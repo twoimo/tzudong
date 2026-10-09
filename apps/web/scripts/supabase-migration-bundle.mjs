@@ -1,4 +1,4 @@
-/** Pure four-migration bundle compilation and lost-ACK reconciliation. */
+/** Pure explicit four/five-migration bundle compilation and lost-ACK reconciliation. */
 import { createHash } from 'node:crypto';
 import { boundedMigrationError } from './apply-supabase-migration.mjs';
 
@@ -9,6 +9,7 @@ import {
 } from './supabase-migration-transaction.mjs';
 
 const BUNDLE_SIZE = 4;
+const SUCCESSOR_BUNDLE_SIZE = 5;
 const HEX_SHA256 = /^[0-9a-f]{64}$/;
 const MIGRATION_ID = /^[a-z0-9_]{1,80}$/;
 
@@ -131,8 +132,8 @@ function suppressAssertionSelectOutput(execution) {
   return compiled + execution.slice(cursor);
 }
 
-export function migrationBundleSuffixRoot(migrations) {
-  if (!Array.isArray(migrations) || migrations.length !== BUNDLE_SIZE) {
+function bundleSuffixRoot(migrations, expectedSize) {
+  if (!Array.isArray(migrations) || migrations.length !== expectedSize) {
     fail('MIGRATION_BUNDLE_SIZE_INVALID');
   }
   return sha256(JSON.stringify(migrations.map(migration => ({
@@ -143,7 +144,15 @@ export function migrationBundleSuffixRoot(migrations) {
   }))));
 }
 
-function validateBundle(bundle, materials) {
+export function migrationBundleSuffixRoot(migrations) {
+  return bundleSuffixRoot(migrations, BUNDLE_SIZE);
+}
+
+export function fiveMigrationBundleSuffixRoot(migrations) {
+  return bundleSuffixRoot(migrations, SUCCESSOR_BUNDLE_SIZE);
+}
+
+function validateBundle(bundle, materials, expectedSize) {
   exactKeys(bundle, [
     'finalReadback',
     'id',
@@ -161,9 +170,9 @@ function validateBundle(bundle, materials) {
     || !HEX_SHA256.test(bundle.prefixRoot)
     || !HEX_SHA256.test(bundle.suffixRoot)
     || !Array.isArray(bundle.migrations)
-    || bundle.migrations.length !== BUNDLE_SIZE
+    || bundle.migrations.length !== expectedSize
     || !Array.isArray(materials)
-    || materials.length !== BUNDLE_SIZE) {
+    || materials.length !== expectedSize) {
     fail('MIGRATION_BUNDLE_INVALID');
   }
 
@@ -201,7 +210,7 @@ function validateBundle(bundle, materials) {
     previousVersion = match[1];
   }
 
-  if (migrationBundleSuffixRoot(bundle.migrations) !== bundle.suffixRoot) {
+  if (bundleSuffixRoot(bundle.migrations, expectedSize) !== bundle.suffixRoot) {
     fail('MIGRATION_BUNDLE_SUFFIX_ROOT_MISMATCH');
   }
   if (!equal(bundle.priorReadback, bundle.migrations[0].expectedPriorState)
@@ -216,16 +225,16 @@ function validateBundle(bundle, materials) {
     suffixRoot: null,
   });
   readbackBinding(bundle.finalReadback, {
-    ledgerCount: bundle.priorCount + BUNDLE_SIZE,
+    ledgerCount: bundle.priorCount + expectedSize,
     priorCount: bundle.priorCount,
     prefixRoot: bundle.prefixRoot,
-    targetCount: BUNDLE_SIZE,
+    targetCount: expectedSize,
     suffixRoot: bundle.suffixRoot,
   });
 }
 
-export function compileMigrationBundle(bundle, materials) {
-  validateBundle(bundle, materials);
+function compileMigrationSequence(bundle, materials, expectedSize) {
+  validateBundle(bundle, materials, expectedSize);
   const plans = bundle.migrations.map((migration, index) => {
     const material = materials[index];
     const plan = migrationEnvelope(material.bytes, migration, material.originalVector);
@@ -260,9 +269,17 @@ export function compileMigrationBundle(bundle, materials) {
   });
 }
 
+export function compileMigrationBundle(bundle, materials) {
+  return compileMigrationSequence(bundle, materials, BUNDLE_SIZE);
+}
+
+export function compileFiveMigrationBundle(bundle, materials) {
+  return compileMigrationSequence(bundle, materials, SUCCESSOR_BUNDLE_SIZE);
+}
+
 export function bundleReconciliationSql(compiled) {
   const { query } = validatedReadbackParts(compiled.finalReadback);
-  return `SET TRANSACTION READ ONLY; SET LOCAL statement_timeout='15s';\n${query};\n`;
+  return `SET TRANSACTION READ ONLY; SET LOCAL standard_conforming_strings=on; SET LOCAL statement_timeout='15s';\n${query};\n`;
 }
 
 export function bundleReconciliationOutcome(value, compiled) {
@@ -296,7 +313,7 @@ export function executeMigrationBundle(databaseUrl, compiled, { runPsqlImpl } = 
   let commandCompleted = false;
   try {
     const output = runPsqlImpl(databaseUrl, compiled.sql, true);
-    commandCompleted = typeof output === 'string';
+    commandCompleted = true;
     const observed = parseSingleJson(output);
     if (!equal(observed, compiled.finalReadback.expected)) {
       fail('MIGRATION_BUNDLE_TERMINAL_READBACK_FAILED');

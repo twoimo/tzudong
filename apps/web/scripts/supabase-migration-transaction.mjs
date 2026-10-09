@@ -4,6 +4,28 @@ const fail = code => { const error = new Error(code); error.code = code; throw e
 const sha = value => createHash('sha256').update(value).digest('hex');
 const quote = value => `'${String(value).replaceAll("'", "''")}'`;
 const trim = value => value.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, '');
+const IDENTIFIER_RUNE = /[\p{L}\p{Nd}_$]/u;
+const SPACE_RUNE = /\p{White_Space}/u;
+
+function previousRune(source, end) {
+  return Array.from(source.slice(0, end)).at(-1) ?? '';
+}
+
+function isBeginAtomic(source, end) {
+  const atomicStart = end - 6;
+  if (atomicStart < 0 || source.slice(atomicStart, end).toUpperCase() !== 'ATOMIC') return false;
+  if (atomicStart > 0 && IDENTIFIER_RUNE.test(previousRune(source, atomicStart))) return false;
+  let cursor = atomicStart;
+  while (cursor > 0) {
+    const rune = previousRune(source, cursor);
+    if (!SPACE_RUNE.test(rune)) break;
+    cursor -= rune.length;
+  }
+  const beginStart = cursor - 5;
+  return beginStart >= 0
+    && source.slice(beginStart, cursor).toUpperCase() === 'BEGIN'
+    && (beginStart === 0 || !IDENTIFIER_RUNE.test(previousRune(source, beginStart)));
+}
 
 // Positions and a masked lexical view only. The returned statement bytes remain untouched.
 function sqlStructure(source) {
@@ -15,6 +37,7 @@ function sqlStructure(source) {
   let dollar = null;
   let block = 0;
   let line = false;
+  const atomic = [];
   const hide = index => { if (source[index] !== '\n' && source[index] !== '\r') masked[index] = ' '; };
   for (let i = 0; i < source.length; i++) {
     const c = source[i], n = source[i + 1];
@@ -65,7 +88,12 @@ function sqlStructure(source) {
         continue;
       }
     }
-    if (c === ';') { const token = trim(source.slice(start, i)); if (token) spans.push({ start, end: i + 1, token }); start = i + 1; }
+    if (c === '(') atomic.push(')');
+    else if (c === ')' && atomic.at(-1) === ')') atomic.pop();
+    else if ((c === 'c' || c === 'C') && isBeginAtomic(source, i + 1)) atomic.push('END');
+    else if ((c === 'd' || c === 'D') && atomic.at(-1) === 'END'
+      && source.slice(Math.max(0, i - 2), i + 1).toUpperCase() === 'END') atomic.pop();
+    if (c === ';' && atomic.length === 0) { const token = trim(source.slice(start, i)); if (token) spans.push({ start, end: i + 1, token }); start = i + 1; }
   }
   if (quoteKind || dollar || block) fail('MIGRATION_SQL_UNTERMINATED');
   const token = trim(source.slice(start)); if (token) spans.push({ start, end: source.length, token });
@@ -163,7 +191,7 @@ function readbackExpression(query) {
 export function reconciliationSql(plan, migration) {
   const prior = readQuery(migration.expectedPriorState), terminal = readQuery(migration.terminalReadback);
   // One fresh read-only psql transaction. Client branching prevents the server from planning an invalid state query.
-  return `SET TRANSACTION READ ONLY; SET LOCAL statement_timeout='15s';
+  return `SET TRANSACTION READ ONLY; SET LOCAL standard_conforming_strings=on; SET LOCAL statement_timeout='15s';
  SELECT EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=${quote(plan.version)}) AS ledger_exists \\gset
 \\if :ledger_exists
  SELECT json_build_object('ledger_exists',true,'ledger_equal',${ledgerEqual(plan)},'prior',NULL,'terminal',${readbackExpression(terminal)})::text;

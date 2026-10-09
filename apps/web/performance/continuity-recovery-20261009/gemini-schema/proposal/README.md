@@ -39,12 +39,21 @@ therefore unchanged after expansion.
 `fixture/factored-schema.json` is the exact candidate. Run:
 
 ```sh
-python3 apps/web/performance/continuity-recovery-20261009/gemini-schema/proofs/verify_schema_factor.py
+python3 apps/web/performance/continuity-recovery-20261009/gemini-schema/proofs/verify_schema_factor.py \
+  --watch-checkout /absolute/path/to/verified-claude-video-checkout
 ```
+
+The checkout is mandatory and may instead be supplied through
+`TZUDONG_CLAUDE_VIDEO_CHECKOUT`. The verifier accepts it only when Git `HEAD`
+is exactly `03ceb42f7fa2c4439aca01752118044baabffb8f`, `skills/watch` is clean,
+and `skills/watch/scripts/watch.py` is a regular, non-symlinked file. It never
+downloads or installs the checkout. A missing, unavailable, dirty, or different
+checkout is rejected before the request proof is constructed.
 
 The verifier regenerates the production schema, checks every reference and
 byte-saving condition, rejects external references and cycles, expands the
-candidate, compares canonical bytes, and verifies the full request delta.
+candidate, compares canonical bytes, and verifies the historical full-schema
+predecessor request delta against that explicitly verified pinned source.
 
 ## Request and cache effects
 

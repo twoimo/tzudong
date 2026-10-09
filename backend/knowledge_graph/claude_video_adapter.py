@@ -99,6 +99,7 @@ def usage(value):
 
 
 def schema(video_id, start, end):
+    """Full semantic contract enforced again by ``validate_analysis``."""
     def obj(properties):
         return {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}
 
@@ -122,6 +123,15 @@ def schema(video_id, start, end):
                 "claims": facts, "uncertainty": strings})
 
 
+def wire_schema():
+    """Small transport contract; nested semantics stay fail-closed locally."""
+    properties = {"schemaVersion": {"type": "integer"}, "videoId": {"type": "string"},
+                  "coverage": {"type": "object"}, "summary": {"type": "array"},
+                  "restaurants": {"type": "array"}, "claims": {"type": "array"},
+                  "uncertainty": {"type": "array"}}
+    return {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}
+
+
 def load_engine(checkout):
     """Execute exact installed bytes in private modules, without bytecode writes."""
     scripts = Path(checkout) / "skills/watch/scripts"
@@ -140,15 +150,24 @@ def load_engine(checkout):
     return engine
 
 
-def request_payload(engine, model, video_id, start, end, prompt, output_limit):
+def _request_payload(engine, model, video_id, start, end, prompt, output_limit, response_schema):
     # The exact prompt passed by upstream ask is checked before dispatch.
     processing, _ = engine._processing((start, end))
     # Preserve fractional source boundaries; upstream rounds clip offsets.
     processing.update(start_offset=f"{start:g}s", end_offset=f"{end:g}s")
     return {"model": model, "input": [{"type": "video", "uri": f"https://www.youtube.com/watch?v={video_id}", "processing": processing},
                                        {"type": "text", "text": engine.build_prompt(prompt)}],
-            "response_format": {"type": "text", "mime_type": "application/json", "schema": schema(video_id, start, end)},
+            "response_format": {"type": "text", "mime_type": "application/json", "schema": response_schema},
             "generation_config": {"max_output_tokens": output_limit}}
+
+
+def request_payload(engine, model, video_id, start, end, prompt, output_limit):
+    return _request_payload(engine, model, video_id, start, end, prompt, output_limit, wire_schema())
+
+
+def predecessor_request_payload(engine, model, video_id, start, end, prompt, output_limit):
+    """Reconstruct the exact prior full-schema request for cache admission only."""
+    return _request_payload(engine, model, video_id, start, end, prompt, output_limit, schema(video_id, start, end))
 
 
 def count_payload(payload):

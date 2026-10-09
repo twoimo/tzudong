@@ -6,8 +6,10 @@ import { readOriginalStatementVector } from '../scripts/apply-supabase-migration
 import {
   bundleReconciliationOutcome,
   bundleReconciliationSql,
+  compileFiveMigrationBundle,
   compileMigrationBundle,
   executeMigrationBundle,
+  fiveMigrationBundleSuffixRoot,
   migrationBundleSuffixRoot,
 } from '../scripts/supabase-migration-bundle.mjs';
 import { statementSpans } from '../scripts/supabase-migration-transaction.mjs';
@@ -155,6 +157,30 @@ test('order, source identity, source hash, vector and suffix drift reject before
   }
 });
 
+test('five-stage compilation is explicit while the historical four-stage API stays exact', () => {
+  const fixture = actualFixture();
+  const source = 'BEGIN; SELECT 5 AS fifth_stage_assertion; COMMIT;';
+  const path = 'backend/supabase/migrations/20261009130105_bundle_fixture_stage_5.sql';
+  const originalVector = statementSpans(source).map(span => span.token);
+  fixture.materials.push({ path, bytes: Buffer.from(source), originalVector });
+  fixture.bundle.migrations.push({
+    id: 'bundle_fixture_stage_5',
+    path,
+    sha256: sha256(source),
+    statementVectorSha256: sha256(JSON.stringify(originalVector)),
+    expectedPriorState: { query: "SELECT '{\"stage\":4}'::text AS state", expected: { stage: 4 } },
+    terminalReadback: { query: "SELECT '{\"stage\":5}'::text AS state", expected: { stage: 5 } },
+  });
+  fixture.bundle.suffixRoot = fiveMigrationBundleSuffixRoot(fixture.bundle.migrations);
+  fixture.bundle.finalReadback.expected.bundle.ledgerCount = fixture.bundle.priorCount + 5;
+  fixture.bundle.finalReadback.expected.bundle.targetCount = 5;
+  fixture.bundle.finalReadback.expected.bundle.suffixRoot = fixture.bundle.suffixRoot;
+  expect(() => compileMigrationBundle(fixture.bundle, fixture.materials)).toThrow('MIGRATION_BUNDLE_INVALID');
+  const compiled = compileFiveMigrationBundle(fixture.bundle, fixture.materials);
+  expect(compiled.plans).toHaveLength(5);
+  expect(compiled.sql.match(/INSERT INTO supabase_migrations\.schema_migrations/g)).toHaveLength(5);
+});
+
 test('fresh prior N and prefix/suffix roots are mandatory and partial target ledger is rejected by the first transaction guard', () => {
   const fixture = actualFixture(23);
   const compiled = compileMigrationBundle(fixture.bundle, fixture.materials);
@@ -183,7 +209,7 @@ test('reconciliation classifies only exact prior/final objects; all intermediate
   }
   expect(bundleReconciliationOutcome('not-json', compiled)).toBe('partial_conflict');
   const sql = bundleReconciliationSql(compiled);
-  expect(sql).toContain('SET TRANSACTION READ ONLY');
+  expect(sql).toStartWith("SET TRANSACTION READ ONLY; SET LOCAL standard_conforming_strings=on;");
   expect(statementSpans(sql).filter(span => /^SELECT\b/i.test(span.token))).toHaveLength(1);
   expect(sql).not.toContain('INSERT INTO');
 });
@@ -202,6 +228,20 @@ test('ambiguous transport performs one read-only reconciliation without claiming
   expect(calls[0]).toMatchObject({ databaseUrl: 'fixture-db', singleTransaction: true });
   expect(calls[1]).toMatchObject({ databaseUrl: 'fixture-db', singleTransaction: true });
   expect(calls[1].sql).not.toContain('INSERT INTO');
+});
+
+test('server terminal guard rollback cannot become success after a matching external commit', () => {
+  const fixture = actualFixture();
+  const compiled = compileMigrationBundle(fixture.bundle, fixture.materials);
+  const guard = Object.assign(new Error('private server detail'), { fixedSqlCode: 'MIGRATION_TERMINAL_READBACK_FAILED' });
+  const calls: string[] = [];
+  expect(() => executeMigrationBundle('fixture-db', compiled, { runPsqlImpl: (_databaseUrl, sql) => {
+    calls.push(sql);
+    if (calls.length === 1) throw guard;
+    return JSON.stringify(compiled.finalReadback.expected);
+  } })).toThrow('MIGRATION_BUNDLE_OUTCOME_UNCONFIRMED');
+  expect(calls).toHaveLength(2);
+  expect(calls.filter(sql => sql.includes('INSERT INTO supabase_migrations.schema_migrations'))).toHaveLength(1);
 });
 
 test('exit-zero malformed or mismatched readback is confirmed once by exact final state', () => {

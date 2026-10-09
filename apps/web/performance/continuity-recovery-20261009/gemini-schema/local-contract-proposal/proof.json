@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-09T08:33:36Z",
+  "classification": {
+    "staticSegmentContractEquivalent": true,
+    "validatorGapFound": false,
+    "providerAcceptanceTested": false,
+    "independentQualityTested": false,
+    "productionImplementationReady": false,
+    "blockingIntegrationGap": "cache_identity_continuity"
+  },
+  "scope": {
+    "included": "JSON-decoded static-segment provider DTOs passed immediately to validate_analysis",
+    "excluded": [
+      "locally merged aggregateSegments DTOs",
+      "provider acceptance",
+      "independent output quality",
+      "cache migration or source changes"
+    ]
+  },
+  "logicalProof": {
+    "definitions": {
+      "O": "values accepted by adapter.schema(videoId, segmentStart, segmentEnd)",
+      "W": "values accepted by wire-schema.json",
+      "V": "values accepted by validate_analysis(value, segmentRow) after decode"
+    },
+    "validatorSubsetOfOriginalSchema": true,
+    "validatorSubsetOfWireSchema": true,
+    "derivation": [
+      "V subset O, therefore O intersection V equals V",
+      "V subset W, therefore W intersection V equals V",
+      "therefore O intersection V equals W intersection V"
+    ]
+  },
+  "constraintCoverage": {
+    "required": true,
+    "additionalProperties": true,
+    "topLevelTypes": true,
+    "nestedTypes": true,
+    "enum": true,
+    "minimumMaximum": true,
+    "maxItems": true,
+    "videoIdBinding": true,
+    "segmentCoverageBoundary": true,
+    "sourceRelativeEvidenceBoundary": true
+  },
+  "boundedExperiment": {
+    "method": "Ajv schema evaluation intersected with the existing validate_analysis function",
+    "caseCount": 112,
+    "validatorAcceptedCount": 3,
+    "oldIntersectionAcceptedCount": 3,
+    "newIntersectionAcceptedCount": 3,
+    "intersectionDivergences": [],
+    "validatorAcceptedOldSchemaViolations": [],
+    "validatorAcceptedWireSchemaViolations": [],
+    "pass": true,
+    "universalProofClaimedFromFixtures": false
+  },
+  "schemas": {
+    "oldForSynthetic835SecondSegment": {
+      "canonicalBytes": 5335,
+      "sha256": "7168c8153f3922ebc33cfdd6f4a07e89e947374e5af882dc122bade3495a9efd"
+    },
+    "proposedWire": {
+      "canonicalBytes": 365,
+      "sha256": "e3f27356cdb188197c709fb607446f606fc250f60ef84bd7bd89062c2e71c360",
+      "fileSha256": "f7436e045718bba41bce80873083afd5bfde332e8a5fa5256427b85692fbdca8"
+    },
+    "currentConfigIdentityFor900SecondSegments": {
+      "responseSchemaSha256": "6b295d868e28bb0560c9da2fe0afbeb2a5d6593767f99244288452db4011aad9",
+      "adapterSha256": "d3c9a61c9c2e33289abefe187bae0b394c09ca8e66ade4f7a4d6017e7685145b",
+      "policySha256": "7934ff60da85f5a28a8884ecdfca2963785ba82edc78230fa7a90506b643aaa4"
+    }
+  },
+  "source": {
+    "claudeVideoAdapterSha256": "d3c9a61c9c2e33289abefe187bae0b394c09ca8e66ade4f7a4d6017e7685145b",
+    "longformAnalysisSha256": "7934ff60da85f5a28a8884ecdfca2963785ba82edc78230fa7a90506b643aaa4",
+    "experimentScriptSha256": "c5c46b36b946364dbde4ef90c119a71b15fb78987481a597c6f07dbf47e271fe"
+  },
+  "integrationGap": {
+    "description": "Changing the transport schema and adapter source changes responseSchemaSha256 and adapterSha256 in AnalysisConfig.identity. Existing succeeded receipts then live under a predecessor identity. The current predecessor check overrides only adapterSha256 and policySha256, so it cannot reconstruct a predecessor whose responseSchemaSha256 also changed. Without an explicit compatibility path, cached_state can classify the result as new and permit a resend.",
+    "minimumProposal": [
+      "Bind the exact previous responseSchemaSha256, adapterSha256, and policySha256 as one reviewed predecessor identity.",
+      "When that predecessor exists, re-run validate_saved_evidence and verify_full_evidence before reuse.",
+      "Reuse only succeeded evidence without rewriting receipt bytes; every non-succeeded predecessor remains readback_required.",
+      "Fail closed before provider work if predecessor compatibility is not proven.",
+      "Add a regression asserting adapter.invoke is never called and old receipt bytes remain unchanged."
+    ]
+  },
+  "operations": {
+    "providerCalls": 0,
+    "keyLookups": 0,
+    "videoResends": 0,
+    "productionSourceChanges": 0,
+    "cacheChanges": 0,
+    "successReceiptChanges": 0,
+    "queueChanges": 0,
+    "otherModelOrProviderUse": 0
+  }
+}

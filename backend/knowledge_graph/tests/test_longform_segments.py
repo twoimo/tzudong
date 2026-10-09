@@ -1,8 +1,10 @@
 import copy
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from backend.knowledge_graph import longform_analysis as m
@@ -53,6 +55,51 @@ class SegmentExecutionTests(unittest.TestCase):
                 patch.object(m, "verify_checkout"), patch.object(m, "project_budget", return_value=self.budget), \
                 patch.object(m.adapter, "invoke", side_effect=self.invoke):
             return m.execute(rows or [self.row], self.info, self.state, config or self.config, limits or self.limits, batch_id=batch_id)
+
+    def predecessor_engine(self):
+        return SimpleNamespace(_processing=lambda clip: ({"type": "static"}, None), build_prompt=lambda prompt: prompt)
+
+    def materialize_wire_schema_predecessor(self):
+        engine = self.predecessor_engine()
+        config_identity = m.wire_schema_predecessor_config(self.config)
+        segment_pairs = []
+        active_segment_directory = None
+        for span in m.segment_rows(self.row, self.config):
+            directory, receipt_path, evidence_path = m.paths(self.state, span, self.config)
+            active_segment_directory = directory
+            receipt, evidence = m.checked_document(receipt_path), m.checked_document(evidence_path)
+            observation_path = receipt_path.with_name(receipt_path.name.replace(".receipt.json", ".observation.json"))
+            observation = m.checked_document(observation_path)
+            contract = m.wire_schema_predecessor_segment_contract(span, self.config, engine)
+            observation["requestSha256"] = contract["requestSha256"]
+            evidence["identity"], evidence["observation"] = contract["receiptIdentity"], observation
+            receipt["identity"] = contract["receiptIdentity"]
+            receipt["observationSha256"], receipt["evidenceSha256"] = m.digest(observation), m.digest(evidence)
+            _, old_receipt, old_evidence = m._exact_paths(self.state, span, self.config, config_identity)
+            old_observation = old_receipt.with_name(old_receipt.name.replace(".receipt.json", ".observation.json"))
+            m.atomic_document(old_observation, observation)
+            m.atomic_document(old_evidence, evidence)
+            m.atomic_document(old_receipt, receipt)
+            segment_pairs.append((old_receipt, old_evidence))
+        _, active_receipt, active_evidence = m.paths(self.state, self.row, self.config)
+        receipt, evidence = m.checked_document(active_receipt), m.checked_document(active_evidence)
+        evidence["identity"] = m.identity(self.row, self.config, config_identity=config_identity)
+        evidence["segments"] = [{"identity": m.checked_document(evidence_path)["identity"],
+                                 "evidenceSha256": m.digest(m.checked_document(evidence_path)),
+                                 "receiptSha256": m.digest(m.checked_document(receipt_path))}
+                                for receipt_path, evidence_path in segment_pairs]
+        receipt["identity"], receipt["evidenceSha256"] = evidence["identity"], m.digest(evidence)
+        _, old_receipt, old_evidence = m._exact_paths(self.state, self.row, self.config, config_identity)
+        m.atomic_document(old_evidence, evidence)
+        m.atomic_document(old_receipt, receipt)
+        active_receipt.unlink()
+        active_evidence.unlink()
+        shutil.rmtree(active_segment_directory)
+        return engine, old_receipt, old_evidence, segment_pairs
+
+    def video_snapshot(self):
+        root = self.state / "videos" / self.row["videoId"]
+        return {path.relative_to(root): path.read_bytes() for path in root.rglob("*.json")}
 
     def test_failure_receipts_add_only_optional_bounded_status_and_fixed_category(self):
         cases=[(400,"invalid_request"),(401,"authentication"),(403,"authentication"),(429,"rate_limit"),(500,"server_error"),(503,"server_error"),
@@ -106,6 +153,92 @@ class SegmentExecutionTests(unittest.TestCase):
         self.assertEqual(prior.read_bytes(),original)
         self.assertEqual(self.config.identity['adapterSha256'],m.hashlib.sha256(m.Path(m.adapter.__file__).read_bytes()).hexdigest())
         self.assertEqual(self.config.identity['policySha256'],m.hashlib.sha256(m.Path(m.__file__).read_bytes()).hexdigest())
+
+    def test_wire_schema_predecessor_two_segment_success_is_reused_without_writes_or_calls(self):
+        self.execute()
+        engine, _, _, segment_pairs = self.materialize_wire_schema_predecessor()
+        self.assertEqual(len(segment_pairs), 2)
+        before, calls = self.video_snapshot(), len(self.calls)
+        restarted = m.replace(self.config)
+        with patch.object(m, "verify_checkout"), patch.object(m.adapter, "load_engine", return_value=engine), \
+                patch.object(m.adapter, "invoke", side_effect=AssertionError("predecessor must not call provider")):
+            self.assertEqual(m.cached_state(self.state, self.row, restarted), "reusable")
+            plan = m.make_plan([self.row], self.info, self.state, restarted)
+            self.assertEqual((plan["cache"]["reusable"], plan["remainingSegments"]), (1, 0))
+            first = m.execute([self.row], self.info, self.state, restarted, self.limits, batch_id="predecessor-restart-1")
+            second = m.execute([self.row], self.info, self.state, restarted, self.limits, batch_id="predecessor-restart-2")
+            duplicate = m.execute([self.row, self.row], self.info, self.state, restarted, self.limits,
+                                  batch_id="predecessor-duplicate-queue")
+        self.assertEqual((first["attempted"], first["reused"], second["attempted"], second["reused"],
+                          duplicate["attempted"], duplicate["reused"]), (0, 1, 0, 1, 0, 2))
+        self.assertEqual(len(self.calls), calls)
+        self.assertEqual(self.video_snapshot(), before)
+
+    def test_wire_schema_predecessor_missing_duplicate_corrupt_or_lineage_is_readback_required(self):
+        self.execute()
+        engine, root_receipt, root_evidence, segment_pairs = self.materialize_wire_schema_predecessor()
+        original = {path: path.read_bytes() for path in (root_receipt, root_evidence, *[path for pair in segment_pairs for path in pair])}
+        first_receipt, first_evidence = segment_pairs[0]
+        observation = first_receipt.with_name(first_receipt.name.replace(".receipt.json", ".observation.json"))
+        original[observation] = observation.read_bytes()
+        with patch.object(m, "verify_checkout"), patch.object(m.adapter, "load_engine", return_value=engine), \
+                patch.object(m.adapter, "invoke", side_effect=AssertionError("invalid predecessor must not call provider")):
+            first_evidence.unlink()
+            self.assertEqual(m.cached_state(self.state, self.row, self.config), "readback_required")
+            first_evidence.write_bytes(original[first_evidence])
+
+            duplicate = first_receipt.with_name("0" * 64 + ".receipt.json")
+            duplicate.write_bytes(first_receipt.read_bytes())
+            self.assertEqual(m.cached_state(self.state, self.row, self.config), "readback_required")
+            duplicate.unlink()
+
+            evidence = m.checked_document(first_evidence)
+            evidence["analysis"]["summary"][0]["evidence"][0]["startSeconds"] = "00:01"
+            m.atomic_document(first_evidence, evidence)
+            receipt = m.checked_document(first_receipt)
+            receipt["evidenceSha256"] = m.digest(evidence)
+            m.atomic_document(first_receipt, receipt)
+            root = m.checked_document(root_evidence)
+            root["segments"][0].update(evidenceSha256=m.digest(evidence), receiptSha256=m.digest(receipt))
+            m.atomic_document(root_evidence, root)
+            root_record = m.checked_document(root_receipt)
+            root_record["evidenceSha256"] = m.digest(root)
+            m.atomic_document(root_receipt, root_record)
+            self.assertEqual(m.cached_state(self.state, self.row, self.config), "readback_required")
+
+            for path, data in original.items():
+                path.write_bytes(data)
+            root_record = m.checked_document(root_receipt)
+            root_record["repairLineageSha256"] = "f" * 64
+            m.atomic_document(root_receipt, root_record)
+            self.assertEqual(m.cached_state(self.state, self.row, self.config), "readback_required")
+
+    def test_wire_schema_predecessor_drift_and_rejection_never_become_new(self):
+        self.execute()
+        engine, root_receipt, _, segment_pairs = self.materialize_wire_schema_predecessor()
+        before, calls = self.video_snapshot(), len(self.calls)
+        changed = [({**self.row, "durationSeconds": 61}, self.config),
+                   (self.row, m.replace(self.config, model="gemini-3.7-flash")),
+                   (self.row, m.replace(self.config, timeout=31))]
+        with patch.object(m, "verify_checkout"), patch.object(m.adapter, "load_engine", return_value=engine), \
+                patch.object(m.adapter, "invoke", side_effect=AssertionError("drift must not call provider")):
+            for row, config in changed:
+                self.assertEqual(m.cached_state(self.state, row, config), "readback_required")
+            with patch.object(m, "PROMPT", m.PROMPT + "\nchanged"):
+                self.assertEqual(m.cached_state(self.state, self.row, self.config), "readback_required")
+            with patch.dict(m.WIRE_SCHEMA_PREDECESSOR_SOURCES, {"adapterSha256": "0" * 64}):
+                self.assertEqual(m.cached_state(self.state, self.row, self.config), "readback_required")
+            with patch.object(m.adapter, "schema", return_value={"type": "object"}):
+                self.assertEqual(m.cached_state(self.state, self.row, self.config), "readback_required")
+            rejected = m.checked_document(segment_pairs[0][0])
+            rejected.update(state="rejected", code="ANALYSIS_EVIDENCE_INVALID")
+            m.atomic_document(segment_pairs[0][0], rejected)
+            rejected_before = self.video_snapshot()
+            result = m.execute([self.row], self.info, self.state, self.config, self.limits, batch_id="rejected-predecessor")
+        self.assertEqual((result["attempted"], result["blocked"]), (0, 1))
+        self.assertEqual(len(self.calls), calls)
+        self.assertEqual(self.video_snapshot(), rejected_before)
+        self.assertNotEqual(rejected_before, before)
 
     def test_longest_inventory_video_has_bounded_gapless_full_coverage(self):
         row = {**self.row, "durationSeconds": 17653}
@@ -283,6 +416,8 @@ class SegmentExecutionTests(unittest.TestCase):
         self.assertNotEqual(m.digest(m.replace(self.config, segment_seconds=20).identity), original)
         self.assertNotEqual(m.digest(m.replace(self.config, output_limit=99).identity), original)
         with patch.object(m.adapter, "schema", return_value={"type": "object"}):
+            self.assertNotEqual(m.digest(self.config.identity), original)
+        with patch.object(m.adapter, "wire_schema", return_value={"type": "object"}):
             self.assertNotEqual(m.digest(self.config.identity), original)
 
 

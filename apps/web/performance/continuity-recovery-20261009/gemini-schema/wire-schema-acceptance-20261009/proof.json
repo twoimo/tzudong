@@ -1,0 +1,24 @@
+{
+  "completed": true,
+  "elapsedSeconds": 2.838956,
+  "expectedVideoId": true,
+  "fullValidatorPass": false,
+  "httpStatus": 200,
+  "modelMatch": true,
+  "originalSchemaConstraintPass": false,
+  "payloadSha256": "1bb888763dc647849967c89dc5eca5dcfec912245aa48e6246307f1cf5fba4a2",
+  "responseDtoSha256": "ca2eea03032b6e4c7ca60b327052c4a3003f57f4030df03b6a86df9e512a9ce0",
+  "schemaSha256": "e3f27356cdb188197c709fb607446f606fc250f60ef84bd7bd89062c2e71c360",
+  "schemaValidation": true,
+  "terminalResponse": true,
+  "usage": {
+    "cachedTokens": 0,
+    "inputTokens": 82,
+    "outputTokens": 62,
+    "thinkingTokens": 109,
+    "toolTokens": 0,
+    "totalTokens": 253
+  },
+  "usageTotalMatchesParts": true,
+  "wireSchemaValidation": true
+}

@@ -7,6 +7,18 @@
 
 상태 표기: **I 구현 / L 로컬 검증 / O 운영 반영 / R 실제 동작 확인**. `?`는 미확인이다. 검증 완료를 기록할 때 소스 SHA, 실제 실행 시각, 환경, 검증 결과와 증빙 경로를 함께 남긴다. 운영 대상이 없는 규칙·문서 항목은 이유를 적고 해당 칸을 적용 제외로 바꿀 수 있다. 과거 보고서는 탐색 근거이며 현재 운영 사실을 대신하지 않는다.
 
+## 2026-10-09 현재 실행 갱신
+
+- PR #3099가 `develop`의 `614b249175c35636a7062bf05cb01ebad538b10d`로 합쳐졌다. PR #3150의 커밋 `8571b65b5e8079d2f238389aaf68f41740aa170e`는 CI 통과 후 후속 수정 중이며, `data`·`main` 승격과 운영 적용은 아직 하지 않았다.
+- `tzudong`의 `preview/develop`에 기존 검증된 서버 키를 1회 설정하고 같은 SHA를 1회 재배포했다. 배포 `dpl_DRLjCuw7iGP8pH1ZwyMtvqjXAmuE`의 READY·SHA·프로젝트를 확인했다. 실제 인증 GET 6개가 500/503에서 200으로 복구됐다. 이는 기능 복구 증빙이며 성능·오류율 실험이 아니다.
+- 현재 Preview의 맛집은 전체 1,659건·표시 50건이며 자동 운영은 중지 상태다. 사용자 관리·감사 로그에는 세 RPC가 부재하므로 새 forward migration을 준비한다. 이전 ledger 52용 SQL을 현재 ledger 80에 그대로 실행하지 않는다.
+- 정확한 PostgreSQL 17.6에서 다섯 SQL의 단일 transaction, 중간·최종 불일치 rollback, G014와 guarded/manual/private 검증을 통과했다. 합성 전체 스키마 증빙이며 운영 적용이나 Storage API 물리 삭제 증빙은 아니다.
+- Preview OAuth·CSRF의 정확한 서버 origin, 오류 표시, GitHub 파이프라인 fallback을 수정했다. 관련 109개 검사·두 TypeScript 컴파일러 검사는 통과했다. 현재 수정 소스는 아직 배포되지 않았다.
+- Gemini 3.8 Flash schema control 실호출 1회는 HTTP 200·253 tokens였다. 영상 없는 제어 입력은 전체 영상 validator를 통과하지 않았으므로 영상 품질 완료나 비용 절감으로 세지 않는다.
+- 사용자 요청대로 `chatgpt-web/` 병렬 검토를 준비한다. CLI Web turn은 성공했지만 이 native V2 작업의 암호화 collaboration 전달은 거부됐다. 전역 feature·모델·큐를 바꾸지 않고 지원되는 별도 plaintext CLI 작업으로 전환 중이다. Astra는 새로 사용하지 않았다.
+
+증빙: `apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/`, `actual-five-stage-replay-20261009/`, `gemini-schema/wire-schema-acceptance-20261009/`.
+
 ## 실행 목록 요약
 
 | 우선순위 | 작업 | 현재 상태 / 다음 조치 |

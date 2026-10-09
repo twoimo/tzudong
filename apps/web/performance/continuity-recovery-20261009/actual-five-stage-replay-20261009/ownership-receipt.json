@@ -1,0 +1,39 @@
+{
+  "kind": "actual-five-bundle-owned-cluster",
+  "status": "passed",
+  "nonce": "18ff575f76eb514be3f43b1a",
+  "container": "tzudong-actual-five-18ff575f76eb514be3f43b1a",
+  "volume": "tzudong-actual-five-18ff575f76eb514be3f43b1a",
+  "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+  "owner": "actual-five-18ff575f76eb514be3f43b1a",
+  "network": "none",
+  "publishedPorts": 0,
+  "operatingWrites": false,
+  "hostedWrites": false,
+  "cleanup": {
+    "nativeClusterRemoved": true,
+    "containerRemoved": true,
+    "volumeRemoved": true,
+    "temporaryScriptsRemoved": true
+  },
+  "nativeServerVersion": "17.6",
+  "nativeFullSchemaEligible": false,
+  "nativeMissingRequiredExtensions": [
+    "btree_gin",
+    "fuzzystrmatch",
+    "hypopg",
+    "index_advisor",
+    "pg_stat_statements",
+    "pg_trgm",
+    "pgcrypto",
+    "supabase_vault",
+    "uuid-ossp",
+    "vector"
+  ],
+  "imageSource": "local-cache-only",
+  "serverVersion": "17.6",
+  "snapshotManifestSha256": "ccd0373d1138301a586b75ab07f01ddcd061765d22e22da646e774cfc1e92563",
+  "sourceHead": "8571b65b5e8079d2f238389aaf68f41740aa170e",
+  "replaySha256": "65f80bebfb67c41cf18138a69478bf06d8743cbb3ed705f97133fb75eaf6af98",
+  "completedAt": "2026-10-09T09:52:06.378Z"
+}

@@ -1,6 +1,10 @@
 import { expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { migrationEnvelope, statementSpans, atomicMigrationSql, reconciliationSql, reconciliationOutcome } from '../scripts/supabase-migration-transaction.mjs';
 import { applyMigrationWithTerminalReadback, readOriginalStatementVector, main, RELEASE_MIGRATION_MANIFEST_PATH } from '../scripts/apply-supabase-migration.mjs';
 const sha=(value:string)=>createHash('sha256').update(value).digest('hex');
@@ -30,6 +34,29 @@ test('quoted/dollar/comment control text remains untouched; unsupported meta com
   const p=migrationEnvelope(Buffer.from(sql),{...migration,sha256:sha(sql)},vector(sql));
   expect(p.execution).toContain("PERFORM 'COMMIT;'");expect(p.execution).toContain('/* ROLLBACK; */');
   expect(()=>statementSpans('\\include arbitrary.sql')).toThrow('META_COMMAND_DENIED');
+});
+test('BEGIN ATOMIC and parenthesis nesting match the pinned G037 statement vector',()=>{
+  const sql=`CREATE FUNCTION public.plus_one(x integer) RETURNS integer LANGUAGE SQL IMMUTABLE
+BEGIN ATOMIC
+  SELECT (x + (1));
+END;
+SELECT (2 + (3));
+`;
+  const directory=mkdtempSync(join(tmpdir(),'tzudong-begin-atomic-'));
+  const path=join(directory,'20261009123000_begin_atomic_fixture.sql');
+  try{
+    writeFileSync(path,sql);
+    const result=spawnSync(process.execPath,[
+      fileURLToPath(new URL('../../../backend/supabase/scripts/g037_supabase_statement_vector.mjs',import.meta.url)),
+      '--source',path,'--version','20261009123000','--sha256',sha(sql),'--size',String(Buffer.byteLength(sql)),
+    ],{encoding:'utf8'});
+    expect(result.status).toBe(0);
+    const pinned=JSON.parse(result.stdout).statements;
+    const observed=vector(sql);
+    expect(observed).toEqual(pinned);
+    expect(observed).toHaveLength(2);
+    expect(observed[0]).toContain('SELECT (x + (1));');
+  }finally{rmSync(directory,{force:true,recursive:true});}
 });
 test('standard strings keep backslashes literal while escape strings may quote with backslashes',()=>{
   const ordinary=String.raw`SELECT 'C:\';`;
@@ -79,6 +106,7 @@ test('ledger state selects one valid readback and the lock precedes catalog vali
   expect(sql).toContain("has_table_privilege(current_user,'supabase_migrations.schema_migrations','DELETE')");
   expect(sql).toContain("has_table_privilege(current_user,'supabase_migrations.schema_migrations','TRUNCATE')");
   const reconcile=reconciliationSql(plan(),migration);
+  expect(reconcile).toStartWith("SET TRANSACTION READ ONLY; SET LOCAL standard_conforming_strings=on;");
   expect(reconcile).toContain('AS ledger_exists \\gset');
   expect(reconcile).toContain('\\if :ledger_exists');
   expect(reconcile).toContain('\\else');
@@ -90,6 +118,16 @@ test('ambiguous lost ACK reconciles once without resend and remains unconfirmed'
     return JSON.stringify({ledger_exists:true,ledger_equal:true,prior:null,terminal:{ready:true}});
   }})).toThrow('MIGRATION_OUTCOME_UNCONFIRMED');
   expect(calls).toHaveLength(2);expect(calls[1]).toContain('SET TRANSACTION READ ONLY');expect(calls[1]).not.toContain('INSERT INTO');
+});
+test('server terminal guard rollback stays unconfirmed when another runner later commits',()=>{
+  const calls:string[]=[];
+  const guard=Object.assign(new Error('private server detail'),{fixedSqlCode:'MIGRATION_TERMINAL_READBACK_FAILED'});
+  expect(()=>applyMigrationWithTerminalReadback('fixture',migration,source,{readVectorImpl:()=>vector(source),runPsqlImpl:(_url:string,sql:string)=>{
+    calls.push(sql);if(calls.length===1)throw guard;
+    return JSON.stringify({ledger_exists:true,ledger_equal:true,prior:null,terminal:{ready:true}});
+  }})).toThrow('MIGRATION_OUTCOME_UNCONFIRMED');
+  expect(calls).toHaveLength(2);
+  expect(calls.filter(sql=>sql.includes('INSERT INTO supabase_migrations.schema_migrations'))).toHaveLength(1);
 });
 test('not-applied reconciliation returns only bounded error codes',()=>{
   const hostile={};

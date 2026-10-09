@@ -5972,7 +5972,9 @@ function AdminDashboardManagementPanel({
   isAdmin: boolean;
 }) {
   const { toast } = useToast();
-  const hasShownDashboardDataErrorToastRef = useRef(false);
+  const lastDashboardDataErrorKindRef = useRef<
+    "metrics" | "operations" | null
+  >(null);
   const [period, setPeriod] = useState<AdminDashboardPeriod>("1M");
   const [pendingSkeletonPeriod, setPendingSkeletonPeriod] =
     useState<AdminDashboardPeriod | null>(null);
@@ -6667,22 +6669,32 @@ function AdminDashboardManagementPanel({
     growthInsightQuery.isLoading ||
     pendingSkeletonPeriod === period;
   const isChartLoading = isInsightDynamicLoading;
-  const chartHasError =
-    hasError || insightQuery.isError || growthInsightQuery.isError;
+  const dashboardDataErrorKind =
+    insightQuery.isError || growthInsightQuery.isError
+      ? "metrics"
+      : hasError
+        ? "operations"
+        : null;
   useEffect(() => {
-    if (!chartHasError) {
-      hasShownDashboardDataErrorToastRef.current = false;
+    if (!dashboardDataErrorKind) {
+      lastDashboardDataErrorKindRef.current = null;
       return;
     }
 
-    if (hasShownDashboardDataErrorToastRef.current) return;
-    hasShownDashboardDataErrorToastRef.current = true;
+    if (lastDashboardDataErrorKindRef.current === dashboardDataErrorKind) return;
+    lastDashboardDataErrorKindRef.current = dashboardDataErrorKind;
     toast({
       variant: "destructive",
-      title: "지표 데이터 로드 실패",
-      description: "대시보드 정적 영역은 유지합니다.",
+      title:
+        dashboardDataErrorKind === "metrics"
+          ? "지표 데이터 로드 실패"
+          : "운영 데이터 일부 로드 실패",
+      description:
+        dashboardDataErrorKind === "metrics"
+          ? "조회·좋아요·댓글 지표를 확인하지 못했습니다."
+          : "대기·맛집·영상·배너 수치 중 불러오지 못한 값은 미확인으로 표시합니다.",
     });
-  }, [chartHasError, toast]);
+  }, [dashboardDataErrorKind, toast]);
 
   const periodCohortViewValue = videos.reduce(
     (sum, video) => sum + video.viewCount,
@@ -10768,7 +10780,7 @@ export function AdminConsoleOverview({
   const overviewModuleSummary = statsLoading
     ? "KPI 데이터를 불러오는 중입니다."
     : statsHasError
-      ? "일부 KPI를 확인하지 못했습니다."
+      ? "일부 운영 데이터를 확인하지 못했습니다."
       : `대기 ${formatNumber(stats.pendingTotal)}건 · 맛집 ${formatNumber(stats.totalRestaurants)}곳 · 영상 ${formatNumber(stats.totalVideos)}개`;
 
   return (

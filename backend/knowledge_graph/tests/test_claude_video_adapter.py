@@ -76,7 +76,7 @@ class PinnedAdapterTests(unittest.TestCase):
         self.assertEqual(create["model"], "gemini-3.8-flash")
         self.assertEqual(create["input"][0]["processing"], {"type": "static", "start_offset": "900s", "end_offset": "1765.25s"})
         self.assertEqual(create["generation_config"], {"max_output_tokens": 100})
-        self.assertEqual(create["response_format"], {"type": "text", "mime_type": "application/json", "schema": adapter.schema("ABCDEFGHIJK", 900, 1765.25)})
+        self.assertEqual(create["response_format"], {"type": "text", "mime_type": "application/json", "schema": adapter.wire_schema()})
         parts = count["generateContentRequest"]["contents"][0]["parts"]
         self.assertEqual(parts[0]["videoMetadata"], {"startOffset": "900s", "endOffset": "1765.25s"})
         self.assertEqual(parts[1]["text"], create["input"][1]["text"])
@@ -198,12 +198,19 @@ class PinnedAdapterTests(unittest.TestCase):
         self.assertNotIn('private',str(failure.exception))
         self.assertNotIn('private',json.dumps(self.observations))
 
-    def test_successful_request_bytes_and_fingerprint_match_frozen_failure_request(self):
+    def test_wire_request_changes_only_schema_and_old_request_is_reconstructible(self):
         engine=adapter.load_engine(analysis.DEFAULT_CHECKOUT)
-        # Payload construction remains byte-identical to the pre-change request.
-        payload=adapter.request_payload(engine,"gemini-3.8-flash","-D43ezc57z8",0,835,
-            analysis.segment_prompt({"videoId":"-D43ezc57z8","durationSeconds":835,"segmentStartSeconds":0,"segmentEndSeconds":835}),65536)
-        self.assertEqual(adapter.digest(payload),"121a7580dde9db30051ec8c05c63f843a478eb59ec9e6900e39f27bd11c8d331")
+        prompt=analysis.segment_prompt({"videoId":"-D43ezc57z8","durationSeconds":835,"segmentStartSeconds":0,"segmentEndSeconds":835})
+        payload=adapter.request_payload(engine,"gemini-3.8-flash","-D43ezc57z8",0,835,prompt,65536)
+        predecessor=adapter.predecessor_request_payload(engine,"gemini-3.8-flash","-D43ezc57z8",0,835,
+            prompt,65536)
+        self.assertEqual(adapter.digest(predecessor),"121a7580dde9db30051ec8c05c63f843a478eb59ec9e6900e39f27bd11c8d331")
+        self.assertEqual((len(adapter.canonical(adapter.wire_schema())),adapter.digest(adapter.wire_schema())),
+                         (365,"e3f27356cdb188197c709fb607446f606fc250f60ef84bd7bd89062c2e71c360"))
+        self.assertEqual(payload["response_format"]["schema"],adapter.wire_schema())
+        self.assertEqual(predecessor["response_format"]["schema"],adapter.schema("-D43ezc57z8",0,835))
+        changed=copy.deepcopy(predecessor);changed["response_format"]["schema"]=adapter.wire_schema()
+        self.assertEqual(payload,changed)
         self.requests.clear();self.observations.clear();self.run_fixture()
         sent=self.requests[-1][2]
         expected=adapter.request_payload(engine,"gemini-3.8-flash","ABCDEFGHIJK",900,1765.25,self.kwargs['prompt'],100)

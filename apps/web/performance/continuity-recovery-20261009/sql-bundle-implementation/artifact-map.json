@@ -1,35 +1,43 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "scope": "current source and exact PostgreSQL17.6 five-stage runtime; historical17.11 retained separately",
+  "historicalMap": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/historical-pg17.11-source/historical-artifact-map.json",
+  "historicalMapSha256": "3a164bc4131f7a005b443c6d9babd79fe8400dcc24d8474b23ff36859e82d4a5",
   "artifacts": [
     {
       "path": "apps/web/scripts/supabase-migration-bundle.mjs",
-      "bytes": 10934,
-      "sha256": "6b18008ae960dc96178f26a83383a81103afb0b4b62571c0804809a93e336d43"
+      "bytes": 12236,
+      "sha256": "fdc6c175fe77cc11b6252c6d9b326061d67639c6e7fff728e94e70a85f25c5b6"
     },
     {
       "path": "apps/web/tests-unit/supabase-migration-bundle.test.ts",
-      "bytes": 11994,
-      "sha256": "04b89d4c7ae38f3235b01cab44036bc34536f33a3bf40cb0bac19f4c4ac0d77f"
+      "bytes": 16821,
+      "sha256": "e6bebd3dd3d467df71591af6ecaeb981df05897ef5b67cf63471db0f05d3e357"
     },
     {
       "path": "apps/web/tests-unit/supabase-migration-bundle-pg17.test.ts",
-      "bytes": 10302,
-      "sha256": "c4e454b00c8b51083fa9280f854af254a897114da5656243095d0e4942136b31"
+      "bytes": 19005,
+      "sha256": "def6fffff229a7fb4bdbe9abb4922cd3838479a5403d0e1d115e5c41449382bb"
     },
     {
-      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/regression-test-output.txt",
-      "bytes": 2222,
-      "sha256": "b59812026518a86974d622a5db32e585a081a1b96aaab5d52e8ce3dfd83eb808"
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-five-stage-replay-20261009/proof.json",
+      "bytes": 12107,
+      "sha256": "65f80bebfb67c41cf18138a69478bf06d8743cbb3ed705f97133fb75eaf6af98"
     },
     {
-      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/pg17-test-output.txt",
-      "bytes": 288,
-      "sha256": "671591d667dc2e70564595ea09354e5e3969f394d161d04948335d42069fce26"
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-five-stage-replay-20261009/ownership-receipt.json",
+      "bytes": 1279,
+      "sha256": "5c3818de492c9e298db9182c6768604e600057a756603b388de9c87a8670693e"
     },
     {
-      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/proof.json",
-      "bytes": 4436,
-      "sha256": "5c875ddb71ea94544b40029275adcd81446ad8de3129a88230c36b381d22b160"
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-five-stage-replay-20261009/artifact-map.json",
+      "bytes": 3857,
+      "sha256": "0cd2ddfc3a5e790004f5578d0e66767834a81a98444c216881160f1c9943d225"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/sql-correctness-and-five-stage-8571b65b/root-portable-source-verifier-result.json",
+      "bytes": 3379,
+      "sha256": "2de10a28eefae45ac16410da443296c15c78ad5fae45c4611d2269f8fa9bc627"
     }
   ]
 }

@@ -504,12 +504,16 @@ class LongformAnalysisTests(unittest.TestCase):
                    (self.row, module.AnalysisConfig("gemini-3.7-flash", 1000, 100, "a" * 64, self.config.checkout, 30)),
                    (self.row, module.AnalysisConfig(self.config.model, 1000, 100, "a" * 64, self.config.checkout, 31))]
         with self.offline_execution():
-            for row, config in changes:
-                self.assertEqual(module.cached_state(self.state, row, config), "new")
-                with self.assertRaisesRegex(module.AnalysisError, "FUNDED_GEMINI_ENV_REQUIRED"):
-                    module.execute([row], self.info, self.state, config, {**self.limits, "maxCalls": 4})
+            row, config = changes[0]
+            self.assertEqual(module.cached_state(self.state, row, config), "new")
+            with self.assertRaisesRegex(module.AnalysisError, "FUNDED_GEMINI_ENV_REQUIRED"):
+                module.execute([row], self.info, self.state, config, {**self.limits, "maxCalls": 4})
+            for row, config in changes[1:]:
+                self.assertEqual(module.cached_state(self.state, row, config), "readback_required")
+                result = module.execute([row], self.info, self.state, config, {**self.limits, "maxCalls": 4})
+                self.assertEqual((result["attempted"], result["blocked"]), (0, 1))
             with patch.object(module, "PROMPT", module.PROMPT + "\nDifferent analysis request."):
-                self.assertEqual(module.cached_state(self.state, self.row, self.config), "new")
+                self.assertEqual(module.cached_state(self.state, self.row, self.config), "readback_required")
 
     def test_cached_video_newly_marked_short_or_live_is_excluded_before_reuse(self):
         with self.execution(lambda argv, **kw: subprocess.CompletedProcess(argv, 0, self.report(), b"")):

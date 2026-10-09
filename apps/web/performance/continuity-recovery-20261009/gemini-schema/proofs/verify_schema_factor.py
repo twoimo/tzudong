@@ -3,11 +3,13 @@
 
 from __future__ import annotations
 
+import argparse
 import copy
 from collections import defaultdict
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -19,6 +21,39 @@ sys.path.insert(0, str(ROOT))
 
 from backend.knowledge_graph import claude_video_adapter as adapter  # noqa: E402
 from backend.knowledge_graph import longform_analysis as analysis  # noqa: E402
+
+
+def verified_checkout(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--watch-checkout",
+        type=Path,
+        default=os.environ.get("TZUDONG_CLAUDE_VIDEO_CHECKOUT"),
+        help="Explicit checkout of the pinned claude-video source",
+    )
+    args = parser.parse_args(argv)
+    if args.watch_checkout is None:
+        raise analysis.AnalysisError("WATCH_CHECKOUT_REQUIRED")
+    checkout = Path(args.watch_checkout).expanduser().resolve()
+    config = analysis.AnalysisConfig(
+        model="gemini-3.8-flash",
+        input_limit=1,
+        output_limit=65536,
+        model_evidence_hash="0" * 64,
+        checkout=checkout,
+    )
+    analysis.verify_checkout(config)
+    return checkout
+
+
+try:
+    WATCH_CHECKOUT = verified_checkout()
+except analysis.AnalysisError as error:
+    code = str(error)
+    if code not in {"WATCH_CHECKOUT_REQUIRED", "WATCH_CHECKOUT_UNAVAILABLE", "WATCH_CHECKOUT_DRIFT"}:
+        code = "WATCH_CHECKOUT_REJECTED"
+    print(json.dumps({"status": "rejected", "code": code}, sort_keys=True, separators=(",", ":")))
+    raise SystemExit(2) from None
 
 
 spec = importlib.util.spec_from_file_location(
@@ -127,7 +162,7 @@ for replacement_pointer, reference in proposal.FACTORS:
         }
     )
 
-engine = adapter.load_engine(analysis.DEFAULT_CHECKOUT)
+engine = adapter.load_engine(WATCH_CHECKOUT)
 row = {
     "videoId": "-D43ezc57z8",
     "durationSeconds": 835,
@@ -135,7 +170,8 @@ row = {
     "segmentStartSeconds": 0,
     "segmentEndSeconds": 835,
 }
-original_request = adapter.request_payload(
+request_builder = getattr(adapter, "predecessor_request_payload", adapter.request_payload)
+original_request = request_builder(
     engine,
     "gemini-3.8-flash",
     row["videoId"],

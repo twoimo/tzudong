@@ -244,6 +244,8 @@ function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagem
     const inactiveBannerCount = sortedBanners.length - activeBannerCount;
     const sidebarTargetCount = sortedBanners.filter((banner) => banner.display_target.includes('sidebar')).length;
     const mobileTargetCount = sortedBanners.filter((banner) => banner.display_target.includes('mobile_popup')).length;
+    const hasReliableBannerCounts = !bannersError;
+    const formatBannerCount = (count: number, suffix = '') => hasReliableBannerCounts ? `${count}${suffix}` : '미확인';
 
     if (!embedded && authLoading) {
         return null;
@@ -768,11 +770,11 @@ function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagem
             <div className={cn("relative z-10 flex min-h-0 flex-1 flex-col", embedded ? "h-full" : "container mx-auto min-h-screen max-w-7xl p-3 md:p-4")}>
                 <AdminPageHeader title="배너 관리" icon={ImageIcon}
                     data-admin-module-header={embedded ? "compact" : undefined} data-admin-module-header-module={embedded ? "banners" : undefined}
-                    summary={<>전체 {bannersLoading ? <InlineCountSkeleton /> : sortedBanners.length}개 · 활성 {bannersLoading ? <InlineCountSkeleton /> : activeBannerCount}개 · 비활성 {bannersLoading ? <InlineCountSkeleton /> : inactiveBannerCount}개</>}
+                    summary={<>전체 {bannersLoading ? <InlineCountSkeleton /> : formatBannerCount(sortedBanners.length, '개')} · 활성 {bannersLoading ? <InlineCountSkeleton /> : formatBannerCount(activeBannerCount, '개')} · 비활성 {bannersLoading ? <InlineCountSkeleton /> : formatBannerCount(inactiveBannerCount, '개')}</>}
                     actions={<div className="flex w-full min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center lg:w-auto" data-admin-module-actions={embedded ? "top-right" : undefined}>
                         <div className="flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
-                            <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Monitor className="mr-1 h-3.5 w-3.5" aria-hidden="true" />데스크톱 배너 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : sidebarTargetCount}</Badge>
-                            <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Smartphone className="mr-1 h-3.5 w-3.5" aria-hidden="true" />모바일 팝업 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : mobileTargetCount}</Badge>
+                            <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Monitor className="mr-1 h-3.5 w-3.5" aria-hidden="true" />데스크톱 배너 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : formatBannerCount(sidebarTargetCount)}</Badge>
+                            <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Smartphone className="mr-1 h-3.5 w-3.5" aria-hidden="true" />모바일 팝업 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : formatBannerCount(mobileTargetCount)}</Badge>
                         </div>
                         <Button onClick={openCreatePanel} disabled={isBusy || Boolean(pendingReadback)} className="h-9 w-full rounded-md bg-primary px-3 text-primary-foreground hover:bg-primary/90 sm:w-auto">
                             <Plus className="mr-2 h-4 w-4" aria-hidden="true" />새 배너

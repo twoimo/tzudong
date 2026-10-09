@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -8,6 +8,64 @@ import { applyMigrationWithTerminalReadback } from '../../../../scripts/apply-su
 import { migrationEnvelope, reconciliationSql } from '../../../../scripts/supabase-migration-transaction.mjs';
 
 const repositoryRoot = resolve(fileURLToPath(new URL('../../../../../..', import.meta.url)));
+
+const postgresMajor = value => {
+  const match = /(?:PostgreSQL\)?\s+)?(\d+)(?:\.\d+)?/.exec(String(value));
+  return match ? Number(match[1]) : null;
+};
+
+const engineContract = ({ pgConfigVersion, initdbVersion, pgCtlVersion, psqlVersion, serverVersionNum = null }) => {
+  const preStartupMajors = {
+    pgConfig: postgresMajor(pgConfigVersion),
+    initdb: postgresMajor(initdbVersion),
+    pgCtl: postgresMajor(pgCtlVersion),
+    psql: postgresMajor(psqlVersion),
+  };
+  const preStartupPassed = Object.values(preStartupMajors).every(major => major === 17);
+  const parsedVersionNum = /^\d+$/.test(String(serverVersionNum ?? '')) ? Number(serverVersionNum) : null;
+  const postStartupMajor = parsedVersionNum === null ? null : Math.trunc(parsedVersionNum / 10000);
+  const postStartupChecked = postStartupMajor !== null;
+  const postStartupPassed = postStartupChecked ? postStartupMajor === 17 : null;
+  return {
+    expectedMajor: 17,
+    preStartupMajors,
+    preStartupPassed,
+    postStartupMajor,
+    postStartupChecked,
+    postStartupPassed,
+    code: !preStartupPassed ? 'POSTGRES_MAJOR_UNSUPPORTED'
+      : postStartupChecked && !postStartupPassed ? 'POSTGRES_SERVER_MAJOR_UNSUPPORTED' : null,
+  };
+};
+
+const fixtureIndex = process.argv.indexOf('--engine-contract-fixture');
+if (fixtureIndex !== -1) {
+  let fixtureResult;
+  try {
+    const fixture = JSON.parse(readFileSync(process.argv[fixtureIndex + 1], 'utf8'));
+    const verification = engineContract(fixture);
+    const fixtureCode = verification.postStartupChecked ? verification.code : 'ENGINE_FIXTURE_INVALID';
+    fixtureResult = {
+      status: fixtureCode === null ? 'passed' : 'rejected',
+      engine: fixtureCode === null ? 'postgresql-17' : null,
+      engineVerification: verification,
+      failure: fixtureCode === null ? null : { code: fixtureCode },
+      fixtureOnly: true,
+      operatingDatabaseWrites: false,
+    };
+  } catch {
+    fixtureResult = {
+      status: 'rejected',
+      engine: null,
+      failure: { code: 'ENGINE_FIXTURE_INVALID' },
+      fixtureOnly: true,
+      operatingDatabaseWrites: false,
+    };
+  }
+  console.log(JSON.stringify(fixtureResult));
+  process.exit(fixtureResult.status === 'passed' ? 0 : 1);
+}
+
 const temporaryRoot = mkdtempSync('/tmp/tzudong-pr3150-pg17-');
 const dataDirectory = resolve(temporaryRoot, 'data');
 const socketDirectory = resolve(temporaryRoot, 'socket');
@@ -18,7 +76,8 @@ mkdirSync(fixtureDirectory);
 
 const result = {
   status: 'unconfirmed',
-  engine: 'postgresql-17',
+  engine: null,
+  expectedEngine: 'postgresql-17',
   network: 'unix-socket-only',
   operatingDatabaseWrites: false,
   cases: [],
@@ -42,10 +101,10 @@ function command(executable, args, options = {}) {
   return run.stdout || '';
 }
 
-const pgBindir = command('pg_config', ['--bindir']).trim();
-const initdb = resolve(pgBindir, 'initdb');
-const pgCtl = resolve(pgBindir, 'pg_ctl');
-const psql = resolve(pgBindir, 'psql');
+let initdb = null;
+let pgCtl = null;
+let psql = null;
+let serverStarted = false;
 
 function runPsql(query, { role = 'postgres', singleTransaction = false } = {}) {
   const args = [
@@ -116,9 +175,33 @@ function expect(condition, code) {
 }
 
 try {
+  const pgConfigVersion = command('pg_config', ['--version']).trim();
+  const pgBindir = command('pg_config', ['--bindir']).trim();
+  initdb = resolve(pgBindir, 'initdb');
+  pgCtl = resolve(pgBindir, 'pg_ctl');
+  psql = resolve(pgBindir, 'psql');
+  const preStartup = engineContract({
+    pgConfigVersion,
+    initdbVersion: command(initdb, ['--version']).trim(),
+    pgCtlVersion: command(pgCtl, ['--version']).trim(),
+    psqlVersion: command(psql, ['--version']).trim(),
+  });
+  result.engineVerification = preStartup;
+  expect(preStartup.preStartupPassed, preStartup.code);
   command(initdb, ['-D', dataDirectory, '-A', 'trust', '-U', 'postgres', '--no-locale', '--encoding=UTF8']);
   command(pgCtl, ['-D', dataDirectory, '-l', resolve(temporaryRoot, 'postgres.log'), '-o', `-F -k ${socketDirectory} -p ${port} -h ''`, '-w', 'start']);
+  serverStarted = true;
   result.serverVersion = runPsql("SELECT current_setting('server_version');").trim();
+  result.serverVersionNum = runPsql("SELECT current_setting('server_version_num');").trim();
+  result.engineVerification = engineContract({
+    pgConfigVersion,
+    initdbVersion: command(initdb, ['--version']).trim(),
+    pgCtlVersion: command(pgCtl, ['--version']).trim(),
+    psqlVersion: command(psql, ['--version']).trim(),
+    serverVersionNum: result.serverVersionNum,
+  });
+  expect(result.engineVerification.postStartupPassed, result.engineVerification.code);
+  result.engine = 'postgresql-17';
   runPsql('CREATE SCHEMA supabase_migrations; CREATE TABLE supabase_migrations.schema_migrations(version text PRIMARY KEY,name text,statements text[]);');
 
   const newTable = 'review_preimage_terminal';
@@ -277,7 +360,8 @@ try {
 } catch (error) {
   result.failure = { code: error.code ?? error.message };
 } finally {
-  try {
+  if (!serverStarted) result.cleanup.stopped = true;
+  else try {
     command(pgCtl, ['-D', dataDirectory, '-m', 'immediate', '-w', 'stop']);
     result.cleanup.stopped = true;
   } catch { result.cleanup.stopped = false; }

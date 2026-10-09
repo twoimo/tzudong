@@ -467,8 +467,10 @@ export function applyMigrationWithTerminalReadback(databaseUrl, migration, query
   const sql = atomicMigrationSql(plan, migration);
   const reconcile = reconciliationSql(plan, migration);
   let output;
+  let commandCompleted = false;
   try {
     output = runPsqlImpl(databaseUrl, sql, true);
+    commandCompleted = true;
     return assertExactReadback(parseReadback(output), migration.terminalReadback.expected, 'MIGRATION_TERMINAL_READBACK_FAILED');
   }
   catch (error) {
@@ -477,7 +479,8 @@ export function applyMigrationWithTerminalReadback(databaseUrl, migration, query
     let value; let disposition = 'unknown';
     try { value = parseReadback(runPsqlImpl(databaseUrl, reconcile, true)); disposition = reconciliationOutcome(value, migration); } catch { /* bounded unknown */ }
     if (disposition === 'committed' && boundedError.code === 'MIGRATION_ALREADY_APPLIED') throw operationError('MIGRATION_ALREADY_APPLIED');
-    if (disposition === 'committed' && ['MIGRATION_READBACK_INVALID', 'MIGRATION_TERMINAL_READBACK_FAILED'].includes(boundedError.code)) {
+    if (disposition === 'committed' && commandCompleted
+      && ['MIGRATION_READBACK_INVALID', 'MIGRATION_TERMINAL_READBACK_FAILED'].includes(boundedError.code)) {
       return assertExactReadback(value.terminal, migration.terminalReadback.expected, 'MIGRATION_TERMINAL_READBACK_FAILED');
     }
     if (disposition === 'not_applied') throw boundedError;

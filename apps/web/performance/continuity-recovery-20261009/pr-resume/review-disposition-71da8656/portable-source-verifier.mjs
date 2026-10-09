@@ -10,8 +10,13 @@ const anchoredHead = '71da8656c45981e927821e935a09e00820e0bbd8';
 const sourcePaths = [
   'apps/web/scripts/apply-supabase-migration.mjs',
   'apps/web/scripts/supabase-migration-transaction.mjs',
+  'apps/web/scripts/supabase-migration-bundle.mjs',
+  'apps/web/scripts/admin-record-sql-successor.mjs',
+  '.github/admin-record-sql-successor.v1.json',
   'apps/web/tests-unit/supabase-migration-apply-source.test.ts',
   'apps/web/tests-unit/supabase-migration-transaction.test.ts',
+  'apps/web/tests-unit/supabase-migration-bundle.test.ts',
+  'apps/web/tests-unit/admin-record-sql-successor.test.ts',
 ];
 const immutablePaths = [
   '.github/supabase-migration-release-manifest.v1.json',
@@ -61,8 +66,13 @@ const testOutput = command(bun, [
   'test',
   'apps/web/tests-unit/supabase-migration-transaction.test.ts',
   'apps/web/tests-unit/supabase-migration-apply-source.test.ts',
+  'apps/web/tests-unit/supabase-migration-bundle.test.ts',
+  'apps/web/tests-unit/admin-record-sql-successor.test.ts',
 ]);
-if (!/\b25 pass\b/.test(testOutput) || !/\b0 fail\b/.test(testOutput) || !/\b169 expect\(\) calls\b/.test(testOutput)) {
+const passed = Number(/\b(\d+) pass\b/.exec(testOutput)?.[1]);
+const failed = Number(/\b(\d+) fail\b/.exec(testOutput)?.[1]);
+const assertions = Number(/\b(\d+) expect\(\) calls\b/.exec(testOutput)?.[1]);
+if (!Number.isSafeInteger(passed) || passed <= 0 || failed !== 0 || !Number.isSafeInteger(assertions) || assertions <= 0) {
   throw new Error('BUN_RESULT_INVALID');
 }
 if (command(git, ['diff', '--check', '--', ...sourcePaths])) throw new Error('DIFF_CHECK_OUTPUT');
@@ -86,7 +96,7 @@ const result = {
   anchoredHead,
   currentHead: command(git, ['rev-parse', 'HEAD']).trim(),
   versions,
-  tests: { pass: 25, fail: 0, assertions: 169 },
+  tests: { pass: passed, fail: failed, assertions },
   sourceHashes,
   immutable,
   manifest: {

@@ -1,0 +1,20 @@
+{
+  "state": "cli_acknowledged_requires_readback",
+  "attempts": 2,
+  "sourceDeployment": "dpl_He2HgNHEkNsdbQg556dGJsreTEgr",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "gitSha": "614b249175c35636a7062bf05cb01ebad538b10d",
+  "target": "preview",
+  "withLatestCommit": false,
+  "productionChanged": false,
+  "mcpOutcome": "rejected",
+  "mcpHttpStatus": 400,
+  "mcpFixedCode": "bad_request",
+  "afterRejectedDispatchMatchedDeployments": 1,
+  "afterRejectedDispatchOnlyOriginal": true,
+  "newDeploymentAttempts": 1,
+  "cliExit": 0,
+  "url": "https://tzudong-fi9s0ycyh-twoimos-projects.vercel.app",
+  "stderrBytes": 510,
+  "stdoutBytes": 53
+}

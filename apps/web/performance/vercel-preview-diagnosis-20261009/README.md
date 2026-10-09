@@ -30,6 +30,26 @@
 
 feature branch에 develop metadata를 덧씌우거나 ignore-command/설정을 무시하도록 강제하는 경로는 제안하지 않는다. 현재 두 canceled URL은 정상 preview/render 증거가 아니며, 현재HEAD의 READY 배포도 이번 조회로 증명하지 않았다.
 
+## HTTP verifier 성공 계약
+
+`verify-merge-preview-http.py`는 expected path sequence 전체가 정확히 한 번씩
+수집되고, 모든 `vercel` CLI process가 exit0이며, 모든 public route가
+`200/301/302/303/307/308`이고 platform protection page가 아니며, 모든
+anonymous admin API가 bounded error code와 함께 `401/403`일 때만
+`status=passed`와 process exit0을 반환한다. `500`, CLI 실패·timeout, 누락,
+순서 변경, 조기 종료, admin `200`은 각각 고정 rejection code와 지금까지의
+partial records를 저장하고 nonzero로 끝난다. 실제 CLI 없이 판정 경계를
+재생할 때만 다음 offline fixture 경로를 사용한다.
+
+```sh
+python3 performance/vercel-preview-diagnosis-20261009/verify-merge-preview-http.py \
+  --evaluate-fixture /absolute/path/to/fixture.json \
+  --output /tmp/merge-preview-verifier-result.json
+```
+
+Fixture mode는 Vercel 명령을 실행하지 않으며 `fixtureOnly=true`를 기록한다.
+기존 `artifact-map.json`과 과거 HTTP 결과는 당시 증거이므로 수정하지 않는다.
+
 ## 수행 경계
 
 read-only 공식 metadata/events 조회와 local source 결정 재생만 수행했다. source/config/env/freeze 수정0, 배포생성/취소/재배포0, 실제preview HTTP/브라우저요청0, 운영DB/provider/model 호출0. 기존user탭/서비스/PID와 과거 evidence를 보존했다. 새runtime server/브라우저handle은 만들지 않았다.
