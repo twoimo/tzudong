@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-09T16:59:13.563Z",
+  "deploymentId": "dpl_CLEMRdaLUrai3Ph9J2czNRA64pyw",
+  "sourceRevision": "8257581e09f6f58f72f6e0e2c4aa7e6c72caab43",
+  "path": "/api/admin/record-actions",
+  "status": 423,
+  "success": false,
+  "code": "RECORD_ACTION_MAINTENANCE",
+  "sameOriginUiRequest": true,
+  "credentialsRecorded": false,
+  "requestBodyRecorded": false
+}

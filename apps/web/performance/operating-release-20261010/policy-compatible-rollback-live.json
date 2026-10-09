@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "vercel-rollback-readback",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "teamId": "team_OUj64KeLxJI3PkEbOaFZnorA",
+  "deploymentId": "dpl_CLEMRdaLUrai3Ph9J2czNRA64pyw",
+  "deploymentUrl": "https://tzudong-a7wf62m0v-twoimos-projects.vercel.app/",
+  "readyState": "READY",
+  "target": "production",
+  "repository": "twoimo/tzudong",
+  "gitSha": "8257581e09f6f58f72f6e0e2c4aa7e6c72caab43",
+  "gitRef": "main",
+  "productionAliases": [
+    "tzudong.app",
+    "www.tzudong.app"
+  ],
+  "observedAt": "2026-10-09T17:23:02.968Z"
+}
