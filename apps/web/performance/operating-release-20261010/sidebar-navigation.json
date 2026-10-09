@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "kind": "authenticated-production-sidebar-navigation",
+  "sourceRevision": "8257581e09f6f58f72f6e0e2c4aa7e6c72caab43",
+  "deploymentId": "dpl_CLEMRdaLUrai3Ph9J2czNRA64pyw",
+  "menuCount": 15,
+  "scope": "navigation and visible load checks; no business write or provider generation proof",
+  "pages": [
+    {
+      "menu": "제보 관리 대기 4건",
+      "url": "https://www.tzudong.app/admin?module=submissions",
+      "observedAt": "2026-10-09T17:42:43.100Z",
+      "authFailure": false,
+      "diagrams": 0,
+      "heading": [
+        "제보 관리"
+      ],
+      "loadFailure": false,
+      "tables": 0
+    },
+    {
+      "menu": "리뷰 관리 대기 6건",
+      "url": "https://www.tzudong.app/admin?module=reviews",
+      "observedAt": "2026-10-09T17:42:46.170Z",
+      "authFailure": false,
+      "diagrams": 0,
+      "heading": [
+        "리뷰 관리"
+      ],
+      "loadFailure": false,
+      "tables": 1,
+      "initialTextMatchWasFalsePositive": true,
+      "subsequentAlertCount": 0,
+      "subsequentRowCount": 6
+    },
+    {
+      "menu": "배너 관리",
+      "url": "https://www.tzudong.app/admin?module=banners",
+      "observedAt": "2026-10-09T17:42:49.231Z",
+      "authFailure": false,
+      "diagrams": 0,
+      "heading": [
+        "배너 관리",
+        "배너 목록"
+      ],
+      "loadFailure": false,
+      "tables": 0
+    },
+    {
+      "menu": "영상 성과 분석",
+      "url": "https://www.tzudong.app/admin?module=insights",
+      "observedAt": "2026-10-09T17:42:52.336Z",
+      "authFailure": false,
+      "diagrams": 0,
+      "heading": [
+        "영상 성과 분석"
+      ],
+      "loadFailure": false,
+      "tables": 0
+    },
+    {
+      "menu": "크롤러 파이프라인",
+      "url": "https://www.tzudong.app/admin?module=pipeline",
+      "observedAt": "2026-10-09T17:42:55.401Z",
+      "authFailure": false,
+      "diagrams": 1,
+      "heading": [
+        "크롤러 파이프라인"
+      ],
+      "loadFailure": false,
+      "tables": 0
+    },
+    {
+      "menu": "지식 그래프",
+      "url": "https://www.tzudong.app/admin?module=knowledge-graph",
+      "observedAt": "2026-10-09T17:43:45.098Z",
+      "authFailure": false,
+      "diagrams": 1,
+      "heading": [
+        "쯔양 지식 그래프"
+      ],
+      "loadFailure": false,
+      "tables": 0
+    },
+    {
+      "menu": "오류 모니터링",
+      "url": "https://www.tzudong.app/admin?module=sentry",
+      "observedAt": "2026-10-09T17:43:48.166Z",
+      "authFailure": false,
+      "diagrams": 0,
+      "heading": [
+        "Sentry 오류 모니터링",
+        "Sentry 연결 미설정"
+      ],
+      "loadFailure": false,
+      "tables": 0
+    },
+    {
+      "menu": "유튜브 썸네일 생성",
+      "url": "https://www.tzudong.app/admin?module=youtube-thumbnail-generator",
+      "observedAt": "2026-10-09T17:43:51.240Z",
+      "authFailure": false,
+      "diagrams": 0,
+      "heading": [
+        "유튜브 썸네일 생성"
+      ],
+      "loadFailure": false,
+      "tables": 0
+    },
+    {
+      "menu": "스토리보드 생성",
+      "url": "https://www.tzudong.app/admin?module=storyboard",
+      "observedAt": "2026-10-09T17:43:54.346Z",
+      "authFailure": false,
+      "diagrams": 0,
+      "heading": [
+        "스토리보드"
+      ],
+      "loadFailure": false,
+      "tables": 0
+    },
+    {
+      "menu": "맛집 동선 추천",
+      "url": "https://www.tzudong.app/admin?module=routes",
+      "observedAt": "2026-10-09T17:43:57.481Z",
+      "authFailure": false,
+      "diagrams": 0,
+      "heading": [
+        "맛집 동선 추천",
+        "옛날김밥"
+      ],
+      "loadFailure": false,
+      "tables": 0
+    },
+    {
+      "menu": "운영 보조",
+      "url": "https://www.tzudong.app/admin?module=llm",
+      "observedAt": "2026-10-09T17:44:00.579Z",
+      "authFailure": false,
+      "diagrams": 0,
+      "heading": [
+        "운영 보조"
+      ],
+      "loadFailure": false,
+      "tables": 1
+    },
+    {
+      "menu": "감사 로그",
+      "url": "https://www.tzudong.app/admin?module=audit",
+      "observedAt": "2026-10-09T17:44:03.648Z",
+      "authFailure": false,
+      "diagrams": 0,
+      "heading": [
+        "감사 로그"
+      ],
+      "loadFailure": false,
+      "tables": 0
+    },
+    {
+      "menu": "대시보드 (KPI)",
+      "url": "https://www.tzudong.app/admin",
+      "observedAt": "2026-10-09T17:44:06.788Z",
+      "authFailure": false,
+      "diagrams": 0,
+      "heading": [
+        "대시보드 (KPI)",
+        "쯔양 성과 대시보드"
+      ],
+      "loadFailure": false,
+      "tables": 0
+    }
+  ],
+  "additionalPages": [
+    {
+      "menu": "맛집 관리",
+      "wholeCount": 1659,
+      "firstPageRows": 50
+    },
+    {
+      "menu": "사용자 관리",
+      "loadFailure": true,
+      "rpcNotInstalled": true
+    }
+  ],
+  "sentryConfigured": false,
+  "credentialsRecorded": false,
+  "userRowsRecorded": false
+}

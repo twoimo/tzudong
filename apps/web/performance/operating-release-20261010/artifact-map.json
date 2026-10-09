@@ -1,0 +1,39 @@
+{
+  "artifacts": {
+    "attempt-reconciliation-safe.json": {
+      "bytes": 1231,
+      "sha256": "fc217d39488cfa05ffad65bb4703f8e9c2ac5434749d79c4e4230fad9854e329"
+    },
+    "authenticated-write-hold-readback.json": {
+      "bytes": 375,
+      "sha256": "30fb8ac65a4067d61e314164f1c23824aed49af0075a20d21adfb683ee62c965"
+    },
+    "final-source-validation.json": {
+      "bytes": 577,
+      "sha256": "4e7fb3e2febc100179f3d3e53608860b4908d9ae54d6f8465e6a4ff30c5b6488"
+    },
+    "guard-error-safe.json": {
+      "bytes": 809,
+      "sha256": "5fbe38876c9f94af8079d62217b1bd52a82fab6caf1c4241ebf91be135b1b28f"
+    },
+    "live-admin-readback.json": {
+      "bytes": 1193,
+      "sha256": "dd95f135af90e31569c96367838fd91687ab910972aa2536b23caa5278da653a"
+    },
+    "policy-compatible-rollback-live.json": {
+      "bytes": 566,
+      "sha256": "145eecc525421b003c019a68653f7ed8c9e0d1946ed70ec6d3a442b65c4630e3"
+    },
+    "promoted-alias-health.json": {
+      "bytes": 676,
+      "sha256": "9133dc450bf0d50ec0eb70c79f141799ad1cef79d88161c77987ce84ca949e99"
+    },
+    "sidebar-navigation.json": {
+      "bytes": 4953,
+      "sha256": "21da064b0dd70f6683c357de9c3121b5b2086a921247e1a4593bdcbe46b2a933"
+    }
+  },
+  "kind": "operating-release-safe-artifact-map",
+  "schemaVersion": 1,
+  "scope": "deployment and failed SQL attempt; no operating success or performance claim"
+}
