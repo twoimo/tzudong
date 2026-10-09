@@ -2949,8 +2949,8 @@ describe("web quality performance source contracts", () => {
     expect(feedPageSource).toContain(
       "const target = reviewId ? `/?panel=feed&review=${encodeURIComponent(reviewId)}` : '/?panel=feed';",
     );
-    expect(stampPageSource).toContain("parameters.set('panel', 'stamp')");
-    expect(stampPageSource).toContain('router.replace(`/?${parameters.toString()}`)');
+    expect(stampPageSource).toContain('buildDesktopStampHomeRedirectPath(window.location.search)');
+    expect(stampPageSource).toContain('if (redirectPath) router.replace(redirectPath)');
     expect(leaderboardPageSource).toContain(
       "router.replace('/?panel=leaderboard')",
     );
