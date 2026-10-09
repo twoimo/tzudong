@@ -1,0 +1,47 @@
+{
+  "kind": "live-synthetic-ocr-readback",
+  "measuredAt": "2026-10-08T23:00:17.579Z",
+  "models": [
+    "gemini-3.6-flash"
+  ],
+  "syntheticInput": true,
+  "operationalDatabaseWrites": 0,
+  "maximumCalls": 1,
+  "callsStarted": 1,
+  "configurationSource": "current-candidate-and-existing-vault-copy",
+  "sourceCommit": "b085e1d36ad8a8bc5626738b9921b194f50324a1",
+  "sourceHashes": {
+    "lib/ocr/gemini.ts": "9299f5eeaffe145018d6b57b28ab565c5a901ec7d8fe9acefd166ee6b98a9d50",
+    "lib/ocr/runtime-config.ts": "cff9c05631ac5506099c1f8892bdd7e8edeb87e8ef404e38a3a46c9c8efc86fd",
+    "lib/ocr/receipt-prompt.ts": "b970646c0936d8660108c09ed87a4259eadc7ea834ef4e3774b05ceb591e88a2",
+    "scripts/verify-ocr-gemini-live.ts": "b01918cb95ecb483c690311c20900e7892070963cf0fbc76614b35afcc5ee8b6"
+  },
+  "sampleCount": 1,
+  "confidenceInterval95": null,
+  "limits": [
+    "Single synthetic receipt only; no general accuracy or speed comparison.",
+    "Candidate helper call only; no Auth/quota/DB/browser operating flow.",
+    "No deployment or promotional credit deduction receipt."
+  ],
+  "inputSha256": "de860d67e2fab63da7b8bc4636b0f2e05d0d69b121c42f0dabf2f42a08239999",
+  "pending": null,
+  "responseModel": "gemini-3.6-flash",
+  "usage": {
+    "promptTokens": 1495,
+    "outputTokens": 128,
+    "thoughtTokens": 265,
+    "totalTokens": 1888
+  },
+  "elapsedMs": 3519.3889169999998,
+  "matches": {
+    "model": true,
+    "store": true,
+    "date": true,
+    "time": true,
+    "total": true,
+    "items": true,
+    "arithmetic": true
+  },
+  "outputSha256": "ef0c5e153e177c636d6315c797dfa86137eb6a158a126b123faeaac646010957",
+  "passed": true
+}
