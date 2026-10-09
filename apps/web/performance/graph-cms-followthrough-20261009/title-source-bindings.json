@@ -1,0 +1,91 @@
+{
+  "privateSourceContentCopied": false,
+  "records": [
+    {
+      "videoId": "F93TnnxCNvY",
+      "sourceTitlePresent": true,
+      "sourceTitleSha256": "b1f750cf11d049001f36ba0e0718ff70382a799f4294ccdb4d0bfea1d5342edd",
+      "reviewFileSha256": "8655d8288e0744c52e43f3f83560c42bde3ff49a6f81a17fc4ec22933962a1d2",
+      "reviewFileBytes": 7528,
+      "titleUtf8Bytes": 129,
+      "indexTitleExactMatch": true
+    },
+    {
+      "videoId": "3Z-ngM3DVi0",
+      "sourceTitlePresent": true,
+      "sourceTitleSha256": "8aecf7e8a93340c9d40c7514761bc423153d6882af5c84453cb38bf64e610f0d",
+      "reviewFileSha256": "b7fdfe2538c6800a7167f4147586f98458bbe9feae6712f7b9c1c6887d8b2120",
+      "reviewFileBytes": 15286,
+      "titleUtf8Bytes": 118,
+      "indexTitleExactMatch": true
+    },
+    {
+      "videoId": "BTyT60UWiLc",
+      "sourceTitlePresent": true,
+      "sourceTitleSha256": "4b9fa668072320c92d3442c8848af381b9bcbe0da14481a28e63f0d5e309aec0",
+      "reviewFileSha256": "fda2dabeb3c51a5f1e2ec4630de8418013a2920645fb9349260d645ae1501aab",
+      "reviewFileBytes": 7249,
+      "titleUtf8Bytes": 123,
+      "indexTitleExactMatch": true
+    },
+    {
+      "videoId": "-C4280KT3S4",
+      "sourceTitlePresent": true,
+      "sourceTitleSha256": "aa5fa0f3ccfb2aa0d8cc687cdd425a63be953dda8d06683f8435a93c853b2594",
+      "reviewFileSha256": "aed9f6f111863bcb6e1895dfd893c8d3766642fc16d6ff472cd43a8f24be76a5",
+      "reviewFileBytes": 10919,
+      "titleUtf8Bytes": 138,
+      "indexTitleExactMatch": true
+    },
+    {
+      "videoId": "Tsy8xRjMpB0",
+      "sourceTitlePresent": true,
+      "sourceTitleSha256": "02a60ed74ed74d6fd48c2ebdaf215743e7db70b8c0bac0fb1313e7c36e3cbf26",
+      "reviewFileSha256": "169c1b7f42b06595f8105d5e2acc8b481cbf0ae3b75e47a1eaeecb4776c7ff18",
+      "reviewFileBytes": 39235,
+      "titleUtf8Bytes": 109,
+      "indexTitleExactMatch": true
+    },
+    {
+      "videoId": "xRf_bhPFZrY",
+      "sourceTitlePresent": true,
+      "sourceTitleSha256": "8e602c4c629644ed066863df00fc6fca1e88889bb809299c75e21f6f709d68a4",
+      "reviewFileSha256": "a03c2e29f2225880e6e1d9a8c6aa3250c82d5fdbc0f16e6b40df4ab35aa413e3",
+      "reviewFileBytes": 9291,
+      "titleUtf8Bytes": 117,
+      "indexTitleExactMatch": true
+    },
+    {
+      "videoId": "zkOBLQUSEr0",
+      "sourceTitlePresent": true,
+      "sourceTitleSha256": "3b4c259c293b149616d4cde7eacd89a5ad6807301f63c2306781678323658497",
+      "reviewFileSha256": "21acf8662fec10ff84a7beeced0ea083484fb030072fa8c1c76dbdff53d36c6a",
+      "reviewFileBytes": 51355,
+      "titleUtf8Bytes": 94,
+      "indexTitleExactMatch": true
+    },
+    {
+      "videoId": "DNGGl1-jFcU",
+      "sourceTitlePresent": true,
+      "sourceTitleSha256": "e229fb8b4cbb4c073371d05017902f94ea52c53bc9d0766cdba57bed04051c5a",
+      "reviewFileSha256": "bb85a33e648e9514c007cf06e5c3b38844649abf713f3623e07a61bc36bfc197",
+      "reviewFileBytes": 38018,
+      "titleUtf8Bytes": 124,
+      "indexTitleExactMatch": true
+    },
+    {
+      "videoId": "Ck5UrobZuKA",
+      "sourceTitlePresent": true,
+      "sourceTitleSha256": "d7af697c1214637d90a85b86ac4d0c45e82b96aa8da98c496992d300a459ae4b",
+      "reviewFileSha256": "1ff26606e96cce5ef8539ece3cbd55561a050e16634ffd5ab5fafdb19b3f073c",
+      "reviewFileBytes": 10391,
+      "titleUtf8Bytes": 124,
+      "indexTitleExactMatch": true
+    }
+  ],
+  "corpusIndexBinding": {
+    "relativePath": "source/corpus/video-index.json",
+    "bytes": 261864,
+    "sha256": "b33dd8c220f62e590e6888f89a77f5e9d454d2b6b63d8c29f47d0aa5cd071762"
+  }
+}

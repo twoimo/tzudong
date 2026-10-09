@@ -1,0 +1,18 @@
+{
+  "fixture": true,
+  "before": {
+    "emptyDetailWidth": 489.59375,
+    "listWidth": 660.390625,
+    "width": 1440
+  },
+  "after": {
+    "documentWidth": 1440,
+    "emptyDetailPresent": false,
+    "listWidth": 1158,
+    "width": 1440
+  },
+  "absoluteWidthChange": 497.609375,
+  "widthChangePercent": 75.35076304270673,
+  "sampleCount": 1,
+  "confidenceScope": "Deterministic layout geometry at one fixed viewport; no productivity or latency claim"
+}

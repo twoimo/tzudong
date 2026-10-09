@@ -55,9 +55,9 @@ async function buildReport(args) {
   }
 
   try {
-    const { GoogleGenAI } = await import('@google/genai');
-    const ai = new GoogleGenAI({ apiKey });
-    await ai.models.generateContent({
+    const { createGeminiClient, generateWithProjectBudget } = await import('../utils/gemini-client.mjs');
+    const ai = createGeminiClient(apiKey);
+    await generateWithProjectBudget(ai, {
       model: args.model,
       contents: 'Reply with only: ok',
       config: {

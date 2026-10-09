@@ -1,0 +1,29 @@
+{
+  "evidence": "local-browser-with-synthetic-read-responses",
+  "hostedEvidence": false,
+  "modules": [
+    {
+      "module": "overview",
+      "shellAndHeaderVisible": true
+    },
+    {
+      "module": "restaurants",
+      "shellAndHeaderVisible": true
+    },
+    {
+      "module": "knowledge-graph",
+      "shellAndHeaderVisible": true
+    },
+    {
+      "module": "sentry",
+      "shellAndHeaderVisible": true
+    },
+    {
+      "module": "storyboard",
+      "shellAndHeaderVisible": true
+    }
+  ],
+  "keyboard": {},
+  "pageErrorCount": 0,
+  "blockedMutationCount": 0
+}

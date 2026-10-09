@@ -1,0 +1,66 @@
+{
+  "kind": "synthetic-local-ui-geometry",
+  "sourceBase": "da0dae8962f30dda85da9168e11ee8caf3a3cc1d",
+  "before": {
+    "width": 390,
+    "height": 844,
+    "cardHeights": [
+      224,
+      224,
+      224
+    ],
+    "fullyVisible": 1,
+    "overflow": 0
+  },
+  "after": [
+    {
+      "width": 390,
+      "height": 844,
+      "cards": 25,
+      "cardHeights": [
+        116,
+        116,
+        116
+      ],
+      "fullyVisible": 2,
+      "overflow": 0,
+      "overlays": 0
+    },
+    {
+      "width": 834,
+      "height": 1194,
+      "cards": 25,
+      "cardHeights": [
+        116,
+        116,
+        116
+      ],
+      "fullyVisible": 12,
+      "overflow": 0,
+      "overlays": 0
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "rows": 25,
+      "overflow": 0,
+      "overlays": 0
+    }
+  ],
+  "comparison": {
+    "metric": "mobile_card_height_px",
+    "before": 224,
+    "after": 116,
+    "absoluteDifference": -108,
+    "changePercent": -48.21428571428571,
+    "samples": 1,
+    "confidenceInterval95": null,
+    "reason": "One fixed fixture state; no population estimate."
+  },
+  "viewportConditions": 3,
+  "hostedMutation": false,
+  "attempts": [
+    "manual-stop-dialog-390-attempt.png: viewport changed and modal closed; not accepted dialog evidence.",
+    "Desktop mobile-card wait timed out because the desktop uses a table; corrected readiness observed 25 table rows."
+  ]
+}

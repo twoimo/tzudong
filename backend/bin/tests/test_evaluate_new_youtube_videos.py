@@ -195,9 +195,9 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
             ROOT / "backend/restaurant-evaluation/scripts/10-rule-evaluation.py"
         ).read_text(encoding="utf-8")
         self.assertIn('--video-id', target)
-        self.assertIn("if not requested and (selection_file.exists()", target)
+        self.assertIn("if not requested and reusable(receipt, input_hash, existing_outputs)", target)
         self.assertIn('--video-id', rule)
-        self.assertIn("if not requested and output_file.exists()", rule)
+        self.assertIn("if not requested and reusable(receipt, input_hash, [output_file])", rule)
 
     def test_shared_runner_calls_evaluate_then_apply(self) -> None:
         runner = (

@@ -1,0 +1,92 @@
+{
+  "kind": "read-only-storage-reuse-audit",
+  "clientDate": "2026-10-08",
+  "root": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong",
+  "regularFiles": 68349,
+  "logicalBytes": 2517213352,
+  "allocatedFileBytes": 2710454272,
+  "volumeAvailableBytes": 299136806912,
+  "boundary": "No symlink traversal; hardlinked inodes counted once; allocated file blocks do not attest exclusive APFS physical allocation. Volume availability is separately observed and shared across sessions.",
+  "top": {
+    "apps/web/.next": {
+      "logicalBytes": 1192361121,
+      "allocatedBytes": 1204461568,
+      "files": 4525
+    },
+    "apps/web/node_modules": {
+      "logicalBytes": 860228761,
+      "allocatedBytes": 1025843200,
+      "files": 57082
+    },
+    "apps/web/performance": {
+      "logicalBytes": 297009541,
+      "allocatedBytes": 304971776,
+      "files": 3528
+    },
+    "apps/web/public": {
+      "logicalBytes": 53594671,
+      "allocatedBytes": 53747712,
+      "files": 72
+    },
+    "apps/web/tests": {
+      "logicalBytes": 27222163,
+      "allocatedBytes": 27344896,
+      "files": 60
+    },
+    "backend": {
+      "logicalBytes": 21656735,
+      "allocatedBytes": 24350720,
+      "files": 1217
+    },
+    "apps/web/.next-local-18080": {
+      "logicalBytes": 14684858,
+      "allocatedBytes": 14802944,
+      "files": 39
+    },
+    "docs": {
+      "logicalBytes": 13179609,
+      "allocatedBytes": 13516800,
+      "files": 154
+    },
+    "assets": {
+      "logicalBytes": 11420784,
+      "allocatedBytes": 11423744,
+      "files": 1
+    },
+    "apps/web/components": {
+      "logicalBytes": 6515083,
+      "allocatedBytes": 6967296,
+      "files": 190
+    },
+    "apps/web/tests-unit": {
+      "logicalBytes": 4785476,
+      "allocatedBytes": 5636096,
+      "files": 406
+    },
+    "apps/web/.lazyweb": {
+      "logicalBytes": 4221174,
+      "allocatedBytes": 4247552,
+      "files": 15
+    }
+  },
+  "changes": {
+    "deletions": 0,
+    "uploads": 0,
+    "operatingStops": 0
+  },
+  "reuse": {
+    "webDependencies": "existing npm lock runtime reused",
+    "pythonTestEnvironment": "existing isolated uv environment reused",
+    "currentBuildOutput": "one .next path, own clean/rebuild script reused",
+    "pgClones": "prior task-owned container and its anonymous volumes already removed; original schema snapshots and recovery scripts retained",
+    "sourcePackageLockSha256": "e51df090f491484d0b6f60e749ff1ab0f2df59437d91151dfbb4eb18fca362eb"
+  },
+  "comparison": {
+    "priorObservedAt": "2026-10-08T19:00:59.392057+09:00",
+    "priorAllocatedBytes": 2710323200,
+    "currentAllocatedBytes": 2710454272,
+    "absoluteAllocatedDifferenceBytes": 131072,
+    "scope": "file allocation observations; not a causal or exclusive APFS disk-saving claim"
+  },
+  "preservedUnownedDevOutput": "apps/web/.next-local-18080 retained; ownership and active state were not inferred from size"
+}

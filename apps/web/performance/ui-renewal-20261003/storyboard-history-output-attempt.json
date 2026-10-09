@@ -1,0 +1,48 @@
+{
+  "kind": "local-postgresql-storyboard-migration",
+  "operationalDatabaseChanges": false,
+  "migrations": [
+    {
+      "file": "20260918021531_storyboard_mlx_worker.sql",
+      "sha256": "3584d659ad253971771bc1a1f49e2f19e837e609e375c22c078673095105a5fa"
+    },
+    {
+      "file": "20260920021531_storyboard_historical_restore.sql",
+      "sha256": "6cd66d48f9fde8b86d89f089da3a5f4cc15dd85475fa0769e5724d40f68d2b95"
+    },
+    {
+      "file": "20261003000812_storyboard_gemini_only.sql",
+      "sha256": "a8b26fae49470cab9f1f6e6471930c48b16ddf3b91f18f734bdf24b4f2930470"
+    },
+    {
+      "file": "20261003182338_storyboard_service_role_bridge.sql",
+      "sha256": "9cf584085e89ae52d728bf145f534cf69bb500fc04b85ad577fc103020b88ff5"
+    }
+  ],
+  "assertions": {
+    "idempotent_create": true,
+    "remote_models_claim_without_fake_disk_bytes": true,
+    "draft_checkpoint_readback": true,
+    "non_gemini_create_denied": true,
+    "stale_lease_rejected": true,
+    "duplicate_result_rejected_without_resend": true,
+    "five_images_checkpoint_and_finish_ready": true,
+    "cas_edit_and_restore_replay_preserve_assets": true,
+    "expired_lease_backoff_and_restart": true,
+    "active_cancel_readback": true,
+    "concurrent_workers_never_double_claim": true,
+    "browser_roles_denied": true,
+    "empty_search_path_preserved": true,
+    "existing_auth_table_grants_unchanged": true,
+    "bridge_reapply_preserves_all_seven_data_tables": true,
+    "legacy_public_definers_removed": true
+  },
+  "postgresVersion": "17.6",
+  "passed": true,
+  "limitations": [
+    "Synthetic fixture database only.",
+    "Real Supabase Storage object upload/download and provider inference are separate tests; fixture asset metadata only."
+  ],
+  "acceptedAsOriginalArtifact": false,
+  "attemptReason": "History verifier output path accidentally used the older artifact name; the older bytes were restored from the frozen commit."
+}

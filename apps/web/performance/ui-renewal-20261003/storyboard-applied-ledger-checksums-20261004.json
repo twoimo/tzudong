@@ -1,0 +1,18 @@
+{
+  "kind": "read-only-hosted-ledger-checksums",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "migrations": [
+    {
+      "version": "20261003000711",
+      "name": "storyboard_production_foundation",
+      "statement_count": 1,
+      "statements_sha256": "3364e8c2857b6cb89975f1f91c4b36ffc6007804002152b1db93a597765d5e7e"
+    },
+    {
+      "version": "20261003000811",
+      "name": "storyboard_historical_restore",
+      "statement_count": 1,
+      "statements_sha256": "27f610ca03aa1f2513a99c7984f4d07874bbdc9f1069cf2de1775e5cd1da5100"
+    }
+  ]
+}

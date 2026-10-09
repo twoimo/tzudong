@@ -1,0 +1,59 @@
+{
+  "sourceHead": "15d82aa12680b3b3609c8c41aa3599bed82837db",
+  "guardedSqlSha256": "04d993212374b7be75e39452a189e6a990282f08e1993d622a4b24df681f1294",
+  "context": "colima-tzudong-catalog-20261007",
+  "ownership": "Generator-owned mktemp g014-catalog-contract and random g014catalog Compose project only; generator cleanup trap",
+  "steps": [
+    {
+      "stage": "run-a",
+      "command": [
+        "/opt/homebrew/bin/bash",
+        "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+        "--output-dir",
+        "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/current-schema-record-20261009/pg15/head-15d82aa1/run-a",
+        "--docker-context",
+        "colima-tzudong-catalog-20261007"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 143.065,
+      "fixedCode": "CANONICAL_STEP_PASS",
+      "stdoutSha256": "eee851180841c02acbc5881e7c663ead0d9a66206de1eb2d84e908679ded2dd6",
+      "stderrSha256": "828e01e1ad0b60b76b5e2f9fb89bbddb73601d57d21de44069d133cb9533b261"
+    },
+    {
+      "stage": "run-b",
+      "command": [
+        "/opt/homebrew/bin/bash",
+        "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+        "--output-dir",
+        "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/current-schema-record-20261009/pg15/head-15d82aa1/run-b",
+        "--docker-context",
+        "colima-tzudong-catalog-20261007"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 131.305,
+      "fixedCode": "CANONICAL_STEP_PASS",
+      "stdoutSha256": "a023f8f12acbc9813d93c2a4d14ae43230b50aeec7b04e5012e36593579a49db",
+      "stderrSha256": "6360a5d2d893ce4ac52210ec98ed73cacd2c185760cb543993a6f91cb27d4242"
+    },
+    {
+      "stage": "compare",
+      "command": [
+        "python3",
+        "backend/supabase/scripts/compare_g024_clean_replays.py",
+        "--left",
+        "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/current-schema-record-20261009/pg15/head-15d82aa1/run-a",
+        "--right",
+        "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/current-schema-record-20261009/pg15/head-15d82aa1/run-b",
+        "--output",
+        "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/current-schema-record-20261009/pg15/head-15d82aa1/dual-clean-replay.json"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.062,
+      "fixedCode": "CANONICAL_STEP_PASS",
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "hostedOperationExecuted": false
+}

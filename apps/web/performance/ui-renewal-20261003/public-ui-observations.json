@@ -1,0 +1,56 @@
+{
+  "kind": "local-synthetic-public-ui-rendering",
+  "hostedUserData": false,
+  "liveMapProviderVerified": false,
+  "screens": [
+    {
+      "name": "mobile map/search/detail",
+      "viewport": [
+        390,
+        844
+      ],
+      "fixtureRestaurants": 25,
+      "reviewCardsInSelectedDetail": 3,
+      "horizontalOverflowPx": 0
+    },
+    {
+      "name": "mobile feed",
+      "viewport": [
+        390,
+        844
+      ],
+      "renderedCards": 15,
+      "horizontalOverflowPx": 0
+    },
+    {
+      "name": "mobile leaderboard",
+      "fixtureRows": 3,
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "name": "mobile no-photo stamp card",
+      "viewport": [
+        390,
+        844
+      ],
+      "cardWidthPx": 358,
+      "cardHeightPx": 82
+    },
+    {
+      "name": "tablet signup/stamp",
+      "viewport": [
+        834,
+        1194
+      ],
+      "horizontalOverflowPx": 0
+    }
+  ],
+  "limits": [
+    "Anonymous and synthetic profile views only; authenticated personal pages remain to verify.",
+    "No before/after task-completion latency claim.",
+    "Initial blank/transient images remain capture attempts."
+  ]
+}

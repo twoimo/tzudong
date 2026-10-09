@@ -1,0 +1,176 @@
+[
+  {
+    "kind": "ffmpeg-start",
+    "at": 1852536641106041,
+    "pid": 87470
+  },
+  {
+    "kind": "ffmpeg-start",
+    "at": 1852536641394500,
+    "pid": 87468
+  },
+  {
+    "kind": "ffmpeg-start",
+    "at": 1852536641475208,
+    "pid": 87471
+  },
+  {
+    "kind": "ffmpeg-start",
+    "at": 1852536641536833,
+    "pid": 87469
+  },
+  {
+    "kind": "ffmpeg-end",
+    "at": 1852536678818833,
+    "pid": 87469,
+    "code": 0
+  },
+  {
+    "kind": "ffmpeg-end",
+    "at": 1852536681693291,
+    "pid": 87468,
+    "code": 0
+  },
+  {
+    "kind": "ffmpeg-end",
+    "at": 1852536684645000,
+    "pid": 87470,
+    "code": 0
+  },
+  {
+    "kind": "ffmpeg-end",
+    "at": 1852536685087250,
+    "pid": 87471,
+    "code": 0
+  },
+  {
+    "kind": "ffmpeg-start",
+    "at": 1852536742278666,
+    "pid": 87479
+  },
+  {
+    "kind": "ffmpeg-start",
+    "at": 1852536742325666,
+    "pid": 87478
+  },
+  {
+    "kind": "ffmpeg-start",
+    "at": 1852536756581666,
+    "pid": 87480
+  },
+  {
+    "kind": "ffmpeg-start",
+    "at": 1852536756990958,
+    "pid": 87481
+  },
+  {
+    "kind": "ffmpeg-end",
+    "at": 1852536777529000,
+    "pid": 87478,
+    "code": 0
+  },
+  {
+    "kind": "ffmpeg-end",
+    "at": 1852536780680333,
+    "pid": 87479,
+    "code": 0
+  },
+  {
+    "kind": "ffmpeg-end",
+    "at": 1852536798197208,
+    "pid": 87480,
+    "code": 0
+  },
+  {
+    "kind": "ffmpeg-end",
+    "at": 1852536800920958,
+    "pid": 87481,
+    "code": 0
+  },
+  {
+    "kind": "ffmpeg-start",
+    "at": 1852536824398833,
+    "pid": 87487
+  },
+  {
+    "kind": "ffmpeg-start",
+    "at": 1852536831917583,
+    "pid": 87488
+  },
+  {
+    "kind": "ffmpeg-start",
+    "at": 1852536851358750,
+    "pid": 87491
+  },
+  {
+    "kind": "ffmpeg-start",
+    "at": 1852536851420250,
+    "pid": 87490
+  },
+  {
+    "kind": "ffmpeg-end",
+    "at": 1852536859240583,
+    "pid": 87487,
+    "code": 0
+  },
+  {
+    "kind": "ffmpeg-end",
+    "at": 1852536870592375,
+    "pid": 87488,
+    "code": 0
+  },
+  {
+    "kind": "ffmpeg-end",
+    "at": 1852536896355958,
+    "pid": 87490,
+    "code": 0
+  },
+  {
+    "kind": "ffmpeg-end",
+    "at": 1852536896579416,
+    "pid": 87491,
+    "code": 0
+  },
+  {
+    "kind": "provider-start",
+    "at": 1852537570142750,
+    "pid": 87637,
+    "video": "0-RhVo6P3zI",
+    "promptSha256": "53a3392218209e11aae920542386cff31e55e1af8100419c363680e39de94422"
+  },
+  {
+    "kind": "provider-end",
+    "at": 1852537570381458,
+    "pid": 87637,
+    "video": "0-RhVo6P3zI",
+    "responseSha256": "4bbd89b06a685811174ca8b1e2a7f5c0bab30b839bb06ed0e7e21cababe11e2a"
+  },
+  {
+    "kind": "provider-start",
+    "at": 1852538074840666,
+    "pid": 87757,
+    "video": "00S1J_3uC0U",
+    "promptSha256": "8affc1fa5855c90d8cfb50e1f63a30c8e8b7e9af57a9cd92613c07bb6d1791bd"
+  },
+  {
+    "kind": "provider-end",
+    "at": 1852538075011750,
+    "pid": 87757,
+    "video": "00S1J_3uC0U",
+    "responseSha256": "e47eed16a3c507b08e65ecf8df352ba2be948d0060005dcd324c5c185b78f25d"
+  },
+  {
+    "kind": "provider-start",
+    "at": 1852538595139375,
+    "pid": 87877,
+    "video": "02LzJVZCqt0",
+    "promptSha256": "ff272e9a9ec1e73e1bec6f3a5621d659e6b3a86decfb3b35b3d80e7c11ed5946"
+  },
+  {
+    "kind": "provider-end",
+    "at": 1852538595315041,
+    "pid": 87877,
+    "video": "02LzJVZCqt0",
+    "responseSha256": "8e3ba32371ab8c66b4069bcc813d258197115b01303e52fe6aa8bbc5038bc098"
+  }
+]

@@ -1,0 +1,71 @@
+{
+  "status": "local verified",
+  "review_threads": [
+    "PRRT_kwDOQGRyNc6pzgnM",
+    "PRRT_kwDOQGRyNc6qm-hc"
+  ],
+  "scope": [
+    "apps/web/lib/admin/record-action-client.ts",
+    "apps/web/lib/admin/use-record-action.tsx",
+    "apps/web/tests-unit/admin-record-action-client.test.ts",
+    "apps/web/tests-unit/admin-record-action-follow-up.test.ts"
+  ],
+  "source_sha256": {
+    "apps/web/lib/admin/record-action-client.ts": "bd331ffe0ad988b2172be6b315d26f50a769b0c026a8dd43f69e69806c0f39c7",
+    "apps/web/lib/admin/use-record-action.tsx": "c8aa512489c4d0a6a8bcc155d2f40f5940b8019c7738e11ff4c21edfc8fd1a86",
+    "apps/web/tests-unit/admin-record-action-client.test.ts": "e53aff8df1277858f3b26aec78656347269cc55b9efd2ec71e50aa5b3363b9b2",
+    "apps/web/tests-unit/admin-record-action-follow-up.test.ts": "3e16dbe7473eaad7a610238fb8a33290a4e7a78ed18574e4bf376fa0f8a9d021"
+  },
+  "verification": {
+    "loopback_http": {
+      "passed": 46,
+      "failed": 0,
+      "assertions": 507,
+      "files": [
+        "admin-record-action-client.test.ts",
+        "admin-record-action-follow-up.test.ts",
+        "admin-restaurant-guarded-ui.test.ts"
+      ]
+    },
+    "targeted_eslint": "passed",
+    "typecheck_parity": "passed",
+    "typecheck_runtime": "Node 24 pinned runtime",
+    "cleanup_admission_loopback": {
+      "passed": [
+        "maintenance hold -> release",
+        "unadmitted -> admitted",
+        "automatic reload does not resume",
+        "explicit readback resumes original operation",
+        "403 remains GET-only",
+        "timeout remains GET-only",
+        "409 maintenance code does not reset",
+        "unknown ACK remains GET-only"
+      ],
+      "contains_keys_or_payloads": false
+    },
+    "typecheck_receipt": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3309,
+      "logicalInputNamesSha256": "dac815f8976b78f1786b63ab314faf2e552af754f3cf55b5990352d609a2e79f",
+      "nonLibraryContentSha256": "10c6266976a4713982d3dcc4fb533a9ecb5c845e96fabb07fab6f1e791ec6e89",
+      "standardLibraryContentSha256": {
+        "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+        "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+      }
+    }
+  },
+  "behavior": [
+    "Actor binding uses domain-separated SHA-256 of authenticated user UUID; only opaque hash appears in sessionStorage key.",
+    "Logout/actor change discards in-memory payload, detaches promise, fences late ACK, and preserves original actor pending identity.",
+    "New v2 pending includes cleanupAttempt=false; persist true before cleanup POST, recover false only after applied GET, never retry uncertain cleanup.",
+    "Applied receipt with pending cleanup preserves identity and GET-only recovery; notify DB success only once per client.",
+    "Legacy v1 has no actor or cleanup-attempt evidence: retain and use original-operation GET only; never delete/replay on forbidden/uncertain readback.",
+    "Exact cleanup endpoint success=false with 423/RECORD_ACTION_MAINTENANCE or 503/RECORD_ACTION_MEDIA_NOT_ADMITTED proves no cleanup work. Persist cleanupAttempt=false and cleanupDeferred=true. Automatic reload remains GET-only; explicit existing-result readback can resume the same operation after applied GET. All other errors keep cleanupAttempt=true."
+  ],
+  "limits": [
+    "No hosted authenticated browser/server or Storage validation.",
+    "No SQL/server contract changes.",
+    "Legacy unbound identities can remain blocked across accounts until their original successful readback; safe ownership cannot be inferred client-side."
+  ]
+}

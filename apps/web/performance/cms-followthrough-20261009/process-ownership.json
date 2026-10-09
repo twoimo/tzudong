@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-08T22:10:59.393886+00:00",
+  "ownedHarnessProcessesRemaining": 0,
+  "preexistingDevServerPid": 57309,
+  "preexistingDevServerPort": 19872,
+  "preexistingDevServerStillRunning": true,
+  "devServerStartedOrStoppedByHelper": false,
+  "browserLifecycle": "First two harnesses awaited browser.close in finally; Playwright fixture teardown completed on failed and passed runs. No user browser tabs adopted or closed."
+}

@@ -140,6 +140,25 @@ describe("Pin_Contract verifier runtime behavior", () => {
 
 
 describe("Bun reconciliation is a failing pin gate", () => {
+  test("binds a packed local fork to the exact archive path and digest", async () => {
+    const { lockConflicts } = await import("../scripts/verify-pin-contract.mjs");
+    const spec='file:vendor/fork.tgz';const integrity='sha512-YWJjZA==';
+    const manifest={devDependencies:{braces:spec}};
+    const npmLock={packages:{'node_modules/braces':{name:'@tzudong/braces',version:'3.0.3-tzudong.1',resolved:spec,integrity}}};
+    expect(lockConflicts({manifest,npmLock,bun:{packages:{braces:['@tzudong/braces@vendor/fork.tgz',{},integrity]}}})).toEqual([]);
+    expect(lockConflicts({manifest,npmLock,bun:{packages:{braces:['@tzudong/braces@vendor/fork.tgz',{},'sha512-ZGVmZw==']}}})).toEqual(['braces']);
+    expect(lockConflicts({manifest,npmLock,bun:{packages:{braces:['@tzudong/braces@vendor/other.tgz',{},integrity]}}})).toEqual(['braces']);
+  });
+  test("admits the same local package and rejects redirected, missing or escaping targets", async () => {
+    const { lockConflicts } = await import("../scripts/verify-pin-contract.mjs");
+    const manifest={devDependencies:{braces:'file:vendor/braces'}};
+    const npmLock={packages:{'node_modules/braces':{link:true,resolved:'vendor/braces'},'vendor/braces':{name:'@tzudong/braces',version:'3.0.3-tzudong.1'}}};
+    const bun={packages:{braces:['@tzudong/braces@file:vendor/braces']}};
+    expect(lockConflicts({manifest,npmLock,bun})).toEqual([]);
+    expect(lockConflicts({manifest,npmLock,bun:{packages:{braces:['braces@3.0.3']}}})).toEqual(['braces']);
+    expect(lockConflicts({manifest,npmLock:{packages:{'node_modules/braces':{link:true,resolved:'vendor/other'}}},bun})).toEqual(['braces']);
+    expect(lockConflicts({manifest:{devDependencies:{braces:'file:../braces'}},npmLock,bun})).toEqual(['braces']);
+  });
   test("missing or differently resolved direct dependencies fail with otherwise matching pins", async () => {
     const { lockConflicts, hasPinDrift } = await import("../scripts/verify-pin-contract.mjs");
     const manifest = { dependencies: { example: "1.2.3" } };

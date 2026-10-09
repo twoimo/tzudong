@@ -1,0 +1,52 @@
+{
+  "schema": "tzudong-caption-title-readback/v1",
+  "results": [
+    {
+      "name": "YT-tzuyang-Video-F93TnnxCNvY",
+      "afterHash": "sha256:78c76e6a31fd24ef212b8a80aee2c8d2f49b96da7dac296ed9a88ec9ab484691",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-3Z-ngM3DVi0",
+      "afterHash": "sha256:393adc0830875d84bcb810ffe300fa4477eb9f327ebf91ce895867272332ed4e",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-BTyT60UWiLc",
+      "afterHash": "sha256:0f3a39283a1bd261f697d8e4cab35c8a9e0b3a6fb2cd86d555b62c6d4b31c925",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video--C4280KT3S4",
+      "afterHash": "sha256:b35a36202dcbca6593245aa2f174850474068aca8c21d82d228b94ed5723ede6",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-Tsy8xRjMpB0",
+      "afterHash": "sha256:646b3b81b82e335fdfd993939767eea170d8b6aa79dcb04b13f07a227b7bef1a",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-xRf_bhPFZrY",
+      "afterHash": "sha256:0a139691b571142eb0d1fb3e5486dbbd5aaabef93282c1d41748dfbf63002fa9",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-zkOBLQUSEr0",
+      "afterHash": "sha256:3857ed87655307b3226df2d6ff90e4e33d964661feef7d099bc14c2a0135f1db",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-DNGGl1-jFcU",
+      "afterHash": "sha256:b8c32de86e8c68c890713c6eb550fc913a659c4ebe562e68630fc9224a83ff22",
+      "reused": false
+    },
+    {
+      "name": "YT-tzuyang-Video-Ck5UrobZuKA",
+      "afterHash": "sha256:4eccc79739737f1008c20d66a34913ac6b5c397aad45020fdd43ed3df512eaf0",
+      "reused": false
+    }
+  ],
+  "providerCalls": 0,
+  "independentVideoCompletion": false
+}

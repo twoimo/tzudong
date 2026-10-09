@@ -1,0 +1,55 @@
+{
+  "observedAtUtc": "2026-10-09T01:16:15.003898+00:00",
+  "evidenceClass": "actual-local-OSK-writes-and-local-web-reader",
+  "privatePlanSha256": "9e5f7b891021384638c2d488df47dceb13c3cd8c97deeb016040996e8e2376d3",
+  "backupCount": 10,
+  "before": {
+    "revision": "f3bf0a6f5a2499c49ffcb5dee67018ab879a11fbf686fbfb9d4931b72186aabe",
+    "nodes": 21,
+    "edges": 79,
+    "eligibleVideos": 1069,
+    "excludedShorts": 80
+  },
+  "after": {
+    "revision": "f519c027d4cbd815146d8f6f4c4d47baa4578af903e7073c7c2fde3723ac410a",
+    "nodes": 30,
+    "edges": 88,
+    "coverage": {
+      "analyzedCount": 0,
+      "asOf": "2026-10-09T00:34:34.628933Z",
+      "eligibleCount": 1071,
+      "excludedShortsCount": 81,
+      "failedCount": 0,
+      "inventoryCount": 1152,
+      "pendingCount": 1071
+    }
+  },
+  "nodeDelta": 9,
+  "edgeDelta": 9,
+  "captionNodesRegistered": 9,
+  "metadataScopeHubWrites": 1,
+  "providerCalls": 0,
+  "independentVisualOrAudioCompletionsAdded": 0,
+  "operatingDatabaseWrites": 0,
+  "productionDeployed": false,
+  "readerReadbacks": {
+    "isolated": {
+      "nodes": 30,
+      "edges": 88,
+      "query": "Ck5UrobZuKA",
+      "matchedNodes": 1
+    },
+    "candidateCanonical": {
+      "nodes": 30,
+      "edges": 88,
+      "query": "Ck5UrobZuKA",
+      "matchedNodes": 1
+    }
+  },
+  "failedProjectionAttempt": {
+    "code": "OSK_PROJECTION_UNAVAILABLE",
+    "cause": "isolated parent directory absent; no output written",
+    "mutationResent": false
+  },
+  "recovery": "Original 9 node files and hub bytes retained privately. Revert only with current target/body CAS, never restoring global index or overwriting concurrent edits. Previous canonical shards retained."
+}

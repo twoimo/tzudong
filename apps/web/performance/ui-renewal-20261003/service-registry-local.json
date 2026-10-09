@@ -1,0 +1,20 @@
+{
+  "kind": "local-service-rpc-registry-verification",
+  "postgresVersion": "17.6",
+  "operationalDatabaseChanges": false,
+  "migrationSha256": "9fa8a42fc86b5fb00c25d65c02d1c9410a82ac5948359bec2f6beb1f03e2bf28",
+  "repairSha256": "bc4ffbde4062f9d3c0bd9b9bf09960dcd681aa39c5df5589779b06929b258aeb",
+  "assertions": {
+    "missing_existing_grant_denied": true,
+    "failed_transaction_writes_zero": true,
+    "six_exact_entries": true,
+    "execute_acl_unchanged": true,
+    "idempotent_rows": true,
+    "host_equivalent_repair_does_not_change_acl": true,
+    "historical_writer_revocation_reproduced": true,
+    "source_repair_restores_exact_acl": true,
+    "repair_does_not_grant_browser_access": true,
+    "missing_signature_denied": true
+  },
+  "pass": true
+}

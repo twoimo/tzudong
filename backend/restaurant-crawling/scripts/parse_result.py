@@ -120,7 +120,7 @@ def scan_pending(args: argparse.Namespace) -> None:
             continue
 
         # (2) crawling 파일이 있어도 restaurants가 비어있거나 깨졌으면 재시도 대상으로 간주
-        if crawling_file.exists():
+        if crawling_file.exists() and not getattr(args, "ignore_completed", False):
             crawling_last = load_last_jsonl_record(crawling_file)
             if has_non_empty_restaurants(crawling_last):
                 # 정상 결과가 이미 있으면 스킵
@@ -384,6 +384,7 @@ def main():
     # Subcommand: scan
     cmd_scan = subparsers.add_parser("scan", help="Scan pending videos")
     cmd_scan.add_argument("--channel", required=True, help="Channel name")
+    cmd_scan.add_argument("--ignore-completed", action="store_true", help="Let the content-addressed stage receipts decide freshness")
     cmd_scan.set_defaults(func=scan_pending)
 
     # Subcommand: parse

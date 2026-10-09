@@ -2202,17 +2202,17 @@ describe("web quality performance source contracts", () => {
 
     expect(rootDarkTokenBlock).toContain(".dark {");
     for (const declaration of [
-      "--background: 24 10% 10%;",
-      "--foreground: 38 30% 96%;",
-      "--card: 24 9% 13%;",
-      "--card-foreground: 38 30% 96%;",
-      "--border: 24 6% 24%;",
-      "--secondary: 24 7% 18%;",
-      "--secondary-foreground: 38 30% 96%;",
-      "--muted: 24 7% 18%;",
-      "--muted-foreground: 24 7% 68%;",
-      "--accent: 24 7% 18%;",
-      "--accent-foreground: 38 30% 96%;",
+      "--background: 220 18% 9%;",
+      "--foreground: 220 20% 96%;",
+      "--card: 220 16% 12%;",
+      "--card-foreground: 220 20% 96%;",
+      "--border: 220 13% 24%;",
+      "--secondary: 220 14% 18%;",
+      "--secondary-foreground: 220 20% 96%;",
+      "--muted: 220 14% 18%;",
+      "--muted-foreground: 220 12% 70%;",
+      "--accent: 220 14% 18%;",
+      "--accent-foreground: 220 20% 96%;",
     ]) {
       expect(rootDarkTokenBlock).toContain(declaration);
     }
@@ -2543,7 +2543,7 @@ describe("web quality performance source contracts", () => {
     expect(userProfilePanelSource).toContain("stampLoadMoreRef");
     expect(userProfilePanelSource).toContain("<MapPanelHeader");
     expect(source("components/home/map-panel-chrome.tsx")).toContain(
-      '"h-8 w-8 shrink-0 rounded-full border border-border bg-background shadow-none hover:bg-secondary"',
+      '"h-9 w-9 shrink-0 rounded-lg border border-border bg-card shadow-none hover:bg-secondary"',
     );
     expect(userProfilePanelSource).toContain("<StampCard");
     expect(userProfilePanelSource).toContain("<ReviewCard");
@@ -3075,7 +3075,7 @@ describe("web quality performance source contracts", () => {
         /const shouldSuppressMobileBottomNav =([\s\S]*?)const shouldRenderMobileBottomNav/,
       )?.[1] ?? "";
     expect(mobileBottomNavSuppressionBlock).toContain('pathname?.startsWith("/auth/")');
-    expect(mobileBottomNavSuppressionBlock).not.toContain('pathname?.startsWith("/admin")');
+    expect(mobileBottomNavSuppressionBlock).toContain('pathname?.startsWith("/admin")');
     expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/feed"');
     expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/stamp"');
     expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/leaderboard"');
@@ -3180,7 +3180,7 @@ describe("web quality performance source contracts", () => {
     const authCallbackSource = source("app/auth/callback/route.ts");
     const authRedirectSource = source("lib/auth/auth-redirect.ts");
     const shortenSource = source("app/api/shorten/route.ts");
-    const shortRedirectSource = source("app/s/[code]/page.tsx");
+    const shortRedirectSource = source("app/s/[code]/route.ts");
     const publicEligibilitySource = source("lib/auth/public-eligibility-session.ts");
 
     expect(proxySource).not.toContain("'/api/naver-'");
@@ -3230,7 +3230,13 @@ describe("web quality performance source contracts", () => {
     expect(shortRedirectSource).toContain(
       "isValidReviewId(target.searchParams.get",
     );
-    expect(shortRedirectSource).toContain("redirect('/');");
+    expect(shortRedirectSource).toContain(
+      "resolveShortUrlRead(lookup.data, lookup.error, isSafeRedirectTarget)",
+    );
+    expect(shortRedirectSource).toContain("createShortUrlResponse(result, code)");
+    expect(source("lib/share/short-url-read.ts")).toContain(
+      "target: isSafeTarget(trimmed) ? trimmed : '/'",
+    );
     expect(authCallbackSource).toContain("function getTrustedRedirectOrigin");
     expect(authCallbackSource).toContain("getSafeAuthNextPath(searchParams.get('next'))");
     expect(authRedirectSource).toContain("export function getSafeAuthNextPath");
@@ -3624,7 +3630,7 @@ describe("web quality performance source contracts", () => {
       "lg:max-h-[calc(100dvh-6.25rem)]",
     );
     expect(myPageProfileSource).toContain("lg:grid-cols-2");
-    expect(myPageProfileSource).toContain("lg:gap-3");
+    expect(myPageProfileSource).toContain("gap-3");
     expect(myPageProfileSource).toContain("md:order-1");
     expect(myPageProfileSource).toContain("md:order-2");
     expect(myPageProfileSource).toContain(
@@ -3710,7 +3716,7 @@ describe("web quality performance source contracts", () => {
       'data-mypage-profile-hero-layout="sidebar-match"',
     );
     expect(myPageProfileSource).toContain(
-      "flex flex-col items-center space-y-4 p-6 text-center md:hidden",
+      "grid grid-cols-[4rem_minmax(0,1fr)] items-center gap-3 p-2 text-left md:hidden",
     );
     expect(myPageProfileSource).not.toContain(
       "flex flex-col items-center space-y-4 border-b border-border p-6 text-center md:hidden",
@@ -3725,7 +3731,7 @@ describe("web quality performance source contracts", () => {
       'data-mypage-profile-identity="standard"',
     );
     expect(myPageProfileSource).toContain(
-      "rounded-full border-2 border-border shadow-sm",
+      "rounded-full border border-border",
     );
     expect(myPageProfileSource).not.toContain(
       "transition-[border-color,box-shadow]",
@@ -3734,7 +3740,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain(
       "truncate px-2 text-xs text-muted-foreground",
     );
-    expect(myPageProfileSource).toContain("grid w-full grid-cols-3 gap-2 pt-2");
+    expect(myPageProfileSource).toContain("col-span-2 grid w-full grid-cols-3 gap-2");
     expect(myPageProfileSource).toContain("useUserProfile");
     expect(myPageProfileSource).toContain("userProfile?.tier");
     expect(myPageProfileSource).toContain("도장");
@@ -3785,9 +3791,9 @@ describe("web quality performance source contracts", () => {
     );
     expect(myPageProfileSource).toContain('id="mypage-mobile-avatar-upload"');
     expect(myPageProfileSource).toContain(
-      'className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2',
+      'className="relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border',
     );
-    expect(myPageProfileSource).toContain('sizes="96px"');
+    expect(myPageProfileSource).toContain('sizes="64px"');
     expect(myPageProfileSource).toContain("handleMobileAvatarUpload");
     expect(myPageProfileSource).toContain("handleMobileAvatarDelete");
     expect(myPageProfileSource).toContain('accept="image/*"');
@@ -3852,8 +3858,8 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).not.toContain(
       'className="mt-3 grid gap-2 sm:grid-cols-2"',
     );
-    expect(myPageProfileSource).toContain("h-24 w-24");
-    expect(myPageProfileSource).toContain('sizes="96px"');
+    expect(myPageProfileSource).toContain("h-16 w-16");
+    expect(myPageProfileSource).toContain('sizes="64px"');
     expect(myPageProfileSource).not.toContain("AvatarImage");
     expect(myPageProfileSource).not.toContain("sm:h-18 sm:w-18");
   });

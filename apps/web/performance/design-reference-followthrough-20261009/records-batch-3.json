@@ -1,0 +1,34 @@
+[
+  {
+    "index": 9,
+    "name": "Transitions",
+    "url": "https://transitions.dev/",
+    "actualUrl": "https://transitions.dev/",
+    "title": "Transitions.dev: UI transitions for AI agents",
+    "screenshot": "09-reference.png"
+  },
+  {
+    "index": 10,
+    "name": "shadcn/ui",
+    "url": "https://ui.shadcn.com/",
+    "actualUrl": "https://ui.shadcn.com/",
+    "title": "shadcn/ui - The Foundation for your Design System",
+    "screenshot": "10-reference.png"
+  },
+  {
+    "index": 11,
+    "name": "21st.dev",
+    "url": "https://21st.dev/",
+    "actualUrl": "https://21st.dev/",
+    "title": "React Components, Templates & Themes — 12,000+ Crafted UI | 21st | 21st",
+    "screenshot": "11-reference.png"
+  },
+  {
+    "index": 12,
+    "name": "Tremor",
+    "url": "https://tremor.so/",
+    "actualUrl": "https://www.tremor.so/",
+    "title": "Tremor – Copy-and-Paste Tailwind CSS UI Components for Charts and Dashboards",
+    "screenshot": "12-reference.png"
+  }
+]

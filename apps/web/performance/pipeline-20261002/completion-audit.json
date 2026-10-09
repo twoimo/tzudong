@@ -1,0 +1,163 @@
+{
+  "kind": "requirement_completion_audit",
+  "status": "incomplete",
+  "goalMayBeCompleted": false,
+  "requirements": [
+    {
+      "requirement": "Full collection/subtitle/media/extraction/evaluation/save/admin scope",
+      "status": "partial",
+      "evidence": [
+        "source e77887c",
+        "current candidate diff",
+        "transcript-cache-raw.json",
+        "transcript-summary.json"
+      ],
+      "remaining": "Metadata collection completion now validates persisted outputs. Combined before/after pipeline experiment still remains."
+    },
+    {
+      "requirement": "Hashed restart/incremental results, single JSONL writer",
+      "status": "verified_for_changed_stages",
+      "evidence": [
+        "backend/utils/tests/test_pipeline_restart_integration.py",
+        "transform-restart-v3-raw.json",
+        "backend/restaurant-crawling/scripts/tests/transcript-cache.test.mjs",
+        "metadata-reader-raw.json",
+        "backend/restaurant-crawling/scripts/tests/test_collect_meta_checkpoint.py",
+        "metadata-reader-v2-raw.json"
+      ],
+      "scope": "08/09/10/11/12 receipts; transform source races and priority; frame receipts and cross-process writer. Not a claim for every collection stage. Step 03 now validates legacy content and serializes channel/ledger writers; no whole-collection version-receipt claim. Step 02 now validates integrity-bound metadata receipts and serializes channel writers; 1,127 readonly records match, 11 failure/repair/concurrency/security cases pass. Strict UTF-8 completion rejects invisible byte corruption; final paired timing includes uncertainty."
+    },
+    {
+      "requirement": "Media resources and shared cache",
+      "status": "partial",
+      "evidence": [
+        "media-replay-raw.json",
+        "backend/utils/tests/frame-receipt.test.mjs"
+      ],
+      "remaining": "Full consumer-chain download-volume comparison is not measured; resource bound is per Node process."
+    },
+    {
+      "requirement": "Provider project budget, Retry-After, fallback",
+      "status": "partial",
+      "evidence": [
+        "backend/utils/provider_budget.py",
+        "backend/bin/run_parallel_laaj.py",
+        "backend/utils/tests/test_pipeline_restart_integration.py",
+        "gemini-admission-raw.json",
+        "gemini-admission-summary.json",
+        "verification-gemini-admission.json"
+      ],
+      "remaining": "Actual TPM/RPD admission and cross-host totals remain. Client cancellation does not cancel remote work. Shared-budget command startup/polling overhead remains to optimize.",
+      "scope": "Active Node generation paths including final merge, map helper and preflight share local project admission; installed SDK sends one HTTP attempt; Retry-After retained before SDK error conversion; permits remain until SDK settlement."
+    },
+    {
+      "requirement": "Evaluation/storage deduplication and 1-200 batch comparison",
+      "status": "verified_in_isolated_storage_fixture",
+      "evidence": [
+        "storage-summary.json",
+        "storage-rpc-raw.json",
+        "storage-new-and-failures-raw.json",
+        "storage-one-and-resume-raw.json",
+        "backend/restaurant-evaluation/scripts/tests/test_supabase_insert_admin_lock.py"
+      ],
+      "remaining": "Operational transport/full catalog and paid inference are not measured. Local real-RPC batch sweep, conflict rollback and uncertain-save restart are retained."
+    },
+    {
+      "requirement": "Admin cursor/search/filter/order/statistics/warnings/detail compatibility",
+      "status": "verified_in_local_fixtures",
+      "evidence": [
+        "admin-api-current-raw.json",
+        "browser-revision-raw.json",
+        "apps/web/tests-unit/admin-evaluation-pagination.test.ts",
+        "apps/web/tests-unit/admin-evaluation-revision-read.test.ts"
+      ],
+      "scope": "50/200 limits; 10011-row enumeration; global warnings and counts; 409 races; outside-page search. No production DB proof."
+    },
+    {
+      "requirement": "Unapplied migration/permissions/query plans",
+      "status": "partial",
+      "evidence": [
+        "sql-snapshot-bounds.json"
+      ],
+      "remaining": "Exact-version isolated fixture passed; full canonical replay and projection workload plan remain."
+    },
+    {
+      "requirement": "At least 7 paired runs of unchanged/new/partial/bulk/restart conditions",
+      "status": "partial",
+      "evidence": [
+        "transform-restart-v3-raw.json",
+        "media-replay-raw.json",
+        "storage-summary.json"
+      ],
+      "remaining": "Storage now covers all five conditions with at least seven pairs. Combined full-pipeline and transform new/restart timing remain."
+    },
+    {
+      "requirement": "100 paired API and browser observations",
+      "status": "partial",
+      "evidence": [
+        "admin-api-current-raw.json",
+        "browser-revision-raw.json"
+      ],
+      "remaining": "100 API component pairs and 100 after-browser observations; before-browser timing missing."
+    },
+    {
+      "requirement": "Preserved deterministic data and administrator protection",
+      "status": "partial",
+      "evidence": [
+        "transform-restart-v3-raw.json",
+        "existing CAS/readback tests"
+      ],
+      "remaining": "1257 transform records match; consolidated full-chain protection/failure evidence remains."
+    },
+    {
+      "requirement": "All metrics, environment, hashes, 95% intervals, regressions",
+      "status": "partial",
+      "evidence": [
+        "summary-current.json",
+        "transcript-summary.json",
+        "gemini-real-probe-raw.json"
+      ],
+      "remaining": "Component metrics and one real 125-token connectivity probe retained; overall throughput/downloads and comparative inference/cost metrics remain."
+    },
+    {
+      "requirement": "Formal observation/scorer/validator/artifact-map proof",
+      "status": "incomplete",
+      "remaining": "24-hour observation and complete G003 evidence not satisfied; no formal performance claim."
+    },
+    {
+      "requirement": "Current documentation and installed runtimes",
+      "status": "verified_for_used_skills_and_candidate",
+      "evidence": [
+        "skill backup/readback from preceding work",
+        "web release lock",
+        "backend installed SDK 2.26.0",
+        "Current official SDK HttpOptions docs, installed 2.26.0 code and actual local HTTP observation: absent retryOptions sends one attempt."
+      ],
+      "scope": "Five used cached skills updated; web SDK 2.18.0, candidate backend SDK 2.26.0. Not a blanket freshness claim for every installed skill."
+    },
+    {
+      "requirement": "Existing model/paid/operating bounds and shared settings preservation",
+      "status": "partial",
+      "scope": "Same configured model; one explicitly funded real request with one SDK attempt. No deployment or operational DB writes. Auto-reload off. Wire model/config preserved in loopback SDK comparison; thinking fallback retains 4096 output cap and temperature.",
+      "remaining": "Initial isolated test rewrote Gemini CLI settings via inherited function. Prior configuration snapshot missing; future isolated writes are now blocked and hash-checked."
+    },
+    {
+      "requirement": "Google credit use",
+      "status": "confirmed_for_one_bounded_real_probe",
+      "scope": "Authorized one-time 10000-KRW top-up and project link verified; auto-reload off; one real Gemini response accepted.",
+      "remaining": "Provider charge and promotional deduction amount are not read back. Card removal requires a valid replacement; both official UI paths checked.",
+      "evidence": [
+        "billing-readback.json",
+        "gemini-real-probe-raw.json"
+      ]
+    },
+    {
+      "requirement": "Operational application plan",
+      "status": "prepared_for_review",
+      "evidence": [
+        "docs/operations/pipeline-performance-20261002.md"
+      ],
+      "scope": "User now permits operational DB changes and deployment. Exact project verified; funded Vercel secret configured, masked readback. Protected promotion/deployment and DB migration remain."
+    }
+  ]
+}

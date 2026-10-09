@@ -1,0 +1,647 @@
+{
+  captureRoot: '/Users/twoimo/.aside/u/0/sessions/2026-10-09_mXIilDn0hp806mSR'
+}
+✔︎ Opened a new tab and set it active: tabs[0], page → Transitions.dev: UI transitions for AI agents (https://transitions.dev/)
+# note: interactive (clickable / focusable) elements only.
+- title: "Transitions.dev: UI transitions for AI agents" [url=https://transitions.dev/]
+- link "Skip to content" [ref=e1]
+- main:
+  - banner:
+    - link "Transitions.dev home" [ref=e2]: "Transitions.dev"
+    - navigation "Primary" [ref=e3]:
+      - button "Products" [ref=e4]
+      - link "Community" [ref=e5]: "Community New"
+      - link "Docs" [ref=e6]
+      - link "Pricing" [ref=e7]
+    - button "Search (⌘K)" [ref=e8]: "Search\n            ⌘K"
+    - link "Get Transitions Pro" [ref=e9]: "Get  Pro"
+    - link "GitHub repository — 4600 stars" [ref=e10]: "4.6k"
+    - button "More" [ref=e11]
+  - banner:
+    - heading "Better UI motionand craft starts here" [level=1]: "Better UI motion and craft starts here"
+    - text: "AI agents for motion and UI craft, a"
+    - link "component builder" [ref=e12]
+    - text: ",\n        a"
+    - link "library" [ref=e13]
+    - text: "of 43+ crafted transitions,\n        and a skill that fits your workflow."
+    - link "Join for free" [ref=e14]
+    - link "Browse" [ref=e15]
+  - region "Used by designers and engineers at" [ref=e16]: "Used by designers and engineers at\n      \n         Higgsfield\n         Mercado Libre\n         Cathay General Hospital\n         Arizona State University"
+  - heading "Library" [level=2]: "Library  includes 43+ crafted transitions, ready to drop into your project."
+  - tablist "Filter transitions by category":
+    - tab "All" [ref=e17] [selected]
+    - tab "Essential" [ref=e18]
+    - tab "AI Agents" [ref=e19]
+    - tab "Effects" [ref=e20]
+    - tab "Texts" [ref=e21]
+    - tab "Pro" [ref=e22]
+  - button "Sort transitions" [ref=e23]
+  - region "Transition prototypes" [ref=e24]:
+    - article [ref=e25]:
+      - button "Animate" [ref=e26]
+      - text: "Card resize\n           Smooth card resize transition"
+      - link "Remix Card resize in the Builder" [ref=e27]
+    - article [ref=e28]:
+      - text: "6 5.7 8"
+      - button "Animate" [ref=e29]
+      - text: "Number pop-in\n           Digit flip with blur and stagger"
+      - link "Remix Number pop-in in the Builder" [ref=e30]
+    - article [ref=e31]:
+      - button "Animate" [ref=e32]
+      - text: "Notification badge\n           Diagonal slide with spring pop-in"
+      - link "Remix Notification badge in the Builder" [ref=e33]
+  - link "Browse all" [ref=e34]
+  - region "Transitions Motion Agent scans your codebase, scores its motion and fixes it as pull requests." [ref=e35]:
+    - heading "Transitions Motion Agent" [level=2]: "Transitions Motion Agent  scans your codebase, scores its motion and fixes it as pull requests."
+    - link "Learn more" [ref=e36]
+    - heading "A motion score for every codebase" [level=3]
+    - text: "One command scores your motion 0 to 100, every finding mapped to the recipe that fixes it. Local and deterministic: no AI, no account."
+    - heading "Fixes as diffs, then a pull request" [level=3]
+    - text: "Polish keeps diffs small. Revamp rewrites motion with the real recipe. Nothing lands without your yes."
+    - heading "A score gate on every pull request" [level=3]
+    - text: "The Action scores every pull request  and can block merges when motion quality drops."
+  - region "Sponsors" [ref=e37]:
+    - heading "Sponsors" [level=2]
+    - text: "For UI animation craft, I highly recommend"
+    - link "Emil Kowalski’s course" [ref=e38]
+    - text: ".\n            \n            Jakub Antalik, creator of Transitions.dev"
+    - link "Take the course" [ref=e39]
+    - text: "You can tell when an interface feels right. Invisible Details  is about the small decisions behind that."
+    - link "Learn more" [ref=e40]
+    - text: "Interested in sponsorship or partnership?"
+    - link "Get in touch." [ref=e41]
+  - contentinfo:
+    - link "Transitions.dev home" [ref=e42]: "Transitions.dev"
+    - text: "Collection of the most essential UI transitions for web apps"
+    - navigation "Footer" [ref=e43]:
+      - text: "Site"
+      - link "Home" [ref=e44]
+      - link "Transitions" [ref=e45]
+      - link "All transitions" [ref=e46]
+      - link "Community" [ref=e47]
+      - link "Skill" [ref=e48]
+      - link "Motion Agent" [ref=e49]
+      - link "Get Pro" [ref=e50]
+      - text: "Docs"
+      - link "Introduction" [ref=e51]
+      - link "Installation" [ref=e52]
+      - link "Accessibility" [ref=e53]
+      - text: "Legal & Account"
+      - link "Sign in" [ref=e54]
+      - link "Terms" [ref=e55]
+      - link "Privacy" [ref=e56]
+      - link "Legal notice" [ref=e57]
+      - link "Contact" [ref=e58]
+    - text: "Created by"
+    - link "Jakub Antalik" [ref=e59]
+✔︎ Opened a new tab and set it active: tabs[0], page → shadcn/ui - The Foundation for your Design System (https://ui.shadcn.com/)
+# note: interactive (clickable / focusable) elements only.
+- title: "shadcn/ui - The Foundation for your Design System" [url=https://ui.shadcn.com/]
+- banner:
+  - navigation:
+    - link "Home" [ref=e1]
+    - link "Docs" [ref=e2]
+    - link "Components" [ref=e3]
+    - link "Blocks" [ref=e4]
+    - link "Charts" [ref=e5]
+    - link "Directory" [ref=e6]
+    - link "Typeset" [ref=e7]
+    - link "Create" [ref=e8]
+  - button "Search documentation..." [ref=e9]
+  - link "125k" [ref=e10]
+  - button "Toggle theme" [ref=e11]
+  - link "New" [ref=e12]
+- main:
+  - region:
+    - link "New Questionnaire component" [ref=e13]
+    - heading "The Foundation for your Design System" [level=1]
+    - text: "Composable, accessible components with thoughtful defaults. Build your own component library with code you can customize, extend, and make your own."
+    - link "Get Started" [ref=e14]
+    - link "View Components" [ref=e15]
+  - region:
+    - button "Button" [ref=e16]
+    - button "Secondary" [ref=e17]
+    - button "Outline" [ref=e18]
+    - group:
+      - group:
+        - textbox "Name" [ref=e19] [placeholder="Name"]
+        - group
+    - group:
+      - textbox "Message" [ref=e20] [placeholder="Message"]
+    - text: "Badge Secondary"
+    - radiogroup "Fruit preference":
+      - radio "Apple" [ref=e21] [checked]
+      - radio "Banana" [ref=e22]
+    - checkbox "Enable email alerts" [ref=e23] [checked]
+    - switch "Enable compact notifications" [ref=e24] [checked]
+    - button "Alert Dialog" [ref=e25]
+    - group:
+      - button "Button Group" [ref=e26]
+      - button "Open quick actions" [ref=e27]
+    - text: "Overview"
+    - button "Analytics" [ref=e28]
+    - button "Transactions" [ref=e29]
+    - button "Investments" [ref=e30]
+    - button "Accounts" [ref=e31]
+    - button "Spending" [ref=e32]
+    - text: "Planning"
+    - button "Documents" [ref=e33]
+    - button "Budget" [ref=e34]
+    - button "Reports" [ref=e35]
+    - button "Goals" [ref=e36]
+    - button "Calendar" [ref=e37]
+    - text: "Support"
+    - button "Help Center" [ref=e38]
+    - button "Docs" [ref=e39]
+    - button "Contact Us" [ref=e40]
+    - button "Status" [ref=e41]
+    - button "Community" [ref=e42]
+    - text: "Account"
+    - button "Profile" [ref=e43]
+    - button "Billing" [ref=e44]
+    - button "Notifications" [ref=e45]
+    - button "Security" [ref=e46]
+    - button "Appearance" [ref=e47]
+    - text: "Savings Targets Active milestones for 2024 across your portfolio. Monitor how close you are to each savings goal."
+    - list:
+      - listitem:
+        - text: "Retirement$420,000"
+        - progressbar "Retirement savings progress"
+        - text: "65% achieved$273,000"
+      - listitem:
+        - text: "Real Estate$85,000"
+        - progressbar "Real estate savings progress"
+        - text: "32% achieved$27,200"
+    - text: "You have not met your targets for this year.Contribution History Last 6 months of activity"
+    - img "Last 6 months of contribution activity": "Dec Jan Feb Mar Apr"
+    - text: "Upcoming May 2024 Scheduled Savings Plan Accelerated Recurring"
+    - button "View Full Report" [ref=e48]
+    - text: "Claimable Balance$1,211.29 Pending Setup Net Royalties$1,248.75 Processing Fee-$37.46"
+    - separator
+    - text: "Total Ready to Claim$1,211.29  USD Once your bank is connected, balances over $10.00 are automatically eligible for monthly distribution on the 15th of each month.Q2 Dividend Income Quarterly dividend payouts across your portfolio holdings."
+    - button "Dismiss dividend income" [ref=e49]
+    - list:
+      - listitem "Vanguard quarterly dividends" [ref=e50]:
+        - text: "Vanguard 450 Shares"
+        - img "Vanguard quarterly dividends"
+      - listitem "S&P 500 VOO quarterly dividends" [ref=e51]:
+        - text: "S&P 500 VOO 112 Shares"
+        - img "S&P 500 VOO quarterly dividends"
+      - listitem "Apple AAPL quarterly dividends" [ref=e52]:
+        - text: "Apple AAPL 85 Shares"
+        - img "Apple AAPL quarterly dividends"
+      - listitem "Realty Income quarterly dividends" [ref=e53]:
+        - text: "Realty Income 320 Shares"
+        - img "Realty Income quarterly dividends"
+    - text: "Set a new milestone Define your financial target and we'll help you pace your savings."
+    - group:
+      - text: "Goal Name"
+      - textbox "Goal Name" [ref=e54] [placeholder="e.g. New Car, Home Downpayment"]
+    - group:
+      - text: "Target Amount"
+      - textbox "Target Amount" [ref=e55]: "$15,000"
+    - group:
+      - text: "Target Date"
+      - textbox "Target Date" [ref=e56]: "Dec 2025"
+    - button "Create Goal" [ref=e57]
+    - button "Cancel" [ref=e58]
+    - text: "Payout Threshold Set the minimum balance required before a payout is triggered."
+    - button "Dismiss payout threshold" [ref=e59]
+    - group:
+      - text: "Preferred Currency"
+      - combobox "USD — United States Dollar" [ref=e60]
+    - group:
+      - text: "Minimum Payout Amount$2500.00"
+      - progressbar "Minimum Payout Amount"
+      - text: "$50 (MIN)$10,000 (MAX)"
+    - group:
+      - text: "Notes"
+      - textbox "Notes" [ref=e61] [placeholder="Add any notes for this payout configuration..."]
+    - button "Save Threshold" [ref=e62]
+    - text: "Account Access Update your credentials or re-authenticate."
+    - group:
+      - text: "Email Address"
+      - textbox "Email Address" [ref=e63] [placeholder="[redacted-email]"]
+    - group:
+      - text: "Current Password"
+      - link "Forgot?" [ref=e64]
+      - textbox "Current Password" [ref=e65] [placeholder="••••••••••••••••••••••••"]
+    - button "Update Security" [ref=e66]
+    - link "Danger Zone Archive account and remove catalog" [ref=e67]
+    - img "Connect device QR code"
+    - text: "Scan to connect your mobile device Open the Ledger mobile app and scan this code to link your device.New Chat How can I help you today?"
+    - button "Reset conversation" [ref=e68]
+    - text: "Morning, shadcn!What are we working on today? Press send to start a new conversation"
+    - group:
+      - text: "I'm building a chat for our app and the scroll behavior is driving me nuts. Every time the AI streams a reply, the whole thread jumps around."
+      - group:
+        - button "Add files" [ref=e69]
+        - button "Send" [ref=e70]
+    - navigation "breadcrumb" [ref=e71]:
+      - link "Home" [ref=e72]
+      - button "Account options" [ref=e73]
+      - link "Payments" [ref=e74] [disabled]
+    - list:
+      - listitem:
+        - link "Change transfer limit Adjust how much you can send from your balance." [ref=e75]
+      - listitem:
+        - link "Scheduled transfers Set up a transfer to send at a later date." [ref=e76]
+      - listitem:
+        - link "Recurring card payments Manage your repeated card transactions." [ref=e77]
+- contentinfo:
+  - text: "Built by"
+  - link "shadcn" [ref=e78]
+  - text: "at"
+  - link "Vercel" [ref=e79]
+  - text: ". The source code is available on"
+  - link "GitHub" [ref=e80]
+  - text: "."
+- region "Notifications alt+T" [ref=e81]
+- region "Notifications" [ref=e82]
+✔︎ Opened a new tab and set it active: tabs[0], page → React Components, Templates & Themes — 12,000+ Crafted UI | 21st | 21st (https://21st.dev/)
+# note: interactive (clickable / focusable) elements only.
+- title: "React Components, Templates & Themes — 12,000+ Crafted UI | 21st | 21st" [url=https://21st.dev/]
+- banner:
+  - link "21st logo" [ref=e1]
+  - button "Log in" [ref=e2]
+  - button "Sign up" [ref=e3]
+  - navigation:
+    - link "Components" [ref=e4]
+    - link "Templates" [ref=e5]
+    - link "Themes" [ref=e6]
+    - link "Pricing" [ref=e7]
+- region:
+  - heading "The libraryof interfaces" [level=1]: "The   library of interfaces"
+  - text: "12,000+ crafted React components, templates, and shadcn themes. Built by real design engineers."
+- region:
+  - heading [level=4]: "2,000+ Marketing blocks:"
+  - link "Animated heroes" [ref=e8]
+  - link "Hero sections" [ref=e9]
+  - link "Shaders" [ref=e10]
+  - link "Liquid & metal" [ref=e11]
+  - link "Backgrounds" [ref=e12]
+  - link "Gradients" [ref=e13]
+  - link "Footers" [ref=e14]
+  - link "Waitlist Hero" [ref=e15]
+  - link [ref=e16]
+  - button "Save to bookmarks" [ref=e17]: "1.3k"
+  - link "Liquid Metal Hero" [ref=e18]
+  - link [ref=e19]:
+    - img "Caio Bonato": "CB"
+  - heading "Liquid Metal Hero" [level=3]
+  - button "Save to bookmarks" [ref=e20]: "761"
+  - link "Hover Preview" [ref=e21]
+  - link "Le Thanh" [ref=e22]
+  - heading "Hover Preview" [level=3]
+  - button "Save to bookmarks" [ref=e23]: "363"
+  - link "Hero ASCII one" [ref=e24]
+  - link "21st Indexer" [ref=e25]
+  - heading "Hero ASCII one" [level=3]
+  - button "Save to bookmarks" [ref=e26]: "967"
+  - link "Vapour Text Effect" [ref=e27]
+  - link "Jatin Yadav" [ref=e28]
+  - heading "Vapour Text Effect" [level=3]
+  - button "Save to bookmarks" [ref=e29]: "1.6k"
+  - link "Hover Footer" [ref=e30]
+  - link "Md afsar mahmud" [ref=e31]
+  - heading "Hover Footer" [level=3]: "Hover  Footer"
+  - button "Save to bookmarks" [ref=e32]: "744"
+  - link "Animated Gradient Background" [ref=e33]
+  - link "0xkhairi Khairi" [ref=e34]
+  - heading "Animated Gradient Background" [level=3]
+  - button "Save to bookmarks" [ref=e35]: "1.4k"
+  - link "Wave Background" [ref=e36]
+  - link "捌玖" [ref=e37]
+  - heading "Wave Background" [level=3]
+  - button "Save to bookmarks" [ref=e38]
+  - heading [level=4]: "2,100+ UI components:"
+  - link "Buttons" [ref=e39]
+  - link "AI chats" [ref=e40]
+  - link "Cards & grids" [ref=e41]
+  - link "Galleries & 3D" [ref=e42]
+  - link "Navigation" [ref=e43]
+  - link "Sign ins & widgets" [ref=e44]
+  - link "Sections" [ref=e45]
+  - link "Background Beams" [ref=e46]
+  - link [ref=e47]
+  - heading "Background Beams" [level=3]
+  - button "Save to bookmarks" [ref=e48]: "648"
+  - link "Not Found Page" [ref=e49]
+  - link "Shaban Haider" [ref=e50]
+  - heading "Not Found Page" [level=3]
+  - button "Save to bookmarks" [ref=e51]: "122"
+  - link "Footer Section" [ref=e52]
+  - link "Shaban Haider" [ref=e53]
+  - heading "Footer Section" [level=3]
+  - button "Save to bookmarks" [ref=e54]: "1.3k"
+  - link "Horizon Hero Section" [ref=e55]
+  - link "scott clayton" [ref=e56]
+  - heading "Horizon Hero Section" [level=3]
+  - button "Save to bookmarks" [ref=e57]: "2.8k"
+  - link "Agent Plan" [ref=e58]
+  - link "Isaiah" [ref=e59]
+  - heading "Agent Plan" [level=3]
+  - button "Save to bookmarks" [ref=e60]
+  - link "Calendar" [ref=e61]
+  - link "Ali Imam" [ref=e62]
+  - heading "Calendar" [level=3]
+  - button "Save to bookmarks" [ref=e63]
+  - link "Sign In Flow" [ref=e64]
+  - link "Erik" [ref=e65]
+  - heading "Sign In Flow" [level=3]
+  - button "Save to bookmarks" [ref=e66]: "2.2k"
+  - link "Sign In" [ref=e67]
+  - link "EaseMize UI" [ref=e68]
+  - heading "Sign In" [level=3]
+  - button "Save to bookmarks" [ref=e69]: "2.0k"
+  - link "Animated Glowing Search Bar" [ref=e70]
+  - link "Le Thanh" [ref=e71]
+  - heading "Animated Glowing Search Bar" [level=3]
+  - button "Save to bookmarks" [ref=e72]: "1.2k"
+- region:
+  - heading "Used by ." [level=2]: "Used by  4,056,368  builders. From indie makers to the world's largest product teams"
+  - heading [level=3]
+  - text: "Google logo Google Meta logo Meta NVIDIA logo NVIDIA ByteDance logo ByteDance Shopify logo Shopify PayPal logo PayPal"
+  - heading "Startups:" [level=3]
+  - text: "Vercel logo Vercel Lovable logo Lovable Webflow logo Webflow Razorpay logo Razorpay Mistral AI logo Mistral AI Nubank logo Nubank Atlassian logo Atlassian"
+- region:
+  - heading "Copy the prompt. Paste it" [level=2]: "Copy the prompt. Paste it  anywhere"
+  - text: "Every component ships as a prompt. One copy — and it builds itself in whatever tool you live in.$ claude✓ components/ui/animated-hero.tsx✓ +148 lines — adapted to your theme❯[Pasted text #1 +88 lines]Claude Code Paste it in the terminal — the source lands in your repo.Add the Animated Hero from 21st acme/website · main animated-hero.tsx+148 −12+ export function AnimatedHero() {+   return <section className=\"hero\">…  <main>−   <OldHero />+   <AnimatedHero />Ready to review Create PR Codex Same prompt as a task — Codex ships it with a diff.Worked for 14s✓Created src/components/AnimatedHero.tsx✓Edited src/pages/Index.tsx Preview updated Lovable Paste it in chat — the exact UI appears in your project."
+  - button "code" [ref=e73]
+  - button "preview" [ref=e74]
+  - text: "shimmer-button.tsx 1 import { cn } from \"@/lib/utils\"2  3 export function  ShimmerButton() {4   return (5    <button  className={cn(6      \"relative rounded-full bg-neutral-950\",7      \"px-7 py-3 text-sm font-medium text-white\",8      \"transition-transform hover:scale-105\",9    )}>10      <span  className=\"shimmer-ring\" aria-hidden />11       Get started →12    </button>13  )14}Shimmer Button"
+  - button "Get started →" [ref=e75]
+  - text: "Real code, ready to ship React + Tailwind, shadcn/ui conventions — every component is source that lands in your repo, yours to edit.25,431 installs this week 455 Saved to bookmarks Landing v2 13 Inspiration 34 Create list Ravi Katiyar"
+  - heading "Number Ticker" [level=2]
+  - text: "12.4k 455 Save it for later Bookmark any component into your lists — personal or team-shared — and pull it back up in one click."
+- region:
+  - heading "Built by real design ." [level=2]: "Built by real design  engineers. Every component has an author. Indexed, searchable, one prompt away"
+  - link "Aceternity UI" [ref=e76]: "Aceternity UI Aceternity UI 87  components"
+  - link "Magic UI" [ref=e77]: "Magic UI Magic UI 62  components"
+  - link "shadcn/ui" [ref=e78]: "shadcn/ui shadcn/ui 87  components"
+  - link "Origin UI" [ref=e79]: "Origin UI Origin UI 44  components"
+  - link "Geist" [ref=e80]: "Geist Geist 87  components"
+  - link "Base UI" [ref=e81]: "Base UI Base UI 29  components"
+  - link "Kokonut UI" [ref=e82]: "Kokonut UI Kokonut UI 49  components"
+  - link "8bitcn" [ref=e83]: "8bitcn 8bitcn 106  components"
+  - link "Kibo UI" [ref=e84]: "Kibo UI Kibo UI 26  components"
+  - link "visx" [ref=e85]: "visx visx 36  components"
+  - link "ReUI" [ref=e86]: "ReUI ReUI 95  components"
+  - link "HextaUI" [ref=e87]: "HextaUI HextaUI 113  components"
+  - link "Tailark" [ref=e88]: "Tailark Tailark 42  components"
+  - link "Shadcnblocks.com" [ref=e89]: "Shadcnblocks.com Shadcnblocks.com 39  components"
+  - link "Ruixen UI" [ref=e90]: "Ruixen UI Ruixen UI 390  components"
+  - link "Efferd" [ref=e91]: "Efferd Efferd 100  components"
+  - link "UI TripleD" [ref=e92]: "UI TripleD UI TripleD 89  components"
+  - link "UI Layouts" [ref=e93]: "UI Layouts UI Layouts 72  components"
+  - link "Shailendra" [ref=e94]: "Shailendra Shailendra 51  components"
+  - link "Jolly UI" [ref=e95]: "Jolly UI Jolly UI 51  components"
+  - link "uimix" [ref=e96]: "uimix uimix 49  components"
+  - link "ShadcnSpace" [ref=e97]: "ShadcnSpace ShadcnSpace 45  components"
+  - link "shadway" [ref=e98]: "shadway shadway 45  components"
+  - link "REAVIZ" [ref=e99]: "REAVIZ REAVIZ 41  components"
+  - link "reuno-ui" [ref=e100]: "reuno-ui reuno-ui 37  components"
+  - link "Motion Primitives" [ref=e101]: "Motion Primitives Motion Primitives 34  components"
+  - link "Systaliko UI" [ref=e102]: "Systaliko UI Systaliko UI 33  components"
+  - link "lndev-ui" [ref=e103]: "lndev-ui lndev-ui 30  components"
+  - link "Fancy Components" [ref=e104]: "Fancy Components Fancy Components 30  components"
+  - link "coss" [ref=e105]: "coss coss 28  components"
+  - link "Cnippet" [ref=e106]: "Cnippet Cnippet 26  components"
+  - link "PrebuiltUI" [ref=e107]: "PrebuiltUI PrebuiltUI 25  components"
+  - link "Circle" [ref=e108]: "Circle Circle 25  components"
+  - link "Spell" [ref=e109]: "Spell Spell 24  components"
+  - link "Layouts" [ref=e110]: "Layouts Layouts 24  components"
+  - link "Interfaces DS" [ref=e111]: "Interfaces DS Interfaces DS 23  components"
+  - text: "…and  700+ design  engineers  shipping  shaders, interactions, and  a n i m a t e d  h e r o e s."
+- region:
+  - heading "Built by Ready for agents" [level=2]: "Built by  humans Ready for agents"
+  - link "Browse components" [ref=e112]
+  - button "Join for free" [ref=e113]
+- region:
+  - heading "Questions," [level=2]: "Questions, answered"
+  - text: "Everything you need to know about the registry, installing components, and publishing your own."
+  - generic "01 What is 21st?" [ref=e115]
+  - generic "02 Is 21st free?" [ref=e117]
+  - generic "03 How is this different from a React component library?" [ref=e119]
+  - generic "04 How do I install a component?" [ref=e121]
+  - generic "05 Do components work with shadcn/ui?" [ref=e123]
+  - generic "06 Can I publish my own components?" [ref=e125]
+  - generic "07 What are React templates on 21st?" [ref=e127]
+- contentinfo:
+  - link "21stBuilt with 21st" [ref=e128]: "Built with 21st"
+  - heading "Product" [level=3]
+  - link "Components" [ref=e129]
+  - link "Templates" [ref=e130]
+  - link "Themes" [ref=e131]
+  - link "Icons" [ref=e132]
+  - link "Pricing" [ref=e133]
+  - heading "Resources" [level=3]
+  - link "Publish" [ref=e134]
+  - link "Sign in" [ref=e135]
+  - heading "Company" [level=3]
+  - link "Contact" [ref=e136]
+  - link "Privacy" [ref=e137]
+  - link "Terms" [ref=e138]
+  - heading "Connect" [level=3]
+  - link "X (Twitter)" [ref=e139]
+  - link "GitHub" [ref=e140]
+  - text: "© 2026 21st Labs, Inc."
+- region "Notifications alt+T" [ref=e141]
+✔︎ Opened a new tab and set it active: tabs[0], page → Tremor – Copy-and-Paste Tailwind CSS UI Components for Charts and Dashboards (https://www.tremor.so/)
+# note: interactive (clickable / focusable) elements only.
+- title: "Tremor – Copy-and-Paste Tailwind CSS UI Components for Charts and Dashboards" [url=https://www.tremor.so/]
+- banner:
+  - link [ref=e1]:
+    - text: "Vercel wordmark Tremor   is joining   Vercel. Read more about our journey"
+    - canvas [ref=e2] [size=1425x48]
+  - link "Tremor Raw Logo and Home Link" [ref=e3]
+  - navigation:
+    - link "Components" [ref=e4]
+    - link "Charts" [ref=e5]
+    - link "Blocks & Templates" [ref=e6]
+    - link "Docs" [ref=e7]
+    - link "Go to GitHub Repository" [ref=e8]
+- main:
+  - region:
+    - text: "Built for React Tailwind CSS"
+    - heading [level=1]: "React components to build charts and dashboards"
+    - text: "35+ fully open-source, accessible components for dashboards and charts.  Built with React, Tailwind CSS and Radix UI."
+    - link "Get started" [ref=e9]
+    - link "Blocks & Templates" [ref=e10]
+    - heading "Portfolio Value" [level=3]
+    - text: "$328,505.10 Aug 25 Aug 29 Sep 02 Sep 06 Sep 10 Sep 14 Sep 18 Sep 22 Sep 26"
+    - generic [ref=e14]:
+      - listitem "ETF Shares Vital" [ref=e15]
+      - listitem "Vitainvest Core" [ref=e16]
+      - listitem "iShares Tech Growth" [ref=e17]
+    - text: "Beautiful defaults, and simple props for every component We already pushed the pixels so that you can focus on data. Customize quickly, spend less time on design."
+    - heading "Online payments" [level=3]
+    - tablist [ref=e18]:
+      - tab "Europe" [ref=e19] [selected]
+      - tab "North America" [ref=e20]
+    - tabpanel "Europe" [ref=e21]:
+      - text: "Jan 23 Dec 23"
+      - list: "Successful 263 Refunded 18 Fraudulent 9"
+    - text: "Accessible by design Built on Recharts and Radix UI, Tremor provides the essentials for production-ready UI.Date (Range) Picker"
+    - button "29 Sep, 2026 - 09 Oct, 2026" [ref=e22]
+    - text: "Range slider"
+    - generic [ref=e23]:
+      - slider [ref=e24]
+      - slider [ref=e25]
+    - text: "55 – 75 Range slider with bins"
+    - button "$186 - $11,768" [ref=e26]
+    - text: "Select with groups"
+    - combobox "Striped Dress Shirt" [ref=e27]
+    - text: "Multi-Checkbox Filter"
+    - button "Selected Locations" [ref=e28]: "Selected Locations 0"
+    - text: "Multi-Logic Filter"
+    - button "Costs Is between $100.00 and $5,000.00" [ref=e29]
+    - text: "Build the most complex filters Modular input components for better interaction with your data, with full support for keyboard navigation.example.com 99.9% uptime Advanced visualizations Tracker, Bar Lists, and many more components to visualize complex use cases gracefully.9.3%1.9%0.6%"
+    - button "Hover me" [ref=e30]
+    - button "Click me" [ref=e31]
+    - button "Open me" [ref=e32]
+    - radiogroup [ref=e33]:
+      - radio "Starter 10k requests" [ref=e34] [checked]
+      - radio "Premium 50k requests" [ref=e35]
+      - radio "Enterprise Individual" [ref=e36]
+    - tablist [ref=e37]:
+      - tab "Overview" [ref=e38] [selected]
+      - tab "Reports" [ref=e39]
+      - tab "Forecast" [ref=e40]
+    - text: "All the helpers you need Components to enhance analytical interfaces, providing the perfect finishing touch.Storage used 1.85GB 18.5%1.85 of 10GB"
+    - progressbar "Progress bar"
+    - text: "Acme Holding$45.1K+$1.1K+9.1%"
+    - progressbar "Progress circle": "20%"
+    - text: "Data Workspaces 1 of 5 used Data Bars, Spark Charts, and Progress Circles Micro visualizations to highlight even the smallest details better.Over 250 blocks and templates to give you a head start From advanced tables to pre-defined dashboards, get access to over 250 blocks and templates to kickstart your next application."
+    - checkbox "Select all" [ref=e41]
+    - text: "Workspace Owner Status Region Capacity Costs Last edited"
+    - checkbox "Select row" [ref=e42]
+    - text: "sales_by_day_api John Doe live US-West 1 99%$3,509.00 23/09/2023 13:00"
+    - checkbox "Select row" [ref=e43] [checked]
+    - text: "marketing_campaign Jane Smith live US-East 2 80%$5,720.00 22/09/2023 10:45"
+    - checkbox "Select row" [ref=e44]
+    - text: "sales_campaign Jane Smith live US-East 2 80%$5,720.00 22/09/2023 10:45"
+    - checkbox "Select row" [ref=e45] [checked]
+    - text: "development_env Mike Johnson live EU-West 1 60%$4,200.00 21/09/2023 14:30"
+    - checkbox "Select row" [ref=e46]
+    - text: "new_workspace_1 Alice Brown live US-West 2 75%$2,100.00 24/09/2023 09:15"
+    - checkbox "Select row" [ref=e47]
+    - text: "test_environment David Clark inactive EU-Central 1 40%$800.00 25/09/2023 16:20"
+  - region "Tremor Blocks & Templates" [ref=e48]:
+    - heading "Tremor Blocks & Templates" [level=2]
+    - text: "Production-ready templates to launch tomorrow Carefully crafted templates built by experts with the latest technology stack based on React and Next.js. Get templates for anything to build and launch your idea."
+    - link "Screenshot of dashboard template Dashboard Template Analytical interfaces that allow your audience t" [ref=e49]
+    - link "Screenshots of database template SaaS Marketing Website Launch your next idea with a beautiful websi" [ref=e50]
+    - link "Screenshots of overview template Report Pages Overview dashboard pages to summarize data." [ref=e51]
+    - link "Screenshots of insights template SaaS Template Feed and track your data in the best way possible. Ev" [ref=e52]
+    - link "Screenshots of solar template One-Pager Website Launch your next idea with a beautiful website templ" [ref=e53]
+    - link "Screenshots of planner template Dashboard Template Simple interfaces designed to present data easily" [ref=e54]
+  - region "Customer voices on X (formely twitter)" [ref=e55]:
+    - heading "Customer voices on" [level=2]: "Customer voices on  X (formely twitter)"
+    - text: "Leading developers build with Tremor Tremor makes it so easy to build beautiful dashboards. The ReactJS / Next.js ecosystem just keeps getting better and better.X (formerly Twitter) profile picture of user Guillermo Rauch"
+    - link "Guillermo Rauch" [ref=e56]
+    - text: "CEO @ Vercel tremor.so is dope X (formerly Twitter) profile picture of user Peer Richelsen"
+    - link "Peer Richelsen" [ref=e57]
+    - text: "Co-Founder @ Cal.com Made quite some progress in the last week. Huge thanks @tremorlabs for saving me weeks of creating custom components.X (formerly Twitter) profile picture of user Eyk Rehbein"
+    - link "Eyk Rehbein" [ref=e58]
+    - text: "Senior Software Engineer @ Sonic Love how clean the dashboard library from @tremorlabs is.X (formerly Twitter) profile picture of user Anthony Morris"
+    - link "Anthony Morris" [ref=e59]
+    - text: "Senior Software Engineer @ Stripe We've loved working with the @tremorlabs team and contributing to the project. It's moving fast and they're releasing really meaningful changes. We expect to continue working with Tremor on additional starter kits like this one.X (formerly Twitter) profile picture of user Tinybird"
+    - link "Tinybird" [ref=e60]
+    - text: "Data platform provider Creating dashboards quickly with @tremorlabs X (formerly Twitter) profile picture of user Drew Bredvick"
+    - link "Drew Bredvick" [ref=e61]
+    - text: "Sales Engineering Manager @ Vercel I am in love with the @tremorlabs viz library & we've been working to adopt it in our Starter Kits.X (formerly Twitter) profile picture of user Alasdair Brown"
+    - link "Alasdair Brown" [ref=e62]
+    - text: "DevRel Lead @ Tinybird Tremor looks interesting. Cool React components to build dashboards tremor.so X (formerly Twitter) profile picture of user Flavio Copes"
+    - link "Flavio Copes" [ref=e63]
+    - text: "Creator of Bootcamp.dev Fantastic set of UI modular components @tremorlabs to build dashboards with React. It comes with pre-built modular KPI cards.X (formerly Twitter) profile picture of user Andrej Baranovskij"
+    - link "Andrej Baranovskij" [ref=e64]
+    - text: "Founder @ Katanaml.io Super excited to see the Tremor release, Looking forward to using it in my side projects and maybe internally at Mentimeter :) it looks fantastic X (formerly Twitter) profile picture of user Geordi Dearns"
+    - link "Geordi Dearns" [ref=e65]
+    - text: "Engineering Manager @ Mentimeter"
+  - region "Get started in seconds" [ref=e66]:
+    - heading "Get started in seconds" [level=2]
+    - text: "Copy-and-paste or NPM package? We have it."
+    - tabpanel:
+      - generic "// Tremor DonutChart [v0.0.0] import React from \"react\"import { Pie, PieChart as ReChartsDonutChart," [ref=e67] [scrollable]
+    - heading "Tremor copy-and-paste" [level=3]
+    - text: "Full customization with our copy-and-paste React components."
+    - list:
+      - heading "35+" [level=3]
+      - text: "Unique Components"
+      - heading "300+" [level=3]
+      - text: "Block examples"
+    - tabpanel:
+      - generic "import { DonutChart } from '@tremor/react'; export function DonutChartUsageExample() { return ( <Don" [ref=e68] [scrollable]
+    - heading "NPM Package" [level=3]
+    - text: "Get started quickly with a basic set of importable components."
+    - list:
+      - heading "15K+" [level=3]
+      - text: "Stargazers on GitHub"
+      - heading "300K+" [level=3]
+      - text: "Monthly downloads"
+- contentinfo:
+  - heading "Footer" [level=2]
+  - heading "Products" [level=3]
+  - list:
+    - link "Tremor Templates" [ref=e69]
+    - link "Tremor NPM Package" [ref=e70]
+    - link "Tremor Figma UI Kit" [ref=e71]
+  - heading "Support" [level=3]
+  - list:
+    - link "Documentation" [ref=e72]
+    - link "Changelog" [ref=e73]
+  - heading "Company" [level=3]
+  - list:
+    - link "Contact us" [ref=e74]
+  - heading "Legal" [level=3]
+  - list:
+    - link "Imprint" [ref=e75]
+    - link "Privacy" [ref=e76]
+    - link "Terms and Conditions" [ref=e77]
+    - link "Contributors" [ref=e78]
+  - heading "Subscribe to our newsletter" [level=3]
+  - text: "We send 3-5 newsletters a year. Promised."
+  - textbox "Subscribe via email" [ref=e79] [disabled] [placeholder="Subscribe via email"]
+  - button "Subscribe" [ref=e80] [disabled]
+  - text: "© 2025  Tremor Labs, Inc. All rights reserved."
+  - link "GitHub" [ref=e81]
+  - link "X" [ref=e82]
+{
+  captureRoot: '/Users/twoimo/.aside/u/0/sessions/2026-10-09_mXIilDn0hp806mSR',
+  records: [
+    {
+      index: 9,
+      name: 'Transitions',
+      url: 'https://transitions.dev/',
+      actualUrl: 'https://transitions.dev/',
+      title: 'Transitions.dev: UI transitions for AI agents',
+      screenshot: '09-reference.png'
+    },
+    {
+      index: 10,
+      name: 'shadcn/ui',
+      url: 'https://ui.shadcn.com/',
+      actualUrl: 'https://ui.shadcn.com/',
+      title: 'shadcn/ui - The Foundation for your Design System',
+      screenshot: '10-reference.png'
+    },
+    {
+      index: 11,
+      name: '21st.dev',
+      url: 'https://21st.dev/',
+      actualUrl: 'https://21st.dev/',
+      title: 'React Components, Templates & Themes — 12,000+ Crafted UI | 21st | 21st',
+      screenshot: '11-reference.png'
+    },
+    {
+      index: 12,
+      name: 'Tremor',
+      url: 'https://tremor.so/',
+      actualUrl: 'https://www.tremor.so/',
+      title: 'Tremor – Copy-and-Paste Tailwind CSS UI Components for Charts and Dashboards',
+      screenshot: '12-reference.png'
+    }
+  ]
+}
+[2m[ok | 13153ms][0m

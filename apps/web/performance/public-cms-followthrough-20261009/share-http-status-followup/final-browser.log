@@ -1,0 +1,26 @@
+
+Running 14 tests using 1 worker
+
+(node:20225) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/14] [fixture-development] › tests/share-http-status.spec.ts:7:2 › HTTP status and bounded recovery for invalid-code
+[2/14] [fixture-development] › tests/share-http-status.spec.ts:7:2 › HTTP status and bounded recovery for MISSNG
+[3/14] [fixture-development] › tests/share-http-status.spec.ts:7:2 › HTTP status and bounded recovery for FAIL00
+[4/14] [fixture-development] › tests/share-http-status.spec.ts:7:2 › HTTP status and bounded recovery for CTRL00
+[5/14] [fixture-development] › tests/share-http-status.spec.ts:23:1 › valid review and unsafe target retain HTTP307 with no response-body success substitution
+[6/14] [fixture-development] › tests/share-http-status.spec.ts:28:2 › standalone CSS system light supports small viewport and visible focus
+[7/14] [fixture-development] › tests/share-http-status.spec.ts:28:2 › standalone CSS system dark supports small viewport and visible focus
+(node:20875) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[8/14] [fixture-production] › tests/share-http-status.spec.ts:7:2 › HTTP status and bounded recovery for invalid-code
+[9/14] [fixture-production] › tests/share-http-status.spec.ts:7:2 › HTTP status and bounded recovery for MISSNG
+[10/14] [fixture-production] › tests/share-http-status.spec.ts:7:2 › HTTP status and bounded recovery for FAIL00
+[11/14] [fixture-production] › tests/share-http-status.spec.ts:7:2 › HTTP status and bounded recovery for CTRL00
+[12/14] [fixture-production] › tests/share-http-status.spec.ts:23:1 › valid review and unsafe target retain HTTP307 with no response-body success substitution
+[13/14] [fixture-production] › tests/share-http-status.spec.ts:28:2 › standalone CSS system light supports small viewport and visible focus
+[14/14] [fixture-production] › tests/share-http-status.spec.ts:28:2 › standalone CSS system dark supports small viewport and visible focus
+  14 passed (10.8s)

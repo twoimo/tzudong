@@ -390,7 +390,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
 
             <SectionPanel title="검수 결과" description="영상 근거와 상호·주소 근거를 기준으로 승인 전 확인해야 할 항목입니다.">
                 <div className="space-y-3">
-                    <EvalItem index={0} title="맛집명 검증" tone="pink" value={record.approved_name ? <Badge className="bg-emerald-600 text-2xs">승인됨 · {record.approved_name}</Badge> : null}>
+                    <EvalItem index={0} title="맛집명 검증" tone="pink" value={record.approved_name ? <Badge variant={record.status === 'approved' ? 'default' : 'secondary'} className={record.status === 'approved' ? 'bg-emerald-600 text-2xs' : 'text-2xs'}>{record.status === 'approved' ? '승인됨' : '저장된 이름'} · {record.approved_name}</Badge> : null}>
                         <div className="space-y-1.5">
                             <SourceNameRow
                                 label="원본 이름"

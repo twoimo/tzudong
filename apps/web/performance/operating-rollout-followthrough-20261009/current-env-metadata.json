@@ -1,0 +1,467 @@
+{
+  "project": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "team": "twoimos-projects",
+  "projectIdentityMatched": true,
+  "targets": {
+    "production": {
+      "count": 24,
+      "metadata": [
+        {
+          "key": "GEMINI_CREDITS_API_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "TZUDONG_APPROVED_PRODUCTION_SHA",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "GEMINI_API_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "NEXT_PUBLIC_NAVER_CLIENT_ID",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "NEXT_NAVER_CLIENT_SECRET",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "NEXT_NAVER_CLIENT_ID",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "SUPABASE_SERVICE_ROLE_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "YOUTUBE_API_KEY",
+          "target": [
+            "production",
+            "preview"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "GEMINI_OCR_YEON",
+          "target": [
+            "production",
+            "preview"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "PRIVACY_ONBOARDING_COOKIE_SECRET",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "PRIVACY_RETENTION_INTERNAL_CAPABILITY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "ACCOUNT_DELETION_WORKER_CAPABILITY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "VERCEL_PROJECT_ID",
+          "target": [
+            "production"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "TS7_RELEASE_ID",
+          "target": [
+            "production"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "GITHUB_ACTIONS_TOKEN",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "GOOGLE_GEOCODING_API_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "NEXT_PUBLIC_SITE_URL",
+          "target": [
+            "development",
+            "preview",
+            "production"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "GITHUB_TOKEN",
+          "target": [
+            "development",
+            "preview",
+            "production"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "GITHUB_OWNER",
+          "target": [
+            "development",
+            "preview",
+            "production"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "GITHUB_REPO",
+          "target": [
+            "development",
+            "preview",
+            "production"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "NEXT_PUBLIC_SUPABASE_URL",
+          "target": [
+            "production",
+            "preview",
+            "development"
+          ],
+          "type": "encrypted"
+        }
+      ]
+    },
+    "all": {
+      "count": 36,
+      "metadata": [
+        {
+          "key": "GEMINI_CREDITS_API_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "TZUDONG_APPROVED_PRODUCTION_SHA",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "GEMINI_API_KEY",
+          "target": [
+            "preview"
+          ],
+          "type": "sensitive",
+          "gitBranch": "develop"
+        },
+        {
+          "key": "GEMINI_API_KEY",
+          "target": [
+            "preview"
+          ],
+          "type": "sensitive",
+          "gitBranch": "data"
+        },
+        {
+          "key": "GEMINI_API_KEY",
+          "target": [
+            "development"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "GEMINI_API_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "NEXT_PUBLIC_NAVER_CLIENT_ID",
+          "target": [
+            "development",
+            "preview"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "NEXT_NAVER_CLIENT_SECRET",
+          "target": [
+            "development"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "NEXT_NAVER_CLIENT_ID",
+          "target": [
+            "development"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "target": [
+            "development"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+          "target": [
+            "development",
+            "preview"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "SUPABASE_SERVICE_ROLE_KEY",
+          "target": [
+            "development"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "NEXT_PUBLIC_NAVER_CLIENT_ID",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "NEXT_NAVER_CLIENT_SECRET",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "NEXT_NAVER_CLIENT_ID",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "SUPABASE_SERVICE_ROLE_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "YOUTUBE_API_KEY",
+          "target": [
+            "production",
+            "preview"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "GEMINI_OCR_YEON",
+          "target": [
+            "production",
+            "preview"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "PRIVACY_ONBOARDING_COOKIE_SECRET",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "PRIVACY_RETENTION_INTERNAL_CAPABILITY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "ACCOUNT_DELETION_WORKER_CAPABILITY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "VERCEL_PROJECT_ID",
+          "target": [
+            "production"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "TS7_RELEASE_ID",
+          "target": [
+            "production"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "GITHUB_ACTIONS_TOKEN",
+          "target": [
+            "development"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "GITHUB_ACTIONS_TOKEN",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "GOOGLE_GEOCODING_API_KEY",
+          "target": [
+            "preview"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "GOOGLE_GEOCODING_API_KEY",
+          "target": [
+            "production"
+          ],
+          "type": "sensitive"
+        },
+        {
+          "key": "NEXT_PUBLIC_SITE_URL",
+          "target": [
+            "development",
+            "preview",
+            "production"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "GITHUB_TOKEN",
+          "target": [
+            "development",
+            "preview",
+            "production"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "GITHUB_OWNER",
+          "target": [
+            "development",
+            "preview",
+            "production"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "GITHUB_REPO",
+          "target": [
+            "development",
+            "preview",
+            "production"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "NEXT_PUBLIC_SUPABASE_URL",
+          "target": [
+            "production",
+            "preview",
+            "development"
+          ],
+          "type": "encrypted"
+        },
+        {
+          "key": "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY",
+          "target": [
+            "preview",
+            "development"
+          ],
+          "type": "encrypted"
+        }
+      ]
+    }
+  },
+  "valuesPersisted": false
+}

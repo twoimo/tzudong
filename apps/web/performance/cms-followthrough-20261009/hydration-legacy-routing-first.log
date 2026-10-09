@@ -1,0 +1,38 @@
+
+Running 1 test using 1 worker
+
+(node:89935) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] tests/admin-console-module-hydration.spec.ts:204:3 › admin console module hydration smoke › loads core admin modules without hydration/runtime errors
+  1) tests/admin-console-module-hydration.spec.ts:204:3 › admin console module hydration smoke › loads core admin modules without hydration/runtime errors 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('#admin-console-canvas')
+    Expected: "restaurant-refresh-history"
+    Received: "restaurants"
+    Timeout:  30000ms
+
+    Call log:
+      - Expect "toHaveAttribute" locator('#admin-console-canvas') with timeout 30000ms
+      - waiting for locator('#admin-console-canvas')
+        63 × locator resolved to <section tabindex="-1" role="region" id="admin-console-canvas" aria-label="관리자 콘솔 작업 화면" data-scroll-owner="admin-canvas" data-admin-console-content="true" data-admin-console-active-module="restaurants" data-admin-console-focus-order="skip-link sidebar canvas module-actions" class="h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain scrollbar-hide border-y border-border bg-background p-2 font-sans tracking-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-v…>…</section>
+           - unexpected value "restaurants"
+
+
+      238 |     for (const target of ADMIN_MODULE_SMOKE_TARGETS) {
+      239 |       await gotoAndHidePopup(page, target.path);
+    > 240 |       await expect(page.locator('#admin-console-canvas')).toHaveAttribute(
+          |                                                           ^
+      241 |         'data-admin-console-active-module',
+      242 |         target.moduleId,
+      243 |         { timeout: 30_000 },
+        at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/admin-console-module-hydration.spec.ts:240:59
+
+    Error Context: performance/cms-followthrough-20261009/hydration-run-output/admin-console-module-hydra-7239e-ut-hydration-runtime-errors/error-context.md
+
+
+  1 failed
+    tests/admin-console-module-hydration.spec.ts:204:3 › admin console module hydration smoke › loads core admin modules without hydration/runtime errors 

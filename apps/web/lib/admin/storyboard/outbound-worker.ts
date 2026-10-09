@@ -7,10 +7,12 @@ import { open } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import sharp from 'sharp';
 import { z } from 'zod';
-import { MlxStoryboardClient, type MlxModel } from './mlx-client.ts';
+import type { MlxStoryboardClient } from './mlx-client.ts';
+import { GeminiStoryboardClient } from './gemini-client.ts';
+import type { ProductionModel as MlxModel } from './production-worker-auth.ts';
 import {
   MAX_STORYBOARD_IMAGE_BYTES, MAX_STORYBOARD_IMAGE_PIXELS, STORYBOARD_PRODUCTION_MESSAGES,
-  StoryboardProductionError, assertStoryboardProviderPolicy, parseStoryboardDraft,
+  StoryboardProductionError, assertGeminiStoryboardExecutionPolicy, parseStoryboardDraft,
   type StoryboardDraft, type StoryboardProductionProvenance,
 } from './production-contract.ts';
 import { canAdmitStoryboardMemory } from './resource-invariants.ts';
@@ -182,7 +184,7 @@ export interface StoryboardWorkerApi {
   operation(value: Record<string, unknown>, signal?: AbortSignal): Promise<unknown>;
   image(lease: Lease, sceneNo: number, bytes: Buffer, proof: StoryboardProductionProvenance, signal?: AbortSignal): Promise<void>;
 }
-type Models = Pick<MlxStoryboardClient, 'models' | 'draft' | 'image'>;
+type Models = { models(signal?: AbortSignal): Promise<MlxModel[]>; draft: MlxStoryboardClient['draft']; image: MlxStoryboardClient['image'] };
 export function storyboardWorkerErrorCode(error: unknown): string {
   if (error instanceof StoryboardWorkerApiError) return error.code;
   if (error instanceof StoryboardProductionError && Object.hasOwn(STORYBOARD_PRODUCTION_MESSAGES, error.code)) return error.code;
@@ -198,7 +200,9 @@ export function admitStoryboardWorkerMemory(
 ): boolean {
   const resident = models.reduce((sum, model) => sum + (Number(model.bytes_resident) || 0), 0);
   const configuredInferencePeak = process.env[STORYBOARD_MLX_INFERENCE_PEAK_BYTES_ENV];
-  const inferencePeakBytes = configuredInferencePeak === undefined
+  const inferencePeakBytes = models.length > 0 && models.every((model) => 'owned_by' in model && model.owned_by === 'gemini-api')
+    ? 128 * 1024 ** 2
+    : configuredInferencePeak === undefined
     ? DEFAULT_STORYBOARD_MLX_INFERENCE_PEAK_BYTES
     : Number(configuredInferencePeak);
   // Default reserves 8 GiB for MLX inference, plus the existing encoded/decoded/upload buffers.
@@ -249,7 +253,7 @@ export class OutboundStoryboardWorker {
     api: StoryboardWorkerApi; mlx?: Models; heartbeatMs?: number; onEvent?: (event: WorkerEvent) => void;
     admitMemory?: (models: MlxModel[]) => boolean;
   }) {
-    this.api = options.api; this.mlx = options.mlx ?? new MlxStoryboardClient();
+    this.api = options.api; this.mlx = options.mlx ?? new GeminiStoryboardClient();
     this.heartbeatMs = options.heartbeatMs ?? 15_000;
     if (!Number.isInteger(this.heartbeatMs) || this.heartbeatMs < 1 || this.heartbeatMs > 30_000) {
       throw new StoryboardWorkerApiError('invalid_worker_timeout');
@@ -335,7 +339,7 @@ export class OutboundStoryboardWorker {
       check();
       await this.heartbeat(models, scope.signal, lease);
       check();
-      assertStoryboardProviderPolicy(job.request.providers);
+      assertGeminiStoryboardExecutionPolicy(job.request.providers);
       if (job.document && (job.document.projectId !== job.projectId || job.document.revision !== job.revision
         || job.document.scenes.length !== job.request.sceneCount
         || job.document.scenes.some((scene, index) => scene.sceneNo !== index + 1))) {
@@ -343,7 +347,7 @@ export class OutboundStoryboardWorker {
       }
       let draft: StoryboardDraft;
       if (!job.document) {
-        if (job.kind !== 'generate' || job.request.providers.text.id !== 'local-mlx') {
+        if (job.kind !== 'generate' || job.request.providers.text.id !== 'gemini-api') {
           throw new StoryboardProductionError('invalid_structured_response');
         }
         this.onEvent({ event: 'text_started', jobId: job.id });
@@ -353,7 +357,7 @@ export class OutboundStoryboardWorker {
         this.onEvent({ event: 'text_saved', jobId: job.id });
       } else draft = job.document;
       let imageFailure: string | undefined;
-      if (job.request.providers.image.id === 'local-mlx') {
+      if (job.request.providers.image.id === 'gemini-api') {
         const scenes = job.kind === 'scene' ? draft.scenes.filter((scene) => scene.sceneNo === job.sceneNo)
           : draft.scenes.filter((scene) => {
             const saved = job.document?.scenes.find((entry) => entry.sceneNo === scene.sceneNo);

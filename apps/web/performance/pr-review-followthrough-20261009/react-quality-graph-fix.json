@@ -1,0 +1,33 @@
+{
+  "editedAtUtc": "2026-10-09T03:27:59.429269+00:00",
+  "path": "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx",
+  "change": "Remove node=selected from page query only",
+  "beforeSourceSha256": "ac95a69229ef6f05d1cf1c8ae499a0d789dda1b950ce493dfa7d5953443ee09f",
+  "finalSourceSha256": "c76fb4fbceeb37241324a43bae369ce358d82e803f308089aab4a653410e8a68",
+  "oneLineChangeOnly": true,
+  "verification": {
+    "actualCurrentComponentQueryFn": true,
+    "actualLocalReader": true,
+    "initialNodes": 92,
+    "nextNodes": 92,
+    "nodeMembershipUnchanged": true,
+    "selectedNode": "n-000000",
+    "selectedEvidenceCount": 16,
+    "selectedSummaryUnchanged": true,
+    "selectionFetches": 0,
+    "detailOpen": true,
+    "listOpen": false,
+    "requests": [
+      "/api/admin/knowledge-graph?q=&kind=&limit=100",
+      "/api/admin/knowledge-graph?q=&kind=&limit=100&edgeCursor=eyJyZXZpc2lvbiI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJxdWVyeSI6ImVmOWFkMDdmYzZkMDQ1M2E4YzYwOWVjYWE5MDRjMWE5NDU4YTc1Y2VkYzQ3ZmU4NWNjMTBlY2Q4YTMwMzQ2NzIiLCJraW5kIjoiZWRnZXMiLCJwYWdlIjoiODIyMWZlM2IyYmFlMGQ1YTA5ODNmMzNkNDYzYWY3NzhhNmJhOTBjYTk1YmQ4ZjBiNTlmMDY4OWE2MTBlMGNlNSIsIm9mZnNldCI6MzE0fQ"
+    ],
+    "initialEdges": 314,
+    "nextEdges": 314,
+    "oldEdgeCursorAccepted": true,
+    "revisionChangeError": "knowledge_cursor_stale",
+    "focusAndErrorBranchesUnchanged": true
+  },
+  "testsLog": "react-quality-graph-fix-tests.txt",
+  "eslint": "PASS",
+  "limitations": "Actual component queryFn/selection/current expressions extracted and executed with synthetic transport invoking actual local file reader. No React browser rendering/focus runtime claim; focus/error branches byte-for-byte preserved. No provider/operational/vault calls."
+}

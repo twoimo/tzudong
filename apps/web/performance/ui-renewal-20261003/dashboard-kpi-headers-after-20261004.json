@@ -1,0 +1,237 @@
+{
+  "kind": "synthetic-kpi-header-geometry",
+  "cases": [
+    {
+      "width": 1423,
+      "card": "subscribers",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 1423,
+      "card": "views",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 1423,
+      "card": "likes",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 1423,
+      "card": "comments",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 1423,
+      "card": "videos",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 834,
+      "card": "subscribers",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 834,
+      "card": "views",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 834,
+      "card": "likes",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 834,
+      "card": "comments",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 834,
+      "card": "videos",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "card": "subscribers",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "card": "views",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "card": "likes",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "card": "comments",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "card": "videos",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true,
+      "overflow": false
+    }
+  ],
+  "before": [
+    {
+      "width": 1423,
+      "card": "subscribers",
+      "headerHeight": 47,
+      "centerDelta": 27.5,
+      "alignedSameRow": false
+    },
+    {
+      "width": 1423,
+      "card": "views",
+      "headerHeight": 47,
+      "centerDelta": 27.5,
+      "alignedSameRow": false
+    },
+    {
+      "width": 1423,
+      "card": "likes",
+      "headerHeight": 47,
+      "centerDelta": 27.5,
+      "alignedSameRow": false
+    },
+    {
+      "width": 1423,
+      "card": "comments",
+      "headerHeight": 47,
+      "centerDelta": 27.5,
+      "alignedSameRow": false
+    },
+    {
+      "width": 1423,
+      "card": "videos",
+      "headerHeight": 47,
+      "centerDelta": 27.5,
+      "alignedSameRow": false
+    },
+    {
+      "width": 834,
+      "card": "subscribers",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true
+    },
+    {
+      "width": 834,
+      "card": "views",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true
+    },
+    {
+      "width": 834,
+      "card": "likes",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true
+    },
+    {
+      "width": 834,
+      "card": "comments",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true
+    },
+    {
+      "width": 834,
+      "card": "videos",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true
+    },
+    {
+      "width": 390,
+      "card": "subscribers",
+      "headerHeight": 47,
+      "centerDelta": 27.5,
+      "alignedSameRow": false
+    },
+    {
+      "width": 390,
+      "card": "views",
+      "headerHeight": 47,
+      "centerDelta": 27.5,
+      "alignedSameRow": false
+    },
+    {
+      "width": 390,
+      "card": "likes",
+      "headerHeight": 47,
+      "centerDelta": 27.5,
+      "alignedSameRow": false
+    },
+    {
+      "width": 390,
+      "card": "comments",
+      "headerHeight": 47,
+      "centerDelta": 27.5,
+      "alignedSameRow": false
+    },
+    {
+      "width": 390,
+      "card": "videos",
+      "headerHeight": 24,
+      "centerDelta": 0,
+      "alignedSameRow": true
+    }
+  ],
+  "nPerCondition": 1,
+  "confidenceInterval": null,
+  "node": "v24.21.0",
+  "browser": "154.0.8037.97",
+  "sourceSha256": "b01d9d38fde33e9c630f5e41048292fe7179d7b34c9a0e0175e49f07dc628e20"
+}

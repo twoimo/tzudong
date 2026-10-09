@@ -1,0 +1,21 @@
+{
+  "kind": "local_candidate_configuration",
+  "modelsChanged": false,
+  "paidCallsPerformed": 0,
+  "operatorDbWrites": 0,
+  "deploymentPerformed": false,
+  "node": "24.21.0",
+  "python": "3.14.7",
+  "npm": "11.6.2",
+  "bun": "1.4.0",
+  "webSdk": "2.18.0",
+  "backendSdk": "2.26.0",
+  "geminiDefaultModel": "gemini-3.7-flash",
+  "geminiDefaultConcurrency": 1,
+  "geminiProgramDefaultRpm": 30,
+  "actualProviderLimitsVerified": false,
+  "dependencySha256": {
+    "backend/node_modules/.package-lock.json": "6e8903b4c2fd2abcf2d53d30aa1f912808d4d84006ae7990bf0eb24240d7a0ef",
+    "apps/web/package-lock.json": "6b89c4c2c04a336a4dcc9d2c3088f49c56c12218f84a9de35b25b17091691bd0"
+  }
+}

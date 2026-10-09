@@ -55,3 +55,25 @@ export type StoryboardRagRpcClient<TRow> = {
     args: StoryboardRagHybridSearchArgs,
   ) => Promise<{ data: TRow[] | null; error: StoryboardRagServiceError }>;
 };
+
+/** Legacy content readback never selects stored vectors or compares their spaces. */
+export type StoryboardRagLegacyRow = {
+  id: string; title: string; content: string; metadata: Record<string, unknown> | null;
+};
+export type StoryboardRagLegacyClient = {
+  from(table: string): {
+    select(columns: string): {
+      eq(column: string, value: string): {
+        contains(column: string, value: Record<string, unknown>): {
+          not(column: string, operator: string, value: string): {
+            or(filter: string): {
+              order(column: string): {
+                limit(count: number): Promise<{ data: StoryboardRagLegacyRow[] | null; error: StoryboardRagServiceError }>;
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+};

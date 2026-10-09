@@ -1,0 +1,25 @@
+{
+  "admittedForFinalPerformance": false,
+  "experiments": [
+    {
+      "path": "apps/web/performance/pipeline-20261002/warning-adaptive-codec-20261005.json",
+      "sha256": "cb59229d02d9367885eac870d5a944f4cb8ff0733d99ba23c9121dcc839e9d1a",
+      "reason": "interrupted: pipe producer could prefetch beyond actual server sequential consumption"
+    },
+    {
+      "path": "apps/web/performance/pipeline-20261002/warning-adaptive-codec-serial-20261005.json",
+      "sha256": "86a2c1d15e35328efd0cd456df652cfe09198c8697d4dd188a771bab261fdd51",
+      "reason": "source drift: normalize-evaluation-record.ts changed during observation window; exit 1 rejects admission"
+    },
+    {
+      "path": "tmp/warning-adaptive-pilot-20261005.json",
+      "sha256": "c5d326119fcdcf8a164c9244faf819c46bd880102831a1f589924f67493b7bc3",
+      "reason": "single-pair development pilot; pre-ACK harness"
+    },
+    {
+      "path": "tmp/warning-adaptive-boundary-20261005.json",
+      "sha256": "1b36f83f7ceff52cb4557653e8ded8dec351d21c0fe3f89fd7ecae09117f45b0",
+      "reason": "single-pair threshold calibration; pre-ACK harness"
+    }
+  ]
+}

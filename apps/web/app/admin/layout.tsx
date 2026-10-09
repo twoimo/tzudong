@@ -1,3 +1,4 @@
+import '../../styles/admin-ui.css';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { buildNoIndexMetadata } from '@/lib/seo';

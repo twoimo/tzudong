@@ -1,0 +1,71 @@
+TAP version 13
+# Subtest: pipeline connectivity probe preserves request caps, funded priority and once-only uncertain receipts
+    # Subtest: funded key is authoritative and request/CLI/receipt caps are retained
+    ok 1 - funded key is authoritative and request/CLI/receipt caps are retained
+      ---
+      duration_ms: 381.118958
+      type: 'test'
+      ...
+    # Subtest: SDK model provenance preserves a returned revision and rejects unknown metadata
+    ok 2 - SDK model provenance preserves a returned revision and rejects unknown metadata
+      ---
+      duration_ms: 1169.469542
+      type: 'test'
+      ...
+    # Subtest: blank funded key retains the explicit generic credential fallback
+    ok 3 - blank funded key retains the explicit generic credential fallback
+      ---
+      duration_ms: 254.514458
+      type: 'test'
+      ...
+    # Subtest: blank generic credential retains the legacy alias fallback
+    ok 4 - blank generic credential retains the legacy alias fallback
+      ---
+      duration_ms: 232.856792
+      type: 'test'
+      ...
+    # Subtest: missing credential starts no SDK request and creates no misleading receipt
+    ok 5 - missing credential starts no SDK request and creates no misleading receipt
+      ---
+      duration_ms: 109.52775
+      type: 'test'
+      ...
+    # Subtest: funded authentication error does not rotate to another key or retry
+    ok 6 - funded authentication error does not rotate to another key or retry
+      ---
+      duration_ms: 284.514416
+      type: 'test'
+      ...
+    # Subtest: lost response remains uncertain and the same output cannot resend
+    ok 7 - lost response remains uncertain and the same output cannot resend
+      ---
+      duration_ms: 338.295875
+      type: 'test'
+      ...
+    # Subtest: process interruption leaves a running once-only receipt before request dispatch
+    ok 8 - process interruption leaves a running once-only receipt before request dispatch
+      ---
+      duration_ms: 287.22775
+      type: 'test'
+      ...
+    # Subtest: overlapping CLI runs sharing an output admit only one request
+    ok 9 - overlapping CLI runs sharing an output admit only one request
+      ---
+      duration_ms: 1121.264208
+      type: 'test'
+      ...
+    1..9
+ok 1 - pipeline connectivity probe preserves request caps, funded priority and once-only uncertain receipts
+  ---
+  duration_ms: 4182.449167
+  type: 'test'
+  ...
+1..1
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4384.990667

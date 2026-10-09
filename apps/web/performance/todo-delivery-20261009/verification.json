@@ -1,0 +1,69 @@
+{
+  "observedAtUtc": "2026-10-09T01:17:58.838394+00:00",
+  "baseHead": "9ae2d740e5250fd96c6de1c1c3941db1435ff5e0",
+  "evidenceClass": "local-source-tests-build-and-actual-scoped-OSK-readback",
+  "todoGroups": 19,
+  "originalTraceIds": 274,
+  "additionalTraceIds": 20,
+  "fullWebSuite": {
+    "pass": 3192,
+    "skip": 9,
+    "fail": 0
+  },
+  "fullSuiteScope": "Completed before the final Hosted README/assertion wording and graph materialization deltas; focused tests cover those later deltas.",
+  "focusedAfterFullSuite": {
+    "readmeAndStoryboardSource": 7,
+    "knowledgeGraph": 26
+  },
+  "recordActionTests": 37,
+  "recordAssertions": 267,
+  "oskPublicationTests": 19,
+  "captionAdapterTests": 5,
+  "nativeCompatParityDiagnostics": 0,
+  "targetedEslintExitCode": 0,
+  "productionBuild": {
+    "runtime": "Node24.21.0/npm11.6.2/Next16.3.8",
+    "compiled": true,
+    "generatedPages": 50,
+    "routeCssBoundariesPassed": true,
+    "ownTsconfigIncludesRemoved": 2,
+    "originalTsconfigSha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+  },
+  "retainedPrivateLogHashes": {
+    "current-todo-batch-unit-20261009.log": "3a4f48eecaf4bc8520ec0d237f577ceaf34e57bb021164a23afdd5de3400f7d1",
+    "current-todo-batch-unit-final-20261009.log": "e84cac5db24672835e6e0dbf1f283d26f13f303f89afcf977ad47f66e700dcff",
+    "todo-source-build-20261009.log": "23c229d1bf7966d357da7acb884da31af9976e7fc3f3515e73eafbb68154799f"
+  },
+  "sourceHashes": {
+    "apps/web/.env.example": "e5a3a386f0c07ca5ebab1fecdcc0288f0b0217bfd62d956515b98a1fc38fc1a7",
+    "apps/web/README.md": "114c09890d7e9b1b08b917c0acc5bf47de26f800c2ae54de2a660f1187795ca4",
+    "apps/web/app/api/admin/record-actions/route.ts": "6989185386d879ed0acd0c650c4d16e35959baf8da44385b0db67e8ab2444959",
+    "apps/web/app/api/admin/record-actions/media-cleanup/route.ts": "ba022470cfdb7226795d71042b2d95c979187f5c4c0c44ebac3794115e744d3d",
+    "apps/web/lib/admin/record-action-admission.ts": "9b45ac5ed1ccd061efb58722375931939da076eb3648f45f7374b7471170c6e0",
+    "apps/web/lib/admin/record-action-client.ts": "c5e0391b38addd0c45ecaabea5acbd44d3dd9ad46898052689ba8b5bd0ff3587",
+    "apps/web/tests-unit/admin-record-actions.test.ts": "454a8dd1b9faab0a1f6e8192647bcf7a85f7d80b0321a1ed300468505911cf26",
+    "apps/web/tests-unit/admin-record-action-client.test.ts": "238ebdb36bc51367e95453fa73b39d23d3893631a74e8da880902992dbcff562",
+    "apps/web/tests-unit/admin-console-uiux-source.test.ts": "de47f4b3de23ba8675b0589cfd19353e2e0b5b8f452e50d7b22dbe9e0a6d4809",
+    "apps/web/tests-unit/design-contract-source.test.ts": "accb8cbeecfe60e54e2386fc6184c31b5d8fbae5223a54ca295b7292011ef1a1",
+    "backend/knowledge_graph/osk_publication.py": "01d76cc5547ae2f9ace9000123a30e263663b181de21f1f863214fc60284c382",
+    "backend/knowledge_graph/OSK_PUBLICATION.md": "c66c25d03b4819e80fe2efa1d687d2f22d755779b1de3e11a224f3b71ca02186",
+    "backend/knowledge_graph/tests/test_osk_publication.py": "cd8d929b3c674e141ec5c1a0b872b5cf179031e2a7c7c4ae6eb9dc8d1383175a",
+    "backend/knowledge_graph/caption_osk_adapter.py": "83cec891cb5ee1453da591b519e8f54cb50ff10dbb07ca3aabd2e07e0aa0664d",
+    "backend/knowledge_graph/tests/test_caption_osk_adapter.py": "00efa1e03b3e02cf8e080dc32fe25995c78ed94979d9b876b53ff0cba0cf47fc",
+    "backend/knowledge_graph/CAPTION_OSK_ADAPTER.md": "62b48bf0adb10617f3f045ea6f6282f8c121d10aa88ad9bd898e65c139aed45f",
+    "apps/web/data/knowledge-graph/tzudong.json": "805c9df6aa282fef0eaa4a3a3844db48e3830af606e8fb8b8c2735d2aafada75",
+    "docs/operations/project-request-todos-20261009.md": "f606cb4d18f391fec277fd3d14691607350fb8fffc9dd90ee6a5c0ac3efc8a41"
+  },
+  "operatingDatabaseWrites": 0,
+  "productionDeployment": false,
+  "newPaidProviderCalls": 0,
+  "astraCallsAdded": 0,
+  "remaining": [
+    "phased SQL adoption/revalidation, active freeze and protected rollout",
+    "actual operating all-user/admin/provider flow",
+    "complete longform independent visual/audio analysis",
+    "Sentry target/region and actual ingestion",
+    "valid replacement constraint for card deletion",
+    "managed Storage full physical cleanup and plugin supported updates"
+  ]
+}

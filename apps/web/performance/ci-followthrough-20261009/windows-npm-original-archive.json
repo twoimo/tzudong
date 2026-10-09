@@ -1,0 +1,22 @@
+[
+  {
+    "source": "apps/web/performance/cms-followthrough-20261009/browser-check.mjs",
+    "archive": "apps/web/performance/cms-followthrough-20261009/archive/windows-npm-module-binding-original/browser-check.mjs.original.txt",
+    "sha256": "6611c9e47d3a1e191774aca0674c863ae17979b036217e51efc2b5d015be957c"
+  },
+  {
+    "source": "apps/web/performance/cms-followthrough-20261009/browser-selector-reconciliation.mjs",
+    "archive": "apps/web/performance/cms-followthrough-20261009/archive/windows-npm-module-binding-original/browser-selector-reconciliation.mjs.original.txt",
+    "sha256": "ce27e3cf6b826efd729593bd0446f06f0335d21a8f3808b60b0c719ebbb0002d"
+  },
+  {
+    "source": "apps/web/performance/cms-followthrough-20261009/artifact-map.json",
+    "archive": "apps/web/performance/cms-followthrough-20261009/archive/windows-npm-module-binding-original/artifact-map.json.original.txt",
+    "sha256": "9ca9711c9b8a057e6e3600c8fd658d75d6ed4298aa5274079e3369187b932128"
+  },
+  {
+    "source": "apps/web/performance/cms-followthrough-20261009/artifact-map.sha256",
+    "archive": "apps/web/performance/cms-followthrough-20261009/archive/windows-npm-module-binding-original/artifact-map.sha256.original.txt",
+    "sha256": "2f04206a7a93fba0ea3cf41aea544ff39dfe23238407aaec89e530fe9c87a076"
+  }
+]

@@ -1,0 +1,34 @@
+{
+  "kind": "read-query-semantics-building-blocks",
+  "hostedMutations": false,
+  "providerCalls": 0,
+  "databaseCases": {
+    "evaluation": 65,
+    "status": 80,
+    "displayNames": 98,
+    "differences": 0
+  },
+  "warningStream": {
+    "relatedRows": 10011,
+    "batchSizes": [
+      1,
+      50,
+      200,
+      777
+    ],
+    "wholeListResultEqual": true,
+    "candidatesRetained": 3,
+    "deletedEvidenceRetained": 3
+  },
+  "webTestsPassed": 10,
+  "postgresTestsPassed": 4,
+  "typescriptDiagnostics": 0,
+  "routeMigrated": false,
+  "remaining": [
+    "Database-side full query and sort",
+    "Page route switch",
+    "Bounded related-row retrieval",
+    "Cold before/after measurements"
+  ],
+  "migrationSha256": "404331acabd4c3d570e21b0fc1a3d1e2c34dd9525eea7bdbc944bc7c087f261c"
+}

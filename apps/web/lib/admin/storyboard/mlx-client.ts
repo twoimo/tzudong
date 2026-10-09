@@ -82,48 +82,7 @@ export class MlxStoryboardClient {
 
   async draft(request: StoryboardProductionRequest, signal?: AbortSignal): Promise<{
     draft: StoryboardDraft; provenance: StoryboardProductionProvenance;
-  }> {
-    assertStoryboardProviderPolicy(request.providers);
-    if (request.providers.text.id !== 'local-mlx') throw new StoryboardProductionError('provider_not_configured');
-    if (request.retrieval !== 'none') throw new StoryboardProductionError('bge_dependency_unavailable');
-    const model = await this.requireModel(request.providers.text.model, 'chat', signal);
-    const schema = z.toJSONSchema(storyboardDraftSchema);
-    const prompt = buildStoryboardDraftPrompt(request);
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const requestId = randomUUID();
-      const response = await this.transport.request('/v1/chat/completions', {
-        model: model.id, stream: false, enable_thinking: false,
-        max_tokens: 8192, temperature: 0.5,
-        messages: [{ role: 'user', content: prompt + (attempt ? '\n이전 응답의 구조 검증에 실패했습니다. 모든 필수 필드와 정확한 장면 수를 다시 확인하세요.' : '') }],
-        response_format: { type: 'json_schema', json_schema: { name: 'storyboard', strict: true, schema } },
-      }, signal);
-      const proof = provenance(response, model.id, requestId);
-      const choices = response.choices;
-      const first = Array.isArray(choices) ? choices[0] as Record<string, unknown> | undefined : undefined;
-      const message = first?.message as Record<string, unknown> | undefined;
-      try {
-        if (first?.finish_reason !== 'stop' || typeof message?.content !== 'string') {
-          throw new StoryboardProductionError('invalid_structured_response');
-        }
-        return { draft: parseStoryboardDraft(JSON.parse(message.content), request), provenance: proof };
-      } catch (error) {
-        if (attempt === 1) throw new StoryboardProductionError('invalid_structured_response');
-        if (error instanceof StoryboardProductionError && error.code !== 'invalid_structured_response') throw error;
-      }
-    }
-    throw new StoryboardProductionError('invalid_structured_response');
-  }
+  }> { throw new Error('STORYBOARD_WORKFLOW_RETIRED'); }
 
-  async image(request: StoryboardProductionRequest, imagePrompt: string, signal?: AbortSignal) {
-    assertStoryboardProviderPolicy(request.providers);
-    if (request.providers.image.id !== 'local-mlx') throw new StoryboardProductionError('provider_not_configured');
-    if (!imagePrompt.trim() || imagePrompt.length > 3000) throw new StoryboardProductionError('invalid_model_request');
-    const model = await this.requireModel(request.providers.image.model, 'image', signal);
-    const requestId = randomUUID();
-    const response = await this.transport.request('/v1/images/generations', {
-      model: model.id, prompt: imagePrompt, size: `${request.imageWidth}x${request.imageHeight}`,
-      steps: 4, stream: false,
-    }, signal);
-    return { bytes: decodeMlxImage(response), provenance: provenance(response, model.id, requestId) };
-  }
+  async image(request: StoryboardProductionRequest, imagePrompt: string, signal?: AbortSignal): Promise<{ bytes: Buffer; provenance: StoryboardProductionProvenance }> { throw new Error('STORYBOARD_WORKFLOW_RETIRED'); }
 }

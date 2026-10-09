@@ -1,0 +1,1081 @@
+{
+  "sourceArtifact": "apps/web/performance/pipeline-20261002/warning-adaptive-codec-frozen-20261005.json",
+  "sourceArtifactSha256": "e0751a2a5a553901f3b3e5cf8fa8b9a15ee07fbb45784a3ebb68d0a8e80f1bef",
+  "scope": "synthetic local warning component; sequential RPC/decode ACK; no hosted/provider performance claim",
+  "cacheState": "fresh Node per observation; PG/OS buffers not flushed and oracle/EXPLAIN warm them; cold condition is application cold only",
+  "environment": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "python": "3.14.8"
+  },
+  "postgres": [
+    "PostgreSQL 17.6 on aarch64-apple-darwin25.6.0, compiled by Apple clang version 21.0.0 (clang-2100.3.34.2), 64-bit",
+    "4MB"
+  ],
+  "uncertainty": "7 alternating pairs per condition; deterministic paired percentile bootstrap, 20000 draws seed 20261005, mean absolute/within-pair relative change. Empirical CI on this local shared host; not a guarantee or hosted population interval.",
+  "conditions": [
+    {
+      "name": "cold",
+      "rows": 1000,
+      "targets": 200,
+      "groups": 1000,
+      "codec": "flat",
+      "oracleDigest": "0f49b5c6aa5cb3f02431cc2b462c152cd805c6b8bda7b05b86bc35c592147d26",
+      "inputBefore": {
+        "relatedRows": "059cde78285e330957cba8ed0d10f9afda95f00f1888589777b003c56d440c6f",
+        "targets": "0408b261fb649955e16d175c77b3f6cae1e2758e68df55bae89de4567e8acd59"
+      },
+      "inputAfter": {
+        "relatedRows": "059cde78285e330957cba8ed0d10f9afda95f00f1888589777b003c56d440c6f",
+        "targets": "0408b261fb649955e16d175c77b3f6cae1e2758e68df55bae89de4567e8acd59"
+      },
+      "densityStageExecutedByRPC": true,
+      "metrics": {
+        "endToEndMs": {
+          "stream": {
+            "p50": 325.3492498770356,
+            "p75": 341.74377110321075,
+            "p95": 354.49681249447167
+          },
+          "adaptive": {
+            "p50": 264.52537486329675,
+            "p75": 273.8601255696267,
+            "p95": 282.53546252381057
+          },
+          "pairedAbsoluteMean": -67.8598035925201,
+          "pairedAbsolute95CI": [
+            -76.70373795554042,
+            -59.6882026709084
+          ],
+          "pairedChangePercentMean": -20.33171158727216,
+          "pairedChangePercent95CI": [
+            -22.942044049550507,
+            -18.09937079781007
+          ],
+          "medianChangePercent": -18.694948593465945,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "dbReadMs": {
+          "stream": {
+            "p50": 103.13808335922658,
+            "p75": 104.78752118069679,
+            "p95": 108.15673333127052
+          },
+          "adaptive": {
+            "p50": 38.85095799341798,
+            "p75": 39.62466702796519,
+            "p95": 44.71066677942871
+          },
+          "pairedAbsoluteMean": -63.17664330293025,
+          "pairedAbsolute95CI": [
+            -66.58822667252805,
+            -60.07603422123275
+          ],
+          "pairedChangePercentMean": -61.4485943564949,
+          "pairedChangePercent95CI": [
+            -63.56169357308982,
+            -59.14196503042774
+          ],
+          "medianChangePercent": -62.33112277440589,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "nodeWorkMs": {
+          "stream": {
+            "p50": 108.80208499999998,
+            "p75": 113.02012500000004,
+            "p95": 120.25312020000007
+          },
+          "adaptive": {
+            "p50": 113.47204100000002,
+            "p75": 114.44710400000002,
+            "p95": 114.84897040000001
+          },
+          "pairedAbsoluteMean": -0.9478034285714269,
+          "pairedAbsolute95CI": [
+            -7.879511571428596,
+            5.692332857142852
+          ],
+          "pairedChangePercentMean": -0.5676601822533363,
+          "pairedChangePercent95CI": [
+            -6.802536299200506,
+            5.536898244682692
+          ],
+          "medianChangePercent": 4.292156717401174,
+          "regressedPairs": 3,
+          "pairs": 7
+        },
+        "nodeCpuMs": {
+          "stream": {
+            "p50": 130.266,
+            "p75": 136.688,
+            "p95": 142.5143
+          },
+          "adaptive": {
+            "p50": 140.223,
+            "p75": 142.50099999999998,
+            "p95": 142.66400000000002
+          },
+          "pairedAbsoluteMean": 3.5708571428571503,
+          "pairedAbsolute95CI": [
+            -3.536857142857134,
+            10.175714285714301
+          ],
+          "pairedChangePercentMean": 2.8982485294969367,
+          "pairedChangePercent95CI": [
+            -2.3656329429080722,
+            7.971667012576904
+          ],
+          "medianChangePercent": 7.643590806503631,
+          "regressedPairs": 4,
+          "pairs": 7
+        },
+        "maxRssKiB": {
+          "stream": {
+            "p50": 124768.0,
+            "p75": 125416.0,
+            "p95": 127398.4
+          },
+          "adaptive": {
+            "p50": 115952.0,
+            "p75": 116608.0,
+            "p95": 117403.2
+          },
+          "pairedAbsoluteMean": -8416.0,
+          "pairedAbsolute95CI": [
+            -9693.714285714286,
+            -7003.428571428572
+          ],
+          "pairedChangePercentMean": -6.73623679062313,
+          "pairedChangePercent95CI": [
+            -7.67837545232199,
+            -5.6733748506600445
+          ],
+          "medianChangePercent": -7.0659143370094935,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "bytes": {
+          "stream": {
+            "p50": 544897.0,
+            "p75": 544897.0,
+            "p95": 544897.0
+          },
+          "adaptive": {
+            "p50": 349782.0,
+            "p75": 349782.0,
+            "p95": 349782.0
+          },
+          "pairedAbsoluteMean": -195115.0,
+          "pairedAbsolute95CI": [
+            -195115.0,
+            -195115.0
+          ],
+          "pairedChangePercentMean": -35.80768475510051,
+          "pairedChangePercent95CI": [
+            -35.80768475510051,
+            -35.80768475510051
+          ],
+          "medianChangePercent": -35.80768475510051,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "requests": {
+          "stream": {
+            "p50": 6.0,
+            "p75": 6.0,
+            "p95": 6.0
+          },
+          "adaptive": {
+            "p50": 1.0,
+            "p75": 1.0,
+            "p95": 1.0
+          },
+          "pairedAbsoluteMean": -5.0,
+          "pairedAbsolute95CI": [
+            -5.0,
+            -5.0
+          ],
+          "pairedChangePercentMean": -83.33333333333334,
+          "pairedChangePercent95CI": [
+            -83.33333333333334,
+            -83.33333333333334
+          ],
+          "medianChangePercent": -83.33333333333334,
+          "regressedPairs": 0,
+          "pairs": 7
+        }
+      },
+      "http": {
+        "pageReadTrials": 25,
+        "stats": {
+          "httpGets": 25,
+          "rpcCalls": 25,
+          "failures": 0
+        },
+        "scope": "owned loopback sequential GET/JSON bridge to actual PG RPC and actual Node decoder; not product auth/PostgREST/provider",
+        "metrics": {
+          "wallMs": {
+            "p50": 122.66779199999996,
+            "p75": 129.6881249999999,
+            "p95": 139.38416699999996
+          },
+          "cpuMs": {
+            "p50": 88.092,
+            "p75": 92.897,
+            "p95": 124.25919999999994
+          },
+          "decoderMs": {
+            "p50": 83.539625,
+            "p75": 89.15541600000006,
+            "p95": 91.8211584
+          },
+          "decoderCpuMs": {
+            "p50": 83.322,
+            "p75": 87.163,
+            "p95": 112.79279999999991
+          },
+          "maxRssKiB": {
+            "p50": 206224.0,
+            "p75": 266976.0,
+            "p95": 269024.0
+          },
+          "bytes": {
+            "p50": 349782.0,
+            "p75": 349782.0,
+            "p95": 349782.0
+          },
+          "requests": {
+            "p50": 1.0,
+            "p75": 1.0,
+            "p95": 1.0
+          }
+        },
+        "maxBodyBytes": 349782
+      },
+      "sqlStages": {
+        "densityStageExplain": {
+          "executionMs": 13.259,
+          "planningMs": 0.199,
+          "actualRows": 1,
+          "rootTempWrittenBlocks": 0
+        },
+        "flatProjectionStageExplain": {
+          "executionMs": 3.621,
+          "planningMs": 0.15,
+          "actualRows": 1000,
+          "rootTempWrittenBlocks": 0
+        }
+      },
+      "amortization": {
+        "crossReadReuse": false,
+        "readsToNetMeasuredSaving": 1,
+        "reason": "Planning cost is paid on each read; negative savings do not amortize by repetition."
+      }
+    },
+    {
+      "name": "small",
+      "rows": 200,
+      "targets": 200,
+      "groups": 200,
+      "codec": "flat",
+      "oracleDigest": "13b4d2ca18ba5b3200666a91e6efc0cbed0f38483ab41ceb01909fee2c912f63",
+      "inputBefore": {
+        "relatedRows": "042e644ec4376af18d1b05e3494365d45edd66b4e0784d01b0bab94f17e484fd",
+        "targets": "0408b261fb649955e16d175c77b3f6cae1e2758e68df55bae89de4567e8acd59"
+      },
+      "inputAfter": {
+        "relatedRows": "042e644ec4376af18d1b05e3494365d45edd66b4e0784d01b0bab94f17e484fd",
+        "targets": "0408b261fb649955e16d175c77b3f6cae1e2758e68df55bae89de4567e8acd59"
+      },
+      "densityStageExecutedByRPC": false,
+      "metrics": {
+        "endToEndMs": {
+          "stream": {
+            "p50": 140.0163748767227,
+            "p75": 152.5369790615514,
+            "p95": 167.40677929483354
+          },
+          "adaptive": {
+            "p50": 140.7542498782277,
+            "p75": 153.46852038055658,
+            "p95": 163.55345437768847
+          },
+          "pairedAbsoluteMean": 0.45823808094220503,
+          "pairedAbsolute95CI": [
+            -10.103738301300577,
+            11.439684379313674
+          ],
+          "pairedChangePercentMean": 0.9302825321535465,
+          "pairedChangePercent95CI": [
+            -6.237309719437372,
+            8.651031783013893
+          ],
+          "medianChangePercent": 0.5269919337325124,
+          "regressedPairs": 4,
+          "pairs": 7
+        },
+        "dbReadMs": {
+          "stream": {
+            "p50": 7.288207998499274,
+            "p75": 7.892791531048715,
+            "p95": 8.7738873437047
+          },
+          "adaptive": {
+            "p50": 5.553083959966898,
+            "p75": 6.217312416993082,
+            "p95": 7.57753737270832
+          },
+          "pairedAbsoluteMean": -1.3049046974629164,
+          "pairedAbsolute95CI": [
+            -2.3144104052335024,
+            -0.2577264261032854
+          ],
+          "pairedChangePercentMean": -16.333748072320596,
+          "pairedChangePercent95CI": [
+            -28.298656434129146,
+            -3.0715679000555696
+          ],
+          "medianChangePercent": -23.807279359887346,
+          "regressedPairs": 2,
+          "pairs": 7
+        },
+        "nodeWorkMs": {
+          "stream": {
+            "p50": 27.09558299999999,
+            "p75": 30.6416465,
+            "p95": 32.737662799999995
+          },
+          "adaptive": {
+            "p50": 27.396084000000002,
+            "p75": 29.47414599999999,
+            "p95": 33.70719119999998
+          },
+          "pairedAbsoluteMean": 0.07938714285713745,
+          "pairedAbsolute95CI": [
+            -2.3189215178571425,
+            3.287104896428511
+          ],
+          "pairedChangePercentMean": 1.1055565619500292,
+          "pairedChangePercent95CI": [
+            -7.408993497346975,
+            12.981828835839114
+          ],
+          "medianChangePercent": 1.1090405399286407,
+          "regressedPairs": 3,
+          "pairs": 7
+        },
+        "nodeCpuMs": {
+          "stream": {
+            "p50": 37.441,
+            "p75": 40.507000000000005,
+            "p95": 41.864399999999996
+          },
+          "adaptive": {
+            "p50": 37.442,
+            "p75": 40.25,
+            "p95": 45.0398
+          },
+          "pairedAbsoluteMean": 0.6737142857142869,
+          "pairedAbsolute95CI": [
+            -2.0315714285714273,
+            4.233714285714285
+          ],
+          "pairedChangePercentMean": 2.1755597003625278,
+          "pairedChangePercent95CI": [
+            -4.983005401471983,
+            11.918199701661432
+          ],
+          "medianChangePercent": 0.0026708688336318787,
+          "regressedPairs": 4,
+          "pairs": 7
+        },
+        "maxRssKiB": {
+          "stream": {
+            "p50": 113712.0,
+            "p75": 114528.0,
+            "p95": 116094.4
+          },
+          "adaptive": {
+            "p50": 114000.0,
+            "p75": 115128.0,
+            "p95": 116176.0
+          },
+          "pairedAbsoluteMean": 221.71428571428572,
+          "pairedAbsolute95CI": [
+            -1067.4285714285713,
+            1380.6285714285666
+          ],
+          "pairedChangePercentMean": 0.20456652824606245,
+          "pairedChangePercent95CI": [
+            -0.9099431832522836,
+            1.2128880752090196
+          ],
+          "medianChangePercent": 0.2532714225411459,
+          "regressedPairs": 4,
+          "pairs": 7
+        },
+        "bytes": {
+          "stream": {
+            "p50": 108893.0,
+            "p75": 108893.0,
+            "p95": 108893.0
+          },
+          "adaptive": {
+            "p50": 82579.0,
+            "p75": 82579.0,
+            "p95": 82579.0
+          },
+          "pairedAbsoluteMean": -26314.0,
+          "pairedAbsolute95CI": [
+            -26314.0,
+            -26314.0
+          ],
+          "pairedChangePercentMean": -24.165006015079026,
+          "pairedChangePercent95CI": [
+            -24.165006015079026,
+            -24.165006015079026
+          ],
+          "medianChangePercent": -24.165006015079026,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "requests": {
+          "stream": {
+            "p50": 2.0,
+            "p75": 2.0,
+            "p95": 2.0
+          },
+          "adaptive": {
+            "p50": 1.0,
+            "p75": 1.0,
+            "p95": 1.0
+          },
+          "pairedAbsoluteMean": -1.0,
+          "pairedAbsolute95CI": [
+            -1.0,
+            -1.0
+          ],
+          "pairedChangePercentMean": -50.0,
+          "pairedChangePercent95CI": [
+            -50.0,
+            -50.0
+          ],
+          "medianChangePercent": -50.0,
+          "regressedPairs": 0,
+          "pairs": 7
+        }
+      },
+      "http": {
+        "pageReadTrials": 25,
+        "stats": {
+          "httpGets": 25,
+          "rpcCalls": 25,
+          "failures": 0
+        },
+        "scope": "owned loopback sequential GET/JSON bridge to actual PG RPC and actual Node decoder; not product auth/PostgREST/provider",
+        "metrics": {
+          "wallMs": {
+            "p50": 26.846708000000007,
+            "p75": 30.01045899999997,
+            "p95": 32.84544219999998
+          },
+          "cpuMs": {
+            "p50": 21.121,
+            "p75": 22.521,
+            "p95": 49.418599999999984
+          },
+          "decoderMs": {
+            "p50": 18.108208000000047,
+            "p75": 20.00191699999999,
+            "p95": 22.546124999999936
+          },
+          "decoderCpuMs": {
+            "p50": 18.842,
+            "p75": 19.443,
+            "p95": 36.23859999999997
+          },
+          "maxRssKiB": {
+            "p50": 165440.0,
+            "p75": 169072.0,
+            "p95": 171945.6
+          },
+          "bytes": {
+            "p50": 82579.0,
+            "p75": 82579.0,
+            "p95": 82579.0
+          },
+          "requests": {
+            "p50": 1.0,
+            "p75": 1.0,
+            "p95": 1.0
+          }
+        },
+        "maxBodyBytes": 82579
+      },
+      "sqlStages": {
+        "densityStageExplain": {
+          "executionMs": 2.443,
+          "planningMs": 0.149,
+          "actualRows": 1,
+          "rootTempWrittenBlocks": 0
+        },
+        "flatProjectionStageExplain": {
+          "executionMs": 0.68,
+          "planningMs": 0.122,
+          "actualRows": 200,
+          "rootTempWrittenBlocks": 0
+        }
+      },
+      "amortization": {
+        "crossReadReuse": false,
+        "readsToNetMeasuredSaving": null,
+        "reason": "Planning cost is paid on each read; negative savings do not amortize by repetition."
+      }
+    },
+    {
+      "name": "dense",
+      "rows": 50000,
+      "targets": 200,
+      "groups": 3,
+      "codec": "grouped",
+      "oracleDigest": "ce87051cb4585caa4fafebc696f80a7af7342f5823d75024546decdc7dd92350",
+      "inputBefore": {
+        "relatedRows": "46f94e82bfacfbb68de5f7039fbf1ebb101751a7a842d507fbdb017de3247edd",
+        "targets": "8d89a27adfff09de2230c28c2baf1fb30ecdd30b112c8137d3a4e30471171e13"
+      },
+      "inputAfter": {
+        "relatedRows": "46f94e82bfacfbb68de5f7039fbf1ebb101751a7a842d507fbdb017de3247edd",
+        "targets": "8d89a27adfff09de2230c28c2baf1fb30ecdd30b112c8137d3a4e30471171e13"
+      },
+      "densityStageExecutedByRPC": true,
+      "metrics": {
+        "endToEndMs": {
+          "stream": {
+            "p50": 38465.52129089832,
+            "p75": 40289.23516685609,
+            "p95": 43720.5819374416
+          },
+          "adaptive": {
+            "p50": 1047.2380830906332,
+            "p75": 1066.6509789880365,
+            "p95": 1129.1780999163166
+          },
+          "pairedAbsoluteMean": -38066.376696640094,
+          "pairedAbsolute95CI": [
+            -40253.67193472838,
+            -36227.95905365742
+          ],
+          "pairedChangePercentMean": -97.3142585337085,
+          "pairedChangePercent95CI": [
+            -97.44193866448919,
+            -97.18364971021938
+          ],
+          "medianChangePercent": -97.27746291238115,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "dbReadMs": {
+          "stream": {
+            "p50": 34368.29500505701,
+            "p75": 35958.12243456021,
+            "p95": 38916.14860505797
+          },
+          "adaptive": {
+            "p50": 931.2756669241935,
+            "p75": 954.3098544236273,
+            "p95": 996.6284920461476
+          },
+          "pairedAbsoluteMean": -33856.81870247104,
+          "pairedAbsolute95CI": [
+            -35837.67236363409,
+            -32160.954805390378
+          ],
+          "pairedChangePercentMean": -97.3149367722552,
+          "pairedChangePercent95CI": [
+            -97.43638065263698,
+            -97.19351560683444
+          ],
+          "medianChangePercent": -97.2903058857381,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "nodeWorkMs": {
+          "stream": {
+            "p50": 3869.5560089999976,
+            "p75": 4097.682814499991,
+            "p95": 4396.104509900015
+          },
+          "adaptive": {
+            "p50": 9.96166600000008,
+            "p75": 10.362500499999989,
+            "p95": 10.611508200000044
+          },
+          "pairedAbsoluteMean": -3938.2018074285697,
+          "pairedAbsolute95CI": [
+            -4161.846169714297,
+            -3746.2946494214284
+          ],
+          "pairedChangePercentMean": -99.74772958682279,
+          "pairedChangePercent95CI": [
+            -99.75975746196946,
+            -99.73385718070722
+          ],
+          "medianChangePercent": -99.74256307501867,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "nodeCpuMs": {
+          "stream": {
+            "p50": 3790.2370000000005,
+            "p75": 3993.1285000000007,
+            "p95": 4208.4962
+          },
+          "adaptive": {
+            "p50": 11.27,
+            "p75": 11.6915,
+            "p95": 12.2875
+          },
+          "pairedAbsoluteMean": -3857.52,
+          "pairedAbsolute95CI": [
+            -4028.8798571428565,
+            -3710.493571428571
+          ],
+          "pairedChangePercentMean": -99.70408799030722,
+          "pairedChangePercent95CI": [
+            -99.71927215806421,
+            -99.68726190382135
+          ],
+          "medianChangePercent": -99.7026571161645,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "maxRssKiB": {
+          "stream": {
+            "p50": 247040.0,
+            "p75": 247616.0,
+            "p95": 248772.8
+          },
+          "adaptive": {
+            "p50": 110304.0,
+            "p75": 111344.0,
+            "p95": 111932.8
+          },
+          "pairedAbsoluteMean": -136082.2857142857,
+          "pairedAbsolute95CI": [
+            -137579.42857142858,
+            -134319.94285714286
+          ],
+          "pairedChangePercentMean": -55.18396376246962,
+          "pairedChangePercent95CI": [
+            -55.56663122425007,
+            -54.79653227335312
+          ],
+          "medianChangePercent": -55.34974093264249,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "bytes": {
+          "stream": {
+            "p50": 27400252.0,
+            "p75": 27400252.0,
+            "p95": 27400252.0
+          },
+          "adaptive": {
+            "p50": 25993.0,
+            "p75": 25993.0,
+            "p95": 25993.0
+          },
+          "pairedAbsoluteMean": -27374259.0,
+          "pairedAbsolute95CI": [
+            -27374259.0,
+            -27374259.0
+          ],
+          "pairedChangePercentMean": -99.90513590896902,
+          "pairedChangePercent95CI": [
+            -99.90513590896902,
+            -99.90513590896902
+          ],
+          "medianChangePercent": -99.90513590896902,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "requests": {
+          "stream": {
+            "p50": 251.0,
+            "p75": 251.0,
+            "p95": 251.0
+          },
+          "adaptive": {
+            "p50": 1.0,
+            "p75": 1.0,
+            "p95": 1.0
+          },
+          "pairedAbsoluteMean": -250.0,
+          "pairedAbsolute95CI": [
+            -250.0,
+            -250.0
+          ],
+          "pairedChangePercentMean": -99.60159362549801,
+          "pairedChangePercent95CI": [
+            -99.60159362549801,
+            -99.60159362549801
+          ],
+          "medianChangePercent": -99.60159362549801,
+          "regressedPairs": 0,
+          "pairs": 7
+        }
+      },
+      "http": {
+        "pageReadTrials": 25,
+        "stats": {
+          "httpGets": 25,
+          "rpcCalls": 25,
+          "failures": 0
+        },
+        "scope": "owned loopback sequential GET/JSON bridge to actual PG RPC and actual Node decoder; not product auth/PostgREST/provider",
+        "metrics": {
+          "wallMs": {
+            "p50": 1004.0265829999989,
+            "p75": 1062.6068749999995,
+            "p95": 1177.8545827999994
+          },
+          "cpuMs": {
+            "p50": 3.969,
+            "p75": 5.927,
+            "p95": 23.620399999999997
+          },
+          "decoderMs": {
+            "p50": 0.9572910000006232,
+            "p75": 1.235499999998865,
+            "p95": 1.463533399999505
+          },
+          "decoderCpuMs": {
+            "p50": 1.105,
+            "p75": 1.493,
+            "p95": 2.9657999999999967
+          },
+          "maxRssKiB": {
+            "p50": 140000.0,
+            "p75": 140640.0,
+            "p95": 140640.0
+          },
+          "bytes": {
+            "p50": 25993.0,
+            "p75": 25993.0,
+            "p95": 25993.0
+          },
+          "requests": {
+            "p50": 1.0,
+            "p75": 1.0,
+            "p95": 1.0
+          }
+        },
+        "maxBodyBytes": 25993
+      },
+      "sqlStages": {
+        "densityStageExplain": {
+          "executionMs": 689.783,
+          "planningMs": 0.167,
+          "actualRows": 1,
+          "rootTempWrittenBlocks": 3706
+        },
+        "flatProjectionStageExplain": {
+          "executionMs": 13.141,
+          "planningMs": 0.231,
+          "actualRows": 1000,
+          "rootTempWrittenBlocks": 0
+        }
+      },
+      "amortization": {
+        "crossReadReuse": false,
+        "readsToNetMeasuredSaving": 1,
+        "reason": "Planning cost is paid on each read; negative savings do not amortize by repetition."
+      }
+    },
+    {
+      "name": "unique",
+      "rows": 50000,
+      "targets": 200,
+      "groups": 50000,
+      "codec": "flat",
+      "oracleDigest": "e9b748edb57b3eac045cfcccfa1957fd082e3b1e45bd8835de6eac11f58b3ff0",
+      "inputBefore": {
+        "relatedRows": "6772da23cd45164fac81319a1e2468436423c15be8385534f053e8451e8ddfe8",
+        "targets": "0408b261fb649955e16d175c77b3f6cae1e2758e68df55bae89de4567e8acd59"
+      },
+      "inputAfter": {
+        "relatedRows": "6772da23cd45164fac81319a1e2468436423c15be8385534f053e8451e8ddfe8",
+        "targets": "0408b261fb649955e16d175c77b3f6cae1e2758e68df55bae89de4567e8acd59"
+      },
+      "densityStageExecutedByRPC": true,
+      "metrics": {
+        "endToEndMs": {
+          "stream": {
+            "p50": 47048.68095880374,
+            "p75": 48679.85908302944,
+            "p95": 49066.00183395203
+          },
+          "adaptive": {
+            "p50": 7934.850249905139,
+            "p75": 8603.806645958684,
+            "p95": 9389.952466846444
+          },
+          "pairedAbsoluteMean": -37224.060023868726,
+          "pairedAbsolute95CI": [
+            -40029.502988294036,
+            -34322.3988198426
+          ],
+          "pairedChangePercentMean": -82.25713139848766,
+          "pairedChangePercent95CI": [
+            -84.15940169641115,
+            -80.28021245558602
+          ],
+          "medianChangePercent": -83.13480827049547,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "dbReadMs": {
+          "stream": {
+            "p50": 41682.12912767194,
+            "p75": 43104.564195731655,
+            "p95": 43962.312657991424
+          },
+          "adaptive": {
+            "p50": 3099.940749350935,
+            "p75": 3341.67077136226,
+            "p95": 3612.0914857136086
+          },
+          "pairedAbsoluteMean": -36983.72692804384,
+          "pairedAbsolute95CI": [
+            -39518.65633148035,
+            -34234.67187943671
+          ],
+          "pairedChangePercentMean": -92.26998546854477,
+          "pairedChangePercent95CI": [
+            -93.1520245377359,
+            -91.37657598436047
+          ],
+          "medianChangePercent": -92.56290210162766,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "nodeWorkMs": {
+          "stream": {
+            "p50": 4550.734590000007,
+            "p75": 4972.549437500005,
+            "p95": 5189.291474000006
+          },
+          "adaptive": {
+            "p50": 4524.972213,
+            "p75": 4973.623352999999,
+            "p95": 5464.9763314
+          },
+          "pairedAbsoluteMean": -102.44944657143144,
+          "pairedAbsolute95CI": [
+            -437.40131628572425,
+            297.7700845714299
+          ],
+          "pairedChangePercentMean": -2.1017400828415713,
+          "pairedChangePercent95CI": [
+            -9.274837554424208,
+            6.7189013582195525
+          ],
+          "medianChangePercent": -0.5661146896287605,
+          "regressedPairs": 3,
+          "pairs": 7
+        },
+        "nodeCpuMs": {
+          "stream": {
+            "p50": 4375.871,
+            "p75": 4659.702500000001,
+            "p95": 4801.150300000001
+          },
+          "adaptive": {
+            "p50": 4353.9169999999995,
+            "p75": 4670.156499999999,
+            "p95": 4984.359799999998
+          },
+          "pairedAbsoluteMean": -78.7397142857146,
+          "pairedAbsolute95CI": [
+            -319.6608571428575,
+            202.5259999999997
+          ],
+          "pairedChangePercentMean": -1.7147572206824662,
+          "pairedChangePercent95CI": [
+            -7.127314258853625,
+            4.690611087170756
+          ],
+          "medianChangePercent": -0.5017058318218415,
+          "regressedPairs": 3,
+          "pairs": 7
+        },
+        "maxRssKiB": {
+          "stream": {
+            "p50": 246384.0,
+            "p75": 247160.0,
+            "p95": 247664.0
+          },
+          "adaptive": {
+            "p50": 249840.0,
+            "p75": 250872.0,
+            "p95": 251616.0
+          },
+          "pairedAbsoluteMean": 4480.0,
+          "pairedAbsolute95CI": [
+            3124.5714285714284,
+            6388.571428571428
+          ],
+          "pairedChangePercentMean": 1.83555196141084,
+          "pairedChangePercent95CI": [
+            1.2655908218260647,
+            2.64376575412212
+          ],
+          "medianChangePercent": 1.4026884862653466,
+          "regressedPairs": 7,
+          "pairs": 7
+        },
+        "bytes": {
+          "stream": {
+            "p50": 27339142.0,
+            "p75": 27339142.0,
+            "p95": 27339142.0
+          },
+          "adaptive": {
+            "p50": 17583869.0,
+            "p75": 17583869.0,
+            "p95": 17583869.0
+          },
+          "pairedAbsoluteMean": -9755273.0,
+          "pairedAbsolute95CI": [
+            -9755273.0,
+            -9755273.0
+          ],
+          "pairedChangePercentMean": -35.68244021703387,
+          "pairedChangePercent95CI": [
+            -35.68244021703387,
+            -35.68244021703387
+          ],
+          "medianChangePercent": -35.68244021703387,
+          "regressedPairs": 0,
+          "pairs": 7
+        },
+        "requests": {
+          "stream": {
+            "p50": 251.0,
+            "p75": 251.0,
+            "p95": 251.0
+          },
+          "adaptive": {
+            "p50": 50.0,
+            "p75": 50.0,
+            "p95": 50.0
+          },
+          "pairedAbsoluteMean": -201.0,
+          "pairedAbsolute95CI": [
+            -201.0,
+            -201.0
+          ],
+          "pairedChangePercentMean": -80.0796812749004,
+          "pairedChangePercent95CI": [
+            -80.0796812749004,
+            -80.0796812749004
+          ],
+          "medianChangePercent": -80.0796812749004,
+          "regressedPairs": 0,
+          "pairs": 7
+        }
+      },
+      "http": {
+        "pageReadTrials": 25,
+        "stats": {
+          "httpGets": 1250,
+          "rpcCalls": 1250,
+          "failures": 0
+        },
+        "scope": "owned loopback sequential GET/JSON bridge to actual PG RPC and actual Node decoder; not product auth/PostgREST/provider",
+        "metrics": {
+          "wallMs": {
+            "p50": 7218.420416999994,
+            "p75": 7660.990374999998,
+            "p95": 8488.4470914
+          },
+          "cpuMs": {
+            "p50": 4244.472,
+            "p75": 4389.435,
+            "p95": 4818.6466
+          },
+          "decoderMs": {
+            "p50": 4248.117954999994,
+            "p75": 4435.192166000012,
+            "p95": 4933.742714599988
+          },
+          "decoderCpuMs": {
+            "p50": 4072.995,
+            "p75": 4219.164000000001,
+            "p95": 4621.277199999999
+          },
+          "maxRssKiB": {
+            "p50": 276448.0,
+            "p75": 278608.0,
+            "p95": 278608.0
+          },
+          "bytes": {
+            "p50": 17583869.0,
+            "p75": 17583869.0,
+            "p95": 17583869.0
+          },
+          "requests": {
+            "p50": 50.0,
+            "p75": 50.0,
+            "p95": 50.0
+          }
+        },
+        "maxBodyBytes": 351901
+      },
+      "sqlStages": {
+        "densityStageExplain": {
+          "executionMs": 825.675,
+          "planningMs": 0.274,
+          "actualRows": 1,
+          "rootTempWrittenBlocks": 3698
+        },
+        "flatProjectionStageExplain": {
+          "executionMs": 12.861,
+          "planningMs": 0.221,
+          "actualRows": 1000,
+          "rootTempWrittenBlocks": 0
+        }
+      },
+      "amortization": {
+        "crossReadReuse": false,
+        "readsToNetMeasuredSaving": 1,
+        "reason": "Planning cost is paid on each read; negative savings do not amortize by repetition."
+      }
+    }
+  ],
+  "resourceCounts": {
+    "pairedReads": 56,
+    "pairedRpcOrStreamCalls": 3941,
+    "httpPageReadTrials": 100,
+    "httpGets": 1325,
+    "httpRpcCalls": 1325,
+    "fullReferenceMatchedReads": 156
+  },
+  "sourceSha256": {
+    "backend/supabase/migrations/20261004192657_admin_evaluation_raw_warning_groups.sql": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a",
+    "apps/web/lib/admin/evaluation-warning-raw-groups.ts": "a79a1a922fad44a906ebdad24efd12e788cf300568d22b0091635af527798dc8",
+    "apps/web/lib/admin/evaluation-page-server.ts": "bb7690e071aee367ca3c9fa6c4197bc16ad362ce33dc4f616e43e6c01c965eb4",
+    "apps/web/lib/admin/evaluation-warning-adaptive-codec.ts": "9872f35d53c059be7f547b6d9bc11898e6fedf69158cf6e57920f367970c3b88",
+    "apps/web/lib/admin/evaluation-warning-stream.ts": "3a5495a38e262ce93e5ce36b942465a004506a1e378e4e0ed9bc9ced28929044",
+    "apps/web/lib/admin/normalize-evaluation-record.ts": "4163901d4da302c8db405ceac5f02ce543522226bc0e3de67caab653ac90d334",
+    "apps/web/lib/admin-evaluation-name.ts": "2fe0559855a2a740a9d805a806abcd6a0772d373f0eaaaccc60787bee97ce121",
+    "apps/web/lib/admin-same-video-duplicate-warning.ts": "7904013149561b7fc7662cb5d05e56213147b45148e86242c82064a5529cbcb1",
+    "apps/web/lib/admin-restaurant-identity-warning.ts": "32e8283f6d1b394ea3ba3c113f05a4325ac18f4cebfef2113f1547f574e2b4ba",
+    "apps/web/lib/dashboard/helpers.ts": "cb8fe6708a4496e9ba8f4954e27b124f60326c9dc5d66017dcfeb174a0947943",
+    "backend/supabase/tests/test_admin_evaluation_raw_warning_groups.py": "51de7f8c94fccb61481e1567d9ea626b3df0e3b8282ffe822faf9c0c0253220f",
+    "backend/bin/benchmark_evaluation_warning_adaptive_codec.py": "a95ad75b32054874fc3ac77fe401131d12aa50bd87e9871d1de60d5e41587004",
+    "backend/bin/measure_evaluation_warning_codec_http.py": "dd31bb5b5d30435f99609fb565ab9df236ba5ec7fa264741a33bf428c34d13ec",
+    "backend/supabase/migrations/20261004194715_admin_evaluation_raw_warning_invoker_contract.sql": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020"
+  }
+}

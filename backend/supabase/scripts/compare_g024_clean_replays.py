@@ -26,7 +26,7 @@ MINIMUM_ARTIFACTS = frozenset((
     "G026_RECONSTRUCTION_BUNDLE.v4.json", "G026_RECONSTRUCTION_TRANSITION.v4.sql",
     "G026_RECONSTRUCTION_REPAIRS.v4.sql", "g026-validation-ledger.json",
     "g026-semantic-receipt.json", "g026-readback-receipt.json",
-    "g026-behavior-receipt.json",
+    "g026-behavior-receipt.json", "operational-archive-binding.json",
 ))
 REQUIRED_METADATA = frozenset((
     "source_sha", "migration_chain_sha256", "jsonl_sha256", "tuple_evidence_sha256",

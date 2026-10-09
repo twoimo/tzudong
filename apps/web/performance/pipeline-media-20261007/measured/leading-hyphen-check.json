@@ -1,0 +1,9 @@
+{
+  "kind": "supplemental_input_coverage",
+  "candidateParserExitCode": 0,
+  "archivedEvaluationExact": true,
+  "originalRuleIdsBeginningWithHyphen": 17,
+  "sampleVideoId": "-1OU4tkFJns",
+  "productionSourceChanged": false,
+  "interpretation": "Initial suspected argparse issue was NOT reproduced; actual Python 3.14.8 parser accepts the leading-hyphen ID. Primary n=7 corpus still uses its predeclared three non-hyphen IDs."
+}

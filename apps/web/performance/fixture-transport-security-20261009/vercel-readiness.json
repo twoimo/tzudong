@@ -1,0 +1,26 @@
+{
+  "observedAt": "2026-10-09T04:08:03.553Z",
+  "project": {
+    "id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "name": "tzudong",
+    "teamId": "team_OUj64KeLxJI3PkEbOaFZnorA",
+    "nodeVersion": "24.x"
+  },
+  "current": {
+    "id": "dpl_2anRkLjU4RPxtTkTLbnybUnBVoGb",
+    "url": "tzudong-9nyutgigx-twoimos-projects.vercel.app",
+    "state": "CANCELED",
+    "gitSha": "2b6e7339fa75b1d403cb97a257e8d9d5b8b37e3c",
+    "target": null
+  },
+  "priorProductCommit": [
+    {
+      "id": "dpl_G2kimSeJAxdU3FoBxg7nabEwVSeC",
+      "url": "tzudong-qv09jlwn4-twoimos-projects.vercel.app",
+      "state": "CANCELED",
+      "gitSha": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f"
+    }
+  ],
+  "conclusion": "Both exact commit deployments are CANCELED. GitHub Vercel success does not establish a READY preview or live behavior. Cancellation cause unverified. No deployment/promotion/settings writes or preview HTTP requests performed.",
+  "productionAdoptionVerified": false
+}

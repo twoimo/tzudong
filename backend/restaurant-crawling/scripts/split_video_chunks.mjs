@@ -1,3 +1,4 @@
+import { boundedLimit, sharedMediaInvocation } from '../../utils/resource-budget.mjs';
 /**
  * 비디오를 청크 계획에 따라 mp4 세그먼트로 분할
  *
@@ -675,11 +676,12 @@ export class ChildSupervisor {
         const sourceArgument = useDescriptorPaths ? '/proc/self/fd/3' : sourceHandle.path;
         const command = useDescriptorPaths ? '/proc/self/fd/4' : binding.path;
         const commandArgs = args.map(arg => arg === sourceHandle.path ? sourceArgument : arg);
-        const stdio = useDescriptorPaths ? ['ignore', 'pipe', 'pipe', sourceHandle.fd, binding.fd] : ['ignore', 'pipe', 'pipe'];
+        const stdio = useDescriptorPaths ? ['pipe', 'pipe', 'pipe', sourceHandle.fd, binding.fd] : ['pipe', 'pipe', 'pipe'];
+        const invocation = sharedMediaInvocation(command, commandArgs);
 
         let child;
         try {
-            child = spawn(command, commandArgs, {
+            child = spawn(invocation.file, invocation.args, {
                 detached: true,
                 env: this.env,
                 windowsHide: true,
@@ -880,7 +882,8 @@ function rejectPreexistingChunkDestinations(outputRoot, chunks) {
 }
 
 async function runChunks({ chunks, sourceHandle, planHandle, binding, outputRoot, supervisor, budget, windowsExecutable }) {
-    const concurrencyLimit = path.extname(sourceHandle.path).toLowerCase() === '.mp4' ? 4 : 2;
+    const hardLimit = path.extname(sourceHandle.path).toLowerCase() === '.mp4' ? 4 : 2;
+    const concurrencyLimit = boundedLimit(process.env.PIPELINE_FFMPEG_JOBS, hardLimit, hardLimit);
     const temporaryReservations = new Map();
     const publishedReservations = new Map();
     const active = new Set();

@@ -1,0 +1,36 @@
+{
+  "kind": "additional_scope_verification",
+  "backendStage": "03 transcript collection",
+  "candidateSourceSha256": "42dd1baae45a59ead74066104de2c59f78e6c8658105a9d0f7c9716ba3491dce",
+  "nodeTranscriptCache": {
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0
+  },
+  "nodeExistingTranscriptCommand": {
+    "passed": 11,
+    "failed": 0,
+    "skipped": 8,
+    "skipReason": "Windows-only tests on macOS"
+  },
+  "nodeFrameReceipt": {
+    "passed": 1,
+    "failed": 0
+  },
+  "pythonAdapterProfilesAndLiveCutover": {
+    "passed": 31,
+    "failed": 0
+  },
+  "pairedReplayConditions": 7,
+  "pairedRunsPerCondition": 7,
+  "observations": 98,
+  "sourceFilesReadOnly": 1125,
+  "sourcePreserved": true,
+  "realProviderProbe": {
+    "calls": 1,
+    "accepted": true,
+    "tokens": 125
+  },
+  "initialCheckIssue": "A Windows-only test skipped without returning and executed its detached process on macOS; explicit return fixed and owned test process confirmed terminated.",
+  "formalPerformanceClaim": "not_established"
+}

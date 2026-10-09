@@ -1,0 +1,191 @@
+[
+  {
+    "route": "/feed",
+    "index": 4,
+    "viewport": "desktop",
+    "screenshot": "stable-4-desktop.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": [
+        61
+      ]
+    }
+  },
+  {
+    "route": "/leaderboard",
+    "index": 8,
+    "viewport": "desktop",
+    "screenshot": "stable-8-desktop.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": [
+        65
+      ]
+    }
+  },
+  {
+    "route": "/stamp",
+    "index": 20,
+    "viewport": "desktop",
+    "screenshot": "stable-20-desktop.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": [
+        65
+      ]
+    }
+  },
+  {
+    "route": "/user/00000000-0000-4000-8000-000000000009",
+    "index": 22,
+    "viewport": "desktop",
+    "screenshot": "stable-22-desktop.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": [
+        61
+      ]
+    }
+  },
+  {
+    "route": "/privacy/onboarding",
+    "index": 17,
+    "viewport": "desktop",
+    "screenshot": "stable-17-desktop.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": []
+    }
+  },
+  {
+    "route": "/feed",
+    "index": 4,
+    "viewport": "tablet",
+    "screenshot": "stable-4-tablet.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": [
+        87
+      ]
+    }
+  },
+  {
+    "route": "/leaderboard",
+    "index": 8,
+    "viewport": "tablet",
+    "screenshot": "stable-8-tablet.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": [
+        87
+      ]
+    }
+  },
+  {
+    "route": "/stamp",
+    "index": 20,
+    "viewport": "tablet",
+    "screenshot": "stable-20-tablet.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": [
+        87
+      ]
+    }
+  },
+  {
+    "route": "/user/00000000-0000-4000-8000-000000000009",
+    "index": 22,
+    "viewport": "tablet",
+    "screenshot": "stable-22-tablet.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": [
+        61
+      ]
+    }
+  },
+  {
+    "route": "/privacy/onboarding",
+    "index": 17,
+    "viewport": "tablet",
+    "screenshot": "stable-17-tablet.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": []
+    }
+  },
+  {
+    "route": "/feed",
+    "index": 4,
+    "viewport": "mobile",
+    "screenshot": "stable-4-mobile.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": [
+        74
+      ]
+    }
+  },
+  {
+    "route": "/leaderboard",
+    "index": 8,
+    "viewport": "mobile",
+    "screenshot": "stable-8-mobile.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": [
+        74
+      ]
+    }
+  },
+  {
+    "route": "/stamp",
+    "index": 20,
+    "viewport": "mobile",
+    "screenshot": "stable-20-mobile.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": [
+        74
+      ]
+    }
+  },
+  {
+    "route": "/user/00000000-0000-4000-8000-000000000009",
+    "index": 22,
+    "viewport": "mobile",
+    "screenshot": "stable-22-mobile.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": [
+        61
+      ]
+    }
+  },
+  {
+    "route": "/privacy/onboarding",
+    "index": 17,
+    "viewport": "mobile",
+    "screenshot": "stable-17-mobile.png",
+    "stableTerminalStateVisible": true,
+    "geometry": {
+      "overflowX": 0,
+      "headers": []
+    }
+  }
+]

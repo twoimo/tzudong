@@ -1,0 +1,41 @@
+{
+  "status": "passed",
+  "kind": "pristine-current-schema-six-flow-fixture",
+  "observedAt": "2026-10-08T22:02:20.792295+00:00",
+  "database": "tzudong_fresh_pg17_61d148a598b0",
+  "fixtureSha256": "aefedf83dd44f8d6c77a82c47df244a13db48bcfc18b2361170050c0d17c3c65",
+  "results": [
+    {
+      "role": "service_role"
+    },
+    {
+      "kind": "fresh-full-source-synthetic-record-fixture",
+      "cases": [
+        "changed_payload_same_uuid_rejected",
+        "restaurant.approve_preview_apply_readback_audit_idempotency",
+        "restaurant.edit_partial_readback_audit",
+        "review.approve_original_triggers_readback_audit",
+        "stale_preview_preserves_later_admin_change_without_audit",
+        "submission.approve_current_schema_readback_audit"
+      ],
+      "status": "checks_passed_in_transaction",
+      "caseCount": 6,
+      "limitations": [
+        "SQL synthetic fixture only; not UI/Auth onboarding/provider/Storage physical deletion.",
+        "Submission edit approval only; new-submission creation is not exercised.",
+        "Single-session optimistic conflict; concurrent commit races remain untested."
+      ],
+      "externalCalls": 0,
+      "syntheticOnly": true,
+      "operatingWrites": false,
+      "assertionsPassed": 4,
+      "rollbackStillRequired": true,
+      "sourceTriggersUnchanged": true,
+      "sourceFunctionsUnchanged": true
+    }
+  ],
+  "operatingWrites": false,
+  "syntheticRowsOnly": true,
+  "rolledBack": true,
+  "legacyOwnerGrantsAdded": false
+}

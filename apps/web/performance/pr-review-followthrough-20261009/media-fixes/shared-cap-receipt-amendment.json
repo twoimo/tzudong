@@ -1,0 +1,9 @@
+{
+  "reason": "Existing regression harness has a fixed output path and replaced its node test receipt during authorized cache review verification. Frozen source snapshots/media preflight/raw traces remain intact.",
+  "path": "apps/web/performance/media-resource-followthrough-20261009/shared-cap/final-source-node-regression.json",
+  "priorReceiptSha256": "8565f9da272179f05fe7599dbd608eef5c909a82f00e08ff962a692cbff87948",
+  "currentReceiptSha256": "9dfe2ba48cb61754e1b7725d4c5a6335c23b572158cf5f987b33ac309de66ec0",
+  "priorReceiptBytesRecoverable": false,
+  "originalSharedCapMapRetainedUnchanged": true,
+  "newReceiptCopiedTo": "node-regression.json"
+}

@@ -10,7 +10,7 @@ if (typeof window !== 'undefined') throw new Error('Storyboard worker authentica
 export const productionUuid = z.uuid().transform((value) => value.toLowerCase());
 export const productionModelSchema = z.object({
   id: z.string().min(1).max(200),
-  owned_by: z.literal('mlx-serve').optional(),
+  owned_by: z.enum(['gemini-api', 'mlx-serve']).optional(),
   capabilities: z.array(z.string().min(1).max(80)).max(32),
   loaded: z.boolean(),
   bytes_on_disk: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),

@@ -1,0 +1,79 @@
+{
+  "schema": "record-media-storage-provider-patch-experiment-v1",
+  "status": "passed",
+  "databaseImage": "supabase/postgres@sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b",
+  "s3Image": "cgr.dev/chainguard/minio@sha256:0d54f6c86e53138c6cfc242e21309a18941624d9034d9cdf598dbba61f69d872",
+  "recordSqlSha256": "1529ad96ebbc2c8e173d5c51fae9bef8051ce632c829eda20f0ae173a77c8caa",
+  "recordSqlUnchanged": true,
+  "harnessSha256": "0a2e4b3916dc7941e902bc53bbfd08b0aa70f88128c124a1c5484047568cbcc9",
+  "tests": [
+    {
+      "name": "standard_upload_claim_delete_physical_absence",
+      "passed": true
+    },
+    {
+      "name": "upsert_before_claim_protects_replacement",
+      "passed": true
+    },
+    {
+      "name": "claimed_path_rejects_user_and_service_upsert",
+      "passed": true
+    },
+    {
+      "name": "copy_rejects_retired_destination_allows_fresh_path",
+      "passed": true
+    },
+    {
+      "name": "resumable_upload_started_before_claim_cannot_replace_after_claim",
+      "passed": true
+    },
+    {
+      "name": "confirmed_delete_prevents_recreation_of_retired_path",
+      "passed": true
+    },
+    {
+      "name": "forged_tus_probe_cannot_commit_or_add_live_reference",
+      "passed": true
+    },
+    {
+      "name": "partial_s3_delete_never_reports_physical_success",
+      "passed": true
+    }
+  ],
+  "observations": [
+    {
+      "case": "resumable_upload_started_before_claim_cannot_replace_after_claim",
+      "terminationStatus": 204,
+      "oldPhotoPreserved": true,
+      "physicalObjects": 1,
+      "infoObjects": 0,
+      "incompleteUploads": 0,
+      "incompleteBytes": 0
+    },
+    {
+      "case": "partial_s3_delete_never_reports_physical_success",
+      "storageStatus": 500,
+      "metadataPresent": true,
+      "physicalObjects": 1,
+      "cleanupPending": true,
+      "injectedPartialFailures": 1
+    }
+  ],
+  "physicalBackend": "s3",
+  "syntheticOnly": true,
+  "hostedOperations": 0,
+  "canonicalReplay": false,
+  "completeCaseSet": true,
+  "sixCaseSetPassed": true,
+  "faultProxySha256": "c16374366da3f311841a8faf742b937b94b99589cb7b7dc0e409651a9228e8c7",
+  "providerModified": true,
+  "admissionEligible": false,
+  "providerPatch": {
+    "schema": "record-storage-fixture-provider-patch-v1",
+    "preimageSha256": "bd03a1fa8083fc81504373af72cc2fdf858626417a63d0f9894bd080c2da40d1",
+    "patchedBundleSha256": "50ecb8f6433b17e1d8ef3d053c828e0b8f873ab0400adf94ce46452673aaad58",
+    "patchSha256": "1daf7ea456ef487383c9537d4e6408a46ec224709ce5a18f9b4837f8afc3f5f5",
+    "officialRelease": false
+  },
+  "baseStorageImage": "supabase/storage-api@sha256:3e3742049427313d167578ba7af753069947972b64fcc5374cfb750f66a26177"
+}

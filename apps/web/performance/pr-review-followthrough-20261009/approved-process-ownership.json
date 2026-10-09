@@ -1,0 +1,29 @@
+{
+  "fixtureSession": 55410,
+  "devSession": 11566,
+  "finalBrowserSession": 92261,
+  "previousBrowserSessions": [
+    80896,
+    69975,
+    13900
+  ],
+  "allOwnedSessionsExited": true,
+  "fixtureExit": 0,
+  "devExit": 0,
+  "browserCompletedExit": 0,
+  "ownedPorts": [
+    20512,
+    20513,
+    20514
+  ],
+  "listenerCountAfterStop": 0,
+  "originalDevPidPreserved": 57309,
+  "originalDevPort": 19872,
+  "generatedDistPreserved": ".next-web-review-followthrough",
+  "generatedOutputExcludedFromArtifactMap": true,
+  "syntheticPagedFixture": "/Users/twoimo/.codex/runtime-cache/tzudong-web-review-fixture-20261009",
+  "sharedVaultWrites": 0,
+  "operatingDbReadsOrWrites": 0,
+  "actualProviderCalls": 0,
+  "commentsResolvedPostsCommitsPushes": 0
+}

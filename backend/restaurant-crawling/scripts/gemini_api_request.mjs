@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { omitUnsupportedGeminiSampling, createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../../utils/gemini-client.mjs';
 import { logSafeError } from '../../utils/privacy-log.mjs';
 
 function resolveThinkingLevel(...candidates) {
@@ -114,29 +114,30 @@ async function main() {
         }
 
         console.log("DEBUG: Initializing GoogleGenerativeAI...");
-        const genAI = new GoogleGenerativeAI(apiKey);
+        const ai = createGeminiClient(apiKey);
         
         // 환경변수 CURRENT_MODEL 우선, 없으면 기본 모델 사용
         const modelName = process.env.CURRENT_MODEL || 'gemini-3.7-flash';
         const thinkingLevel = resolveThinkingLevel(process.env.GEMINI_THINKING_LEVEL, 'LOW');
         console.log('DEBUG: Configuring Gemini model.');
-        const model = genAI.getGenerativeModel({
+        const request = {
             model: modelName,
-            generationConfig: {
+            contents: [{ role: 'user', parts: promptParts.map(part => typeof part === 'string' ? { text: part } : part) }],
+            config: omitUnsupportedGeminiSampling(modelName, {
                 temperature: 0.2,
                 maxOutputTokens: 4096,
                 thinkingConfig: { thinkingLevel }
-            }
-        });
+            })
+        };
 
         console.log("DEBUG: Calling generateContent...");
         
         // 텍스트 프롬프트 + Base64 이미지 배열을 함께 전송 (멀티모달)
-        const result = await model.generateContent(promptParts);
+        const response = await generateWithProjectBudget(ai, request);
         
         console.log("DEBUG: Content Generated. Getting response...");
-        const response = await result.response;
-        const text = response.text();
+        logGeminiUsage(response);
+        const text = requireGeminiText(response);
         console.log("DEBUG: Got text. Writing output...");
 
         fs.writeFileSync(outputFile, text);

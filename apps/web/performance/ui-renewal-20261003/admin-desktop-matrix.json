@@ -1,0 +1,240 @@
+{
+  "environment": "synthetic localhost dev server; CDP capture; 1440x1000",
+  "observations": [
+    {
+      "name": "overview-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [
+          "Tzuyang KPI Dashboard"
+        ],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": true
+    },
+    {
+      "name": "restaurants-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin?module=restaurants",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [
+          "관리자 데이터 검수"
+        ],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": true
+    },
+    {
+      "name": "restaurant-refresh-history-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin?module=restaurant-refresh-history",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [
+          "맛집 최신화 기록관리",
+          "변경 후보 및 결정 이력",
+          "왼쪽 목록에서 후보를 선택하세요"
+        ],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": true
+    },
+    {
+      "name": "submissions-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin?module=submissions",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": false
+    },
+    {
+      "name": "reviews-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin?module=reviews",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [
+          "관리자 데이터 검수"
+        ],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": true
+    },
+    {
+      "name": "users-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin?module=users",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [
+          "사용자 관리",
+          "사용자 목록",
+          "새 계정 안내",
+          "상세·위험 변경"
+        ],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": true
+    },
+    {
+      "name": "banners-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin?module=banners",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [
+          "배너 관리",
+          "배너 목록",
+          "새 배너 작성"
+        ],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": true
+    },
+    {
+      "name": "insights-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin?module=insights",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [
+          "핵심 인사이트"
+        ],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": true
+    },
+    {
+      "name": "pipeline-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin?module=pipeline",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [
+          "크롤러 파이프라인"
+        ],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": true
+    },
+    {
+      "name": "youtube-thumbnail-generator-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin?module=youtube-thumbnail-generator",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": false
+    },
+    {
+      "name": "storyboard-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin?module=storyboard",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [
+          "스토리보드",
+          "새 제작 요청"
+        ],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": true
+    },
+    {
+      "name": "routes-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin?module=routes",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [
+          "맛집 동선 추천",
+          "마커를 선택하세요",
+          "오버레이 제안 검토"
+        ],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": true
+    },
+    {
+      "name": "llm-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin?module=llm",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [
+          "운영 보조",
+          "현재 화면 요약",
+          "다음 검수 추천",
+          "위험 액션 체크리스트",
+          "안전 적용 원칙",
+          "운영 원칙"
+        ],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": true
+    },
+    {
+      "name": "audit-desktop-matrix",
+      "url": "http://127.0.0.1:18794/admin?module=audit",
+      "fixture": true,
+      "metrics": {
+        "alerts": 0,
+        "clippedHeadings": 0,
+        "headings": [
+          "감사 로그"
+        ],
+        "height": 1000,
+        "overflow": 0,
+        "width": 1440
+      },
+      "ready": true
+    }
+  ]
+}

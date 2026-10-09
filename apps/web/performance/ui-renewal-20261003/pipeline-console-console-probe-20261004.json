@@ -1,0 +1,94 @@
+{
+  "kind": "pipeline-console-synthetic-browser",
+  "browserSession": "tzudong-pipeline-astra",
+  "observedAt": "2026-10-04T09:54:53.054Z",
+  "browser": "154.0.8037.97",
+  "node": "v24.21.0",
+  "sourceStart": [
+    {
+      "path": "components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "sha256": "79884d8dd038bb196b088324e7095cffd60e6965a74b6b03cfc7b30f2b6b98fb"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.tsx",
+      "sha256": "4d95e99c62bee331c9984d83be79982129bdab978fdd208fb1af210666d9798e"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.module.css",
+      "sha256": "d2892622ab059d24cf12208ebc741b565ea77f227f62e1fa84cea9cc72cf577c"
+    },
+    {
+      "path": "lib/admin/pipeline-flow-view-model.ts",
+      "sha256": "e4cb1fd12fcef34dccbc1739abc7a4296aad6091865edb891064bc395f10b6ec"
+    },
+    {
+      "path": "lib/admin/pipeline-action-preview.ts",
+      "sha256": "bb6d5309584b1d6c06e58ab00248905127a61539b46b977b4daa48ecb9088a06"
+    }
+  ],
+  "sourceEnd": [
+    {
+      "path": "components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "sha256": "79884d8dd038bb196b088324e7095cffd60e6965a74b6b03cfc7b30f2b6b98fb"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.tsx",
+      "sha256": "4d95e99c62bee331c9984d83be79982129bdab978fdd208fb1af210666d9798e"
+    },
+    {
+      "path": "components/admin/pipeline/PipelineFlowDiagram.module.css",
+      "sha256": "d2892622ab059d24cf12208ebc741b565ea77f227f62e1fa84cea9cc72cf577c"
+    },
+    {
+      "path": "lib/admin/pipeline-flow-view-model.ts",
+      "sha256": "e4cb1fd12fcef34dccbc1739abc7a4296aad6091865edb891064bc395f10b6ec"
+    },
+    {
+      "path": "lib/admin/pipeline-action-preview.ts",
+      "sha256": "bb6d5309584b1d6c06e58ab00248905127a61539b46b977b4daa48ecb9088a06"
+    }
+  ],
+  "sourceStable": true,
+  "cases": [
+    {
+      "width": 390,
+      "colorScheme": "light",
+      "invisibleLabels": 0,
+      "nodes": 8,
+      "edgePaths": 8,
+      "clippedText": 0,
+      "horizontalOverflow": 0,
+      "heading": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "rawLeak": false,
+      "theme": false,
+      "clickSelection": true,
+      "arrowNavigation": true,
+      "spaceSelection": true,
+      "manualReviewLink": true
+    }
+  ],
+  "mutationChecks": [],
+  "safety": {
+    "serverBoundPosts": 0,
+    "fixturePostsFulfilled": 0,
+    "otherPostsDenied": 0,
+    "externalDenied": 0,
+    "realProviderCalls": 0
+  },
+  "errors": {
+    "pageErrors": 0,
+    "consoleErrors": 1,
+    "consoleKinds": {
+      "other": 1
+    },
+    "expectedHttpFailures": false
+  },
+  "limitations": [
+    "All pipeline and manifest bodies are synthetic browser fixtures.",
+    "No real API preview ticket, worker execution, provider output, DB write, deployment or production availability was tested."
+  ]
+}

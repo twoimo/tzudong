@@ -1,0 +1,11 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-console-uiux-source.test.ts:
+(pass) admin console beginner-friendly UI/UX source contract > keeps live YouTube KPI refresh behind an admin-only server route [0.34ms]
+(pass) admin console beginner-friendly UI/UX source contract > keeps admin pages dense without sacrificing responsive boundaries [5.83ms]
+
+ 2 pass
+ 42 filtered out
+ 0 fail
+ 120 expect() calls
+Ran 2 tests across 1 file. [41.00ms]

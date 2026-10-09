@@ -1,0 +1,10 @@
+{
+  "account": "u0",
+  "entrypoint": "https://sentry.io/auth/login/",
+  "exitCode": 0,
+  "taskOwnedTabClosedInFinally": true,
+  "mutationsPerformed": false,
+  "snapshotPersisted": false,
+  "observedState": "Sign in to Sentry",
+  "membershipAndRegionVerified": false
+}

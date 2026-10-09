@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "sourceSha256": "5a1adc3211ebfde3c13a45c55e3192328d45bd6b750e60d708c80d850a9b69ea",
+  "operatingWrites": false,
+  "rollbackExact": true,
+  "g014Passed": 4,
+  "metadataPreserved": true,
+  "oldBody": "2f680f3d2e7d94cac4ba1812c0ee29abb30885c3d6e6fa86bb0abbc1ef1e8eb1",
+  "newBody": "2f680f3d2e7d94cac4ba1812c0ee29abb30885c3d6e6fa86bb0abbc1ef1e8eb1",
+  "idempotentExact": true,
+  "rolesMembersLegacyAclManifestPreserved": true,
+  "runtimeCases": [
+    "applied_fingerprint_excluded",
+    "today_finished_approval_prior_day_run_counted",
+    "same_policy_daily_deferred_reincluded",
+    "stale_policy_excluded",
+    "stop_counts_empty_version_preserved"
+  ],
+  "actualTickParity": true,
+  "wrongBodyRejectedAtomically": true
+}

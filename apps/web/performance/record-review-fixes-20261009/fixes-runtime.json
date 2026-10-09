@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "operatingWrites": false,
+  "extraHelperGrants": false,
+  "cases": [
+    "canonical_metadata_omissions_clear_order_and_invalid_types",
+    "deleted_trace_recreate_composite_same_video_different_name",
+    "submission.reject_parent_child_reason",
+    "submission.delete_parent_child_reason"
+  ]
+}

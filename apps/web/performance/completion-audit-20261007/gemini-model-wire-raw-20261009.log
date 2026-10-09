@@ -1,0 +1,41 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/storyboard-gemini-client.test.ts:
+(pass) Gemini storyboard worker client > installed SDK serializes 3.8 draft without removed sampling fields and preserves the existing contract [6.02ms]
+(pass) Gemini storyboard worker client > installed SDK does not itself remove obsolete model-specific sampling fields [0.31ms]
+(pass) Gemini storyboard worker client > both Nano Banana models retain their independent image configuration on the SDK wire [0.81ms]
+(pass) Gemini storyboard worker client > prefers the funded server credential and never a public key [0.03ms]
+(pass) Gemini storyboard worker client > coalesces repeated metadata polling through a bounded catalog and returns independent objects [0.35ms]
+(pass) Gemini storyboard worker client > validates structured scenes and actual response model provenance [0.21ms]
+(pass) Gemini storyboard worker client > advertises available models when one optional lookup is unavailable [0.14ms]
+(pass) Gemini storyboard worker client > rejects an empty verified catalog and preserves caller cancellation [0.15ms]
+(pass) Gemini storyboard worker client > returns a completed result even when optional usage telemetry fails [0.22ms]
+(pass) Gemini storyboard worker client > rejects different response models and all non-Gemini or unapproved request models [0.23ms]
+(pass) Gemini storyboard worker client > performs no work after abort and does not leak provider diagnostics [0.17ms]
+
+tests-unit/ocr-runtime-config.test.ts:
+(pass) ocr runtime config > collects unique environment credentials in priority order [0.10ms]
+(pass) ocr runtime config > pins explicitly funded requests to one server credential and ignores public keys [0.21ms]
+(pass) ocr runtime config > returns no credentials for an empty environment [1.25ms]
+(pass) ocr runtime config > falls back to a credential-free automatic configuration [0.54ms]
+(pass) ocr runtime config > prefers the manual model ahead of the fallback chain [0.36ms]
+(pass) ocr runtime config > ignores a blank manual model and unknown routing modes [0.11ms]
+(pass) ocr runtime config > reads the legacy routing mode and model keys [0.22ms]
+
+tests-unit/gemini-ocr.test.ts:
+(pass) gemini receipt ocr helper > retains older explicit sampling while omitting removed controls for modern Flash models [0.21ms]
+(pass) gemini receipt ocr helper > installed SDK sends no obsolete sampling override for the configured OCR baseline and 3.8 [1.31ms]
+(pass) gemini receipt ocr helper > does not spend a provider call after caller cancellation [0.61ms]
+(pass) gemini receipt ocr helper > stops fallback after cancellation during a request and drops duplicate models [0.49ms]
+(pass) gemini receipt ocr helper > defaults to gemini-3.6-flash as the authoritative OCR baseline [0.13ms]
+(pass) gemini receipt ocr helper > defaults OCR thinking to medium and allows env override [0.03ms]
+(pass) gemini receipt ocr helper > builds Gemini multimodal parts without exposing secrets [0.17ms]
+(pass) gemini receipt ocr helper > calls configured Gemini model and normalizes receipt JSON [0.84ms]
+(pass) gemini receipt ocr helper > falls through Gemini model list before failing [0.17ms]
+(pass) gemini receipt ocr helper > does not include the API key in missing-key errors [0.04ms]
+(pass) gemini receipt ocr helper > throws provider error with attempts when all Gemini candidates fail [0.05ms]
+
+ 29 pass
+ 0 fail
+ 238 expect() calls
+Ran 29 tests across 3 files. [298.00ms]

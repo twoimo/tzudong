@@ -1,0 +1,7 @@
+{
+  "command": "Node24 scripts/run-typecheck.mjs --compiler parity",
+  "exitCode": 0,
+  "diagnosticCodes": [],
+  "status": "passed",
+  "affectedPaths": []
+}

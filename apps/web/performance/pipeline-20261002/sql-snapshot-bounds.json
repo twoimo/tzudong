@@ -1,0 +1,92 @@
+{
+  "kind": "isolated_postgresql_synthetic_fixture",
+  "status": "passed",
+  "liveEvidenceEligible": false,
+  "postgresVersion": "15.8",
+  "migrationSha256": "9e1c1d694cb56f0abef7e286d39b4ad6b883484364737d566f9564682f1728f1",
+  "snapshotRowsVerified": 1127,
+  "publicRolesDenied": [
+    "anon",
+    "authenticated"
+  ],
+  "byteBoundMiB": 32,
+  "rowBound": 50000,
+  "overflowRejectedBeforeReturn": true,
+  "counterOnlyPreservedRevision": true,
+  "rollbackPreservedRevision": true,
+  "mutationInvalidatedRevision": true,
+  "hostedWrites": 0,
+  "pagePrimaryKeyQueryPlan": [
+    {
+      "Plan": {
+        "Node Type": "Limit",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Startup Cost": 0.28,
+        "Total Cost": 2.22,
+        "Plan Rows": 50,
+        "Plan Width": 16,
+        "Actual Startup Time": 0.037,
+        "Actual Total Time": 0.066,
+        "Actual Rows": 50,
+        "Actual Loops": 1,
+        "Shared Hit Blocks": 34,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0,
+        "Plans": [
+          {
+            "Node Type": "Index Only Scan",
+            "Parent Relationship": "Outer",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Scan Direction": "Forward",
+            "Index Name": "restaurants_pkey",
+            "Relation Name": "restaurants",
+            "Alias": "restaurants",
+            "Startup Cost": 0.28,
+            "Total Cost": 138.81,
+            "Plan Rows": 3569,
+            "Plan Width": 16,
+            "Actual Startup Time": 0.036,
+            "Actual Total Time": 0.063,
+            "Actual Rows": 50,
+            "Actual Loops": 1,
+            "Heap Fetches": 65,
+            "Shared Hit Blocks": 34,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0
+          }
+        ]
+      },
+      "Planning": {
+        "Shared Hit Blocks": 61,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0
+      },
+      "Planning Time": 0.381,
+      "Triggers": [],
+      "Execution Time": 0.084
+    }
+  ]
+}

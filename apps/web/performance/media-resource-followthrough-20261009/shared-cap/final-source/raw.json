@@ -1,0 +1,130 @@
+[
+  {
+    "implementation": "baseline",
+    "phase": "cold",
+    "processResults": [
+      {
+        "wallMs": 1570.5920001491904,
+        "cpuMs": 4112.469,
+        "peakTreeRssMiB": 458.078125,
+        "sampledPeakFfmpeg": 4,
+        "resourceSamples": 15,
+        "exitCode": 0,
+        "diagnosticSha256": "83d66700907080d24d7e73261888b48ff5685b6bcbba2db89af479cb88dc9288"
+      },
+      {
+        "wallMs": 1586.8774999398738,
+        "cpuMs": 4146.429,
+        "peakTreeRssMiB": 509.65625,
+        "sampledPeakFfmpeg": 4,
+        "resourceSamples": 16,
+        "exitCode": 0,
+        "diagnosticSha256": "d330acad7c0a9e557c81b727491924b3158e6397a5f51c85bfe3dcf1fdc7e4c8"
+      }
+    ],
+    "exactPeakFfmpegCommands": 8,
+    "ffmpegCalls": 24,
+    "providerReplayCalls": 0,
+    "evaluationReplayCalls": 0,
+    "unclosedFfmpegCommands": 0,
+    "framesPerProcess": 48,
+    "outputManifestSha256": "7d9e9a848a3dcfdde54b0c086fd828e8c242c447ccb152a6b3cf668fa4150682",
+    "outputsEquivalent": true
+  },
+  {
+    "implementation": "baseline",
+    "phase": "restart",
+    "processResults": [
+      {
+        "wallMs": 260.5045831296593,
+        "cpuMs": 233.21999999999997,
+        "peakTreeRssMiB": 64.90625,
+        "sampledPeakFfmpeg": 0,
+        "resourceSamples": 3,
+        "exitCode": 0,
+        "diagnosticSha256": "d492f5dc640ca1f503fb35a45b00e89416a78004f4635fef190298840db6295b"
+      },
+      {
+        "wallMs": 265.2892500627786,
+        "cpuMs": 231.44500000000002,
+        "peakTreeRssMiB": 67.171875,
+        "sampledPeakFfmpeg": 0,
+        "resourceSamples": 3,
+        "exitCode": 0,
+        "diagnosticSha256": "7cf99ded6a132700c90e7ae245c960b16f394d17c7045c477d97d4ff052f08cf"
+      }
+    ],
+    "exactPeakFfmpegCommands": 0,
+    "ffmpegCalls": 0,
+    "providerReplayCalls": 0,
+    "evaluationReplayCalls": 0,
+    "unclosedFfmpegCommands": 0,
+    "framesPerProcess": 48,
+    "outputManifestSha256": "7d9e9a848a3dcfdde54b0c086fd828e8c242c447ccb152a6b3cf668fa4150682",
+    "outputsEquivalent": true
+  },
+  {
+    "implementation": "candidate",
+    "phase": "cold",
+    "processResults": [
+      {
+        "wallMs": 1521.1647909600288,
+        "cpuMs": 4542.744,
+        "peakTreeRssMiB": 302.90625,
+        "sampledPeakFfmpeg": 1,
+        "resourceSamples": 14,
+        "exitCode": 0,
+        "diagnosticSha256": "0db4513e21470cdfd0b81a30df92fcea143b553726721057c05ee6fa48be4f52"
+      },
+      {
+        "wallMs": 1488.6467498727143,
+        "cpuMs": 4563.402,
+        "peakTreeRssMiB": 318.78125,
+        "sampledPeakFfmpeg": 1,
+        "resourceSamples": 13,
+        "exitCode": 0,
+        "diagnosticSha256": "58b02c271df615c498483af075b0636255b9e425924f9f49ae123eb63e6eec1a"
+      }
+    ],
+    "exactPeakFfmpegCommands": 4,
+    "ffmpegCalls": 24,
+    "providerReplayCalls": 0,
+    "evaluationReplayCalls": 0,
+    "unclosedFfmpegCommands": 0,
+    "framesPerProcess": 48,
+    "outputManifestSha256": "7d9e9a848a3dcfdde54b0c086fd828e8c242c447ccb152a6b3cf668fa4150682",
+    "outputsEquivalent": true
+  },
+  {
+    "implementation": "candidate",
+    "phase": "restart",
+    "processResults": [
+      {
+        "wallMs": 292.36358404159546,
+        "cpuMs": 283.24399999999997,
+        "peakTreeRssMiB": 67.28125,
+        "sampledPeakFfmpeg": 0,
+        "resourceSamples": 3,
+        "exitCode": 0,
+        "diagnosticSha256": "c5e7f681e15809ac6b86b96acf715eaaacba0cfb1d241bd88d1f201c77f9ee98"
+      },
+      {
+        "wallMs": 292.83387516625226,
+        "cpuMs": 282.54699999999997,
+        "peakTreeRssMiB": 67.09375,
+        "sampledPeakFfmpeg": 0,
+        "resourceSamples": 3,
+        "exitCode": 0,
+        "diagnosticSha256": "5f0090f7c6324ea18d5ab0cf766cf1b6ff5a6ce93199e8c8393de7fbdf1f88e4"
+      }
+    ],
+    "exactPeakFfmpegCommands": 0,
+    "ffmpegCalls": 0,
+    "providerReplayCalls": 0,
+    "evaluationReplayCalls": 0,
+    "unclosedFfmpegCommands": 0,
+    "framesPerProcess": 48,
+    "outputManifestSha256": "7d9e9a848a3dcfdde54b0c086fd828e8c242c447ccb152a6b3cf668fa4150682",
+    "outputsEquivalent": true
+  }
+]

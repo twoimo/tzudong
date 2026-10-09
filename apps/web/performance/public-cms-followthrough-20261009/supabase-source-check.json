@@ -1,0 +1,12 @@
+{
+  "url": "https://supabase.com/changelog.md",
+  "status": 200,
+  "boundedBytes": 99170,
+  "breakingChangeTagCount": 24,
+  "retryMentionCount": 3,
+  "sha256": "f718b0dc1423d1984fc5f18b8ee81bec2847c6a0fdb6658262afa5a004ddf77a",
+  "relevantBreakingSectionHeadings": [],
+  "installedRetrySource": "node_modules/@supabase/postgrest-js/src/fetchWithRetry.ts",
+  "retryModifierDocs": "https://supabase.com/docs/reference/javascript/retry",
+  "policy": "SDK and project retry defaults preserved; synthetic search-error test waits for nested retries."
+}

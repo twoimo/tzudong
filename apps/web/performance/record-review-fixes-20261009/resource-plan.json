@@ -1,0 +1,14 @@
+{
+  "name": "tzudong-record-fixes-20261009-a1390aca",
+  "volume": "tzudong-record-fixes-20261009-a1390aca",
+  "owner": "01a0f860-10d0-71b0-bb2a-95c2b52e025e",
+  "runLabel": "tzudong-record-fixes-20261009-a1390aca",
+  "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+  "network": "none",
+  "ports": 0,
+  "boundManifestSha256": "ccd0373d1138301a586b75ab07f01ddcd061765d22e22da646e774cfc1e92563",
+  "existingRuntimeDatabaseStates": "Both existingDBs have M1-M3; they are not pristine controls",
+  "existingResourcesTouched": false,
+  "snapshotUserRowsCopied": 0,
+  "sourceRoleBootstrapOnly": "Exact original37roles/29members in newcluster, not addedowner/helper executiongrants"
+}

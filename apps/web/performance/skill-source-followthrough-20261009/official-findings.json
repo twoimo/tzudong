@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-09",
+  "sources": [
+    {
+      "url": "https://nextjs.org/docs/app/guides/environment-variables",
+      "finding": "Lookup checks process.env, environment-specific local file, generic local except test, environment file, then generic env; first value wins. The test-specific local file is loaded."
+    },
+    {
+      "url": "https://developers.openai.com/plugins/deploy/submission",
+      "finding": "Published MCP server updates and packaged skill updates are different: skill/metadata changes require a new publisher ZIP."
+    },
+    {
+      "url": "https://developers.openai.com/plugins/build/plugins",
+      "finding": "Local marketplace source refresh and desktop restart instructions concern local authored packages; they do not establish an end-user curated remote cache editing/update route."
+    },
+    {
+      "url": "https://vercel.com/docs/agent-resources/vercel-plugin",
+      "finding": "Maintained docs name the Vercel upstream plugin and per-client installation; its OpenCode update command is not a Codex remote-package update command."
+    }
+  ],
+  "contradiction": {
+    "installedSkill": "vercel/0.54.1/skills/env-vars/SKILL.md",
+    "section": "Load Order (Next.js)",
+    "currentUpstreamStillIncorrect": true,
+    "evidence": "Both current upstream and installed section wrongly say environment-specific local file is skipped in test; latest Next docs contradict this."
+  }
+}

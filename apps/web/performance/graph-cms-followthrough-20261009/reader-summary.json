@@ -1,0 +1,15 @@
+{
+  "revision": "f519c027d4cbd815146d8f6f4c4d47baa4578af903e7073c7c2fde3723ac410a",
+  "totalNodes": 30,
+  "totalEdges": 88,
+  "coverage": {
+    "analyzedCount": 0,
+    "asOf": "2026-10-09T00:34:34.628933Z",
+    "eligibleCount": 1071,
+    "excludedShortsCount": 81,
+    "failedCount": 0,
+    "inventoryCount": 1152,
+    "pendingCount": 1071
+  },
+  "captionFirstPass": 9
+}

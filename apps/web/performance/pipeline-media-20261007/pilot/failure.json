@@ -1,0 +1,35 @@
+{
+  "pair": 0,
+  "implementation": "candidate",
+  "phase": "cold",
+  "media": {
+    "wallMs": 312.6792081166059,
+    "cpuMs": 263.948,
+    "peakTreeRssMiB": 73.5625,
+    "sampledPeakFfmpeg": 0,
+    "resourceSamples": 4,
+    "exitCode": 1,
+    "diagnosticSha256": "128d7bd6c924834fa22be7464ad185a35340f7ed162c19d03d8a681e5f69906a",
+    "result": null
+  },
+  "laaj": {
+    "wallMs": 2604.9315840937197,
+    "cpuMs": 2030.144,
+    "peakTreeRssMiB": 71.21875,
+    "sampledPeakFfmpeg": 0,
+    "resourceSamples": 32,
+    "exitCode": 0,
+    "diagnosticSha256": "4744ddf152248c45cf23efc8ea2f3363fef5ed8df9ac942ffd7e1542e539d0a9",
+    "result": null
+  },
+  "transform": {
+    "wallMs": 171.3169168215245,
+    "cpuMs": 82.273,
+    "peakTreeRssMiB": 29.09375,
+    "sampledPeakFfmpeg": 0,
+    "resourceSamples": 2,
+    "exitCode": 0,
+    "diagnosticSha256": "0f5e96d62154b69a9d3e70cdb007984d72f6f2be343c4d165e02fa0adfa19282",
+    "result": null
+  }
+}

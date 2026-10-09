@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "operatingWrites": false,
+  "migrationSha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3",
+  "cases": [
+    {
+      "target": "public.restaurant_review_automation_manual(uuid,text,text,text,uuid)",
+      "fixedCode": "REVIEW_MANUAL_LOCK_SOURCE_DRIFT",
+      "exactRollback": true
+    },
+    {
+      "target": "pipeline_control.lock_restaurant_review_catalog_revision()",
+      "fixedCode": "REVIEW_MANUAL_LOCK_HELPER_DRIFT",
+      "exactRollback": true
+    }
+  ],
+  "g014Passed": 4
+}

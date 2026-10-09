@@ -15,6 +15,7 @@ import {
   snapshotRevision,
 } from "@/lib/admin/pipeline-control";
 import { getAdminSafeErrorName } from "@/lib/admin/guarded-mutation-contract";
+import { parseGithubWorkflowState } from "@/lib/admin/operations-view-model";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { readBoundedJsonRequest } from "@/lib/security/bounded-json-request";
 import { isTrustedSameOriginMutation } from "@/lib/security/same-origin-mutation";
@@ -180,11 +181,15 @@ async function readGithubCrawlerSnapshot() {
         created_at?: string;
       }>;
     };
-    const run = payload.workflow_runs?.[0];
-    if (!run?.id) {
+    if (!Array.isArray(payload?.workflow_runs)) {
       return null;
     }
-    const conclusion = String(run.conclusion ?? run.status ?? "unknown").slice(0, 32);
+    const run = payload.workflow_runs?.[0];
+    if (!run || !Number.isSafeInteger(run.id) || Number(run.id) <= 0) {
+      return null;
+    }
+    const state = parseGithubWorkflowState(run);
+    const failureFrames = state.failed === true ? [{ errorCode: "github_crawler", line: "1" }] : [];
     return {
       targets: [],
       jobs: [
@@ -192,20 +197,15 @@ async function readGithubCrawlerSnapshot() {
           id: String(run.id),
           target: "tzuyang",
           profile: "lite_gha",
-          status: conclusion === "success" ? "Succeeded" : "Failed",
-          error_code: conclusion === "success" ? null : "github_crawler",
-          dry_run: false,
-          adapter_index: 0,
+          status: state.jobStatus,
+          error_code: state.failed === true ? "github_crawler" : null,
         },
       ],
-      failures:
-        conclusion === "success"
-          ? []
-          : [{ errorCode: "github_crawler", line: "1" }],
+      githubRun: { id: String(run.id), status: state.status, conclusion: state.conclusion },
+      failures: failureFrames,
       gauges: {},
-      failureFrames:
-        conclusion === "success" ? [] : [{ errorCode: "github_crawler", line: "1" }],
-      hardware: process.env.TZUDONG_HARDWARE_CHIP ?? "github_actions",
+      failureFrames,
+      hardware: "github_actions",
       dataEnv: "hosted_read",
       source: "github_actions",
     };

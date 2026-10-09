@@ -1,0 +1,25 @@
+{
+  "fixtureSession": 14436,
+  "devSession": 57354,
+  "browserSession": 3040,
+  "exits": [
+    0,
+    0,
+    0
+  ],
+  "firstBrowserFailureSession": 89124,
+  "firstBrowserFailureExit": 1,
+  "previousFixtureSession": 7394,
+  "previousFixtureExit": 0,
+  "ownedPorts": [
+    20402,
+    20403,
+    20404
+  ],
+  "listenersAfterShutdown": 0,
+  "preexistingDevPidPreserved": 57309,
+  "sharedVaultWritesByHelper": 0,
+  "canonicalExportWritesByHelper": 0,
+  "generatedDistPreserved": ".next-graph-title-followthrough",
+  "privateFixtureExport": "/Users/twoimo/.codex/runtime-cache/tzudong-caption-title-20261009-1791510040932/fixture-export"
+}

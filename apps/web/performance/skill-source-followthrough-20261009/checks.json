@@ -1,0 +1,15 @@
+{
+  "managedFilesUnchanged": true,
+  "repositorySourceEdited": false,
+  "updateApplied": false,
+  "canonicalCorrectionComplete": false,
+  "externalFeedbackSent": false,
+  "paidCalls": 0,
+  "restarts": 0,
+  "liveDatabaseWrites": 0,
+  "limitations": [
+    "Desktop-only plugin update UI not inspected",
+    "No corrected upstream Vercel env-vars version found",
+    "Managed package publication requires publisher; no caller capability established"
+  ]
+}

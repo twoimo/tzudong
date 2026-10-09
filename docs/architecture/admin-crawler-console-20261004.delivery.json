@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "dataflow",
+  "input": "/Users/twoimo/.codex/worktrees/pipeline-performance-20261002/tzudong/docs/architecture/admin-crawler-console-20261004.dataflow.json",
+  "output": "/Users/twoimo/.codex/worktrees/pipeline-performance-20261002/tzudong/docs/architecture/admin-crawler-console-20261004.html",
+  "specification": {
+    "sha256": "c62ece7848973ea7776fee4c29485a456ee0ebcfdaf1abf1465a95a1ff2b1529",
+    "bytes": 3631
+  },
+  "artifact": {
+    "sha256": "924d0f5a5fe53f84c08e08efb321342dbc44e8b93f4a743f09ab6429bc5a74cd",
+    "bytes": 808019
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

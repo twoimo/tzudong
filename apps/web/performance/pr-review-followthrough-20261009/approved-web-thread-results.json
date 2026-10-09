@@ -1,0 +1,41 @@
+{
+  "sourceStable": true,
+  "githubThreadsResolvedByHelper": 0,
+  "threads": [
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pyg6w",
+      "classification": "addressed",
+      "meaning": "Current local source and focused verification address this exact issue; not a deployed or GitHub-resolved claim."
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qme8W",
+      "classification": "addressed",
+      "meaning": "Current local source and focused verification address this exact issue; not a deployed or GitHub-resolved claim."
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pzgm5",
+      "classification": "addressed",
+      "meaning": "Current local source and focused verification address this exact issue; not a deployed or GitHub-resolved claim."
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qm-hm",
+      "classification": "addressed",
+      "meaning": "Current local source and focused verification address this exact issue; not a deployed or GitHub-resolved claim."
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qm-ht",
+      "classification": "addressed",
+      "meaning": "Current local source and focused verification address this exact issue; not a deployed or GitHub-resolved claim."
+    }
+  ],
+  "sourceManifest": "approved-source-manifest.json",
+  "browserResults": "approved-browser-results.json",
+  "checks": {
+    "focusedTests": 45,
+    "expandedAffectedTests": 67,
+    "densitySourceContracts": 2,
+    "targetedEslintExit": 0,
+    "parityDiagnostics": 0,
+    "parityLogicalInputs": 3314
+  }
+}

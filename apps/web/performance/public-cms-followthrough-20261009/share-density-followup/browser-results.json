@@ -1,0 +1,359 @@
+{
+  "config": {
+    "argv": [
+      "/opt/homebrew/Cellar/node@24/24.21.0/bin/node",
+      "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "performance/public-cms-followthrough-20261009/share-density-followup/browser.config.mjs"
+    ],
+    "configFile": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/share-density-followup/browser.config.mjs",
+    "rootDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/share-density-followup/browser-output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "share-read-fallback.spec.ts"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "line",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/share-density-followup/browser-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "share-read-fallback.spec.ts",
+      "file": "share-read-fallback.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "bounded share fallback and home recovery invalid-code at desktop",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1964,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T23:27:14.180Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "adc617960b6a9505a0d0-3106b1635feccd2bddae",
+          "file": "share-read-fallback.spec.ts",
+          "line": 10,
+          "column": 3
+        },
+        {
+          "title": "bounded share fallback and home recovery Zz00Qq at desktop",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1405,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T23:27:18.101Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "adc617960b6a9505a0d0-8566dba9f8a507641ae7",
+          "file": "share-read-fallback.spec.ts",
+          "line": 10,
+          "column": 3
+        },
+        {
+          "title": "bounded share fallback and home recovery invalid-code at tablet",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1208,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T23:27:19.513Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "adc617960b6a9505a0d0-7cdc559369248632dab7",
+          "file": "share-read-fallback.spec.ts",
+          "line": 10,
+          "column": 3
+        },
+        {
+          "title": "bounded share fallback and home recovery Zz00Qq at tablet",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1191,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T23:27:20.727Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "adc617960b6a9505a0d0-7eccd01485fd7d3db1a6",
+          "file": "share-read-fallback.spec.ts",
+          "line": 10,
+          "column": 3
+        },
+        {
+          "title": "bounded share fallback and home recovery invalid-code at mobile",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1079,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T23:27:21.925Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "adc617960b6a9505a0d0-d871a56b186bf87e83b6",
+          "file": "share-read-fallback.spec.ts",
+          "line": 10,
+          "column": 3
+        },
+        {
+          "title": "bounded share fallback and home recovery Zz00Qq at mobile",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1140,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T23:27:23.009Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "adc617960b6a9505a0d0-331543dfba531312804d",
+          "file": "share-read-fallback.spec.ts",
+          "line": 10,
+          "column": 3
+        },
+        {
+          "title": "compact stamp failure retains recovery at tablet",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2498,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T23:27:24.158Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "adc617960b6a9505a0d0-241a6aeba626ece16cc0",
+          "file": "share-read-fallback.spec.ts",
+          "line": 29,
+          "column": 2
+        },
+        {
+          "title": "compact stamp failure retains recovery at mobile",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2479,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T23:27:26.663Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "adc617960b6a9505a0d0-fde02ad3ede639920d20",
+          "file": "share-read-fallback.spec.ts",
+          "line": 29,
+          "column": 2
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-08T23:27:13.939Z",
+    "duration": 15308.257,
+    "expected": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

@@ -1,0 +1,826 @@
+{
+  "schema": 1,
+  "auditedAtUtc": "2026-10-09T02:14:46.797831+00:00",
+  "reviewInput": {
+    "path": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/pr-3099-review-current-20261009.json",
+    "sha256": "77db26b5e60b785ca20280e2f7a2a8c221acbdd9d3fc3ec098890530b1746e70",
+    "exportHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+    "totalUnresolvedThreads": 48,
+    "hasNextPage": false,
+    "treatedAsUntrustedEvidence": true
+  },
+  "currentHead": "3f86d6999d4a6b00e6221510a0728358747fa997",
+  "scope": "17 apps/web UI/graph/admin/route/view-model threads; current dirty source hashes bind findings",
+  "counts": {
+    "addressed": 6,
+    "unaddressed": 10,
+    "obsolete": 1
+  },
+  "threads": [
+    {
+      "threadId": "PRRT_kwDOQGRyNc6ouwJC",
+      "classification": "unaddressed",
+      "rationale": "기본 stream warning 경로에 sequential200-row 읽기가 여전히 있으며 offset<=50000이다. RPC/raw opt-in 존재만으로 기본 경로의 transfer/latency 지적을 해소하지 않는다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/lib/admin/evaluation-page-server.ts",
+          "line": 19,
+          "reason": "default stream",
+          "sha256": "bb7690e071aee367ca3c9fa6c4197bc16ad362ce33dc4f616e43e6c01c965eb4"
+        },
+        {
+          "path": "apps/web/lib/admin/evaluation-page-server.ts",
+          "line": 36,
+          "reason": "offset<=50000/range200 loop",
+          "sha256": "bb7690e071aee367ca3c9fa6c4197bc16ad362ce33dc4f616e43e6c01c965eb4"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/admin-evaluation-page-server.test.ts",
+          "line": 1,
+          "scope": "keyset/warning compatibility; current worst-case latency not tested in this audit",
+          "executedInThisAudit": false,
+          "result": "not-rerun",
+          "sha256": "cfb3fe042e565a1bfa8dd44e4f6964248b83841d77d40ea975902d6e7e07f362"
+        }
+      ],
+      "proposalToRoot": "기존 의미·Unicode 동등성/용량 admission을 보존하면서 bounded RPC/raw 경로의 정량 근거와 기본 경로 적용을 root가 검토. SQL/producer 범위는 root 소유.",
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/lib/admin/evaluation-page-server.ts",
+      "exportIsOutdated": true,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4176104496"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6oxXr1",
+      "classification": "addressed",
+      "rationale": "backend Python :g URL 표현과 zero/fractional/exponent timestamp를 맞추는 evidenceTimestamp와 정확 URL admission이 존재한다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/types/knowledge-graph.ts",
+          "line": 33,
+          "reason": "Python six-significant-digit canonical timestamp",
+          "sha256": "d9adfd90785490c3cdda89cbcc3d1e84270caeb84774962e2bb9b634217ffecc"
+        },
+        {
+          "path": "apps/web/types/knowledge-graph.ts",
+          "line": 70,
+          "reason": "zero base URL and canonical fractional timestamp",
+          "sha256": "d9adfd90785490c3cdda89cbcc3d1e84270caeb84774962e2bb9b634217ffecc"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/admin-knowledge-graph.test.ts",
+          "line": 55,
+          "scope": "actual backend zero/fractional/rounded/exponent URL parity",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "80136fd1ab95451f9f8922bbd6809797ad849bfc167b3e4e62fbead0cd58584b"
+        }
+      ],
+      "proposalToRoot": null,
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": true,
+        "artifact": "apps/web/performance/graph-cms-followthrough-20261009/title-enriched-mobile-selected.png",
+        "limit": "Staged caption 0:00 link renders; fractional/exponent cases are unit evidence, not browser playback."
+      },
+      "path": "apps/web/types/knowledge-graph.ts",
+      "exportIsOutdated": true,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4177159986"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6oxXr3",
+      "classification": "addressed",
+      "rationale": "pending에 expected profile/role/account fields를 저장하고 실제 returned fields가 모두 일치해야 성공으로 전환한다. 존재 여부만으로 성공 처리하지 않는다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/components/admin/AdminUsersPanel.tsx",
+          "line": 96,
+          "reason": "expected fields",
+          "sha256": "793d4c51ab60196c9bb2fa51d74de30e5a5ecb813bfafb8c6e1e7ab5c3e3c974"
+        },
+        {
+          "path": "apps/web/components/admin/AdminUsersPanel.tsx",
+          "line": 115,
+          "reason": "Object.entries(expected).every comparison",
+          "sha256": "793d4c51ab60196c9bb2fa51d74de30e5a5ecb813bfafb8c6e1e7ab5c3e3c974"
+        },
+        {
+          "path": "apps/web/components/admin/AdminUsersPanel.tsx",
+          "line": 353,
+          "reason": "later readback gated by expected comparison",
+          "sha256": "793d4c51ab60196c9bb2fa51d74de30e5a5ecb813bfafb8c6e1e7ab5c3e3c974"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/admin-users-mutation-scope.test.ts",
+          "line": 66,
+          "scope": "old/partly changed profile not confirmed",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "268039ccffdf8f8bc9b02afac7a15d2c313a9b357b242206847e4bb74ec58ef8"
+        },
+        {
+          "path": "apps/web/tests-unit/admin-users-mutation-scope.test.ts",
+          "line": 75,
+          "scope": "role/account reversal not confirmed",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "268039ccffdf8f8bc9b02afac7a15d2c313a9b357b242206847e4bb74ec58ef8"
+        }
+      ],
+      "proposalToRoot": null,
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/components/admin/AdminUsersPanel.tsx",
+      "exportIsOutdated": true,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4177159989"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6oxtOt",
+      "classification": "addressed",
+      "rationale": "applyEditor/requestEditor/closeEditor 모두 pendingReadback에서 return하므로 editor 변화로 미확인 state를 지우는 경로가 막혀 있다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/app/admin/banners/page.tsx",
+          "line": 319,
+          "reason": "applyEditor pending guard",
+          "sha256": "178a3029d5d6761c68adbd55e22545286efd26b32460d2454646cc2e1cdea647"
+        },
+        {
+          "path": "apps/web/app/admin/banners/page.tsx",
+          "line": 328,
+          "reason": "requestEditor guard",
+          "sha256": "178a3029d5d6761c68adbd55e22545286efd26b32460d2454646cc2e1cdea647"
+        },
+        {
+          "path": "apps/web/app/admin/banners/page.tsx",
+          "line": 644,
+          "reason": "refresh verifies exact saved fields/deletion",
+          "sha256": "178a3029d5d6761c68adbd55e22545286efd26b32460d2454646cc2e1cdea647"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/mobile-desktop-parity-source.test.ts",
+          "line": 229,
+          "scope": "general pending readback guard source contract; this exact scenario not rerun",
+          "executedInThisAudit": false,
+          "result": "not-rerun",
+          "sha256": "a3719c81e40210fbb0ae99f9cce6b27b137fdfdfd83c341bd975959edf7450d0"
+        }
+      ],
+      "proposalToRoot": null,
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/app/admin/banners/page.tsx",
+      "exportIsOutdated": true,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4177299780"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6oxtOv",
+      "classification": "addressed",
+      "rationale": "Unknown target status에서 partial=true를 설정하고 dashboard controlsReady는 job_api && !partial를 요구한다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/lib/admin/pipeline-flow-view-model.ts",
+          "line": 94,
+          "reason": "Unknown target marks partial",
+          "sha256": "25ae84ca521b20339e42e425575b8778ca391e835c532efa9937d719572a9a91"
+        },
+        {
+          "path": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+          "line": 106,
+          "reason": "partial locks controls",
+          "sha256": "7490ac33cb15d0a8f59bd8f154487cbe75cc16732c7a860003c4b281f7d67fae"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/pipeline-flow-view-model.test.ts",
+          "line": 73,
+          "scope": "new/malformed/Unknown target states retain target and mark partial",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "b1f159771ade01d222e08f70b2bc5f1566b9777dc0f8dbe6d929d3330dc009f3"
+        }
+      ],
+      "proposalToRoot": null,
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/lib/admin/pipeline-flow-view-model.ts",
+      "exportIsOutdated": true,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4177299781"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6o0iU5",
+      "classification": "addressed",
+      "rationale": "fallback route가 실제 GitHub status/conclusion을 보존하고 공통 state parser를 사용한다. operations는 confirmed failure만 집계하며 pending/cancelled/skipped를 failure로 승격하지 않는다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/app/api/admin/pipeline/route.ts",
+          "line": 193,
+          "reason": "parseGithubWorkflowState and githubRun provenance",
+          "sha256": "7d99a6adbbd97707bed0b79d0c659d1ac9563d65e94c197848f8900fcbcb52bc"
+        },
+        {
+          "path": "apps/web/lib/admin/operations-view-model.ts",
+          "line": 128,
+          "reason": "independent status/conclusion parsing; partial/limited boundary",
+          "sha256": "585d05678fdbe082d9e91d86ec7bb7215c0e5733c1e57f264912df94eddb178c"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/admin-operations-view-model.test.ts",
+          "line": 138,
+          "scope": "confirmed GitHub conclusions only",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "a357c6259a931faa5b042cd94e60809abef52f12a7f56fab81b4bc3d3bc1edbb"
+        },
+        {
+          "path": "apps/web/tests-unit/admin-operations-view-model.test.ts",
+          "line": 153,
+          "scope": "incomplete GitHub runs remain non-failures",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "a357c6259a931faa5b042cd94e60809abef52f12a7f56fab81b4bc3d3bc1edbb"
+        }
+      ],
+      "proposalToRoot": null,
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/lib/admin/operations-view-model.ts",
+      "exportIsOutdated": true,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4178502631"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6o0iU8",
+      "classification": "addressed",
+      "rationale": "reload 직전 stats/warnings/revision/count를 모두0/빈 값으로 초기화하고 실패 catch도 warnings/filteredTotal/revision/cursor를 비운다. pageReadError 안내와 action lock이 있다. catch에 setStats가 없다는 한 줄만 보면 선행 reset을 놓친다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/app/admin/evaluations/page.tsx",
+          "line": 1318,
+          "reason": "reset revision and whole page metadata before fetch",
+          "sha256": "ee773aeb062d58f5170b213f3ca672aafe0ec2673c2bb6f9f8dd0ba97967163a"
+        },
+        {
+          "path": "apps/web/app/admin/evaluations/page.tsx",
+          "line": 1325,
+          "reason": "stats cleared before request",
+          "sha256": "ee773aeb062d58f5170b213f3ca672aafe0ec2673c2bb6f9f8dd0ba97967163a"
+        },
+        {
+          "path": "apps/web/app/admin/evaluations/page.tsx",
+          "line": 1340,
+          "reason": "failure clears cursor/filter/warnings and sets pageReadError",
+          "sha256": "ee773aeb062d58f5170b213f3ca672aafe0ec2673c2bb6f9f8dd0ba97967163a"
+        }
+      ],
+      "testEvidence": [],
+      "proposalToRoot": null,
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/app/admin/evaluations/page.tsx",
+      "exportIsOutdated": false,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4178502638"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pyg6w",
+      "classification": "unaddressed",
+      "rationale": "q는 useDeferredValue(search)이고 queryKey에 즉시 반영된다. 타이핑 요청을 시간 기준으로 묶는 debounce/submit 경계가 없다. 서버 reader는 모든 node/edge shard를 읽는다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx",
+          "line": 29,
+          "reason": "deferred search in queryKey; no debounce",
+          "sha256": "4616504d1ee2140bdc1d3c56a0ac9a496340d419ad986fbe4df438678196f925"
+        },
+        {
+          "path": "apps/web/lib/admin/knowledge-graph-shards.ts",
+          "line": 166,
+          "reason": "full node shard traversal",
+          "sha256": "e6952da7522b587223170b4ee2e44a5d8835ddd772b5d5a4a85a0bb4897659ea"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/admin-knowledge-graph-titles.test.ts",
+          "line": 1,
+          "scope": "title search/admission; not typing request-count/performance coverage",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "1317726201f95449e08c4fc8ccb023e5cdc1f3c955605456c577a6c8cbe7ed63"
+        }
+      ],
+      "proposalToRoot": "별도 debounced query 또는 명시 submit을 도입하고 typing request count/obsolete query behavior를 검증. 현재 KGraph source는 이번 감사에서 변경하지 않음.",
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "artifact": "apps/web/performance/graph-cms-followthrough-20261009/title-enriched-browser-results.json",
+        "limit": "Three viewport search flows pass for30 nodes; fill-based flow does not prove typing debouncing or large-graph scan cost."
+      },
+      "path": "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx",
+      "exportIsOutdated": false,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4203936409"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pyg62",
+      "classification": "obsolete",
+      "rationale": "comment premise가 틀렸다. every(count)의 count는 value>=0인 numeric validator라0도 true이며 truthiness callback이 아니다. 실제2/0/4 재현의 합계는6이다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/lib/admin/operations-view-model.ts",
+          "line": 38,
+          "reason": "count validator accepts zero",
+          "sha256": "585d05678fdbe082d9e91d86ec7bb7215c0e5733c1e57f264912df94eddb178c"
+        },
+        {
+          "path": "apps/web/lib/admin/operations-view-model.ts",
+          "line": 211,
+          "reason": "every(count) validator, not Boolean",
+          "sha256": "585d05678fdbe082d9e91d86ec7bb7215c0e5733c1e57f264912df94eddb178c"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/admin-operations-view-model.test.ts",
+          "line": 85,
+          "scope": "explicit canonical zeros survive",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "a357c6259a931faa5b042cd94e60809abef52f12a7f56fab81b4bc3d3bc1edbb"
+        }
+      ],
+      "proposalToRoot": null,
+      "reproduction": "web-reproduction.json: pendingZeroCase counts[2,0,4] total6; commentPremiseReproduced=false",
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/lib/admin/operations-view-model.ts",
+      "exportIsOutdated": false,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4203936418"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pzgm5",
+      "classification": "unaddressed",
+      "rationale": "display jobs는 manifest mismatch/unavailable에서 Unknown으로 내려가지만 reliable/statusLabel은 snapshot.partial만 확인한다. model probe에서도 partial=false,display Unknown,reliable=true가 재현된다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/lib/admin/pipeline-flow-view-model.ts",
+          "line": 108,
+          "reason": "manifest based downgrade",
+          "sha256": "25ae84ca521b20339e42e425575b8778ca391e835c532efa9937d719572a9a91"
+        },
+        {
+          "path": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+          "line": 103,
+          "reason": "reliable ignores displayed downgrade",
+          "sha256": "7490ac33cb15d0a8f59bd8f154487cbe75cc16732c7a860003c4b281f7d67fae"
+        },
+        {
+          "path": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+          "line": 109,
+          "reason": "statusLabel ignores manifest/display uncertainty",
+          "sha256": "7490ac33cb15d0a8f59bd8f154487cbe75cc16732c7a860003c4b281f7d67fae"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/pipeline-flow-view-model.test.ts",
+          "line": 1,
+          "scope": "display downgrade covered; dashboard derived reliable coherence not covered",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "b1f159771ade01d222e08f70b2bc5f1566b9777dc0f8dbe6d929d3330dc009f3"
+        }
+      ],
+      "proposalToRoot": "표시된 GitHub status/manifest 매칭 결과를 reliability/status label에 포함. job_api 제어 경계는 유지.",
+      "reproduction": "web-reproduction.json: pipelineMissingManifest partial=false/display Unknown/currentDashboardReliable=true",
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+      "exportIsOutdated": false,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4204339775"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6pzgnM",
+      "classification": "unaddressed",
+      "rationale": "pendingKey가 account-independent v1이며 persisted identity에 actor가 없다. recover에서 appliedAttempt=true 뒤 다른 actor의 거부가 pending identity를 막힌 상태로 남길 수 있다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/lib/admin/record-action-client.ts",
+          "line": 56,
+          "reason": "unscoped sessionStorage key",
+          "sha256": "c5e0391b38addd0c45ecaabea5acbd44d3dd9ad46898052689ba8b5bd0ff3587"
+        },
+        {
+          "path": "apps/web/lib/admin/record-action-client.ts",
+          "line": 156,
+          "reason": "recover reads same identity",
+          "sha256": "c5e0391b38addd0c45ecaabea5acbd44d3dd9ad46898052689ba8b5bd0ff3587"
+        },
+        {
+          "path": "apps/web/lib/admin/record-action-client.ts",
+          "line": 212,
+          "reason": "persisted fields omit actor",
+          "sha256": "c5e0391b38addd0c45ecaabea5acbd44d3dd9ad46898052689ba8b5bd0ff3587"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/admin-record-action-client.test.ts",
+          "line": 90,
+          "scope": "same actor reload recovery only; cross-actor recovery not covered",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "238ebdb36bc51367e95453fa73b39d23d3893631a74e8da880902992dbcff562"
+        }
+      ],
+      "proposalToRoot": "root record-action 소유 범위에서 authenticated actor binding 및 logout/confirmed actor mismatch 처리를 검토. 불확실 apply를 임의 cancel/new UUID로 풀지 않도록 검증.",
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/lib/admin/record-action-client.ts",
+      "exportIsOutdated": false,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4204339798"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6p2B3h",
+      "classification": "unaddressed",
+      "rationale": "UI는 model.owned_by===gemini-api를 요구하지만 production store list의 serialized model에는 owned_by가 없다. capability가 맞아도 selector가 비어질 수 있다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/lib/admin/storyboard/production-store.ts",
+          "line": 262,
+          "reason": "catalog projection drops owned_by",
+          "sha256": "8595c32824937899d22311b208594b83e46463ad7fe81c134f76235b18c14638"
+        },
+        {
+          "path": "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+          "line": 313,
+          "reason": "modelsFor ownership filter",
+          "sha256": "839664b908b4e41ddb8d8565a509f4bb0bd1359aa62a1396753d7db91415ac53"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/storyboard-production-api.test.ts",
+          "line": 148,
+          "scope": "store creation capabilities; serialized list→UI ownership bridge not verified",
+          "executedInThisAudit": false,
+          "result": "not-rerun",
+          "sha256": "63bfa3c69b58b0beba4dead33c7aefddb13d9ae52623fcc0a06ce7a3aa6cb9a0"
+        }
+      ],
+      "proposalToRoot": "P1 우선: validated model ownership discriminator를 catalog serialization에 보존하고 store.list DTO→modelsFor 경로를 격리 검증. 모델 호출 없이 가능.",
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+      "exportIsOutdated": false,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4205365758"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qTx9K",
+      "classification": "unaddressed",
+      "rationale": "dense pool50개에 legacy를 뒤에 붙인 후 splice(50)하므로 candidateCount50에서 legacy pool 전체가 탈락할 수 있다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/app/api/admin/storyboard/rag/search/route.ts",
+          "line": 177,
+          "reason": "legacy bounded own pool",
+          "sha256": "c76676be558e9a578f457c13b29c4373a5365175b9931003b7524b97248c9b9d"
+        },
+        {
+          "path": "apps/web/app/api/admin/storyboard/rag/search/route.ts",
+          "line": 188,
+          "reason": "append after dense pool then cap50",
+          "sha256": "c76676be558e9a578f457c13b29c4373a5365175b9931003b7524b97248c9b9d"
+        }
+      ],
+      "testEvidence": [],
+      "proposalToRoot": "두 pool을 bounded 합치면서 legacy quota/lexical ranking을 유지. candidateCount50·dense50·exact legacy match fixture로 rerank 이전 admission을 검증.",
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/app/api/admin/storyboard/rag/search/route.ts",
+      "exportIsOutdated": false,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4217712728"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qme8W",
+      "classification": "unaddressed",
+      "rationale": "selected는 queryKey에 포함되고 선택마다 node parameter를 전송한다. 이미 loaded nodes에 선택 대상이 있어도 full shard reader가 다시 실행된다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx",
+          "line": 30,
+          "reason": "selected in queryKey",
+          "sha256": "4616504d1ee2140bdc1d3c56a0ac9a496340d419ad986fbe4df438678196f925"
+        },
+        {
+          "path": "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx",
+          "line": 33,
+          "reason": "node query parameter on selection",
+          "sha256": "4616504d1ee2140bdc1d3c56a0ac9a496340d419ad986fbe4df438678196f925"
+        },
+        {
+          "path": "apps/web/lib/admin/knowledge-graph-shards.ts",
+          "line": 166,
+          "reason": "selected lookup scans full shards",
+          "sha256": "e6952da7522b587223170b4ee2e44a5d8835ddd772b5d5a4a85a0bb4897659ea"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/admin-knowledge-graph-titles.test.ts",
+          "line": 1,
+          "scope": "selected data/source title; does not constrain selection network count",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "1317726201f95449e08c4fc8ccb023e5cdc1f3c955605456c577a6c8cbe7ed63"
+        }
+      ],
+      "proposalToRoot": "현재 페이지 선택은 local data로 처리하고 off-page 선택만 bounded detail read로 분리. shape/placeholder/error/revision 경계를 회귀 검증.",
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "artifact": "apps/web/performance/graph-cms-followthrough-20261009/title-enriched-browser-results.json",
+        "limit": "Selection/detail succeeds; this browser report has no selection request count/large graph performance proof."
+      },
+      "path": "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx",
+      "exportIsOutdated": false,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4225437128"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qm-hc",
+      "classification": "unaddressed",
+      "rationale": "recover가 cleanupAttempt=true로 설정하므로 recovered applied receipt의 mediaCleanupPending=true여도 complete의 유일 cleanup POST를 건너뛰고 identity를 제거할 수 있다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/lib/admin/record-action-client.ts",
+          "line": 120,
+          "reason": "cleanup runs only !cleanupAttempt",
+          "sha256": "c5e0391b38addd0c45ecaabea5acbd44d3dd9ad46898052689ba8b5bd0ff3587"
+        },
+        {
+          "path": "apps/web/lib/admin/record-action-client.ts",
+          "line": 128,
+          "reason": "complete removes identity",
+          "sha256": "c5e0391b38addd0c45ecaabea5acbd44d3dd9ad46898052689ba8b5bd0ff3587"
+        },
+        {
+          "path": "apps/web/lib/admin/record-action-client.ts",
+          "line": 166,
+          "reason": "recovery pre-sets cleanupAttempt true",
+          "sha256": "c5e0391b38addd0c45ecaabea5acbd44d3dd9ad46898052689ba8b5bd0ff3587"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/admin-record-action-client.test.ts",
+          "line": 141,
+          "scope": "immediate uncertain cleanup does not repeat; pending cleanup on recovered tab not covered",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "238ebdb36bc51367e95453fa73b39d23d3893631a74e8da880902992dbcff562"
+        }
+      ],
+      "proposalToRoot": "root 기록 작업 소유 범위: server pending vs inflight/uncertain admission을 이용해 unattempted cleanup만 재개하고 pending receipt identity를 보존.",
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/lib/admin/record-action-client.ts",
+      "exportIsOutdated": false,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4225646856"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qm-hm",
+      "classification": "unaddressed",
+      "rationale": "사용자 readback은 기존 searchQuery/perPage120 목록 안에서 찾는다. 검색에 쓰인 nickname/username 변경으로 target이 결과에서 빠지면 refresh도 같은 검색을 반복한다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/components/admin/AdminUsersPanel.tsx",
+          "line": 332,
+          "reason": "searchQuery retained during loadUsers",
+          "sha256": "793d4c51ab60196c9bb2fa51d74de30e5a5ecb813bfafb8c6e1e7ab5c3e3c974"
+        },
+        {
+          "path": "apps/web/components/admin/AdminUsersPanel.tsx",
+          "line": 353,
+          "reason": "readback only searches nextUsers",
+          "sha256": "793d4c51ab60196c9bb2fa51d74de30e5a5ecb813bfafb8c6e1e7ab5c3e3c974"
+        },
+        {
+          "path": "apps/web/app/api/admin/users/route.ts",
+          "line": 108,
+          "reason": "GET list search/page only",
+          "sha256": "c6039a28d239071cc634da0817ccabca52c7d3da4acc5bf00212774aa61020c0"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/admin-users-mutation-scope.test.ts",
+          "line": 66,
+          "scope": "returned-row matching semantics covered; renamed target outside filter not covered",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "268039ccffdf8f8bc9b02afac7a15d2c313a9b357b242206847e4bb74ec58ef8"
+        }
+      ],
+      "proposalToRoot": "pending target를 authenticated ID로 별도 조회하는 경로와 exact expected comparison을 함께 유지. list UI filter와 readback admission을 분리.",
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/components/admin/AdminUsersPanel.tsx",
+      "exportIsOutdated": false,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4225646869"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6qm-ht",
+      "classification": "unaddressed",
+      "rationale": "pending recovery는 필터를 제거하지만 candidate ID 요청은 하지 않는다. GET route는 전체 newest100만 반환하므로 오래된 pending candidate를 영구 못 찾을 수 있다.",
+      "codeEvidence": [
+        {
+          "path": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+          "line": 565,
+          "reason": "drops status/search without candidate ID",
+          "sha256": "3e9b52cca2a0f2b276e9175975d657149ac7ed64ae67ca6e6849522c101a44bf"
+        },
+        {
+          "path": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+          "line": 585,
+          "reason": "evaluateReadback only over returned candidates",
+          "sha256": "3e9b52cca2a0f2b276e9175975d657149ac7ed64ae67ca6e6849522c101a44bf"
+        },
+        {
+          "path": "apps/web/app/api/admin/restaurant-refresh-history/route.ts",
+          "line": 319,
+          "reason": "unfiltered newest100 cap",
+          "sha256": "03607c04b8be53ca41c005be818b303cf35fc2c663c3f8faece5a407cfd850a5"
+        }
+      ],
+      "testEvidence": [
+        {
+          "path": "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts",
+          "line": 219,
+          "scope": "source/component recovery and expected comparison; missing target outside100 not covered",
+          "executedInThisAudit": true,
+          "result": "passed",
+          "sha256": "c45a0532abbe58039c128ac045204fe5c893c9f0b267de4c89421981b76baee0"
+        }
+      ],
+      "proposalToRoot": "requireAdmin을 유지한 candidate_id exact GET와 targeted readback을 추가. newest100 밖 candidate·변경된 filter fixture로 unlock 조건을 검증.",
+      "reproduction": null,
+      "renderEvidence": {
+        "specificIssueRuntimeVerified": false,
+        "limit": "Existing rendering does not validate this failure/concurrency/recovery path."
+      },
+      "path": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+      "exportIsOutdated": false,
+      "exportIsResolved": false,
+      "commentUrls": [
+        "https://github.com/twoimo/tzudong/pull/3099#discussion_r4225646876"
+      ]
+    }
+  ],
+  "excludedThreadIds": [
+    "PRRT_kwDOQGRyNc6ouwJG",
+    "PRRT_kwDOQGRyNc6oxVfH",
+    "PRRT_kwDOQGRyNc6oxVfM",
+    "PRRT_kwDOQGRyNc6oxXry",
+    "PRRT_kwDOQGRyNc6oxtOq",
+    "PRRT_kwDOQGRyNc6ozOtb",
+    "PRRT_kwDOQGRyNc6o0iU-",
+    "PRRT_kwDOQGRyNc6o1c8T",
+    "PRRT_kwDOQGRyNc6o1c8W",
+    "PRRT_kwDOQGRyNc6o1c8X",
+    "PRRT_kwDOQGRyNc6pzgnD",
+    "PRRT_kwDOQGRyNc6pz8hq",
+    "PRRT_kwDOQGRyNc6pz8ht",
+    "PRRT_kwDOQGRyNc6pz8hv",
+    "PRRT_kwDOQGRyNc6pz8hy",
+    "PRRT_kwDOQGRyNc6p2B3s",
+    "PRRT_kwDOQGRyNc6p2B30",
+    "PRRT_kwDOQGRyNc6p2B33",
+    "PRRT_kwDOQGRyNc6qTx8x",
+    "PRRT_kwDOQGRyNc6qTx83",
+    "PRRT_kwDOQGRyNc6qTx9B",
+    "PRRT_kwDOQGRyNc6qjvAp",
+    "PRRT_kwDOQGRyNc6qlQpu",
+    "PRRT_kwDOQGRyNc6qlQp4",
+    "PRRT_kwDOQGRyNc6qlQqB",
+    "PRRT_kwDOQGRyNc6qlQqH",
+    "PRRT_kwDOQGRyNc6qmBxR",
+    "PRRT_kwDOQGRyNc6qnYiv",
+    "PRRT_kwDOQGRyNc6qnYiz",
+    "PRRT_kwDOQGRyNc6qnYi2",
+    "PRRT_kwDOQGRyNc6qnYi8"
+  ],
+  "checks": {
+    "bunTests": {
+      "exitCode": 0,
+      "tests": 85,
+      "files": 7,
+      "assertions": 1150,
+      "log": "web-review-tests.log"
+    },
+    "modelOnlyReproductions": "web-reproduction.json",
+    "productSourceEdits": 0,
+    "browserStarted": false,
+    "externalPostsResolutionsCommitsPushes": 0
+  },
+  "limits": [
+    "Addressed means current local source fixes this exact issue, not GitHub resolved or deployed correctness.",
+    "Outdated flags were not used as automatic obsolete classifications.",
+    "85 passing tests do not close the10 scenarios their assertions do not cover.",
+    "Existing graph screenshots are rendering/search/selection evidence for30 nodes, not typing debouncing, full-shard performance, or actor recovery proof.",
+    "Root has separately applied title9; this review did not rewrite graph source/data or execute shared writes."
+  ]
+}

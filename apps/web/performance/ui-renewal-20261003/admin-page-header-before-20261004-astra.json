@@ -1,0 +1,2050 @@
+{
+  "phase": "before",
+  "synthetic": true,
+  "pageErrors": 0,
+  "results": [
+    {
+      "id": "overview",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 28,
+        "centerY": 26
+      },
+      "padding": [
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ],
+      "title": {
+        "text": "쯔양 성과 대시보드",
+        "x": 220,
+        "y": 12,
+        "width": 116.25,
+        "height": 24,
+        "centerY": 24,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "KPI 카드 직접 드래그 순서 설정",
+          "x": 1103.03125,
+          "y": 12,
+          "width": 58.6875,
+          "height": 28,
+          "centerY": 26
+        },
+        {
+          "label": "KPI 카드 순서를 처음 상태로 초기화",
+          "x": 1165.71875,
+          "y": 12,
+          "width": 46.53125,
+          "height": 28,
+          "centerY": 26
+        },
+        {
+          "label": "KPI 대시보드를 PDF 보고서로 내보내기",
+          "x": 1218.25,
+          "y": 12,
+          "width": 89.71875,
+          "height": 28,
+          "centerY": 26
+        },
+        {
+          "label": "GitHub Actions KPI 데이터 수집 로그 열기",
+          "x": 1311.96875,
+          "y": 12,
+          "width": 28,
+          "height": 28,
+          "centerY": 26
+        },
+        {
+          "label": "대시보드 타임프레임 설정: 1개월",
+          "x": 1345.96875,
+          "y": 12,
+          "width": 65.03125,
+          "height": 28,
+          "centerY": 26
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "restaurants",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 57,
+        "centerY": 40.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "맛집 관리",
+        "x": 232,
+        "y": 28,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 40,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "검수",
+          "x": 359,
+          "y": 24,
+          "width": 48.203125,
+          "height": 32,
+          "centerY": 40
+        },
+        {
+          "label": "최신화·이력",
+          "x": 407.203125,
+          "y": 24,
+          "width": 88.1875,
+          "height": 32,
+          "centerY": 40
+        },
+        {
+          "label": "리스트 뷰",
+          "x": 507.390625,
+          "y": 24,
+          "width": 32,
+          "height": 32,
+          "centerY": 40
+        },
+        {
+          "label": "슬라이드 뷰",
+          "x": 543.390625,
+          "y": 24,
+          "width": 32,
+          "height": 32,
+          "centerY": 40
+        },
+        {
+          "label": "자동 운영 상태 새로고침",
+          "x": 1198.640625,
+          "y": 25,
+          "width": 40,
+          "height": 30,
+          "centerY": 40
+        },
+        {
+          "label": "설정",
+          "x": 1242.640625,
+          "y": 25,
+          "width": 76.203125,
+          "height": 30,
+          "centerY": 40
+        },
+        {
+          "label": "이력·정책",
+          "x": 1322.84375,
+          "y": 25,
+          "width": 76.15625,
+          "height": 30,
+          "centerY": 40
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "submissions",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 55,
+        "centerY": 39.5
+      },
+      "padding": [
+        "6px",
+        "8px",
+        "6px",
+        "8px"
+      ],
+      "title": {
+        "text": "제보 관리",
+        "x": 260,
+        "y": 18,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 30,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "reviews",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 55,
+        "centerY": 39.5
+      },
+      "padding": [
+        "6px",
+        "8px",
+        "6px",
+        "8px"
+      ],
+      "title": {
+        "text": "리뷰 관리",
+        "x": 260,
+        "y": 18,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 30,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "users",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 44,
+        "centerY": 34
+      },
+      "padding": [
+        "6px",
+        "8px",
+        "6px",
+        "8px"
+      ],
+      "title": {
+        "text": "사용자 관리",
+        "x": 252,
+        "y": 20,
+        "width": 71.75,
+        "height": 24,
+        "centerY": 32,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "banners",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 55,
+        "centerY": 39.5
+      },
+      "padding": [
+        "6px",
+        "8px",
+        "6px",
+        "8px"
+      ],
+      "title": {
+        "text": "배너 관리",
+        "x": 260,
+        "y": 18,
+        "width": 152.390625,
+        "height": 24,
+        "centerY": 30,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "새 배너",
+          "x": 1307.3125,
+          "y": 21,
+          "width": 95.6875,
+          "height": 36,
+          "centerY": 39
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "insights",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 59,
+        "centerY": 41.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "영상 성과 분석",
+        "x": 256,
+        "y": 20,
+        "width": 88.984375,
+        "height": 24,
+        "centerY": 32,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "pipeline",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 36,
+        "centerY": 30
+      },
+      "padding": [
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ],
+      "title": {
+        "text": "크롤러 파이프라인",
+        "x": 220,
+        "y": 18,
+        "width": 114.4375,
+        "height": 24,
+        "centerY": 30,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "새로고침",
+          "x": 1324.515625,
+          "y": 12,
+          "width": 86.484375,
+          "height": 36,
+          "centerY": 30
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": true,
+      "unavailable": false
+    },
+    {
+      "id": "knowledge-graph",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 53,
+        "centerY": 38.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "쯔양 지식 그래프",
+        "x": 256,
+        "y": 26,
+        "width": 102.609375,
+        "height": 24,
+        "centerY": 38,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "지식 그래프 새로고침",
+          "x": 1359,
+          "y": 20,
+          "width": 40,
+          "height": 36,
+          "centerY": 38
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "sentry",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 53,
+        "centerY": 38.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "Sentry 오류 모니터링",
+        "x": 256,
+        "y": 26,
+        "width": 137.046875,
+        "height": 24,
+        "centerY": 38,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "오류 목록 새로고침",
+          "x": 1359,
+          "y": 20,
+          "width": 40,
+          "height": 36,
+          "centerY": 38
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": true,
+      "unavailable": false
+    },
+    {
+      "id": "youtube-thumbnail-generator",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 59,
+        "centerY": 41.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "유튜브 썸네일 생성",
+        "x": 256,
+        "y": 20,
+        "width": 116.25,
+        "height": 24,
+        "centerY": 32,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "storyboard",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 236,
+        "y": 98,
+        "width": 1159,
+        "height": 44,
+        "centerY": 120
+      },
+      "padding": [
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ],
+      "title": {
+        "text": "스토리보드",
+        "x": 236,
+        "y": 98,
+        "width": 83.9375,
+        "height": 28,
+        "centerY": 112,
+        "fontSize": "20px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "저장된 프로젝트 선택Gemini 합성 프로젝트수동 합성 프로젝트",
+          "x": 1140.171875,
+          "y": 98,
+          "width": 169,
+          "height": 44,
+          "centerY": 120
+        },
+        {
+          "label": "연결 설정",
+          "x": 1317.171875,
+          "y": 102,
+          "width": 77.828125,
+          "height": 36,
+          "centerY": 120
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "routes",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 59,
+        "centerY": 41.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "맛집 동선 추천",
+        "x": 256,
+        "y": 20,
+        "width": 88.984375,
+        "height": 24,
+        "centerY": 32,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "llm",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 53,
+        "centerY": 38.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "운영 보조",
+        "x": 256,
+        "y": 26,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 38,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "운영 상태 새로고침",
+          "x": 1304.59375,
+          "y": 20,
+          "width": 94.40625,
+          "height": 36,
+          "centerY": 38
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": true
+    },
+    {
+      "id": "audit",
+      "width": 1423,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1191,
+        "height": 59,
+        "centerY": 41.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "감사 로그",
+        "x": 256,
+        "y": 20,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 32,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "overview",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 28,
+        "centerY": 26
+      },
+      "padding": [
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ],
+      "title": {
+        "text": "쯔양 성과 대시보드",
+        "x": 220,
+        "y": 12,
+        "width": 116.25,
+        "height": 24,
+        "centerY": 24,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "KPI 카드 직접 드래그 순서 설정",
+          "x": 514.03125,
+          "y": 12,
+          "width": 58.6875,
+          "height": 28,
+          "centerY": 26
+        },
+        {
+          "label": "KPI 카드 순서를 처음 상태로 초기화",
+          "x": 576.71875,
+          "y": 12,
+          "width": 46.53125,
+          "height": 28,
+          "centerY": 26
+        },
+        {
+          "label": "KPI 대시보드를 PDF 보고서로 내보내기",
+          "x": 629.25,
+          "y": 12,
+          "width": 89.71875,
+          "height": 28,
+          "centerY": 26
+        },
+        {
+          "label": "GitHub Actions KPI 데이터 수집 로그 열기",
+          "x": 722.96875,
+          "y": 12,
+          "width": 28,
+          "height": 28,
+          "centerY": 26
+        },
+        {
+          "label": "대시보드 타임프레임 설정: 1개월",
+          "x": 756.96875,
+          "y": 12,
+          "width": 65.03125,
+          "height": 28,
+          "centerY": 26
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "restaurants",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 101,
+        "centerY": 62.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "맛집 관리",
+        "x": 232,
+        "y": 28,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 40,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "검수",
+          "x": 359,
+          "y": 24,
+          "width": 48.203125,
+          "height": 32,
+          "centerY": 40
+        },
+        {
+          "label": "최신화·이력",
+          "x": 407.203125,
+          "y": 24,
+          "width": 88.1875,
+          "height": 32,
+          "centerY": 40
+        },
+        {
+          "label": "리스트 뷰",
+          "x": 507.390625,
+          "y": 24,
+          "width": 32,
+          "height": 32,
+          "centerY": 40
+        },
+        {
+          "label": "슬라이드 뷰",
+          "x": 543.390625,
+          "y": 24,
+          "width": 32,
+          "height": 32,
+          "centerY": 40
+        },
+        {
+          "label": "자동 운영 상태 새로고침",
+          "x": 609.640625,
+          "y": 68,
+          "width": 40,
+          "height": 36,
+          "centerY": 86
+        },
+        {
+          "label": "설정",
+          "x": 653.640625,
+          "y": 68,
+          "width": 76.203125,
+          "height": 36,
+          "centerY": 86
+        },
+        {
+          "label": "이력·정책",
+          "x": 733.84375,
+          "y": 68,
+          "width": 76.15625,
+          "height": 36,
+          "centerY": 86
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "submissions",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 55,
+        "centerY": 39.5
+      },
+      "padding": [
+        "6px",
+        "8px",
+        "6px",
+        "8px"
+      ],
+      "title": {
+        "text": "제보 관리",
+        "x": 260,
+        "y": 18,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 30,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "reviews",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 55,
+        "centerY": 39.5
+      },
+      "padding": [
+        "6px",
+        "8px",
+        "6px",
+        "8px"
+      ],
+      "title": {
+        "text": "리뷰 관리",
+        "x": 260,
+        "y": 18,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 30,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "users",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 44,
+        "centerY": 34
+      },
+      "padding": [
+        "6px",
+        "8px",
+        "6px",
+        "8px"
+      ],
+      "title": {
+        "text": "사용자 관리",
+        "x": 252,
+        "y": 20,
+        "width": 71.75,
+        "height": 24,
+        "centerY": 32,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "banners",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 99,
+        "centerY": 61.5
+      },
+      "padding": [
+        "6px",
+        "8px",
+        "6px",
+        "8px"
+      ],
+      "title": {
+        "text": "배너 관리",
+        "x": 260,
+        "y": 18,
+        "width": 152.390625,
+        "height": 24,
+        "centerY": 30,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "새 배너",
+          "x": 460.84375,
+          "y": 68,
+          "width": 95.6875,
+          "height": 36,
+          "centerY": 86
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "insights",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 59,
+        "centerY": 41.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "영상 성과 분석",
+        "x": 256,
+        "y": 20,
+        "width": 88.984375,
+        "height": 24,
+        "centerY": 32,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "pipeline",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 36,
+        "centerY": 30
+      },
+      "padding": [
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ],
+      "title": {
+        "text": "크롤러 파이프라인",
+        "x": 220,
+        "y": 18,
+        "width": 114.4375,
+        "height": 24,
+        "centerY": 30,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "새로고침",
+          "x": 735.515625,
+          "y": 12,
+          "width": 86.484375,
+          "height": 36,
+          "centerY": 30
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": true,
+      "unavailable": false
+    },
+    {
+      "id": "knowledge-graph",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 53,
+        "centerY": 38.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "쯔양 지식 그래프",
+        "x": 256,
+        "y": 26,
+        "width": 102.609375,
+        "height": 24,
+        "centerY": 38,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "지식 그래프 새로고침",
+          "x": 770,
+          "y": 20,
+          "width": 40,
+          "height": 36,
+          "centerY": 38
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "sentry",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 53,
+        "centerY": 38.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "Sentry 오류 모니터링",
+        "x": 256,
+        "y": 26,
+        "width": 137.046875,
+        "height": 24,
+        "centerY": 38,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "오류 목록 새로고침",
+          "x": 770,
+          "y": 20,
+          "width": 40,
+          "height": 36,
+          "centerY": 38
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": true,
+      "unavailable": false
+    },
+    {
+      "id": "youtube-thumbnail-generator",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 59,
+        "centerY": 41.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "유튜브 썸네일 생성",
+        "x": 256,
+        "y": 20,
+        "width": 116.25,
+        "height": 24,
+        "centerY": 32,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "storyboard",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 236,
+        "y": 98,
+        "width": 570,
+        "height": 44,
+        "centerY": 120
+      },
+      "padding": [
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ],
+      "title": {
+        "text": "스토리보드",
+        "x": 236,
+        "y": 98,
+        "width": 83.9375,
+        "height": 28,
+        "centerY": 112,
+        "fontSize": "20px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "저장된 프로젝트 선택Gemini 합성 프로젝트수동 합성 프로젝트",
+          "x": 551.171875,
+          "y": 98,
+          "width": 169,
+          "height": 44,
+          "centerY": 120
+        },
+        {
+          "label": "연결 설정",
+          "x": 728.171875,
+          "y": 102,
+          "width": 77.828125,
+          "height": 36,
+          "centerY": 120
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "routes",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 59,
+        "centerY": 41.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "맛집 동선 추천",
+        "x": 256,
+        "y": 20,
+        "width": 88.984375,
+        "height": 24,
+        "centerY": 32,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "llm",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "centerY": 0
+      },
+      "padding": [
+        "",
+        "",
+        "",
+        ""
+      ],
+      "title": {
+        "text": "운영 보조",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "centerY": 0,
+        "fontSize": "",
+        "fontWeight": "",
+        "lineHeight": "",
+        "visible": false
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": true
+    },
+    {
+      "id": "audit",
+      "width": 834,
+      "status": 200,
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 59,
+        "centerY": 41.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "감사 로그",
+        "x": 256,
+        "y": 20,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 32,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "overview",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 32,
+        "centerY": 82
+      },
+      "padding": [
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ],
+      "title": {
+        "text": "쯔양 성과 대시보드",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "centerY": 0,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": false
+      },
+      "controls": [
+        {
+          "label": "KPI 카드 직접 드래그 순서 설정",
+          "x": 10,
+          "y": 66,
+          "width": 58.6875,
+          "height": 28,
+          "centerY": 80
+        },
+        {
+          "label": "KPI 카드 순서를 처음 상태로 초기화",
+          "x": 72.6875,
+          "y": 66,
+          "width": 46.53125,
+          "height": 28,
+          "centerY": 80
+        },
+        {
+          "label": "KPI 대시보드를 PDF 보고서로 내보내기",
+          "x": 125.21875,
+          "y": 66,
+          "width": 34,
+          "height": 28,
+          "centerY": 80
+        },
+        {
+          "label": "GitHub Actions KPI 데이터 수집 로그 열기",
+          "x": 163.21875,
+          "y": 66,
+          "width": 28,
+          "height": 28,
+          "centerY": 80
+        },
+        {
+          "label": "대시보드 타임프레임 설정: 1개월",
+          "x": 197.21875,
+          "y": 66,
+          "width": 65.03125,
+          "height": 28,
+          "centerY": 80
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "restaurants",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 193,
+        "centerY": 162.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "맛집 관리",
+        "x": 22,
+        "y": 88,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 100,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "검수",
+          "x": 149,
+          "y": 78,
+          "width": 48.203125,
+          "height": 44,
+          "centerY": 100
+        },
+        {
+          "label": "최신화·이력",
+          "x": 197.203125,
+          "y": 78,
+          "width": 88.1875,
+          "height": 44,
+          "centerY": 100
+        },
+        {
+          "label": "리스트 뷰",
+          "x": 22,
+          "y": 134,
+          "width": 44,
+          "height": 44,
+          "centerY": 156
+        },
+        {
+          "label": "슬라이드 뷰",
+          "x": 70,
+          "y": 134,
+          "width": 44,
+          "height": 44,
+          "centerY": 156
+        },
+        {
+          "label": "자동 운영 상태 새로고침",
+          "x": 163.640625,
+          "y": 206,
+          "width": 44,
+          "height": 44,
+          "centerY": 228
+        },
+        {
+          "label": "설정",
+          "x": 211.640625,
+          "y": 206,
+          "width": 76.203125,
+          "height": 44,
+          "centerY": 228
+        },
+        {
+          "label": "이력·정책",
+          "x": 291.84375,
+          "y": 206,
+          "width": 76.15625,
+          "height": 44,
+          "centerY": 228
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "submissions",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 55,
+        "centerY": 93.5
+      },
+      "padding": [
+        "6px",
+        "8px",
+        "6px",
+        "8px"
+      ],
+      "title": {
+        "text": "제보 관리",
+        "x": 50,
+        "y": 72,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 84,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "reviews",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 55,
+        "centerY": 93.5
+      },
+      "padding": [
+        "6px",
+        "8px",
+        "6px",
+        "8px"
+      ],
+      "title": {
+        "text": "리뷰 관리",
+        "x": 50,
+        "y": 72,
+        "width": 58.125,
+        "height": 24,
+        "centerY": 84,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "users",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 69,
+        "centerY": 100.5
+      },
+      "padding": [
+        "6px",
+        "8px",
+        "6px",
+        "8px"
+      ],
+      "title": {
+        "text": "사용자 관리",
+        "x": 42,
+        "y": 72,
+        "width": 71.75,
+        "height": 24,
+        "centerY": 84,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "banners",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 131,
+        "centerY": 131.5
+      },
+      "padding": [
+        "6px",
+        "8px",
+        "6px",
+        "8px"
+      ],
+      "title": {
+        "text": "배너 관리",
+        "x": 50,
+        "y": 72,
+        "width": 152.390625,
+        "height": 24,
+        "centerY": 84,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "새 배너",
+          "x": 18,
+          "y": 154,
+          "width": 354,
+          "height": 36,
+          "centerY": 172
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "insights",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 59,
+        "centerY": 95.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "영상 성과 분석",
+        "x": 46,
+        "y": 74,
+        "width": 88.984375,
+        "height": 24,
+        "centerY": 86,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "pipeline",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 36,
+        "centerY": 84
+      },
+      "padding": [
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ],
+      "title": {
+        "text": "크롤러 파이프라인",
+        "x": 10,
+        "y": 72,
+        "width": 114.4375,
+        "height": 24,
+        "centerY": 84,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "새로고침",
+          "x": 293.515625,
+          "y": 66,
+          "width": 86.484375,
+          "height": 36,
+          "centerY": 84
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": true,
+      "unavailable": false
+    },
+    {
+      "id": "knowledge-graph",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 53,
+        "centerY": 92.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "쯔양 지식 그래프",
+        "x": 46,
+        "y": 80,
+        "width": 102.609375,
+        "height": 24,
+        "centerY": 92,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "지식 그래프 새로고침",
+          "x": 328,
+          "y": 74,
+          "width": 40,
+          "height": 36,
+          "centerY": 92
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "sentry",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 53,
+        "centerY": 92.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "Sentry 오류 모니터링",
+        "x": 46,
+        "y": 80,
+        "width": 137.046875,
+        "height": 24,
+        "centerY": 92,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "오류 목록 새로고침",
+          "x": 328,
+          "y": 74,
+          "width": 40,
+          "height": 36,
+          "centerY": 92
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": true,
+      "unavailable": false
+    },
+    {
+      "id": "youtube-thumbnail-generator",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 59,
+        "centerY": 95.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "유튜브 썸네일 생성",
+        "x": 46,
+        "y": 74,
+        "width": 116.25,
+        "height": 24,
+        "centerY": 86,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "storyboard",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 22,
+        "y": 168,
+        "width": 346,
+        "height": 84,
+        "centerY": 210
+      },
+      "padding": [
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ],
+      "title": {
+        "text": "스토리보드",
+        "x": 22,
+        "y": 168,
+        "width": 83.9375,
+        "height": 28,
+        "centerY": 182,
+        "fontSize": "20px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "visible": true
+      },
+      "controls": [
+        {
+          "label": "저장된 프로젝트 선택Gemini 합성 프로젝트수동 합성 프로젝트",
+          "x": 22,
+          "y": 208,
+          "width": 260.171875,
+          "height": 44,
+          "centerY": 230
+        },
+        {
+          "label": "연결 설정",
+          "x": 290.171875,
+          "y": 208,
+          "width": 77.828125,
+          "height": 44,
+          "centerY": 230
+        }
+      ],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "routes",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 59,
+        "centerY": 95.5
+      },
+      "padding": [
+        "8px",
+        "12px",
+        "8px",
+        "12px"
+      ],
+      "title": {
+        "text": "맛집 동선 추천",
+        "x": 46,
+        "y": 74,
+        "width": 88.984375,
+        "height": 24,
+        "centerY": 86,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "visible": true
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    },
+    {
+      "id": "llm",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "centerY": 0
+      },
+      "padding": [
+        "",
+        "",
+        "",
+        ""
+      ],
+      "title": {
+        "text": "운영 보조",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "centerY": 0,
+        "fontSize": "",
+        "fontWeight": "",
+        "lineHeight": "",
+        "visible": false
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": true
+    },
+    {
+      "id": "audit",
+      "width": 390,
+      "status": 200,
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "centerY": 0
+      },
+      "padding": [
+        "",
+        "",
+        "",
+        ""
+      ],
+      "title": {
+        "text": "감사 로그",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "centerY": 0,
+        "fontSize": "",
+        "fontWeight": "",
+        "lineHeight": "",
+        "visible": false
+      },
+      "controls": [],
+      "pageOverflow": 0,
+      "headerOverflow": 0,
+      "notConfigured": false,
+      "unavailable": false
+    }
+  ],
+  "limitations": [
+    "Synthetic local loopback preview only; no production or deployment evidence.",
+    "Baseline did not freeze the source manifest.",
+    "llm at 390 and 834, audit at 390 had detached zero rectangles and are not valid baseline geometry.",
+    "overview at 390 had a hidden title; it is a visibility finding, not a valid title position."
+  ]
+}

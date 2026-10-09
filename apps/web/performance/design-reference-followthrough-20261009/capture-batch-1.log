@@ -1,0 +1,2093 @@
+{
+  captureRoot: '/Users/twoimo/.aside/u/0/sessions/2026-10-09_aB87TgK2voxHjSPv'
+}
+✔︎ Opened a new tab and set it active: tabs[0], page → Supahero - Website hero section library (https://supahero.io/)
+# note: interactive (clickable / focusable) elements only.
+- title: "Supahero - Website hero section library" [url=https://supahero.io/]
+- text: "supahero is now part of"
+- link "screensdesign" [ref=e1]
+- text: "🎉 Create high converting apps in seconds."
+- banner:
+  - link "Supahero" [ref=e2]
+  - navigation:
+    - link "UX Apps Library" [ref=e3]
+    - link "Make Killer Apps" [ref=e4]
+    - button "Search" [ref=e5]
+- main:
+  - region:
+    - heading "Website hero section library" [level=1]
+    - text: "Curated collection of beautiful website hero sections."
+  - region:
+    - link "Anubi" [ref=e6]
+    - link "Better Stack" [ref=e7]
+    - link "eddie" [ref=e8]
+    - link "Lando Norris" [ref=e9]
+    - link "Zed" [ref=e10]
+    - link "35mm" [ref=e11]
+    - link "Wope" [ref=e12]
+    - link "Treize grammes" [ref=e13]
+    - link "Did Global Cinema" [ref=e14]
+    - link "Spectrum.Life" [ref=e15]
+    - link "Eric Jordan" [ref=e16]
+    - link "Tigran Azatyan" [ref=e17]
+    - link "Shaga Odyssey" [ref=e18]
+    - link "IntegratedBio" [ref=e19]
+    - link "Dream Design Laboratory" [ref=e20]
+    - link "Dialweb" [ref=e21]
+    - link "Dribbble" [ref=e22]
+    - link "Casa Lunara" [ref=e23]
+    - link "Modify" [ref=e24]
+    - link "Red Antler" [ref=e25]
+    - link "KARO" [ref=e26]
+    - link "Uigraphic" [ref=e27]
+    - link "Gallereee" [ref=e28]
+    - link "Haptikos" [ref=e29]
+    - link "Fourseven" [ref=e30]
+    - link "EventBeds" [ref=e31]
+    - link "bychudy" [ref=e32]
+    - link "Colabs" [ref=e33]
+    - link "GRINK" [ref=e34]
+    - link "Habito" [ref=e35]
+    - link "Royal Beverage" [ref=e36]
+    - link "Superpower" [ref=e37]
+    - link "Lax Chee" [ref=e38]
+    - link "Yucca Packing" [ref=e39]
+    - link "Payy" [ref=e40]
+    - link "Madar" [ref=e41]
+    - link "Exat" [ref=e42]
+    - link "Easyfast" [ref=e43]
+    - link "Maggie App" [ref=e44]
+    - link "End Speciesism" [ref=e45]
+    - link "Easlo" [ref=e46]
+    - link "Your Creative" [ref=e47]
+    - link "Produktly" [ref=e48]
+    - link "Otherlife" [ref=e49]
+    - link "Arc" [ref=e50]
+    - link "Nova Wallet" [ref=e51]
+    - link "Sales&More" [ref=e52]
+    - link "Avision" [ref=e53]
+    - link "Lugano Living Lab" [ref=e54]
+    - link "Craft" [ref=e55]
+    - link "AI Digital" [ref=e56]
+    - link "Abhishek Jha" [ref=e57]
+    - link "Morgana Studios" [ref=e58]
+    - link "Tab with a View" [ref=e59]
+    - link "Figure&Plot" [ref=e60]
+    - link "Passionfroot" [ref=e61]
+    - link "Super" [ref=e62]
+    - link "Visage" [ref=e63]
+    - link "The Flow Party" [ref=e64]
+    - link "Guangxi Cai" [ref=e65]
+    - link "Marga Navarro" [ref=e66]
+    - link "The Observatory" [ref=e67]
+    - link "OnePage Flip" [ref=e68]
+    - link "Windaro" [ref=e69]
+    - link "Folioblox - Free Dark Portfolio Framer template" [ref=e70]
+    - link "Aadityaa Nagarajan" [ref=e71]
+    - link "Women Executives in IT Award" [ref=e72]
+    - link "VandsLab" [ref=e73]
+    - link "FlowOS" [ref=e74]
+    - link "Monolith Studio" [ref=e75]
+    - link "Surge" [ref=e76]
+    - link "Axim Ecommerce" [ref=e77]
+    - link "Overflow Design" [ref=e78]
+    - link "Notioly" [ref=e79]
+    - link "Lexington Themes" [ref=e80]
+    - link "Superex" [ref=e81]
+    - link "Chillbase" [ref=e82]
+    - link "Family Style" [ref=e83]
+    - link "TapRefer" [ref=e84]
+    - link "Yeye Weller x Decathlon" [ref=e85]
+    - link "The Resonance" [ref=e86]
+    - link "New Valley" [ref=e87]
+    - link "Deeo Studio" [ref=e88]
+    - link "Bleibtgleich" [ref=e89]
+    - link "bmw" [ref=e90]
+    - link "Nothing Design Studio" [ref=e91]
+    - link "Creedz" [ref=e92]
+    - link "Untold" [ref=e93]
+    - link "X Shack" [ref=e94]
+    - link "Our Roots" [ref=e95]
+    - link "Resend" [ref=e96]
+    - link "Neat Digital" [ref=e97]
+    - link "Kuba" [ref=e98]
+    - link "Tilesuite" [ref=e99]
+    - link "Datalands" [ref=e100]
+    - link "AFTERWORK INDUSTRIES" [ref=e101]
+    - link "Wise" [ref=e102]
+    - link "Nicolas Bussière" [ref=e103]
+    - link "Naya Studio" [ref=e104]
+    - link "Ramp" [ref=e105]
+    - link "Superfields" [ref=e106]
+    - link "Nika" [ref=e107]
+    - link "Michael Brown" [ref=e108]
+    - link "Kettmeir" [ref=e109]
+    - link "Figma" [ref=e110]
+    - link "Teamcamp" [ref=e111]
+    - link "Jimo" [ref=e112]
+    - link "Apple iMac" [ref=e113]
+    - link "BETC Fullsix" [ref=e114]
+    - link "OpenCall" [ref=e115]
+    - link "Tailkits" [ref=e116]
+    - link "Lovable" [ref=e117]
+    - link "Stefan Stefancik" [ref=e118]
+    - link "Noovo" [ref=e119]
+    - link "Litebox" [ref=e120]
+    - link "Daisy AI" [ref=e121]
+    - link "Chipsa" [ref=e122]
+    - link "Federico Pian" [ref=e123]
+    - link "Media.Work" [ref=e124]
+    - link "Meridian" [ref=e125]
+    - link "Atom Swiss" [ref=e126]
+    - link "Shuttle" [ref=e127]
+    - link "Comanche Indians" [ref=e128]
+    - link "Mobbin" [ref=e129]
+    - link "Linear" [ref=e130]
+    - link "Franky Hung" [ref=e131]
+    - link "Folk" [ref=e132]
+    - link "Renault" [ref=e133]
+    - link "Polecat Agency" [ref=e134]
+    - link "coolshapes" [ref=e135]
+    - link "Framer Plugins" [ref=e136]
+    - link "Manychat" [ref=e137]
+    - link "Stripe" [ref=e138]
+    - link "Weavy" [ref=e139]
+    - link "Refero" [ref=e140]
+    - link "Emre Devseren" [ref=e141]
+    - link "Dolce & Gabbana" [ref=e142]
+    - link "Eislab" [ref=e143]
+    - link "Templifica" [ref=e144]
+    - link "A1" [ref=e145]
+    - link "Dropbox Brand Guidelines" [ref=e146]
+    - link "The Design System Guide" [ref=e147]
+    - link "Senja" [ref=e148]
+    - link "Tonemaki" [ref=e149]
+    - link "Ousmane Dembélé's Ballon d'Or" [ref=e150]
+    - link "OKA" [ref=e151]
+    - link "Sling Money" [ref=e152]
+    - link "Reform Collective" [ref=e153]
+    - link "OFFLIMITS" [ref=e154]
+    - link "Jin Zhen Lian" [ref=e155]
+    - link "Mannequin Technologies" [ref=e156]
+    - link "Apple Macbook Pro" [ref=e157]
+    - link "Moti App" [ref=e158]
+    - link "SUFFIX" [ref=e159]
+    - link "De Maldè" [ref=e160]
+    - link "Loti" [ref=e161]
+    - link "Obsidian" [ref=e162]
+    - link "Kael Donovan" [ref=e163]
+    - link "Razorpay" [ref=e164]
+    - link "BlueYard" [ref=e165]
+    - link "Yinger" [ref=e166]
+    - link "Recent Work" [ref=e167]
+    - link "Feather" [ref=e168]
+    - link "MomdayClub" [ref=e169]
+    - link "Danish Chiragh" [ref=e170]
+    - link "Figr" [ref=e171]
+    - link "Framer Website Builder Tool" [ref=e172]
+    - link "AHAPL" [ref=e173]
+    - link "Popcorn" [ref=e174]
+    - link "Rock Paper Design" [ref=e175]
+    - link "ArtPill" [ref=e176]
+    - link "Georgi Valkov" [ref=e177]
+    - link "The Shirt By Matthew" [ref=e178]
+    - link "Alche" [ref=e179]
+    - link "Jords+Co" [ref=e180]
+    - link "Fabrica" [ref=e181]
+    - link "Nervana" [ref=e182]
+    - link "Roasti" [ref=e183]
+    - link "BeatPerMinute" [ref=e184]
+    - link "Limitless" [ref=e185]
+    - link "Womp" [ref=e186]
+    - link "Attio" [ref=e187]
+    - link "Atoll" [ref=e188]
+    - link "RAYRAYlab" [ref=e189]
+    - link "Murf AI" [ref=e190]
+    - link "Wishes" [ref=e191]
+    - link "Thomas Yuen" [ref=e192]
+    - link "StringTune" [ref=e193]
+    - link "Oddit" [ref=e194]
+    - link "Niche design" [ref=e195]
+    - link "Spoil Me" [ref=e196]
+    - link "Osmo" [ref=e197]
+    - link "Handshake" [ref=e198]
+    - link "Bryn Taylor" [ref=e199]
+    - link "Light in the Darkness" [ref=e200]
+    - link "MyHealthPrac" [ref=e201]
+    - link "Editor X" [ref=e202]
+    - link "Artboard Studio" [ref=e203]
+    - link "KODE Immersive" [ref=e204]
+    - link "Matthieu Renaut" [ref=e205]
+    - link "Humaaans" [ref=e206]
+    - link "Liveblocks" [ref=e207]
+    - link "Heliocrafts" [ref=e208]
+    - link "creamu Inc." [ref=e209]
+    - link "Artone Studio" [ref=e210]
+    - link "Raycast" [ref=e211]
+    - link "SmoothUI" [ref=e212]
+    - link "Ctrl" [ref=e213]
+    - link "Drivelodge" [ref=e214]
+    - link "Nite Riot" [ref=e215]
+    - link "VW Lab Showcase" [ref=e216]
+    - link "e—b agency" [ref=e217]
+    - link "FramerPlugins" [ref=e218]
+    - link "10 AI-driven Features" [ref=e219]
+    - link "Flighty" [ref=e220]
+    - link "Lewis" [ref=e221]
+    - link "24/7 Artists" [ref=e222]
+    - link "Trifecta" [ref=e223]
+    - link "Side Stage Ventures" [ref=e224]
+    - link "SavoirFaire" [ref=e225]
+    - link "Good Measure" [ref=e226]
+    - link "Taiga" [ref=e227]
+    - link "Flaire" [ref=e228]
+    - link "Tammura" [ref=e229]
+    - link "Manychat Careers" [ref=e230]
+    - link "Prestige" [ref=e231]
+    - link "Klook" [ref=e232]
+    - link "Daniel Sun" [ref=e233]
+    - link "Proper Prompts" [ref=e234]
+    - link "Noomo Valentime" [ref=e235]
+    - link "Tesla" [ref=e236]
+    - link "Büro" [ref=e237]
+    - link "Charter" [ref=e238]
+    - link "Inflatable" [ref=e239]
+    - link "StyleAI" [ref=e240]
+    - link "Lambda" [ref=e241]
+    - link "CreativoCode" [ref=e242]
+    - link "Design Systems" [ref=e243]
+    - link "Making Today" [ref=e244]
+    - link "Captured" [ref=e245]
+    - link "OneTech" [ref=e246]
+    - link "REP" [ref=e247]
+    - link "Pallete AI" [ref=e248]
+    - link "tbh" [ref=e249]
+    - link "Abhay Singh" [ref=e250]
+    - link "Grainient" [ref=e251]
+    - link "New Genre" [ref=e252]
+    - link "Evervault" [ref=e253]
+    - link "New Academics" [ref=e254]
+    - link "Koala UI" [ref=e255]
+    - link "Dopler" [ref=e256]
+    - link "Digital Design Days X" [ref=e257]
+    - link "Bigpicture company" [ref=e258]
+    - link "Broed" [ref=e259]
+    - link "Alejandro Mejias" [ref=e260]
+    - link "Blogie AI" [ref=e261]
+    - link "Super Evil Genius" [ref=e262]
+    - link "Tuple" [ref=e263]
+    - link "Hypeblox" [ref=e264]
+    - link "Jinesh Bhaskaran" [ref=e265]
+    - link "Specify" [ref=e266]
+    - link "Bangluxor" [ref=e267]
+    - link "Aria" [ref=e268]
+    - link "Lyniq" [ref=e269]
+    - link "Mindset Design Studio" [ref=e270]
+    - link "Logiaweb" [ref=e271]
+    - link "Reflect" [ref=e272]
+    - link "Spline Masterclass" [ref=e273]
+    - link "Carbo" [ref=e274]
+    - link "Profound" [ref=e275]
+    - link "Anuc Home" [ref=e276]
+    - link "Addverb" [ref=e277]
+    - link "Draftss" [ref=e278]
+    - link "Clay" [ref=e279]
+    - link "Wokine" [ref=e280]
+    - link "StrangePixels" [ref=e281]
+    - link "Zypsy" [ref=e282]
+    - link "Secchiari Boots" [ref=e283]
+    - link "Lemon Squeezy" [ref=e284]
+    - link "Wonderboy" [ref=e285]
+    - link "FRA! Doodle Artist Portfolio" [ref=e286]
+    - link "Basedash" [ref=e287]
+    - link "Burner" [ref=e288]
+    - link "Base" [ref=e289]
+    - link "Alina Papazova" [ref=e290]
+    - link "Advanced Columns" [ref=e291]
+    - link "Viacheslav Novoseltsev" [ref=e292]
+    - link "Genesis" [ref=e293]
+    - link "Habitastic" [ref=e294]
+    - link "Notion Calendar" [ref=e295]
+    - link "mymind" [ref=e296]
+    - link "Morflax" [ref=e297]
+    - link "Rico OG" [ref=e298]
+    - link "Once UI" [ref=e299]
+    - link "Sent.dm" [ref=e300]
+    - link "Sketch" [ref=e301]
+    - link "Screen Studio" [ref=e302]
+    - link "ChainGPT" [ref=e303]
+    - link "Jilles Design" [ref=e304]
+    - link "Clay Boan" [ref=e305]
+    - link "Inkwell" [ref=e306]
+    - link "Artiom Yakushev" [ref=e307]
+    - link "iMac G3" [ref=e308]
+    - link "Roberta's Society" [ref=e309]
+    - link "Canopy" [ref=e310]
+    - link "Functional" [ref=e311]
+    - link "Adept" [ref=e312]
+    - link "Khagwal 3D" [ref=e313]
+    - link "Kieran Clarke" [ref=e314]
+    - link "Example" [ref=e315]
+    - link "Cosmos lac" [ref=e316]
+    - link "Urbanjava Studio" [ref=e317]
+    - link "Latitude" [ref=e318]
+    - link "Glorify" [ref=e319]
+    - link "Phase" [ref=e320]
+    - link "GetInvoice" [ref=e321]
+    - link "Kota" [ref=e322]
+    - link "Mokkap" [ref=e323]
+    - link "Memorisely" [ref=e324]
+    - link "Gnow" [ref=e325]
+    - link "Fearless Wallet" [ref=e326]
+    - link "Coda" [ref=e327]
+    - link "Amplemarket" [ref=e328]
+    - link "Yuna" [ref=e329]
+    - link "Pentaclay" [ref=e330]
+    - link "GeneX" [ref=e331]
+    - link "Badrutt's Palace Hotel" [ref=e332]
+    - link "Off/Menu" [ref=e333]
+    - link "Funkhaus" [ref=e334]
+    - link "Imaga" [ref=e335]
+    - link "Imprint" [ref=e336]
+    - link "Cubecho" [ref=e337]
+    - link "Tiempo" [ref=e338]
+    - link "Mariq" [ref=e339]
+    - link "Hyperbolic" [ref=e340]
+    - link "UFO Timeline" [ref=e341]
+    - link "Travel Next Level" [ref=e342]
+    - link "Dipsy Design Studio" [ref=e343]
+    - link "Andrey Ilyaskin" [ref=e344]
+    - link "Charles Leclerc" [ref=e345]
+    - link "Nitex" [ref=e346]
+    - link "Rantir" [ref=e347]
+    - link "Shapefest" [ref=e348]
+    - link "Flexis" [ref=e349]
+    - link "Schema" [ref=e350]
+    - link "Lumos" [ref=e351]
+    - link "Macaw" [ref=e352]
+    - link "More Nutrition" [ref=e353]
+    - link "HHHusher" [ref=e354]
+    - link "Twenty" [ref=e355]
+    - link "Herrlich Media" [ref=e356]
+    - link "Webifier" [ref=e357]
+    - link "Parabol" [ref=e358]
+    - link "Estudi Image" [ref=e359]
+    - link "Newtwen" [ref=e360]
+    - link "Andrés Briganti" [ref=e361]
+    - link "Crazy Creative" [ref=e362]
+    - link "Electra Filmworks" [ref=e363]
+    - link "Holygrid" [ref=e364]
+    - link "Eric Hu Studio" [ref=e365]
+    - link "kaleida" [ref=e366]
+    - link "AI Build" [ref=e367]
+    - link "Setapp" [ref=e368]
+    - link "Tiny Coast Digital" [ref=e369]
+    - link "Neverhack" [ref=e370]
+    - link "Mount Media" [ref=e371]
+    - link "GradientsHub" [ref=e372]
+    - link "KidSuper Studios" [ref=e373]
+    - link "Fancy" [ref=e374]
+    - link "gola templates" [ref=e375]
+    - link "Reweb" [ref=e376]
+    - link "Bookmarks" [ref=e377]
+    - link "Airbnb Homes" [ref=e378]
+    - link "Framer Configurator" [ref=e379]
+    - link "Josh Warren" [ref=e380]
+    - link "Off-Grid" [ref=e381]
+    - link "Analogue" [ref=e382]
+    - link "Cabeenet" [ref=e383]
+    - link "The Modern World" [ref=e384]
+    - link "Russoutdoor" [ref=e385]
+    - link "Easelink" [ref=e386]
+    - link "Milanco" [ref=e387]
+    - link "Notion" [ref=e388]
+    - link "Lemni" [ref=e389]
+    - link "Apple Watch Series 10" [ref=e390]
+    - link "Contra" [ref=e391]
+    - link "James Xi" [ref=e392]
+    - link "Won J You Studios" [ref=e393]
+    - link "MR Likino" [ref=e394]
+    - link "Stuut" [ref=e395]
+    - link "J-vers" [ref=e396]
+    - link "Notion Mail" [ref=e397]
+    - link "Paintboxed" [ref=e398]
+    - link "Montfort" [ref=e399]
+    - link "Victor Berbel" [ref=e400]
+    - link "Zenblog" [ref=e401]
+    - link "Mino" [ref=e402]
+    - link "Adaline" [ref=e403]
+    - link "Kit" [ref=e404]
+    - link "Heritage In Art" [ref=e405]
+    - link "Aibuild" [ref=e406]
+    - link "Glass abstract" [ref=e407]
+    - link "Roman Salakhov" [ref=e408]
+    - link "MindMarket" [ref=e409]
+    - link "Responsly" [ref=e410]
+    - link "Quantum Body" [ref=e411]
+    - link "Iconly" [ref=e412]
+    - link "Brandfolio" [ref=e413]
+    - link "Glide" [ref=e414]
+    - link "Smart2start" [ref=e415]
+    - link "Metalab" [ref=e416]
+    - link "Focal" [ref=e417]
+    - link "Frameship" [ref=e418]
+    - link "Sunny Bonnell" [ref=e419]
+    - link "Folioblox - Free Portfolio Framer template in nature theme" [ref=e420]
+    - link "Lovart" [ref=e421]
+    - link "Joy from Africa to the World" [ref=e422]
+    - link "Unpack.so" [ref=e423]
+    - link "PeachWeb" [ref=e424]
+    - link "CTA Gallery" [ref=e425]
+    - link "Ribbit" [ref=e426]
+    - link "Gary and the endless forest" [ref=e427]
+    - link "Sitely" [ref=e428]
+    - link "Pierre" [ref=e429]
+    - link "Linkkit" [ref=e430]
+    - link "Yellow Fellow" [ref=e431]
+    - link "Background" [ref=e432]
+    - link "Kajabi" [ref=e433]
+    - link "Allô" [ref=e434]
+    - link "Webgamma" [ref=e435]
+    - link "Shopiframe" [ref=e436]
+    - link "Gruppo Saida" [ref=e437]
+    - link "Shuka" [ref=e438]
+    - link "Spline" [ref=e439]
+    - link "Altermind" [ref=e440]
+    - link "Recraft" [ref=e441]
+    - link "Midlife Engineering" [ref=e442]
+    - link "Superlist" [ref=e443]
+    - link "Delphi" [ref=e444]
+    - link "Niklas Peterson" [ref=e445]
+    - link "Les rêveries de l'orangerie" [ref=e446]
+    - link "Segurado" [ref=e447]
+    - link "Ponpon Mania" [ref=e448]
+    - link "Gifo" [ref=e449]
+    - link "Marc Kuiper" [ref=e450]
+    - link "Princity" [ref=e451]
+    - link "Good Company" [ref=e452]
+    - link "Studio-CC" [ref=e453]
+    - link "Pipe" [ref=e454]
+    - link "NIKI Studio" [ref=e455]
+    - link "Hartmann Capital" [ref=e456]
+    - link "Six B" [ref=e457]
+    - link "Github Universe 2024" [ref=e458]
+    - link "The Spark" [ref=e459]
+    - link "Paste" [ref=e460]
+    - link "Archi-malin studio" [ref=e461]
+    - link "Serge Tiutyk" [ref=e462]
+    - link "Eric Huguenin" [ref=e463]
+    - link "Tiqmo" [ref=e464]
+    - link "Apple Mac mini" [ref=e465]
+    - link "Designjoy" [ref=e466]
+    - link "David Alaba" [ref=e467]
+    - link "Rejouice" [ref=e468]
+    - link "Parasite" [ref=e469]
+    - link "LEOLEO Studio" [ref=e470]
+    - link "Gini" [ref=e471]
+    - link "Violin Workshop" [ref=e472]
+    - link "Designfly" [ref=e473]
+    - link "Der Baukasten" [ref=e474]
+    - link "Hamza Ehsan" [ref=e475]
+    - link "15th Anniversary" [ref=e476]
+    - link "DreamCut" [ref=e477]
+    - link "Codex" [ref=e478]
+    - link "Fiddle" [ref=e479]
+    - link "Sun Hung" [ref=e480]
+    - link "beige.social" [ref=e481]
+    - link "Inflatable 3D Letters" [ref=e482]
+    - link "Keikku" [ref=e483]
+    - link "BRANT" [ref=e484]
+    - link "Warhol Arts" [ref=e485]
+    - link "Framer" [ref=e486]
+    - link "Wone" [ref=e487]
+    - link "Busy Status Bar" [ref=e488]
+    - link "Sui Overflow 2025" [ref=e489]
+    - link "Cobalt" [ref=e490]
+    - link "Micro" [ref=e491]
+    - link "Pera" [ref=e492]
+    - link "Jeton" [ref=e493]
+    - link "Cosmos Studio" [ref=e494]
+    - link "Retool" [ref=e495]
+    - link "Saapro" [ref=e496]
+    - link "Capcules" [ref=e497]
+    - link "Digilab" [ref=e498]
+    - link "Vogue Business | Archrival: Gen Z Report" [ref=e499]
+    - link "Flagship" [ref=e500]
+    - link "Dragonfly" [ref=e501]
+    - link "Radial Face" [ref=e502]
+    - link "Flowcub" [ref=e503]
+    - link "ForAI" [ref=e504]
+    - link "Typeform" [ref=e505]
+    - link "Folioblox - Free Portfolio Framer template" [ref=e506]
+    - link "Richard Payne" [ref=e507]
+    - link "Brand AI" [ref=e508]
+    - link "Optikka" [ref=e509]
+    - link "Eagle's Nest" [ref=e510]
+    - link "WinWinKit" [ref=e511]
+    - link "HAS.WORKS" [ref=e512]
+    - link "ViralCuts" [ref=e513]
+    - link "Team Lecdt" [ref=e514]
+    - link "Wendy Andrade" [ref=e515]
+    - link "FRAMES" [ref=e516]
+    - link "Paggy" [ref=e517]
+    - link "Unifiers of Japan" [ref=e518]
+    - link "Maison Alaïa" [ref=e519]
+    - link "Shatlyk Abdullayev" [ref=e520]
+    - link "The PERFECT Landing Page in Minutes" [ref=e521]
+    - link "Apple Watch Ultra 2" [ref=e522]
+    - link "Builder" [ref=e523]
+    - link "Team&Tonic" [ref=e524]
+    - link "Index" [ref=e525]
+    - link "Anyone Creative Meetup" [ref=e526]
+    - link "Payload" [ref=e527]
+    - link "Feastie" [ref=e528]
+    - link "Phamily" [ref=e529]
+    - link "Pakshoma" [ref=e530]
+    - link "Tars" [ref=e531]
+    - link "Plain" [ref=e532]
+    - link "Doppio" [ref=e533]
+    - link "KokonutUI" [ref=e534]
+    - link "Squarespace" [ref=e535]
+    - link "TELEMETRY" [ref=e536]
+    - link "Tally" [ref=e537]
+    - link "HappyScope" [ref=e538]
+    - link "nk.studio" [ref=e539]
+    - link "Gladia" [ref=e540]
+    - link "Osmo" [ref=e541]
+    - link "Rivian" [ref=e542]
+    - link "2025 Small Business Guide" [ref=e543]
+    - link "Stryds" [ref=e544]
+    - link "Ghost" [ref=e545]
+    - link "Flowmapp" [ref=e546]
+    - link "Toolfolio" [ref=e547]
+    - link "Follow" [ref=e548]
+    - link "Wix" [ref=e549]
+    - link "Cut The Code" [ref=e550]
+    - link "AVATR VISION XPECTRA" [ref=e551]
+    - link "House Of Corto" [ref=e552]
+    - link "Guillaume" [ref=e553]
+    - link "Ycode" [ref=e554]
+    - link "daokai" [ref=e555]
+    - link "ai.work" [ref=e556]
+    - link "Captain Toucan" [ref=e557]
+    - link "Wotter" [ref=e558]
+    - link "Hiro Platform" [ref=e559]
+    - link "Cartier Watches and Wonders 2025" [ref=e560]
+    - link "Anima" [ref=e561]
+    - link "Mikki Sindhunata" [ref=e562]
+    - link "200% Studio" [ref=e563]
+    - link "Design Sphere" [ref=e564]
+    - link "Katana" [ref=e565]
+    - link "Webflow" [ref=e566]
+    - link "With Toolkit" [ref=e567]
+    - link "Cardbonmade" [ref=e568]
+    - link "Unlockt" [ref=e569]
+    - link "Litheum" [ref=e570]
+    - link "Maya Lynne Adar" [ref=e571]
+    - link "Manifest" [ref=e572]
+    - link "InstaGallery" [ref=e573]
+    - link "Tusaro" [ref=e574]
+    - link "Biograph" [ref=e575]
+    - link "Webestica" [ref=e576]
+    - link "Mammoth Murals" [ref=e577]
+    - link "Deck Doctors" [ref=e578]
+- contentinfo:
+  - heading "Supahero" [level=3]
+  - text: "Now part of"
+  - link "screensdesign.com" [ref=e579]
+  - text: "The biggest UX app library in the world."
+  - heading "Pages" [level=4]
+  - link "Home" [ref=e580]
+  - link "Tools" [ref=e581]
+  - link "Templates" [ref=e582]
+  - link "Pricing" [ref=e583]
+  - link "Submit" [ref=e584]
+  - heading "Contact" [level=4]
+  - link "[redacted-email]" [ref=e585]
+  - text: "© 2026  Supahero.io - All rights reserved."
+✔︎ Opened a new tab and set it active: tabs[0], page → Dark Themed Web Design Inspiration (https://www.dark.design/)
+# note: interactive (clickable / focusable) elements only.
+- title: "Dark Themed Web Design Inspiration" [url=https://www.dark.design/]
+- navigation:
+  - link [ref=e1]
+  - link "Sites" [ref=e2]:
+    - button "Sites" [ref=e3]
+  - link "Templates" [ref=e4]:
+    - button "Templates" [ref=e5]: "Templates Free"
+  - link "Sponsor" [ref=e6]:
+    - button "Sponsor" [ref=e7]
+  - button "Submit" [ref=e8]
+  - link "Sign in" [ref=e9]:
+    - button "Sign in" [ref=e10]
+  - link "Create Account" [ref=e11]:
+    - button "Create Account" [ref=e12]
+- main:
+  - heading "Handpicked websitesfrom the dark side" [level=1]: "Handpicked websites from the dark side"
+  - button "Get Monthly Picks" [ref=e13]
+  - link "Done admiring?" [ref=e14]
+  - link "Billow Sponsor" [ref=e15]
+  - text: "Meet Billow Sponsored"
+  - button "All" [ref=e16]
+  - button "Agency" [ref=e17]
+  - button "AI" [ref=e18]
+  - button "Culture" [ref=e19]
+  - button "Education" [ref=e20]
+  - button "Hardware" [ref=e21]
+  - button "Personal" [ref=e22]
+  - button "Software" [ref=e23]
+  - button "Web3" [ref=e24]
+  - button "New" [ref=e25]
+  - button "Popular" [ref=e26]
+  - link "Basement" [ref=e27]
+  - text: "Basement· Agency"
+  - button "Bookmark" [ref=e28]
+  - link "Visit site" [ref=e29]
+  - link "V7" [ref=e30]
+  - text: "V7· AI"
+  - button "Bookmark" [ref=e31]
+  - link "Visit site" [ref=e32]
+  - link "Railway" [ref=e33]
+  - text: "Railway· Software"
+  - button "Bookmark" [ref=e34]
+  - link "Visit site" [ref=e35]
+  - link "Pryzm" [ref=e36]
+  - text: "Pryzm· Software"
+  - button "Bookmark" [ref=e37]
+  - link "Visit site" [ref=e38]
+  - link "Framer" [ref=e39]
+  - text: "Framer· Affiliated"
+  - button "Bookmark" [ref=e40]
+  - link "Visit site" [ref=e41]
+  - link "108™" [ref=e42]
+  - text: "108™· Software"
+  - button "Bookmark" [ref=e43]
+  - link "Visit site" [ref=e44]
+  - link "Ponder" [ref=e45]
+  - text: "Ponder· Software"
+  - button "Bookmark" [ref=e46]
+  - link "Visit site" [ref=e47]
+  - link "Glyphs & Grids" [ref=e48]
+  - text: "Glyphs & Grids· Software"
+  - button "Bookmark" [ref=e49]
+  - link "Visit site" [ref=e50]
+  - link "Rectangles" [ref=e51]
+  - text: "Rectangles· Culture"
+  - button "Bookmark" [ref=e52]
+  - link "Visit site" [ref=e53]
+  - link "TRIONN" [ref=e54]
+  - text: "TRIONN· Agency"
+  - button "Bookmark" [ref=e55]
+  - link "Visit site" [ref=e56]
+  - link "xAI" [ref=e57]
+  - text: "xAI· AI"
+  - button "Bookmark" [ref=e58]
+  - link "Visit site" [ref=e59]
+  - link "Mainframe" [ref=e60]
+  - text: "Mainframe· AI"
+  - button "Bookmark" [ref=e61]
+  - link "Visit site" [ref=e62]
+  - link "Rig" [ref=e63]
+  - text: "Rig· AI"
+  - button "Bookmark" [ref=e64]
+  - link "Visit site" [ref=e65]
+  - link "Damn Good Brands" [ref=e66]
+  - text: "Damn Good Brands· Agency"
+  - button "Bookmark" [ref=e67]
+  - link "Visit site" [ref=e68]
+  - link "Ink Games" [ref=e69]
+  - text: "Ink Games· Software"
+  - button "Bookmark" [ref=e70]
+  - link "Visit site" [ref=e71]
+  - link "Griflan" [ref=e72]
+  - text: "Griflan· Agency"
+  - button "Bookmark" [ref=e73]
+  - link "Visit site" [ref=e74]
+  - link "Corentin Bernadou" [ref=e75]
+  - text: "Corentin Bernadou· Personal"
+  - button "Bookmark" [ref=e76]
+  - link "Visit site" [ref=e77]
+  - link "MONOLOG" [ref=e78]
+  - text: "MONOLOG· Agency"
+  - button "Bookmark" [ref=e79]
+  - link "Visit site" [ref=e80]
+  - link "Mohit Singh" [ref=e81]
+  - text: "Mohit Singh· Personal"
+  - button "Bookmark" [ref=e82]
+  - link "Visit site" [ref=e83]
+  - link "Fora" [ref=e84]
+  - text: "Fora· Software"
+  - button "Bookmark" [ref=e85]
+  - link "Visit site" [ref=e86]
+  - link "CSS Studio" [ref=e87]
+  - text: "CSS Studio· Software"
+  - button "Bookmark" [ref=e88]
+  - link "Visit site" [ref=e89]
+  - link "Reve" [ref=e90]
+  - text: "Reve· Software"
+  - button "Bookmark" [ref=e91]
+  - link "Visit site" [ref=e92]
+  - link "TitanGate Equity" [ref=e93]
+  - text: "TitanGate Equity· Web3"
+  - button "Bookmark" [ref=e94]
+  - link "Visit site" [ref=e95]
+  - link "Runlayer" [ref=e96]
+  - text: "Runlayer· AI"
+  - button "Bookmark" [ref=e97]
+  - link "Visit site" [ref=e98]
+  - link "1820 Productions" [ref=e99]
+  - text: "1820 Productions· Agency"
+  - button "Bookmark" [ref=e100]
+  - link "Visit site" [ref=e101]
+  - link "Defined" [ref=e102]
+  - text: "Defined· Software"
+  - button "Bookmark" [ref=e103]
+  - link "Visit site" [ref=e104]
+  - link "xmcp" [ref=e105]
+  - text: "xmcp· Software"
+  - button "Bookmark" [ref=e106]
+  - link "Visit site" [ref=e107]
+  - link "OXI" [ref=e108]
+  - text: "OXI· Hardware"
+  - button "Bookmark" [ref=e109]
+  - link "Visit site" [ref=e110]
+  - link "Danilo Sierra" [ref=e111]
+  - text: "Danilo Sierra· Personal"
+  - button "Bookmark" [ref=e112]
+  - link "Visit site" [ref=e113]
+  - link "Subdivision" [ref=e114]
+  - text: "Subdivision· Agency"
+  - button "Bookmark" [ref=e115]
+  - link "Visit site" [ref=e116]
+  - link "Wahba" [ref=e117]
+  - text: "Wahba· Personal"
+  - button "Bookmark" [ref=e118]
+  - link "Visit site" [ref=e119]
+  - link "Khroma" [ref=e120]
+  - text: "Khroma· AI"
+  - button "Bookmark" [ref=e121]
+  - link "Visit site" [ref=e122]
+  - link "Dropshot" [ref=e123]
+  - text: "Dropshot· Software"
+  - button "Bookmark" [ref=e124]
+  - link "Visit site" [ref=e125]
+  - link "State of Sites 2026" [ref=e126]
+  - text: "State of Sites 2026· Software"
+  - button "Bookmark" [ref=e127]
+  - link "Visit site" [ref=e128]
+  - link "Cape Town Dam Levels Today" [ref=e129]
+  - text: "Cape Town Dam Levels Today· Software"
+  - button "Bookmark" [ref=e130]
+  - link "Visit site" [ref=e131]
+  - link "Cédric" [ref=e132]
+  - text: "Cédric· Personal"
+  - button "Bookmark" [ref=e133]
+  - link "Visit site" [ref=e134]
+  - link "Supercommon Systems" [ref=e135]
+  - text: "Supercommon Systems· Software"
+  - button "Bookmark" [ref=e136]
+  - link "Visit site" [ref=e137]
+  - link "Fey App" [ref=e138]
+  - text: "Fey App· Software"
+  - button "Bookmark" [ref=e139]
+  - link "Visit site" [ref=e140]
+  - link "Stellar" [ref=e141]
+  - text: "Stellar· Agency"
+  - button "Bookmark" [ref=e142]
+  - link "Visit site" [ref=e143]
+  - link "Umbrel" [ref=e144]
+  - text: "Umbrel· Hardware"
+  - button "Bookmark" [ref=e145]
+  - link "Visit site" [ref=e146]
+  - link "Lazy" [ref=e147]
+  - text: "Lazy· Software"
+  - button "Bookmark" [ref=e148]
+  - link "Visit site" [ref=e149]
+  - link "Resend" [ref=e150]
+  - text: "Resend· Software"
+  - button "Bookmark" [ref=e151]
+  - link "Visit site" [ref=e152]
+  - link "Wope" [ref=e153]
+  - text: "Wope· Software"
+  - button "Bookmark" [ref=e154]
+  - link "Visit site" [ref=e155]
+  - link "Twingate" [ref=e156]
+  - text: "Twingate· Software"
+  - button "Bookmark" [ref=e157]
+  - link "Visit site" [ref=e158]
+  - link "Sol" [ref=e159]
+  - text: "Sol· Hardware"
+  - button "Bookmark" [ref=e160]
+  - link "Visit site" [ref=e161]
+  - link "Article" [ref=e162]
+  - text: "Article· Agency"
+  - button "Bookmark" [ref=e163]
+  - link "Visit site" [ref=e164]
+  - link "Coronel" [ref=e165]
+  - text: "Coronel· Personal"
+  - button "Bookmark" [ref=e166]
+  - link "Visit site" [ref=e167]
+  - link "Tome" [ref=e168]
+  - text: "Tome· Software"
+  - button "Bookmark" [ref=e169]
+  - link "Visit site" [ref=e170]
+  - link "TIMES TWO" [ref=e171]
+  - text: "TIMES TWO· Software"
+  - button "Bookmark" [ref=e172]
+  - link "Visit site" [ref=e173]
+  - link "Yann-Edern Gillet" [ref=e174]
+  - text: "Yann-Edern Gillet· Personal"
+  - button "Bookmark" [ref=e175]
+  - link "Visit site" [ref=e176]
+  - link "Wonderland" [ref=e177]
+  - text: "Wonderland· Agency"
+  - button "Bookmark" [ref=e178]
+  - link "Visit site" [ref=e179]
+  - link "STRV" [ref=e180]
+  - text: "STRV· Agency"
+  - button "Bookmark" [ref=e181]
+  - link "Visit site" [ref=e182]
+  - link "Cncpt" [ref=e183]
+  - text: "Cncpt· Education"
+  - button "Bookmark" [ref=e184]
+  - link "Visit site" [ref=e185]
+  - link "Shape" [ref=e186]
+  - text: "Shape· Software"
+  - button "Bookmark" [ref=e187]
+  - link "Visit site" [ref=e188]
+  - link "Canopy" [ref=e189]
+  - text: "Canopy· Education"
+  - button "Bookmark" [ref=e190]
+  - link "Visit site" [ref=e191]
+  - link "Journey of Zajno" [ref=e192]
+  - text: "Journey of Zajno· Agency"
+  - button "Bookmark" [ref=e193]
+  - link "Visit site" [ref=e194]
+  - link "Marco Flammini" [ref=e195]
+  - text: "Marco Flammini· Personal"
+  - button "Bookmark" [ref=e196]
+  - link "Visit site" [ref=e197]
+  - link "Opal Composer" [ref=e198]
+  - text: "Opal Composer· Software"
+  - button "Bookmark" [ref=e199]
+  - link "Visit site" [ref=e200]
+  - link "Open AI" [ref=e201]
+  - text: "Open AI· Software"
+  - button "Bookmark" [ref=e202]
+  - link "Visit site" [ref=e203]
+  - link "Nicolas Lanthemann" [ref=e204]
+  - text: "Nicolas Lanthemann· Personal"
+  - button "Bookmark" [ref=e205]
+  - link "Visit site" [ref=e206]
+  - link "Arrival" [ref=e207]
+  - text: "Arrival· Hardware"
+  - button "Bookmark" [ref=e208]
+  - link "Visit site" [ref=e209]
+  - link "Framer University" [ref=e210]
+  - text: "Framer University· Education"
+  - button "Bookmark" [ref=e211]
+  - link "Visit site" [ref=e212]
+  - link "Specify Launch" [ref=e213]
+  - text: "Specify Launch· Software"
+  - button "Bookmark" [ref=e214]
+  - link "Visit site" [ref=e215]
+  - link "Hayden Bleasel" [ref=e216]
+  - text: "Hayden Bleasel· Personal"
+  - button "Bookmark" [ref=e217]
+  - link "Visit site" [ref=e218]
+  - link "Webflow Conf" [ref=e219]
+  - text: "Webflow Conf· Education"
+  - button "Bookmark" [ref=e220]
+  - link "Visit site" [ref=e221]
+  - link "Makepill" [ref=e222]
+  - text: "Makepill· Agency"
+  - button "Bookmark" [ref=e223]
+  - link "Visit site" [ref=e224]
+  - link "The Network State Company" [ref=e225]
+  - text: "The Network State Company· Software"
+  - button "Bookmark" [ref=e226]
+  - link "Visit site" [ref=e227]
+  - link "BonsAI" [ref=e228]
+  - text: "BonsAI· Software"
+  - button "Bookmark" [ref=e229]
+  - link "Visit site" [ref=e230]
+  - link "Minhpham" [ref=e231]
+  - text: "Minhpham· Personal"
+  - button "Bookmark" [ref=e232]
+  - link "Visit site" [ref=e233]
+  - link "Wanted for Nothing" [ref=e234]
+  - text: "Wanted for Nothing· Agency"
+  - button "Bookmark" [ref=e235]
+  - link "Visit site" [ref=e236]
+  - link "Paul Lapkin" [ref=e237]
+  - text: "Paul Lapkin· Personal"
+  - button "Bookmark" [ref=e238]
+  - link "Visit site" [ref=e239]
+  - link "Morrow" [ref=e240]
+  - text: "Morrow· Agency"
+  - button "Bookmark" [ref=e241]
+  - link "Visit site" [ref=e242]
+  - link "Offsuit" [ref=e243]
+  - text: "Offsuit· Software"
+  - button "Bookmark" [ref=e244]
+  - link "Visit site" [ref=e245]
+  - link "Ultra Mail" [ref=e246]
+  - text: "Ultra Mail· Software"
+  - button "Bookmark" [ref=e247]
+  - link "Visit site" [ref=e248]
+  - link "Dimension" [ref=e249]
+  - text: "Dimension· Software"
+  - button "Bookmark" [ref=e250]
+  - link "Visit site" [ref=e251]
+  - link "Arcade" [ref=e252]
+  - text: "Arcade· Personal"
+  - button "Bookmark" [ref=e253]
+  - link "Visit site" [ref=e254]
+  - link "Orion" [ref=e255]
+  - text: "Orion· Software"
+  - button "Bookmark" [ref=e256]
+  - link "Visit site" [ref=e257]
+  - link "Gitness" [ref=e258]
+  - text: "Gitness· Software"
+  - button "Bookmark" [ref=e259]
+  - link "Visit site" [ref=e260]
+  - link "Procreate" [ref=e261]
+  - text: "Procreate· Software"
+  - button "Bookmark" [ref=e262]
+  - link "Visit site" [ref=e263]
+  - link "Mona & Hubot Sans" [ref=e264]
+  - text: "Mona & Hubot Sans· Software"
+  - button "Bookmark" [ref=e265]
+  - link "Visit site" [ref=e266]
+  - link "Vercel" [ref=e267]
+  - text: "Vercel· Software"
+  - button "Bookmark" [ref=e268]
+  - link "Visit site" [ref=e269]
+  - link "Multiversx" [ref=e270]
+  - text: "Multiversx· Software"
+  - button "Bookmark" [ref=e271]
+  - link "Visit site" [ref=e272]
+  - link "Halodhimas" [ref=e273]
+  - text: "Halodhimas· Personal"
+  - button "Bookmark" [ref=e274]
+  - link "Visit site" [ref=e275]
+  - link "Justin Farrugia" [ref=e276]
+  - text: "Justin Farrugia· Personal"
+  - button "Bookmark" [ref=e277]
+  - link "Visit site" [ref=e278]
+  - link "GSAP" [ref=e279]
+  - text: "GSAP· Software"
+  - button "Bookmark" [ref=e280]
+  - link "Visit site" [ref=e281]
+  - link "Charge Cars" [ref=e282]
+  - text: "Charge Cars· Hardware"
+  - button "Bookmark" [ref=e283]
+  - link "Visit site" [ref=e284]
+  - link "Moth3r" [ref=e285]
+  - text: "Moth3r· Personal"
+  - button "Bookmark" [ref=e286]
+  - link "Visit site" [ref=e287]
+  - link "Midday" [ref=e288]
+  - text: "Midday· AI"
+  - button "Bookmark" [ref=e289]
+  - link "Visit site" [ref=e290]
+  - link "Electronic Materials Office" [ref=e291]
+  - text: "Electronic Materials Office· Hardware"
+  - button "Bookmark" [ref=e292]
+  - link "Visit site" [ref=e293]
+  - link "Incident" [ref=e294]
+  - text: "Incident· Personal"
+  - button "Bookmark" [ref=e295]
+  - link "Visit site" [ref=e296]
+  - link "Endless Tools" [ref=e297]
+  - text: "Endless Tools· Software"
+  - button "Bookmark" [ref=e298]
+  - link "Visit site" [ref=e299]
+  - link "ETH Cap" [ref=e300]
+  - text: "ETH Cap· Web3"
+  - button "Bookmark" [ref=e301]
+  - link "Visit site" [ref=e302]
+  - link "Mubien" [ref=e303]
+  - text: "Mubien· Agency"
+  - button "Bookmark" [ref=e304]
+  - link "Visit site" [ref=e305]
+  - link "Anton Komandin" [ref=e306]
+  - text: "Anton Komandin· Personal"
+  - button "Bookmark" [ref=e307]
+  - link "Visit site" [ref=e308]
+  - link "Half Past Nine" [ref=e309]
+  - text: "Half Past Nine· Agency"
+  - button "Bookmark" [ref=e310]
+  - link "Visit site" [ref=e311]
+  - link "Capsule" [ref=e312]
+  - text: "Capsule· Software"
+  - button "Bookmark" [ref=e313]
+  - link "Visit site" [ref=e314]
+  - link "And Again" [ref=e315]
+  - text: "And Again· Agency"
+  - button "Bookmark" [ref=e316]
+  - link "Visit site" [ref=e317]
+  - link "Spellar" [ref=e318]
+  - text: "Spellar· AI"
+  - button "Bookmark" [ref=e319]
+  - link "Visit site" [ref=e320]
+  - link "Nav Supply" [ref=e321]
+  - text: "Nav Supply· Software"
+  - button "Bookmark" [ref=e322]
+  - link "Visit site" [ref=e323]
+  - link "Avara" [ref=e324]
+  - text: "Avara· Web3"
+  - button "Bookmark" [ref=e325]
+  - link "Visit site" [ref=e326]
+  - link "AuthKit" [ref=e327]
+  - text: "AuthKit· Software"
+  - button "Bookmark" [ref=e328]
+  - link "Visit site" [ref=e329]
+  - link "Arrow Dynamics" [ref=e330]
+  - text: "Arrow Dynamics· Software"
+  - button "Bookmark" [ref=e331]
+  - link "Visit site" [ref=e332]
+  - link "Ozone" [ref=e333]
+  - text: "Ozone· Software"
+  - button "Bookmark" [ref=e334]
+  - link "Visit site" [ref=e335]
+  - link "Seda" [ref=e336]
+  - text: "Seda· Web3"
+  - button "Bookmark" [ref=e337]
+  - link "Visit site" [ref=e338]
+  - link "ST33P" [ref=e339]
+  - text: "ST33P"
+  - button "Bookmark" [ref=e340]
+  - link "Visit site" [ref=e341]
+  - link "Traf" [ref=e342]
+  - text: "Traf· Personal"
+  - button "Bookmark" [ref=e343]
+  - link "Visit site" [ref=e344]
+  - link "Geist" [ref=e345]
+  - text: "Geist· Software"
+  - button "Bookmark" [ref=e346]
+  - link "Visit site" [ref=e347]
+  - link "Google Gemini" [ref=e348]
+  - text: "Google Gemini· AI"
+  - button "Bookmark" [ref=e349]
+  - link "Visit site" [ref=e350]
+  - link "Oval" [ref=e351]
+  - text: "Oval"
+  - button "Bookmark" [ref=e352]
+  - link "Visit site" [ref=e353]
+  - link "Daybox" [ref=e354]
+  - text: "Daybox· Software"
+  - button "Bookmark" [ref=e355]
+  - link "Visit site" [ref=e356]
+  - link "Benjamin Hoppe" [ref=e357]
+  - text: "Benjamin Hoppe· Personal"
+  - button "Bookmark" [ref=e358]
+  - link "Visit site" [ref=e359]
+  - link "099" [ref=e360]
+  - text: "099"
+  - button "Bookmark" [ref=e361]
+  - link "Visit site" [ref=e362]
+  - link "Gurudutt Perichetla" [ref=e363]
+  - text: "Gurudutt Perichetla· Personal"
+  - button "Bookmark" [ref=e364]
+  - link "Visit site" [ref=e365]
+  - link "Verse" [ref=e366]
+  - text: "Verse· Personal"
+  - button "Bookmark" [ref=e367]
+  - link "Visit site" [ref=e368]
+  - link "Pedro Duarte" [ref=e369]
+  - text: "Pedro Duarte· Personal"
+  - button "Bookmark" [ref=e370]
+  - link "Visit site" [ref=e371]
+  - link "Morningstar" [ref=e372]
+  - text: "Morningstar· Web3"
+  - button "Bookmark" [ref=e373]
+  - link "Visit site" [ref=e374]
+  - link "Shift A" [ref=e375]
+  - text: "Shift A· Education"
+  - button "Bookmark" [ref=e376]
+  - link "Visit site" [ref=e377]
+  - link "Mita" [ref=e378]
+  - text: "Mita· Software"
+  - button "Bookmark" [ref=e379]
+  - link "Visit site" [ref=e380]
+  - link "Pinnacle Design Lab" [ref=e381]
+  - text: "Pinnacle Design Lab· Agency"
+  - button "Bookmark" [ref=e382]
+  - link "Visit site" [ref=e383]
+  - link "Fabian Albert" [ref=e384]
+  - text: "Fabian Albert· Personal"
+  - button "Bookmark" [ref=e385]
+  - link "Visit site" [ref=e386]
+  - link "Para" [ref=e387]
+  - text: "Para· Software"
+  - button "Bookmark" [ref=e388]
+  - link "Visit site" [ref=e389]
+  - link "Algo API" [ref=e390]
+  - text: "Algo API· Software"
+  - button "Bookmark" [ref=e391]
+  - link "Visit site" [ref=e392]
+  - link "LPB" [ref=e393]
+  - text: "LPB· Personal"
+  - button "Bookmark" [ref=e394]
+  - link "Visit site" [ref=e395]
+  - link "Nikita" [ref=e396]
+  - text: "Nikita· Personal"
+  - button "Bookmark" [ref=e397]
+  - link "Visit site" [ref=e398]
+  - link "Ander" [ref=e399]
+  - text: "Ander· Agency"
+  - button "Bookmark" [ref=e400]
+  - link "Visit site" [ref=e401]
+  - link "Marc Kuiper" [ref=e402]
+  - text: "Marc Kuiper· Personal"
+  - button "Bookmark" [ref=e403]
+  - link "Visit site" [ref=e404]
+  - link "Core Framework" [ref=e405]
+  - text: "Core Framework· Software"
+  - button "Bookmark" [ref=e406]
+  - link "Visit site" [ref=e407]
+  - link "Motion" [ref=e408]
+  - text: "Motion· Software"
+  - button "Bookmark" [ref=e409]
+  - link "Visit site" [ref=e410]
+  - link "Sharon Lee" [ref=e411]
+  - text: "Sharon Lee· Personal"
+  - button "Bookmark" [ref=e412]
+  - link "Visit site" [ref=e413]
+  - link "Nexis" [ref=e414]
+  - text: "Nexis· AI"
+  - button "Bookmark" [ref=e415]
+  - link "Visit site" [ref=e416]
+  - link "Atio" [ref=e417]
+  - text: "Atio· Agency"
+  - button "Bookmark" [ref=e418]
+  - link "Visit site" [ref=e419]
+  - link "Vana" [ref=e420]
+  - text: "Vana· Software"
+  - button "Bookmark" [ref=e421]
+  - link "Visit site" [ref=e422]
+  - link "Webflow" [ref=e423]
+  - text: "Webflow· Software"
+  - button "Bookmark" [ref=e424]
+  - link "Visit site" [ref=e425]
+  - link "Langbase" [ref=e426]
+  - text: "Langbase· AI"
+  - button "Bookmark" [ref=e427]
+  - link "Visit site" [ref=e428]
+  - link "CP" [ref=e429]
+  - text: "CP· Agency"
+  - button "Bookmark" [ref=e430]
+  - link "Visit site" [ref=e431]
+  - link "Time to Refokus" [ref=e432]
+  - text: "Time to Refokus· Agency"
+  - button "Bookmark" [ref=e433]
+  - link "Visit site" [ref=e434]
+  - link "Cobalt" [ref=e435]
+  - text: "Cobalt· Software"
+  - button "Bookmark" [ref=e436]
+  - link "Visit site" [ref=e437]
+  - link "Small Square" [ref=e438]
+  - text: "Small Square· Agency"
+  - button "Bookmark" [ref=e439]
+  - link "Visit site" [ref=e440]
+  - link "Satellitor" [ref=e441]
+  - text: "Satellitor· Software"
+  - button "Bookmark" [ref=e442]
+  - link "Visit site" [ref=e443]
+  - link "Alex Murashko" [ref=e444]
+  - text: "Alex Murashko· Personal"
+  - button "Bookmark" [ref=e445]
+  - link "Visit site" [ref=e446]
+  - link "Droplette" [ref=e447]
+  - text: "Droplette· Software"
+  - button "Bookmark" [ref=e448]
+  - link "Visit site" [ref=e449]
+  - link "G3DAAS" [ref=e450]
+  - text: "G3DAAS· Software"
+  - button "Bookmark" [ref=e451]
+  - link "Visit site" [ref=e452]
+  - link "Sun-Rise" [ref=e453]
+  - text: "Sun-Rise· Hardware"
+  - button "Bookmark" [ref=e454]
+  - link "Visit site" [ref=e455]
+  - link "Just Build" [ref=e456]
+  - text: "Just Build· Agency"
+  - button "Bookmark" [ref=e457]
+  - link "Visit site" [ref=e458]
+  - link "Simarro Lozano" [ref=e459]
+  - text: "Simarro Lozano· Personal"
+  - button "Bookmark" [ref=e460]
+  - link "Visit site" [ref=e461]
+  - link "Jim Schachterle" [ref=e462]
+  - text: "Jim Schachterle· Personal"
+  - button "Bookmark" [ref=e463]
+  - link "Visit site" [ref=e464]
+  - link "Creme" [ref=e465]
+  - text: "Creme· Culture"
+  - button "Bookmark" [ref=e466]
+  - link "Visit site" [ref=e467]
+  - link "Reflektor" [ref=e468]
+  - text: "Reflektor· Agency"
+  - button "Bookmark" [ref=e469]
+  - link "Visit site" [ref=e470]
+  - link "Open" [ref=e471]
+  - text: "Open· Education"
+  - button "Bookmark" [ref=e472]
+  - link "Visit site" [ref=e473]
+  - link "Guillaume Azadian" [ref=e474]
+  - text: "Guillaume Azadian· Personal"
+  - button "Bookmark" [ref=e475]
+  - link "Visit site" [ref=e476]
+  - link "Kevin Bhagat" [ref=e477]
+  - text: "Kevin Bhagat· Personal"
+  - button "Bookmark" [ref=e478]
+  - link "Visit site" [ref=e479]
+  - link "Roud Studio" [ref=e480]
+  - text: "Roud Studio· Agency"
+  - button "Bookmark" [ref=e481]
+  - link "Visit site" [ref=e482]
+  - link "More Sleep" [ref=e483]
+  - text: "More Sleep· Agency"
+  - button "Bookmark" [ref=e484]
+  - link "Visit site" [ref=e485]
+  - link "Hyper Card" [ref=e486]
+  - text: "Hyper Card· Software"
+  - button "Bookmark" [ref=e487]
+  - link "Visit site" [ref=e488]
+  - link "Framer 2023" [ref=e489]
+  - text: "Framer 2023· Software"
+  - button "Bookmark" [ref=e490]
+  - link "Visit site" [ref=e491]
+  - link "Ferrari Movie" [ref=e492]
+  - text: "Ferrari Movie· Culture"
+  - button "Bookmark" [ref=e493]
+  - link "Visit site" [ref=e494]
+  - link "Studio Arde" [ref=e495]
+  - text: "Studio Arde· Agency"
+  - button "Bookmark" [ref=e496]
+  - link "Visit site" [ref=e497]
+  - link "Elapse" [ref=e498]
+  - text: "Elapse· AI"
+  - button "Bookmark" [ref=e499]
+  - link "Visit site" [ref=e500]
+  - link "David Anthony Chenault" [ref=e501]
+  - text: "David Anthony Chenault· Personal"
+  - button "Bookmark" [ref=e502]
+  - link "Visit site" [ref=e503]
+  - link "Trionn" [ref=e504]
+  - text: "Trionn· Agency"
+  - button "Bookmark" [ref=e505]
+  - link "Visit site" [ref=e506]
+  - link "Dokument" [ref=e507]
+  - text: "Dokument· Agency"
+  - button "Bookmark" [ref=e508]
+  - link "Visit site" [ref=e509]
+  - link "Knob" [ref=e510]
+  - text: "Knob· Hardware"
+  - button "Bookmark" [ref=e511]
+  - link "Visit site" [ref=e512]
+  - link "Robert Borghesi" [ref=e513]
+  - text: "Robert Borghesi· Personal"
+  - button "Bookmark" [ref=e514]
+  - link "Visit site" [ref=e515]
+  - link "Brilliant" [ref=e516]
+  - text: "Brilliant· Hardware"
+  - button "Bookmark" [ref=e517]
+  - link "Visit site" [ref=e518]
+  - link "Somefolk" [ref=e519]
+  - text: "Somefolk· Personal"
+  - button "Bookmark" [ref=e520]
+  - link "Visit site" [ref=e521]
+  - link "Jessica Mille" [ref=e522]
+  - text: "Jessica Mille· Personal"
+  - button "Bookmark" [ref=e523]
+  - link "Visit site" [ref=e524]
+  - link "Halo Lab" [ref=e525]
+  - text: "Halo Lab· Agency"
+  - button "Bookmark" [ref=e526]
+  - link "Visit site" [ref=e527]
+  - link "Jeff Koons" [ref=e528]
+  - text: "Jeff Koons· Culture"
+  - button "Bookmark" [ref=e529]
+  - link "Visit site" [ref=e530]
+  - link "ODA" [ref=e531]
+  - text: "ODA· Agency"
+  - button "Bookmark" [ref=e532]
+  - link "Visit site" [ref=e533]
+  - link "Modules" [ref=e534]
+  - text: "Modules· Software"
+  - button "Bookmark" [ref=e535]
+  - link "Visit site" [ref=e536]
+  - link "Vercel Ship" [ref=e537]
+  - text: "Vercel Ship· Software"
+  - button "Bookmark" [ref=e538]
+  - link "Visit site" [ref=e539]
+  - link "Sageeast" [ref=e540]
+  - text: "Sageeast· Personal"
+  - button "Bookmark" [ref=e541]
+  - link "Visit site" [ref=e542]
+  - link "IR" [ref=e543]
+  - text: "IR· Software"
+  - button "Bookmark" [ref=e544]
+  - link "Visit site" [ref=e545]
+  - link "Metalab" [ref=e546]
+  - text: "Metalab· Agency"
+  - button "Bookmark" [ref=e547]
+  - link "Visit site" [ref=e548]
+  - link "Nikita Labutin" [ref=e549]
+  - text: "Nikita Labutin· Personal"
+  - button "Bookmark" [ref=e550]
+  - link "Visit site" [ref=e551]
+  - link "Ithaca" [ref=e552]
+  - text: "Ithaca· Web3"
+  - button "Bookmark" [ref=e553]
+  - link "Visit site" [ref=e554]
+  - link "KnowMore" [ref=e555]
+  - text: "KnowMore· Software"
+  - button "Bookmark" [ref=e556]
+  - link "Visit site" [ref=e557]
+  - link "Noon" [ref=e558]
+  - text: "Noon· Software"
+  - button "Bookmark" [ref=e559]
+  - link "Visit site" [ref=e560]
+  - link "Studio AI" [ref=e561]
+  - text: "Studio AI· AI"
+  - button "Bookmark" [ref=e562]
+  - link "Visit site" [ref=e563]
+  - link "PP Fragment Font" [ref=e564]
+  - text: "PP Fragment Font· Software"
+  - button "Bookmark" [ref=e565]
+  - link "Visit site" [ref=e566]
+  - link "Unicorn Studio" [ref=e567]
+  - text: "Unicorn Studio· Software"
+  - button "Bookmark" [ref=e568]
+  - link "Visit site" [ref=e569]
+  - link "Eleveight" [ref=e570]
+  - text: "Eleveight· Software"
+  - button "Bookmark" [ref=e571]
+  - link "Visit site" [ref=e572]
+  - link "We are Gradient" [ref=e573]
+  - text: "We are Gradient· Software"
+  - button "Bookmark" [ref=e574]
+  - link "Visit site" [ref=e575]
+  - link "September" [ref=e576]
+  - text: "September· Agency"
+  - button "Bookmark" [ref=e577]
+  - link "Visit site" [ref=e578]
+  - link "Keywords AI" [ref=e579]
+  - text: "Keywords AI· Software"
+  - button "Bookmark" [ref=e580]
+  - link "Visit site" [ref=e581]
+  - link "Frame v4" [ref=e582]
+  - text: "Frame v4· Software"
+  - button "Bookmark" [ref=e583]
+  - link "Visit site" [ref=e584]
+  - link "Paco Lui" [ref=e585]
+  - text: "Paco Lui· Personal"
+  - button "Bookmark" [ref=e586]
+  - link "Visit site" [ref=e587]
+  - link "Kaisermann" [ref=e588]
+  - text: "Kaisermann· Personal"
+  - button "Bookmark" [ref=e589]
+  - link "Visit site" [ref=e590]
+  - link "Flareum" [ref=e591]
+  - text: "Flareum· Software"
+  - button "Bookmark" [ref=e592]
+  - link "Visit site" [ref=e593]
+  - link "Aimpie" [ref=e594]
+  - text: "Aimpie· Agency"
+  - button "Bookmark" [ref=e595]
+  - link "Visit site" [ref=e596]
+  - link "Raycast" [ref=e597]
+  - text: "Raycast· Software"
+  - button "Bookmark" [ref=e598]
+  - link "Visit site" [ref=e599]
+  - link "Design Engineer" [ref=e600]
+  - text: "Design Engineer· Software"
+  - button "Bookmark" [ref=e601]
+  - link "Visit site" [ref=e602]
+  - link "ChainGPT" [ref=e603]
+  - text: "ChainGPT· AI"
+  - button "Bookmark" [ref=e604]
+  - link "Visit site" [ref=e605]
+  - link "AngelList 2023" [ref=e606]
+  - text: "AngelList 2023"
+  - button "Bookmark" [ref=e607]
+  - link "Visit site" [ref=e608]
+  - link "Remote Jobs" [ref=e609]
+  - text: "Remote Jobs· Software"
+  - button "Bookmark" [ref=e610]
+  - link "Visit site" [ref=e611]
+  - link "Shawn Lukas" [ref=e612]
+  - text: "Shawn Lukas· Personal"
+  - button "Bookmark" [ref=e613]
+  - link "Visit site" [ref=e614]
+  - link "Storytime" [ref=e615]
+  - text: "Storytime· Culture"
+  - button "Bookmark" [ref=e616]
+  - link "Visit site" [ref=e617]
+  - link "iPad Pro" [ref=e618]
+  - text: "iPad Pro· Hardware"
+  - button "Bookmark" [ref=e619]
+  - link "Visit site" [ref=e620]
+  - link "Toronto Tech Week" [ref=e621]
+  - text: "Toronto Tech Week· Culture"
+  - button "Bookmark" [ref=e622]
+  - link "Visit site" [ref=e623]
+  - link "Blitzit" [ref=e624]
+  - text: "Blitzit· Software"
+  - button "Bookmark" [ref=e625]
+  - link "Visit site" [ref=e626]
+  - link "Fura" [ref=e627]
+  - text: "Fura· Hardware"
+  - button "Bookmark" [ref=e628]
+  - link "Visit site" [ref=e629]
+  - link "Arock" [ref=e630]
+  - text: "Arock· Personal"
+  - button "Bookmark" [ref=e631]
+  - link "Visit site" [ref=e632]
+  - link "Van Schneider" [ref=e633]
+  - text: "Van Schneider· Personal"
+  - button "Bookmark" [ref=e634]
+  - link "Visit site" [ref=e635]
+  - link "Rekki" [ref=e636]
+  - text: "Rekki· Software"
+  - button "Bookmark" [ref=e637]
+  - link "Visit site" [ref=e638]
+  - link "ESE" [ref=e639]
+  - text: "ESE· Agency"
+  - button "Bookmark" [ref=e640]
+  - link "Visit site" [ref=e641]
+  - link "Yinger" [ref=e642]
+  - text: "Yinger· Personal"
+  - button "Bookmark" [ref=e643]
+  - link "Visit site" [ref=e644]
+  - link "Onmi" [ref=e645]
+  - text: "Onmi· Software"
+  - button "Bookmark" [ref=e646]
+  - link "Visit site" [ref=e647]
+  - link "Shuttle" [ref=e648]
+  - text: "Shuttle· Software"
+  - button "Bookmark" [ref=e649]
+  - link "Visit site" [ref=e650]
+  - link "Linear" [ref=e651]
+  - text: "Linear· Software"
+  - button "Bookmark" [ref=e652]
+  - link "Visit site" [ref=e653]
+  - link "Droppable" [ref=e654]
+  - text: "Droppable· Software"
+  - button "Bookmark" [ref=e655]
+  - link "Visit site" [ref=e656]
+  - link "GoPidge" [ref=e657]
+  - text: "GoPidge· Software"
+  - button "Bookmark" [ref=e658]
+  - link "Visit site" [ref=e659]
+  - link "TYPO72TYPO" [ref=e660]
+  - text: "TYPO72TYPO· Software"
+  - button "Bookmark" [ref=e661]
+  - link "Visit site" [ref=e662]
+  - link "Jin Su Park" [ref=e663]
+  - text: "Jin Su Park· Personal"
+  - button "Bookmark" [ref=e664]
+  - link "Visit site" [ref=e665]
+  - link "Gokul Krishnan" [ref=e666]
+  - text: "Gokul Krishnan· Personal"
+  - button "Bookmark" [ref=e667]
+  - link "Visit site" [ref=e668]
+  - link "Lapz" [ref=e669]
+  - text: "Lapz· Software"
+  - button "Bookmark" [ref=e670]
+  - link "Visit site" [ref=e671]
+  - link "Trigger" [ref=e672]
+  - text: "Trigger· Software"
+  - button "Bookmark" [ref=e673]
+  - link "Visit site" [ref=e674]
+  - link "ZBS" [ref=e675]
+  - text: "ZBS· Web3"
+  - button "Bookmark" [ref=e676]
+  - link "Visit site" [ref=e677]
+  - link "Hey Valentin" [ref=e678]
+  - text: "Hey Valentin· Personal"
+  - button "Bookmark" [ref=e679]
+  - link "Visit site" [ref=e680]
+  - link "Kino" [ref=e681]
+  - text: "Kino· Software"
+  - button "Bookmark" [ref=e682]
+  - link "Visit site" [ref=e683]
+  - link "Festina" [ref=e684]
+  - text: "Festina"
+  - button "Bookmark" [ref=e685]
+  - link "Visit site" [ref=e686]
+  - link "Retool" [ref=e687]
+  - text: "Retool· Software"
+  - button "Bookmark" [ref=e688]
+  - link "Visit site" [ref=e689]
+  - link "Blok" [ref=e690]
+  - text: "Blok· Hardware"
+  - button "Bookmark" [ref=e691]
+  - link "Visit site" [ref=e692]
+  - link "Playlist Studio" [ref=e693]
+  - text: "Playlist Studio· Agency"
+  - button "Bookmark" [ref=e694]
+  - link "Visit site" [ref=e695]
+  - link "Time Drift" [ref=e696]
+  - text: "Time Drift· Software"
+  - button "Bookmark" [ref=e697]
+  - link "Visit site" [ref=e698]
+  - link "Hyperstudio" [ref=e699]
+  - text: "Hyperstudio· Agency"
+  - button "Bookmark" [ref=e700]
+  - link "Visit site" [ref=e701]
+  - link "Warp" [ref=e702]
+  - text: "Warp· Software"
+  - button "Bookmark" [ref=e703]
+  - link "Visit site" [ref=e704]
+  - link "Deeo" [ref=e705]
+  - text: "Deeo· Agency"
+  - button "Bookmark" [ref=e706]
+  - link "Visit site" [ref=e707]
+  - link "Refresh 2024" [ref=e708]
+  - text: "Refresh 2024· Software"
+  - button "Bookmark" [ref=e709]
+  - link "Visit site" [ref=e710]
+  - link "HEX" [ref=e711]
+  - text: "HEX· Software"
+  - button "Bookmark" [ref=e712]
+  - link "Visit site" [ref=e713]
+  - link "Framer Plugins" [ref=e714]
+  - text: "Framer Plugins· Software"
+  - button "Bookmark" [ref=e715]
+  - link "Visit site" [ref=e716]
+  - link "Height" [ref=e717]
+  - text: "Height· Software"
+  - button "Bookmark" [ref=e718]
+  - link "Visit site" [ref=e719]
+  - link "Framer Studio" [ref=e720]
+  - text: "Framer Studio· Agency"
+  - button "Bookmark" [ref=e721]
+  - link "Visit site" [ref=e722]
+  - link "Shareio" [ref=e723]
+  - text: "Shareio· Software"
+  - button "Bookmark" [ref=e724]
+  - link "Visit site" [ref=e725]
+  - link "Modal" [ref=e726]
+  - text: "Modal· AI"
+  - button "Bookmark" [ref=e727]
+  - link "Visit site" [ref=e728]
+  - link "13g" [ref=e729]
+  - text: "13g· Agency"
+  - button "Bookmark" [ref=e730]
+  - link "Visit site" [ref=e731]
+  - link "Cursor" [ref=e732]
+  - text: "Cursor· AI"
+  - button "Bookmark" [ref=e733]
+  - link "Visit site" [ref=e734]
+  - link "Better Stack" [ref=e735]
+  - text: "Better Stack· Software"
+  - button "Bookmark" [ref=e736]
+  - link "Visit site" [ref=e737]
+  - link "Blocks" [ref=e738]
+  - text: "Blocks· Personal"
+  - button "Bookmark" [ref=e739]
+  - link "Visit site" [ref=e740]
+  - link "Osmo" [ref=e741]
+  - text: "Osmo· Education"
+  - button "Bookmark" [ref=e742]
+  - link "Visit site" [ref=e743]
+  - link "Tiempo" [ref=e744]
+  - text: "Tiempo· Software"
+  - button "Bookmark" [ref=e745]
+  - link "Visit site" [ref=e746]
+  - link "Fey Earnings" [ref=e747]
+  - text: "Fey Earnings· Software"
+  - button "Bookmark" [ref=e748]
+  - link "Visit site" [ref=e749]
+  - link "Grok" [ref=e750]
+  - text: "Grok· AI"
+  - button "Bookmark" [ref=e751]
+  - link "Visit site" [ref=e752]
+  - link "Orbi" [ref=e753]
+  - text: "Orbi· Software"
+  - button "Bookmark" [ref=e754]
+  - link "Visit site" [ref=e755]
+  - link "Slash" [ref=e756]
+  - text: "Slash· Software"
+  - button "Bookmark" [ref=e757]
+  - link "Visit site" [ref=e758]
+  - link "AntiMetal" [ref=e759]
+  - text: "AntiMetal· Software"
+  - button "Bookmark" [ref=e760]
+  - link "Visit site" [ref=e761]
+  - link "Fey Finder" [ref=e762]
+  - text: "Fey Finder· Software"
+  - button "Bookmark" [ref=e763]
+  - link "Visit site" [ref=e764]
+  - link "Toolbar" [ref=e765]
+  - text: "Toolbar· Software"
+  - button "Bookmark" [ref=e766]
+  - link "Visit site" [ref=e767]
+- contentinfo:
+  - link [ref=e768]
+  - text: "© 2026  Dark –"
+  - link "Product by Y5K LLC" [ref=e769]
+  - navigation:
+    - link "Sites" [ref=e770]
+    - link "Templates" [ref=e771]
+    - link "Sponsor" [ref=e772]
+- region "Notifications alt+T" [ref=e773]
+[system] last tab closed. `page` is now null. call openTab(url) to open a new one.
+[system] no current open tabs in this session.
+✔︎ Opened a new tab and set it active: tabs[0], page → Macapp Supply — Beautifully designed macOS apps, curated (https://macapp.supply/)
+# note: interactive (clickable / focusable) elements only.
+- title: "Macapp Supply — Beautifully designed macOS apps, curated" [url=https://macapp.supply/]
+- banner:
+  - text: "Macapp Supply"
+  - navigation:
+    - link "Apps" [ref=e1]
+    - link "Categories" [ref=e2]
+    - link "Icons" [ref=e3]
+  - text: "3  online"
+  - button "Subscribe" [ref=e4]
+  - link "Sponsor" [ref=e5]
+  - button "Search apps" [ref=e6]: "Search⌘K"
+  - link "Submit an app" [ref=e7]
+- region:
+  - heading "A curated shelf of macOS apps." [level=1]: "A curated shelf of  beautifully designed  macOS apps."
+  - link "Browse the collection" [ref=e8]
+  - link "Submit an app" [ref=e9]
+  - link "Screen Movie" [ref=e10]: "Screen Movie app icon"
+  - link "ScreenPlace" [ref=e11]: "ScreenPlace app icon"
+  - link "Shotbase" [ref=e12]: "Shotbase app icon"
+  - link "VidMage" [ref=e13]: "VidMage app icon"
+  - link "Hejour" [ref=e14]: "Hejour app icon"
+  - link "Glance" [ref=e15]: "Glance app icon"
+  - link "Shortap" [ref=e16]: "Shortap app icon"
+  - link "Supaste" [ref=e17]: "Supaste app icon"
+  - link "Cooldock" [ref=e18]: "Cooldock app icon"
+  - link "DisplayBuddy" [ref=e19]: "DisplayBuddy app icon"
+- generic [ref=e20] [scrollable]:
+  - button "All" [ref=e21]
+  - button "Supply Pick" [ref=e22]
+  - button "Video" [ref=e23]
+  - button "Productivity" [ref=e24]
+  - button "Utility" [ref=e25]
+  - button "AI" [ref=e26]
+  - button "Writing" [ref=e27]
+  - button "Dev" [ref=e28]
+  - button "Audio" [ref=e29]
+  - button "Finance" [ref=e30]
+  - button "Design" [ref=e31]
+  - button "Photography" [ref=e32]
+  - button "Lifestyle" [ref=e33]
+  - button "Business" [ref=e34]
+  - button "Entertainment" [ref=e35]
+  - button "Communication" [ref=e36]
+  - button "Marketing" [ref=e37]
+  - button "Analytics" [ref=e38]
+- button "Hot" [ref=e39]
+- button "Latest" [ref=e40]
+- button "Trending" [ref=e41]
+- region:
+  - link [ref=e42]:
+    - text: "Screen Movie app icon"
+    - heading "Featured" [level=3]: "Screen Movie"
+    - text: "Screen Recording & Motion Editor for macOS"
+  - link [ref=e43]:
+    - text: "ScreenPlace app icon"
+    - heading "Featured" [level=3]: "ScreenPlace"
+    - text: "Effortlessly put every window in its place on your Mac."
+- region
+- region
+- contentinfo:
+  - link "Screen Movie" [ref=e44]
+  - link "ScreenPlace" [ref=e45]
+  - link "Shotbase" [ref=e46]
+  - link "VidMage" [ref=e47]
+  - link "Hejour" [ref=e48]
+  - link "Glance" [ref=e49]
+  - link "Shortap" [ref=e50]
+  - link "Supaste" [ref=e51]
+  - link "Cooldock" [ref=e52]
+  - link "DisplayBuddy" [ref=e53]
+  - link "Letterboxx" [ref=e54]
+  - link "FrameOS" [ref=e55]
+  - link "PopNote" [ref=e56]
+  - link "PuppyOne" [ref=e57]
+  - link "Echo" [ref=e58]
+  - link "Moonitor" [ref=e59]
+  - link "LilMoon" [ref=e60]
+  - link "Peekabop" [ref=e61]
+  - link "Greetigo" [ref=e62]
+  - link "FINDmsg" [ref=e63]
+  - heading "Subscribe for updates" [level=3]
+  - text: "Hear about new, useful, beautifully designed macOS apps as we add them to the shelf. No spam, unsubscribe anytime — by subscribing you agree to our"
+  - link "Privacy Policy" [ref=e64]
+  - text: ".Subscribe Macapp Supply A curated shelf of beautifully designed macOS apps."
+  - link "Solt Wagner" [ref=e65]: "Solt Wagner Curated by Solt Wagner"
+  - text: "DataFast Widget"
+  - heading "Menu" [level=4]
+  - link "Home" [ref=e66]
+  - link "Icons" [ref=e67]
+  - link "Submit an app" [ref=e68]
+  - link "Sponsor" [ref=e69]
+  - link "Listing guidelines" [ref=e70]
+  - link "Contact" [ref=e71]
+  - link "Privacy" [ref=e72]
+  - link "Terms" [ref=e73]
+  - heading "Categories" [level=4]
+  - link "AI" [ref=e74]
+  - link "Analytics" [ref=e75]
+  - link "Audio" [ref=e76]
+  - link "Business" [ref=e77]
+  - link "Communication" [ref=e78]
+  - link "Design" [ref=e79]
+  - link "Dev" [ref=e80]
+  - link "Entertainment" [ref=e81]
+  - link "Finance" [ref=e82]
+  - link "Lifestyle" [ref=e83]
+  - link "Marketing" [ref=e84]
+  - link "Photography" [ref=e85]
+  - link "Productivity" [ref=e86]
+  - link "Utility" [ref=e87]
+  - link "Video" [ref=e88]
+  - link "Writing" [ref=e89]
+  - heading "Featured" [level=4]
+  - link "Screen Movie app icon" [ref=e90]: "Screen Movie app icon Screen Movie"
+  - link "ScreenPlace app icon" [ref=e91]: "ScreenPlace app icon ScreenPlace"
+  - link "Shotbase app icon" [ref=e92]: "Shotbase app icon Shotbase"
+  - link "VidMage app icon" [ref=e93]: "VidMage app icon VidMage"
+  - link "Hejour app icon" [ref=e94]: "Hejour app icon Hejour"
+  - link "Glance app icon" [ref=e95]: "Glance app icon Glance"
+  - link "Shortap app icon" [ref=e96]: "Shortap app icon Shortap"
+  - link "Supaste app icon" [ref=e97]: "Supaste app icon Supaste"
+  - link "Cooldock app icon" [ref=e98]: "Cooldock app icon Cooldock"
+  - link "DisplayBuddy app icon" [ref=e99]: "DisplayBuddy app icon DisplayBuddy"
+  - link "Letterboxx app icon" [ref=e100]: "Letterboxx app icon Letterboxx"
+  - text: "© 2026  Macapp Supply. All rights reserved."
+  - link "RSS feed" [ref=e101]: "RSS"
+  - text: "A manually curated collection. Some outbound links may be affiliate links. Not affiliated with Apple Inc. — all app marks belong to their respective owners."
+- region "Notifications alt+T" [ref=e102]
+- iframe:
+  - region "Notifications (F8)" [ref=f1e1]
+✔︎ Opened a new tab and set it active: tabs[0], page → GetLayers AI — An AI-native library of templates. (https://www.getlayers.ai/)
+# note: interactive (clickable / focusable) elements only.
+- title: "GetLayers AI — An AI-native library of templates." [url=https://www.getlayers.ai/]
+- region "Early Access Sale" [ref=e1]:
+  - link "Early Access Sale$759 now$199 18:59:58 left" [ref=e2]
+- region "Cookie consent" [ref=e3]:
+  - heading "This website uses cookies" [level=2]
+  - text: "We use cookies to keep the site working. See our"
+  - link "cookie policy" [ref=e4]
+  - text: "."
+  - button "Accept all" [ref=e5]
+  - button "Reject all" [ref=e6]
+  - button "Manage preferences" [ref=e7]
+- banner:
+  - link "getlayers — home" [ref=e8]: "get layers"
+  - button "Search the library (⌘K)" [ref=e9]: "⌘K"
+  - navigation "Primary" [ref=e10]:
+    - link "Library" [ref=e11]
+    - link "Pricing" [ref=e12]
+    - link "Docs" [ref=e13]
+    - link "MCP" [ref=e14]
+    - link "Affiliate" [ref=e15]
+    - link "About" [ref=e16]
+    - link "Contact" [ref=e17]
+  - link "Sign in" [ref=e18]
+- region:
+  - text: "Trusted by 1,000+ creators"
+  - heading "Cinematic AI sites, made easy" [level=1]
+  - text: "Copy a prompt, paste it into your AI, and launch a site that doesn't look AI-made."
+  - link "Get unlimited access" [ref=e19]
+- main:
+  - region:
+    - banner:
+      - text: "New templates arrive weekly"
+      - heading "Immersive website prompts" [level=2]
+      - link "All Templates" [ref=e20]
+    - article [ref=e21]:
+      - heading "Vesper" [level=3]:
+        - link "Vesper" [ref=e22]
+      - text: "SaaS"
+    - article [ref=e23]:
+      - heading "Stride" [level=3]:
+        - link "Stride" [ref=e24]
+      - text: "Fintech"
+    - article [ref=e25]:
+      - heading "AI Studio" [level=3]:
+        - link "AI Studio" [ref=e26]
+      - text: "AI / Tech"
+    - article [ref=e27]:
+      - heading "Creative Director" [level=3]:
+        - link "Creative Director" [ref=e28]
+      - text: "Portfolio"
+    - article [ref=e29]:
+      - text: "Dantora"
+      - heading "Dantora" [level=3]:
+        - link "Dantora" [ref=e30]
+      - text: "Health / Science"
+    - article [ref=e31]:
+      - text: "Clarix"
+      - heading "Clarix" [level=3]:
+        - link "Clarix" [ref=e32]
+      - text: "AI / Tech"
+    - article [ref=e33]:
+      - text: "New Era"
+      - heading "New Era" [level=3]:
+        - link "New Era" [ref=e34]
+      - text: "Health / Science"
+    - article [ref=e35]:
+      - text: "Kumo New"
+      - heading "Kumo" [level=3]:
+        - link "Kumo" [ref=e36]
+      - text: "Agency / Studio"
+    - link "Explore Templates" [ref=e37]
+  - region:
+    - banner
+    - article [ref=e38]:
+      - text: "Rift Stone"
+      - heading "Rift Stone" [level=3]:
+        - link "Rift Stone" [ref=e39]
+      - text: "3D Element"
+    - article [ref=e40]:
+      - text: "Orb"
+      - heading "Orb" [level=3]:
+        - link "Orb" [ref=e41]
+      - text: "Fluid & Iridescent"
+    - article [ref=e42]:
+      - text: "Epoxy Drift"
+      - heading "Epoxy Drift" [level=3]:
+        - link "Epoxy Drift" [ref=e43]
+      - text: "3D Element"
+    - article [ref=e44]:
+      - text: "Pinwheel Galaxy"
+      - heading "Pinwheel Galaxy" [level=3]:
+        - link "Pinwheel Galaxy" [ref=e45]
+      - text: "Galaxy & Space"
+    - article [ref=e46]:
+      - text: "Aurum Peak"
+      - heading "Aurum Peak" [level=3]:
+        - link "Aurum Peak" [ref=e47]
+      - text: "Waves & Terrain"
+    - article [ref=e48]:
+      - text: "Pixel Glass"
+      - heading "Pixel Glass" [level=3]:
+        - link "Pixel Glass" [ref=e49]
+      - text: "3D Element"
+    - article [ref=e50]:
+      - text: "Argent Massif"
+      - heading "Argent Massif" [level=3]:
+        - link "Argent Massif" [ref=e51]
+      - text: "Waves & Terrain"
+    - article [ref=e52]:
+      - text: "Halcyon Gate"
+      - heading "Halcyon Gate" [level=3]:
+        - link "Halcyon Gate" [ref=e53]
+      - text: "3D Element"
+  - region:
+    - banner
+    - article [ref=e54]:
+      - text: "Strigil"
+      - heading "Strigil" [level=3]:
+        - link "Strigil" [ref=e55]
+      - text: "Default"
+    - article [ref=e56]:
+      - text: "Pharos"
+      - heading "Pharos" [level=3]:
+        - link "Pharos" [ref=e57]
+      - text: "Default"
+    - article [ref=e58]:
+      - text: "Laminar"
+      - heading "Laminar" [level=3]:
+        - link "Laminar" [ref=e59]
+      - text: "Default"
+    - article [ref=e60]:
+      - text: "Komorebi"
+      - heading "Komorebi" [level=3]:
+        - link "Komorebi" [ref=e61]
+      - text: "Default"
+    - article [ref=e62]:
+      - text: "Antipode"
+      - heading "Antipode" [level=3]:
+        - link "Antipode" [ref=e63]
+      - text: "Default"
+    - article [ref=e64]:
+      - text: "Ichor"
+      - heading "Ichor" [level=3]:
+        - link "Ichor" [ref=e65]
+      - text: "Default"
+    - article [ref=e66]:
+      - text: "Kindle 001"
+      - heading "Kindle 001" [level=3]:
+        - link "Kindle 001" [ref=e67]
+      - text: "001"
+    - article [ref=e68]:
+      - text: "Shoal"
+      - heading "Shoal" [level=3]:
+        - link "Shoal" [ref=e69]
+      - text: "Default"
+  - region:
+    - banner
+    - article [ref=e70]:
+      - text: "Carousel Spotlight"
+      - heading "Carousel Spotlight" [level=3]:
+        - link "Carousel Spotlight" [ref=e71]
+      - text: "Carousel"
+    - article [ref=e72]:
+      - text: "Colonnade"
+      - heading "Colonnade" [level=3]:
+        - link "Colonnade" [ref=e73]
+      - text: "Features"
+    - article [ref=e74]:
+      - text: "Cards Almanac"
+      - heading "Cards Almanac" [level=3]:
+        - link "Cards Almanac" [ref=e75]
+      - text: "Cards"
+    - article [ref=e76]:
+      - text: "Cards Cascade"
+      - heading "Cards Cascade" [level=3]:
+        - link "Cards Cascade" [ref=e77]
+      - text: "Cards"
+    - article [ref=e78]:
+      - text: "Showcase Equator"
+      - heading "Showcase Equator" [level=3]:
+        - link "Showcase Equator" [ref=e79]
+      - text: "Showcase"
+    - article [ref=e80]:
+      - text: "Roadmap Ascent"
+      - heading "Roadmap Ascent" [level=3]:
+        - link "Roadmap Ascent" [ref=e81]
+      - text: "Process / Roadmap"
+    - article [ref=e82]:
+      - text: "Mirror Hall"
+      - heading "Mirror Hall" [level=3]:
+        - link "Mirror Hall" [ref=e83]
+      - text: "Carousel"
+    - article [ref=e84]:
+      - text: "Slider Slipstream"
+      - heading "Slider Slipstream" [level=3]:
+        - link "Slider Slipstream" [ref=e85]
+      - text: "Carousel"
+  - region:
+    - banner
+    - article [ref=e86]:
+      - text: "Purple Dream"
+      - heading "Purple Dream" [level=3]:
+        - link "Purple Dream" [ref=e87]
+      - text: "Landscape / Nature"
+    - article [ref=e88]:
+      - text: "Glowing Dunes"
+      - heading "Glowing Dunes" [level=3]:
+        - link "Glowing Dunes" [ref=e89]
+      - text: "Landscape / Nature"
+    - article [ref=e90]:
+      - text: "Vivid Sunset"
+      - heading "Vivid Sunset" [level=3]:
+        - link "Vivid Sunset" [ref=e91]
+      - text: "Landscape / Nature"
+    - article [ref=e92]:
+      - text: "Night Flowers"
+      - heading "Night Flowers" [level=3]:
+        - link "Night Flowers" [ref=e93]
+      - text: "Floral"
+    - article [ref=e94]:
+      - text: "Green Vertical Blinds"
+      - heading "Green Vertical Blinds" [level=3]:
+        - link "Green Vertical Blinds" [ref=e95]
+      - text: "Abstract / Glass"
+    - article [ref=e96]:
+      - text: "Starry Night"
+      - heading "Starry Night" [level=3]:
+        - link "Starry Night" [ref=e97]
+      - text: "Landscape / Nature"
+    - article [ref=e98]:
+      - text: "Glass Wave"
+      - heading "Glass Wave" [level=3]:
+        - link "Glass Wave" [ref=e99]
+      - text: "Abstract / Glass"
+    - article [ref=e100]:
+      - text: "Star Man"
+      - heading "Star Man" [level=3]:
+        - link "Star Man" [ref=e101]
+      - text: "Character"
+  - region
+  - region
+  - region
+- contentinfo:
+  - text: "get layers Build cinematic websites in minutes with GetLayers."
+  - navigation "Product" [ref=e102]:
+    - text: "Product"
+    - link "Templates" [ref=e103]
+    - link "3D Scenes" [ref=e104]
+    - link "Sections" [ref=e105]
+    - link "Backgrounds" [ref=e106]
+    - link "Gradients" [ref=e107]
+    - link "Docs" [ref=e108]
+    - link "MCP" [ref=e109]
+    - link "Pricing" [ref=e110]
+  - navigation "Company" [ref=e111]:
+    - text: "Company"
+    - link "About" [ref=e112]
+    - link "Affiliate" [ref=e113]
+    - link "Contact us" [ref=e114]
+    - link "Privacy Policy" [ref=e115]
+    - link "Terms of Use" [ref=e116]
+    - link "Cookie Policy" [ref=e117]
+    - link "Affiliate Terms" [ref=e118]
+    - button "Cookie preferences" [ref=e119]
+  - navigation "Social" [ref=e120]:
+    - text: "Social"
+    - link "textura.us" [ref=e121]
+    - link "textura.eu" [ref=e122]
+    - link "Facebook" [ref=e123]
+    - link "Pinterest" [ref=e124]
+    - link "Dzianis on X" [ref=e125]
+    - link "Dzianis on LinkedIn" [ref=e126]
+    - link "[redacted-email]" [ref=e127]
+    - link "[redacted-email]" [ref=e128]
+    - link "textura.agency — opens in a new tab" [ref=e129]: "textura.agency"
+  - heading "Fresh prompts, every Friday." [level=2]
+  - text: "Join the getlayers digest — new prompts and AI design news, once a week."
+  - textbox "Email address" [ref=e130] [placeholder="[redacted-email]"]
+  - button "Subscribe" [ref=e131]
+  - text: "By subscribing, you agree to receive our weekly email digest.© 2026 getlayers ·"
+  - link "textura.agency — opens in a new tab" [ref=e132]: "textura.agency"
+- button "Ask AI for guides" [ref=e133]
+{
+  captureRoot: '/Users/twoimo/.aside/u/0/sessions/2026-10-09_aB87TgK2voxHjSPv',
+  records: [
+    {
+      index: 1,
+      name: 'Supahero',
+      url: 'https://supahero.io/',
+      actualUrl: 'https://supahero.io/',
+      title: 'Supahero - Website hero section library',
+      screenshot: '01-reference.png'
+    },
+    {
+      index: 2,
+      name: 'Dark Design',
+      url: 'https://dark.design/',
+      actualUrl: 'https://www.dark.design/',
+      title: 'Dark Themed Web Design Inspiration',
+      screenshot: '02-reference.png'
+    },
+    {
+      index: 3,
+      name: 'Mac App Supply',
+      url: 'https://macapp.supply/',
+      actualUrl: 'https://macapp.supply/',
+      title: 'Macapp Supply — Beautifully designed macOS apps, curated',
+      screenshot: '03-reference.png'
+    },
+    {
+      index: 4,
+      name: 'Layers',
+      url: 'https://getlayers.ai/',
+      actualUrl: 'https://www.getlayers.ai/',
+      title: 'GetLayers AI — An AI-native library of templates.',
+      screenshot: '04-reference.png'
+    }
+  ]
+}
+[2m[ok | 14564ms][0m

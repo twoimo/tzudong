@@ -1,0 +1,22 @@
+{
+  "assert_g014_catalog_contract": {
+    "exactExpectedBodySha256": "50948ddce54dbba9497978964bebc535c27ebe98fb0f46bf05e2ec17ab0b9e01",
+    "metadataUnchanged": true,
+    "onlyReviewedRecordAndRawSignatureAdditions": true
+  },
+  "assert_g014_definer_contract": {
+    "exactExpectedBodySha256": "b9e2f7d812783deee6c91d27d22d6c2019be9aa04e4f1221cc7482567775354a",
+    "metadataUnchanged": true,
+    "onlyReviewedRecordAndRawSignatureAdditions": true
+  },
+  "assert_g014_public_rpc_allowlist": {
+    "exactExpectedBodySha256": "f23203a0a2366eca16b30b256729e859efc556952df8cb75485924153e1188ef",
+    "metadataUnchanged": true,
+    "onlyReviewedRecordAndRawSignatureAdditions": false
+  },
+  "assert_g014_workflow_owner_contract": {
+    "exactExpectedBodySha256": "345aed9acb1da06262740ef06d81e51855a44c7470aa8b431a23e6fa629aab1d",
+    "metadataUnchanged": true,
+    "onlyReviewedRecordAndRawSignatureAdditions": false
+  }
+}

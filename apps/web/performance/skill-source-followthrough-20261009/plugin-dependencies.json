@@ -1,0 +1,100 @@
+[
+  {
+    "status": "fulfilled",
+    "value": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Action completed."
+        }
+      ],
+      "structuredContent": {
+        "meta": null,
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"source_plugin_id\":\"plugin_connector_690a90ec05c881918afb6a55dc9bbaa1\",\"source_plugin_name\":\"vercel\",\"source_catalog_id\":\"openai-curated\",\"source_plugin_status\":\"enabled\",\"source_plugin_installation_policy\":\"available\",\"source_plugin_installed\":true,\"source_plugin_user_enabled\":true,\"dependencies\":[{\"manifest_key\":\"vercel\",\"app_id\":\"asdk_app_690a90ec05c881918afb6a55dc9bbaa1\",\"optional\":true,\"canonical_plugin_id\":\"plugin_connector_690a90ec05c881918afb6a55dc9bbaa1\",\"canonical_plugin_name\":\"vercel\",\"canonical_catalog_id\":\"openai-curated\",\"canonical_plugin_display_name\":\"Vercel\",\"canonical_plugin_status\":\"enabled\",\"canonical_plugin_installation_policy\":\"available\",\"canonical_plugin_installed\":true,\"canonical_plugin_user_enabled\":true}],\"unresolved_apps\":[]}",
+            "annotations": null,
+            "meta": null
+          }
+        ],
+        "structuredContent": {
+          "source_plugin_id": "plugin_connector_690a90ec05c881918afb6a55dc9bbaa1",
+          "source_plugin_name": "vercel",
+          "source_catalog_id": "openai-curated",
+          "source_plugin_status": "enabled",
+          "source_plugin_installation_policy": "available",
+          "source_plugin_installed": true,
+          "source_plugin_user_enabled": true,
+          "dependencies": [
+            {
+              "manifest_key": "vercel",
+              "app_id": "asdk_app_690a90ec05c881918afb6a55dc9bbaa1",
+              "optional": true,
+              "canonical_plugin_id": "plugin_connector_690a90ec05c881918afb6a55dc9bbaa1",
+              "canonical_plugin_name": "vercel",
+              "canonical_catalog_id": "openai-curated",
+              "canonical_plugin_display_name": "Vercel",
+              "canonical_plugin_status": "enabled",
+              "canonical_plugin_installation_policy": "available",
+              "canonical_plugin_installed": true,
+              "canonical_plugin_user_enabled": true
+            }
+          ],
+          "unresolved_apps": []
+        },
+        "isError": false
+      },
+      "isError": false
+    }
+  },
+  {
+    "status": "fulfilled",
+    "value": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Action completed."
+        }
+      ],
+      "structuredContent": {
+        "meta": null,
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"source_plugin_id\":\"plugin_asdk_app_69d3e5ee6a708191baa733f7b8931995\",\"source_plugin_name\":\"supabase\",\"source_catalog_id\":\"openai-curated\",\"source_plugin_status\":\"enabled\",\"source_plugin_installation_policy\":\"available\",\"source_plugin_installed\":true,\"source_plugin_user_enabled\":true,\"dependencies\":[{\"manifest_key\":\"supabase\",\"app_id\":\"asdk_app_69d3e5ee6a708191baa733f7b8931995\",\"optional\":true,\"canonical_plugin_id\":\"plugin_asdk_app_69d3e5ee6a708191baa733f7b8931995\",\"canonical_plugin_name\":\"supabase\",\"canonical_catalog_id\":\"openai-curated\",\"canonical_plugin_display_name\":\"Supabase\",\"canonical_plugin_status\":\"enabled\",\"canonical_plugin_installation_policy\":\"available\",\"canonical_plugin_installed\":true,\"canonical_plugin_user_enabled\":true}],\"unresolved_apps\":[]}",
+            "annotations": null,
+            "meta": null
+          }
+        ],
+        "structuredContent": {
+          "source_plugin_id": "plugin_asdk_app_69d3e5ee6a708191baa733f7b8931995",
+          "source_plugin_name": "supabase",
+          "source_catalog_id": "openai-curated",
+          "source_plugin_status": "enabled",
+          "source_plugin_installation_policy": "available",
+          "source_plugin_installed": true,
+          "source_plugin_user_enabled": true,
+          "dependencies": [
+            {
+              "manifest_key": "supabase",
+              "app_id": "asdk_app_69d3e5ee6a708191baa733f7b8931995",
+              "optional": true,
+              "canonical_plugin_id": "plugin_asdk_app_69d3e5ee6a708191baa733f7b8931995",
+              "canonical_plugin_name": "supabase",
+              "canonical_catalog_id": "openai-curated",
+              "canonical_plugin_display_name": "Supabase",
+              "canonical_plugin_status": "enabled",
+              "canonical_plugin_installation_policy": "available",
+              "canonical_plugin_installed": true,
+              "canonical_plugin_user_enabled": true
+            }
+          ],
+          "unresolved_apps": []
+        },
+        "isError": false
+      },
+      "isError": false
+    }
+  }
+]

@@ -23,11 +23,11 @@ export const RestaurantCountBadge = memo(({ count }: { count: number }) => (
 ));
 RestaurantCountBadge.displayName = 'RestaurantCountBadge';
 
-export const OnlineUsersBadge = memo(({ count }: { count: number }) => (
+export const OnlineUsersBadge = memo(({ count }: { count: number }) => count > 0 ? (
     <MapOverlayNotice className={NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES.onlineUsers}>
         {count}명이 함께 보는 중
     </MapOverlayNotice>
-));
+) : null);
 OnlineUsersBadge.displayName = 'OnlineUsersBadge';
 
 export const AnnouncementToastBadge = memo(({ title, onClick }: { title: string; onClick?: () => void }) => (

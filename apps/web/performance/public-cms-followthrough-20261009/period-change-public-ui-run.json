@@ -1,0 +1,449 @@
+{
+  "config": {
+    "argv": [
+      "/opt/homebrew/Cellar/node@24/24.21.0/bin/node",
+      "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "performance/public-cms-followthrough-20261009/public-ui.config.mjs"
+    ],
+    "configFile": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/public-ui.config.mjs",
+    "rootDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/public-ui-run-output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "public-cms-readonly.spec.ts"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "line",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/public-ui-run.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "public-cms-readonly.spec.ts",
+      "file": "public-cms-readonly.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "auth branding, signup scroll and Escape at desktop",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4853,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T22:51:57.987Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "dfea0402b28601c76a8c-2c953f366af583e25e86",
+          "file": "public-cms-readonly.spec.ts",
+          "line": 25,
+          "column": 3
+        },
+        {
+          "title": "auth branding, signup scroll and Escape at tablet",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1525,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T22:52:03.152Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "dfea0402b28601c76a8c-78fe93e301e0bf72e93b",
+          "file": "public-cms-readonly.spec.ts",
+          "line": 25,
+          "column": 3
+        },
+        {
+          "title": "auth branding, signup scroll and Escape at mobile",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1305,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T22:52:04.683Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "dfea0402b28601c76a8c-bbb603c8801325edf3f6",
+          "file": "public-cms-readonly.spec.ts",
+          "line": 25,
+          "column": 3
+        },
+        {
+          "title": "auth branding, signup scroll and Escape at short-mobile",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1200,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T22:52:05.995Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "dfea0402b28601c76a8c-44dd97d175a257a07fa0",
+          "file": "public-cms-readonly.spec.ts",
+          "line": 25,
+          "column": 3
+        },
+        {
+          "title": "public legal documents scroll and retain their read-only navigation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 942,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T22:52:07.200Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "dfea0402b28601c76a8c-056ac9f68e89257f5487",
+          "file": "public-cms-readonly.spec.ts",
+          "line": 54,
+          "column": 1
+        },
+        {
+          "title": "synthetic public leaderboard period reads and outage recovery at desktop",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 3647,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('alert')\nExpected substring: \u001b[32m\"이전에 조회한 결과\"\u001b[39m\nError: strict mode violation: getByRole('alert') resolved to 2 elements:\n    1) <div role=\"alert\" class=\"space-y-2 px-4 py-3 text-xs text-muted-foreground\">…</div> aka getByText('랭킹 목록을 갱신하지 못했습니다이전에 조회한 결과를 표시합니다.다시 시도')\n    2) <div role=\"alert\" aria-live=\"assertive\" id=\"__next-route-announcer__\"></div> aka locator('[id=\"__next-route-announcer__\"]')\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('alert') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('alert')\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('alert')\nExpected substring: \u001b[32m\"이전에 조회한 결과\"\u001b[39m\nError: strict mode violation: getByRole('alert') resolved to 2 elements:\n    1) <div role=\"alert\" class=\"space-y-2 px-4 py-3 text-xs text-muted-foreground\">…</div> aka getByText('랭킹 목록을 갱신하지 못했습니다이전에 조회한 결과를 표시합니다.다시 시도')\n    2) <div role=\"alert\" aria-live=\"assertive\" id=\"__next-route-announcer__\"></div> aka locator('[id=\"__next-route-announcer__\"]')\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('alert') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('alert')\u001b[22m\n\n    at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:95:43",
+                    "location": {
+                      "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts",
+                      "column": 43,
+                      "line": 95
+                    },
+                    "snippet": "  93 |     const retry = page.getByRole('button', { name: '다시 시도', exact: true });\n  94 |     await expect(retry).toBeVisible({ timeout: 15_000 });\n> 95 |     await expect(page.getByRole('alert')).toContainText('이전에 조회한 결과');\n     |                                           ^\n  96 |     outage = false;\n  97 |     await retry.click();\n  98 |     await expect(retry).toBeHidden();"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts",
+                        "column": 43,
+                        "line": 95
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('alert')\nExpected substring: \u001b[32m\"이전에 조회한 결과\"\u001b[39m\nError: strict mode violation: getByRole('alert') resolved to 2 elements:\n    1) <div role=\"alert\" class=\"space-y-2 px-4 py-3 text-xs text-muted-foreground\">…</div> aka getByText('랭킹 목록을 갱신하지 못했습니다이전에 조회한 결과를 표시합니다.다시 시도')\n    2) <div role=\"alert\" aria-live=\"assertive\" id=\"__next-route-announcer__\"></div> aka locator('[id=\"__next-route-announcer__\"]')\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('alert') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('alert')\u001b[22m\n\n\n  93 |     const retry = page.getByRole('button', { name: '다시 시도', exact: true });\n  94 |     await expect(retry).toBeVisible({ timeout: 15_000 });\n> 95 |     await expect(page.getByRole('alert')).toContainText('이전에 조회한 결과');\n     |                                           ^\n  96 |     outage = false;\n  97 |     await retry.click();\n  98 |     await expect(retry).toBeHidden();\n    at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:95:43"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T22:52:08.147Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/public-ui-run-output/public-cms-readonly-synthe-fa063--outage-recovery-at-desktop/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts",
+                    "column": 43,
+                    "line": 95
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "dfea0402b28601c76a8c-65542a7eaa29ceda3409",
+          "file": "public-cms-readonly.spec.ts",
+          "line": 69,
+          "column": 3
+        },
+        {
+          "title": "synthetic public leaderboard period reads and outage recovery at tablet",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 2452,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('alert')\nExpected substring: \u001b[32m\"이전에 조회한 결과\"\u001b[39m\nError: strict mode violation: getByRole('alert') resolved to 2 elements:\n    1) <div role=\"alert\" class=\"space-y-2 px-4 py-3 text-xs text-muted-foreground\">…</div> aka getByText('랭킹 목록을 갱신하지 못했습니다이전에 조회한 결과를 표시합니다.다시 시도')\n    2) <div role=\"alert\" aria-live=\"assertive\" id=\"__next-route-announcer__\"></div> aka locator('[id=\"__next-route-announcer__\"]')\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('alert') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('alert')\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('alert')\nExpected substring: \u001b[32m\"이전에 조회한 결과\"\u001b[39m\nError: strict mode violation: getByRole('alert') resolved to 2 elements:\n    1) <div role=\"alert\" class=\"space-y-2 px-4 py-3 text-xs text-muted-foreground\">…</div> aka getByText('랭킹 목록을 갱신하지 못했습니다이전에 조회한 결과를 표시합니다.다시 시도')\n    2) <div role=\"alert\" aria-live=\"assertive\" id=\"__next-route-announcer__\"></div> aka locator('[id=\"__next-route-announcer__\"]')\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('alert') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('alert')\u001b[22m\n\n    at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:95:43",
+                    "location": {
+                      "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts",
+                      "column": 43,
+                      "line": 95
+                    },
+                    "snippet": "  93 |     const retry = page.getByRole('button', { name: '다시 시도', exact: true });\n  94 |     await expect(retry).toBeVisible({ timeout: 15_000 });\n> 95 |     await expect(page.getByRole('alert')).toContainText('이전에 조회한 결과');\n     |                                           ^\n  96 |     outage = false;\n  97 |     await retry.click();\n  98 |     await expect(retry).toBeHidden();"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts",
+                        "column": 43,
+                        "line": 95
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('alert')\nExpected substring: \u001b[32m\"이전에 조회한 결과\"\u001b[39m\nError: strict mode violation: getByRole('alert') resolved to 2 elements:\n    1) <div role=\"alert\" class=\"space-y-2 px-4 py-3 text-xs text-muted-foreground\">…</div> aka getByText('랭킹 목록을 갱신하지 못했습니다이전에 조회한 결과를 표시합니다.다시 시도')\n    2) <div role=\"alert\" aria-live=\"assertive\" id=\"__next-route-announcer__\"></div> aka locator('[id=\"__next-route-announcer__\"]')\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('alert') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('alert')\u001b[22m\n\n\n  93 |     const retry = page.getByRole('button', { name: '다시 시도', exact: true });\n  94 |     await expect(retry).toBeVisible({ timeout: 15_000 });\n> 95 |     await expect(page.getByRole('alert')).toContainText('이전에 조회한 결과');\n     |                                           ^\n  96 |     outage = false;\n  97 |     await retry.click();\n  98 |     await expect(retry).toBeHidden();\n    at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:95:43"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T22:52:12.077Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/public-ui-run-output/public-cms-readonly-synthe-1dd83-d-outage-recovery-at-tablet/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts",
+                    "column": 43,
+                    "line": 95
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "dfea0402b28601c76a8c-7fe1f882f0d0f18e07a2",
+          "file": "public-cms-readonly.spec.ts",
+          "line": 69,
+          "column": 3
+        },
+        {
+          "title": "synthetic public leaderboard period reads and outage recovery at mobile",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 2337,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('alert')\nExpected substring: \u001b[32m\"이전에 조회한 결과\"\u001b[39m\nError: strict mode violation: getByRole('alert') resolved to 2 elements:\n    1) <div role=\"alert\" class=\"space-y-2 px-4 py-3 text-xs text-muted-foreground\">…</div> aka getByText('랭킹 목록을 갱신하지 못했습니다이전에 조회한 결과를 표시합니다.다시 시도')\n    2) <div role=\"alert\" aria-live=\"assertive\" id=\"__next-route-announcer__\"></div> aka locator('[id=\"__next-route-announcer__\"]')\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('alert') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('alert')\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('alert')\nExpected substring: \u001b[32m\"이전에 조회한 결과\"\u001b[39m\nError: strict mode violation: getByRole('alert') resolved to 2 elements:\n    1) <div role=\"alert\" class=\"space-y-2 px-4 py-3 text-xs text-muted-foreground\">…</div> aka getByText('랭킹 목록을 갱신하지 못했습니다이전에 조회한 결과를 표시합니다.다시 시도')\n    2) <div role=\"alert\" aria-live=\"assertive\" id=\"__next-route-announcer__\"></div> aka locator('[id=\"__next-route-announcer__\"]')\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('alert') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('alert')\u001b[22m\n\n    at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:95:43",
+                    "location": {
+                      "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts",
+                      "column": 43,
+                      "line": 95
+                    },
+                    "snippet": "  93 |     const retry = page.getByRole('button', { name: '다시 시도', exact: true });\n  94 |     await expect(retry).toBeVisible({ timeout: 15_000 });\n> 95 |     await expect(page.getByRole('alert')).toContainText('이전에 조회한 결과');\n     |                                           ^\n  96 |     outage = false;\n  97 |     await retry.click();\n  98 |     await expect(retry).toBeHidden();"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts",
+                        "column": 43,
+                        "line": 95
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('alert')\nExpected substring: \u001b[32m\"이전에 조회한 결과\"\u001b[39m\nError: strict mode violation: getByRole('alert') resolved to 2 elements:\n    1) <div role=\"alert\" class=\"space-y-2 px-4 py-3 text-xs text-muted-foreground\">…</div> aka getByText('랭킹 목록을 갱신하지 못했습니다이전에 조회한 결과를 표시합니다.다시 시도')\n    2) <div role=\"alert\" aria-live=\"assertive\" id=\"__next-route-announcer__\"></div> aka locator('[id=\"__next-route-announcer__\"]')\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('alert') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('alert')\u001b[22m\n\n\n  93 |     const retry = page.getByRole('button', { name: '다시 시도', exact: true });\n  94 |     await expect(retry).toBeVisible({ timeout: 15_000 });\n> 95 |     await expect(page.getByRole('alert')).toContainText('이전에 조회한 결과');\n     |                                           ^\n  96 |     outage = false;\n  97 |     await retry.click();\n  98 |     await expect(retry).toBeHidden();\n    at /Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts:95:43"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T22:52:15.019Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/public-cms-followthrough-20261009/public-ui-run-output/public-cms-readonly-synthe-1b280-d-outage-recovery-at-mobile/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/tests/public-cms-readonly.spec.ts",
+                    "column": 43,
+                    "line": 95
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "dfea0402b28601c76a8c-91e308866c7961dad38b",
+          "file": "public-cms-readonly.spec.ts",
+          "line": 69,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-08T22:51:57.635Z",
+    "duration": 20009.006,
+    "expected": 5,
+    "skipped": 0,
+    "unexpected": 3,
+    "flaky": 0
+  }
+}

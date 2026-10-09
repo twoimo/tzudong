@@ -1,0 +1,71 @@
+{
+  "sourceHead": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+  "sourceAuthority": "/Users/twoimo/.codex/worktrees/pipeline-review-validation-20261009/tzudong",
+  "sourceHashes": {
+    "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh": "4363941d284cd9eb23431c0498d69468959566e92c39db8a5df5426cf3496237",
+    "backend/supabase/scripts/transform_registration_replay.py": "e5e13a191fd08709104ad6f20c68d926f564bfc2188a7d1432112128307cbcd5",
+    "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+    "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3"
+  },
+  "context": "colima-tzudong-catalog-20261007",
+  "ownership": "Unchanged generator mktemp g014-catalog-contract and random g014catalog Compose projects; only their cleanup trap",
+  "steps": [
+    {
+      "stage": "run-a",
+      "command": [
+        "/opt/homebrew/bin/bash",
+        "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+        "--output-dir",
+        "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/record-review-fixes-20261009/pg15/head-99b12562/run-a",
+        "--docker-context",
+        "colima-tzudong-catalog-20261007"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 155.933,
+      "fixedCode": "CANONICAL_STEP_PASS",
+      "fixedFailureIdentifiers": [],
+      "originalFixedFailureLines": [],
+      "stdoutSha256": "8b38e8df2f506f8cd01ee1d1d54ffdd5e5f4e2efba63bedc6a182b0a4e3af579",
+      "stderrSha256": "86de168f6287aaeb22de5697a1caad38ca514fcd1520b69b456322d5265d628d"
+    },
+    {
+      "stage": "run-b",
+      "command": [
+        "/opt/homebrew/bin/bash",
+        "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+        "--output-dir",
+        "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/record-review-fixes-20261009/pg15/head-99b12562/run-b",
+        "--docker-context",
+        "colima-tzudong-catalog-20261007"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 154.333,
+      "fixedCode": "CANONICAL_STEP_PASS",
+      "fixedFailureIdentifiers": [],
+      "originalFixedFailureLines": [],
+      "stdoutSha256": "78bb48663428a3a659ed0c6bd87571a855bd326f4c4492381600cd50e6de5f13",
+      "stderrSha256": "1093789531868af7141f054d07217c812cd472bc38efcb53dd3fba1859636f3e"
+    },
+    {
+      "stage": "compare",
+      "command": [
+        "python3",
+        "backend/supabase/scripts/compare_g024_clean_replays.py",
+        "--left",
+        "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/record-review-fixes-20261009/pg15/head-99b12562/run-a",
+        "--right",
+        "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/record-review-fixes-20261009/pg15/head-99b12562/run-b",
+        "--output",
+        "/Users/twoimo/.codex/worktrees/pipeline-admin-integration-20261007/tzudong/apps/web/performance/record-review-fixes-20261009/pg15/head-99b12562/dual-clean-replay.json"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.114,
+      "fixedCode": "CANONICAL_STEP_PASS",
+      "fixedFailureIdentifiers": [],
+      "originalFixedFailureLines": [],
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "operatingWrites": false
+}

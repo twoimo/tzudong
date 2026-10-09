@@ -1,0 +1,15 @@
+{
+  "code": "HUB_COVERAGE_READBACK",
+  "id": "261004-15ps-zgfwptkf",
+  "beforeHash": "sha256:0561dfdd7547f0542b6db2961ebfb3d3ed9e5c156c90418e4a4f88e56c9ad7e1",
+  "afterHash": "sha256:282ea3c75ab4de64a1128d866114059902e9facba1ced09554b9a18f8b6d1887",
+  "coverage": {
+    "inventoryCount": 1152,
+    "eligibleCount": 1071,
+    "excludedShortsCount": 81,
+    "asOf": "2026-10-09T00:34:34.628933+00:00"
+  },
+  "otherBodyAndMetadataPreserved": true,
+  "providerCalls": 0,
+  "independentVideoCompletionAdded": 0
+}

@@ -1,0 +1,89 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-exact-readback-api.test.ts:
+(pass) actor-authenticated exact GET reads stay bounded, ignore list filters, and find candidates outside newest100 [53.53ms]
+
+tests-unit/admin-user-management-source.test.ts:
+(pass) admin user-management source contract > embeds user management as a URL-backed admin console module [1.23ms]
+(pass) admin user-management source contract > keeps user-management UI Korean, guarded, and accessible [0.58ms]
+(pass) admin user-management source contract > keeps admin user details explicit-selection only [0.21ms]
+(pass) admin user-management source contract > keeps admin user APIs server-only and service-role contained [1.03ms]
+(pass) admin user-management source contract > does not keep ad-hoc service-role helper scripts in the web package root [0.07ms]
+(pass) admin user-management source contract > adds an admin audit trail migration with RLS read access for admins [0.88ms]
+(pass) admin user-management source contract > persists per-admin sidebar ordering with RLS and explicit Data API grants [0.47ms]
+(pass) admin user-management source contract > does not add a separate global shortcut outside the admin console [0.45ms]
+
+tests-unit/admin-users-mutation-scope.test.ts:
+(pass) admin users mutation result scope contract > scopes mutation results by action and selected target [0.16ms]
+(pass) admin users mutation result scope contract > preserves audit/readback metadata in scoped action messages [0.12ms]
+(pass) admin users mutation result scope contract > binds each admin user mutation callsite to its isolated action [0.11ms]
+(pass) admin users expected mutation readback > does not confirm a present user whose profile remains old or only partly changed [0.15ms]
+(pass) admin users expected mutation readback > requires the requested role and account status, including reversed changes [0.04ms]
+(pass) admin users expected mutation readback > keeps uncertain results locked independently of selection and checks immediate and later readbacks [0.08ms]
+(pass) profile renamed outside active search confirms only the authenticated exact target and preserves filtered list [0.53ms]
+(pass) missing, wrong, and newer nonmatching exact results never release the pending readback lock [0.28ms]
+(pass) aborted earlier exact read cannot confirm mutation or clear a newer request loading state [0.11ms]
+
+tests-unit/pipeline-flow-view-model.test.ts:
+(pass) pipeline manifest projection > canonical steps and evidence paths exist; app and document share an acyclic DAG [1.77ms]
+(pass) pipeline manifest projection > complete records retain fractional times; batch completion never approves manual review [0.28ms]
+(pass) pipeline manifest projection > missing, unreadable, empty, over-limit and changed schemas cannot become completed [0.17ms]
+(pass) pipeline manifest projection > failure, upstream skip, optional skip and partial observations stay distinct [0.24ms]
+(pass) pipeline manifest projection > duplicates, invalid times and summed overflow never fabricate completion or timing [0.24ms]
+(pass) pipeline manifest projection > raw event names, reasons, errors and paths never enter the projection [0.06ms]
+(pass) pipeline execution read model > missing arrays, schema changes and bounds fail closed; valid empty remains empty [0.21ms]
+(pass) pipeline execution read model > unknown source/status, malformed entries and incomplete mode stay unknown [0.17ms]
+(pass) pipeline execution read model > unknown target states retain the target but make otherwise valid API snapshots partial [0.12ms]
+(pass) pipeline execution read model > known target states recover a fresh snapshot without changing earlier uncertainty or clearing job errors [0.07ms]
+(pass) pipeline execution read model > valid zero gauges survive; negative, nonfinite and extra properties do not [0.03ms]
+(pass) pipeline execution read model > GHA needs identical identity; normalized fallback live/failure defaults are not observations [0.10ms]
+(pass) pipeline execution read model > manifest and operations agree on actual GitHub failure semantics without enabling controls [0.29ms]
+(pass) pipeline execution read model > unknown or contradictory manifest evidence stays unknown and recovers only from a matching valid run [0.07ms]
+(pass) pipeline execution read model > controls require API, UUID, known profile and a valid transition [0.04ms]
+(pass) pipeline preview and confirmation > dry/live and controls preserve ticket, request identity and guarded contract [0.84ms]
+(pass) pipeline preview and confirmation > changed target/mode/schema, missing tickets, expiration and confirmation fail closed [0.44ms]
+(pass) display reliability follows GitHub manifest admission while preserving job_api control truth [0.10ms]
+
+tests-unit/admin-knowledge-graph-api.test.ts:
+(pass) knowledge graph admin boundary > denies both browser roles and keeps the valid admin feed private [5.32ms]
+(pass) knowledge graph admin boundary > serves the actual sharded files and returns private 409/503 responses without exposing diagnostics [6.71ms]
+(pass) knowledge graph admin boundary > returns fixed bounded errors for malformed public input [0.39ms]
+
+tests-unit/admin-knowledge-graph.test.ts:
+(pass) bounded Tzudong knowledge graph reads > accepts the actual scope-only OSK export without treating its hub as analyzed video [0.35ms]
+(pass) bounded Tzudong knowledge graph reads > pages all nodes without loss or duplicates while preserving whole graph counts [0.45ms]
+(pass) bounded Tzudong knowledge graph reads > searches outside the first page and returns typed detail for the selected node [0.09ms]
+(pass) bounded Tzudong knowledge graph reads > rejects stale and cross-query cursors and bounded malformed queries [0.21ms]
+(pass) bounded Tzudong knowledge graph reads > refuses foreign scope, dangling edges, duplicate ids and invented coverage [0.21ms]
+(pass) bounded Tzudong knowledge graph reads > limits outbound evidence to the exact typed public video and timestamp [0.05ms]
+(pass) bounded Tzudong knowledge graph reads > admits backend canonical zero, fractional, rounded and exponent timestamps throughout the read contract [0.69ms]
+
+tests-unit/admin-knowledge-graph-titles.test.ts:
+(pass) title-only search finds exact sourced title while preserving identity and analysis coverage [0.17ms]
+(pass) legacy nodes stay valid; incomplete, foreign, unsafe, and fabricated stage contracts fail closed [0.09ms]
+(pass) strict file reader preserves optional title/stage and title-only search from Python shards [92.03ms]
+
+tests-unit/admin-restaurant-refresh-history-source.test.ts:
+(pass) admin restaurant refresh history source contracts > retains legacy refresh routes while mounting refresh inside restaurant management [0.66ms]
+(pass) admin restaurant refresh history source contracts > panel keeps refresh workflow history-first and operator guarded [0.42ms]
+(pass) admin restaurant refresh history source contracts > panel renders inside the compact embedded module shell without the old h1 title [10.84ms]
+(pass) admin restaurant refresh history source contracts > admin API is admin gated, no-store, and separates record from guarded apply [0.27ms]
+(pass) admin restaurant refresh history source contracts > migration stores immutable refresh runs/candidates with RLS and explicit grants [0.21ms]
+(pass) refresh history CMS behavior > completed records remain selectable without a mutation path [0.38ms]
+(pass) refresh history CMS behavior > stale, loading, failed-read, busy and closure-apply candidates cannot write [0.06ms]
+(pass) refresh history CMS behavior > notes, decision and apply changes survive selection or close until explicit discard [0.09ms]
+(pass) refresh history CMS behavior > same-row selection preserves draft and saving prevents selection or discard [0.02ms]
+(pass) refresh history CMS behavior > approved apply preserves request body and closes after the expected receipt [0.33ms]
+(pass) refresh history CMS behavior > unconfirmed receipts retain the draft without automatic retry or false success [0.10ms]
+(pass) refresh uncertain mutation readback > lost response, server failure and malformed success lock retransmission and selection [0.09ms]
+(pass) refresh uncertain mutation readback > missing row, unchanged status, incomplete application and failed GET cannot unlock [0.22ms]
+(pass) refresh uncertain mutation readback > a different terminal decision or restaurant identity reports conflict and stays locked [0.07ms]
+(pass) refresh uncertain mutation readback > only a GET started after the mutation can confirm the expected state [0.06ms]
+(pass) refresh uncertain mutation readback > fresh GET confirms exact decision/apply while preserving recrawl pending or failed semantics [0.14ms]
+(pass) refresh uncertain mutation readback > a previously observed decision/apply timestamp is not accepted as a new outcome [0.05ms]
+(pass) pending candidate outside newest100 is read exactly without changing the list filter [0.15ms]
+
+ 67 pass
+ 0 fail
+ 950 expect() calls
+Ran 67 tests across 8 files. [483.00ms]

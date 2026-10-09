@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isAllowedStoryboardGeminiModel } from './gemini-models';
 
 /** The version is separate from legacy heatmap/seed results; no synthetic AHP. */
 export const STORYBOARD_WORKFLOW = 'storyboard-mlx-v1' as const;
@@ -8,7 +9,7 @@ export const MAX_STORYBOARD_DOCUMENT_BYTES = 192 * 1024;
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 export const storyboardProviderSchema = z.object({
-  id: z.enum(['local-mlx', 'chatgpt-manual', 'grok-manual', 'manual', 'openai-api', 'xai-api']),
+  id: z.enum(['gemini-api', 'local-mlx', 'chatgpt-manual', 'grok-manual', 'manual', 'openai-api', 'xai-api']),
   model: z.string().trim().max(200).default(''),
 }).strict();
 export type StoryboardProvider = z.infer<typeof storyboardProviderSchema>;
@@ -112,7 +113,7 @@ export class StoryboardProductionError extends Error {
 }
 
 export const STORYBOARD_USER_IMPORT_PROVIDER_IDS = ['manual', 'chatgpt-manual', 'grok-manual'] as const;
-export const STORYBOARD_OFFICIAL_API_PROVIDER_IDS = ['openai-api', 'xai-api'] as const;
+export const STORYBOARD_OFFICIAL_API_PROVIDER_IDS = ['gemini-api', 'openai-api', 'xai-api'] as const;
 
 export function isStoryboardUserImportProviderId(id: string): boolean {
   return (STORYBOARD_USER_IMPORT_PROVIDER_IDS as readonly string[]).includes(id);
@@ -131,8 +132,18 @@ export function assertStoryboardProviderPolicy(policy: StoryboardProviderPolicy)
     if (!policy.externalAI && isStoryboardOfficialApiProviderId(provider.id)) {
       throw new StoryboardProductionError('external_ai_disabled');
     }
-    if (['local-mlx', 'openai-api', 'xai-api'].includes(provider.id) && !provider.model) {
+    if (['gemini-api', 'local-mlx', 'openai-api', 'xai-api'].includes(provider.id) && !provider.model) {
       throw new StoryboardProductionError('model_not_selected');
+    }
+  }
+}
+
+/** Archived provenance remains readable; every new automated execution is Gemini-only. */
+export function assertGeminiStoryboardExecutionPolicy(policy: StoryboardProviderPolicy): void {
+  if (!policy.externalAI) throw new StoryboardProductionError('external_ai_disabled');
+  for (const modality of ['text', 'image'] as const) {
+    if (policy[modality].id !== 'gemini-api' || !isAllowedStoryboardGeminiModel(policy[modality].model, modality)) {
+      throw new StoryboardProductionError('provider_not_configured');
     }
   }
 }

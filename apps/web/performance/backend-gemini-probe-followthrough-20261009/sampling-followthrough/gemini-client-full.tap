@@ -1,0 +1,162 @@
+TAP version 13
+# warning=PROVIDER_BUDGET_RELEASE_UNAVAILABLE
+# Subtest: release debt recovers in the same live process before admitting a new provider call
+ok 1 - release debt recovers in the same live process before admitting a new provider call
+  ---
+  duration_ms: 1088.418042
+  type: 'test'
+  ...
+# Subtest: successful result releases the captured acquisition scope even if the caller changes its environment
+ok 2 - successful result releases the captured acquisition scope even if the caller changes its environment
+  ---
+  duration_ms: 183.043625
+  type: 'test'
+  ...
+# Subtest: provider error identity survives caller environment changes during cooldown and release
+ok 3 - provider error identity survives caller environment changes during cooldown and release
+  ---
+  duration_ms: 227.203
+  type: 'test'
+  ...
+# Subtest: installed SDK default and explicit one-attempt policy each send exactly one HTTP request
+ok 4 - installed SDK default and explicit one-attempt policy each send exactly one HTTP request
+  ---
+  duration_ms: 26.165208
+  type: 'test'
+  ...
+# Subtest: legacy and current SDK preserve model, prompt and generation settings on the wire
+ok 5 - legacy and current SDK preserve model, prompt and generation settings on the wire
+  ---
+  duration_ms: 981.310333
+  type: 'test'
+  ...
+# Subtest: deadline aborts but does not release a project permit while the SDK promise remains unsettled
+ok 6 - deadline aborts but does not release a project permit while the SDK promise remains unsettled
+  ---
+  duration_ms: 343.762125
+  type: 'test'
+  ...
+# Subtest: SDK HTTP timeout aborts transport, publishes no success and leaves no lease
+ok 7 - SDK HTTP timeout aborts transport, publishes no success and leaves no lease
+  ---
+  duration_ms: 193.736375
+  type: 'test'
+  ...
+# Subtest: Retry-After from real SDK response headers applies a shared project cooldown
+ok 8 - Retry-After from real SDK response headers applies a shared project cooldown
+  ---
+  duration_ms: 1216.399541
+  type: 'test'
+  ...
+# Subtest: already-cancelled requests never invoke SDK and invalid deadlines fail closed
+ok 9 - already-cancelled requests never invoke SDK and invalid deadlines fail closed
+  ---
+  duration_ms: 0.286125
+  type: 'test'
+  ...
+# Subtest: usage logs include thinking counts and exclude content or provider diagnostics
+ok 10 - usage logs include thinking counts and exclude content or provider diagnostics
+  ---
+  duration_ms: 0.123333
+  type: 'test'
+  ...
+# Subtest: empty or blocked SDK text cannot be published as a completed result
+ok 11 - empty or blocked SDK text cannot be published as a completed result
+  ---
+  duration_ms: 0.134917
+  type: 'test'
+  ...
+# Subtest: thinking fallback retains Gemini 3 default sampling and chunk output limit
+ok 12 - thinking fallback retains Gemini 3 default sampling and chunk output limit
+  ---
+  duration_ms: 147.434292
+  type: 'test'
+  ...
+# Subtest: evaluation entrypoints keep model and thinking settings while omitting unsupported sampling
+ok 13 - evaluation entrypoints keep model and thinking settings while omitting unsupported sampling
+  ---
+  duration_ms: 16228.539709
+  type: 'test'
+  ...
+# Subtest: pipeline connectivity probe preserves request caps, funded priority and once-only uncertain receipts
+    # Subtest: funded key is authoritative and request/CLI/receipt caps are retained
+    ok 1 - funded key is authoritative and request/CLI/receipt caps are retained
+      ---
+      duration_ms: 359.935916
+      type: 'test'
+      ...
+    # Subtest: SDK model provenance preserves a returned revision and rejects unknown metadata
+    ok 2 - SDK model provenance preserves a returned revision and rejects unknown metadata
+      ---
+      duration_ms: 1184.027583
+      type: 'test'
+      ...
+    # Subtest: blank funded key retains the explicit generic credential fallback
+    ok 3 - blank funded key retains the explicit generic credential fallback
+      ---
+      duration_ms: 306.071
+      type: 'test'
+      ...
+    # Subtest: blank generic credential retains the legacy alias fallback
+    ok 4 - blank generic credential retains the legacy alias fallback
+      ---
+      duration_ms: 307.321375
+      type: 'test'
+      ...
+    # Subtest: missing credential starts no SDK request and creates no misleading receipt
+    ok 5 - missing credential starts no SDK request and creates no misleading receipt
+      ---
+      duration_ms: 2337.410917
+      type: 'test'
+      ...
+    # Subtest: funded authentication error does not rotate to another key or retry
+    ok 6 - funded authentication error does not rotate to another key or retry
+      ---
+      duration_ms: 352.339834
+      type: 'test'
+      ...
+    # Subtest: lost response remains uncertain and the same output cannot resend
+    ok 7 - lost response remains uncertain and the same output cannot resend
+      ---
+      duration_ms: 389.172
+      type: 'test'
+      ...
+    # Subtest: process interruption leaves a running once-only receipt before request dispatch
+    ok 8 - process interruption leaves a running once-only receipt before request dispatch
+      ---
+      duration_ms: 348.310834
+      type: 'test'
+      ...
+    # Subtest: overlapping CLI runs sharing an output admit only one request
+    ok 9 - overlapping CLI runs sharing an output admit only one request
+      ---
+      duration_ms: 1118.289209
+      type: 'test'
+      ...
+    1..9
+ok 14 - pipeline connectivity probe preserves request caps, funded priority and once-only uncertain receipts
+  ---
+  duration_ms: 6704.725167
+  type: 'test'
+  ...
+# Subtest: shared sampling policy removes only unsupported fields and never mutates caller config
+ok 15 - shared sampling policy removes only unsupported fields and never mutates caller config
+  ---
+  duration_ms: 941.342875
+  type: 'test'
+  ...
+# Subtest: crawler and final merge entrypoints retain older explicit sampling and modern request caps
+ok 16 - crawler and final merge entrypoints retain older explicit sampling and modern request caps
+  ---
+  duration_ms: 3445.485208
+  type: 'test'
+  ...
+1..16
+# tests 25
+# suites 0
+# pass 25
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 31906.927666

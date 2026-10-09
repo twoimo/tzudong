@@ -1,0 +1,160 @@
+{
+  "state": "sourceReady",
+  "frozen": true,
+  "supersedes": "apps/web/performance/ui-renewal-20261003/record-actions-source-ready-20261005-read-fence.json",
+  "files": [
+    {
+      "path": "apps/web/app/admin/evaluations/page.tsx",
+      "sha256": "dc400348d6fd5248bdd246e62e5f6b03f4785c4d3ce96871cd90d1389de62f3e",
+      "bytes": 109881
+    },
+    {
+      "path": "apps/web/lib/admin/record-action-client.ts",
+      "sha256": "0f6c72b23458615d06d97545f4fc3c995994f76e9297935129a9b386aeef34cc",
+      "bytes": 15997
+    },
+    {
+      "path": "apps/web/lib/admin/use-record-action.tsx",
+      "sha256": "9dc22cfcf1df2ab3259ab0817ddd2825071045d8e405d8a888fd02833d795208",
+      "bytes": 6823
+    },
+    {
+      "path": "apps/web/app/api/admin/restaurant-requests/[requestId]/review/route.ts",
+      "sha256": "b8a7e07f4892916f4da078583540f10d506e46c97bbb56671d80560776679cb8",
+      "bytes": 1133
+    },
+    {
+      "path": "apps/web/app/api/admin/restaurants/[restaurantId]/destructive-action/route.ts",
+      "sha256": "b8a7e07f4892916f4da078583540f10d506e46c97bbb56671d80560776679cb8",
+      "bytes": 1133
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-action-client.test.ts",
+      "sha256": "6ae2b57536a8406aa2acf43b0a1e4430c7bb331f8e327cdabd3e1a1c927d83f2",
+      "bytes": 20787
+    },
+    {
+      "path": "apps/web/tests-unit/admin-evaluation-record-actions.test.ts",
+      "sha256": "4a1f21e3789dad29edf3eaa8c5fa32b499f37b1b3c647481865a0f0c66d25aad",
+      "bytes": 9866
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-view-fence.test.ts",
+      "sha256": "200b682b70f1db1fd9490bb3ee01f16fcf1a3f6d917775a3ed1dbf4ab2bbed9b",
+      "bytes": 5888
+    },
+    {
+      "path": "apps/web/tests-unit/admin-retired-moderation-endpoints.test.ts",
+      "sha256": "4c140527e50551d41977d4df79b3f2e5e2e6e34d256162e100e213515749b4a6",
+      "bytes": 2683
+    },
+    {
+      "path": "apps/web/tests-unit/admin-mutation-request-security.test.ts",
+      "sha256": "b8396824e4b2ef3c3da8822f3098004bdea048c2bec658ea5b75de0e24aab558",
+      "bytes": 8860
+    },
+    {
+      "path": "apps/web/tests-unit/admin-restaurant-destructive-action.test.ts",
+      "sha256": "d7abb251a20f672fc16a5514583549d091f97a183558f1b1d86af63ee506acc6",
+      "bytes": 6434
+    },
+    {
+      "path": "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+      "sha256": "511ba2944c720b6b9444dd849baa98b3d8a55644b9170b96171764a87d23a2a7",
+      "bytes": 435542
+    },
+    {
+      "path": "apps/web/tests-unit/api-security-source.test.ts",
+      "sha256": "b4d27a92b39a1fbb5770baae2ef8bd2f7f7ffa68fa99dd815f3adbd09309dc52",
+      "bytes": 28820
+    },
+    {
+      "path": "apps/web/scripts/verify-admin-record-actions-browser.ts",
+      "sha256": "1ca05b89d07561e6ba199e2f72dd1cb26add86413cc6d0cdb1614238199f6d27",
+      "bytes": 13870
+    },
+    {
+      "path": "apps/web/lib/admin/evaluation-record-actions.ts",
+      "sha256": "7161a3b1d3c9c86ddb3917d5dfe92cfa16ba41189f7e92760a9b4af020c56eab",
+      "bytes": 4263
+    },
+    {
+      "path": "apps/web/components/admin/SubmissionListView.tsx",
+      "sha256": "01046974b240f677d20b96e86cb86f85cc4699fd336d8e16922662bb156dd6fd",
+      "bytes": 131937
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-action-follow-up.test.ts",
+      "sha256": "cece509af9c5d8c1066e3a71b33144fe0bf9e3baa1c45ecfee6909e9581dd545",
+      "bytes": 3716
+    }
+  ],
+  "changes": [
+    "DUPLICATE_REVIEW is a definite duplicate-domain-review failure, not a user-review duplicate or STALE/uncertain result. Its dialog offers the existing restaurant review route; no apply/readback replay button.",
+    "mediaCleanupPending and optional mediaCleanupUnmanaged are distinct and may coexist. Only pending jobs cause a cleanup POST; unmanaged-only assets remain untouched.",
+    "SubmissionListView explanatory text no longer references the retired URL; handlers and other markup unchanged."
+  ],
+  "checks": {
+    "affectedTests": {
+      "passed": 30,
+      "failed": 0,
+      "assertions": 270,
+      "files": 5,
+      "evidence": "/tmp/astra-record-final-mappings-tests.log",
+      "realPayloadFollowup": {
+        "evidence": "/tmp/astra-record-final-mappings-real-payload.log",
+        "passed": 1,
+        "assertions": 14,
+        "aggregation": "The same mapping test was rerun with complete submission.approve and review.delete payloads; it replaces its earlier 12 assertions, not an additional distinct test."
+      }
+    },
+    "eslint": {
+      "errors": 0,
+      "warnings": 0,
+      "evidence": "/tmp/astra-record-final-mappings-eslint.log"
+    },
+    "rootReloadCallbackPreserved": true,
+    "retiredEndpointsUnchanged": true,
+    "readyServerFilesPreserved": {
+      "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql": true,
+      "apps/web/lib/admin/record-action-contract.ts": true,
+      "apps/web/lib/admin/record-action-service.ts": true,
+      "apps/web/app/api/admin/record-actions/route.ts": true,
+      "apps/web/app/api/admin/record-actions/media-cleanup/route.ts": true,
+      "apps/web/tests-unit/admin-record-actions.test.ts": true,
+      "backend/supabase/tests/test_admin_record_actions.py": true,
+      "backend/supabase/tests/test_admin_record_actions_regressions.py": true,
+      "backend/supabase/tests/admin-record-actions-contract.md": true
+    },
+    "serverSqlSha256": "97af1726a2e2b399388fcb617266378237893bbe868c25ffa19ee748b2c4833f",
+    "browser": {
+      "rerun": false,
+      "priorEvidence": "apps/web/performance/ui-renewal-20261003/record-actions-browser-20261005-read-fence-final.json",
+      "scope": "Prior synthetic 390/834/1423 rendering and read-fence behavior. Final mapping/link behavior checked with actual hook React rendering and loopback HTTP tests, not a new browser receipt."
+    },
+    "typecheck": {
+      "rerun": false,
+      "priorEvidence": "/tmp/astra-record-read-fence-typecheck.log",
+      "scope": "Prior revision parity; final requested pass limited to affected mapping/read-fence tests and lint."
+    }
+  },
+  "preserved": [
+    "root reload callback",
+    "page invalidation and stale/uncertain fence",
+    "six fallback status files",
+    "server DTO/service/routes/SQL",
+    "legacy mutation flag"
+  ],
+  "boundaries": {
+    "operatingWrites": 0,
+    "providerCalls": 0,
+    "serverChanges": 0,
+    "commits": 0,
+    "browserOpenedThisPass": false,
+    "ownedBrowserPreviouslyClosed": true
+  },
+  "limits": [
+    "Local client evidence only; no hosted API/DB/Storage or deployment claim.",
+    "Unmanaged media is explicitly excluded from automatic cleanup; no new operator/storage write workflow is introduced."
+  ]
+}

@@ -164,11 +164,25 @@ class CollectMetaThumbnailSecurityTests(unittest.TestCase):
 
         response = FixtureResponse(chunks=interrupted_chunks())
         with patch.object(collect_meta.requests, "get", return_value=response):
-            collect_meta.save_thumbnail_file(self.channel_dir, VALID_VIDEO_ID, 0, VALID_URL)
+            self.assertFalse(collect_meta.save_thumbnail_file(self.channel_dir, VALID_VIDEO_ID, 0, VALID_URL))
 
         thumbnail_dir = self.channel_dir / "thumbnails"
         self.assertTrue(thumbnail_dir.is_dir())
         self.assertEqual([], list(thumbnail_dir.iterdir()))
+
+    def test_existing_thumbnail_readback_rejects_corrupt_directory_and_symlink_artifacts(self):
+        directory=self.channel_dir/'thumbnails';directory.mkdir()
+        target=directory/f'{VALID_VIDEO_ID}-0.jpg'
+        target.write_bytes(b'invalid-image')
+        self.assertFalse(collect_meta.check_thumbnail_exists(self.channel_dir,VALID_VIDEO_ID,0))
+        target.unlink();target.mkdir()
+        self.assertFalse(collect_meta.check_thumbnail_exists(self.channel_dir,VALID_VIDEO_ID,0))
+        target.rmdir()
+        outside=self.channel_dir/'outside.jpg';outside.write_bytes(JPEG_FIXTURE)
+        target.symlink_to(outside)
+        self.assertFalse(collect_meta.check_thumbnail_exists(self.channel_dir,VALID_VIDEO_ID,0))
+        target.unlink();target.write_bytes(JPEG_FIXTURE)
+        self.assertTrue(collect_meta.check_thumbnail_exists(self.channel_dir,VALID_VIDEO_ID,0))
 
     def test_hashes_and_persists_a_valid_small_image_from_verified_magic(self):
         hash_response = FixtureResponse(chunks=[JPEG_FIXTURE[:4], JPEG_FIXTURE[4:]])
@@ -179,7 +193,7 @@ class CollectMetaThumbnailSecurityTests(unittest.TestCase):
 
         save_response = FixtureResponse(chunks=[JPEG_FIXTURE])
         with patch.object(collect_meta.requests, "get", return_value=save_response):
-            collect_meta.save_thumbnail_file(self.channel_dir, VALID_VIDEO_ID, 0, VALID_URL)
+            self.assertTrue(collect_meta.save_thumbnail_file(self.channel_dir, VALID_VIDEO_ID, 0, VALID_URL))
 
         thumbnail_path = self.channel_dir / "thumbnails" / f"{VALID_VIDEO_ID}-0.jpg"
         self.assertEqual(JPEG_FIXTURE, thumbnail_path.read_bytes())

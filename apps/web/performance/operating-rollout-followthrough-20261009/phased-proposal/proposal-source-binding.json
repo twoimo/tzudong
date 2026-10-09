@@ -1,0 +1,9 @@
+{
+  "canonicalM1Sha256": "04d993212374b7be75e39452a189e6a990282f08e1993d622a4b24df681f1294",
+  "proposedM1Sha256": "9a8d6e4407e72f2cce1ba38a00b6a2115ea0c64fa089e8362f816463d5115551",
+  "retirementTemplateSha256": "90e74357b91255a1487c6852fd29fa60f3e75a4392feb7524a6dbf56d3186a73",
+  "canonicalSqlModified": false,
+  "adopted": false,
+  "retirementBindingsUnfilledFailClosed": true,
+  "pg17AndPg15ReplayRerun": false
+}

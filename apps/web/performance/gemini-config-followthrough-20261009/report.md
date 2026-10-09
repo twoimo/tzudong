@@ -1,0 +1,11 @@
+# Gemini configuration followthrough — 2026-10-09
+
+The public environment example now matches the existing Gemini-only OCR/storyboard contracts. All Gemini key values and the RAG URL are blank. The OCR 3.6 Flash/MEDIUM baseline, storyboard 3.8 Flash/Nano Banana 2/Pro allowlist, and Gemini 1024-dimensional retrieval fingerprint are documented without changing caller source or any limit. The server-only record hold example is active; explicit cleared is required for new preview/apply/media-cleanup POST work.
+
+Local checks: 2 focused example/source tests, all 44 existing admin UI/source tests, and 63 related OCR/Gemini/RAG/retired-producer/production API tests passed. `git diff --check` passed. Tests use synthetic credentials and intercepted/mock requests; no paid invocation or worker was started.
+
+Source review found no active production storyboard path that bypasses Gemini: queue admission and outbound generation enforce the allowlist; retired routes, image/MLX callers and legacy CLIs refuse. The historical manual/provenance data and test hooks remain. Existing separately approved thumbnail settings, including its gpt-image-2 comment and both pre-existing thumbnail example blocks, were preserved verbatim.
+
+No operational env, vault, queue, provider, account, DB, memory, commit, push or deployment was changed. This is local source/configuration evidence, not a claim about live worker installation, quota availability or hosted behavior. Runtime budget variables are documented by name only so existing approved values remain authoritative.
+
+README followup: the active hosted setup in `apps/web/README.md` also contained retired command/remote/BGE configuration. That narrow setup block now documents blank Gemini credentials, actual priority, the exact storyboard allowlist, existing RAG endpoint/embedding contract and preserved budget variables. The two affected tests passed after this followup, including parsing the README env block and comparing its keys/defaults with `.env.example`. `git diff --check` passed. Both README thumbnail sections were compared with HEAD and remain byte-identical. The earlier source-suite result predates this final assertion edit; no full suite was repeated.
