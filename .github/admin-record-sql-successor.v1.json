@@ -14,8 +14,12 @@
   "advisoryLockKey": "7311754282260165",
   "stateRootAlgorithm": "admin-record-successor-state/v1",
   "sourceRoot": "15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3",
+  "operatingTransition": {
+    "beforeFive": 80,
+    "afterFive": 85
+  },
   "launchPolicy": {
-    "state": "held",
+    "state": "ready",
     "code": "SUCCESSOR_LAUNCH_HELD",
     "reason": "protected-release-and-fresh-admission-required"
   },
@@ -168,6 +172,10 @@
     {
       "path": "apps/web/scripts/apply-supabase-migration.mjs",
       "sha256": "02c404e0be3e81b7c8d4d7766ff29e750b1797f5ad49b5f496168170e21192d4"
+    },
+    {
+      "path": "apps/web/scripts/vercel-rollback-readback.mjs",
+      "sha256": "fa3876153f0e949d23115612cb34bc545c6c29bccb6ba2fd6042a38e70555e04"
     },
     {
       "path": "backend/supabase/scripts/g037_supabase_statement_vector.mjs",
