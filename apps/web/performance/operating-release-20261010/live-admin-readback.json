@@ -1,0 +1,38 @@
+{
+  "observedAt": "2026-10-09T17:16:16.485968+00:00",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "deploymentId": "dpl_CLEMRdaLUrai3Ph9J2czNRA64pyw",
+  "gitSha": "8257581e09f6f58f72f6e0e2c4aa7e6c72caab43",
+  "actualAuthenticatedBrowser": true,
+  "admin": {
+    "module": "restaurants",
+    "heading": "맛집 관리",
+    "catalogTotal": 1659,
+    "deletedTotal": 890,
+    "firstPageRows": 50,
+    "sidebarMenuCount": 15,
+    "loadError": false,
+    "temporaryDraftDiscarded": true,
+    "dialogsRemaining": 0
+  },
+  "writeHold": {
+    "method": "POST",
+    "path": "/api/admin/record-actions",
+    "status": 423,
+    "code": "RECORD_ACTION_MAINTENANCE",
+    "bodyParsedBeforeHold": false,
+    "sourceGateVerified": true
+  },
+  "sourceOnlyTestsAreNotLiveDataWrites": true,
+  "operatingSqlApplied": false,
+  "beforeImage": {
+    "file": "admin-restaurants-before.jpg",
+    "width": 1280,
+    "height": 720
+  },
+  "afterImage": {
+    "file": "admin-restaurants-after.jpg",
+    "note": "Browser viewport changed between captures; not a paired density measurement."
+  },
+  "confidenceInterval": "Not applicable to this fixed identity/behavior readback; no population performance claim."
+}

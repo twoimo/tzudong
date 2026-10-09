@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-10-09T17:12:07.285344+00:00",
+  "readbacks": [
+    {
+      "host": "www.tzudong.app",
+      "status": 200,
+      "exitCode": 0,
+      "health": {
+        "ok": true,
+        "service": "tzudong-web",
+        "gitSha": "8257581e09f6f58f72f6e0e2c4aa7e6c72caab43",
+        "deploymentId": "dpl_CLEMRdaLUrai3Ph9J2czNRA64pyw",
+        "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+        "releaseId": "5445fa71104b2408962c1c5d369babf3bb778838",
+        "host": "www.tzudong.app"
+      }
+    },
+    {
+      "host": "tzudong.app",
+      "status": 301,
+      "exitCode": 0,
+      "json": false
+    }
+  ],
+  "credentialsRecorded": false,
+  "sqlWrites": 0
+}
