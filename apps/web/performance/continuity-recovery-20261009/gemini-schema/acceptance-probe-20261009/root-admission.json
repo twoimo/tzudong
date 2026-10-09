@@ -1,0 +1,46 @@
+{
+  "admittedAt": "2026-10-09T07:20:23Z",
+  "admission": "admitted",
+  "authorization": {
+    "providerPostMaximum": 1,
+    "retries": 0,
+    "readbacks": 0,
+    "timeoutSeconds": 120,
+    "requestsPerMinuteMaximum": 1,
+    "concurrencyMaximum": 1,
+    "generationRateCapUsd": 1.032192
+  },
+  "request": {
+    "model": "gemini-3.8-flash",
+    "maxOutputTokens": 65536,
+    "store": false,
+    "hasVideo": false,
+    "hasTools": false,
+    "hasCache": false,
+    "hasHistory": false,
+    "promptSha256": "81377b15578f67767fab3a8b4a72cede12c75a83544f103109ca4b437a4f671b",
+    "payloadCanonicalBytes": 2553,
+    "payloadSha256": "a9dcf0aa926e214d3b7d0e91e35e7ea1c575086c4b2ed04d87b4ca19335587ae"
+  },
+  "schema": {
+    "canonicalBytes": 2004,
+    "sha256": "d72c43afe8d12d0a85a815d8ec70ce107dc40e0bc97d2dfbedfeaf6065846953",
+    "expandedOriginalCanonicalBytes": 5335,
+    "expandedOriginalSha256": "7168c8153f3922ebc33cfdd6f4a07e89e947374e5af882dc122bade3495a9efd",
+    "expandedCanonicalEqualityProved": true
+  },
+  "continuity": {
+    "previousFullSchemaPayloadCanonicalBytes": 5884,
+    "previousFullSchemaPayloadSha256": "5b46a236cc80f8fc656f7151c3381bedd0a7d598971b65e806449f680fde897d",
+    "reconstructedPreviousPayloadMatched": true,
+    "sharedBudgetNamespaceReused": true
+  },
+  "holds": {
+    "productionSourceWrite": false,
+    "failedReceiptWrite": false,
+    "successCacheWrite": false,
+    "queueWrite": false,
+    "vaultWrite": false,
+    "providerDiagnosticPersistence": false
+  }
+}

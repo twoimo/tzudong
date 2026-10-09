@@ -1,0 +1,173 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "claims": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "evidence": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "endSeconds": {
+                  "$ref": "#/properties/claims/items/properties/evidence/items/properties/startSeconds"
+                },
+                "modality": {
+                  "enum": [
+                    "audio",
+                    "visual",
+                    "both"
+                  ],
+                  "type": "string"
+                },
+                "startSeconds": {
+                  "description": "Numeric seconds from the beginning of the ORIGINAL video, not the clip; never MM:SS text.",
+                  "maximum": 835,
+                  "minimum": 0,
+                  "type": "number"
+                }
+              },
+              "required": [
+                "startSeconds",
+                "endSeconds",
+                "modality"
+              ],
+              "type": "object"
+            },
+            "maxItems": 100,
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "spoken",
+              "visual",
+              "inference"
+            ],
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "uncertainty": {
+            "$ref": "#/properties/uncertainty"
+          }
+        },
+        "required": [
+          "text",
+          "kind",
+          "evidence",
+          "confidence",
+          "uncertainty"
+        ],
+        "type": "object"
+      },
+      "maxItems": 100,
+      "type": "array"
+    },
+    "coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "endSeconds": {
+          "enum": [
+            835
+          ],
+          "type": "number"
+        },
+        "limitations": {
+          "$ref": "#/properties/uncertainty"
+        },
+        "startSeconds": {
+          "enum": [
+            0
+          ],
+          "type": "number"
+        }
+      },
+      "required": [
+        "startSeconds",
+        "endSeconds",
+        "complete",
+        "limitations"
+      ],
+      "type": "object"
+    },
+    "restaurants": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "claims": {
+            "$ref": "#/properties/claims"
+          },
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "evidence": {
+            "$ref": "#/properties/claims/items/properties/evidence"
+          },
+          "menus": {
+            "$ref": "#/properties/claims"
+          },
+          "name": {
+            "type": "string"
+          },
+          "uncertainty": {
+            "$ref": "#/properties/uncertainty"
+          }
+        },
+        "required": [
+          "name",
+          "evidence",
+          "confidence",
+          "uncertainty",
+          "menus",
+          "claims"
+        ],
+        "type": "object"
+      },
+      "maxItems": 100,
+      "type": "array"
+    },
+    "schemaVersion": {
+      "enum": [
+        1
+      ],
+      "type": "integer"
+    },
+    "summary": {
+      "$ref": "#/properties/claims"
+    },
+    "uncertainty": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 50,
+      "type": "array"
+    },
+    "videoId": {
+      "enum": [
+        "-D43ezc57z8"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "videoId",
+    "coverage",
+    "summary",
+    "restaurants",
+    "claims",
+    "uncertainty"
+  ],
+  "type": "object"
+}

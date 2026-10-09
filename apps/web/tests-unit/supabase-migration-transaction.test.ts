@@ -44,6 +44,16 @@ test('insufficient query contracts deny before connection; no forged expected de
     expect(()=>applyMigrationWithTerminalReadback('fixture',m,source,{readVectorImpl:()=>vector(source),runPsqlImpl:()=>{calls++;return '';}})).toThrow();expect(calls).toBe(0);
   }
 });
+test('long escaped readback literals compile while mutation outside literals remains denied',()=>{
+  const escaped='\\&'.repeat(15000);
+  const query=`SELECT '${escaped} INSERT UPDATE DELETE'::text;`;
+  const m={...migration,expectedPriorState:{...migration.expectedPriorState,query}};
+  expect(atomicMigrationSql(plan(),m)).toContain(escaped);
+  for(const mutation of ['INSERT','UPDATE','DELETE']){
+    const bad={...m,expectedPriorState:{...m.expectedPriorState,query:`SELECT '${escaped}'::text ${mutation} forbidden;`}};
+    expect(()=>atomicMigrationSql(plan(),bad)).toThrow('MIGRATION_READBACK_CONTRACT_INSUFFICIENT');
+  }
+});
 test('lost ACK makes exactly one fresh read-only reconciliation, never resends',()=>{
   const calls:string[]=[];const result=applyMigrationWithTerminalReadback('fixture',migration,source,{readVectorImpl:()=>vector(source),runPsqlImpl:(_url:string,sql:string)=>{
     calls.push(sql);if(calls.length===1)throw new Error('lost acknowledgement');

@@ -1,0 +1,21 @@
+{
+  "httpStatus": 400,
+  "category": "invalid_request",
+  "elapsedSeconds": 1.212196,
+  "payloadCanonicalBytes": 2553,
+  "payloadSha256": "a9dcf0aa926e214d3b7d0e91e35e7ea1c575086c4b2ed04d87b4ca19335587ae",
+  "schemaCanonicalBytes": 2004,
+  "schemaSha256": "d72c43afe8d12d0a85a815d8ec70ce107dc40e0bc97d2dfbedfeaf6065846953",
+  "usage": {
+    "inputTokens": null,
+    "outputTokens": null,
+    "thinkingTokens": null,
+    "cachedTokens": null,
+    "toolTokens": null,
+    "totalTokens": null
+  },
+  "completed": null,
+  "modelMatch": null,
+  "exactDtoPass": null,
+  "originalSchemaConstraintPass": null
+}

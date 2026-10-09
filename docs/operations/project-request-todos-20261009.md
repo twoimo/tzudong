@@ -616,7 +616,7 @@ PR #3099의48개 review를 현재 source와 대조했다.43개는 source/test bi
 - [x] 공개metadata200후collector를첫1편/동시성1만시도했다. caption429/exit75에서중단,완료611/pending459/추가·변경0,재전송0.
 - [x] 기존claude-video·Gemini3.8로새835초롱폼1편을기존보다낮은2call한도에서실행했다. countTokens86492성공, generation4xx거부,분석출력없음/재전송0. 정확한status·개별비용·독립검증은미확정. GetTokens무료문구의countTokens대응은추론으로명시했다.
 - [ ] 실제거부의HTTPstatus/공식payload를진단하고boundedreceipt를보완한다. 기존rejected기록과no-resend를보존한다.
-- [ ] 기존migrationcaller에작은puretransactionhelper를통합해prior→DDL→terminal→원본statementvectorledger를DBcommit전에검증하고unknownACK는readback만수행한다. 기존3개manifest/pin/providerverify/G037은변경하지않는다.
+- [x] 기존 migration caller에 작은 pure transaction helper를 통합했다. prior → DDL → terminal → 원본 statement vector ledger를 DB commit 전에 검증하고, 불확실한 ACK는 readback만 수행한다. 기존 manifest 3개·pin·provider verify·G037은 유지했다. 로컬 PG15.8·17.6 각각 13개 사례로 확인했으며 운영 apply는 별도 미완료다.
 - [ ] 정식DBadmission/SQL등록·data/main승격·production배포와실제admin/providerflows를완료한다. developREADY를운영완료로세지않는다.
 
 증빙: release-readiness-refresh/protected-develop-merge.json, vercel-preview-diagnosis-20261009/MERGE_PREVIEW_VERIFICATION.md, longform-public-resume-20261009/result.json, longform-bounded-analysis-plan-20261009/execution-result.json.
@@ -629,6 +629,18 @@ Git 스냅샷 `7d4080365c237ed1effd6e66eb8e81332173b922`에서 작업 소유 파
 
 합성 Gemini Interactions 요청 세 건을 각각 POST 1회·재시도 0회로 실행했다. 기본 텍스트는 200·78 tokens·2.460322초, 영상 없이 5,335-byte 전체 스키마를 넣은 요청은 400·사용량 미확인·1.192054초였다. 같은 입력과 65,536 output limit에서 response_format만 제거하면 200·1,982 tokens·18.149477초로 완료됐다. 하지만 synthetic DTO exact match가 false여서 스키마 제거는 채택하지 않는다. 서로 다른 조건의 지연은 성능 개선 비교가 아니며, 실제 청구·크레딧 귀속도 미확인이다. DTO와 제약을 유지하며 중복 스키마를 공유하는 대안을 준비한다.
 
-사용자는 미리보기 로그인 완료라고 답했다. 현재 toolset에는 Codex 브라우저 읽기 도구가 없으며, 지원되는 Aside 프로필에도 해당 탭이 없다. 로그인 탭 참조 연결 질문은 pending이다. 쿠키·토큰을 export하거나 CUA 거부를 우회하지 않는다. 실제 인증 흐름의 미검증 상태를 완료로 세지 않는다.
+사용자는 미리보기 로그인 완료 및 로그인한 탭 연결을 선택했다고 답했다. 현재 메시지에는 실제 탭 참조가 없고 toolset에도 Codex 브라우저 읽기 도구가 없으며, 지원되는 Aside 프로필에도 해당 탭이 없다. 쿠키·토큰을 export하거나 CUA 거부를 우회하지 않는다. 실제 인증 흐름의 미검증 상태를 완료로 세지 않는다.
 
 소스·테스트·복구·미리보기·운영 증빙을 분리하며 전체 목표 완료 체크는 열린 상태다.
+
+## 후속 PR와 스키마 축약 검증
+
+복구한 source와 증빙은 PR #3150, head `c483542c480225af6830e10d1c29365f2b010989`로 push했다. Release와 Promotion Path는 통과했다. 이후 관측에서 aggregate CodeQL은 failure이고 다른 플랫폼 CI는 진행 중이므로 전체 CI 성공이나 병합 완료로 표시하지 않는다. 해당 실패의 실제 source 위치를 조사 중이다.
+
+CodeQL #88의 `js/redos`는 신규 migration helper의 literal masking 정규식에서 발생했다. 역슬래시 소비 분기를 배타적으로 수정하고, 30KB escaped literal 안의 INSERT/UPDATE/DELETE는 허용하되 literal 밖의 같은 명령은 계속 거부하는 회귀를 추가했다. 수정 후 Bun 2개 파일 19개 통과·128 assertions, Node24 targeted lint 및 diff-check가 통과했다. 새 head의 CodeQL 결과는 별도로 확인한다.
+
+원본 schema의 모든 제약을 유지하는 local JSON Pointer 축약안을 작성했다. 고정 schema의 크기는 5,335 → 2,004 bytes, 절대 차이 −3,331 bytes, 감소율 62.44%다. 원본 canonical JSON과 확장 결과가 정확히 일치했고 영상 ID·정수·소수 경계 10개 사례도 통과했다. 고정 구조의 전수 집계이므로 95% 신뢰구간은 적용하지 않는다.
+
+단일 합성 API 수용 검증은 POST 1회·재시도 0회·영상 재전송 0회로 수행했다. HTTP 400, 1.212196초, 사용량 미확인이다. 축약안은 production source에 채택하지 않았다. 이 값은 속도 개선·품질·금액 절감 증빙이 아니다. 기존 실패한 835초 receipt와 성공 cache·queue는 유지했다.
+
+증빙: `apps/web/performance/continuity-recovery-20261009/pr-delivery.json`, `gemini-schema/proofs/schema-boundary-cases.json`, `gemini-schema/acceptance-probe-20261009/proof.json`. 실제 오류의 고정 코드·허용된 schema 필드만 추출하는 진단을 준비하고, 별도의 원문·secret 저장은 하지 않는다.

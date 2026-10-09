@@ -65,7 +65,7 @@ function readQuery(contract) {
   if (spans.length !== 1 || !/^SELECT\b/i.test(leadingSql(spans[0].token)) || !contract.expected || typeof contract.expected !== 'object' || Array.isArray(contract.expected) || !Object.keys(contract.expected).length) fail('MIGRATION_READBACK_CONTRACT_INSUFFICIENT');
   // Trusted manifest queries only; disallow mutation/transaction keywords outside literals/comments.
   const sql = leadingSql(spans[0].token);
-  const masked = sql.replace(/'(?:''|\\.|[^'])*'|"(?:""|[^"])*"|--[^\n]*|\/\*[\s\S]*?\*\//g, ' ');
+  const masked = sql.replace(/'(?:''|\\[\s\S]|[^'\\])*'|"(?:""|[^"])*"|--[^\n]*|\/\*[\s\S]*?\*\//g, ' ');
   if (/\b(?:INSERT|UPDATE|DELETE|MERGE|COPY|CALL|DO|COMMIT|ROLLBACK|BEGIN|INTO|FOR\s+UPDATE|FOR\s+SHARE)\b/i.test(masked)) fail('MIGRATION_READBACK_CONTRACT_INSUFFICIENT');
   return sql;
 }
