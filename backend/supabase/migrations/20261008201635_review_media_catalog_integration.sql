@@ -282,7 +282,15 @@ BEGIN
          WHERE p.pronamespace='privacy_retention'::regnamespace) IS DISTINCT FROM v_assertions
      OR (SELECT jsonb_agg(to_jsonb(p)-'proowner'-'proacl'-'prosrc' ORDER BY p.oid) FROM pg_proc p
          JOIN pg_temp.review_media_expected e ON p.oid=to_regprocedure(e.signature)) IS DISTINCT FROM v_functions THEN
-    RAISE EXCEPTION 'review_media_catalog_preservation_drift';
+    RAISE EXCEPTION 'review_media_catalog_preservation_drift' USING DETAIL =
+      jsonb_build_object(
+        'membershipPreserved',(SELECT coalesce(jsonb_agg(to_jsonb(m) ORDER BY roleid,member,grantor),'[]') FROM pg_auth_members m) IS NOT DISTINCT FROM v_members,
+        'publicNamespacePreserved',(SELECT to_jsonb(n) FROM pg_namespace n WHERE nspname='public') IS NOT DISTINCT FROM v_public,
+        'assertionsPreserved',(SELECT jsonb_agg(CASE WHEN p.oid=v_known THEN to_jsonb(p)-'prosrc' ELSE to_jsonb(p) END ORDER BY p.oid) FROM pg_proc p
+            WHERE p.pronamespace='privacy_retention'::regnamespace) IS NOT DISTINCT FROM v_assertions,
+        'functionMetadataPreserved',(SELECT jsonb_agg(to_jsonb(p)-'proowner'-'proacl'-'prosrc' ORDER BY p.oid) FROM pg_proc p
+            JOIN pg_temp.review_media_expected e ON p.oid=to_regprocedure(e.signature)) IS NOT DISTINCT FROM v_functions
+      )::text;
   END IF;
   PERFORM pg_temp.review_media_g014_assert();
   IF to_regprocedure('pg_temp.review_media_g014_assert()') IS NOT NULL THEN
