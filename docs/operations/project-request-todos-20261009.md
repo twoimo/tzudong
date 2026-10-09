@@ -716,3 +716,5 @@ Five-stage 11개 private receipt와 forward prior-state receipt의 실제 canoni
 같은1,659행 합성 입력의7쌍에서 cold DB 호출은13→14(+1,+7.69%)로 악화했다. 이전 source와 경고1,658건이7쌍 모두 일치했고 실제 네트워크0회다. 전환기 최악 요청 상한은255→16(-239,-93.73%)이다. Aggregate가 있는 별도 경로의5회 상한과 구분한다. 고정 호출 수와 상한이므로 모집단95%CI를 만들지 않으며 운영 지연·비용·쿼타 절감을 주장하지 않는다.
 
 root page server23개/231assertions 통과, agent의 범위 수정 전 관련27개/723assertions 통과를 별도 보존한다. 새 호환 소스의 실제 Preview 조회 복구는 아직 확인 전이며 운영 SQL·Storage·catalog reload는0회다. 증빙: `continuity-recovery-20261009/double-missing-warning-fix-20261010/`.
+
+실제 Preview 재검증: develop `bb32e07fe9ea44186e003488428ca14a0ae6a32c`, `dpl_C2L2iemi6K7UayhrGoikKbvFeNo4` READY를 확인했다. 기존 Google 관리자 세션을 유지한 실제 reload에서 맛집 전체1,659건·삭제890건·표50행·수정 버튼36개·고정 조회 오류 부재를 확인했다. 최초 heading 대기는 timeout이었고 이후 새 상태에서 헤더와 표를 확인했으며 실패 대기도 기록했다. 이 결과는 실제 인증된 조회 복구이고 승인·저장·물리 삭제를 입증하지 않는다. source는 data/main 승격 전이며 SQL·Storage·catalog reload0회다. 증빙: `continuity-recovery-20261009/double-missing-live-preview-20261010.json`.

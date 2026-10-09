@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "deploymentId": "dpl_C2L2iemi6K7UayhrGoikKbvFeNo4",
+  "deploymentSha": "bb32e07fe9ea44186e003488428ca14a0ae6a32c",
+  "deploymentState": "READY",
+  "immutableUrl": "https://tzudong-nq7qscz01-twoimos-projects.vercel.app",
+  "browserUrl": "https://tzudong-git-develop-twoimos-projects.vercel.app/admin?module=restaurants",
+  "loginSessionPreserved": true,
+  "uiReadback": {
+    "total": 1659,
+    "deleted": 890,
+    "tableCount": 1,
+    "bodyRows": 50,
+    "editButtons": 36,
+    "fixedLoadError": false,
+    "emptySearchState": false
+  },
+  "initialWait": "heading locator timed out; fresh observed state then contained the correct heading and loaded table",
+  "verifiedScope": "real authenticated UI read only; no write/delete/approve flow",
+  "operations": {
+    "schemaWrites": 0,
+    "storageDeletes": 0,
+    "catalogReloads": 0
+  }
+}
