@@ -1,0 +1,39 @@
+{
+  "schema": "tzudong-pipeline-cpu-local-followthrough-v1",
+  "ownedSourceChanges": {
+    "backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh": "d5708e5ab72b96e9769a847e230ad8e3f410bf7d843d6ef500f963a6ad0994d4",
+    "backend/utils/stage_cache.py": "10ed8686fe3be87e0d447ff6163eee08303a9b1537e541b81123ccb4ac50322b",
+    "backend/utils/tests/test_stage_execution.py": "d55fdbae0a87c30da479e353446eb3b746b2821315ac0da2852687b82e19a309"
+  },
+  "otherAgentGeminiFilesModifiedByThisTask": false,
+  "rawBaseline": "pipeline-media-20261007 preserved without modification",
+  "profileAttempts": {
+    "initial": "failed due to wrong jq binary path; preserved",
+    "corrected": "diagnostic one-pair profiler includes wrapper overhead; not pooled in seven-pair measurements"
+  },
+  "measurements": {
+    "alternatingPairsPerPhase": 7,
+    "observations": 28,
+    "framesEach": 48,
+    "outputPromptTraceEquality": true,
+    "protectedFixtureRowsEach": 3,
+    "duplicates": 0,
+    "ffmpegCapUnchangedPerProcess": 4,
+    "independentChecksPassed": 10
+  },
+  "checks": {
+    "stageExecution": 8,
+    "laajRestart": 11,
+    "sharedStagePerformance": 14,
+    "shellSyntaxExitCode": 0,
+    "newEvidenceEslintExitCode": 0
+  },
+  "corpusBeforeAfterUnchanged": true,
+  "operatingWrites": 0,
+  "actualProviderCalls": 0,
+  "paidCalls": 0,
+  "modelsOrQuotasChanged": false,
+  "sourceCommitOrPushPerformed": false,
+  "liveEvidenceEligible": false,
+  "remainingScope": "Real admitted provider, original videos, full worker graph, deployed DB/CAS and admin readback remain unmeasured. Historical legacy-baseline +48.36% CPU regression is not erased or reclassified by this current before/after experiment."
+}

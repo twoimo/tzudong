@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import shutil
+import shlex
 import sys
 import tempfile
 import unittest
@@ -45,6 +46,51 @@ time.sleep(0.15)
     def command(self):
         return [sys.executable,str(CLI),'run','--receipt',str(self.receipt),'--input',str(self.input),
                 '--output',str(self.output),'--',sys.executable,str(self.worker),str(self.root)]
+
+    def test_prepare_reuses_or_returns_the_same_validated_fingerprint(self):
+        def action(name, extra=()):
+            return subprocess.run([sys.executable, str(CLI), name,
+                '--receipt', str(self.receipt), '--input', str(self.input),
+                '--output', str(self.output), *extra], capture_output=True, text=True, timeout=10)
+        expected = action('fingerprint').stdout.strip()
+        prepared = action('prepare')
+        self.assertEqual(prepared.returncode, 0)
+        self.assertEqual(prepared.stdout.strip(), expected)
+        self.assertEqual(subprocess.run(self.command(), capture_output=True, timeout=10).returncode, 0)
+        self.assertEqual(action('prepare').stdout.strip(), 'reusable')
+        self.output.write_text('{broken')
+        self.assertEqual(action('prepare').stdout.strip(), expected)
+        self.input.write_text('{"input":2}\n')
+        self.assertNotEqual(action('prepare').stdout.strip(), expected)
+        receipt_before = self.receipt.read_bytes()
+        self.assertEqual(action('complete', ['--expected', expected]).returncode, 1)
+        self.assertEqual(self.receipt.read_bytes(), receipt_before)
+        self.input.write_text('{broken')
+        invalid = action('prepare')
+        self.assertEqual(invalid.returncode, 1)
+        self.assertEqual(invalid.stdout, '')
+
+    @unittest.skipUnless(shutil.which('bash'), 'Bash required')
+    def test_laaj_log_timestamps_use_builtin_without_changing_output_channels(self):
+        script = (ROOT / 'backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh').read_text()
+        logger = script[script.index('log_line() {'):script.index('\n\nformat_duration()')]
+        bash = shutil.which('bash')
+        version = subprocess.check_output([bash, '-c', 'printf "%s %s" "${BASH_VERSINFO[0]}" "${BASH_VERSINFO[1]}"'], text=True).split()
+        has_builtin = tuple(map(int, version)) >= (4, 2)
+        fake_date = self.root / 'date'
+        marker = self.root / 'date-used'
+        fake_date.write_text('#!/bin/sh\nexit 99\n' if has_builtin else '#!/bin/sh\nprintf "fallback\\n" >> ' + shlex.quote(str(marker)) + '\nprintf "12:34:56\\n"\n')
+        fake_date.chmod(0o700)
+        result = subprocess.run([bash, '-c',
+            'RED= GREEN= YELLOW= BLUE= CYAN= NC=; ' + logger + '\nlog_info fixture; log_error fixture'],
+            env={**os.environ, 'PATH': str(self.root)}, capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0)
+        self.assertRegex(result.stdout, r'^\[\d{2}:\d{2}:\d{2}\] \[INFO\] fixture\n$')
+        self.assertRegex(result.stderr, r'^\[\d{2}:\d{2}:\d{2}\] \[ERROR\] fixture\n$')
+        if has_builtin:
+            self.assertFalse(marker.exists())
+        else:
+            self.assertEqual(marker.read_text(), 'fallback\nfallback\n')
 
     def test_overlapping_processes_execute_once_and_publish_one_valid_receipt(self):
         with subprocess.Popen(self.command(),stdout=subprocess.PIPE,stderr=subprocess.PIPE) as first:

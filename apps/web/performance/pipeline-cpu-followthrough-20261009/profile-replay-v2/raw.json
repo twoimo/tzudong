@@ -1,0 +1,294 @@
+[
+  {
+    "pair": 0,
+    "implementation": "baseline",
+    "phase": "cold",
+    "wallMs": 12028.426124947146,
+    "cpuMs": 5091.119,
+    "peakTreeRssMiB": 565.796875,
+    "media": {
+      "wallMs": 748.2297499664128,
+      "cpuMs": 1625.313,
+      "peakTreeRssMiB": 565.796875,
+      "sampledPeakFfmpeg": 1,
+      "resourceSamples": 7,
+      "exitCode": 0,
+      "diagnosticSha256": "635ec635d3366305e9e9471f4b93b1e513a7e0b245238456528e3619a4a69562"
+    },
+    "laaj": {
+      "wallMs": 11188.254249980673,
+      "cpuMs": 3403.3199999999997,
+      "peakTreeRssMiB": 44.796875,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 112,
+      "exitCode": 0,
+      "diagnosticSha256": "af51b199f9e4d81ae86e9247bfeaada81564037bb9f83ca5ca8e950cb668ab2a"
+    },
+    "transform": {
+      "wallMs": 91.9421250000596,
+      "cpuMs": 62.48599999999999,
+      "peakTreeRssMiB": 4.390625,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 1,
+      "exitCode": 0,
+      "diagnosticSha256": "d9d1b4120a715c61e3ed111fc956baddfcc11e9ddc48edb19ccd5f48e8f44135"
+    },
+    "exactPeakFfmpegCommands": 12,
+    "ffmpegCalls": 12,
+    "providerReplayCalls": 4,
+    "evaluationReplayCalls": 3,
+    "unclosedFfmpegCommands": 0,
+    "outputs": {
+      "evaluations": [
+        [
+          "0-RhVo6P3zI.jsonl",
+          "cfe5a2f202ec8f1c2324a1e92fdcaa4c29569fd4381a19dd8287239629f135b1"
+        ],
+        [
+          "00S1J_3uC0U.jsonl",
+          "552036de5aefcd3909f1083d02382084593f33a80bd5d0f142d5a850d68ca0ba"
+        ],
+        [
+          "02LzJVZCqt0.jsonl",
+          "893549cf78f83ba70448e54c7e5640ea07abf1498ff02ff94b99c1a9f32ee418"
+        ]
+      ],
+      "evaluationSha256": "92a4d5b3a4fe156b9b2fc4f3a677ce23d098facb0f7ceb5d02fc3a9c7c236dc4",
+      "transformSha256": "c746defb0578fd577b65dbec5ee6e86a1b3f9663b50ec4dcfc1e27feba01c0ef",
+      "rows": 6,
+      "traceIds": [
+        "34c6e4be3bd2192be5b8d2d9d906b097a2a7cc2ff587deb890952bda6db4955b",
+        "9aa4975f08a92f4aa4b83ea64d424e345fc2a15750f70903e9fa41753cb39f38",
+        "fb423e391dd567b586754bc95d821ab00b75c4a1ca013bce6cd6ea66ffba0853",
+        "fixture-protected-0",
+        "fixture-protected-1",
+        "fixture-protected-2"
+      ],
+      "duplicates": 0,
+      "frameSha256": "1cff0ea07625b49d7b7399d2d6f62e5f5beff01cbf02f777c5080ae0ee1dc200",
+      "frames": 48,
+      "failedSegments": 0
+    },
+    "exactOutputEquivalent": true,
+    "adminProtectedRowsUnchanged": true
+  },
+  {
+    "pair": 0,
+    "implementation": "baseline",
+    "phase": "restart",
+    "wallMs": 1259.8439580760896,
+    "cpuMs": 1051.259,
+    "peakTreeRssMiB": 50.875,
+    "media": {
+      "wallMs": 220.2945831231773,
+      "cpuMs": 221.339,
+      "peakTreeRssMiB": 50.875,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 2,
+      "exitCode": 0,
+      "diagnosticSha256": "c1fd48d3193005e09c295227407176903a6accae00057fba6babe23a9474d281"
+    },
+    "laaj": {
+      "wallMs": 947.980249999091,
+      "cpuMs": 775.5269999999999,
+      "peakTreeRssMiB": 26.40625,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 11,
+      "exitCode": 0,
+      "diagnosticSha256": "f88cb0167685ee8b9cec24d30fae7322125751a869c688532d9cf148c6ac73d2"
+    },
+    "transform": {
+      "wallMs": 91.5691249538213,
+      "cpuMs": 54.392999999999994,
+      "peakTreeRssMiB": 4.46875,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 1,
+      "exitCode": 0,
+      "diagnosticSha256": "38e967a5c6f22319827a7c1c4d71ddcde2575bf21d45a7e1e482c5d566954797"
+    },
+    "exactPeakFfmpegCommands": 0,
+    "ffmpegCalls": 0,
+    "providerReplayCalls": 1,
+    "evaluationReplayCalls": 0,
+    "unclosedFfmpegCommands": 0,
+    "outputs": {
+      "evaluations": [
+        [
+          "0-RhVo6P3zI.jsonl",
+          "cfe5a2f202ec8f1c2324a1e92fdcaa4c29569fd4381a19dd8287239629f135b1"
+        ],
+        [
+          "00S1J_3uC0U.jsonl",
+          "552036de5aefcd3909f1083d02382084593f33a80bd5d0f142d5a850d68ca0ba"
+        ],
+        [
+          "02LzJVZCqt0.jsonl",
+          "893549cf78f83ba70448e54c7e5640ea07abf1498ff02ff94b99c1a9f32ee418"
+        ]
+      ],
+      "evaluationSha256": "92a4d5b3a4fe156b9b2fc4f3a677ce23d098facb0f7ceb5d02fc3a9c7c236dc4",
+      "transformSha256": "c746defb0578fd577b65dbec5ee6e86a1b3f9663b50ec4dcfc1e27feba01c0ef",
+      "rows": 6,
+      "traceIds": [
+        "34c6e4be3bd2192be5b8d2d9d906b097a2a7cc2ff587deb890952bda6db4955b",
+        "9aa4975f08a92f4aa4b83ea64d424e345fc2a15750f70903e9fa41753cb39f38",
+        "fb423e391dd567b586754bc95d821ab00b75c4a1ca013bce6cd6ea66ffba0853",
+        "fixture-protected-0",
+        "fixture-protected-1",
+        "fixture-protected-2"
+      ],
+      "duplicates": 0,
+      "frameSha256": "1cff0ea07625b49d7b7399d2d6f62e5f5beff01cbf02f777c5080ae0ee1dc200",
+      "frames": 48,
+      "failedSegments": 0
+    },
+    "exactOutputEquivalent": true,
+    "adminProtectedRowsUnchanged": true
+  },
+  {
+    "pair": 0,
+    "implementation": "candidate",
+    "phase": "cold",
+    "wallMs": 9255.42891700752,
+    "cpuMs": 8586.622,
+    "peakTreeRssMiB": 243.640625,
+    "media": {
+      "wallMs": 652.7824171353132,
+      "cpuMs": 1670.011,
+      "peakTreeRssMiB": 243.640625,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 7,
+      "exitCode": 0,
+      "diagnosticSha256": "7ba17a832453eba98f397abe8af062c4a815aeff003cbe882ebc726d99f54ea7"
+    },
+    "laaj": {
+      "wallMs": 8446.436333935708,
+      "cpuMs": 6824.477,
+      "peakTreeRssMiB": 105.6875,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 81,
+      "exitCode": 0,
+      "diagnosticSha256": "f77f4a31e2dc109f5c7a2e806921bbd54f8e5353d383f0c1ac5336ee3746cde8"
+    },
+    "transform": {
+      "wallMs": 156.21016593649983,
+      "cpuMs": 92.134,
+      "peakTreeRssMiB": 4.40625,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 1,
+      "exitCode": 0,
+      "diagnosticSha256": "13677364d011dcd9b106f0ed3abe903a3fcd473ab7bd8abc0d7b711f66bd60b2"
+    },
+    "exactPeakFfmpegCommands": 4,
+    "ffmpegCalls": 12,
+    "providerReplayCalls": 3,
+    "evaluationReplayCalls": 3,
+    "unclosedFfmpegCommands": 0,
+    "outputs": {
+      "evaluations": [
+        [
+          "0-RhVo6P3zI.jsonl",
+          "cfe5a2f202ec8f1c2324a1e92fdcaa4c29569fd4381a19dd8287239629f135b1"
+        ],
+        [
+          "00S1J_3uC0U.jsonl",
+          "552036de5aefcd3909f1083d02382084593f33a80bd5d0f142d5a850d68ca0ba"
+        ],
+        [
+          "02LzJVZCqt0.jsonl",
+          "893549cf78f83ba70448e54c7e5640ea07abf1498ff02ff94b99c1a9f32ee418"
+        ]
+      ],
+      "evaluationSha256": "92a4d5b3a4fe156b9b2fc4f3a677ce23d098facb0f7ceb5d02fc3a9c7c236dc4",
+      "transformSha256": "c746defb0578fd577b65dbec5ee6e86a1b3f9663b50ec4dcfc1e27feba01c0ef",
+      "rows": 6,
+      "traceIds": [
+        "34c6e4be3bd2192be5b8d2d9d906b097a2a7cc2ff587deb890952bda6db4955b",
+        "9aa4975f08a92f4aa4b83ea64d424e345fc2a15750f70903e9fa41753cb39f38",
+        "fb423e391dd567b586754bc95d821ab00b75c4a1ca013bce6cd6ea66ffba0853",
+        "fixture-protected-0",
+        "fixture-protected-1",
+        "fixture-protected-2"
+      ],
+      "duplicates": 0,
+      "frameSha256": "1cff0ea07625b49d7b7399d2d6f62e5f5beff01cbf02f777c5080ae0ee1dc200",
+      "frames": 48,
+      "failedSegments": 0
+    },
+    "exactOutputEquivalent": true,
+    "adminProtectedRowsUnchanged": true
+  },
+  {
+    "pair": 0,
+    "implementation": "candidate",
+    "phase": "restart",
+    "wallMs": 1861.7934996727854,
+    "cpuMs": 1263.242,
+    "peakTreeRssMiB": 69.453125,
+    "media": {
+      "wallMs": 300.20237481221557,
+      "cpuMs": 257.847,
+      "peakTreeRssMiB": 69.453125,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 3,
+      "exitCode": 0,
+      "diagnosticSha256": "301cf1c273a849cbf2baac8d12e008a2785a107b2df666583517e30c3028862a"
+    },
+    "laaj": {
+      "wallMs": 1451.2539999559522,
+      "cpuMs": 930.6859999999999,
+      "peakTreeRssMiB": 39.953125,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 12,
+      "exitCode": 0,
+      "diagnosticSha256": "24307fcf03e5d6a0776d0c5051a7ec5a66b7aca318e50e6c213b468bab2378a9"
+    },
+    "transform": {
+      "wallMs": 110.33712490461767,
+      "cpuMs": 74.709,
+      "peakTreeRssMiB": 4.375,
+      "sampledPeakFfmpeg": 0,
+      "resourceSamples": 1,
+      "exitCode": 0,
+      "diagnosticSha256": "02e088e72b07393b83874f284f3f08400bac76cfd653892bb173495e596be07a"
+    },
+    "exactPeakFfmpegCommands": 0,
+    "ffmpegCalls": 0,
+    "providerReplayCalls": 0,
+    "evaluationReplayCalls": 0,
+    "unclosedFfmpegCommands": 0,
+    "outputs": {
+      "evaluations": [
+        [
+          "0-RhVo6P3zI.jsonl",
+          "cfe5a2f202ec8f1c2324a1e92fdcaa4c29569fd4381a19dd8287239629f135b1"
+        ],
+        [
+          "00S1J_3uC0U.jsonl",
+          "552036de5aefcd3909f1083d02382084593f33a80bd5d0f142d5a850d68ca0ba"
+        ],
+        [
+          "02LzJVZCqt0.jsonl",
+          "893549cf78f83ba70448e54c7e5640ea07abf1498ff02ff94b99c1a9f32ee418"
+        ]
+      ],
+      "evaluationSha256": "92a4d5b3a4fe156b9b2fc4f3a677ce23d098facb0f7ceb5d02fc3a9c7c236dc4",
+      "transformSha256": "c746defb0578fd577b65dbec5ee6e86a1b3f9663b50ec4dcfc1e27feba01c0ef",
+      "rows": 6,
+      "traceIds": [
+        "34c6e4be3bd2192be5b8d2d9d906b097a2a7cc2ff587deb890952bda6db4955b",
+        "9aa4975f08a92f4aa4b83ea64d424e345fc2a15750f70903e9fa41753cb39f38",
+        "fb423e391dd567b586754bc95d821ab00b75c4a1ca013bce6cd6ea66ffba0853",
+        "fixture-protected-0",
+        "fixture-protected-1",
+        "fixture-protected-2"
+      ],
+      "duplicates": 0,
+      "frameSha256": "1cff0ea07625b49d7b7399d2d6f62e5f5beff01cbf02f777c5080ae0ee1dc200",
+      "frames": 48,
+      "failedSegments": 0
+    },
+    "exactOutputEquivalent": true,
+    "adminProtectedRowsUnchanged": true
+  }
+]

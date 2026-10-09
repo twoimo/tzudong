@@ -1,0 +1,84 @@
+[
+  {
+    "probe": "two_independent_processes_same_outputs",
+    "implementation": "baseline",
+    "mediaExitCodes": [
+      0,
+      1
+    ],
+    "laajExitCodes": [
+      0,
+      0
+    ],
+    "framesEquivalent": false,
+    "evaluationAndTraceEquivalent": true,
+    "adminProtectedRowsUnchanged": true,
+    "exactPeakFfmpegCommands": 20,
+    "ffmpegCalls": 24,
+    "providerReplayCalls": 8,
+    "evaluationReplayCalls": 6,
+    "unclosedFfmpegCommands": 0,
+    "duplicateEvaluations": 3
+  },
+  {
+    "probe": "damaged_frame_recovery",
+    "implementation": "baseline",
+    "exitCode": 0,
+    "restoredExactBytes": false,
+    "damagedBytesRetainedInHistory": false,
+    "exactPeakFfmpegCommands": 0,
+    "ffmpegCalls": 0,
+    "providerReplayCalls": 0,
+    "evaluationReplayCalls": 0,
+    "unclosedFfmpegCommands": 0
+  },
+  {
+    "probe": "two_independent_processes_same_outputs",
+    "implementation": "candidate",
+    "mediaExitCodes": [
+      0,
+      0
+    ],
+    "laajExitCodes": [
+      0,
+      0
+    ],
+    "framesEquivalent": true,
+    "evaluationAndTraceEquivalent": true,
+    "adminProtectedRowsUnchanged": true,
+    "exactPeakFfmpegCommands": 8,
+    "ffmpegCalls": 12,
+    "providerReplayCalls": 3,
+    "evaluationReplayCalls": 3,
+    "unclosedFfmpegCommands": 0,
+    "duplicateEvaluations": 0
+  },
+  {
+    "probe": "damaged_frame_recovery",
+    "implementation": "candidate",
+    "exitCode": 0,
+    "restoredExactBytes": true,
+    "damagedBytesRetainedInHistory": true,
+    "exactPeakFfmpegCommands": 1,
+    "ffmpegCalls": 1,
+    "providerReplayCalls": 0,
+    "evaluationReplayCalls": 0,
+    "unclosedFfmpegCommands": 0
+  },
+  {
+    "probe": "provider_process_timeout_then_restart",
+    "implementation": "candidate",
+    "timeoutExitCode": 1,
+    "partialPublishedFiles": 0,
+    "restartExitCode": 0,
+    "transformExitCode": 0,
+    "evaluationAndTraceEquivalent": true,
+    "adminProtectedRowsUnchanged": true,
+    "timeoutProviderStarted": true,
+    "exactPeakFfmpegCommands": 0,
+    "ffmpegCalls": 0,
+    "providerReplayCalls": 4,
+    "evaluationReplayCalls": 4,
+    "unclosedFfmpegCommands": 0
+  }
+]

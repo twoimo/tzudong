@@ -1,0 +1,8 @@
+{
+  "source": "backend/bin/score_media_orchestration.py",
+  "originalSha256": "e6d783c73103edb9992a534cbb10a9ad060a80db3420698320591c156c408292",
+  "adaptedSha256": "d3c11fef8fe2176c3c5c543752fc939ad59d31c3d7d4df8639f290503c94348f",
+  "onlyInterpretationStringsChanged": true,
+  "validationChecksUnchanged": true,
+  "existingScorerSourceModified": false
+}
