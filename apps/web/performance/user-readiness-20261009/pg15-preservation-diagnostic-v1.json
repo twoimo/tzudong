@@ -1,0 +1,27 @@
+[
+  {
+    "run": "v6",
+    "failure": "review_media_catalog_preservation_drift",
+    "details": {
+      "assertionsPreserved": true,
+      "membershipPreserved": true,
+      "publicNamespacePreserved": true,
+      "functionMetadataPreserved": false
+    },
+    "hostedWrites": false
+  },
+  {
+    "run": "v7",
+    "failure": "review_media_catalog_preservation_drift",
+    "details": {
+      "assertionsPreserved": true,
+      "membershipPreserved": true,
+      "changedMetadataFields": [
+        "proargdefaults"
+      ],
+      "publicNamespacePreserved": true,
+      "functionMetadataPreserved": false
+    },
+    "hostedWrites": false
+  }
+]

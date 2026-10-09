@@ -1,0 +1,9 @@
+{
+  "counts": {
+    "pass": 3253,
+    "skip": 9,
+    "fail": 0
+  },
+  "sourceHead": "92b4db44435464bee5ceb7dd0abcbb6765860745",
+  "note": "Finished across SQL-only and CSS-CLI source follow-up; UI/bundle source unchanged."
+}

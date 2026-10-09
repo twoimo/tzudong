@@ -1,0 +1,10 @@
+{
+  "originalRelativePath": "catalog-ci-unit-local-v2.log",
+  "originalSha256": "cbe4a241ef28e363f9f926bb475bc79d6de265cf8b107ff9a406b4d3428df7f7",
+  "originalBytes": 111899,
+  "originalPreservedOwnerOnlyOutsidePublicTree": true,
+  "sanitizedRelativePath": "catalog-ci-unit-local-v2-sanitized-v1.log",
+  "sanitizedSha256": "2cae032b9fa5cf471912c7991ff04999d90690e0a97dc5094672cef346c1db42",
+  "databaseUserinfoRedactions": 2,
+  "rawOverwritten": false
+}

@@ -1,0 +1,14 @@
+{
+  "sourceHead": "1e75cee8e580e5742eee08341a68b773358ee48c",
+  "thread": {
+    "id": "PRRT_kwDOQGRyNc6qulVk",
+    "isResolved": true
+  },
+  "pythonPublicationTests": 48,
+  "webNightlyTests": 30,
+  "canonicalDimensionsPreserved": true,
+  "functionRows": 14,
+  "storagePolicyRows": 22,
+  "remainingDependency": "PRRT_kwDOQGRyNc6qsd9K",
+  "operatingWrites": 0
+}

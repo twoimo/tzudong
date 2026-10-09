@@ -1,0 +1,17 @@
+{
+  "createdAtUtc": "2026-10-08T19:28:22.016246+00:00",
+  "baseSource": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "operatingSource": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+  "humanSteering": "Make the service robust enough for real users to use immediately; preserve the entire memory/SDK/Galaxy/field objective.",
+  "priorGoalTurn": "progress: completed nine-pair aggregate with inconclusive natural memory; candidate remains unadmitted",
+  "priority": [
+    "review/media transaction safety",
+    "login continuation",
+    "signed-out Stamp feedback",
+    "live public/authenticated read paths"
+  ],
+  "deviceUsageHoldPreserved": true,
+  "currentMemoryCandidatePromoted": false,
+  "realUserReviewOrStampWritten": false,
+  "goalComplete": false
+}

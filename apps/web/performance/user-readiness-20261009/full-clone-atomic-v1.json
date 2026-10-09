@@ -1,0 +1,10 @@
+{
+  "sourceSha256": "eac350c48a0c1424f1caf33f9b1daf5e76b73ccdffa33033c025bd6486f7f53a",
+  "exit": 0,
+  "fixedCode": null,
+  "SQLSourceError": "",
+  "actor": "postgres",
+  "serverVersion": "17.6",
+  "operatingWrites": false,
+  "atomicAll3": true
+}

@@ -1,0 +1,12 @@
+{
+  "schema": "readiness-evidence-privacy-scan-v1",
+  "files": 139,
+  "hits": [
+    {
+      "path": "catalog-ci-unit-local-v2.log",
+      "kind": "database_password_url"
+    }
+  ],
+  "scope": "bounded credential patterns; manual source/media minimization still required",
+  "imagePhotosPersisted": false
+}

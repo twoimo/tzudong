@@ -1,0 +1,23 @@
+{
+  "startedAtUtc": "2026-10-08T22:20:13.798Z",
+  "mode": "plan",
+  "label": "live-plan-v1",
+  "project": "aqlcofblfxdrjhhdmarw",
+  "keyEmitted": false,
+  "contentsPersisted": false,
+  "keysPersisted": false,
+  "sourceDataChanged": false,
+  "operatingWrites": false,
+  "status": "passed",
+  "plan": {
+    "schemaVersion": 1,
+    "referencesHash": "a92fc069e28928f413704b04539dd92fe65fef185d53865c6a57204152a93a66",
+    "expectedFiles": 8,
+    "sourceBytesHash": "7d490833b232a62de0c75b523afe6e9a669337175a6b317b485ff60b1c2ae848",
+    "totalBytes": 9811615,
+    "imageContentsPersisted": false,
+    "keysPersisted": false,
+    "operatingWrites": false
+  },
+  "endedAtUtc": "2026-10-08T22:20:28.054Z"
+}

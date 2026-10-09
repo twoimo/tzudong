@@ -1,0 +1,122 @@
+{
+  "headSha": "41e229528b5039c9f057f125efb1e6cc1cb443ca",
+  "resolvedKnownThreads": [
+    {
+      "id": "PRRT_kwDOQGRyNc6qkLU1",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qkLU5",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qkLU8",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qkLVA",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qkbZ4",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qkbZ9",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qkbaB",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qkbaF",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qknIZ",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qknIh",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qknIn",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qkyK6",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qkyLC",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qlDIl",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qlDIo",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qlJCY",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qsOjm",
+      "resolvedReadback": true
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qsd9C",
+      "resolvedReadback": true
+    }
+  ],
+  "remaining": [
+    {
+      "id": "PRRT_kwDOQGRyNc6qsd9K",
+      "isResolved": false,
+      "isOutdated": false,
+      "comments": {
+        "nodes": [
+          {
+            "path": "apps/web/components/reviews/ReviewModal.tsx",
+            "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4227927591"
+          }
+        ]
+      }
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6qulVk",
+      "isResolved": false,
+      "isOutdated": false,
+      "comments": {
+        "nodes": [
+          {
+            "path": ".github/scripts/verify-nightly-local-publication.py",
+            "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4228792897"
+          }
+        ]
+      }
+    }
+  ],
+  "validation": {
+    "fullWebUnit": {
+      "pass": 3280,
+      "skip": 9,
+      "fail": 0
+    },
+    "focusedReviewAndAuth": 233,
+    "postIntegrationContract": 109,
+    "exactPG176": 29,
+    "canonicalDualComparedFiles": 56,
+    "SQLAtomicOwnerRPCs": 7,
+    "anonymousDenied": true,
+    "rollbackExact": true,
+    "metadataNegativeControls": 2
+  },
+  "guardedProducerStillRequired": true,
+  "deployed": false
+}

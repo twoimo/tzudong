@@ -1,0 +1,22 @@
+{
+  "requestedBaseline": "6d12ce81e6f6e9c8b2e3a321cfc6d5f6eca93391",
+  "observedHeadAtFinish": "08ef6d5928edad2bafe38bbd0502519e2b833d27",
+  "files": {
+    "backend/supabase/migrations/20261008192455_review_media_commit_cleanup.sql": "1b018884a0ba8bb25e6a9e31fa831e349bd4442118e5d4bf1699464e09e16c3c",
+    "backend/supabase/migrations/20261008200719_review_verification_private.sql": "92b469ab0ed1a23bf91c1ab5a3f8e92d45cf0f4e06e5fa602d6a34ad0497a51b",
+    "backend/supabase/migrations/20261008201635_review_media_catalog_integration.sql": "6e820eb535bc514e78f258110e36dff00537bcaefcffd8b354356107ca9c09fe",
+    "backend/supabase/scripts/local-migrate.py": "666481b8c4e08e0492a9dc01ab32c76d55160790bab85386fb519d555315b24b",
+    "backend/supabase/scripts/local_catalog_readback.sql": "d5ece869c653c4513aaf0bfb8fbc191f9e3800565487cbe368f5509f6aa40b7e",
+    "backend/supabase/tests/test_review_media_commit_cleanup.py": "42807ae1e57de442645146853dc90534a84f928ea94c02502a5cc0a67fcb4868",
+    "backend/supabase/tests/test_review_media_catalog_integration.py": "66755c6082dc6e410efdae163b3667ca76dfa81a68d39269b3b240a223834558"
+  },
+  "patchSha256": "ade15bc02c32e10a01caa0a63e77b10eaae3fee7c22fec4cf5fb8a8d1280301e",
+  "verification": {
+    "postgres": "17.11 (Homebrew)",
+    "environment": "fresh temporary cluster; Unix socket only; per-test databases; cluster stopped and removed",
+    "result": "29 tests passed",
+    "baseline": "5 new regressions failed as expected",
+    "integrationDatabaseReplay": "not run; parent owns full PG15/PG17.6 replay",
+    "commitPushByThisWorker": false
+  }
+}

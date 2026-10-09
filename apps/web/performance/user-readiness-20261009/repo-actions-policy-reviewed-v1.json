@@ -1,0 +1,8 @@
+{
+  "github_owned_allowed": true,
+  "patterns_allowed": [
+    "denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282",
+    "opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4"
+  ],
+  "verified_allowed": true
+}

@@ -1,0 +1,61 @@
+{
+  "sourceHarnessSha": "8a4fa1a205236d80c698e39b8efd31f7ec894df3",
+  "startedAtUtc": "2026-10-09T09:43:56.587Z",
+  "environment": "live www anonymous desktop Chrome; viewport mobile/tablet emulation",
+  "physicalDevice": false,
+  "fieldAdmission": 0,
+  "serviceMutationAllowed": false,
+  "cases": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/leaderboard",
+      "expectedTitle": "랭킹",
+      "titleVisible": true,
+      "rankingErrorObserved": false,
+      "headerPixelsCaptured": true
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/feed",
+      "expectedTitle": "리뷰",
+      "titleVisible": true,
+      "rankingErrorObserved": false,
+      "headerPixelsCaptured": true
+    }
+  ],
+  "responses": [
+    {
+      "path": "/rest/v1/rpc/read_public_profile_leaderboard_page",
+      "status": 200,
+      "viewportWidth": 390
+    },
+    {
+      "path": "/rest/v1/reviews",
+      "status": 200,
+      "viewportWidth": 390
+    },
+    {
+      "path": "/rest/v1/rpc/read_public_profile_summaries",
+      "status": 200,
+      "viewportWidth": 390
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 390
+    }
+  ],
+  "blockedMutations": 4,
+  "pageErrors": 0,
+  "consoleErrors": 4,
+  "passed": false,
+  "browserVersion": "154.0.8037.98",
+  "failureCode": "LIVE_FLOW_NOT_CONFIRMED",
+  "endedAtUtc": "2026-10-09T09:44:08.498Z"
+}

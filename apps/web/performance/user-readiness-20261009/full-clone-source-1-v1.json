@@ -1,0 +1,15 @@
+{
+  "stage": "review-media-source-1",
+  "source": "20261008192455_review_media_commit_cleanup.sql",
+  "sourceSha256": "d0ce077fc3869f89b451a84229f12ed0df3b4452ce91186eac66f50982a4accd",
+  "sourceBytes": 16654,
+  "exit": 0,
+  "sqlState": null,
+  "mustOwnTable": false,
+  "timestamp": "2026-10-08T20:39:24.482071+00:00",
+  "userRowsCopied": 0,
+  "operatingWrites": false,
+  "actor": "postgres",
+  "serverVersion": "17.6",
+  "ddlDiagnosticPersisted": false
+}

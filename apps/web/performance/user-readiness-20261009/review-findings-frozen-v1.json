@@ -1,0 +1,268 @@
+[
+  {
+    "id": "PRRT_kwDOQGRyNc6qkLU1",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Drain legacy verification keys from the public bucket**\n\nFor a deleted pre-migration review, the queued verification key may still exist only in `review-photos`, but `deps.remove(..., 'verification')` maps exclusively to `review-verifications`. `finish_review_media_cleanup` deliberately checks both buckets, so every retry leaves the public receipt intact and the cleanup entry permanently pending. Verification cleanup needs to attempt the legacy public bucket as well as the private bucket before readback.\n\nUseful? React with 👍 / 👎.",
+          "path": "apps/web/lib/reviews/review-media-mutation.ts",
+          "line": 77,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224460247"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qkLU5",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Preserve the pending mutation kind when retrying**\n\nAfter an edit returns an uncertain result, the mutation remains pending as an `edit`, but the delete control is still enabled. If the user selects delete, `ReviewMediaMutation` correctly rejects the mismatched action while this line changes `retryKind` to `delete`; subsequent “same request” attempts can therefore never confirm the original edit, and the modal cannot be closed while it remains pending. Disable the opposite action while pending or derive the retry kind from the frozen operation rather than the newly requested action.\n\nUseful? React with 👍 / 👎.",
+          "path": "apps/web/components/reviews/ReviewEditModal.tsx",
+          "line": 389,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224460253"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qkLU8",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Allow abandoning uploads that are confirmed missing**\n\nWhen an upload deterministically fails and the subsequent existence check confirms that object is absent—for example, an oversized original file after compression fails—the operation remains pending and every retry reuses the same failing file. `ReviewEditModal` blocks editing and closing whenever that pending flag is set, so the user has no recovery path other than reloading, which can also orphan earlier uploads from the same operation. Provide a safe cancellation path that queues any successfully uploaded keys before clearing this pre-DB operation.\n\nUseful? React with 👍 / 👎.",
+          "path": "apps/web/lib/reviews/review-media-mutation.ts",
+          "line": 161,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224460259"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qkLVA",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Handle desktop review continuations before redirecting**\n\nOn a desktop viewport, loading the new `/stamp?restaurant=…&writeReview=1` post-login destination immediately redirects to `/` before the continuation effect can load the restaurant and open the composer. A repository-wide search shows that only `app/stamp/page.tsx` consumes `writeReview`, so preserving the parameter on the home URL does not resume the action; this is especially deterministic when restaurant data is still loading during the first effect pass. Process the continuation before this redirect or add an equivalent consumer to the desktop home panel.\n\nUseful? React with 👍 / 👎.",
+          "path": "apps/web/app/stamp/page.tsx",
+          "line": 204,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224460265"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qkbZ4",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Fall back for pre-migration canonical verification keys**\n\nFor reviews created by the existing composer before this migration, `verification_photo` already uses the five-segment canonical path, but the parent version uploaded every such object to `review-photos` (`ReviewModal.tsx:102-122`). This condition only falls back for two-segment keys, so both the new admin image route and OCR helper return the failed private-bucket response for those reviews, making their receipts unavailable until an external move occurs; no mover for these objects exists in the repository.\n\nUseful? React with 👍 / 👎.",
+          "path": "apps/web/lib/reviews/private-verification.ts",
+          "line": 13,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224565151"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qkbZ9",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Queue media removed through legacy admin review deletion**\n\nWhen `NEXT_PUBLIC_ADMIN_LEGACY_BROWSER_MUTATIONS=enabled`, this restrictive policy rejects the evaluations page's Storage deletion because the review still references each object; that page ignores the removal error and then directly deletes the row (`apps/web/app/admin/evaluations/page.tsx:3007-3015`), while `AdminReviewPanel` directly deletes the row without attempting Storage cleanup at all (`AdminReviewPanel.tsx:467-475`). Direct review deletes only take the serialization trigger and never enqueue their pre-image, so admin-deleted reviews permanently orphan their food and verification objects; route these deletions through the durable cleanup workflow or enqueue media from direct deletes.\n\nUseful? React with 👍 / 👎.",
+          "path": "backend/supabase/migrations/20261008192455_review_media_commit_cleanup.sql",
+          "line": 262,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224565160"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qkbaB",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Preserve OAuth continuations through privacy recovery**\n\nWhen a user follows a review or MY-page continuation and signs in with Google using an existing account whose privacy eligibility is stale, this passes the destination to `/auth/callback`, but the callback's ineligible branch redirects to `buildHomePrivacyOnboardingPath()` without that `next` value (`app/auth/callback/route.ts:178-180`). The recovery modal therefore receives `/` as its destination and closes on the home page after eligibility is restored, losing the action the new continuation flow was meant to resume; carry the already-sanitized destination through the privacy-onboarding redirect.\n\nUseful? React with 👍 / 👎.",
+          "path": "apps/web/components/auth/AuthModal.tsx",
+          "line": 367,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224565165"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qkbaF",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Enforce the server's password upper bound in the form**\n\nFor a new password signup with more than 72 characters, this client-side check now admits the password, but `validPasswordSignup` in `app/api/privacy/onboarding/route.ts:353-358` still rejects anything over 72 characters. The user therefore completes the challenge and submits the form only to receive the generic onboarding failure instead of an actionable length error; keep the relaxed limit aligned with the server's 72-character maximum.\n\nUseful? React with 👍 / 👎.",
+          "path": "apps/web/components/auth/AuthModal.tsx",
+          "line": 485,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224565172"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qknIZ",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Delete fallback receipts from the public bucket**\n\nWhen OCR compresses a pre-migration receipt that `downloadReviewVerification` fetched from `review-photos`, this binds `storage` to `review-verifications`; the later `storage.remove([oldObjectPath])` therefore checks only the private bucket after the database has been repointed. The legacy receipt remains publicly accessible and becomes orphaned, potentially while this flow reports success. Track which bucket supplied the download and delete/read back the old object from that bucket.\n\nAGENTS.md reference: [AGENTS.md:L33-L36](https://github.com/twoimo/tzudong/blob/20cd008ff3b9b2ee86c699ad8e46655d0937efc4/AGENTS.md#L33-L36)\n\nUseful? React with 👍 / 👎.",
+          "path": "apps/web/app/api/admin/ocr-receipts/process/route.ts",
+          "line": 495,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224643448"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qknIh",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Block private shadows of referenced public receipts**\n\nFor a pre-migration review whose canonical verification key still exists only in `review-photos`, the owner can upload arbitrary bytes under that same key in `review-verifications` because this insert policy checks only the owner prefix and purpose. Both the admin image route and OCR downloader try the private bucket first, so the newly uploaded object silently shadows the original receipt without any review-row mutation or moderation reset. Reject private inserts for keys already referenced by public-backed reviews, or migrate and read back those objects before preferring the private bucket.\n\nAGENTS.md reference: [AGENTS.md:L33-L37](https://github.com/twoimo/tzudong/blob/20cd008ff3b9b2ee86c699ad8e46655d0937efc4/AGENTS.md#L33-L37)\n\nUseful? React with 👍 / 👎.",
+          "path": "backend/supabase/migrations/20261008200719_review_verification_private.sql",
+          "line": 18,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224643460"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qknIn",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Let editors remove preserved historical photo values**\n\nWhen a review contains historical URL or otherwise noncanonical `food_photos`, `ReviewEditModal.getOwnedFoodPhotoPaths` filters those values out, while this expression counts them against the submitted limit and the update below unconditionally appends them again. A row with ten such values cannot be edited at all because the form requires at least one visible or new photo, making this total eleven and returning `REVIEW_INVALID`; smaller rows also cannot remove the hidden values and reach the limit prematurely. Normalize authoritative historical URLs into owned paths or expose an explicit safe removal path instead of always preserving them.\n\nUseful? React with 👍 / 👎.",
+          "path": "backend/supabase/migrations/20261008192455_review_media_commit_cleanup.sql",
+          "line": 150,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224643472"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qkyK6",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Preserve continuations through email-confirmed signup**\n\nWhen Supabase requires email confirmation, the branch at lines 555–559 returns before this new redirect runs and calls `closeAfterAuthSuccess()`, whose home handlers remove the `next` query parameter. The server-side signup also receives no continuation to embed in the confirmation link, so a user who chose password signup from a review or MY-page continuation lands at the default home route after confirming their email and permanently loses the requested action. Carry the sanitized destination through the email-confirmation flow rather than limiting it to signups that immediately return a session.\n\nUseful? React with 👍 / 👎.",
+          "path": "apps/web/components/auth/AuthModal.tsx",
+          "line": 584,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224716874"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qkyLC",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reject unsupported receipt formats before upload**\n\nThe receipt picker still advertises `accept=\"image/*\"` and `handleVerificationPhotoChange` accepts the selected file without MIME validation, while receipts at or below 5 MiB are uploaded with their original MIME type. After routing verification uploads into this bucket, selecting a GIF, HEIC, or another browser-supported image outside this four-type allowlist proceeds through the complete form and then deterministically fails at Storage. Restrict and validate the picker to these MIME types or convert every accepted receipt to an allowed format before upload.\n\nUseful? React with 👍 / 👎.",
+          "path": "backend/supabase/migrations/20261008200719_review_verification_private.sql",
+          "line": 7,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224716891"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qlDIl",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Update the nightly Storage probe for the new key policy**\n\nAfter these migrations run, the browser Storage check in `apps/web/tests/local-supabase-admin.spec.ts:160-180` uploads `${userId}/nightly-browser-cors/review.webp`; its fourth path segment is empty, so this new restrictive policy rejects the upload even though the existing permissive policy allows it. The nightly request allowlist in `apps/web/tests/nightly/nightly-test.ts:98,686-692` expects the same legacy shape, so the canonical nightly regression will now fail its Storage upload/public-read checks on every migrated stack. Change the probe and its allowlist to use a canonical `.../reviews/<review-id>/food/...` key.\n\nUseful? React with 👍 / 👎.",
+          "path": "backend/supabase/migrations/20261008200719_review_verification_private.sql",
+          "line": 29,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224831762"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qlDIo",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reject uploads that revive retired media keys**\n\nAfter cleanup deletes a verification object, `finish_review_media_cleanup` marks its tombstone complete, but this insert policy checks only the owner prefix and purpose. The owner—or a delayed Storage write—can therefore upload the exact retired key again; `pending_review_media_cleanup` excludes completed entries and the reference guard prevents reattaching the key, so the receipt remains orphaned indefinitely. The public food insert policy has the same gap and can similarly recreate a publicly readable object after review deletion; both insert paths need to reject keys whose cleanup row is retired.\n\nUseful? React with 👍 / 👎.",
+          "path": "backend/supabase/migrations/20261008200719_review_verification_private.sql",
+          "line": 18,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224831769"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qlJCY",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Normalize historical receipt URLs before proxying**\n\nFor a historical review whose `verification_photo` is a same-origin public Storage URL, `resolveReviewPhotoUrl` successfully extracts the owned key and now emits this admin API route, but the route rereads the original URL and these two raw-key parsers both reject it, returning 404 before any download. Those receipts were displayed directly before this change and remain explicitly supported by the URL resolver, so admins can no longer inspect them. This is separate from the already noted canonical-key fallback because the fresh failing input is a stored URL rather than a raw canonical key; normalize the authoritative URL to its owned object path before downloading.\n\nUseful? React with 👍 / 👎.",
+          "path": "apps/web/lib/reviews/private-verification-handler.ts",
+          "line": 28,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4224870365"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qsOjm",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Queue the replaced private receipt before dropping its reference**\n\nWhen the existing receipt already lives in `review-verifications` and `storage.remove([oldObjectPath])` returns an error before deleting it, the preceding database update has already committed in a separate request. This function then throws, but the review now points to the replacement, so later retries cannot recover the old key and the private receipt remains orphaned indefinitely. Enqueue the old key before repointing, or perform an absence readback and retain a durable retry record; this is distinct from the previously reported legacy-public-bucket case.\n\nAGENTS.md reference: [AGENTS.md:L33-L35](https://github.com/twoimo/tzudong/blob/92b4db44435464bee5ceb7dd0abcbb6765860745/AGENTS.md#L33-L35)\n\nUseful? React with 👍 / 👎.",
+          "path": "apps/web/app/api/admin/ocr-receipts/process/route.ts",
+          "line": 495,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4227830051"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qsd9C",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Regenerate compensated upload keys before retrying**\n\nWhen a new-review submission partially uploads media and another upload is definitively rejected, `ReviewSaveOperation.cleanup()` deletes the successful objects; the new restrictive delete policy retires those keys. The controller then retains the same prepared paths for an unchanged retry, so it reuploads them but this guard rejects the review insert with `REVIEW_MEDIA_RETIRED`, making the retry fail indefinitely until the user changes or reselects the draft. Clear/regenerate the operation ID and paths after successful compensation, while preserving frozen paths only for genuinely uncertain writes.\n\nUseful? React with 👍 / 👎.",
+          "path": "backend/supabase/migrations/20261008192455_review_media_commit_cleanup.sql",
+          "line": 89,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4227927581"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRRT_kwDOQGRyNc6qsd9K",
+    "isResolved": false,
+    "comments": {
+      "nodes": [
+        {
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Route guarded receipt cleanup to the private bucket**\n\nWhen an admin deletes a review created by this composer, the default guarded `review.delete` flow still records every media job with bucket `review-photos` (`20261004190259_admin_record_guarded_actions.sql:542-552`), and `resumeRecordMediaCleanup` only admits that bucket. Since this line now uploads the verification object to `review-verifications`, cleanup finds the public object absent, marks the job complete, and leaves the private receipt orphaned indefinitely. Carry each media purpose's actual bucket through the guarded queue, removal, and absence readback.\n\nAGENTS.md reference: [AGENTS.md:L35-L35](https://github.com/twoimo/tzudong/blob/4b84a1b7e98e50e530d28231c1875b2e2abf35aa/AGENTS.md#L35-L35)\n\nUseful? React with 👍 / 👎.",
+          "path": "apps/web/components/reviews/ReviewModal.tsx",
+          "line": 120,
+          "url": "https://github.com/twoimo/tzudong/pull/3147#discussion_r4227927591"
+        }
+      ]
+    }
+  }
+]

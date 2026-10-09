@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "task": "PR 3147 auth continuation UI/API follow-up",
+  "baseline": "6d12ce81e6f6e9c8b2e3a321cfc6d5f6eca93391",
+  "observedHeadAfterParallelWork": "08ef6d5928edad2bafe38bbd0502519e2b833d27",
+  "baselineIsAncestor": true,
+  "reviewIds": [
+    "PRRT_kwDOQGRyNc6qkLVA",
+    "PRRT_kwDOQGRyNc6qkbaB",
+    "PRRT_kwDOQGRyNc6qkbaF",
+    "PRRT_kwDOQGRyNc6qkyK6"
+  ],
+  "outcomes": {
+    "kLVA": "Desktop stamp navigation is held while the selected restaurant review continuation is pending or active.",
+    "kbaB": "A validated non-admin next path survives stale OAuth privacy recovery.",
+    "kbaF": "New-password inputs and validation expose and enforce the existing 8-to-72-character server contract.",
+    "kyK6": "Password signup sends a server-validated continuation in the Supabase confirmation redirect and emits the SSR PKCE verifier only when email confirmation is required."
+  },
+  "verification": {
+    "runtime": {
+      "node": "24.21.0",
+      "bun": "1.4.0",
+      "supabaseJs": "2.117.2",
+      "authJs": "2.117.2"
+    },
+    "focusedUnit": {
+      "files": 4,
+      "passed": 74,
+      "failed": 0,
+      "expectations": 693
+    },
+    "finalStampUnit": {
+      "files": 1,
+      "passed": 6,
+      "failed": 0,
+      "expectations": 30
+    },
+    "focusedEslint": {
+      "files": 9,
+      "errors": 0,
+      "warnings": 0
+    },
+    "diffCheck": "passed"
+  },
+  "sessionMetadata": {
+    "model": null,
+    "reasoningEffort": null,
+    "note": "No serving model or effort attestation was exposed to this session."
+  },
+  "limits": [
+    "No commit or push.",
+    "No real signup, OAuth, email, production request, database write, or device action.",
+    "Full unit, build, parity, browser, and SDK validation remain with the parent stable-source run."
+  ]
+}

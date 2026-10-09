@@ -1,0 +1,22 @@
+{
+  "sources": [
+    {
+      "source": "20261008192455_review_media_commit_cleanup.sql",
+      "sha256": "d0ce077fc3869f89b451a84229f12ed0df3b4452ce91186eac66f50982a4accd",
+      "bytes": 16654
+    },
+    {
+      "source": "20261008200719_review_verification_private.sql",
+      "sha256": "c8d34e3ec2f4d8e06e02c5cb0b4dc91b9bc16cd7aa01c4ab29907db86137440d",
+      "bytes": 3294
+    },
+    {
+      "source": "20261008201635_review_media_catalog_integration.sql",
+      "sha256": "2ec53a7140ee6a870ce40bc6ccab678b99481bf529b0742973f8322aa57c9ea1",
+      "bytes": 42589
+    }
+  ],
+  "sha256": "16f13dba62de26f39e75b9e5da57023df9485821f446339efe6a862389eeb820",
+  "transform": "exact top-level transaction envelope only",
+  "operatingApplied": false
+}

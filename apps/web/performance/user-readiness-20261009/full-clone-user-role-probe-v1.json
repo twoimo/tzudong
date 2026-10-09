@@ -1,0 +1,18 @@
+{
+  "exit": 0,
+  "status": "passed",
+  "fixedFailure": "",
+  "derivedResults": [
+    {
+      "ownerRPCsPassed": 6,
+      "privateSchemaDenied": true
+    },
+    {
+      "anonRPCDenied": true,
+      "privateSchemaDenied": true
+    }
+  ],
+  "serverVersion": "17.6",
+  "roleProbeRolledBack": true,
+  "operatingWrites": false
+}

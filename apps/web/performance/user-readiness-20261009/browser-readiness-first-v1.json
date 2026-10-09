@@ -1,0 +1,105 @@
+{
+  "startedAtUtc": "2026-10-08T20:24:15.207Z",
+  "distDir": ".next-user-readiness-v1",
+  "node": "v24.21.0",
+  "productionBuild": true,
+  "data": "synthetic REST735 / anonymous Auth401",
+  "fieldAdmission": 0,
+  "actualAccountCreated": false,
+  "actualReviewWritten": false,
+  "physicalDevice": false,
+  "fixtureSha256": "b6b4d657623586610ca40938092f159676ffeb052039cdc2d5a9bb29f6832008",
+  "cases": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "case": "guest Stamp review opens login with selected restaurant continuation",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "case": "OAuth callback preserves explicit review continuation",
+      "passed": true,
+      "providerNavigationIntercepted": true
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "case": "password longer than 12 characters reaches the bounded onboarding path",
+      "passed": true,
+      "onboardingInterceptedAndDeclined": true
+    },
+    {
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "case": "guest Stamp review opens login with selected restaurant continuation",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "case": "OAuth callback preserves explicit review continuation",
+      "passed": true,
+      "providerNavigationIntercepted": true
+    },
+    {
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "case": "password longer than 12 characters reaches the bounded onboarding path",
+      "passed": true,
+      "onboardingInterceptedAndDeclined": true
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "case": "guest Stamp review opens login with selected restaurant continuation",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "case": "OAuth callback preserves explicit review continuation",
+      "passed": true,
+      "providerNavigationIntercepted": true
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "case": "password longer than 12 characters reaches the bounded onboarding path",
+      "passed": true,
+      "onboardingInterceptedAndDeclined": true
+    },
+    {
+      "case": "compiled private verification route rejects anonymous request",
+      "passed": true,
+      "status": 401
+    }
+  ],
+  "errors": {
+    "page": 0,
+    "console": 10,
+    "unsupportedFixture": 2
+  },
+  "passed": false,
+  "browserVersion": "154.0.8037.98",
+  "endedAtUtc": "2026-10-08T20:24:27.523Z"
+}
