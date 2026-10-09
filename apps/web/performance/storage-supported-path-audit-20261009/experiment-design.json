@@ -1,0 +1,144 @@
+{
+  "schema": "supported-storage-single-delete-experiment-design/v1",
+  "status": "prepared_not_executed",
+  "sourceHead": "b085e1d36ad8a8bc5626738b9921b194f50324a1",
+  "observedAtUtc": "2026-10-08T22:50:02.424881+00:00",
+  "versions": {
+    "pin": "v1.33.0",
+    "publisherComparison": "v1.80.1",
+    "installedStorageJs": "2.117.2",
+    "tusS3StorePinned": "2.0.0",
+    "tusS3StoreComparison": "2.0.7"
+  },
+  "conclusion": "Supported single REST route bypasses bulk per-key omission for primary object only; full TUS/info/multipart physical admission remains unresolved.",
+  "operatingCalls": 0,
+  "paidCalls": 0,
+  "runtimeExperimentsPerformed": 0,
+  "providerPatches": 0,
+  "projectSourceEdits": 0,
+  "protectedContainersChanged": 0,
+  "isolation": {
+    "newUniqueOwnedContainersOnly": true,
+    "rootV3ContainerAndDbReuse": false,
+    "privateInternalNetwork": true,
+    "publishPorts": 0,
+    "images": "existing exact pinned image digests; no implicit upgrade/pull",
+    "data": "synthetic rows and bytes only; source and backend evidence mapped by SHA",
+    "cleanup": "only verified task-owned experiment resources; retain uncertain outcomes"
+  },
+  "cases": [
+    {
+      "id": "rest_route_admission",
+      "request": "Authenticated DELETE /object/{bucket}/{escaped logical path}, no prefixes body",
+      "verify": [
+        "actual pinned executable route accepts method/path/auth",
+        "200 schema matches spec",
+        "reject foreign path and role without exposing keys"
+      ]
+    },
+    {
+      "id": "sdk_one_path_bulk",
+      "request": "installed storage-js remove([path])",
+      "verify": [
+        "capture outgoing method/path/body with sanitized shape only",
+        "confirm bulk backend request rather than single DeleteObject"
+      ]
+    },
+    {
+      "id": "standard_success",
+      "verify": [
+        "seed actual metadata and physical versioned original",
+        "claim cleanup through original fence",
+        "single DELETE removes original and metadata",
+        "enumerate exact backend key, .info and incomplete uploads",
+        "readback/audit correspond to physical result"
+      ]
+    },
+    {
+      "id": "single_s3_rejection",
+      "fault": "403/5xx rejection of physical DeleteObject",
+      "verify": [
+        "HTTP failure",
+        "metadata transaction rollback",
+        "original bytes preserved",
+        "cleanup remains pending/uncertain without blind resend"
+      ]
+    },
+    {
+      "id": "bulk_200_errors",
+      "fault": "DeleteObjects 200 Errors + Deleted; keyless Error and mixed chunks",
+      "verify": [
+        "reproduce generic path omission without managed patch",
+        "no physical-success admission from metadata absence"
+      ]
+    },
+    {
+      "id": "completed_tus_single_delete",
+      "verify": [
+        "actual TUS upload, saved returned Location",
+        "single REST deletes original but measure .info residue",
+        "do not infer absence from storage.objects.list",
+        "Attempting termination of the completed upload must respect the publisher disabled-termination policy; no bypass."
+      ]
+    },
+    {
+      "id": "inflight_tus_single_delete",
+      "verify": [
+        "start resumable/multipart before cleanup claim",
+        "single REST result alone must not count upload parts/.info absent",
+        "original no-recreation fence remains active"
+      ]
+    },
+    {
+      "id": "tus_termination_success",
+      "verify": [
+        "use actual saved TUS Location, never constructed guesses",
+        "rolled-back permission probe accepted",
+        "multipart abort plus original/.info delete measured",
+        "metadata behavior separately verified",
+        "Only unfinished uploads: completed uploads are excluded by server policy."
+      ]
+    },
+    {
+      "id": "tus_200_partial_errors",
+      "fault": "per-key original or .info failure during tus store DeleteObjects",
+      "verify": [
+        "physical survivor despite possible fulfilled termination",
+        "unknown/pending retained",
+        "no false full admission"
+      ]
+    },
+    {
+      "id": "original_fences",
+      "verify": [
+        "forged version=1 TUS GUC INSERT/UPDATE cannot commit",
+        "late PATCH/upsert/copy/recreate after claim rejected",
+        "existing independent targets remain unchanged"
+      ]
+    },
+    {
+      "id": "lost_response_and_readback",
+      "verify": [
+        "no blind delete resend",
+        "original metadata and physical key readbacks separated",
+        "a sidecar/multipart residue blocks full completion"
+      ]
+    }
+  ],
+  "requiredArtifacts": [
+    "source/interface hashes",
+    "actual route request shape without credential/path logging",
+    "raw sanitized statuses/counts/bytes",
+    "metadata snapshots/transaction result",
+    "exact-backend original/.info/multipart counts",
+    "fence regression results",
+    "failed cases retained",
+    "owned-resource cleanup receipt"
+  ],
+  "limits": [
+    "No hosted provider availability or actual installed route verification yet.",
+    "Standard-only admission cannot be inferred for arbitrary historical objects.",
+    "General managed physical deletion remains blocked until full supported cleanup/error contract is proven."
+  ],
+  "additionalSourceBoundary": "Both versions configure disableTerminationForFinishedUploads=true; completed TUS termination is not an available cleanup workaround."
+}

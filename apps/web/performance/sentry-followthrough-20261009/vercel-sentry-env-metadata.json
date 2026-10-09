@@ -1,0 +1,20 @@
+{
+  "command": [
+    "vercel",
+    "env",
+    "ls",
+    "--project",
+    "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "--scope",
+    "twoimos-projects",
+    "--format",
+    "json",
+    "--non-interactive"
+  ],
+  "exitCode": 0,
+  "totalVariableCount": 36,
+  "sentryMetadata": [],
+  "valuesReadOrPersisted": false,
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "team": "twoimos-projects"
+}

@@ -524,3 +524,25 @@
 증빙: `apps/web/performance/current-schema-record-20261009/`, `apps/web/performance/cms-followthrough-20261009/`.
 
 이번 후속 UI의 Next16.3.8 production build/50개 페이지/route CSS boundary도 통과했다. 관련 build가 추가한 tsconfig include만 검사 후 제거하여 원래 bytes를 복원했다. 운영 반영·배포는 수행하지 않았다.
+
+## 후속 실행 — 공개 화면·실호출·지원 경로 점검
+
+- Windows npm의 authored runner 변수명 lint 오류 2개를 수정했다. 원본 script/map을 archive로 보존했고, custom Next 생성물만 root의 bounded distDir 계약에 따라 제외했다. 실제 authored rule 유지 검사를 통과했다. `d8942781ad76727176efd87f97ce9b578b522bc7`로 PR에 반영했고 현재 CI snapshot은 pass13/fail0/pending4/skipping4다. 이후 CI의 최종 상태와 새 source SHA는 다시 확인한다.
+- 공개22개 route를 desktop/tablet/mobile에서 조사해 초기66+stable15 캡처를 보존했다. 익명 로그인 상태·랭킹 갱신 실패·도장 조회 실패·reduced-motion의 확정된 source 결함을 수정했고 읽기 흐름10개와 관련57개 검사가 통과했다. 공유 fallback의 runtime 오류 후속8개와25개 검사도 통과했지만 HTTP404/실패 상태 의미 보존은 별도로 재검증 중이며 완료로 세지 않는다.
+- 도장 실패 영역은 같은 조건의 tablet/mobile에서 256→160px(-96px, -37.5%)로 줄였고 넘침0·재조회 행동을 유지했다. 고정된 두 viewport의 렌더 비교이며 속도/성능·실기기·전체 접근성 개선율로 확대하지 않는다.
+- 현재 OCR helper/request builder의 실제 Gemini3.6 기본 모델 호출1회가 성공했다. 합성 영수증1건의 모델·상호·날짜·시간·총액·품목·합계 일치, 3,519.39ms, 입력1,495/출력128/thinking265/총1,888tokens. n=1로 일반 정확도·95%CI·성능 개선·금액 절감을 주장하지 않는다. 기존 10월2~3일 storyboard/OCR 실호출 기록도 회수했으며 현재 전체 worker/UI 성공으로 승계하지 않는다.
+- AI Studio의 올바른 project/account를 read-only로 확인했다: paid Tier1, prepay10,000원, auto-reload OFF, GCP compact표시 ₩9.47만. 현재 10월1~8일 Gemini 비용396.14/화면절감396.14/총0원은 계정 집계이고 신규 검사 귀속은 미확정이다. 추가 충전/키 교체 없음. Vercel production에 funded sensitive 변수의 존재만 확인했다. 원본 tkt wrapper target은 사라져 authority CLI 재조회는 미완료이며 기존 vault copy를 읽기만 했다.
+- 롯데0488 삭제의 현재 화면을 재확인했다. 유효한 replacement를 요구하고 기존 alternative는 선택 불가다. 새 카드/계정폐쇄/funding unlink/추가결제 없이 취소했고 삭제 미완료를 유지한다.
+- Supported 단일 Storage DELETE는 primary object 실패 전달을 개선할 수 있지만 TUS .info·multipart와 completed upload를 모두 정리하지 않는다. 현재 전체 physical cleanup의 대안으로 채택하지 않았다. upstream 지원/실제 managed contract가 필요하고 admission gate는 유지한다.
+- managed env-vars의 test 로딩 안내 차이를 공식 Next 문서 및 installed16.3.8 synthetic3조건으로 확인해 정정안을 준비했다. managed cache 직접 수정/새 권한 부여/프로젝트 pin 자동 갱신 없음. supported 정본 반영은 미완료다.
+- 현재 production SHA는 f31904e6dca2d9b608259cf150c5d0894db0928e로 재확인했다. 보호 승격·운영 SQL 적용·정책을 유지하는 rollback·배포·실제 Auth/개인 데이터/지도/Sentry/전체 롱폼·독립 품질은 남는다.
+
+증빙: `apps/web/performance/public-cms-followthrough-20261009/`, `ci-followthrough-20261009/`, `funded-gemini-followthrough-20261009/`, `storage-supported-path-audit-20261009/`. 최종 완료 체크와 전체 목표는 열린 상태다.
+
+Sentry 연결 후속: 정확한 Vercel 전체 환경36개에서 Sentry 이름0개, 설치 SDK11.4.0·관리자 조회/권한/산이타이저 source는 확인했다. 현재 account/org/region은 미검증이며, root가 기존 org 또는 신규 EU/US의 material 선택 질문을 pending으로 올렸다. 신규 org·token·event 전송은 하지 않았다. `apps/web/performance/sentry-followthrough-20261009/readiness.json`에 실제 event ID/group readback 계획과 최소 권한을 준비했다.
+
+CPU 실제 후속: frozen source/동일 호스트/동일 local workload의 7쌍에서 Cold CPU평균3,648.63→3,268.92ms(-379.71ms, -10.41%, bootstrap95%CI8.46~12.59), Restart477.08→419.04ms(-58.04ms, -12.17%, CI7.34~17.06)를 측정했다. 프레임48·평가·prompt/trace·보호3행의 28관측 동등성을 확인했다. 기존 +48.36% CPU회귀를 숨기거나 이 결과로 전체 회귀가 해소됐다고 간주하지 않는다. 실제 공급자/운영 개선은 미입증이고 RSS 개선은 불명확하다. Bash 최신 builtin과 Mac system Bash fallback도 별도로 검증했다.
+
+공개 후속 최종 source 검사: 관련65개/8파일, 전체 lint, Next16.3.8 production build/50pages/route CSS가 모두 통과했다. 별도 distDir를 사용하고 compiler의 own include2개만 검사 후 제거해 원래 tsconfig bytes를 복원했다. 공유 transport를404/503/307로 구분하며 provider diagnostics는 전달하지 않는다. 실제 운영 redirect/인증/지도/기기·배포는 미완료다.
+
+운영 준비 fresh 확인: ledger80/latest20261008124858, 맛집1659, 자동검수OFF/version1/batch50/daily50, runs/items/active items 모두0, guarded RPC 및 준비·병행SQL 미적용을 read-only로 확인했다. 현재 G037_WRITE_FREEZE=active 선언과 data publication 변수 부재도 확인했으며 기존 제한을 변경하지 않았다. source/앱/DDL compatibility와 policy-safe rollback 감사는 별도 증빙으로 이어간다. 공개 HTTP transport source는23eb6750, exact raw 보완은8ce4d110에 commit/push됐다. 실제 운영 적용·배포는 아직 아니다.
