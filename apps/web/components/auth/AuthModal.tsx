@@ -631,7 +631,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
   const privacyOnboardingContent = (
     <div className="space-y-4" data-testid="privacy-onboarding-modal">
       <p className="rounded-lg border border-primary/25 bg-primary/5 p-3 text-sm leading-6" role="status">
-        Google 로그인은 완료되었습니다. 서비스 이용에 필요한 항목만 확인해주세요.
+        Google 로그인 후 서비스 이용에 필요한 항목을 확인해주세요.
       </p>
       <OnboardingConsentFields
         ageBand={ageBand}

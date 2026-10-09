@@ -13,6 +13,10 @@ const eslintConfig = [
             'node_modules/**',
             '.next/**',
             ...generatedNextDistDirs,
+            // Controlled HTTP-status fixture rebuilds; authored fixture code stays linted.
+            'performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/.next/**',
+            'performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/.next-dev/**',
+            'performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/.next-production/**',
             '.next-stale-*',
             '.next-stale-*/**',
             '**/.next-stale-*',

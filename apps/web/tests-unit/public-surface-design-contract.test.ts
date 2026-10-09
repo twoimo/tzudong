@@ -45,7 +45,6 @@ const PAGE_MATRIX = [
   'app/admin/banners/page.tsx',
   'app/admin/submissions/page.tsx',
   'app/admin/privacy-incidents/page.tsx',
-  'app/s/[code]/page.tsx',
 ] as const;
 
 const APP_RUNTIME_LAYOUT_FAMILIES = [
@@ -278,10 +277,14 @@ function walkCssUnder(root: string): string[] {
 }
 
 describe('public surface design contract', () => {
-  test('page inventory is exactly the 27-row matrix', () => {
+  test('page and share transport inventory preserves all 27 surfaces', () => {
     const actual = walkFiles(appDir, (name) => name === 'page.tsx');
     expect(actual).toEqual([...PAGE_MATRIX].sort());
-    expect(actual).toHaveLength(27);
+    const transport = 'app/s/[code]/route.ts';
+    expect([...actual, transport]).toHaveLength(27);
+    expect(existsSync(join(appRoot, transport))).toBe(true);
+    expect(readApp(transport)).toContain('export async function GET(');
+    expect(existsSync(join(appRoot, 'app/s/[code]/page.tsx'))).toBe(false);
   });
 
   test('loading files use the three-way taxonomy and do not treat null loaders as missing', () => {
@@ -333,7 +336,9 @@ describe('public surface design contract', () => {
     expect(readApp('app/data-deletion/page.tsx')).not.toContain('AppRuntimeLayout');
     expect(existsSync(join(appRoot, 'app/privacy/layout.tsx'))).toBe(false);
     expect(existsSync(join(appRoot, 'app/data-deletion/layout.tsx'))).toBe(false);
-    expect(readApp('app/s/[code]/page.tsx')).toContain('notFound()');
+    expect(readApp('app/s/[code]/route.ts')).toContain('resolveShortUrlRead(');
+    expect(readApp('app/s/[code]/route.ts')).toContain('createShortUrlResponse');
+    expect(readApp('app/s/[code]/route.ts')).not.toContain('notFound()');
     expect(readApp('app/s/layout.tsx')).toContain('AppRuntimeLayout');
   });
 
@@ -399,7 +404,9 @@ describe('public surface design contract', () => {
     expect(notFoundSource).toContain('text-muted-foreground');
     expect(notFoundSource).not.toContain('CenteredErrorState');
     expect(readApp('app/error.tsx')).toContain('CenteredErrorState');
-    expect(readApp('app/s/[code]/page.tsx')).toContain('notFound()');
+    expect(readApp('app/s/[code]/route.ts')).toContain('resolveShortUrlRead(');
+    expect(readApp('app/s/[code]/route.ts')).toContain('createShortUrlResponse');
+    expect(readApp('app/s/[code]/route.ts')).not.toContain('notFound()');
     expect(readApp('app/layout.tsx')).toContain('import "./globals.css"');
     expect(readApp('app/layout.tsx')).not.toContain('app-globals.css');
     expect(readApp('app/s/layout.tsx')).toContain('AppRuntimeLayout');

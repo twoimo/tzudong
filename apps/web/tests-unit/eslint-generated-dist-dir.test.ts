@@ -16,6 +16,11 @@ test('excludes generated custom distDir files while enforcing authored runner ru
         expect(await eslint.isPathIgnored(resolve(webRoot, authoredPath))).toBe(false);
         const [result] = await eslint.lintText('const module = {};', { filePath: authoredPath });
         expect(result.messages.some(message => message.ruleId === '@next/next/no-assign-module-variable')).toBe(true);
+        const fixtureRoot = 'performance/public-cms-followthrough-20261009/share-http-status-followup/fixture';
+        for (const directory of ['.next', '.next-dev', '.next-production']) {
+            expect(await eslint.isPathIgnored(resolve(webRoot, fixtureRoot, directory, 'generated.js'))).toBe(true);
+        }
+        expect(await eslint.isPathIgnored(resolve(webRoot, fixtureRoot, 'app/not-found.jsx'))).toBe(false);
     } finally {
         rmSync(generatedRoot, { recursive: true });
     }

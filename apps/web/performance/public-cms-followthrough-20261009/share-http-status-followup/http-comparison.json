@@ -1,0 +1,231 @@
+{
+  "scope": "owned dev/production fixture plus actual checkout dev; controlled read responses",
+  "cases": [
+    {
+      "environment": "checkout-development",
+      "path": "/s/invalid-code",
+      "status": 404,
+      "location": null,
+      "robotsHeader": "noindex, nofollow",
+      "pageErrors": [],
+      "shareState": "not-found",
+      "robotsMeta": "noindex,nofollow",
+      "screenshot": "checkout-development-_s_invalid-code.png"
+    },
+    {
+      "environment": "checkout-development",
+      "path": "/s/Zz00Qq",
+      "status": 404,
+      "location": null,
+      "robotsHeader": "noindex, nofollow",
+      "pageErrors": [],
+      "shareState": "not-found",
+      "robotsMeta": "noindex,nofollow",
+      "screenshot": "checkout-development-_s_Zz00Qq.png"
+    },
+    {
+      "environment": "fixture-development",
+      "path": "/legacy/invalid-code",
+      "status": 404,
+      "location": null,
+      "robotsHeader": null,
+      "pageErrors": [],
+      "shareState": null,
+      "robotsMeta": "noindex",
+      "screenshot": "fixture-development-_legacy_invalid-code.png"
+    },
+    {
+      "environment": "fixture-development",
+      "path": "/legacy/FAIL00",
+      "status": 404,
+      "location": null,
+      "robotsHeader": null,
+      "pageErrors": [],
+      "shareState": null,
+      "robotsMeta": "noindex",
+      "screenshot": "fixture-development-_legacy_FAIL00.png"
+    },
+    {
+      "environment": "fixture-development",
+      "path": "/notice/invalid-code",
+      "status": 200,
+      "location": null,
+      "robotsHeader": null,
+      "pageErrors": [],
+      "shareState": "not-found",
+      "robotsMeta": "noindex",
+      "screenshot": "fixture-development-_notice_invalid-code.png"
+    },
+    {
+      "environment": "fixture-development",
+      "path": "/notice/MISSNG",
+      "status": 200,
+      "location": null,
+      "robotsHeader": null,
+      "pageErrors": [],
+      "shareState": "not-found",
+      "robotsMeta": "noindex",
+      "screenshot": "fixture-development-_notice_MISSNG.png"
+    },
+    {
+      "environment": "fixture-development",
+      "path": "/notice/FAIL00",
+      "status": 200,
+      "location": null,
+      "robotsHeader": null,
+      "pageErrors": [],
+      "shareState": "unavailable",
+      "robotsMeta": "noindex",
+      "screenshot": "fixture-development-_notice_FAIL00.png"
+    },
+    {
+      "environment": "fixture-development",
+      "path": "/s/invalid-code",
+      "status": 404,
+      "location": null,
+      "robotsHeader": "noindex, nofollow",
+      "pageErrors": [],
+      "shareState": "not-found",
+      "robotsMeta": "noindex,nofollow",
+      "screenshot": "fixture-development-_s_invalid-code.png"
+    },
+    {
+      "environment": "fixture-development",
+      "path": "/s/MISSNG",
+      "status": 404,
+      "location": null,
+      "robotsHeader": "noindex, nofollow",
+      "pageErrors": [],
+      "shareState": "not-found",
+      "robotsMeta": "noindex,nofollow",
+      "screenshot": "fixture-development-_s_MISSNG.png"
+    },
+    {
+      "environment": "fixture-development",
+      "path": "/s/FAIL00",
+      "status": 503,
+      "location": null,
+      "robotsHeader": "noindex, nofollow",
+      "pageErrors": [],
+      "shareState": "unavailable",
+      "robotsMeta": "noindex,nofollow",
+      "screenshot": "fixture-development-_s_FAIL00.png"
+    },
+    {
+      "environment": "fixture-development",
+      "path": "/s/VALID1",
+      "status": 307,
+      "location": "/?review=00000000-0000-4000-8000-000000000009",
+      "robotsHeader": "noindex, nofollow"
+    },
+    {
+      "environment": "fixture-development",
+      "path": "/s/BADURL",
+      "status": 307,
+      "location": "/",
+      "robotsHeader": "noindex, nofollow"
+    },
+    {
+      "environment": "fixture-production",
+      "path": "/legacy/invalid-code",
+      "status": 404,
+      "location": null,
+      "robotsHeader": null,
+      "pageErrors": [],
+      "shareState": null,
+      "robotsMeta": "noindex",
+      "screenshot": "fixture-production-_legacy_invalid-code.png"
+    },
+    {
+      "environment": "fixture-production",
+      "path": "/legacy/FAIL00",
+      "status": 404,
+      "location": null,
+      "robotsHeader": null,
+      "pageErrors": [],
+      "shareState": null,
+      "robotsMeta": "noindex",
+      "screenshot": "fixture-production-_legacy_FAIL00.png"
+    },
+    {
+      "environment": "fixture-production",
+      "path": "/notice/invalid-code",
+      "status": 200,
+      "location": null,
+      "robotsHeader": null,
+      "pageErrors": [],
+      "shareState": "not-found",
+      "robotsMeta": "noindex",
+      "screenshot": "fixture-production-_notice_invalid-code.png"
+    },
+    {
+      "environment": "fixture-production",
+      "path": "/notice/MISSNG",
+      "status": 200,
+      "location": null,
+      "robotsHeader": null,
+      "pageErrors": [],
+      "shareState": "not-found",
+      "robotsMeta": "noindex",
+      "screenshot": "fixture-production-_notice_MISSNG.png"
+    },
+    {
+      "environment": "fixture-production",
+      "path": "/notice/FAIL00",
+      "status": 200,
+      "location": null,
+      "robotsHeader": null,
+      "pageErrors": [],
+      "shareState": "unavailable",
+      "robotsMeta": "noindex",
+      "screenshot": "fixture-production-_notice_FAIL00.png"
+    },
+    {
+      "environment": "fixture-production",
+      "path": "/s/invalid-code",
+      "status": 404,
+      "location": null,
+      "robotsHeader": "noindex, nofollow",
+      "pageErrors": [],
+      "shareState": "not-found",
+      "robotsMeta": "noindex,nofollow",
+      "screenshot": "fixture-production-_s_invalid-code.png"
+    },
+    {
+      "environment": "fixture-production",
+      "path": "/s/MISSNG",
+      "status": 404,
+      "location": null,
+      "robotsHeader": "noindex, nofollow",
+      "pageErrors": [],
+      "shareState": "not-found",
+      "robotsMeta": "noindex,nofollow",
+      "screenshot": "fixture-production-_s_MISSNG.png"
+    },
+    {
+      "environment": "fixture-production",
+      "path": "/s/FAIL00",
+      "status": 503,
+      "location": null,
+      "robotsHeader": "noindex, nofollow",
+      "pageErrors": [],
+      "shareState": "unavailable",
+      "robotsMeta": "noindex,nofollow",
+      "screenshot": "fixture-production-_s_FAIL00.png"
+    },
+    {
+      "environment": "fixture-production",
+      "path": "/s/VALID1",
+      "status": 307,
+      "location": "/?review=00000000-0000-4000-8000-000000000009",
+      "robotsHeader": "noindex, nofollow"
+    },
+    {
+      "environment": "fixture-production",
+      "path": "/s/BADURL",
+      "status": 307,
+      "location": "/",
+      "robotsHeader": "noindex, nofollow"
+    }
+  ]
+}

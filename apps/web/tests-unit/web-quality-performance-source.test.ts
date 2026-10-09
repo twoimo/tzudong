@@ -3180,7 +3180,7 @@ describe("web quality performance source contracts", () => {
     const authCallbackSource = source("app/auth/callback/route.ts");
     const authRedirectSource = source("lib/auth/auth-redirect.ts");
     const shortenSource = source("app/api/shorten/route.ts");
-    const shortRedirectSource = source("app/s/[code]/page.tsx");
+    const shortRedirectSource = source("app/s/[code]/route.ts");
     const publicEligibilitySource = source("lib/auth/public-eligibility-session.ts");
 
     expect(proxySource).not.toContain("'/api/naver-'");
@@ -3230,7 +3230,13 @@ describe("web quality performance source contracts", () => {
     expect(shortRedirectSource).toContain(
       "isValidReviewId(target.searchParams.get",
     );
-    expect(shortRedirectSource).toContain("redirect('/');");
+    expect(shortRedirectSource).toContain(
+      "resolveShortUrlRead(lookup.data, lookup.error, isSafeRedirectTarget)",
+    );
+    expect(shortRedirectSource).toContain("createShortUrlResponse(result, code)");
+    expect(source("lib/share/short-url-read.ts")).toContain(
+      "target: isSafeTarget(trimmed) ? trimmed : '/'",
+    );
     expect(authCallbackSource).toContain("function getTrustedRedirectOrigin");
     expect(authCallbackSource).toContain("getSafeAuthNextPath(searchParams.get('next'))");
     expect(authRedirectSource).toContain("export function getSafeAuthNextPath");
