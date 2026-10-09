@@ -289,7 +289,12 @@ BEGIN
         'assertionsPreserved',(SELECT jsonb_agg(CASE WHEN p.oid=v_known THEN to_jsonb(p)-'prosrc' ELSE to_jsonb(p) END ORDER BY p.oid) FROM pg_proc p
             WHERE p.pronamespace='privacy_retention'::regnamespace) IS NOT DISTINCT FROM v_assertions,
         'functionMetadataPreserved',(SELECT jsonb_agg(to_jsonb(p)-'proowner'-'proacl'-'prosrc' ORDER BY p.oid) FROM pg_proc p
-            JOIN pg_temp.review_media_expected e ON p.oid=to_regprocedure(e.signature)) IS NOT DISTINCT FROM v_functions
+            JOIN pg_temp.review_media_expected e ON p.oid=to_regprocedure(e.signature)) IS NOT DISTINCT FROM v_functions,
+        'changedMetadataFields',(SELECT jsonb_agg(DISTINCT old_field.key ORDER BY old_field.key)
+          FROM jsonb_array_elements(v_functions) AS old_function(value)
+          CROSS JOIN LATERAL jsonb_each(old_function.value) AS old_field(key,value)
+          JOIN pg_proc p ON p.oid=(old_function.value->>'oid')::oid
+          WHERE old_field.value IS DISTINCT FROM (to_jsonb(p)-'proowner'-'proacl'-'prosrc')->old_field.key)
       )::text;
   END IF;
   PERFORM pg_temp.review_media_g014_assert();
