@@ -214,7 +214,7 @@ export function atomicMigrationSql(plan, migration) {
   const terminalGuard = block(`${capture(terminal, 'observed')}
  IF observed IS DISTINCT FROM ${expectedTerminal} THEN RAISE EXCEPTION 'MIGRATION_TERMINAL_READBACK_FAILED'; END IF;`);
   const ledgerGuard = block(`IF NOT ${ledgerEqual(plan)} THEN RAISE EXCEPTION 'MIGRATION_LEDGER_READBACK_FAILED'; END IF;`);
-  return `SET LOCAL standard_conforming_strings=on; SET LOCAL lock_timeout='2s'; SET LOCAL statement_timeout='120s';\n${admission}\nLOCK TABLE supabase_migrations.schema_migrations IN EXCLUSIVE MODE;\n${contractGuard}\n${priorGuard}\n${plan.execution}\n${terminalGuard}\nINSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES(${quote(plan.version)},${quote(plan.name)},ARRAY(SELECT jsonb_array_elements_text(${quote(JSON.stringify(plan.originalVector))}::jsonb)));\n${ledgerGuard}\n${terminal};\n`;
+  return `SET LOCAL standard_conforming_strings=on; SET LOCAL lock_timeout='2s'; SET LOCAL statement_timeout='120s';\n${admission}\nLOCK TABLE supabase_migrations.schema_migrations IN EXCLUSIVE MODE;\n${contractGuard}\n${priorGuard}\n${plan.execution}\nINSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES(${quote(plan.version)},${quote(plan.name)},ARRAY(SELECT jsonb_array_elements_text(${quote(JSON.stringify(plan.originalVector))}::jsonb)));\n${ledgerGuard}\n${terminalGuard}\n${terminal};\n`;
 }
 function readbackExpression(query) {
   return `(SELECT CASE WHEN jsonb_typeof(value)='string' THEN (value#>>'{}')::jsonb ELSE value END FROM jsonb_each((SELECT to_jsonb(r) FROM (${query}) r)))`;

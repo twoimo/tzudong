@@ -237,7 +237,7 @@ test('dedicated ready manifest pins the post-five chain and exact forward source
   expect(baseRecord.manifest.operatingTransition).toEqual({ beforeFive: 80, afterFive: 85, afterForward: 86 });
   expect(baseRecord.manifest.fiveStage).toMatchObject({
     entries: 5,
-    sha256: '0388c89f64de3a0910af6646647856868e685bae1ae8dd375a46bdf70bb38b8d',
+    sha256: '3674b05d5be0091e1123a1c76709e0a53e9c7dbed3fc468c4fafd9b1a22b985d',
     sourceRoot: '15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3',
   });
   expect(baseRecord.fiveManifest.migrations.map((migration: any) => migration.id)).toEqual([
@@ -268,7 +268,7 @@ test('dedicated ready manifest pins the post-five chain and exact forward source
     },
     {
       path: 'apps/web/scripts/supabase-migration-transaction.mjs',
-      sha256: '9268c882d1cb128d798f65faeb87ac3b1cc1fc3d52e843f8695b0c2ab3aa5b53',
+      sha256: 'c67bdff4c63b1bf1b4a157863b3eb5253b5973a8fb54b7fd49351270787bed26',
     },
     {
       path: 'apps/web/scripts/vercel-rollback-readback.mjs',
@@ -370,7 +370,12 @@ test('fresh admission and compiled plan bind exact 85 preimage, shared lock and 
   expect(plan.migration.expectedPriorState.query).toContain("'ledgerCount',ledger_all.row_count");
   expect(plan.migration.expectedPriorState.query).toContain("'prefixCount',ledger_prefix.row_count");
   expect(plan.migration.expectedPriorState.query).toContain("'targetState'");
-  expect(statementSpans(plan.sql).some(span => /^(?:BEGIN|COMMIT|ROLLBACK|ABORT|START\s+TRANSACTION)\b/i.test(span.token.trim()))).toBe(false);
+  const spans = statementSpans(plan.sql);
+  const terminalGuard = spans.findIndex(span => span.token.includes('MIGRATION_TERMINAL_READBACK_FAILED'));
+  expect(terminalGuard).toBeGreaterThan(1);
+  expect(spans[terminalGuard - 2].token).toContain('INSERT INTO supabase_migrations.schema_migrations');
+  expect(spans[terminalGuard - 1].token).toContain('MIGRATION_LEDGER_READBACK_FAILED');
+  expect(spans.some(span => /^(?:BEGIN|COMMIT|ROLLBACK|ABORT|START\s+TRANSACTION)\b/i.test(span.token.trim()))).toBe(false);
 });
 
 test('wrong version, count, five-stage state, target state and protected revision fail closed', () => {

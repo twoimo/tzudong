@@ -542,6 +542,15 @@ test('compiled plan checks catalog and ledger roots at every stage under an advi
   expect(plan.sql).toContain(document.stageStates[5].state.schemaRoot);
   expect(plan.sql).toContain('ADMIN_PRIVATE_CLEANUP_ACTION_SOURCE_DRIFT');
   expect(plan.sql.match(/MIGRATION_TERMINAL_READBACK_FAILED/g)).toHaveLength(6);
+  const spans = statementSpans(plan.sql);
+  const terminalGuards = spans
+    .map((span, index) => span.token.includes('MIGRATION_TERMINAL_READBACK_FAILED') ? index : -1)
+    .filter(index => index >= 0);
+  expect(terminalGuards).toHaveLength(6);
+  for (const index of terminalGuards.slice(0, 5)) {
+    expect(spans[index - 2].token).toContain('INSERT INTO supabase_migrations.schema_migrations');
+    expect(spans[index - 1].token).toContain('MIGRATION_LEDGER_READBACK_FAILED');
+  }
   expect(plan.stateQuery).toContain("'schemaRoot'");
   expect(plan.stateQuery).toContain("'ledgerRoot'");
   expect(plan.stateQuery).toContain("state IN('queued','running')");
