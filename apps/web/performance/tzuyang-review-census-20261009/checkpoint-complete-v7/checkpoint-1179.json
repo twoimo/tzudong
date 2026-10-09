@@ -1,0 +1,67 @@
+{
+  "actualModelVersion": "gemini-3.8-flash",
+  "index": 1179,
+  "inputSha256": "9944a25ed99837e9abfe4a47c73cb3ad0eaf9ce292ee456aec7372338d4baff3",
+  "model": "gemini-3.8-flash",
+  "promptSha256": "7a279af1b9586e9b2f482f1e2b23cdb93bcc013d0daf2e4dbc9277c64a277ae7",
+  "rawPrivateCheckpointSha256": "879944a29b21c6d3c2643d1c217c3ad42fa2301be32371fe04bcb02dbaa81832",
+  "rows": [
+    {
+      "adminLocked": false,
+      "channelVerified": true,
+      "issues": [
+        "EMPTY_REVIEW",
+        "NEEDS_VIDEO_EVIDENCE"
+      ],
+      "key": "r1656",
+      "nonempty": false,
+      "recordStatus": "deleted",
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceRecordSha256": "7ec710b2d357fa50db53b1a883cbaab98e0eb2e0a1b2f4396e3b6d38d27c818b",
+      "sourceReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status": "needs_source"
+    },
+    {
+      "adminLocked": false,
+      "channelVerified": true,
+      "issues": [],
+      "key": "r1657",
+      "nonempty": true,
+      "recordStatus": "deleted",
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceRecordSha256": "f7c417e41e6248193e7debbae5f7f44376d6038f03dbb25d9849c0c6a3d62a5a",
+      "sourceReviewSha256": "da2db91d0b5f51c7828900434a5ad0e9f35f9b76e7455d7ae4f3ce995bc7e233",
+      "status": "ok"
+    },
+    {
+      "adminLocked": false,
+      "channelVerified": true,
+      "issues": [
+        "EMPTY_REVIEW",
+        "NEEDS_VIDEO_EVIDENCE"
+      ],
+      "key": "r1658",
+      "nonempty": false,
+      "recordStatus": "deleted",
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceRecordSha256": "28ceb78406771c04ace52b7248bc3e85935691f1ffc33f9288b090d543da0a3b",
+      "sourceReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status": "needs_source"
+    }
+  ],
+  "sourceSnapshotSha256": "b8f06e7c5867b5ac2d8dfe5283e1ffdcf2a103a34f2e1d29333169fe4c5d38d8",
+  "thinkingLevel": "HIGH",
+  "usage": {
+    "candidatesTokenCount": 162,
+    "promptTokenCount": 1313,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 1313
+      }
+    ],
+    "serviceTier": "standard",
+    "thoughtsTokenCount": 2161,
+    "totalTokenCount": 3636
+  }
+}
