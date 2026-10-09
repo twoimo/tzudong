@@ -1,0 +1,30 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/supabase-migration-transaction.test.ts:
+(pass) four exact source envelopes agree with pinned provider-source parser and preserve body bytes [107.17ms]
+(pass) hash/vector drift and all intermediate control aliases are rejected before a call [0.34ms]
+(pass) quoted/dollar/comment control text remains untouched; unsupported meta commands reject [0.09ms]
+(pass) server guards precede ledger and no source transaction boundary reaches payload [0.48ms]
+(pass) insufficient query contracts deny before connection; no forged expected default [0.31ms]
+(pass) long escaped readback literals compile while mutation outside literals remains denied [0.65ms]
+(pass) lost ACK makes exactly one fresh read-only reconciliation, never resends [0.27ms]
+(pass) conflict/unknown are fixed outcomes and not-applied retains bounded failure [0.05ms]
+Supabase migration terminal state verified: g016_privacy_audit_owner_policy
+Supabase migration terminal state verified: g016_onboarding_confirmation_freshness
+(pass) existing caller preserves pinned dry-run and valid provider-owned verify-only shape [4.10ms]
+(pass) exit0 truncated/contaminated/mismatched stdout reconciles once after committed state [0.32ms]
+(pass) local psql startup and raw diagnostics stay outside the executor contract [0.20ms]
+
+tests-unit/supabase-migration-bundle.test.ts:
+(pass) actual four source files compile in exact identity/hash/vector order with one output SELECT [111.41ms]
+(pass) order, source identity, source hash, vector and suffix drift reject before an executor exists [625.60ms]
+(pass) fresh prior N and prefix/suffix roots are mandatory and partial target ledger is rejected by the first transaction guard [202.01ms]
+(pass) reconciliation classifies only exact prior/final objects; all intermediate stages conflict [107.81ms]
+(pass) lost ACK performs one read-only reconciliation and never resends the four-stage bundle [103.47ms]
+(pass) not-applied preserves failure while partial and unknown are fixed fail-closed outcomes [100.28ms]
+(pass) successful output must be exactly one JSON object matching the final bundle readback [118.83ms]
+
+ 18 pass
+ 0 fail
+ 163 expect() calls
+Ran 18 tests across 2 files. [1.59s]

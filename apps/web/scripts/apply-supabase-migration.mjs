@@ -32,6 +32,35 @@ const operationError = (code) => {
   error.code = code;
   return error;
 };
+const COMPILER_GUARD_CODES = new Set([
+  'MIGRATION_LEDGER_UNAVAILABLE',
+  'MIGRATION_LEDGER_CONTRACT_INSUFFICIENT',
+  'MIGRATION_ALREADY_APPLIED',
+  'MIGRATION_LEDGER_CONFLICT',
+  'MIGRATION_PRIOR_STATE_MISMATCH',
+  'MIGRATION_TERMINAL_READBACK_FAILED',
+  'MIGRATION_LEDGER_READBACK_FAILED',
+]);
+const BOUNDED_APPLY_CODES = new Set([
+  ...COMPILER_GUARD_CODES,
+  'MIGRATION_READBACK_INVALID',
+  'MIGRATION_PSQL_EXECUTION_FAILED',
+  'MIGRATION_PSQL_FAILED',
+]);
+const safeErrorProperty = (error, property) => {
+  try {
+    const value = error?.[property];
+    return typeof value === 'string' ? value : '';
+  } catch { return ''; }
+};
+export function boundedMigrationError(error) {
+  const fixedSqlCode = safeErrorProperty(error, 'fixedSqlCode');
+  if (COMPILER_GUARD_CODES.has(fixedSqlCode)) return operationError(fixedSqlCode);
+  const code = safeErrorProperty(error, 'code');
+  if (BOUNDED_APPLY_CODES.has(code)) return operationError(code);
+  const sqlstate = /^MIGRATION_PSQL_FAILED_([0-9A-Z]{5})(?:_|$)/.exec(code)?.[1];
+  return operationError(sqlstate ? `MIGRATION_PSQL_FAILED_${sqlstate}` : 'MIGRATION_PSQL_FAILED');
+}
 const PROVIDER_RECEIPT_KEYS = Object.freeze([
   'version',
   'provider',
@@ -361,19 +390,7 @@ function runPsql(databaseUrl, query, singleTransaction) {
   if (result.status !== 0) {
     const stderr = result.stderr || '';
     const sqlstate = /ERROR:\s+([0-9A-Z]{5}):/m.exec(stderr)?.[1];
-    const undefinedFunction = sqlstate === '42883'
-      ? /function ([a-z_][a-z0-9_.]*\([a-z0-9_., ]*\)) does not exist/i.exec(stderr)?.[1]
-      : null;
-    const undefinedOperator = sqlstate === '42883'
-      ? /operator does not exist:\s*([a-z0-9_[\]. =<>!+-]+)/i.exec(stderr)?.[1]
-      : null;
-    const classifier = (undefinedFunction ?? undefinedOperator)
-      ?.slice(0, 96)
-      .replace(/[^a-z0-9_]+/gi, '_')
-      .replace(/_+/g, '_')
-      .replace(/^_|_$/g, '')
-      .toUpperCase();
-    const error = operationError(sqlstate ? `MIGRATION_PSQL_FAILED_${sqlstate}${classifier ? `_${classifier}` : ''}` : 'MIGRATION_PSQL_FAILED');
+    const error = operationError(sqlstate ? `MIGRATION_PSQL_FAILED_${sqlstate}` : 'MIGRATION_PSQL_FAILED');
     error.fixedSqlCode = /ERROR:\s+(?:[0-9A-Z]{5}:\s*)?(MIGRATION_[A-Z0-9_]{1,96})\b/m.exec(stderr)?.[1];
     throw error;
   }
@@ -456,11 +473,14 @@ export function applyMigrationWithTerminalReadback(databaseUrl, migration, query
   }
   catch (error) {
     // No resend: a failed/lost COMMIT acknowledgement is not evidence of rollback.
+    const boundedError = boundedMigrationError(error);
     let value; let disposition = 'unknown';
     try { value = parseReadback(runPsqlImpl(databaseUrl, reconcile, true)); disposition = reconciliationOutcome(value, migration); } catch { /* bounded unknown */ }
-    if (disposition === 'committed' && error.fixedSqlCode === 'MIGRATION_ALREADY_APPLIED') throw operationError('MIGRATION_ALREADY_APPLIED');
-    if (disposition === 'committed') return assertExactReadback(value.terminal, migration.terminalReadback.expected, 'MIGRATION_TERMINAL_READBACK_FAILED');
-    if (disposition === 'not_applied') throw error.fixedSqlCode ? operationError(error.fixedSqlCode) : error;
+    if (disposition === 'committed' && boundedError.code === 'MIGRATION_ALREADY_APPLIED') throw operationError('MIGRATION_ALREADY_APPLIED');
+    if (disposition === 'committed' && ['MIGRATION_READBACK_INVALID', 'MIGRATION_TERMINAL_READBACK_FAILED'].includes(boundedError.code)) {
+      return assertExactReadback(value.terminal, migration.terminalReadback.expected, 'MIGRATION_TERMINAL_READBACK_FAILED');
+    }
+    if (disposition === 'not_applied') throw boundedError;
     throw operationError(disposition === 'partial_conflict' ? 'MIGRATION_RECONCILIATION_CONFLICT' : 'MIGRATION_OUTCOME_UNCONFIRMED');
   }
 }

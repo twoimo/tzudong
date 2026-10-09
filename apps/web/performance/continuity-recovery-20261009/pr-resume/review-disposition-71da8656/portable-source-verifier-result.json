@@ -1,0 +1,61 @@
+{
+  "observedAt": "2026-10-09T08:12:30Z",
+  "status": "passed",
+  "anchoredHead": "71da8656c45981e927821e935a09e00820e0bbd8",
+  "currentHead": "71da8656c45981e927821e935a09e00820e0bbd8",
+  "versions": {
+    "node": "v24.19.0",
+    "bun": "1.4.0",
+    "python": "Python 3.14.8"
+  },
+  "tests": {
+    "pass": 23,
+    "fail": 0,
+    "assertions": 141
+  },
+  "sourceHashes": {
+    "apps/web/scripts/apply-supabase-migration.mjs": {
+      "bytes": 19926,
+      "sha256": "af2ecd0246b278f9e4198817eaa711bec0afd62bd033005f4fc26d5280c3df45"
+    },
+    "apps/web/scripts/supabase-migration-transaction.mjs": {
+      "bytes": 13551,
+      "sha256": "ba054d1c2c9c8eb2d19a110c4b58be999f52521880cbf66aef02ce963b97bbb5"
+    },
+    "apps/web/tests-unit/supabase-migration-transaction.test.ts": {
+      "bytes": 10033,
+      "sha256": "d0d5932a5e26bbe95577a48a5240bf9bbe4722308a2bfe1b79ac4ff82fe2be37"
+    }
+  },
+  "immutableInputs": {
+    "releaseManifest": {
+      "sha256": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d",
+      "migrationCount": 3,
+      "matchesAnchoredHead": true
+    },
+    "g037Parser": {
+      "sha256": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd",
+      "matchesAnchoredHead": true
+    },
+    "reviewedSqlFiles": {
+      "count": 4,
+      "allMatchAnchoredHead": true
+    }
+  },
+  "verifier": {
+    "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/review-disposition-71da8656/portable-source-verifier.mjs",
+    "bytes": 4740,
+    "sha256": "0f8120a85f928a7913696c1943f0fe2dfe0309d702fc3064e5a437f2f74090a9"
+  },
+  "historicalEvidence": {
+    "originalFreezeRunnerModified": false,
+    "originalArtifactMapModified": false,
+    "originalPg15RuntimeModified": false,
+    "originalPg17RuntimeModified": false,
+    "promotedToCurrentSourceHashes": false
+  },
+  "limits": [
+    "This result proves current source, targeted unit behavior, pinned tools, and anchored immutable inputs only.",
+    "It does not claim PG15 runtime parity, hosted Supabase behavior, merge, deployment, or an operating database write."
+  ]
+}

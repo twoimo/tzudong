@@ -1,0 +1,264 @@
+{
+  "observedAt": "2026-10-09T07:54:08Z",
+  "repository": "twoimo/tzudong",
+  "pullRequest": {
+    "number": 3150,
+    "url": "https://github.com/twoimo/tzudong/pull/3150",
+    "state": "OPEN",
+    "isDraft": false,
+    "baseRef": "develop",
+    "headRef": "codex/pipeline-continuity-20261009",
+    "headSha": "71da8656c45981e927821e935a09e00820e0bbd8",
+    "headTreeSha": "17efa56ef815a7d1a4e25694846139a91733d92c",
+    "localHeadMatched": true,
+    "localTreeMatched": true,
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "BLOCKED",
+    "updatedAt": "2026-10-09T07:41:45Z"
+  },
+  "branchProtection": {
+    "branch": "develop",
+    "strictRequiredStatusChecks": true,
+    "requiredContexts": [
+      "Release",
+      "Promotion Path"
+    ],
+    "requiredConversationResolution": true,
+    "requiredApprovingReviewCount": 0,
+    "enforceAdmins": true
+  },
+  "requiredChecks": {
+    "release": {
+      "status": "completed",
+      "conclusion": "success",
+      "workflowRunId": 37899614610,
+      "jobId": 113718843872,
+      "url": "https://github.com/twoimo/tzudong/actions/runs/37899614610/job/113718843872"
+    },
+    "promotionPath": [
+      {
+        "status": "completed",
+        "conclusion": "success",
+        "workflowRunId": 37899612271,
+        "jobId": 113718836408,
+        "url": "https://github.com/twoimo/tzudong/actions/runs/37899612271/job/113718836408"
+      },
+      {
+        "status": "completed",
+        "conclusion": "success",
+        "workflowRunId": 37900186384,
+        "jobId": 113720664501,
+        "url": "https://github.com/twoimo/tzudong/actions/runs/37900186384/job/113720664501"
+      }
+    ],
+    "allRequiredContextsSuccessful": true
+  },
+  "platformCi": {
+    "workflowRunId": 37899614651,
+    "headSha": "71da8656c45981e927821e935a09e00820e0bbd8",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/twoimo/tzudong/actions/runs/37899614651",
+    "jobs": [
+      {
+        "name": "Install",
+        "jobId": 113718844060,
+        "conclusion": "success"
+      },
+      {
+        "name": "Ubuntu npm",
+        "jobId": 113718844436,
+        "conclusion": "success"
+      },
+      {
+        "name": "Ubuntu Bun",
+        "jobId": 113718844328,
+        "conclusion": "success"
+      },
+      {
+        "name": "Windows npm",
+        "jobId": 113718844480,
+        "conclusion": "success"
+      },
+      {
+        "name": "Windows Bun",
+        "jobId": 113718844357,
+        "conclusion": "success"
+      },
+      {
+        "name": "Admin",
+        "jobId": 113718844420,
+        "conclusion": "success"
+      }
+    ]
+  },
+  "codeql": {
+    "workflowRunId": 37899610863,
+    "headSha": "71da8656c45981e927821e935a09e00820e0bbd8",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/twoimo/tzudong/actions/runs/37899610863",
+    "languageJobs": [
+      {
+        "name": "Analyze (actions)",
+        "jobId": 113718835797,
+        "conclusion": "success"
+      },
+      {
+        "name": "Analyze (go)",
+        "jobId": 113718835395,
+        "conclusion": "success"
+      },
+      {
+        "name": "Analyze (javascript-typescript)",
+        "jobId": 113718836248,
+        "conclusion": "success"
+      },
+      {
+        "name": "Analyze (python)",
+        "jobId": 113718835792,
+        "conclusion": "success"
+      },
+      {
+        "name": "Analyze (rust)",
+        "jobId": 113718835779,
+        "conclusion": "success"
+      },
+      {
+        "name": "Analyze (swift)",
+        "jobId": 113718835617,
+        "conclusion": "success"
+      }
+    ],
+    "aggregate": {
+      "checkRunId": 113719077763,
+      "headSha": "71da8656c45981e927821e935a09e00820e0bbd8",
+      "status": "completed",
+      "conclusion": "success",
+      "title": "No new alerts in code changed by this pull request",
+      "url": "https://github.com/twoimo/tzudong/runs/113719077763"
+    },
+    "alert88": {
+      "rule": "js/redos",
+      "url": "https://github.com/twoimo/tzudong/security/code-scanning/88",
+      "resourceState": null,
+      "resourceFixedAt": null,
+      "mostRecentInstance": {
+        "state": "fixed",
+        "ref": "refs/pull/3150/head",
+        "commitSha": "c483542c480225af6830e10d1c29365f2b010989",
+        "category": "/language:javascript-typescript",
+        "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+        "line": 68
+      },
+      "comparisonWithPriorReceipt": "Consistent with the prior exact-head JavaScript analysis receipt: the current alert endpoint still reports the prior instance as fixed, the exact-head JavaScript job completed successfully, and the current aggregate check reports no new alerts. The alert resource itself still exposes neither a repository-wide state nor fixed_at, so those null fields are not treated as independent closure evidence."
+    },
+    "comparisonWithPriorAggregateReceipt": "The earlier local receipt recorded aggregate check run 113719077763 as neutral with title '4 configurations not found'. A direct current read of that same check-run ID returned completed/success with title 'No new alerts in code changed by this pull request'; this receipt records the current API value and does not rewrite the earlier observation."
+  },
+  "reviewThreads": {
+    "total": 10,
+    "resolved": 1,
+    "unresolved": 9,
+    "allUnresolvedAreCurrent": true,
+    "blocksMergeBecauseConversationResolutionIsRequired": true,
+    "items": [
+      {
+        "discussionId": 4227745935,
+        "severity": "P2",
+        "path": "apps/web/performance/continuity-recovery-20261009/sql/freeze-evidence.mjs",
+        "line": 47,
+        "title": "Match the freeze verifier to the minimized test suite",
+        "url": "https://github.com/twoimo/tzudong/pull/3150#discussion_r4227745935"
+      },
+      {
+        "discussionId": 4227745944,
+        "severity": "P2",
+        "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+        "line": 17,
+        "title": "Honor standard-conforming backslashes in SQL strings",
+        "url": "https://github.com/twoimo/tzudong/pull/3150#discussion_r4227745944"
+      },
+      {
+        "discussionId": 4227745952,
+        "severity": "P2",
+        "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+        "line": 90,
+        "title": "Run readbacks only in the database state where they are valid",
+        "url": "https://github.com/twoimo/tzudong/pull/3150#discussion_r4227745952"
+      },
+      {
+        "discussionId": 4227745960,
+        "severity": "P2",
+        "path": "apps/web/scripts/apply-supabase-migration.mjs",
+        "line": 462,
+        "title": "Keep generic-error reconciliation fail-closed",
+        "url": "https://github.com/twoimo/tzudong/pull/3150#discussion_r4227745960"
+      },
+      {
+        "discussionId": 4227824954,
+        "severity": "P2",
+        "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+        "line": 68,
+        "title": "Mask all admitted SQL literals and nested comments",
+        "url": "https://github.com/twoimo/tzudong/pull/3150#discussion_r4227824954"
+      },
+      {
+        "discussionId": 4227824964,
+        "severity": "P2",
+        "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+        "line": 44,
+        "title": "Tokenize comments inside multiword transaction controls",
+        "url": "https://github.com/twoimo/tzudong/pull/3150#discussion_r4227824964"
+      },
+      {
+        "discussionId": 4227824969,
+        "severity": "P2",
+        "path": "apps/web/performance/continuity-recovery-20261009/sql/freeze-evidence.mjs",
+        "line": 10,
+        "title": "Resolve verifier tools from the active environment",
+        "url": "https://github.com/twoimo/tzudong/pull/3150#discussion_r4227824969"
+      },
+      {
+        "discussionId": 4227824976,
+        "severity": "P2",
+        "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+        "line": 98,
+        "title": "Lock the ledger before validating its schema",
+        "url": "https://github.com/twoimo/tzudong/pull/3150#discussion_r4227824976"
+      },
+      {
+        "discussionId": 4227824987,
+        "severity": "P2",
+        "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+        "line": 85,
+        "title": "Require a privilege that permits the exclusive ledger lock",
+        "url": "https://github.com/twoimo/tzudong/pull/3150#discussion_r4227824987"
+      }
+    ]
+  },
+  "narrowSourceAssessment": {
+    "sqlLexing": "Use one lexical pass for ordinary strings, E strings, quoted identifiers, dollar-quoted bodies, line comments, and nested block comments; derive both readback keyword masking and transaction-control tokens from it so standard_conforming_strings and commented multiword controls are handled consistently.",
+    "stateReadbacks": "Check ledger presence first and evaluate only the prior-state query before an unapplied migration or only the terminal query for an existing ledger row. Generate reconciliation with a short-circuiting state branch so renamed or dropped objects are not queried in the wrong state.",
+    "genericReconciliation": "Keep generic transport or local failures unconfirmed unless an attempt-bound value persisted in the same transaction proves this invocation committed. Without that proof, return MIGRATION_OUTCOME_UNCONFIRMED instead of success.",
+    "ledgerLock": "Require and report a bounded privilege that can acquire the chosen explicit lock, then acquire the lock before catalog-shape validation so concurrent DDL cannot invalidate the admission result.",
+    "evidenceGenerator": "Resolve Bun and Python from explicit environment overrides or the active PATH, retain version checks, update the expected minimized-suite count from 19 to 18, and regenerate the retained log and artifact map from the current sources."
+  },
+  "result": {
+    "requiredChecksPassed": true,
+    "platformCiPassed": true,
+    "codeqlPassed": true,
+    "alert88ExactHeadEvidenceConsistent": true,
+    "mergeReady": false,
+    "blocker": "Nine current unresolved P2 review threads; develop requires conversation resolution."
+  },
+  "operationsPerformed": {
+    "pollingRepeatedAfterStableCompletion": false,
+    "sourceModified": false,
+    "commitCreated": false,
+    "pushPerformed": false,
+    "mergePerformed": false,
+    "deploymentPerformed": false,
+    "hostedDatabaseOperationPerformed": false,
+    "branchProtectionModified": false
+  }
+}

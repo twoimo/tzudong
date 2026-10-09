@@ -70,7 +70,7 @@
 
 ## 추가 대화 요구와 구체적 후속 Todo
 
-- [ ] A001 위 12개 사용자 제공 레퍼런스의 실제 탐색 증빙과 채택 요소를 연결한다. 이름·URL은 현재 채팅에서 회수했으며 실제 심층 탐색과 적용 검증은 별도로 확인한다. **[I:목록 회수 L:탐색 미확인 O:미확인 R:미확인]**
+- [x] A001 사용자 제공 레퍼런스 12개의 실제 탐색 증빙과 현재 채택 요소를 연결했다. 공개 홈 12개·채택 가능 캡처 20개, 기존 artifact map, 구현 source 12개의 현재 해시가 일치했다. Tremor의 표·필터와 shadcn/ui의 입력·메뉴를 주 기준으로 확인했다. 다른 10개는 현재 비교·제외 근거이며 과거 선택의 인과 증명으로 확대하지 않는다. 증빙: `continuity-recovery-20261009/design-reference-audit/README.md`. **[I:source 연결 L:공개 탐색·해시 확인 O:미확인 R:인증 화면 미확인]**
 - [ ] A002 공개 모든 경로 및 관리자 사이드바 모든 페이지·하위 경로를 실제 route inventory와 연결하고 CMS 리뉴얼 적용 여부를 페이지별로 확인한다. 대표 화면의 성공을 전체 완료로 확대하지 않는다. **[I:? L:? O:? R:?]**
 - [ ] A003 공개·관리자 공통 헤더의 제목/높이/정렬/간격/행동을 일관되게 구현하고 데스크톱·태블릿·모바일에서 캡처한다. **[I:? L:? O:? R:?]**
 - [ ] A004 KPI와 맛집 관리 헤더를 한 줄 구조로 통합하고 제목·건수·탭·뷰·자동 운영 행동을 보존한다. 좁은 화면에서는 핵심 행동을 숨기지 않는 접근 가능한 재배치를 검증한다. **[I:? L:? O:? R:?]**
@@ -639,8 +639,28 @@ Git 스냅샷 `7d4080365c237ed1effd6e66eb8e81332173b922`에서 작업 소유 파
 
 CodeQL #88의 `js/redos`는 신규 migration helper의 literal masking 정규식에서 발생했다. 역슬래시 소비 분기를 배타적으로 수정하고, 30KB escaped literal 안의 INSERT/UPDATE/DELETE는 허용하되 literal 밖의 같은 명령은 계속 거부하는 회귀를 추가했다. 수정 후 Bun 2개 파일 19개 통과·128 assertions, Node24 targeted lint 및 diff-check가 통과했다. 새 head의 CodeQL 결과는 별도로 확인한다.
 
+수정 head `71da8656c45981e927821e935a09e00820e0bbd8`의 Release·Promotion Path가 통과했다. JavaScript/TypeScript analysis `1921629666`은 success·결과 0건이며 PR head의 alert #88이 해소된 것을 확인했다. Aggregate CodeQL의 missing-configuration neutral 경고와 진행 중인 플랫폼 CI는 별도로 유지하며 전체 CI·병합 완료로 해석하지 않는다. 증빙: `codeql-alert88-71da8656.json`.
+
 원본 schema의 모든 제약을 유지하는 local JSON Pointer 축약안을 작성했다. 고정 schema의 크기는 5,335 → 2,004 bytes, 절대 차이 −3,331 bytes, 감소율 62.44%다. 원본 canonical JSON과 확장 결과가 정확히 일치했고 영상 ID·정수·소수 경계 10개 사례도 통과했다. 고정 구조의 전수 집계이므로 95% 신뢰구간은 적용하지 않는다.
 
 단일 합성 API 수용 검증은 POST 1회·재시도 0회·영상 재전송 0회로 수행했다. HTTP 400, 1.212196초, 사용량 미확인이다. 축약안은 production source에 채택하지 않았다. 이 값은 속도 개선·품질·금액 절감 증빙이 아니다. 기존 실패한 835초 receipt와 성공 cache·queue는 유지했다.
 
 증빙: `apps/web/performance/continuity-recovery-20261009/pr-delivery.json`, `gemini-schema/proofs/schema-boundary-cases.json`, `gemini-schema/acceptance-probe-20261009/proof.json`. 실제 오류의 고정 코드·허용된 schema 필드만 추출하는 진단을 준비하고, 별도의 원문·secret 저장은 하지 않는다.
+
+그 후 동일 합성 요청의 단일 진단 POST에서 HTTP 400·`invalid_request`를 확인했지만 원인 category와 schema path는 unknown/null이었다. Sanitizer의 비밀값 echo·deep JSON·큰 index 등 회귀 15개가 통과했고 증빙 map 15개 항목의 바이트·해시를 재검증했다. Endpoint·model·response format·입력은 현재 공식 계약과 일치하므로 원인 미확정을 유지하며 추가 호출을 중단했다. 영상 재전송과 production schema 변경은 0건이다.
+
+OSK 조직 검토 3개 구간은 현행 view hash와 일치했다. caption-first-pass·미검증 출처 및 독립 전체 시각/음성 검증 0건을 유지하고 organization metadata를 deferred로 제출했다. 검토 잔여는 13 → 10개, 미해석 Link 7개와 대화 포착 incomplete는 그대로 열려 있다. 노드·허브·개인 기억·engine 변경은 없다.
+
+## 리뷰 보완과 실제 SQL 묶음 검증
+
+PR #3150의 미해결 리뷰 9개를 실제 실패 벡터와 대조했다. SQL lexer를 통합해 일반 문자열·E 문자열·dollar quote·중첩 주석을 구분하고, 주석이 끼어든 transaction control을 거부한다. Ledger 상태에 맞는 readback만 실행하며, generic transport 오류는 재조회가 일치해도 해당 시도의 commit을 확정하지 않는다. EXCLUSIVE lock 권한을 먼저 확인하고 catalog shape는 lock 뒤에 검증한다. 원문 오류·cause·임의 getter는 고정 코드 경계 밖으로 전달하지 않는다.
+
+현재 targeted Bun 3개 파일 34개 통과·307 assertions, ESLint 7개 파일 및 native7.0.2/compat6.0.2 parity 진단 0개다. 정확한 PG17.6에서 single executor 6개 사례, 생성된 4단계 fixture 31 assertions를 통과했다. 격리 fixture의 원격 host·host override·공유 DB·임의 options·누락된 identity 5개를 연결 전에 거부했고 psql 호출은 0회였다. 소유 DB·서버는 정리했으며 기존 서버는 변경하지 않았다.
+
+실제 SQL 4개도 canonical snapshot 기반의 격리 PG17.6 전체 schema에서 실행했다. Terminal mismatch는 target ledger 0행과 schema·role·metadata의 정확한 롤백을 확인했고, 성공은 synthetic prefix 3행 보존 + target ledger 4행 추가를 확인했다. G014 assertion 4개, guarded record phase 6개, manual preview phase 5개가 통과했다. Hosted data/ledger 복사 0건이며 실제 운영 적용 증빙으로 확대하지 않는다. 과거 PG17.11 결과와 그 당시 source 3개는 exact hash로 archive에 보존했다.
+
+단일 운영 읽기 snapshot은 ledger 80개/latest20261008124858, 맛집1,659개, 새 SQL 4개 미적용, 자동 검수 OFF/version1/batch50/daily50, runs/items/active0을 확인했다. 전체 catalog·ingress fence·approved main/source binding은 아직 migration admission으로 완성되지 않았다.
+
+Gemini의 최소 flat structured control은 model match·schema validation·videoId 일치로 완료됐다. 입력82·출력19·thinking855·total956 tokens, 7.802805초다. 복잡한 schema의 400과 구조화 출력 전체 경로 실패를 구분한 대조군이며 전체 DTO·영상 품질·비용 개선은 입증하지 않는다. 전체 strict validator를 유지하는 작은 wire schema와 성공 cache predecessor 연속성 보완은 별도 구현·검증 중이다.
+
+증빙: `continuity-recovery-20261009/actual-bundle-replay/`, `sql-bundle-implementation/shared-helper-final-pg17.6/`, `pr-resume/review-disposition-71da8656/`, `operating-readonly-snapshot.json`, `gemini-schema/flat-schema-control-20261009/`. 전체 목표와 운영 반영 체크는 열린 상태다.

@@ -1,0 +1,115 @@
+{
+  "observedAt": "2026-10-09T08:12:30Z",
+  "pullRequest": 3150,
+  "reviewedHead": "71da8656c45981e927821e935a09e00820e0bbd8",
+  "baselineReproduction": {
+    "command": "bun test apps/web/tests-unit/supabase-migration-transaction.test.ts",
+    "result": {
+      "pass": 10,
+      "fail": 5,
+      "assertions": 68
+    },
+    "failures": [
+      "ordinary string ending in a backslash was reported as MIGRATION_SQL_UNTERMINATED",
+      "comment-separated PREPARE TRANSACTION was admitted",
+      "dollar literals and nested comments were rejected by mutation admission",
+      "prior readback was generated before the ledger-state branch and catalog validation preceded the lock",
+      "an ambiguous transport error was promoted to success from matching final state"
+    ]
+  },
+  "threads": [
+    {
+      "discussionId": 4227745935,
+      "title": "Match the freeze verifier to the minimized test suite",
+      "verdict": "valid",
+      "disposition": "fixed_by_separate_portable_verifier",
+      "evidence": "The historical runner expected 19 tests while the retained minimization amendment declared 18. The historical runner and bound artifact map remain byte-unchanged; the new source-bound verifier expects the current 23 tests and 141 assertions."
+    },
+    {
+      "discussionId": 4227745944,
+      "title": "Honor standard-conforming backslashes in SQL strings",
+      "verdict": "valid",
+      "disposition": "fixed",
+      "evidence": "The shared lexical pass treats backslashes as escapes only for E-prefixed strings. Ordinary strings follow standard_conforming_strings=on and the original bytes remain unchanged."
+    },
+    {
+      "discussionId": 4227745952,
+      "title": "Run readbacks only in the database state where they are valid",
+      "verdict": "valid",
+      "disposition": "fixed",
+      "evidence": "The atomic block checks ledger presence before either dynamic readback. Reconciliation uses psql gset/if branching so the server never parses the inactive query. Isolated PG17 passed missing-terminal preimage and missing-prior existing-ledger cases."
+    },
+    {
+      "discussionId": 4227745960,
+      "title": "Keep generic-error reconciliation fail-closed",
+      "verdict": "valid",
+      "disposition": "fixed",
+      "evidence": "Only post-success readback validation errors may be confirmed. A generic transport failure performs one read-only reconciliation without resend and returns MIGRATION_OUTCOME_UNCONFIRMED even when the table and ledger exist."
+    },
+    {
+      "discussionId": 4227824954,
+      "title": "Mask all admitted SQL literals and nested comments",
+      "verdict": "valid",
+      "disposition": "fixed",
+      "evidence": "Readback mutation admission now consumes the same lexical pass used for statement boundaries, including dollar bodies and nested block comments."
+    },
+    {
+      "discussionId": 4227824964,
+      "title": "Tokenize comments inside multiword transaction controls",
+      "verdict": "valid",
+      "disposition": "fixed",
+      "evidence": "Control detection now reads unmasked SQL words, so PREPARE or START separated from TRANSACTION by comments remains denied."
+    },
+    {
+      "discussionId": 4227824969,
+      "title": "Resolve verifier tools from the active environment",
+      "verdict": "valid",
+      "disposition": "fixed_by_separate_portable_verifier",
+      "evidence": "The new verifier resolves Bun, Python, and Git from explicit TZUDONG_* overrides or PATH and passed with Node 24.19.0, Bun 1.4.0, and Python 3.14.8. The historical artifact-bound runner remains unchanged."
+    },
+    {
+      "discussionId": 4227824976,
+      "title": "Lock the ledger before validating its schema",
+      "verdict": "valid",
+      "disposition": "fixed",
+      "evidence": "Only existence and bounded privilege admission precede LOCK TABLE. All pg_attribute, pg_class, and pg_constraint contract validation now runs after the EXCLUSIVE lock."
+    },
+    {
+      "discussionId": 4227824987,
+      "title": "Require a privilege that permits the exclusive ledger lock",
+      "verdict": "valid",
+      "disposition": "fixed",
+      "evidence": "Admission requires SELECT, INSERT, and one of UPDATE, DELETE, or TRUNCATE before requesting EXCLUSIVE. An actual PG17 SELECT+INSERT role returned MIGRATION_LEDGER_UNAVAILABLE without source or ledger writes."
+    }
+  ],
+  "verification": {
+    "targetedTests": "23 pass, 0 fail, 141 assertions",
+    "targetedEslint": "passed with zero warnings",
+    "isolatedPg17Cases": 6,
+    "isolatedPg17Status": "passed",
+    "diffCheck": "passed",
+    "historicalSqlEvidenceModified": false
+  },
+  "preservedContracts": {
+    "releaseManifestMigrationCount": 3,
+    "releaseManifestSha256": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d",
+    "g037Sha256": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd",
+    "reviewedSqlFilesUnchanged": 4,
+    "sourceVectorComparisonPassed": true,
+    "lostAckSourceResend": false,
+    "providerDiagnosticsExposed": false
+  },
+  "excludedActions": [
+    "commit",
+    "push",
+    "merge",
+    "hosted database apply",
+    "environment or variable mutation",
+    "PR review-thread resolution"
+  ],
+  "limits": [
+    "Historical PG15.8 and PG17.6 runtime receipts remain bound to their old source hashes and are not current verification.",
+    "The root-owned bundle module and bundle tests are outside this disposition and were not used as evidence.",
+    "No hosted, production, deployment, or operating database claim is made."
+  ]
+}

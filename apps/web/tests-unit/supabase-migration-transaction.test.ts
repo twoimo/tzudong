@@ -31,6 +31,16 @@ test('quoted/dollar/comment control text remains untouched; unsupported meta com
   expect(p.execution).toContain("PERFORM 'COMMIT;'");expect(p.execution).toContain('/* ROLLBACK; */');
   expect(()=>statementSpans('\\include arbitrary.sql')).toThrow('META_COMMAND_DENIED');
 });
+test('standard strings keep backslashes literal while escape strings may quote with backslashes',()=>{
+  const ordinary=String.raw`SELECT 'C:\';`;
+  const escaped=String.raw`SELECT E'quoted \'';`;
+  expect(statementSpans(ordinary).map((entry:{token:string})=>entry.token)).toEqual([ordinary.slice(0,-1)]);
+  expect(statementSpans(escaped).map((entry:{token:string})=>entry.token)).toEqual([escaped.slice(0,-1)]);
+});
+test('comment-separated prepared transactions remain denied',()=>{
+  const sql="BEGIN;PREPARE/* reviewed comment */TRANSACTION 'fixture';COMMIT;";
+  expect(()=>migrationEnvelope(Buffer.from(sql),{...migration,sha256:sha(sql)},vector(sql))).toThrow('TRANSACTION_CONTROL_DENIED');
+});
 test('server guards precede ledger and no source transaction boundary reaches payload',()=>{
   const sql=atomicMigrationSql(plan(),migration);
   expect(sql).toContain('INTO STRICT');expect(sql).toContain('IS DISTINCT FROM');expect(sql).toContain('MIGRATION_PRIOR_STATE_MISMATCH');
@@ -54,16 +64,58 @@ test('long escaped readback literals compile while mutation outside literals rem
     expect(()=>atomicMigrationSql(plan(),bad)).toThrow('MIGRATION_READBACK_CONTRACT_INSUFFICIENT');
   }
 });
-test('lost ACK makes exactly one fresh read-only reconciliation, never resends',()=>{
-  const calls:string[]=[];const result=applyMigrationWithTerminalReadback('fixture',migration,source,{readVectorImpl:()=>vector(source),runPsqlImpl:(_url:string,sql:string)=>{
+test('dollar literals and nested comments are ignored by readback mutation admission',()=>{
+  const query="SELECT jsonb_build_object('definition',$body$UPDATE hidden SET value=1$body$) /* outer /* DELETE */ INSERT */;";
+  const m={...migration,expectedPriorState:{...migration.expectedPriorState,query}};
+  expect(()=>atomicMigrationSql(plan(),m)).not.toThrow();
+});
+test('ledger state selects one valid readback and the lock precedes catalog validation',()=>{
+  const sql=atomicMigrationSql(plan(),migration);
+  const prior=sql.indexOf('absent');
+  const ledgerBranch=sql.indexOf("IF EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20261009120000')");
+  expect(ledgerBranch).toBeGreaterThan(-1);expect(ledgerBranch).toBeLessThan(prior);
+  expect(sql.indexOf('LOCK TABLE supabase_migrations.schema_migrations IN EXCLUSIVE MODE')).toBeLessThan(sql.indexOf("FROM pg_attribute WHERE attrelid='supabase_migrations.schema_migrations'::regclass"));
+  expect(sql).toContain("has_table_privilege(current_user,'supabase_migrations.schema_migrations','UPDATE')");
+  expect(sql).toContain("has_table_privilege(current_user,'supabase_migrations.schema_migrations','DELETE')");
+  expect(sql).toContain("has_table_privilege(current_user,'supabase_migrations.schema_migrations','TRUNCATE')");
+  const reconcile=reconciliationSql(plan(),migration);
+  expect(reconcile).toContain('AS ledger_exists \\gset');
+  expect(reconcile).toContain('\\if :ledger_exists');
+  expect(reconcile).toContain('\\else');
+});
+test('ambiguous lost ACK reconciles once without resend and remains unconfirmed',()=>{
+  const calls:string[]=[];
+  expect(()=>applyMigrationWithTerminalReadback('fixture',migration,source,{readVectorImpl:()=>vector(source),runPsqlImpl:(_url:string,sql:string)=>{
     calls.push(sql);if(calls.length===1)throw new Error('lost acknowledgement');
-    return JSON.stringify({ledger_exists:true,ledger_equal:true,prior:{absent:false},terminal:{ready:true}});
-  }});
-  expect(result).toEqual({ready:true});expect(calls).toHaveLength(2);expect(calls[1]).toContain('SET TRANSACTION READ ONLY');expect(calls[1]).not.toContain('INSERT INTO');
+    return JSON.stringify({ledger_exists:true,ledger_equal:true,prior:null,terminal:{ready:true}});
+  }})).toThrow('MIGRATION_OUTCOME_UNCONFIRMED');
+  expect(calls).toHaveLength(2);expect(calls[1]).toContain('SET TRANSACTION READ ONLY');expect(calls[1]).not.toContain('INSERT INTO');
+});
+test('not-applied reconciliation returns only bounded error codes',()=>{
+  const hostile={};
+  Object.defineProperty(hostile,'fixedSqlCode',{get(){throw new Error('private fixed-code getter detail');}});
+  Object.defineProperty(hostile,'code',{get(){throw new Error('private code getter detail');}});
+  for(const {first,expected} of [
+    {first:Object.assign(new Error('private transport message'),{cause:new Error('private cause'),marker:'private marker'}),expected:'MIGRATION_PSQL_FAILED'},
+    {first:Object.assign(new Error('malformed JSON detail'),{code:'MIGRATION_READBACK_INVALID',cause:'private cause'}),expected:'MIGRATION_READBACK_INVALID'},
+    {first:{code:'MIGRATION_PSQL_FAILED_P0001_PRIVATE_DETAIL',fixedSqlCode:'MIGRATION_PRIVATE_PROVIDER_DETAIL'},expected:'MIGRATION_PSQL_FAILED_P0001'},
+    {first:hostile,expected:'MIGRATION_PSQL_FAILED'},
+  ]){
+    let calls=0;let caught:unknown;
+    try{
+      applyMigrationWithTerminalReadback('fixture',migration,source,{readVectorImpl:()=>vector(source),runPsqlImpl:()=>{
+        calls++;if(calls===1)throw first;
+        return JSON.stringify({ledger_exists:false,ledger_equal:false,prior:{absent:true},terminal:null});
+      }});
+    }catch(error){caught=error;}
+    const bounded=caught as Error&Record<string,unknown>;
+    expect(bounded.code).toBe(expected);
+    expect(bounded.message).toBe(bounded.code);expect(bounded.cause).toBeUndefined();expect(bounded.marker).toBeUndefined();expect(calls).toBe(2);
+  }
 });
 test('conflict/unknown are fixed outcomes and not-applied retains bounded failure',()=>{
-  expect(reconciliationOutcome({ledger_exists:true,ledger_equal:false,terminal:{ready:true}},migration)).toBe('partial_conflict');
-  expect(reconciliationOutcome({ledger_exists:false,ledger_equal:false,prior:{absent:true}},migration)).toBe('not_applied');
+  expect(reconciliationOutcome({ledger_exists:true,ledger_equal:false,prior:null,terminal:{ready:true}},migration)).toBe('partial_conflict');
+  expect(reconciliationOutcome({ledger_exists:false,ledger_equal:false,prior:{absent:true},terminal:null},migration)).toBe('not_applied');
   expect(reconciliationSql(plan(),migration)).toContain('FROM jsonb_each');
   expect(reconciliationSql(plan(),migration)).not.toContain('SELECT value FROM (');
 });
@@ -78,7 +130,7 @@ test('existing caller preserves pinned dry-run and valid provider-owned verify-o
 
 test('exit0 truncated/contaminated/mismatched stdout reconciles once after committed state',()=>{
   for(const bad of ['', '{"ready":', 'untrusted extra stdout', '{"ready":false}']){
-    let calls=0;const result=applyMigrationWithTerminalReadback('fixture',migration,source,{readVectorImpl:()=>vector(source),runPsqlImpl:()=>{calls++;return calls===1?bad:JSON.stringify({ledger_exists:true,ledger_equal:true,prior:{absent:false},terminal:{ready:true}});}});
+    let calls=0;const result=applyMigrationWithTerminalReadback('fixture',migration,source,{readVectorImpl:()=>vector(source),runPsqlImpl:()=>{calls++;return calls===1?bad:JSON.stringify({ledger_exists:true,ledger_equal:true,prior:null,terminal:{ready:true}});}});
     expect(result).toEqual({ready:true});expect(calls).toBe(2);
   }
 });

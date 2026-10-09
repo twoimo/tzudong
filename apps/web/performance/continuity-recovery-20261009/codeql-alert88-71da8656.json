@@ -1,0 +1,81 @@
+{
+  "observedAt": "2026-10-09T07:38:26Z",
+  "pullRequest": {
+    "number": 3150,
+    "url": "https://github.com/twoimo/tzudong/pull/3150",
+    "headSha": "71da8656c45981e927821e935a09e00820e0bbd8",
+    "headTreeSha": "17efa56ef815a7d1a4e25694846139a91733d92c",
+    "ref": "refs/pull/3150/head"
+  },
+  "javascriptTypescriptScan": {
+    "workflowRunId": 37899610863,
+    "jobId": 113718836248,
+    "jobName": "Analyze (javascript-typescript)",
+    "headSha": "71da8656c45981e927821e935a09e00820e0bbd8",
+    "status": "completed",
+    "conclusion": "success",
+    "startedAt": "2026-10-09T07:32:35Z",
+    "completedAt": "2026-10-09T07:35:50Z",
+    "url": "https://github.com/twoimo/tzudong/actions/runs/37899610863/job/113718836248",
+    "analysis": {
+      "id": 1921629666,
+      "analysisKey": "dynamic/github-code-scanning/codeql:analyze",
+      "category": "/language:javascript-typescript",
+      "ref": "refs/pull/3150/head",
+      "commitSha": "71da8656c45981e927821e935a09e00820e0bbd8",
+      "createdAt": "2026-10-09T07:35:41Z",
+      "resultsCount": 0,
+      "rulesCount": 87,
+      "error": "",
+      "warning": ""
+    }
+  },
+  "alert88": {
+    "url": "https://github.com/twoimo/tzudong/security/code-scanning/88",
+    "rule": "js/redos",
+    "source": {
+      "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+      "line": 68
+    },
+    "prHeadResolutionVerified": true,
+    "openAlert88OnExactPrRef": false,
+    "openMatchingRuleAndSourceOnExactPrRef": false,
+    "instance": {
+      "commitSha": "c483542c480225af6830e10d1c29365f2b010989",
+      "ref": "refs/pull/3150/head",
+      "category": "/language:javascript-typescript",
+      "state": "fixed"
+    },
+    "resourceState": null,
+    "resourceFixedAt": null,
+    "resourceStateInterpretation": "The alert resource did not expose a repository-wide state, so the exact PR analysis and instance state are the resolution evidence."
+  },
+  "defaultBranch": {
+    "name": "main",
+    "openAlert88Found": false,
+    "openMatchingRuleAndSourceFound": false,
+    "repositoryWideOpenAlert88Found": false,
+    "repositoryWideOpenMatchingRuleAndSourceFound": false,
+    "interpretation": "Default-branch and repository-wide open-alert queries were evaluated separately from the exact PR ref; neither returned alert 88 or the same rule and source."
+  },
+  "aggregateCodeql": {
+    "checkRunId": 113719077763,
+    "headSha": "71da8656c45981e927821e935a09e00820e0bbd8",
+    "status": "completed",
+    "conclusion": "neutral",
+    "title": "4 configurations not found",
+    "successClaimed": false,
+    "note": "The aggregate configuration warning is not treated as a successful aggregate CodeQL result."
+  },
+  "platformCi": {
+    "priorObservedStatus": "in_progress",
+    "polledAgain": false,
+    "resultClaimed": false
+  },
+  "limits": {
+    "claim": "Alert 88 is absent from the completed JavaScript/TypeScript scan for exact PR head 71da8656c45981e927821e935a09e00820e0bbd8. This does not convert the aggregate neutral configuration warning into success.",
+    "mergePerformed": false,
+    "databaseOperationPerformed": false,
+    "manifestModified": false
+  }
+}
