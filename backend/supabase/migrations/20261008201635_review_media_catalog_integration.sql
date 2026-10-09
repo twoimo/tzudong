@@ -77,7 +77,10 @@ BEGIN
   IF (SELECT count(*) FROM pg_proc WHERE pronamespace='review_media_private'::regnamespace)<>6 THEN
     RAISE EXCEPTION 'review_media_catalog_identity_conflict';
   END IF;
-  SELECT jsonb_agg(to_jsonb(p)-'proowner'-'proacl'-'prosrc' ORDER BY p.oid) INTO v_functions
+  -- Preserve semantic defaults. PG15 pg_node_tree contains parser location
+  -- offsets that change when the identical definition is recreated. The initial
+  -- exact source/default checks above remain mandatory; retain every other field.
+  SELECT jsonb_agg(((to_jsonb(p)-'proowner'-'proacl'-'prosrc'-'proargdefaults') || jsonb_build_object('proargdefaults',pg_get_expr(p.proargdefaults,0))) ORDER BY p.oid) INTO v_functions
     FROM pg_proc p JOIN pg_temp.review_media_expected e ON p.oid=to_regprocedure(e.signature);
 
   -- Use only the existing G014 owner-management authority. This transaction's
@@ -280,7 +283,7 @@ BEGIN
      OR (SELECT to_jsonb(n) FROM pg_namespace n WHERE nspname='public') IS DISTINCT FROM v_public
      OR (SELECT jsonb_agg(CASE WHEN p.oid=v_known THEN to_jsonb(p)-'prosrc' ELSE to_jsonb(p) END ORDER BY p.oid) FROM pg_proc p
          WHERE p.pronamespace='privacy_retention'::regnamespace) IS DISTINCT FROM v_assertions
-     OR (SELECT jsonb_agg(to_jsonb(p)-'proowner'-'proacl'-'prosrc' ORDER BY p.oid) FROM pg_proc p
+     OR (SELECT jsonb_agg(((to_jsonb(p)-'proowner'-'proacl'-'prosrc'-'proargdefaults') || jsonb_build_object('proargdefaults',pg_get_expr(p.proargdefaults,0))) ORDER BY p.oid) FROM pg_proc p
          JOIN pg_temp.review_media_expected e ON p.oid=to_regprocedure(e.signature)) IS DISTINCT FROM v_functions THEN
     RAISE EXCEPTION 'review_media_catalog_preservation_drift' USING DETAIL =
       jsonb_build_object(
@@ -288,13 +291,13 @@ BEGIN
         'publicNamespacePreserved',(SELECT to_jsonb(n) FROM pg_namespace n WHERE nspname='public') IS NOT DISTINCT FROM v_public,
         'assertionsPreserved',(SELECT jsonb_agg(CASE WHEN p.oid=v_known THEN to_jsonb(p)-'prosrc' ELSE to_jsonb(p) END ORDER BY p.oid) FROM pg_proc p
             WHERE p.pronamespace='privacy_retention'::regnamespace) IS NOT DISTINCT FROM v_assertions,
-        'functionMetadataPreserved',(SELECT jsonb_agg(to_jsonb(p)-'proowner'-'proacl'-'prosrc' ORDER BY p.oid) FROM pg_proc p
+        'functionMetadataPreserved',(SELECT jsonb_agg(((to_jsonb(p)-'proowner'-'proacl'-'prosrc'-'proargdefaults') || jsonb_build_object('proargdefaults',pg_get_expr(p.proargdefaults,0))) ORDER BY p.oid) FROM pg_proc p
             JOIN pg_temp.review_media_expected e ON p.oid=to_regprocedure(e.signature)) IS NOT DISTINCT FROM v_functions,
         'changedMetadataFields',(SELECT jsonb_agg(DISTINCT old_field.key ORDER BY old_field.key)
           FROM jsonb_array_elements(v_functions) AS old_function(value)
           CROSS JOIN LATERAL jsonb_each(old_function.value) AS old_field(key,value)
           JOIN pg_proc p ON p.oid=(old_function.value->>'oid')::oid
-          WHERE old_field.value IS DISTINCT FROM (to_jsonb(p)-'proowner'-'proacl'-'prosrc')->old_field.key)
+          WHERE old_field.value IS DISTINCT FROM (((to_jsonb(p)-'proowner'-'proacl'-'prosrc'-'proargdefaults') || jsonb_build_object('proargdefaults',pg_get_expr(p.proargdefaults,0))))->old_field.key)
       )::text;
   END IF;
   PERFORM pg_temp.review_media_g014_assert();
