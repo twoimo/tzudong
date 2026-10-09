@@ -1,0 +1,65 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/review-photo-ownership-source.test.ts:
+(pass) review photo ownership source contracts > ReviewCard resolves only owner- and review-bound public URLs [0.42ms]
+(pass) review photo ownership source contracts > ReviewEditModal validates ownership before rendering, persisting, or deleting object keys [0.97ms]
+(pass) review photo ownership source contracts > local File previews are restricted and revoked [0.18ms]
+(pass) review photo ownership source contracts > the review composer uploads and persists one canonical review id [0.66ms]
+
+tests-unit/review-media-mutation.test.ts:
+(pass) review commit and media failure boundaries > DB rejection before commit preserves old media and retires only unused uploads [1.58ms]
+(pass) review commit and media failure boundaries > throw-after: committed upload survives; cleanup follows receipt [0.65ms]
+(pass) review commit and media failure boundaries > error-after: committed upload survives; cleanup follows receipt [0.07ms]
+(pass) review commit and media failure boundaries > unknown result later confirmed committed does not reupload or remutate [0.18ms]
+(pass) review commit and media failure boundaries > error-before: missing receipt never authorizes compensation [0.09ms]
+(pass) review commit and media failure boundaries > throw-before: missing receipt never authorizes compensation [0.04ms]
+(pass) review commit and media failure boundaries > missing row is not a successful delete [0.04ms]
+(pass) review commit and media failure boundaries > unauthorized owner cannot mutate or delete media [0.18ms]
+(pass) review commit and media failure boundaries > partial Storage failure after commit survives page revisit for both purposes [0.88ms]
+(pass) review commit and media failure boundaries > delete transport failure after completion is resolved by metadata readback [0.28ms]
+(pass) review commit and media failure boundaries > cleanup RPC failure after commit does not replay the mutation [0.26ms]
+(pass) review commit and media failure boundaries > concurrent clicks share one operation [0.11ms]
+(pass) review commit and media failure boundaries > upload uncertainty verifies the same key and never deletes a live upload [0.07ms]
+(pass) review commit and media failure boundaries > incomplete upload retries frozen paths before any DB write [0.23ms]
+(pass) review commit and media failure boundaries > owner change during upload blocks mutation and cleanup [0.10ms]
+(pass) review commit and media failure boundaries > cleanup validates owner, review and purpose on all returned paths [0.05ms]
+(pass) review commit and media failure boundaries > stale baseline cannot replace a concurrent edit [0.03ms]
+(pass) review commit and media failure boundaries > missing migration fails before uploading or mutating [0.04ms]
+(pass) review commit and media failure boundaries > a different action cannot join an active edit and report its result as a deletion [0.08ms]
+(pass) review commit and media failure boundaries > feedback never exposes provider diagnostics [0.07ms]
+
+tests-unit/review-photo-url-security.test.ts:
+(pass) review photo URL trust boundary > builds and resolves a canonical key bound to its owner and review [0.32ms]
+(pass) review photo URL trust boundary > rejects another owner, review, or purpose [0.02ms]
+(pass) review photo URL trust boundary > resolves same-origin public review-photo URLs back to the owned object [0.10ms]
+(pass) review photo URL trust boundary > rejects absolute URLs, buckets, traversal, encoded separators, queries, and fragments [0.19ms]
+(pass) review photo URL trust boundary > rejects controls, malformed key shapes, and unsupported image extensions [0.06ms]
+(pass) review photo URL trust boundary > fails closed without owner binding and for invalid cache-buster values [0.03ms]
+(pass) review photo URL trust boundary > resolves the historical composer layout for the owning user only [0.11ms]
+(pass) review photo URL trust boundary > resolves the configured loopback origin instead of requiring https [0.04ms]
+(pass) review photo URL trust boundary > normalizes browser filenames into the canonical filename grammar [0.19ms]
+(pass) review photo URL trust boundary > rejects an arbitrary tracker origin even when the storage client generates that origin [0.47ms]
+(pass) review photo URL trust boundary > deduplicates cleanup keys and verifies removal through storage readback [0.67ms]
+(pass) review photo URL trust boundary > retains the exact canonical retry set when remove resolves an error or readback finds an object [0.07ms]
+
+tests-unit/zz-ocr-route-contract.test.ts:
+(pass) OCR extract route privacy and normalization contract > stores only bounded count/status metadata and excludes raw receipt/provider/credential payloads [1.64ms]
+(pass) OCR extract route privacy and normalization contract > disables raw OCR log caching and persists fixed failure codes only [1.18ms]
+(pass) OCR extract route privacy and normalization contract > rejects unauthenticated and oversized OCR requests before reading image bytes [0.22ms]
+(pass) OCR extract route privacy and normalization contract > rejects cross-site OCR mutations before authentication or paid work [0.45ms]
+(pass) OCR extract route privacy and normalization contract > parses only bounded, unique OCR multipart fields [0.58ms]
+(pass) OCR extract route privacy and normalization contract > rejects malformed and chunked oversized OCR multipart bodies [5.31ms]
+(pass) OCR extract route privacy and normalization contract > keeps authenticated OCR reads and writes on the user-scoped client [0.21ms]
+(pass) OCR extract route privacy and normalization contract > force refresh rejection copy does not expose dev/admin internals [0.08ms]
+(pass) OCR extract route privacy and normalization contract > fails closed without exposing diagnostics when quota state is unavailable [0.31ms]
+(pass) OCR extract route privacy and normalization contract > uses an authenticated atomic OCR quota reservation instead of count-then-act [0.59ms]
+(pass) OCR extract route privacy and normalization contract > parses bounded OCR quota receipts and fails closed on malformed RPC data [0.40ms]
+(pass) OCR extract route privacy and normalization contract > admin OCR rerun preflights workflow before destructive reset and rolls back dispatch failures [1.97ms]
+(pass) OCR extract route privacy and normalization contract > inline OCR rejects foreign, originless, and cross-site browser mutations [0.13ms]
+(pass) OCR extract route privacy and normalization contract > inline OCR blocks secret-bearing fixtures before persistence and never retains debug receipt artifacts [1.23ms]
+(pass) OCR extract route privacy and normalization contract > admin receipt image retrieval remains private, bounded, contained, and non-destructive [11.04ms]
+
+ 51 pass
+ 0 fail
+ 448 expect() calls
+Ran 51 tests across 4 files. [363.00ms]

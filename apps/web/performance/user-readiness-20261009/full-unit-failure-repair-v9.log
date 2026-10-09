@@ -1,0 +1,108 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-route-auth-contract.test.ts:
+(pass) admin route auth source contract > keeps every admin route admin-gated directly or through an accepted route helper [43.57ms]
+(pass) admin route auth source contract > orders admin auth before service-role work [11.30ms]
+(pass) admin route auth source contract > keeps new guarded storyboard RAG auth contracts sanitized [0.34ms]
+(pass) admin route auth source contract > keeps public home/map sources separated from admin overlay/proposal contracts [51.42ms]
+
+tests-unit/verify-pin-contract-source.test.ts:
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > owns the two bounded fixed codes and never mutates release-authority files [0.04ms]
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > verifies all six Pin_Contract items with declared vs resolved [0.05ms]
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > routes type checking through npm run typecheck:parity and guards the compiler root [0.01ms]
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > detects bun.lock vs package-lock.json conflicts and records list + count
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > fails closed on drift while still recording the per-item receipt
+(pass) Pin_Contract declared values in the tree > package.json and both locks pin the exact contract versions [0.04ms]
+(pass) Pin_Contract verifier runtime behavior > rejects an absent repository compiler or emits a per-item installed-compiler receipt [540.41ms]
+(pass) Bun reconciliation is a failing pin gate > missing or differently resolved direct dependencies fail with otherwise matching pins [13.46ms]
+
+tests-unit/storage-server-client.test.ts:
+(pass) server-only privileged Storage boundary > uses a distinct strict-local key and preserves hosted behavior [0.21ms]
+(pass) server-only privileged Storage boundary > routes thumbnail Storage only through the dedicated client [0.98ms]
+(pass) server-only privileged Storage boundary > keeps both Storage key names out of browser and Playwright environments [0.67ms]
+
+tests-unit/web-quality-performance-source.test.ts:
+(pass) Tailwind v4 source contracts > parses exact source directives and compiles all production entries with retained utilities [697.28ms]
+(pass) route CSS boundary verifier fixtures > inventories shared and exclusive home, general, admin, and deferred assets [11.52ms]
+(pass) route CSS boundary verifier fixtures > rejects malformed, decoy, negated-media, and budget-bypass CSS [24.20ms]
+(pass) route CSS ceiling boundaries > enforces exact and one-over raw and transfer ceilings for every route [2170.43ms]
+(pass) web quality performance source contracts > map marker HTML keeps image markers with WebP delivery and PNG fallback [0.21ms]
+(pass) web quality performance source contracts > global map exposes bounded Google failure exploration fallback [0.25ms]
+(pass) web quality performance source contracts > map marker WebP assets are present and at least 75% smaller than PNG fallbacks [1.44ms]
+(pass) web quality performance source contracts > popup ad banners load immediately for first-screen exposure while distant media has no src [0.32ms]
+(pass) web quality performance source contracts > home filter count queries run before dropdown open so triggers do not show stale zero counts [0.33ms]
+(pass) web quality performance source contracts > home map runtime renders directly while supporting queries stay intent-gated [12.77ms]
+(pass) web quality performance source contracts > mobile toast dark tokens and G007 announcement width stay explicit [0.24ms]
+(pass) web quality performance source contracts > naver marker click centering avoids slow duplicate recenter loops [0.23ms]
+(pass) web quality performance source contracts > device location floating action does not show expanding circle animations [0.73ms]
+(pass) web quality performance source contracts > profile/stamp/map regressions stay fixed while preserving deferred map loading [1.66ms]
+(pass) web quality performance source contracts > review like heart keeps the previous feed-style mobile and desktop overlay layout [0.61ms]
+(pass) web quality performance source contracts > auth-gated review actions open UI prompts without uncaught LOGIN_REQUIRED throws [0.36ms]
+(pass) web quality performance source contracts > overlay and review icon buttons expose stable accessible names [1.04ms]
+(pass) web quality performance source contracts > desktop direct feature routes hand off to the home left panel and suppress popup blockers [1.86ms]
+(pass) web quality performance source contracts > direct utility routes render clear fallback states instead of blank or invalid panel configs [0.65ms]
+(pass) web quality performance source contracts > admin utility APIs stay behind admin auth and short URLs cannot become open redirects [0.66ms]
+(pass) web quality performance source contracts > feed direct route defers heavy modals and detail panels until interaction [1.21ms]
+(pass) web quality performance source contracts > /mypage avoids client-side redirect work and defers desktop-only sidebar cost [3.25ms]
+(pass) web quality performance source contracts > page-level loaders keep route fallbacks single-owner while map fallbacks stay embedded [17.37ms]
+(pass) web quality performance source contracts > route loading boundaries keep skeleton ownership single-pass [8.30ms]
+(pass) web quality performance source contracts > intent-loaded mobile modal shells do not render desktop dialog on the first client paint [1.56ms]
+(pass) web quality performance source contracts > auth user state lookups have Supabase index migration coverage [0.54ms]
+(pass) web quality performance source contracts > user-facing Supabase reads avoid wide fanout and redundant stamp fetches [0.77ms]
+(pass) web quality performance source contracts > admin review queue avoids fetching approved review history [0.25ms]
+(pass) web quality performance source contracts > Supabase reads use explicit response shapes instead of broad selects [39.92ms]
+(pass) web quality performance source contracts > global chrome assets stay small and cacheable without changing page UI [30.87ms]
+(pass) web quality performance source contracts > restaurant search controls keep accessible names and keyboard-safe rows [0.41ms]
+(pass) web quality performance source contracts > mobile leaderboard rows keep stats visible inside narrow viewports [0.09ms]
+(pass) web quality performance source contracts > direct mobile routes use a self-hosted Korean font before fallback stacks [0.16ms]
+
+tests-unit/privacy-onboarding.test.ts:
+(pass) privacy onboarding challenge > fresh password and OAuth cookies roundtrip with the issuer signing context [0.56ms]
+(pass) privacy onboarding challenge > random token digest follows the immutable SQL SHA-256 contract rather than cookie HMAC [8.02ms]
+(pass) privacy onboarding challenge > 만료·변조·비정규 정책 해시 또는 nonce challenge를 거부한다 [1.15ms]
+(pass) privacy onboarding challenge > OAuth nonce is the one-time confirmation token and the signed origin is mandatory [0.59ms]
+(pass) privacy onboarding challenge > rejected onboarding responses expire all bounded Supabase auth chunks [1.51ms]
+(pass) privacy onboarding challenge > 재사용과 정책 불일치는 서버의 원자적 확정 경로로 넘긴다 [0.76ms]
+(pass) privacy onboarding challenge > OAuth callback uses only the signed HttpOnly challenge as the onboarding discriminator [0.27ms]
+(pass) privacy onboarding challenge > no-challenge OAuth sessions without a live receipt enter only exact onboarding without revocation [0.53ms]
+(pass) privacy onboarding challenge > browser auth contexts cannot bypass the privacy onboarding challenge [0.26ms]
+368 |     expect(signupEligibilityIndex).toBeGreaterThan(-1);
+369 |     expect(passwordSignup).toContain('const challenge = await startOnboardingChallenge("password");');
+370 |     expect(passwordSignup).toContain('action: "password_signup"');
+371 |     expect(passwordSignup.indexOf('toast.success("회원가입 완료! 환영합니다.")')).toBeGreaterThan(signupEligibilityIndex);
+372 |     expect(passwordSignup.indexOf('dispatchHomeAuthSessionUpdated({', signupEligibilityIndex)).toBeGreaterThan(signupEligibilityIndex);
+373 |     expect(passwordSignup.indexOf('redirectAfterAdminLogin()', signupEligibilityIndex)).toBeGreaterThan(signupEligibilityIndex);
+                                                                                              ^
+error: expect(received).toBeGreaterThan(expected)
+
+Expected: > 4041
+Received: -1
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/privacy-onboarding.test.ts:373:89)
+(fail) privacy onboarding challenge > live eligibility receipt gates browser sessions without process-global policy state [1.90ms]
+(pass) live privacy eligibility receipt > eligible current receipt is accepted only with the exact bounded schema [0.30ms]
+(pass) live privacy eligibility receipt > missing profile, policy drift, adult block, and guardian expiry or withdrawal remain fail-closed [0.04ms]
+(pass) live privacy eligibility receipt > malformed, contradictory, and error receipts cannot open a session [0.56ms]
+(pass) minimum-data age and consent choices > 만 14세 미만 가입은 보호자 확인 경로가 배포·읽기검증될 때까지 차단한다 [1.23ms]
+(pass) minimum-data age and consent choices > 선택 마케팅과 야간 채널 동의는 기본 거부이며 필수 정책 동의와 분리된다 [0.13ms]
+(pass) minimum-data age and consent choices > 야간 마케팅은 같은 채널의 명시적 일반 마케팅 동의 없이는 만들지 않는다 [0.14ms]
+(pass) minimum-data age and consent choices > 정책 내용 해시는 정확한 렌더링 입력을 고정한다 [0.10ms]
+(pass) fresh onboarding confirmation receipt > requires an exact verified schema-v1 receipt and accepts a verified replay [0.12ms]
+(pass) fresh onboarding confirmation receipt > G016 serializes same-user replay and exposes one canonical nonce-aware signature [0.12ms]
+(pass) privacy-safe error handling > password, token, email, provider error object를 로그나 응답에 싣지 않는다 [0.14ms]
+(pass) G014 server session release boundaries > self and service-target eligibility reads are exact RPC-only fail-closed boundaries [0.12ms]
+(pass) G014 server session release boundaries > callback finalizes the nonce-bound challenge before live eligibility and rejects ambiguous OAuth without identity mutation [0.26ms]
+(pass) G014 server session release boundaries > rejected OAuth callbacks redirect no-store after attempting both sign-outs even when they fail [1.58ms]
+(pass) G014 server session release boundaries > rejected OAuth callbacks redirect no-store after both sign-outs resolve [0.28ms]
+(pass) G014 server session release boundaries > password onboarding keeps explicit Auth absence checks for identity cleanup [0.09ms]
+(pass) G014 server session release boundaries > protected middleware releases no stale session and public auth/privacy paths remain loop-safe [0.10ms]
+(pass) G014 server session release boundaries > password finalization and replay recovery are same-origin, provenance-bound, held on ambiguity, and non-enumerating [0.25ms]
+(pass) G014 server session release boundaries > existing-account recovery accepts only an authenticated server-derived password-proof subject [0.23ms]
+
+1 tests failed:
+(fail) privacy onboarding challenge > live eligibility receipt gates browser sessions without process-global policy state [1.90ms]
+
+ 75 pass
+ 1 fail
+ 3820 expect() calls
+Ran 76 tests across 5 files. [4.99s]

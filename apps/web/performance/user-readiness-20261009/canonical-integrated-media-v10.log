@@ -1,0 +1,4904 @@
+verified 10 unauthorized ordered reconstruction source entries
+G026 source-only empty-replay bundle verified
+ Network g014catalog645513866_isolated Creating 
+ Volume g014catalog645513866_db-data Creating 
+ Volume g014catalog645513866_db-data Creating 
+ Network g014catalog645513866_isolated Creating 
+ Volume g014catalog645513866_db-data Created 
+ Volume g014catalog645513866_db-data Created 
+ Network g014catalog645513866_isolated Created 
+ Network g014catalog645513866_isolated Created 
+ Container g014catalog645513866-db Creating 
+ Container g014catalog645513866-db Created 
+ Container g014catalog645513866-db Starting 
+ Container g014catalog645513866-db Started 
+ Container g014catalog645513866-auth-run-60c8760c1910 Creating 
+ Container g014catalog645513866-auth-run-60c8760c1910 Created 
+ Container g014catalog645513866-auth-run-59b035753530 Creating 
+ Container g014catalog645513866-auth-run-59b035753530 Created 
+{"level":"info","msg":"Go runtime metrics collection started","time":"2026-10-09T09:36:29Z"}
+{"args":["init_auth_schema"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:29Z"}
+{"args":["alter_users"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:29Z"}
+{"args":["adds_confirmed_at"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:29Z"}
+{"args":["add_email_change_confirmed"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:29Z"}
+{"args":["create_identities_table"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:29Z"}
+{"args":["add_refresh_token_parent"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:29Z"}
+{"args":["create_user_id_idx"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:29Z"}
+{"args":["update_auth_functions"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:29Z"}
+{"args":["update_auth_uid"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:29Z"}
+{"args":["update_user_idx"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:29Z"}
+{"args":["add_banned_until"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:29Z"}
+{"args":["update_auth_functions"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:29Z"}
+{"args":["add_user_reauthentication"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:29Z"}
+{"args":["add_unique_idx"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_auth_jwt_function"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_ip_address_to_audit_log"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_sessions_table"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_mfa_schema"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_aal_and_factor_id_to_sessions"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_mfa_indexes"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_sessions_user_id_index"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_refresh_tokens_session_id_revoked_index"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_saml"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_identities_user_id_idx"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_session_not_after_column"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["remove_parent_foreign_key_refresh_tokens"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["backfill_email_identity"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["backfill_email_last_sign_in_at"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["modify_users_email_unique_index"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_identities_email_column"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["remove_sso_sessions"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["alter_phone_type"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_deleted_at"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["backfill_invite_identities"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_flow_state_table"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_authentication_method_to_flow_state_table"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["remove_duplicate_idx"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_cleanup_indexes"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_mfa_challenge_cleanup_index"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_flow_state_to_relay_state"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_mfa_factors_user_id_idx"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_session_refresh_columns"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_sessions_tag"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_id_pkey_identities"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["remove_ip_address_from_saml_relay_state"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_is_anonymous_column"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_issued_at_to_flow_state"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_saml_name_id_format"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_one_time_tokens_table"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["enable_rls_update_grants"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_mfa_phone_config"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_mfa_factors_column_last_challenged_at"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["drop_uniqueness_constraint_on_phone"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_web_authn"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_disabled_to_sso_providers"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_oauth_clients_table"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:30Z"}
+{"args":["add_oauth_authorizations_consents"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:31Z"}
+{"args":["add_oauth_client_type"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:31Z"}
+{"args":["remove_oauth_client_id_column"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:31Z"}
+{"args":["add_oauth_client_id_to_session"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:31Z"}
+{"args":["add_last_webauthn_challenge_data"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:31Z"}
+{"args":["add_session_refresh_token_columns"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:31Z"}
+{"args":["add_nonce_to_oauth_authorizations"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:31Z"}
+{"args":["add_scopes_to_sessions"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:31Z"}
+{"args":["add_oauth_client_states_table"],"component":"pop","level":"info","msg":"\u003e %s","time":"2026-10-09T09:36:31Z"}
+{"args":[65],"component":"pop","level":"info","msg":"Successfully applied %d migrations.","time":"2026-10-09T09:36:31Z"}
+{"args":[1.999646185],"component":"pop","level":"info","msg":"%.4f seconds","time":"2026-10-09T09:36:31Z"}
+{"count":65,"level":"info","msg":"GoTrue migrations applied successfully","time":"2026-10-09T09:36:31Z"}
+ Container g014catalog645513866-db Running 
+ Volume g014catalog645513866_storage-data Creating 
+ Volume g014catalog645513866_storage-data Creating 
+ Volume g014catalog645513866_storage-data Created 
+ Volume g014catalog645513866_storage-data Created 
+ Container g014catalog645513866-storage Creating 
+ Container g014catalog645513866-storage Created 
+ Container g014catalog645513866-storage Starting 
+ Container g014catalog645513866-storage Started 
+native Storage tenant migrations completed
+NOTICE:  schema "extensions" already exists, skipping
+NOTICE:  extension "pgcrypto" already exists, skipping
+NOTICE:  schema "extensions" already exists, skipping
+CREATE SCHEMA
+NOTICE:  extension "btree_gin" does not exist, skipping
+DROP EXTENSION
+NOTICE:  extension "pg_trgm" does not exist, skipping
+DROP EXTENSION
+DROP EXTENSION
+CREATE EXTENSION
+CREATE EXTENSION
+CREATE EXTENSION
+COMMENT
+COMMENT
+COMMENT
+ALTER DATABASE
+DO
+DO
+DO
+DO
+NOTICE:  function public.has_role(uuid,app_role) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.is_user_admin(uuid) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.handle_new_user() does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.increment_review_count(uuid) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.decrement_review_count(uuid) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.update_user_stats_on_review() does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.set_review_edited_at() does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.update_updated_at_column() does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.get_review_like_count(uuid) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.is_review_liked_by_user(uuid,uuid) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.mark_notification_read(uuid) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.mark_all_notifications_read() does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.create_user_notification(uuid,notification_type,text,text,jsonb) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.create_admin_announcement_notification(text,text,jsonb) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.create_new_restaurant_notification(text,text,jsonb) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.create_ranking_notification(uuid,pg_catalog.int4,text) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.delete_notification(uuid) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.get_restaurant_stats() does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.get_user_stats() does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+DROP FUNCTION
+NOTICE:  function public.update_table_statistics() does not exist, skipping
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.cleanup_old_notifications(pg_catalog.int4) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.search_restaurants(text,text[],pg_catalog.int4,pg_catalog.float4) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.get_restaurant_stats_by_status() does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.get_approved_restaurants(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.approve_restaurant(uuid,uuid) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.reject_restaurant(uuid,uuid,text) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.insert_restaurant_from_jsonl(jsonb) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  table "user_roles" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+COMMENT
+NOTICE:  table "profiles" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+COMMENT
+NOTICE:  table "restaurants" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+COMMENT
+DROP TABLE
+NOTICE:  table "reviews" does not exist, skipping
+CREATE TABLE
+COMMENT
+NOTICE:  table "review_likes" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+COMMENT
+NOTICE:  table "server_costs" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+COMMENT
+NOTICE:  table "user_stats" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+COMMENT
+NOTICE:  table "notifications" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+COMMENT
+NOTICE:  table "announcements" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+COMMENT
+NOTICE:  table "restaurant_submissions" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+COMMENT
+ALTER TABLE
+NOTICE:  policy "Users can view own submissions" for relation "public.restaurant_submissions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users can insert own submissions" for relation "public.restaurant_submissions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Admins can manage all submissions" for relation "public.restaurant_submissions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+NOTICE:  trigger "update_restaurant_submissions_updated_at" for relation "public.restaurant_submissions" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+COMMENT
+COMMENT
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+COMMENT
+COMMENT
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+COMMENT
+COMMENT
+SELECT 0
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+COMMENT
+SELECT 0
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+COMMENT
+SELECT 0
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+COMMENT
+NOTICE:  function public.refresh_materialized_views() does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+NOTICE:  trigger "on_auth_user_created" for relation "auth.users" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "trigger_update_user_stats" for relation "public.reviews" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+COMMENT
+NOTICE:  trigger "trigger_set_review_edited_at" for relation "public.reviews" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+COMMENT
+NOTICE:  trigger "update_restaurants_updated_at" for relation "public.restaurants" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+COMMENT
+NOTICE:  trigger "update_reviews_updated_at" for relation "public.reviews" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+COMMENT
+NOTICE:  trigger "update_server_costs_updated_at" for relation "public.server_costs" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+COMMENT
+NOTICE:  trigger "update_announcements_updated_at" for relation "public.announcements" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+COMMENT
+NOTICE:  policy "Users and admins can view roles" for relation "public.user_roles" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Admins can view all profiles" for relation "public.profiles" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "Public profiles are viewable by everyone" for relation "public.profiles" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users can update own profile" for relation "public.profiles" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users can insert own profile" for relation "public.profiles" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Restaurants are viewable by everyone" for relation "public.restaurants" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "Approved restaurants are viewable by everyone" for relation "public.restaurants" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Admins can view all restaurants" for relation "public.restaurants" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Admins can insert restaurants" for relation "public.restaurants" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Admins can update restaurants" for relation "public.restaurants" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Admins can delete restaurants" for relation "public.restaurants" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Reviews are viewable by everyone" for relation "public.reviews" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users can insert own reviews" for relation "public.reviews" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users and admins can update reviews" for relation "public.reviews" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users and admins can delete reviews" for relation "public.reviews" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Anyone can view review likes" for relation "public.review_likes" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Authenticated users can insert own review likes" for relation "public.review_likes" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users can delete own review likes" for relation "public.review_likes" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Server costs are viewable by everyone" for relation "public.server_costs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Admins can manage server costs" for relation "public.server_costs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "User stats are viewable by everyone" for relation "public.user_stats" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users can view own notifications" for relation "public.notifications" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "System can insert notifications" for relation "public.notifications" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users can update own notifications (read status)" for relation "public.notifications" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users can delete own notifications" for relation "public.notifications" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Announcements are viewable by everyone" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Admins can manage announcements" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+INSERT 0 1
+NOTICE:  policy "Anyone can view review photos" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Authenticated users can upload review photos" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "Users can update own review photos" for relation "storage.objects" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users can delete own review photos" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+GRANT
+GRANT
+GRANT
+GRANT
+REVOKE
+REVOKE
+REVOKE
+DROP FUNCTION
+CREATE FUNCTION
+NOTICE:  function public.get_user_leaderboard() does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+NOTICE:  function public.get_popular_reviews() does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+COMMENT
+COMMENT
+INSERT 0 0
+ANALYZE
+ANALYZE
+ANALYZE
+ANALYZE
+ANALYZE
+ANALYZE
+ANALYZE
+NOTICE:  view "v_table_sizes" does not exist, skipping
+DROP VIEW
+DROP VIEW
+NOTICE:  view "v_index_usage" does not exist, skipping
+NOTICE:  function public.get_table_sizes() does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  function public.get_index_usage() does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+INSERT 0 0
+INSERT 0 0
+INSERT 0 0
+COMMENT
+COMMENT
+COMMENT
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to column status of table restaurant_submissions
+drop cascades to policy Users can insert own submissions on table restaurant_submissions
+DROP TYPE
+CREATE TYPE
+COMMENT
+DO
+NOTICE:  table "restaurant_requests" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+COMMENT
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+DROP TABLE
+CREATE TABLE
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+NOTICE:  trigger "update_restaurant_submissions_updated_at" for relation "public.restaurant_submissions" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  table "restaurant_submission_items" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+NOTICE:  policy "Users can view own requests" for relation "public.restaurant_requests" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users can insert own requests" for relation "public.restaurant_requests" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Admins can view all requests" for relation "public.restaurant_requests" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Admins can update requests" for relation "public.restaurant_requests" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+NOTICE:  policy "Users can view own submissions" for relation "public.restaurant_submissions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users can insert own submissions" for relation "public.restaurant_submissions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users can delete own pending submissions" for relation "public.restaurant_submissions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Admins can view all submissions" for relation "public.restaurant_submissions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Admins can update all submissions" for relation "public.restaurant_submissions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+NOTICE:  policy "Users can view own submission items" for relation "public.restaurant_submission_items" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Users can insert own submission items" for relation "public.restaurant_submission_items" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+NOTICE:  policy "Admins can manage all submission items" for relation "public.restaurant_submission_items" does not exist, skipping
+CREATE POLICY
+NOTICE:  constraint "restaurants_source_type_check" of relation "restaurants" does not exist, skipping
+ALTER TABLE
+ALTER TABLE
+CREATE FUNCTION
+COMMENT
+CREATE FUNCTION
+NOTICE:  trigger "sync_submission_status_trigger" for relation "public.restaurant_submission_items" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  ✅ 제보 시스템 테이블 재설계 v2 완료
+NOTICE:     - restaurant_requests 테이블 생성 (쯔양에게 맛집 추천)
+NOTICE:     - restaurant_submissions 테이블 재설계 (정규화)
+NOTICE:     - restaurant_submission_items 테이블 생성 (개별 항목)
+NOTICE:     - submission_status ENUM 단순화
+NOTICE:     - RLS 정책 설정 완료
+NOTICE:     - restaurants.source_type 제약 수정
+NOTICE:     - 상태 자동 동기화 트리거 설정
+DO
+NOTICE:  function public.generate_unique_id(text,text,text) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+COMMENT
+NOTICE:  ⚠️ get_ncp_monthly_usage 함수가 존재하지 않습니다
+DO
+NOTICE:  ⚠️ increment_ncp_api_usage 함수가 존재하지 않습니다
+DO
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+NOTICE:  index "idx_submission_items_target_restaurant" does not exist, skipping
+DROP INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+NOTICE:  index "idx_reviews_ocr_pending" does not exist, skipping
+DROP INDEX
+NOTICE:  index "idx_reviews_duplicate" does not exist, skipping
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+NOTICE:  index "idx_submission_items_target_restaurant_id" does not exist, skipping
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+NOTICE:  index "idx_restaurant_requests_road_address" does not exist, skipping
+DROP INDEX
+DROP INDEX
+NOTICE:  index "idx_restaurant_requests_geocoding_pending" does not exist, skipping
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+NOTICE:  ✅ 데이터베이스 성능 최적화 완료
+NOTICE:     - 함수 search_path 보안 설정 (3개)
+NOTICE:     - RLS initplan 최적화 (12개 정책)
+NOTICE:     - 중복 인덱스 제거 (1개)
+NOTICE:     - FK 인덱스 추가 (5개)
+NOTICE:     - 미사용 인덱스 제거 (52개)
+NOTICE:  
+NOTICE:  ⚠️ 수동 설정 필요:
+NOTICE:     - Supabase Dashboard > Authentication > Providers > Email
+NOTICE:     - "Enable leaked password protection" 활성화
+DO
+BEGIN
+NOTICE:  schema "extensions" already exists, skipping
+CREATE SCHEMA
+NOTICE:  extension "vector" already exists, skipping
+CREATE EXTENSION
+NOTICE:  extension "fuzzystrmatch" already exists, skipping
+CREATE EXTENSION
+NOTICE:  extension "pgcrypto" already exists, skipping
+CREATE EXTENSION
+DO
+SAVEPOINT
+CREATE TABLE
+CREATE INDEX
+ROLLBACK
+RELEASE
+DO
+COMMIT
+BEGIN
+LOCK TABLE
+DO
+DO
+CREATE TABLE
+DO
+DO
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+DO
+DO
+CREATE TYPE
+CREATE TYPE
+CREATE TYPE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE TRIGGER
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+DO
+DO
+DO
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+DO
+DO
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+DO
+DO
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+NOTICE:  trigger "trigger_ad_banners_updated_at" for relation "ad_banners" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+ALTER TABLE
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+INSERT 0 3
+COMMENT
+COMMENT
+COMMENT
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+ALTER TABLE
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+COMMIT
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+CREATE POLICY
+CREATE POLICY
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "restaurants" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "idx_restaurants_created_at" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_restaurants_name" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_restaurants_review_count" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_restaurants_status" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_restaurants_unique_id" already exists, skipping
+CREATE INDEX
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER TABLE
+ALTER TABLE
+CREATE INDEX
+CREATE FUNCTION
+ALTER FUNCTION
+COMMENT
+BEGIN
+NOTICE:  extension "pgcrypto" already exists, skipping
+CREATE EXTENSION
+NOTICE:  relation "announcements" already exists, skipping
+CREATE TABLE
+DO
+DO
+NOTICE:  column "content" of relation "announcements" already exists, skipping
+NOTICE:  column "created_by" of relation "announcements" already exists, skipping
+NOTICE:  column "created_at" of relation "announcements" already exists, skipping
+NOTICE:  column "updated_at" of relation "announcements" already exists, skipping
+ALTER TABLE
+DO
+DO
+DO
+UPDATE 0
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+DO
+NOTICE:  constraint "announcements_title_length_check" of relation "announcements" does not exist, skipping
+NOTICE:  constraint "announcements_content_length_check" of relation "announcements" does not exist, skipping
+NOTICE:  constraint "announcements_priority_range_check" of relation "announcements" does not exist, skipping
+ALTER TABLE
+ALTER TABLE
+CREATE FUNCTION
+NOTICE:  trigger "trigger_announcements_updated_at" for relation "public.announcements" does not exist, skipping
+DROP TRIGGER
+DROP TRIGGER
+CREATE TRIGGER
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+NOTICE:  policy "Announcements select policy" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "Admins can insert announcements" for relation "public.announcements" does not exist, skipping
+NOTICE:  policy "Admins can update announcements" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+DROP POLICY
+NOTICE:  policy "Admins can delete announcements" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "announcements_select_policy" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "announcements_insert_admin" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+DROP POLICY
+NOTICE:  policy "announcements_update_admin" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "announcements_delete_admin" for relation "public.announcements" does not exist, skipping
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+INSERT 0 10
+COMMIT
+catalog_source_apply 20260214_fix_approve_edit_backup_stage.sql
+CREATE FUNCTION
+catalog_source_apply 20260214_fix_restaurant_rpcs_and_search.sql
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+catalog_source_apply 20260214_fix_submission_item_target_to_backup.sql
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+catalog_source_apply 20260405_add_google_name.sql
+ALTER TABLE
+catalog_source_apply 20260405_deduplicate_restaurants.sql
+DO
+catalog_source_apply 20260410_add_admin_review_merge_rpc.sql
+CREATE FUNCTION
+REVOKE
+REVOKE
+GRANT
+GRANT
+catalog_source_apply 20260417_prevent_active_restaurant_identity_duplicates.sql
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+UPDATE 0
+UPDATE 0
+CREATE INDEX
+catalog_source_apply 20260417_harden_submission_identity_duplicate_checks.sql
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+catalog_source_apply 20260425_add_ai_leaderboard_snapshots.sql
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+catalog_source_apply 20260425_allow_ocr_logs_user_insert.sql
+NOTICE:  policy "Users can insert their own OCR logs" for relation "public.ocr_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+catalog_source_apply 20260425_create_admin_ai_settings.sql
+CREATE TABLE
+CREATE TABLE
+CREATE FUNCTION
+NOTICE:  trigger "set_admin_ai_settings_updated_at" for relation "public.admin_ai_settings" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "set_admin_ai_provider_keys_updated_at" for relation "public.admin_ai_provider_keys" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+ALTER TABLE
+ALTER TABLE
+catalog_source_apply 20260506065538_optimize_auth_user_state_indexes.sql
+DO
+catalog_source_apply 20260506085634_optimize_app_query_indexes.sql
+CREATE FUNCTION
+NOTICE:  schema "extensions" already exists, skipping
+CREATE SCHEMA
+NOTICE:  extension "pg_trgm" already exists, skipping
+CREATE EXTENSION
+DO
+catalog_source_apply 20260509000100_drop_server_costs.sql
+DROP TABLE
+catalog_source_apply 20260509000200_drop_admin_ai_settings.sql
+DROP TABLE
+DROP TABLE
+DROP TABLE
+DROP FUNCTION
+catalog_source_apply 20260509_drop_server_costs.sql
+NOTICE:  table "server_costs" does not exist, skipping
+DROP TABLE
+catalog_source_apply 20260514_00_admin_user_management_hardening.sql
+NOTICE:  relation "user_roles" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "profiles" already exists, skipping
+CREATE TABLE
+CREATE TABLE
+INSERT 0 0
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+NOTICE:  constraint "profiles_role_allowed_check" of relation "profiles" does not exist, skipping
+ALTER TABLE
+UPDATE 0
+ALTER TABLE
+NOTICE:  relation "user_roles_user_id_role_idx" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+GRANT
+REVOKE
+NOTICE:  policy "user_roles_select_own" for relation "public.user_roles" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+NOTICE:  trigger "profiles_prevent_role_client_change" for relation "public.profiles" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+NOTICE:  trigger "user_roles_prevent_last_admin_delete" for relation "public.user_roles" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+NOTICE:  trigger "user_roles_prevent_last_admin_update" for relation "public.user_roles" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+ALTER TABLE
+GRANT
+REVOKE
+NOTICE:  policy "user_account_status_select_own" for relation "public.user_account_status" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  trigger "user_account_status_prevent_last_active_admin_disable" for relation "public.user_account_status" does not exist, skipping
+CREATE FUNCTION
+DROP TRIGGER
+CREATE TRIGGER
+NOTIFY
+catalog_source_apply 20260514_admin_sidebar_preferences.sql
+CREATE TABLE
+ALTER TABLE
+GRANT
+NOTICE:  policy "admin_user_preferences_select_own_admin" for relation "public.admin_user_preferences" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "admin_user_preferences_insert_own_admin" for relation "public.admin_user_preferences" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "admin_user_preferences_update_own_admin" for relation "public.admin_user_preferences" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE INDEX
+CREATE FUNCTION
+NOTICE:  trigger "admin_user_preferences_set_updated_at" for relation "public.admin_user_preferences" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTIFY
+catalog_source_apply 20260514_admin_user_management_audit.sql
+CREATE TABLE
+ALTER TABLE
+GRANT
+NOTICE:  policy "admin_audit_events_select_admins" for relation "public.admin_audit_events" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+REVOKE
+GRANT
+NOTIFY
+catalog_source_apply 20260516_tighten_admin_user_management_grants.sql
+REVOKE
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+NOTIFY
+catalog_source_apply 20260523093000_create_restaurant_popular_rank_snapshots.sql
+CREATE SCHEMA
+REVOKE
+REVOKE
+REVOKE
+NOTICE:  policy "Public can read popular rank snapshots" for relation "public.restaurant_popular_rank_snapshots" does not exist, skipping
+DO
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+catalog_source_apply 20260525143908_create_youtube_kpi_snapshots.sql
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+catalog_source_apply 20260526083932_add_youtube_channel_growth_snapshot_deltas.sql
+ALTER TABLE
+CREATE INDEX
+UPDATE 0
+catalog_source_apply 20260531084217_harden_public_api_grants_and_rpcs.sql
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+NOTICE:  Skipped privileged default privilege revoke: ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public REVOKE ALL PRIVILEGES ON TABLES FROM anon, authenticated
+NOTICE:  Skipped privileged default privilege revoke: ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public REVOKE ALL PRIVILEGES ON FUNCTIONS FROM anon, authenticated
+NOTICE:  Skipped privileged default privilege revoke: ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public REVOKE ALL PRIVILEGES ON SEQUENCES FROM anon, authenticated
+DO
+NOTICE:  Skipped missing RPC grant hardening target: public.make_user_admin(text)
+NOTICE:  Skipped missing RPC grant hardening target: public.batch_insert_restaurants_from_jsonl(jsonb[])
+NOTICE:  Skipped missing RPC grant hardening target: public.approve_restaurant_submission(uuid, uuid)
+NOTICE:  Skipped missing RPC grant hardening target: public.reject_restaurant_submission(uuid, uuid, text)
+NOTICE:  Skipped missing RPC grant hardening target: public.approve_edit_restaurant_submission(uuid, uuid, uuid[])
+NOTICE:  Skipped missing RPC grant hardening target: public.reject_submission(uuid, uuid, text)
+NOTICE:  Skipped missing RPC grant hardening target: public.reject_submission_item(uuid, uuid, text)
+DO
+NOTIFY
+catalog_source_apply 20260531084516_tighten_public_table_data_api_grants.sql
+REVOKE
+GRANT
+GRANT
+REVOKE
+GRANT
+GRANT
+REVOKE
+GRANT
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+GRANT
+REVOKE
+GRANT
+GRANT
+REVOKE
+GRANT
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+REVOKE
+GRANT
+REVOKE
+REVOKE
+NOTIFY
+catalog_source_apply 20260531105250_restaurant_refresh_history.sql
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+REVOKE
+REVOKE
+GRANT
+GRANT
+NOTICE:  policy "restaurant_refresh_runs_admin_select" for relation "public.restaurant_refresh_runs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "restaurant_refresh_runs_admin_insert" for relation "public.restaurant_refresh_runs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "restaurant_refresh_runs_admin_update" for relation "public.restaurant_refresh_runs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "restaurant_refresh_candidates_admin_select" for relation "public.restaurant_refresh_candidates" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "restaurant_refresh_candidates_admin_insert" for relation "public.restaurant_refresh_candidates" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "restaurant_refresh_candidates_admin_update" for relation "public.restaurant_refresh_candidates" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+COMMENT
+COMMENT
+catalog_source_apply 20260611091500_create_youtube_thumbnail_releases.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+INSERT 0 1
+NOTIFY
+catalog_source_apply 20260612075100_storyboard_caption_provenance.sql
+ALTER TABLE
+UPDATE 0
+ALTER TABLE
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+catalog_source_apply 20260627080000_storyboard_custom_gpt_rag_documents.sql
+NOTICE:  extension "vector" already exists, skipping
+CREATE EXTENSION
+NOTICE:  extension "pgcrypto" already exists, skipping
+CREATE EXTENSION
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+NOTICE:  trigger "set_documents_updated_at" for relation "public.documents" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+ALTER TABLE
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+GRANT
+GRANT
+catalog_source_apply 20260627150000_restrict_restaurants_public_select_approved.sql
+ALTER TABLE
+REVOKE
+GRANT
+GRANT
+NOTICE:  policy "Enable read access for all users" for relation "public.restaurants" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "Enable update for admins" for relation "public.restaurants" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "restaurants_public_approved_select" for relation "public.restaurants" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "restaurants_authenticated_admin_update" for relation "public.restaurants" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+COMMENT
+COMMENT
+NOTIFY
+catalog_source_apply 20260627153000_storyboard_documents_hybrid_v2_indexes.sql
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+REVOKE
+GRANT
+REVOKE
+GRANT
+COMMENT
+NOTIFY
+catalog_source_apply 20260627154500_storyboard_documents_hybrid_rrf_type_fix.sql
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+GRANT
+REVOKE
+GRANT
+NOTIFY
+catalog_source_apply 20260702000100_restaurant_request_review_lifecycle.sql
+ALTER TABLE
+UPDATE 0
+UPDATE 0
+ALTER TABLE
+DO
+CREATE TABLE
+ALTER TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "Admins can view request review audit" for relation "public.restaurant_request_review_audit" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTIFY
+catalog_source_apply 20260702000200_restaurant_request_client_idempotency.sql
+ALTER TABLE
+CREATE INDEX
+NOTIFY
+catalog_source_apply 20260704000100_restaurant_submission_submit_contract.sql
+ALTER TABLE
+CREATE INDEX
+CREATE FUNCTION
+REVOKE
+GRANT
+NOTIFY
+catalog_source_apply 20260704000200_restaurant_destructive_admin_audit.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+NOTIFY
+catalog_source_apply 20260707000100_admin_restaurant_map_overlays.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+REVOKE
+REVOKE
+GRANT
+CREATE FUNCTION
+NOTICE:  trigger "set_admin_restaurant_map_overlays_updated_at" for relation "public.admin_restaurant_map_overlays" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+catalog_source_apply 20260707000200_admin_restaurant_map_overlay_audit_apply.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+GRANT
+catalog_source_apply 20260707000300_admin_trend_schema_foundation.sql
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+NOTICE:  identifier "admin_restaurant_map_overlay_proposal_review_events_proposal_id_idx" will be truncated to "admin_restaurant_map_overlay_proposal_review_events_proposal_id"
+CREATE INDEX
+NOTICE:  identifier "admin_restaurant_map_overlay_proposal_review_events_actor_created_idx" will be truncated to "admin_restaurant_map_overlay_proposal_review_events_actor_creat"
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+CREATE FUNCTION
+NOTICE:  trigger "set_admin_restaurant_map_overlay_proposals_updated_at" for relation "public.admin_restaurant_map_overlay_proposals" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "set_admin_trend_job_requests_updated_at" for relation "public.admin_trend_job_requests" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+catalog_source_apply 20260707000400_admin_trend_job_request_rpcs.sql
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+catalog_source_apply 20260707000500_admin_trend_proposal_review_rpc.sql
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+GRANT
+catalog_source_apply 20260707000600_admin_trend_proposal_approval_rpc.sql
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+GRANT
+catalog_source_apply 20260707000700_admin_storyboard_jobs.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+REVOKE
+GRANT
+NOTICE:  policy "admin_storyboard_jobs_service_role_all" for relation "public.admin_storyboard_jobs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+catalog_source_apply 20260711000100_release_auth_session_revocation.sql
+DO
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+REVOKE
+REVOKE
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER DEFAULT PRIVILEGES
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+NOTIFY
+catalog_source_apply 20260712000100_g010_privacy_foundation.sql
+DO
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE VIEW
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+NOTIFY
+catalog_source_apply 20260712000200_g010_notification_marketing.sql
+NOTICE:  relation "notifications" already exists, skipping
+CREATE TABLE
+ALTER TABLE
+UPDATE 0
+ALTER TABLE
+ALTER TABLE
+NOTICE:  constraint "notifications_classification_check" of relation "notifications" does not exist, skipping
+NOTICE:  constraint "notifications_channel_check" of relation "notifications" does not exist, skipping
+NOTICE:  constraint "notifications_marketing_consent_check" of relation "notifications" does not exist, skipping
+ALTER TABLE
+CREATE INDEX
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+NOTICE:  constraint "notifications_campaign_operation_fk" of relation "notifications" does not exist, skipping
+ALTER TABLE
+ALTER TABLE
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+NOTICE:  policy "notifications_owner_select" for relation "public.notifications" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "notifications_owner_update" for relation "public.notifications" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "notifications_owner_delete" for relation "public.notifications" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+GRANT
+GRANT
+REVOKE
+REVOKE
+REVOKE
+GRANT
+REVOKE
+REVOKE
+GRANT
+GRANT
+DO
+catalog_source_apply 20260712000300_g010_account_deletion.sql
+DO
+CREATE TABLE
+CREATE INDEX
+INSERT 0 1
+CREATE TABLE
+INSERT 0 19
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  trigger "account_deletion_requests_updated_at" for relation "public.account_deletion_requests" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "account_deletion_request_items_updated_at" for relation "public.account_deletion_request_items" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER TABLE
+UPDATE 0
+UPDATE 0
+NOTICE:  constraint "admin_audit_events_whitelisted_contract" of relation "admin_audit_events" does not exist, skipping
+ALTER TABLE
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  constraint "account_deletion_requests_reason_code_allowed" of relation "account_deletion_requests" does not exist, skipping
+NOTICE:  constraint "account_deletion_requests_count_summary_safe" of relation "account_deletion_requests" does not exist, skipping
+ALTER TABLE
+NOTICE:  constraint "account_deletion_request_items_reason_code_allowed" of relation "account_deletion_request_items" does not exist, skipping
+ALTER TABLE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+NOTIFY
+catalog_source_apply 20260712000400_g010_retention_separation.sql
+BEGIN
+CREATE SCHEMA
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+CREATE TABLE
+INSERT 0 10
+CREATE FUNCTION
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  trigger "privacy_retention_classes_updated_at" for relation "privacy_retention.privacy_retention_classes" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "privacy_retention_classes_versioned" for relation "privacy_retention.privacy_retention_classes" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "privacy_retention_class_sources_versioned" for relation "privacy_retention.privacy_retention_class_sources" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "privacy_legal_holds_history" for relation "privacy_retention.privacy_legal_holds" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "privacy_retention_work_items_updated_at" for relation "privacy_retention.privacy_retention_work_items" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "privacy_retention_runs_updated_at" for relation "privacy_retention.privacy_retention_runs" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+DROP TRIGGER
+NOTICE:  trigger "privacy_retention_run_items_updated_at" for relation "privacy_retention.privacy_retention_run_items" does not exist, skipping
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+NOTIFY
+COMMIT
+catalog_source_apply 20260712000500_g010_incident_workflow.sql
+DO
+CREATE TYPE
+CREATE TYPE
+CREATE TYPE
+CREATE TYPE
+CREATE TYPE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+catalog_source_apply 20260712000600_g010_ocr_log_minimization.sql
+CREATE FUNCTION
+REVOKE
+GRANT
+NOTICE:  constraint "ocr_logs_metadata_privacy_safe" of relation "ocr_logs" does not exist, skipping
+DO
+COMMENT
+catalog_source_apply 20260713000100_g013_short_url_security.sql
+CREATE SCHEMA
+REVOKE
+DO
+ALTER TABLE
+CREATE TABLE
+INSERT 0 3
+CREATE TABLE
+CREATE INDEX
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+catalog_source_apply 20260713000200_g013_ocr_quota_security.sql
+CREATE SCHEMA
+REVOKE
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+CREATE POLICY
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+NOTIFY
+catalog_source_apply 20260713000300_g013_admin_provider_budgets.sql
+CREATE SCHEMA
+REVOKE
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+CREATE TABLE
+INSERT 0 3
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+GRANT
+NOTIFY
+catalog_source_apply 20260713000400_g013_provider_budget_extension.sql
+BEGIN
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+INSERT 0 2
+ALTER TABLE
+COMMIT
+NOTIFY
+catalog_source_apply 20260713000450_g013_address_admin_approval.sql
+BEGIN
+DO
+GRANT ROLE
+NOTICE:  schema "privacy_retention" already exists, skipping
+CREATE SCHEMA
+REVOKE
+GRANT
+NOTICE:  identifier "tzuyang_address_evidence_admin_approval_receipts_time_order_check" will be truncated to "tzuyang_address_evidence_admin_approval_receipts_time_order_che"
+NOTICE:  identifier "tzuyang_address_evidence_admin_approval_receipts_timestamp_precision_check" will be truncated to "tzuyang_address_evidence_admin_approval_receipts_timestamp_prec"
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+GRANT
+CREATE POLICY
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE TRIGGER
+NOTICE:  identifier "tzuyang_address_evidence_admin_approval_receipts_append_only_truncate" will be truncated to "tzuyang_address_evidence_admin_approval_receipts_append_only_tr"
+CREATE TRIGGER
+GRANT
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.user_roles" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.user_account_status" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DO
+DO
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+DO
+DO
+REVOKE ROLE
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20260713002000_g014_public_api_private_boundary.sql
+DO
+DO
+DROP POLICY
+DROP POLICY
+DROP POLICY
+DROP POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+NOTICE:  function public.approve_restaurant(uuid) does not exist, skipping
+DROP FUNCTION
+DROP FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+BEGIN
+DO
+GRANT ROLE
+NOTICE:  schema "privacy_retention" already exists, skipping
+CREATE SCHEMA
+ALTER SCHEMA
+REVOKE
+REVOKE
+GRANT
+GRANT
+DO
+GRANT
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+DO
+CREATE VIEW
+ALTER VIEW
+REVOKE
+GRANT
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.privacy_policy_versions" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.privacy_age_profiles" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.privacy_consent_events" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.privacy_retention_classes" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.privacy_retention_class_sources" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.privacy_retention_work_items" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.privacy_retained_records" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.privacy_retention_runs" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.privacy_retention_run_items" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.privacy_legal_holds" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.privacy_onboarding_challenges" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.privacy_guardian_verifications" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.privacy_audit_events" does not exist, skipping
+DO
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.notifications" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.marketing_campaign_operations" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.marketing_campaign_recipients" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.marketing_campaign_batches" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.account_deletion_policies" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.account_deletion_data_classes" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.account_deletion_requests" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.account_deletion_request_items" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.privacy_incidents" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.privacy_incident_transition_previews" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.privacy_incident_notices" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.privacy_incident_actions" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.profiles" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.admin_audit_events" does not exist, skipping
+DO
+DO
+CREATE FUNCTION
+ALTER FUNCTION
+DROP TRIGGER
+NOTICE:  trigger "g014_privacy_audit_events_append_only" for relation "privacy_retention.privacy_audit_events" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+DO
+NOTICE:  trigger "g014_admin_audit_events_append_only" for relation "public.admin_audit_events" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+REVOKE
+DO
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+GRANT
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.g014_public_rpc_allowlist" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DO
+DO
+CREATE FUNCTION
+DO
+CREATE FUNCTION
+ALTER FUNCTION
+DO
+DO
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+GRANT
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.g014_nested_helper_allowlist" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DO
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+DO
+REVOKE
+REVOKE
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+DO
+GRANT
+GRANT
+REVOKE ROLE
+DO
+DO
+GRANT ROLE
+REVOKE
+REVOKE
+REVOKE ROLE
+DO
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20260713002100_g014_privacy_workflows.sql
+BEGIN
+DO
+GRANT ROLE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+GRANT
+CREATE POLICY
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE TRIGGER
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+WARNING:  no privileges were granted for "auth"
+GRANT
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+DO
+REVOKE
+NOTIFY
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20260713002200_g014_marketing_state_machine.sql
+BEGIN
+DO
+GRANT ROLE
+DO
+ALTER TABLE
+UPDATE 0
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE INDEX
+NOTICE:  ALTER TABLE / ADD CONSTRAINT USING INDEX will rename index "g014_marketing_campaign_batches_id_operation_idx" to "g014_marketing_campaign_batches_id_operation_key"
+ALTER TABLE
+CREATE INDEX
+CREATE INDEX
+NOTICE:  ALTER TABLE / ADD CONSTRAINT USING INDEX will rename index "g014_privacy_consent_events_exact_binding_idx" to "g014_privacy_consent_events_exact_binding_key"
+ALTER TABLE
+CREATE TABLE
+NOTICE:  identifier "g014_marketing_batch_recipients_transport_notification_shape_check" will be truncated to "g014_marketing_batch_recipients_transport_notification_shape_ch"
+NOTICE:  identifier "g014_marketing_batch_recipients_transport_notification_status_check" will be truncated to "g014_marketing_batch_recipients_transport_notification_status_c"
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE TABLE
+NOTICE:  identifier "g014_marketing_provider_attempt_accepted_recipients_canonical_check" will be truncated to "g014_marketing_provider_attempt_accepted_recipients_canonical_c"
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+GRANT
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE TRIGGER
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE TRIGGER
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE TRIGGER
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE TRIGGER
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE TRIGGER
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE TRIGGER
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE TRIGGER
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE TRIGGER
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+GRANT
+NOTICE:  policy "g014_privacy_workflow_owner_review_likes_source" for relation "public.review_likes" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "g014_privacy_workflow_owner_reviews_source" for relation "public.reviews" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "g014_privacy_workflow_owner_restaurants_source" for relation "public.restaurants" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+REVOKE
+REVOKE
+GRANT
+REVOKE
+GRANT
+DO
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+DO
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20260713002300_g014_account_deletion_state_machine.sql
+BEGIN
+DO
+GRANT ROLE
+DO
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+INSERT 0 1
+INSERT 0 1
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE INDEX
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  function privacy_retention.g014_account_deletion_receipt_payload_hash(text,uuid,uuid,uuid,text,text,text,text,text,text,text,text,text) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  trigger "g014_account_deletion_admin_role_removal_fence" for relation "public.user_roles" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_account_deletion_admin_status_removal_fence" for relation "public.user_account_status" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  function public.claim_account_deletion_external_phase(uuid,uuid,uuid,text,text,text,text) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  function privacy_retention.g014_account_deletion_enable_evidence_cleanup(uuid,uuid) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  trigger "g014_account_deletion_provider_proof_lease_guard" for relation "privacy_retention.account_deletion_provider_receipt_proofs" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+INSERT 0 19
+INSERT 0 19
+INSERT 0 1
+INSERT 0 20
+CREATE FUNCTION
+NOTICE:  trigger "g014_account_deletion_hold_subject_lock" for relation "privacy_retention.privacy_legal_holds" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+INSERT 0 1
+CREATE FUNCTION
+NOTICE:  trigger "g014_account_deletion_policy_immutable" for relation "public.account_deletion_policies" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+NOTICE:  trigger "g014_account_deletion_data_class_immutable" for relation "public.account_deletion_data_classes" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+NOTICE:  trigger "g014_account_deletion_manifest_immutable" for relation "privacy_retention.account_deletion_source_manifest" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+NOTICE:  trigger "g014_account_deletion_append_only" for relation "privacy_retention.account_deletion_adapter_registry" does not exist, skipping
+NOTICE:  trigger "g014_account_deletion_append_only" for relation "privacy_retention.account_deletion_hold_class_map" does not exist, skipping
+NOTICE:  trigger "g014_account_deletion_append_only" for relation "privacy_retention.account_deletion_client_cleanup_contracts" does not exist, skipping
+NOTICE:  trigger "g014_account_deletion_append_only" for relation "privacy_retention.account_deletion_policy_activation_history" does not exist, skipping
+NOTICE:  trigger "g014_account_deletion_append_only" for relation "privacy_retention.account_deletion_policy_publications" does not exist, skipping
+NOTICE:  trigger "g014_account_deletion_append_only" for relation "privacy_retention.account_deletion_evidence_separations" does not exist, skipping
+NOTICE:  trigger "g014_account_deletion_append_only" for relation "privacy_retention.account_deletion_storage_objects" does not exist, skipping
+NOTICE:  trigger "g014_account_deletion_append_only" for relation "privacy_retention.account_deletion_provider_receipt_proofs" does not exist, skipping
+NOTICE:  trigger "g014_account_deletion_append_only" for relation "privacy_retention.account_deletion_storage_receipts" does not exist, skipping
+DO
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  trigger "g014_account_deletion_item_binding_guard" for relation "public.account_deletion_request_items" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+UPDATE 0
+ALTER TABLE
+NOTICE:  trigger "g014_account_deletion_request_binding_guard" for relation "public.account_deletion_requests" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+DROP FUNCTION
+CREATE FUNCTION
+NOTICE:  function public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text) does not exist, skipping
+DROP FUNCTION
+DROP FUNCTION
+DROP FUNCTION
+NOTICE:  function public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text) does not exist, skipping
+DROP FUNCTION
+DROP FUNCTION
+NOTICE:  function public.list_account_deletion_storage_objects(uuid,uuid,uuid,text,text,text) does not exist, skipping
+DROP FUNCTION
+NOTICE:  function public.list_account_deletion_storage_objects(uuid,uuid,uuid,text,text,text,uuid) does not exist, skipping
+DROP FUNCTION
+NOTICE:  function public.get_account_deletion_storage_work_items(uuid,uuid,text) does not exist, skipping
+DROP FUNCTION
+DROP FUNCTION
+NOTICE:  function public.finalize_account_deletion_storage(uuid,uuid,text,jsonb) does not exist, skipping
+DROP FUNCTION
+NOTICE:  function public.finalize_account_deletion_storage(uuid,uuid,text,uuid,jsonb) does not exist, skipping
+DROP FUNCTION
+NOTICE:  function public.finalize_account_deletion_storage(uuid,uuid,uuid,text,text,text,uuid,jsonb) does not exist, skipping
+DROP FUNCTION
+DROP FUNCTION
+NOTICE:  function public.finalize_account_deletion_auth(uuid,uuid,text,text) does not exist, skipping
+DROP FUNCTION
+NOTICE:  function public.finalize_account_deletion_auth(uuid,uuid,text,uuid,text) does not exist, skipping
+DROP FUNCTION
+NOTICE:  function public.finalize_account_deletion_auth(uuid,uuid,uuid,text,text,text,uuid,text) does not exist, skipping
+DROP FUNCTION
+DROP FUNCTION
+NOTICE:  function public.fail_account_deletion(uuid,uuid,uuid,text,text,text,text) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  function public.fail_account_deletion_external_phase(uuid,uuid,uuid,text,text,text,text,uuid,text) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+DO
+REVOKE
+GRANT
+CREATE POLICY
+DO
+NOTICE:  policy "g014_account_deletion_source_access" for relation "profiles" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "user_stats" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "user_stats" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "user_bookmarks" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "user_bookmarks" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "notifications" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "admin_user_preferences" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "admin_user_preferences" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "documents" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "documents" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "review_likes" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "review_likes" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "reviews" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "reviews" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "restaurant_submission_items" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "restaurant_submission_items" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "restaurant_submissions" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "restaurant_submissions" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "restaurant_requests" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "restaurant_requests" does not exist, skipping
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "ocr_logs" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "ocr_logs" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "marketing_campaign_recipients" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "marketing_campaign_operations" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "privacy_retention.marketing_campaign_batch_recipients" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "privacy_retention.marketing_campaign_consent_evidence_keys" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "privacy_retention.privacy_consent_events" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "privacy_retention.privacy_age_profiles" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "privacy_retention.privacy_guardian_verifications" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "privacy_retention.privacy_onboarding_challenges" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_source_access" for relation "privacy_retention.privacy_audit_events" does not exist, skipping
+NOTICE:  policy "g014_account_deletion_audit_append_access" for relation "privacy_retention.privacy_audit_events" does not exist, skipping
+DO
+WARNING:  no privileges were granted for "auth"
+WARNING:  no privileges were granted for "storage"
+GRANT
+GRANT
+GRANT
+NOTICE:  function public.finalize_account_deletion_storage(uuid,uuid,pg_catalog.bool) does not exist, skipping
+DROP FUNCTION
+NOTICE:  function public.finalize_account_deletion_auth(uuid,uuid,pg_catalog.bool) does not exist, skipping
+DROP FUNCTION
+DO
+DO
+REVOKE
+GRANT
+REVOKE
+DO
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE FUNCTION
+NOTICE:  trigger "g014_account_deletion_seed_external_jobs" for relation "public.account_deletion_requests" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+DO
+WARNING:  no privileges were granted for "auth"
+WARNING:  no privileges were granted for "storage"
+GRANT
+WARNING:  not all privileges were granted for "sessions"
+WARNING:  not all privileges were granted for "refresh_tokens"
+GRANT
+REVOKE
+REVOKE
+GRANT
+DELETE 5
+INSERT 0 8
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  trigger "g014_account_deletion_external_job_binding_guard" for relation "privacy_retention.account_deletion_external_jobs" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_account_deletion_external_attempt_binding_guard" for relation "privacy_retention.account_deletion_external_job_attempts" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+DROP TRIGGER
+NOTICE:  trigger "g014_account_deletion_external_checkpoint_append_only" for relation "privacy_retention.account_deletion_external_job_checkpoints" does not exist, skipping
+CREATE TRIGGER
+NOTICE:  trigger "g014_account_deletion_external_proof_append_only" for relation "privacy_retention.account_deletion_external_job_provider_proofs" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+ALTER FUNCTION
+ALTER FUNCTION
+REVOKE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+DROP FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  trigger "g014_account_deletion_storage_write_fence" for relation "storage.objects" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+ALTER FUNCTION
+REVOKE
+ALTER FUNCTION
+REVOKE
+GRANT
+ALTER FUNCTION
+REVOKE
+ALTER FUNCTION
+REVOKE
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+INSERT 0 1
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+DO
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+INSERT 0 1
+DO
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+DROP FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+ALTER FUNCTION
+REVOKE
+ALTER FUNCTION
+REVOKE
+ALTER FUNCTION
+REVOKE
+DROP INDEX
+CREATE INDEX
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20260713002400_g014_retention_adapters_receipts.sql
+BEGIN
+DO
+GRANT ROLE
+DO
+CREATE FUNCTION
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+NOTICE:  constraint "g014_retention_claim_requires_storage_version" of relation "privacy_retention_work_items" does not exist, skipping
+ALTER TABLE
+DROP FUNCTION
+DO
+UPDATE 0
+ALTER TABLE
+ALTER TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+DO
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+UPDATE 0
+ALTER TABLE
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  trigger "g014_retention_approval_insert_guard" for relation "privacy_retention.retention_adapter_approvals" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_approval_immutable" for relation "privacy_retention.retention_adapter_approvals" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_approval_consumption_immutable" for relation "privacy_retention.retention_adapter_approval_consumptions" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  trigger "g014_retention_adapter_registry_immutable" for relation "privacy_retention.retention_adapter_registry" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_adapter_version_transition" for relation "privacy_retention.retention_adapter_versions" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_adapter_version_delete" for relation "privacy_retention.retention_adapter_versions" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_binding_transition" for relation "privacy_retention.retention_class_adapter_bindings" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_binding_delete" for relation "privacy_retention.retention_class_adapter_bindings" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_storage_claim_binding" for relation "privacy_retention.g014_retention_storage_claims" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_storage_claim_transition" for relation "privacy_retention.g014_retention_storage_claims" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_storage_claim_delete" for relation "privacy_retention.g014_retention_storage_claims" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_provider_effect_transition" for relation "privacy_retention.g014_retention_provider_effects" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_provider_effect_delete" for relation "privacy_retention.g014_retention_provider_effects" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_receipts_immutable" for relation "privacy_retention.g014_retention_receipts" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_run_transition_guard" for relation "privacy_retention.privacy_retention_runs" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_run_item_transition_guard" for relation "privacy_retention.privacy_retention_run_items" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_work_item_transition_guard" for relation "privacy_retention.privacy_retention_work_items" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+DROP TRIGGER
+CREATE TRIGGER
+NOTICE:  trigger "g014_retention_hold_subject_lock" for relation "privacy_retention.privacy_legal_holds" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+INSERT 0 2
+INSERT 0 6
+INSERT 0 6
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+DROP FUNCTION
+NOTICE:  function public.claim_privacy_retention_storage_items(uuid,text,text,pg_catalog.int4) does not exist, skipping
+DROP FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.retention_adapter_registry" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.retention_adapter_versions" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.retention_class_adapter_bindings" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.retention_adapter_approvals" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.retention_adapter_approval_consumptions" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.g014_retention_storage_claims" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.g014_retention_provider_effects" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.g014_retention_receipts" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.privacy_retention_classes" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.privacy_retention_class_sources" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.privacy_legal_holds" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.privacy_retention_work_items" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.privacy_retained_records" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.privacy_retention_runs" does not exist, skipping
+NOTICE:  policy "g014_retention_owner_access" for relation "privacy_retention.privacy_retention_run_items" does not exist, skipping
+DO
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+DROP POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+NOTICE:  policy "g014_retention_source_access" for relation "notifications" does not exist, skipping
+NOTICE:  policy "g014_retention_source_access" for relation "ocr_logs" does not exist, skipping
+DO
+DELETE 6
+INSERT 0 9
+GRANT
+GRANT
+DO
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+NOTIFY
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20260713002500_g014_catalog_contract.sql
+BEGIN
+DO
+GRANT ROLE
+DO
+DELETE 1
+DROP FUNCTION
+GRANT
+NOTICE:  policy "g014_postgres_migration_maintenance" for relation "privacy_retention.g014_public_rpc_allowlist" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+GRANT
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "privacy_retention.g014_catalog_contract_manifest" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+NOTICE:  policy "g014_catalog_owner_access" for relation "notifications" does not exist, skipping
+NOTICE:  policy "g014_catalog_owner_access" for relation "marketing_campaign_operations" does not exist, skipping
+NOTICE:  policy "g014_catalog_owner_access" for relation "marketing_campaign_recipients" does not exist, skipping
+NOTICE:  policy "g014_catalog_owner_access" for relation "marketing_campaign_batches" does not exist, skipping
+NOTICE:  policy "g014_catalog_owner_access" for relation "account_deletion_policies" does not exist, skipping
+NOTICE:  policy "g014_catalog_owner_access" for relation "account_deletion_data_classes" does not exist, skipping
+NOTICE:  policy "g014_catalog_owner_access" for relation "account_deletion_requests" does not exist, skipping
+NOTICE:  policy "g014_catalog_owner_access" for relation "account_deletion_request_items" does not exist, skipping
+NOTICE:  policy "g014_catalog_owner_access" for relation "privacy_incidents" does not exist, skipping
+NOTICE:  policy "g014_catalog_owner_access" for relation "privacy_incident_transition_previews" does not exist, skipping
+NOTICE:  policy "g014_catalog_owner_access" for relation "privacy_incident_notices" does not exist, skipping
+NOTICE:  policy "g014_catalog_owner_access" for relation "privacy_incident_actions" does not exist, skipping
+NOTICE:  policy "g014_catalog_owner_access" for relation "admin_audit_events" does not exist, skipping
+DO
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+REVOKE
+REVOKE
+REVOKE
+DO
+NOTICE:  trigger "g014_catalog_manifest_immutable" for relation "privacy_retention.g014_catalog_contract_manifest" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+GRANT
+DO
+GRANT
+GRANT
+REVOKE ROLE
+DO
+ assert_g014_catalog_contract 
+------------------------------
+ 
+(1 row)
+
+GRANT ROLE
+REVOKE
+REVOKE
+REVOKE ROLE
+DO
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20260713002600_g014_account_deletion_receipt_parity.sql
+BEGIN
+DO
+GRANT ROLE
+DO
+DROP FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+DELETE 1
+INSERT 0 1
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20260713002700_g028_account_deletion_reauth_proof.sql
+BEGIN
+CREATE SCHEMA
+REVOKE
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE POLICY
+CREATE INDEX
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+GRANT ROLE
+ALTER SCHEMA
+ALTER TABLE
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+GRANT
+REVOKE
+REVOKE
+REVOKE
+GRANT
+REVOKE
+GRANT
+DELETE 0
+INSERT 0 2
+REVOKE ROLE
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20260728000100_g038_deterministic_contract.sql
+BEGIN
+DO
+DO
+DO
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE FUNCTION
+ALTER TABLE
+ALTER TABLE
+ALTER FUNCTION
+REVOKE
+GRANT
+DO
+REVOKE
+REVOKE
+ALTER TABLE
+ALTER TABLE
+DO
+COMMIT
+catalog_source_apply 20260801000100_g016_privacy_audit_owner_policy.sql
+BEGIN
+DO
+DO
+RESET
+SET
+ALTER TABLE
+ALTER TABLE
+NOTICE:  policy "g016_privacy_workflow_owner_access" for relation "privacy_retention.privacy_audit_events" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+INSERT 0 1
+REVOKE
+RESET
+DO
+RESET
+COMMIT
+catalog_source_apply 20260801000200_g016_onboarding_confirmation_freshness.sql
+BEGIN
+DO
+RESET
+SET
+ALTER FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+NOTIFY
+RESET
+DO
+RESET
+COMMIT
+catalog_source_apply 20260801000300_g016_onboarding_allowlist_freshness.sql
+BEGIN
+GRANT ROLE
+DELETE 1
+INSERT 0 1
+DO
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+SET
+CREATE FUNCTION
+RESET
+REVOKE ROLE
+ g016_catalog_assertion_bridge 
+-------------------------------
+ 
+(1 row)
+
+NOTIFY
+COMMIT
+catalog_source_apply 20260804000100_g041_privacy_audit_lock_privilege.sql
+BEGIN
+DO
+DO
+SET
+GRANT
+REVOKE
+INSERT 0 1
+RESET
+DO
+DO
+COMMIT
+catalog_source_apply 20260804000200_g041_privacy_onboarding_workflow_privileges.sql
+BEGIN
+DO
+DO
+SET
+GRANT
+GRANT
+GRANT
+REVOKE
+INSERT 0 5
+RESET
+DO
+DO
+COMMIT
+catalog_source_apply 20260804000300_g041_auth_boundary_runtime_repairs.sql
+BEGIN
+DO
+DO
+SET
+CREATE FUNCTION
+REVOKE
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+RESET
+WARNING:  no privileges could be revoked for "auth"
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+REVOKE
+GRANT
+REVOKE
+REVOKE
+DROP POLICY
+REVOKE
+DO
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20260804000400_g041_auth_boundary_closure.sql
+BEGIN
+DO
+WARNING:  no privileges could be revoked for "auth"
+REVOKE
+REVOKE
+REVOKE
+NOTICE:  policy "g041_release_auth_identities_owner_select" for relation "public.release_auth_identities" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "g041_release_auth_session_leases_owner_select" for relation "public.release_auth_session_leases" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "g041_release_auth_session_leases_owner_update" for relation "public.release_auth_session_leases" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+REVOKE
+GRANT
+GRANT
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20260804000500_g041_auth_workflow_bridge.sql
+BEGIN
+DO
+DO
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+REVOKE
+GRANT
+GRANT
+SET
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+DO
+DO
+DO
+DO
+DO
+DO
+RESET
+GRANT ROLE
+WARNING:  no privileges could be revoked for "auth"
+REVOKE
+WARNING:  no privileges could be revoked for "oauth_clients"
+WARNING:  no privileges could be revoked for column "tableoid" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "cmax" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "xmax" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "cmin" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "xmin" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "ctid" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "id" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "client_secret_hash" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "registration_type" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "redirect_uris" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "grant_types" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "client_name" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "client_uri" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "logo_uri" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "created_at" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "updated_at" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "deleted_at" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for column "client_type" of relation "oauth_clients"
+WARNING:  no privileges could be revoked for "oauth_consents"
+WARNING:  no privileges could be revoked for column "tableoid" of relation "oauth_consents"
+WARNING:  no privileges could be revoked for column "cmax" of relation "oauth_consents"
+WARNING:  no privileges could be revoked for column "xmax" of relation "oauth_consents"
+WARNING:  no privileges could be revoked for column "cmin" of relation "oauth_consents"
+WARNING:  no privileges could be revoked for column "xmin" of relation "oauth_consents"
+WARNING:  no privileges could be revoked for column "ctid" of relation "oauth_consents"
+WARNING:  no privileges could be revoked for column "id" of relation "oauth_consents"
+WARNING:  no privileges could be revoked for column "user_id" of relation "oauth_consents"
+WARNING:  no privileges could be revoked for column "client_id" of relation "oauth_consents"
+WARNING:  no privileges could be revoked for column "scopes" of relation "oauth_consents"
+WARNING:  no privileges could be revoked for column "granted_at" of relation "oauth_consents"
+WARNING:  no privileges could be revoked for column "revoked_at" of relation "oauth_consents"
+WARNING:  no privileges could be revoked for "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "tableoid" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "cmax" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "xmax" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "cmin" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "xmin" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "ctid" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "id" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "authorization_id" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "client_id" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "user_id" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "redirect_uri" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "scope" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "state" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "resource" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "code_challenge" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "code_challenge_method" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "response_type" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "status" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "authorization_code" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "created_at" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "expires_at" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "approved_at" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for column "nonce" of relation "oauth_authorizations"
+WARNING:  no privileges could be revoked for "oauth_client_states"
+WARNING:  no privileges could be revoked for column "tableoid" of relation "oauth_client_states"
+WARNING:  no privileges could be revoked for column "cmax" of relation "oauth_client_states"
+WARNING:  no privileges could be revoked for column "xmax" of relation "oauth_client_states"
+WARNING:  no privileges could be revoked for column "cmin" of relation "oauth_client_states"
+WARNING:  no privileges could be revoked for column "xmin" of relation "oauth_client_states"
+WARNING:  no privileges could be revoked for column "ctid" of relation "oauth_client_states"
+WARNING:  no privileges could be revoked for column "id" of relation "oauth_client_states"
+WARNING:  no privileges could be revoked for column "provider_type" of relation "oauth_client_states"
+WARNING:  no privileges could be revoked for column "code_verifier" of relation "oauth_client_states"
+WARNING:  no privileges could be revoked for column "created_at" of relation "oauth_client_states"
+REVOKE
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+DO
+RESET
+DO
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20260812000100_local_runtime_schema_convergence.sql
+NOTICE:  relation "youtube_channel_kpi_snapshots" already exists, skipping
+CREATE TABLE
+NOTICE:  column "previous_bucket_started_at" of relation "youtube_channel_kpi_snapshots" already exists, skipping
+NOTICE:  column "subscriber_delta" of relation "youtube_channel_kpi_snapshots" already exists, skipping
+NOTICE:  column "view_delta" of relation "youtube_channel_kpi_snapshots" already exists, skipping
+NOTICE:  column "video_delta" of relation "youtube_channel_kpi_snapshots" already exists, skipping
+ALTER TABLE
+NOTICE:  relation "youtube_channel_kpi_snapshots_latest_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "youtube_channel_kpi_snapshots_previous_bucket_idx" already exists, skipping
+CREATE INDEX
+ALTER TABLE
+REVOKE
+GRANT
+NOTICE:  relation "youtube_video_kpi_snapshots" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "youtube_video_kpi_snapshots_latest_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "youtube_video_kpi_snapshots_bucket_views_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "youtube_video_kpi_snapshots_video_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "youtube_video_kpi_snapshots_channel_idx" already exists, skipping
+CREATE INDEX
+ALTER TABLE
+REVOKE
+GRANT
+NOTICE:  relation "youtube_thumbnail_releases" already exists, skipping
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+NOTICE:  relation "youtube_thumbnail_releases_active_key_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "youtube_thumbnail_releases_key_published_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "youtube_thumbnail_releases_candidate_idx" already exists, skipping
+CREATE INDEX
+ALTER TABLE
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+INSERT 0 4
+NOTICE:  policy "tzudong_public_media_read" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "tzudong_profile_avatar_insert_own" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "tzudong_profile_avatar_update_own" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "tzudong_profile_avatar_delete_own" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "tzudong_review_photo_insert_own" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "tzudong_review_photo_update_own" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "tzudong_review_photo_delete_own" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "tzudong_ad_banner_insert_admin" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "tzudong_ad_banner_update_admin" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTICE:  policy "tzudong_ad_banner_delete_admin" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DO
+NOTIFY
+catalog_source_apply 20260812000200_local_public_read_policy_convergence.sql
+BEGIN
+DO
+GRANT ROLE
+ pg_advisory_xact_lock 
+-----------------------
+ 
+(1 row)
+
+DO
+CREATE FUNCTION
+ALTER FUNCTION
+COMMENT
+REVOKE
+GRANT
+REVOKE
+GRANT
+ALTER TABLE
+ALTER TABLE
+REVOKE
+GRANT
+GRANT
+REVOKE
+GRANT
+GRANT
+NOTICE:  policy "Announcements select policy" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "Admins can insert announcements" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "Admins can update announcements" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "Admins can delete announcements" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+DROP POLICY
+NOTICE:  policy "announcements_select_active" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "announcements_select_admin" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+DROP POLICY
+DROP POLICY
+DROP POLICY
+NOTICE:  policy "tzudong_announcements_select_active" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "tzudong_announcements_select_admin" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "tzudong_announcements_insert_admin" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "tzudong_announcements_update_admin" for relation "public.announcements" does not exist, skipping
+DROP POLICY
+DROP POLICY
+NOTICE:  policy "tzudong_announcements_delete_admin" for relation "public.announcements" does not exist, skipping
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+NOTICE:  policy "ad_banners_select_combined" for relation "public.ad_banners" does not exist, skipping
+DROP POLICY
+DROP POLICY
+DROP POLICY
+DROP POLICY
+DROP POLICY
+DROP POLICY
+NOTICE:  policy "tzudong_ad_banners_select_active" for relation "public.ad_banners" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "tzudong_ad_banners_select_admin" for relation "public.ad_banners" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "tzudong_ad_banners_insert_admin" for relation "public.ad_banners" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "tzudong_ad_banners_update_admin" for relation "public.ad_banners" does not exist, skipping
+DROP POLICY
+DROP POLICY
+NOTICE:  policy "tzudong_ad_banners_delete_admin" for relation "public.ad_banners" does not exist, skipping
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+ALTER POLICY
+DO
+NOTIFY
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20260812000300_local_admin_data_boundary_convergence.sql
+BEGIN
+DO
+GRANT ROLE
+ pg_advisory_xact_lock 
+-----------------------
+ 
+(1 row)
+
+DO
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+INSERT 0 5
+DO
+NOTIFY
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20260812000400_local_admin_map_overlay_boundary_convergence.sql
+BEGIN
+DO
+GRANT ROLE
+ pg_advisory_xact_lock 
+-----------------------
+ 
+(1 row)
+
+DO
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+ALTER TABLE
+ALTER TABLE
+REVOKE
+REVOKE
+GRANT
+GRANT
+REVOKE
+GRANT
+DROP POLICY
+NOTICE:  policy "tzudong_admin_map_overlays_owner_select" for relation "public.admin_restaurant_map_overlays" does not exist, skipping
+NOTICE:  policy "tzudong_admin_map_overlays_owner_insert" for relation "public.admin_restaurant_map_overlays" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "tzudong_admin_map_overlays_owner_update" for relation "public.admin_restaurant_map_overlays" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "tzudong_admin_map_overlay_audit_owner_select" for relation "public.admin_restaurant_map_overlay_audit_events" does not exist, skipping
+DROP POLICY
+NOTICE:  policy "tzudong_admin_map_overlay_audit_owner_insert" for relation "public.admin_restaurant_map_overlay_audit_events" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+DO
+NOTIFY
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql
+BEGIN
+ pg_advisory_xact_lock 
+-----------------------
+ 
+(1 row)
+
+DO
+DO
+ALTER FUNCTION
+SET
+DO
+DO
+DO
+DO
+CREATE TABLE
+REVOKE
+CREATE FUNCTION
+REVOKE
+DO
+RESET
+DO
+DO
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20260812000600_local_profile_read_boundary_convergence.sql
+BEGIN
+ pg_advisory_xact_lock 
+-----------------------
+ 
+(1 row)
+
+DO
+DO
+SET
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+REVOKE
+GRANT
+GRANT
+DO
+DO
+DO
+DO
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+ assert_g014_definer_contract 
+------------------------------
+ 
+(1 row)
+
+CREATE TABLE
+REVOKE
+CREATE FUNCTION
+REVOKE
+DO
+RESET
+DO
+DO
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20260812000700_local_profile_leaderboard_page_convergence.sql
+BEGIN
+ pg_advisory_xact_lock 
+-----------------------
+ 
+(1 row)
+
+DO
+DO
+SET
+CREATE FUNCTION
+REVOKE
+GRANT
+DO
+DO
+DO
+DO
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+ assert_g014_definer_contract 
+------------------------------
+ 
+(1 row)
+
+CREATE TABLE
+REVOKE
+CREATE FUNCTION
+REVOKE
+DO
+RESET
+DO
+DO
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20260813085342_current_profile_mutation_boundary.sql
+BEGIN
+ pg_advisory_xact_lock 
+-----------------------
+ 
+(1 row)
+
+DO
+LOCK TABLE
+LOCK TABLE
+LOCK TABLE
+LOCK TABLE
+LOCK TABLE
+DO
+ALTER TABLE
+CREATE INDEX
+ALTER TABLE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+DO
+DO
+GRANT
+NOTICE:  policy "g014_privacy_workflow_owner_access" for relation "public.user_stats" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+SET
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+INSERT 0 3
+DO
+DO
+DO
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+ assert_g014_definer_contract 
+------------------------------
+ 
+(1 row)
+
+CREATE TABLE
+REVOKE
+CREATE FUNCTION
+REVOKE
+DO
+RESET
+DO
+DO
+DO
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20260817000100_restaurant_identity_helper_writer_grants.sql
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+NOTIFY
+catalog_source_apply 20260817020000_pipeline_control.sql
+CREATE SCHEMA
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+REVOKE
+GRANT
+GRANT
+GRANT
+catalog_source_apply 20260820030000_pipeline_control_atomic.sql
+ALTER TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+catalog_source_apply 20260820040000_pipeline_batch_upsert.sql
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+ALTER DEFAULT PRIVILEGES
+REVOKE
+REVOKE
+REVOKE
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+catalog_source_apply 20260820050000_pipeline_outbox.sql
+CREATE TABLE
+CREATE INDEX
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER TABLE
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+ALTER DEFAULT PRIVILEGES
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+catalog_source_apply 20260825140000_pipeline_outbox_trusted_search_path.sql
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+catalog_source_apply 20260827084200_g014_8_guardian_provider_verification.sql
+BEGIN
+DO
+RESET
+SET
+DO
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+CREATE TABLE
+REVOKE
+CREATE FUNCTION
+REVOKE
+DO
+NOTIFY
+RESET
+DO
+RESET
+ asserted 
+----------
+ t
+(1 row)
+
+COMMIT
+catalog_source_apply 20260828000100_hosted_candidate_identity_unique.sql
+CREATE INDEX
+catalog_source_apply 20260901000100_local_analytics_schema.sql
+CREATE SCHEMA
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE TABLE
+REVOKE
+GRANT
+REVOKE
+REVOKE
+GRANT
+GRANT
+REVOKE
+REVOKE
+ALTER DEFAULT PRIVILEGES
+catalog_source_apply 20260901000200_pipeline_batch_upsert_publication_allowlist.sql
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+REVOKE
+REVOKE
+ALTER DEFAULT PRIVILEGES
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+catalog_source_apply 20260903174413_advisor_followup_hardening.sql
+SET
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+DO
+DO
+SET
+CREATE TABLE
+REVOKE
+CREATE FUNCTION
+REVOKE
+GRANT
+RESET
+DO
+DO
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+DO
+DO
+DO
+SET
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+DO
+ALTER TABLE
+RESET
+DO
+DO
+catalog_source_apply 20260905000100_local_agent_terminal_results.sql
+CREATE TABLE
+REVOKE
+GRANT
+REVOKE
+CREATE VIEW
+REVOKE
+GRANT
+catalog_source_apply 20260905000200_local_agent_rate_budget.sql
+CREATE TABLE
+CREATE INDEX
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+catalog_source_apply 20260905015816_publication_nullable_trace_cas.sql
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+catalog_source_apply 20260905031359_local_agent_trigger_reservation.sql
+CREATE FUNCTION
+REVOKE
+GRANT
+catalog_source_apply 20260905050509_local_agent_approval_pending_decisions.sql
+CREATE TABLE
+CREATE INDEX
+REVOKE
+GRANT
+catalog_source_apply 20260906040116_admin_user_ids_catalog_slice.sql
+catalog_source_apply 20260906053936_admin_management_group_catalog_slice.sql
+catalog_source_apply 20260906064252_g014_pg17_workflow_owner_contract.sql
+catalog_source_apply 20260918021531_storyboard_mlx_worker.sql
+BEGIN
+DO
+GRANT ROLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+GRANT
+REVOKE
+GRANT
+INSERT 0 1
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER TABLE
+ALTER TABLE
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+DO
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+INSERT 0 10
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20260920021531_storyboard_historical_restore.sql
+BEGIN
+DO
+GRANT ROLE
+CREATE TABLE
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+GRANT
+DO
+ALTER TABLE
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+INSERT 0 0
+DO
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+CREATE POLICY
+CREATE POLICY
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+ALTER FUNCTION
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20260920171524_public_profile_summary_read_boundary.sql
+BEGIN
+ pg_advisory_xact_lock 
+-----------------------
+ 
+(1 row)
+
+DO
+SET
+DO
+DO
+ALTER FUNCTION
+REVOKE
+GRANT
+INSERT 0 2
+DO
+RESET
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20260921123000_g041_privacy_consent_lock_privilege.sql
+BEGIN
+DO
+DO
+SET
+GRANT
+REVOKE
+INSERT 0 1
+RESET
+DO
+DO
+COMMIT
+catalog_source_apply 20261001123253_app_web_vitals_aggregate.sql
+CREATE TABLE
+ALTER TABLE
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+COMMENT
+NOTIFY
+catalog_source_apply 20261001152740_app_web_vitals_ingest_budget.sql
+CREATE TABLE
+ALTER TABLE
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+NOTIFY
+catalog_source_apply 20261002235102_admin_evaluation_pagination.sql
+NOTICE:  schema "pipeline_control" already exists, skipping
+CREATE SCHEMA
+CREATE TABLE
+INSERT 0 1
+ALTER TABLE
+REVOKE
+GRANT
+GRANT
+CREATE FUNCTION
+REVOKE
+CREATE TRIGGER
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+COMMENT
+INSERT 0 2
+catalog_source_apply 20261003000812_storyboard_gemini_only.sql
+BEGIN
+DO
+GRANT ROLE
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20261003095444_restore_service_identity_helpers.sql
+BEGIN
+DO
+GRANT
+GRANT
+GRANT
+INSERT 0 3
+COMMIT
+catalog_source_apply 20261003065736_g014_current_service_rpc_registry.sql
+[{"owner": "privacy_workflow_owner", "present": true, "signature": "public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)", "serviceAllowed": true}, {"owner": "postgres", "present": true, "signature": "public.extract_youtube_video_id(text)", "serviceAllowed": true}, {"owner": "postgres", "present": true, "signature": "public.normalize_restaurant_identity_name(text)", "serviceAllowed": true}, {"owner": "postgres", "present": true, "signature": "public.record_app_web_vitals_bounded(text,text,text,text,smallint)", "serviceAllowed": true}, {"owner": "postgres", "present": true, "signature": "public.record_app_web_vitals(text,text,text,text,smallint)", "serviceAllowed": true}, {"owner": "postgres", "present": true, "signature": "public.resolve_restaurant_identity_name(text,text,text,text)", "serviceAllowed": true}]
+BEGIN
+CREATE TABLE
+INSERT 0 6
+DO
+INSERT 0 6
+COMMIT
+catalog_source_apply 20261003081915_restaurant_review_automation.sql
+BEGIN
+CREATE TABLE
+INSERT 0 1
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+GRANT
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+ALTER FUNCTION
+ALTER FUNCTION
+INSERT 0 5
+COMMIT
+catalog_source_apply 20261003113923_g014_service_invoker_contract.sql
+BEGIN
+DO
+GRANT ROLE
+DO
+CREATE SCHEMA
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+DO
+REVOKE ROLE
+DO
+COMMIT
+BEGIN
+DO
+GRANT ROLE
+SET
+DO
+RESET
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20261003171449_restaurant_review_manual_guards.sql
+BEGIN
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+INSERT 0 1
+COMMIT
+catalog_source_apply 20261003172126_restaurant_review_manual_invoker_contract.sql
+BEGIN
+DO
+GRANT ROLE
+SET
+DO
+RESET
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20261003182338_storyboard_service_role_bridge.sql
+BEGIN
+DO
+GRANT ROLE
+DO
+NOTICE:  schema "storyboard_control" already exists, skipping
+CREATE SCHEMA
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+NOTICE:  policy "storyboard_production_owner_access" for relation "public.admin_storyboard_production_projects" does not exist, skipping
+NOTICE:  policy "storyboard_production_owner_access" for relation "public.admin_storyboard_production_workers" does not exist, skipping
+NOTICE:  policy "storyboard_production_owner_access" for relation "public.admin_storyboard_production_jobs" does not exist, skipping
+NOTICE:  policy "storyboard_production_owner_access" for relation "public.admin_storyboard_production_assets" does not exist, skipping
+NOTICE:  policy "storyboard_production_owner_access" for relation "public.admin_storyboard_production_events" does not exist, skipping
+NOTICE:  policy "storyboard_production_owner_access" for relation "public.admin_storyboard_production_revisions" does not exist, skipping
+NOTICE:  policy "storyboard_production_owner_access" for relation "public.admin_storyboard_production_restores" does not exist, skipping
+DO
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20261003193717_restaurant_review_claim_progress.sql
+BEGIN
+CREATE FUNCTION
+ALTER FUNCTION
+COMMIT
+catalog_source_apply 20261003205335_storyboard_uncertain_lease_recovery.sql
+BEGIN
+ALTER TABLE
+ALTER TABLE
+DO
+COMMIT
+catalog_source_apply 20261003212017_admin_evaluation_read_helpers.sql
+BEGIN
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+GRANT
+COMMIT
+catalog_source_apply 20261003215116_admin_evaluation_keyset_queries.sql
+BEGIN
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE TABLE
+ALTER TABLE
+REVOKE
+GRANT
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+REVOKE
+CREATE TRIGGER
+CREATE FUNCTION
+REVOKE
+CREATE TRIGGER
+INSERT 0 0
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+INSERT 0 1
+CREATE VIEW
+REVOKE
+GRANT
+REVOKE
+GRANT
+COMMIT
+catalog_source_apply 20261003220841_admin_evaluation_page_invoker_contract.sql
+BEGIN
+DO
+GRANT ROLE
+SET
+DO
+RESET
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20261004003503_admin_evaluation_display_revision.sql
+BEGIN
+CREATE TRIGGER
+COMMIT
+catalog_source_apply 20261004010334_restaurant_review_identity_evidence.sql
+BEGIN
+DO
+COMMIT
+catalog_source_apply 20261004023841_storyboard_claim_capability_order.sql
+BEGIN
+DO
+COMMIT
+catalog_source_apply 20261004045404_restaurant_review_category_contract.sql
+BEGIN
+DO
+COMMIT
+catalog_source_apply 20261004050500_admin_evaluation_warning_groups.sql
+BEGIN
+CREATE COLLATION
+CREATE COLLATION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+GRANT
+INSERT 0 1
+DO
+COMMIT
+catalog_source_apply 20261004050600_admin_evaluation_warning_invoker_contract.sql
+BEGIN
+DO
+GRANT ROLE
+SET
+DO
+RESET
+REVOKE ROLE
+DO
+COMMIT
+catalog_source_apply 20261004120000_restaurant_review_gemini_decision.sql
+BEGIN
+ALTER TABLE
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+ALTER FUNCTION
+CREATE FUNCTION
+COMMIT
+catalog_source_apply 20261004172622_restaurant_review_deferred_reclassification.sql
+BEGIN
+DO
+COMMIT
+catalog_source_apply 20261004190259_admin_record_guarded_actions.sql
+BEGIN
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+GRANT
+GRANT
+GRANT
+CREATE FUNCTION
+CREATE INDEX
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE TRIGGER
+REVOKE
+REVOKE
+GRANT
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20261004192657_admin_evaluation_raw_warning_groups.sql
+BEGIN
+LOCK TABLE
+CREATE FUNCTION
+UPDATE 0
+UPDATE 1
+CREATE INDEX
+CREATE FUNCTION
+REVOKE
+GRANT
+COMMIT
+catalog_source_apply 20261004194715_admin_evaluation_raw_warning_invoker_contract.sql
+BEGIN
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20261008084856_public_profile_leaderboard_read_boundary.sql
+BEGIN
+ pg_advisory_xact_lock 
+-----------------------
+ 
+(1 row)
+
+DO
+SET
+DO
+DO
+DO
+ assert_g014_public_rpc_allowlist 
+----------------------------------
+ 
+(1 row)
+
+ assert_g014_definer_contract 
+------------------------------
+ 
+(1 row)
+
+RESET
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20261008192455_review_media_commit_cleanup.sql
+BEGIN
+CREATE SCHEMA
+REVOKE
+CREATE TABLE
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+REVOKE
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE POLICY
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+COMMIT
+catalog_source_apply 20261008200719_review_verification_private.sql
+BEGIN
+INSERT 0 1
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE FUNCTION
+REVOKE
+GRANT
+COMMIT
+catalog_source_apply 20261008201635_review_media_catalog_integration.sql
+BEGIN
+SET
+ pg_advisory_xact_lock 
+-----------------------
+ 
+(1 row)
+
+CREATE TABLE
+INSERT 0 14
+REVOKE
+GRANT
+DO
+DO
+NOTIFY
+COMMIT
+catalog_source_apply 20261009022915_restaurant_review_manual_preview_eligibility.sql
+BEGIN
+DO
+DO
+COMMIT
+generated source-only evidence in apps/web/performance/user-readiness-20261009/canonical-integrated-media-v10

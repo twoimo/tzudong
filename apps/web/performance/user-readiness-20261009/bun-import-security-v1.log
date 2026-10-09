@@ -1,0 +1,7 @@
+bun install v1.4.0 (34cbb9a40)
+[4.50ms] migrated lockfile from package-lock.json
+Resolving dependencies
+Resolved, downloaded and extracted [1]
+Saved lockfile
+
+Saved bun.lock (821 packages) [11.00ms]

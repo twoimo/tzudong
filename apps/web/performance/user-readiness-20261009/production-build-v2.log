@@ -1,0 +1,388 @@
+▲ Next.js 16.3.6 (webpack)
+- Environments: .env.production.local
+✓ Running next.config.mjs took 36ms
+- Experiments (use with caution):
+  · optimizePackageImports
+  · staleTimes
+
+  Creating an optimized production build ...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 1/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+
+
+Retrying 2/3...
+✓ Compiled successfully in 23.8s
+  Running TypeScript ...
+
+  We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+  The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+  	- include was updated to add '.next-user-readiness-v2/types/**/*.ts'
+  	- include was updated to add '.next-user-readiness-v2/dev/types/**/*.ts'
+
+  Finished TypeScript in 19.4s ...
+  Collecting page data using 17 workers ...
+  Generating static pages using 17 workers (0/49) ...
+  Generating static pages using 17 workers (12/49) 
+  Generating static pages using 17 workers (24/49) 
+  Generating static pages using 17 workers (36/49) 
+✓ Generating static pages using 17 workers (49/49) in 1244ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /admin
+├ ƒ /admin/banners
+├ ƒ /admin/evaluations
+├ ƒ /admin/privacy-incidents
+├ ƒ /admin/submissions
+├ ƒ /api/account/delete
+├ ƒ /api/admin/audit-events
+├ ƒ /api/admin/banners
+├ ƒ /api/admin/evaluations
+├ ƒ /api/admin/image-generation-readiness
+├ ƒ /api/admin/map-overlays
+├ ƒ /api/admin/map-overlays/apply
+├ ƒ /api/admin/map-overlays/preview
+├ ƒ /api/admin/marketing-campaigns
+├ ƒ /api/admin/notifications
+├ ƒ /api/admin/ocr-receipts
+├ ƒ /api/admin/ocr-receipts/process
+├ ƒ /api/admin/ocr-receipts/rerun
+├ ƒ /api/admin/ocr-receipts/reset-all
+├ ƒ /api/admin/pending-counts
+├ ƒ /api/admin/pipeline
+├ ƒ /api/admin/preferences/dashboard-widget-order
+├ ƒ /api/admin/preferences/sidebar-order
+├ ƒ /api/admin/privacy-incidents
+├ ƒ /api/admin/profile-summaries
+├ ƒ /api/admin/publish-jobs
+├ ƒ /api/admin/release-auth-proof
+├ ƒ /api/admin/restaurant-refresh-history
+├ ƒ /api/admin/restaurant-requests/[requestId]/review
+├ ƒ /api/admin/restaurants/[restaurantId]/destructive-action
+├ ƒ /api/admin/review-verification/[reviewId]
+├ ƒ /api/admin/routes/candidates
+├ ƒ /api/admin/routes/directions
+├ ƒ /api/admin/storyboard
+├ ƒ /api/admin/storyboard/chat
+├ ƒ /api/admin/storyboard/images
+├ ƒ /api/admin/storyboard/jobs
+├ ƒ /api/admin/storyboard/jobs/[jobId]
+├ ƒ /api/admin/storyboard/jobs/[jobId]/cancel
+├ ƒ /api/admin/storyboard/production
+├ ƒ /api/admin/storyboard/production/[id]
+├ ƒ /api/admin/storyboard/production/[id]/assets/[assetId]
+├ ƒ /api/admin/storyboard/production/[id]/export
+├ ƒ /api/admin/storyboard/production/[id]/images
+├ ƒ /api/admin/storyboard/rag/documents
+├ ƒ /api/admin/storyboard/rag/search
+├ ƒ /api/admin/system-status
+├ ƒ /api/admin/trend-job-requests
+├ ƒ /api/admin/trend-job-requests/[requestId]
+├ ƒ /api/admin/trend-job-requests/[requestId]/cancel
+├ ƒ /api/admin/trend-proposals
+├ ƒ /api/admin/trend-proposals/[proposalId]/approve
+├ ƒ /api/admin/trend-proposals/[proposalId]/preview-overlay
+├ ƒ /api/admin/trend-proposals/[proposalId]/reject
+├ ƒ /api/admin/users
+├ ƒ /api/admin/users/[userId]
+├ ƒ /api/admin/youtube-channel
+├ ƒ /api/admin/youtube-kpi-collection-logs
+├ ƒ /api/admin/youtube-kpis
+├ ƒ /api/admin/youtube-thumbnail-generator
+├ ƒ /api/admin/youtube-thumbnail-generator/chat
+├ ƒ /api/admin/youtube-thumbnail-generator/history
+├ ƒ /api/admin/youtube-thumbnail-generator/reference-image
+├ ƒ /api/admin/youtube-thumbnail-generator/release-candidates
+├ ƒ /api/admin/youtube-thumbnail-generator/release-candidates/promote
+├ ƒ /api/admin/youtube-thumbnail-generator/releases/assets/[releaseId]
+├ ƒ /api/admin/youtube-thumbnail-generator/releases/current
+├ ƒ /api/admin/youtube-thumbnail-generator/releases/publish
+├ ƒ /api/auth/logout
+├ ƒ /api/dashboard/failures
+├ ƒ /api/dashboard/funnel
+├ ƒ /api/dashboard/quality
+├ ƒ /api/dashboard/restaurants
+├ ƒ /api/dashboard/summary
+├ ƒ /api/dashboard/video/[videoId]
+├ ƒ /api/dev/admin-thumbnail-bootstrap
+├ ƒ /api/health
+├ ƒ /api/home/youtube-kpi
+├ ƒ /api/insights/treemap
+├ ƒ /api/internal/account-deletion
+├ ƒ /api/internal/privacy-retention
+├ ƒ /api/mypage/submissions/delete
+├ ƒ /api/mypage/submissions/submit
+├ ƒ /api/naver-geocode
+├ ƒ /api/naver-search
+├ ƒ /api/notifications/review-like
+├ ƒ /api/ocr/extract
+├ ƒ /api/ocr/extract/stream
+├ ƒ /api/ocr/quota
+├ ƒ /api/performance/web-vitals
+├ ƒ /api/privacy/consents
+├ ƒ /api/privacy/guardian
+├ ƒ /api/privacy/location-readiness
+├ ƒ /api/privacy/onboarding
+├ ○ /api/release/mode
+├ ƒ /api/shorten
+├ ƒ /api/storyboard-worker
+├ ƒ /api/storyboard-worker/images
+├ ƒ /api/youtube-meta
+├ ƒ /auth/callback
+├ ƒ /auth/required
+├ ƒ /auth/reset-password
+├ ƒ /data-deletion
+├ ƒ /feed
+├ ƒ /fonts/ChosunCentennial_otf.otf
+├ ƒ /global-map
+├ ƒ /home-frame
+├ ƒ /insights
+├ ƒ /leaderboard
+├ ƒ /mypage
+├ ƒ /mypage/bookmarks
+├ ƒ /mypage/profile
+├ ƒ /mypage/reviews
+├ ƒ /mypage/submissions/edit
+├ ƒ /mypage/submissions/new
+├ ƒ /mypage/submissions/recommend
+├ ƒ /privacy
+├ ƒ /privacy/onboarding
+├ ○ /robots.txt
+├ ƒ /s/[code]
+├ ○ /sitemap.xml
+├ ƒ /stamp
+├ ƒ /submissions
+└ ƒ /user/[userId]
+
+Route (pages)
+─   /_app
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

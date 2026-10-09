@@ -1,0 +1,36 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/privacy-onboarding.test.ts:
+(pass) privacy onboarding challenge > fresh password and OAuth cookies roundtrip with the issuer signing context [0.54ms]
+(pass) privacy onboarding challenge > random token digest follows the immutable SQL SHA-256 contract rather than cookie HMAC [0.94ms]
+(pass) privacy onboarding challenge > 만료·변조·비정규 정책 해시 또는 nonce challenge를 거부한다 [0.20ms]
+(pass) privacy onboarding challenge > OAuth nonce is the one-time confirmation token and the signed origin is mandatory [0.46ms]
+(pass) privacy onboarding challenge > rejected onboarding responses expire all bounded Supabase auth chunks [1.02ms]
+(pass) privacy onboarding challenge > 재사용과 정책 불일치는 서버의 원자적 확정 경로로 넘긴다 [0.23ms]
+(pass) privacy onboarding challenge > OAuth callback uses only the signed HttpOnly challenge as the onboarding discriminator [0.08ms]
+(pass) privacy onboarding challenge > no-challenge OAuth sessions without a live receipt enter only exact onboarding without revocation [0.67ms]
+(pass) privacy onboarding challenge > browser auth contexts cannot bypass the privacy onboarding challenge [0.38ms]
+(pass) privacy onboarding challenge > live eligibility receipt gates browser sessions without process-global policy state [0.19ms]
+(pass) live privacy eligibility receipt > eligible current receipt is accepted only with the exact bounded schema [0.18ms]
+(pass) live privacy eligibility receipt > missing profile, policy drift, adult block, and guardian expiry or withdrawal remain fail-closed [0.03ms]
+(pass) live privacy eligibility receipt > malformed, contradictory, and error receipts cannot open a session [0.05ms]
+(pass) minimum-data age and consent choices > 만 14세 미만 가입은 보호자 확인 경로가 배포·읽기검증될 때까지 차단한다 [0.36ms]
+(pass) minimum-data age and consent choices > 선택 마케팅과 야간 채널 동의는 기본 거부이며 필수 정책 동의와 분리된다 [0.02ms]
+(pass) minimum-data age and consent choices > 야간 마케팅은 같은 채널의 명시적 일반 마케팅 동의 없이는 만들지 않는다 [0.05ms]
+(pass) minimum-data age and consent choices > 정책 내용 해시는 정확한 렌더링 입력을 고정한다 [0.17ms]
+(pass) fresh onboarding confirmation receipt > requires an exact verified schema-v1 receipt and accepts a verified replay [0.11ms]
+(pass) fresh onboarding confirmation receipt > G016 serializes same-user replay and exposes one canonical nonce-aware signature [0.09ms]
+(pass) privacy-safe error handling > password, token, email, provider error object를 로그나 응답에 싣지 않는다 [0.20ms]
+(pass) G014 server session release boundaries > self and service-target eligibility reads are exact RPC-only fail-closed boundaries [0.25ms]
+(pass) G014 server session release boundaries > callback finalizes the nonce-bound challenge before live eligibility and rejects ambiguous OAuth without identity mutation [0.21ms]
+(pass) G014 server session release boundaries > rejected OAuth callbacks redirect no-store after attempting both sign-outs even when they fail [1.17ms]
+(pass) G014 server session release boundaries > rejected OAuth callbacks redirect no-store after both sign-outs resolve [0.17ms]
+(pass) G014 server session release boundaries > password onboarding keeps explicit Auth absence checks for identity cleanup [0.06ms]
+(pass) G014 server session release boundaries > protected middleware releases no stale session and public auth/privacy paths remain loop-safe [0.31ms]
+(pass) G014 server session release boundaries > password finalization and replay recovery are same-origin, provenance-bound, held on ambiguity, and non-enumerating [0.18ms]
+(pass) G014 server session release boundaries > existing-account recovery accepts only an authenticated server-derived password-proof subject [0.16ms]
+
+ 28 pass
+ 0 fail
+ 294 expect() calls
+Ran 28 tests across 1 file. [168.00ms]

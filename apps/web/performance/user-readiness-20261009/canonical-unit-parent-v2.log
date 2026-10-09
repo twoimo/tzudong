@@ -1,0 +1,15 @@
+F...............................................................................................................................
+======================================================================
+FAIL: test_canonical_readback_reuses_the_complete_migration_postconditions (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_canonical_readback_reuses_the_complete_migration_postconditions)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_catalog_integration.py", line 73, in test_canonical_readback_reuses_the_complete_migration_postconditions
+    self.assertEqual(checks(MIGRATION.read_text()), checks((ROOT / local_migrate.READBACK_SOURCE).read_text()))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'DO $[4901 chars]lts<>(CASE WHEN v_function.proname=\'mutate_re[16484 chars]$;\n' != 'DO $[4901 chars]lts<>CASE WHEN v_function.proname=\'mutate_rev[13984 chars]$;\n'
+Diff is 21325 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 128 tests in 80.256s
+
+FAILED (failures=1)

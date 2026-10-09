@@ -1,0 +1,10 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/review-save-submit.test.ts:
+(pass) actual ReviewModal submit and Supabase adapter > known success writes pending review with canonical owner/review-bound photos [169.61ms]
+
+ 1 pass
+ 34 filtered out
+ 0 fail
+ 12 expect() calls
+Ran 1 test across 1 file. [427.00ms]

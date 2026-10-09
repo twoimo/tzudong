@@ -1,0 +1,77 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/review-photo-ownership-source.test.ts:
+(pass) review photo ownership source contracts > ReviewCard resolves only owner- and review-bound public URLs [0.40ms]
+(pass) review photo ownership source contracts > ReviewEditModal validates ownership before rendering, persisting, or deleting object keys [1.25ms]
+(pass) review photo ownership source contracts > local File previews are restricted and revoked [0.29ms]
+(pass) review photo ownership source contracts > the review composer uploads and persists one canonical review id [0.56ms]
+
+tests-unit/review-edit-modal-photo-cleanup.test.ts:
+(pass) shared review mutation UI boundary > both UIs use commit-aware mutations and cannot directly remove photos or rows [0.18ms]
+(pass) shared review mutation UI boundary > uncertain requests keep their retry action and cleanup can resume without a review card [0.09ms]
+
+tests-unit/search-count-refresh.test.ts:
+(pass) disabled search analytics does not trigger a redundant popularity read [0.14ms]
+(pass) only an applied counter mutation refreshes popularity [0.04ms]
+
+tests-unit/review-media-mutation.test.ts:
+(pass) review commit and media failure boundaries > DB rejection before commit preserves old media and retires only unused uploads [1.47ms]
+(pass) review commit and media failure boundaries > throw-after: committed upload survives; cleanup follows receipt [0.50ms]
+(pass) review commit and media failure boundaries > error-after: committed upload survives; cleanup follows receipt [0.07ms]
+(pass) review commit and media failure boundaries > unknown result later confirmed committed does not reupload or remutate [0.15ms]
+(pass) review commit and media failure boundaries > error-before: missing receipt never authorizes compensation [0.10ms]
+(pass) review commit and media failure boundaries > throw-before: missing receipt never authorizes compensation [0.03ms]
+(pass) review commit and media failure boundaries > missing row is not a successful delete [0.04ms]
+(pass) review commit and media failure boundaries > unauthorized owner cannot mutate or delete media [0.03ms]
+(pass) review commit and media failure boundaries > partial Storage failure after commit survives page revisit for both purposes [0.15ms]
+(pass) review commit and media failure boundaries > delete transport failure after completion is resolved by metadata readback [0.07ms]
+(pass) review commit and media failure boundaries > cleanup RPC failure after commit does not replay the mutation [0.10ms]
+(pass) review commit and media failure boundaries > concurrent clicks share one operation [0.12ms]
+(pass) review commit and media failure boundaries > upload uncertainty verifies the same key and never deletes a live upload [0.06ms]
+(pass) review commit and media failure boundaries > incomplete upload retries frozen paths before any DB write [0.06ms]
+(pass) review commit and media failure boundaries > owner change during upload blocks mutation and cleanup [0.08ms]
+(pass) review commit and media failure boundaries > cleanup validates owner, review and purpose on all returned paths [0.04ms]
+(pass) review commit and media failure boundaries > stale baseline cannot replace a concurrent edit [0.02ms]
+(pass) review commit and media failure boundaries > missing migration fails before uploading or mutating [0.03ms]
+(pass) review commit and media failure boundaries > a different action cannot join an active edit and report its result as a deletion [0.06ms]
+(pass) review commit and media failure boundaries > feedback never exposes provider diagnostics [0.07ms]
+
+tests-unit/auth-user-continuation.test.ts:
+(pass) requested user login continuation > keeps MY and review destinations while ordinary in-page login stays put [0.12ms]
+(pass) requested user login continuation > retains the administrator boundary and rejects unsafe destinations [0.01ms]
+(pass) requested user login continuation > binds the resumed stamp composer to the selected public restaurant ID [0.26ms]
+
+tests-unit/mypage-crud-contract.test.ts:
+(pass) mypage CRUD QA/QC source contracts > profile update flows guard nickname, avatar, and password mutations by the signed-in user [0.89ms]
+(pass) mypage CRUD QA/QC source contracts > bookmark and review deletion are owner-scoped and invalidate their read models [0.75ms]
+(pass) mypage CRUD QA/QC source contracts > submission create flows insert parent and child rows with rollback on child insert failure [1.14ms]
+(pass) mypage CRUD QA/QC source contracts > submission history deletion goes through an authenticated owner-checking API route [1.51ms]
+(pass) mypage CRUD QA/QC source contracts > permanent account delete uses a bearer-bound one-time proof and preserves the durable worker/readback boundary [0.51ms]
+
+tests-unit/auth-admin-login-redirect.test.ts:
+(pass) proxy emits a fresh nonce-bound enforcing CSP and forwards the nonce to rendering [5.05ms]
+(pass) password recovery proof > is user-bound and can be consumed only once [0.04ms]
+(pass) public eligibility proxy > public eligibility skip decisions keep session hints eligible for live checks [0.04ms]
+(pass) public eligibility proxy > only the exact method/path matrix can bypass eligibility [0.12ms]
+(pass) public eligibility proxy > credentialless public pages and APIs bypass session lookup [0.86ms]
+(pass) public eligibility proxy > onboarding, callback, and health loop-safe paths remain available to held sessions [1.05ms]
+(pass) admin auth redirect helpers > 관리자 next 경로와 쿼리를 안전하게 보존한다 [0.05ms]
+(pass) admin auth redirect helpers > 홈 로그인 모달 요청 URL을 읽고 검증된 next만 넘긴다 [0.04ms]
+(pass) admin auth redirect helpers > privacy onboarding uses one exact loop-safe home modal URL [0.03ms]
+(pass) admin auth redirect helpers > 홈 쿼리 로그인 성공은 success-aware cleanup을 사용하고 관리자 redirect는 assign을 유지한다 [0.67ms]
+(pass) admin middleware login redirect > 미로그인 관리자는 auth required 화면 대신 홈 로그인 모달 URL로 보낸다 [3.08ms]
+(pass) admin middleware login redirect > 관리자 로그인 리디렉션은 초과 길이 또는 잘못된 next 컨텍스트를 루트로 제한한다 [0.56ms]
+(pass) admin middleware login redirect > 활성 세션 확인이 실패하면 로그인 화면으로 닫힌다 [1.53ms]
+(pass) admin middleware login redirect > 로그인했지만 관리자가 아니면 홈으로 보낸다 [1.02ms]
+(pass) admin middleware login redirect > 관리자는 요청한 관리자 페이지를 그대로 통과한다 [0.54ms]
+(pass) admin middleware login redirect > 마이페이지 인증 리디렉션은 캐시하지 않는다 [0.59ms]
+(pass) admin middleware login redirect > Supabase 설정이 없으면 보호된 관리자 JSON 응답을 캐시하지 않는다 [0.58ms]
+(pass) 관리자 보호 경로의 비탐색 요청은 리디렉션 대신 닫힌 JSON 응답을 받는다 [1.35ms]
+(pass) 관리자 권한 및 상태 권한 오류는 API 요청을 fail closed 한다 [1.35ms]
+(pass) live eligibility denials, malformed receipts, and RPC failures close protected sessions [1.43ms]
+(pass) existing accounts are classification-only and missing privacy evidence stays onboarding-required [0.24ms]
+
+ 57 pass
+ 0 fail
+ 496 expect() calls
+Ran 57 tests across 7 files. [193.00ms]

@@ -1,0 +1,43 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/review-save-submit.test.ts:
+(pass) actual ReviewModal submit and Supabase adapter > saved cleanup owns its revision even after the current restaurant selection is cleared [168.55ms]
+(pass) actual ReviewModal submit and Supabase adapter > known success writes pending review with canonical owner/review-bound photos [96.75ms]
+(pass) actual ReviewModal submit and Supabase adapter > definite insert denial compensates and keeps input draft [36.86ms]
+(pass) actual ReviewModal submit and Supabase adapter > lost commit reply reads by owner AND ID before reporting success [37.21ms]
+(pass) actual ReviewModal submit and Supabase adapter > unavailable readback blocks duplicate write and leaves draft/photos intact [38.90ms]
+(pass) actual ReviewModal submit and Supabase adapter > actual submit ref rejects same-tick double submit [38.08ms]
+(pass) actual ReviewModal submit and Supabase adapter > changed input during submit is preserved after committed original draft [53.86ms]
+(pass) actual ReviewModal submit and Supabase adapter > close during committed insert reports success and notifies consumers once [52.23ms]
+(pass) actual ReviewModal submit and Supabase adapter > known commit completes scoped draft cleanup after unmounted without callbacks or photo removal [31.79ms]
+(pass) actual ReviewModal submit and Supabase adapter > known commit completes scoped draft cleanup after different-owner without callbacks or photo removal [37.78ms]
+(pass) actual ReviewModal submit and Supabase adapter > unmount with unanswered insert never clears its draft or saved photos [33.40ms]
+(pass) actual ReviewModal submit and Supabase adapter > unmount during draft snapshot capture cannot dispatch a review write [45.17ms]
+(pass) actual ReviewModal submit and Supabase adapter > close readback can discover earlier commit and notify consumers [51.87ms]
+(pass) actual ReviewModal submit and Supabase adapter > callback failure never reports database failure or permits a duplicate retry [63.90ms]
+(pass) actual ReviewModal submit and Supabase adapter > draft deletion failure offers cleanup retry with the original saved operation [59.86ms]
+(pass) actual ReviewModal submit and Supabase adapter > recovery renders an accessible new-tab edit destination and disables every create control [16.84ms]
+(pass) actual ReviewModal submit and Supabase adapter > actual close handler retains form and blocks close for unresolved write [48.21ms]
+(pass) actual ReviewModal submit and Supabase adapter > actual edit handler binds the owner and original snapshot to the atomic mutation [7.93ms]
+(pass) actual draft handlers and IndexedDB deletion boundary > awaits in-flight autosave then prepared cleanup and suppresses late autosave [26.70ms]
+(pass) actual draft handlers and IndexedDB deletion boundary > clearDraft reports deletion failure rather than acknowledging cleanup [13.88ms]
+(pass) composer-owned draft revisions > pre-capture B saved at the same key survives A submit [81.84ms]
+(pass) composer-owned draft revisions > fully compensated upload rejection refreshes same-composer autosave timestamp on retry [107.72ms]
+(pass) composer-owned draft revisions > fully compensated insert rejection refreshes same-composer autosave timestamp on retry [91.92ms]
+(pass) composer-owned draft revisions > no own revision cannot delete an existing row; restored revision can [137.79ms]
+(pass) composer-owned draft revisions > absent owned row never authorizes a subsequently saved row [68.91ms]
+(pass) composer-owned draft revisions > B timestamp-only replacement before capture survives [73.00ms]
+(pass) composer-owned draft revisions > compensated retry cannot acquire B revision from the current IDB row [107.22ms]
+(pass) composer-owned draft revisions > unknown-insert never refreshes to a later same-composer autosave [114.25ms]
+(pass) composer-owned draft revisions > unanswered-upload never refreshes to a later same-composer autosave [146.37ms]
+(pass) composer-owned draft revisions > known commit cleanup retry retains original revision after later autosave [114.40ms]
+(pass) composer-owned draft revisions > capture IO failure blocks writes and retry uses only the remembered revision [96.09ms]
+(pass) composer-owned draft revisions > scope mismatch cannot grant cleanup authority [71.14ms]
+(pass) composer-owned draft revisions > late autoSave completion cannot restore old scope authority [68.55ms]
+(pass) composer-owned draft revisions > late loadDraft completion cannot restore old scope authority [59.31ms]
+(pass) composer-owned draft revisions > expired owned revision cannot block submit or acquire a fresh B row [68.09ms]
+
+ 35 pass
+ 0 fail
+ 422 expect() calls
+Ran 35 tests across 1 file. [2.61s]

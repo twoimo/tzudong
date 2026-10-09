@@ -1,0 +1,13 @@
+✔ exact private byte readback precedes public deletion (1.863666ms)
+✔ copy response lost after commit is reconciled; no deletion after unanswered failed copy (0.68975ms)
+✔ private corruption or reference change prevents every public removal (0.76825ms)
+✔ unknown remove outcome uses metadata readback and repeat does not remove twice (0.17475ms)
+✔ remaining public object is pending even when Storage remove was attempted (0.157083ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 54.832166

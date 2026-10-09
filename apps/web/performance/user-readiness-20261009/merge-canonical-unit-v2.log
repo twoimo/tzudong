@@ -1,0 +1,14 @@
+.............................................................................................................F.........
+======================================================================
+FAIL: test_ledger_applies_integration_normally_and_retains_three_overlap_proofs (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_ledger_applies_integration_normally_and_retains_three_overlap_proofs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_catalog_integration.py", line 132, in test_ledger_applies_integration_normally_and_retains_three_overlap_proofs
+    self.assertEqual(len(local_migrate._load_replay_contract().supported_sources()), 3)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 5 != 3
+
+----------------------------------------------------------------------
+Ran 119 tests in 90.290s
+
+FAILED (failures=1)

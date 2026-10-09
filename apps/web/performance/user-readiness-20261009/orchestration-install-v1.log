@@ -1,0 +1,13 @@
+Collecting hypothesis==6.165.10 (from -r backend/test-requirements.txt (line 3))
+  Downloading hypothesis-6.165.10-cp311-cp311-macosx_11_0_arm64.whl.metadata (5.7 kB)
+Collecting PyYAML==6.0.3 (from -r backend/test-requirements.txt (line 4))
+  Using cached pyyaml-6.0.3-cp311-cp311-macosx_11_0_arm64.whl.metadata (2.4 kB)
+Collecting sortedcontainers<3.0.0,>=2.1.0 (from hypothesis==6.165.10->-r backend/test-requirements.txt (line 3))
+  Downloading sortedcontainers-2.4.0-py2.py3-none-any.whl.metadata (10 kB)
+Downloading hypothesis-6.165.10-cp311-cp311-macosx_11_0_arm64.whl (779 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 779.5/779.5 kB 20.7 MB/s  0:00:00
+Using cached pyyaml-6.0.3-cp311-cp311-macosx_11_0_arm64.whl (175 kB)
+Downloading sortedcontainers-2.4.0-py2.py3-none-any.whl (29 kB)
+Installing collected packages: sortedcontainers, PyYAML, hypothesis
+
+Successfully installed PyYAML-6.0.3 hypothesis-6.165.10 sortedcontainers-2.4.0
