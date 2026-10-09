@@ -1,9 +1,10 @@
 // Loopback-only visual fixture gateway. No request is forwarded to a hosted API.
 import http from 'node:http';
+import { fixtureRequestBoundary, fixtureUpstreamRequest, forwardFixtureRead } from '../fixture-transport-security-20261009/loopback-transport.mjs';
 import { readLocalKnowledgeGraph } from '../../lib/admin/knowledge-graph-local.ts';
 import { readFileSync } from 'node:fs';
 
-const upstream = 'http://127.0.0.1:20402';
+const upstreamPort = 20402;
 const origin = 'http://127.0.0.1:20404';
 const stamp = '2026-10-03T00:00:00.000Z';
 const storyboardProjects = ['gemini-api','manual'].map((provider,index) => {
@@ -183,7 +184,9 @@ const mockSupabase = http.createServer(async (req, res) => {
 mockSupabase.listen(20403, '127.0.0.1');
 
 const preview = http.createServer(async (req, res) => {
-  const url = new URL(req.url, origin);
+  let url;
+  try { url = fixtureRequestBoundary(req, origin); }
+  catch { return response(res, { error: 'FIXTURE_INPUT_INVALID' }, 400); }
   if (url.pathname === '/__fixture/session') {
     const cookie = `base64-${Buffer.from(JSON.stringify(fixtureSession())).toString('base64url')}`;
     res.writeHead(303,{'Set-Cookie':`sb-127-auth-token=${cookie}; Path=/; SameSite=Lax; Max-Age=86400`,Location:'/mypage/profile','Cache-Control':'no-store'});
@@ -215,27 +218,14 @@ const preview = http.createServer(async (req, res) => {
   if (url.pathname.startsWith('/_next/image')) {
     res.writeHead(200, { 'Content-Type': 'image/webp' }); return res.end(logo);
   }
-  try {
-    const incoming = Object.fromEntries(Object.entries(req.headers).filter(([, value]) => value !== undefined)
-      .map(([key, value]) => [key, Array.isArray(value) ? value.join(', ') : value]));
-    const result = await fetch(`${upstream}${url.pathname}${url.search}`, { redirect: 'manual',
-      headers: { ...incoming, host: '127.0.0.1:20402', 'x-e2e-admin-bypass': '1', 'x-e2e-admin-bypass-token': 'design-fixture-local-only' } });
-    const headers = Object.fromEntries(result.headers);
-    delete headers['content-encoding']; delete headers['content-length'];
-    res.writeHead(result.status, headers);
-    res.end(Buffer.from(await result.arrayBuffer()));
-  } catch { response(res, { error: 'FIXTURE_UPSTREAM_UNAVAILABLE' }, 502); }
+  try { forwardFixtureRead(req, res, origin, upstreamPort); }
+  catch { response(res, { error: 'FIXTURE_INPUT_INVALID' }, 400); }
 });
 preview.listen(20404, '127.0.0.1', () => console.log('Design preview uses synthetic data on loopback port 20404; hosted APIs and mutations disabled.'));
 preview.on('upgrade', (req, socket, head) => {
-  let path;
-  try {
-    const target = new URL(req.url, origin);
-    if (target.origin !== origin) throw new Error('origin mismatch');
-    path = target.pathname + target.search;
-  } catch { socket.destroy(); return; }
-  const bridge = http.request({ hostname: '127.0.0.1', port: 20402, path,
-    headers: { ...req.headers, host: '127.0.0.1:20402' } });
+  let bridge;
+  try { bridge = fixtureUpstreamRequest(req, origin, upstreamPort, true); }
+  catch { socket.destroy(); return; }
   bridge.on('upgrade', (reply, remote, remoteHead) => {
     socket.write(`HTTP/1.1 ${reply.statusCode} ${reply.statusMessage}\r\n${Object.entries(reply.headers).map(([key, value]) => `${key}: ${value}`).join('\r\n')}\r\n\r\n`);
     if (head.length) remote.write(head);
@@ -243,6 +233,8 @@ preview.on('upgrade', (req, socket, head) => {
     remote.pipe(socket); socket.pipe(remote);
     remote.on('error', () => socket.destroy()); socket.on('error', () => remote.destroy());
   });
+  bridge.on('timeout', () => bridge.destroy());
+  bridge.on('response', reply => { reply.resume(); socket.destroy(); });
   bridge.on('error', () => socket.destroy()); bridge.end();
 });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { preview.close(); mockSupabase.close(); process.exit(0); });

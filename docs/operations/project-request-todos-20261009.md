@@ -12,7 +12,7 @@
 | 우선순위 | 작업 | 현재 상태 / 다음 조치 |
 | --- | --- | --- |
 | 1 | 관리자 저장·물리 파일 삭제·실패 복구 | 현재 스키마 atomic 승인·2연결 경합 검증 통과. Storage 8개 격리 시나리오 통과; managed 물리 삭제 admission은 미완료 |
-| 1 | 현재 운영 DB·배포·작업 큐·롤백 기준선 | 현재 운영 읽기 preflight 확인: ledger 80, 맛집 1,659건/해시 유지, 자동 검수 꺼짐, 대기 RPC 부재. 대기 SQL 3개 적용·배포·롤백 확인 필요 |
+| 1 | 현재 운영 DB·배포·작업 큐·롤백 기준선 | 현재 운영 읽기 preflight 확인: ledger 80, 맛집 1,659건/해시 유지, 자동 검수 꺼짐, 대기 RPC 부재. 대기 SQL 4개 적용·배포·롤백 확인 필요 |
 | 1 | 크롤링→미디어→추출→평가→저장 최적화 | 증분·캐시·쿼터·병렬·배치 소스와 부분 측정 있음. 전체 공급자/운영 관측·품질 검증 필요 |
 | 1 | 검수 검색·페이지·전체 통계·상세·중복 경고 | 소스/로컬 증빙 있음. 운영 DB·실제 서비스에서 전체 의미 보존 확인 필요 |
 | 1 | Gemini 자동 분류·재검수·조건부 승인·자동 승인·보류 | 정책·원문·수동 수정·CAS·frozen target·중지/재개와 독립 정답 검증 필요 |
@@ -591,3 +591,12 @@ PR #3099의48개 review를 현재 source와 대조했다.43개는 source/test bi
 재생 측정7쌍의 warning request6→1(-5회,-83.33%), JSON539,007→25,241bytes(-513,766,-95.32%) 및 전체 경고 hash 동등성을 확인했다. 결정적인 동일fixture 요청/byte 집계로 운영 지연·금액·일반 정확도나 신뢰구간을 추정하지 않는다. 실제FFmpeg 참여2process의 shared cap8→4와48JPEG 동등성·parent exit/cancel·busy probe는 확인했지만 과거cold wall/CPU 악화와 입력 preimage 공백으로 성능admission을 열지 않았다.
 
 전체 목표는 열린 상태다. 다음은 source/증빙 batch commit → clean canonical replay → 검증된review resolve·필수CI → 보호된develop→data→main 및 운영SQL/환경/worker/배포·실제readback이다. G037 active와 외부 publisher/Sentry/Card/Storage 및 전체롱폼 독립검증의 기존 제약은 그대로 유지한다.
+
+## 후속 실행 — canonical replay와 fixture 보안
+
+- [x] `99b1256297db3619c10b3d4e7fa3b108b4bdef5f` clean detached source의 PG15.8 canonical replay 2회와 비교를 수행한다. 56개 artifact hash가 전부 같고 M1/forward127의 exact chain·adapter admission도 통과했다. Source clean과 소유 자원 cleanup을 확인했다. 운영 DB 검증은 아니다.
+- [x] CI가 지적한 세 authored fixture gateway의 URL/헤더/Host/Origin/HMR 경계를 수정한다. 실제 세 fixture와 loopback sentinel의 67개 검사, Node24 targeted lint를 통과했다. 외부 목적지 trap 요청0이며 과거 gateway/map 원문도 따로 보존했다.
+- [ ] 새 커밋의 CodeQL 및 필수 CI를 확인하고, 현재 소스와 연결된 48개 review thread만 처리한다.
+- [ ] 운영 SQL 4개와 구버전 호환성·정책을 유지하는 롤백을 정식 release contract에 연결한다. G037 freeze 및 아직 미확정된 외부 조건은 유지한다.
+
+증빙: `apps/web/performance/record-review-fixes-20261009/pg15/head-99b12562/final-verification.json`, `apps/web/performance/fixture-transport-security-20261009/transport-verification.json`. 전체 기능·운영 반영 완료 체크는 열린 상태다.

@@ -1,11 +1,12 @@
 // Loopback-only visual fixture gateway. No request is forwarded to a hosted API.
 import http from 'node:http';
-import { fixtureRequestBoundary, fixtureUpstreamRequest, forwardFixtureRead } from '../fixture-transport-security-20261009/loopback-transport.mjs';
 import { readLocalKnowledgeGraph } from '../../lib/admin/knowledge-graph-local.ts';
 import { readFileSync } from 'node:fs';
 
-const upstreamPort = 20382;
-const origin = 'http://127.0.0.1:20384';
+const upstream = 'http://127.0.0.1:20512';
+const origin = 'http://127.0.0.1:20514';
+let graphMode = 'current';
+const pagedGraphRoot = process.env.PAGED_GRAPH_FIXTURE_ROOT;
 const stamp = '2026-10-03T00:00:00.000Z';
 const storyboardProjects = ['gemini-api','manual'].map((provider,index) => {
   const id=`00000000-0000-4000-b100-${String(index+1).padStart(12,'0')}`;
@@ -115,7 +116,7 @@ function fixtureAutomationAction(body) {
 }
 function api(pathname, params = new URLSearchParams()) {
   if (pathname === '/api/admin/sentry') return { state: 'not_configured', collection: { browser: false, server: false }, dashboardUrl: null, issues: [], nextCursor: null, fetchedAt: null };
-  if (pathname === '/api/admin/knowledge-graph') return readLocalKnowledgeGraph(params);
+  if (pathname === '/api/admin/knowledge-graph') return readLocalKnowledgeGraph(params, graphMode === 'paged' ? pagedGraphRoot : undefined);
   if (pathname === '/api/admin/evaluations/automation') return fixtureAutomation;
   if (pathname === '/api/dashboard/restaurants') return {asOf:stamp,total:restaurants.length,limit:500,offset:0,filters:{onlyWithCoordinates:true},items:restaurants.map(row=>({
     id:row.id,name:row.name,category:'한식',address:row.road_address,lat:row.lat,lng:row.lng,youtubeLink:null,videoId:null,
@@ -156,7 +157,7 @@ function api(pathname, params = new URLSearchParams()) {
 }
 
 const mockSupabase = http.createServer(async (req, res) => {
-  const path = new URL(req.url, 'http://127.0.0.1:20383').pathname;
+  const path = new URL(req.url, 'http://127.0.0.1:20513').pathname;
   if (req.method === 'OPTIONS') return response(res, {});
   if (path === '/auth/v1/user') return response(res, fixtureUser);
   if (path.startsWith('/auth/v1/')) return response(res, { user: null, session: null });
@@ -181,12 +182,14 @@ const mockSupabase = http.createServer(async (req, res) => {
   if (path.includes('/rpc/')) return response(res, []);
   return response(res, []);
 });
-mockSupabase.listen(20383, '127.0.0.1');
+mockSupabase.listen(20513, '127.0.0.1');
 
 const preview = http.createServer(async (req, res) => {
-  let url;
-  try { url = fixtureRequestBoundary(req, origin); }
-  catch { return response(res, { error: 'FIXTURE_INPUT_INVALID' }, 400); }
+  const url = new URL(req.url, origin);
+  if (url.pathname === '/__fixture/graph-mode') {
+    if (!['current','paged'].includes(url.searchParams.get('mode'))) return response(res,{error:'INVALID_MODE'},400);
+    graphMode = url.searchParams.get('mode'); return response(res,{mode:graphMode});
+  }
   if (url.pathname === '/__fixture/session') {
     const cookie = `base64-${Buffer.from(JSON.stringify(fixtureSession())).toString('base64url')}`;
     res.writeHead(303,{'Set-Cookie':`sb-127-auth-token=${cookie}; Path=/; SameSite=Lax; Max-Age=86400`,Location:'/mypage/profile','Cache-Control':'no-store'});
@@ -218,14 +221,27 @@ const preview = http.createServer(async (req, res) => {
   if (url.pathname.startsWith('/_next/image')) {
     res.writeHead(200, { 'Content-Type': 'image/webp' }); return res.end(logo);
   }
-  try { forwardFixtureRead(req, res, origin, upstreamPort); }
-  catch { response(res, { error: 'FIXTURE_INPUT_INVALID' }, 400); }
+  try {
+    const incoming = Object.fromEntries(Object.entries(req.headers).filter(([, value]) => value !== undefined)
+      .map(([key, value]) => [key, Array.isArray(value) ? value.join(', ') : value]));
+    const result = await fetch(`${upstream}${url.pathname}${url.search}`, { redirect: 'manual',
+      headers: { ...incoming, host: '127.0.0.1:20512', 'x-e2e-admin-bypass': '1', 'x-e2e-admin-bypass-token': 'design-fixture-local-only' } });
+    const headers = Object.fromEntries(result.headers);
+    delete headers['content-encoding']; delete headers['content-length'];
+    res.writeHead(result.status, headers);
+    res.end(Buffer.from(await result.arrayBuffer()));
+  } catch { response(res, { error: 'FIXTURE_UPSTREAM_UNAVAILABLE' }, 502); }
 });
-preview.listen(20384, '127.0.0.1', () => console.log('Design preview uses synthetic data on loopback port 20384; hosted APIs and mutations disabled.'));
+preview.listen(20514, '127.0.0.1', () => console.log('Design preview uses synthetic data on loopback port 20514; hosted APIs and mutations disabled.'));
 preview.on('upgrade', (req, socket, head) => {
-  let bridge;
-  try { bridge = fixtureUpstreamRequest(req, origin, upstreamPort, true); }
-  catch { socket.destroy(); return; }
+  let path;
+  try {
+    const target = new URL(req.url, origin);
+    if (target.origin !== origin) throw new Error('origin mismatch');
+    path = target.pathname + target.search;
+  } catch { socket.destroy(); return; }
+  const bridge = http.request({ hostname: '127.0.0.1', port: 20512, path,
+    headers: { ...req.headers, host: '127.0.0.1:20512' } });
   bridge.on('upgrade', (reply, remote, remoteHead) => {
     socket.write(`HTTP/1.1 ${reply.statusCode} ${reply.statusMessage}\r\n${Object.entries(reply.headers).map(([key, value]) => `${key}: ${value}`).join('\r\n')}\r\n\r\n`);
     if (head.length) remote.write(head);
@@ -233,8 +249,6 @@ preview.on('upgrade', (req, socket, head) => {
     remote.pipe(socket); socket.pipe(remote);
     remote.on('error', () => socket.destroy()); socket.on('error', () => remote.destroy());
   });
-  bridge.on('timeout', () => bridge.destroy());
-  bridge.on('response', reply => { reply.resume(); socket.destroy(); });
   bridge.on('error', () => socket.destroy()); bridge.end();
 });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { preview.close(); mockSupabase.close(); process.exit(0); });

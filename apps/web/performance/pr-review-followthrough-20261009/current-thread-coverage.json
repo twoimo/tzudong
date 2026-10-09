@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "observedAtUtc": "2026-10-09T03:37:33.659306+00:00",
-  "auditPhase": "final frozen-source review coverage; named missing proof remains pending; root integration/operating gates separate",
+  "observedAtUtc": "2026-10-09T03:47:24.075421+00:00",
+  "auditPhase": "final current-commit review-readiness audit",
   "reviewExport": {
     "path": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/pr-3099-review-current-20261009.json",
     "sha256": "77db26b5e60b785ca20280e2f7a2a8c221acbdd9d3fc3ec098890530b1746e70",
@@ -31,12 +31,11 @@
     "duplicateThreadCount": 0
   },
   "counts": {
-    "locally_verified": 43,
-    "pending_source_bound_verification": 2,
+    "locally_verified": 45,
     "contradicted_premise": 3
   },
-  "finalLocalReviewCount": 46,
-  "incompleteCount": 2,
+  "finalLocalReviewCount": 48,
+  "incompleteCount": 0,
   "threads": [
     {
       "threadId": "PRRT_kwDOQGRyNc6ouwJC",
@@ -57,7 +56,12 @@
           "receiptSha256": "32e8283f6d1b394ea3ba3c113f05a4325ac18f4cebfef2113f1547f574e2b4ba",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "32e8283f6d1b394ea3ba3c113f05a4325ac18f4cebfef2113f1547f574e2b4ba",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin-same-video-duplicate-warning.ts",
@@ -65,7 +69,12 @@
           "receiptSha256": "7904013149561b7fc7662cb5d05e56213147b45148e86242c82064a5529cbcb1",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "7904013149561b7fc7662cb5d05e56213147b45148e86242c82064a5529cbcb1",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/evaluation-page-server.ts",
@@ -75,7 +84,11 @@
           "receiptSuperseded": true,
           "historicalReceiptSha256": "04933165d80cd1cac653a6b1d1d31c7ffffc18a858365790485772789b4d0620",
           "stableAtLedgerFinalRead": true,
-          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json"
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "04933165d80cd1cac653a6b1d1d31c7ffffc18a858365790485772789b4d0620",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/evaluation-warning-adaptive-codec.ts",
@@ -83,7 +96,12 @@
           "receiptSha256": "9872f35d53c059be7f547b6d9bc11898e6fedf69158cf6e57920f367970c3b88",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "9872f35d53c059be7f547b6d9bc11898e6fedf69158cf6e57920f367970c3b88",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/evaluation-warning-raw-groups.ts",
@@ -91,7 +109,12 @@
           "receiptSha256": "a79a1a922fad44a906ebdad24efd12e788cf300568d22b0091635af527798dc8",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "a79a1a922fad44a906ebdad24efd12e788cf300568d22b0091635af527798dc8",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/evaluation-warning-stream.ts",
@@ -99,7 +122,12 @@
           "receiptSha256": "3a5495a38e262ce93e5ce36b942465a004506a1e378e4e0ed9bc9ced28929044",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "3a5495a38e262ce93e5ce36b942465a004506a1e378e4e0ed9bc9ced28929044",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/normalize-evaluation-record.ts",
@@ -107,7 +135,12 @@
           "receiptSha256": "4163901d4da302c8db405ceac5f02ce543522226bc0e3de67caab653ac90d334",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "4163901d4da302c8db405ceac5f02ce543522226bc0e3de67caab653ac90d334",
+          "commitMatch": true
         },
         {
           "path": "apps/web/scripts/measure-evaluation-warning-default.ts",
@@ -115,7 +148,12 @@
           "receiptSha256": "74ae61bc18386d8cf8be04b224698b7ba13ff533efdac82e010089fdcce1e41f",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "74ae61bc18386d8cf8be04b224698b7ba13ff533efdac82e010089fdcce1e41f",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-evaluation-page-server.test.ts",
@@ -125,7 +163,11 @@
           "receiptSuperseded": true,
           "historicalReceiptSha256": "cfb3fe042e565a1bfa8dd44e4f6964248b83841d77d40ea975902d6e7e07f362",
           "stableAtLedgerFinalRead": true,
-          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json"
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "3ade0958ce0deaf49d1798752e6455f3508461b1276cecb2d883dcae33f7bab7",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-evaluation-page-api.test.ts",
@@ -135,7 +177,11 @@
           "receiptSuperseded": true,
           "historicalReceiptSha256": null,
           "stableAtLedgerFinalRead": true,
-          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json"
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "0b5fd29100051a2ddf4c53761d3b1e31ae8059e0e23dcde63fdc3999eec02e90",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -175,7 +221,8 @@
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
       "verificationStatus": "passed_current_bound_evidence",
-      "currentValidation": "37 selected web tests passed with banner parity; targeted warning33 already retained"
+      "currentValidation": "37 selected web tests passed with banner parity; targeted warning33 already retained",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6ouwJG",
@@ -186,17 +233,23 @@
       "exportIsResolved": false,
       "resolutionCondition": "Auto-approval must reject every null, blank, unknown or non-string category element.",
       "currentFinding": "Forward category migration checks every JSON category against canonical allowed strings.",
-      "status": "pending_source_bound_verification",
-      "finalForLocalReview": false,
-      "auditPhase": "provisional",
+      "status": "locally_verified",
+      "finalForLocalReview": true,
+      "auditPhase": "final_current_commit_runtime_bound",
       "sourceAndTestBindings": [
         {
           "path": "backend/supabase/migrations/20261003081915_restaurant_review_automation.sql",
           "sha256": "1cff7056df006070a76b466a2ad04cf386fdb8d6b868fba491f6cb88a56246e0",
-          "receiptSha256": null,
-          "receiptMatch": null,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "1cff7056df006070a76b466a2ad04cf386fdb8d6b868fba491f6cb88a56246e0",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": null,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "1cff7056df006070a76b466a2ad04cf386fdb8d6b868fba491f6cb88a56246e0",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/migrations/20261004045404_restaurant_review_category_contract.sql",
@@ -204,7 +257,12 @@
           "receiptSha256": "5f16d4f5b50d4a343a737d96be6465c7bef3a51fd89789deff141f928f5ee600",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "5f16d4f5b50d4a343a737d96be6465c7bef3a51fd89789deff141f928f5ee600",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/tests/test_restaurant_review_identity.py",
@@ -212,7 +270,12 @@
           "receiptSha256": "52aabadaa577814bf305edd983eee83d62f8bae278abd5f91cc5d2d0f6ae7a07",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "52aabadaa577814bf305edd983eee83d62f8bae278abd5f91cc5d2d0f6ae7a07",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -220,20 +283,53 @@
           "path": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
           "sha256": "42ec64f23d0c1904bc0946b47d7f5a6d2660306f3b94d9ca8934f5b5b9be6d70",
           "exists": true
+        },
+        {
+          "path": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "sha256": "2af27a3a7188d8a8fcc32463105abd050d3aaa8f4940a33c53708314b9397673",
+          "exists": true
+        },
+        {
+          "path": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime/runtime-cases.json",
+          "sha256": "154d8ab0ae4d4e334db88d38d865b0f43b5106fdb547daa638800086ca5872dd",
+          "exists": true
+        },
+        {
+          "path": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime/source-runtime-bindings.json",
+          "sha256": "e194d771b6629865f9da7024e7915e235add0abbf2b31acc844cfa157da381e3",
+          "exists": true
         }
       ],
       "initialClassification": {
         "path": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
         "statusNotUsedAsCompletionProof": "addressed"
       },
-      "remaining": [
-        "Current source satisfies the reviewed condition, but this classification receipt records inspected test pointers rather than a fresh exact-source passing execution. Bind retained replay/test proof or run affected local checks."
-      ],
+      "remaining": [],
       "remoteResolvedByAudit": false,
       "deploymentVerified": false,
-      "remainingGates": [],
+      "remainingGates": [
+        "Canonical PG15 clean-source replay is separate and still in progress. Local isolated PG17 service-role execution is not an operating apply or provider-quality receipt."
+      ],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "pending_named_proof"
+      "verificationStatus": "passed_current_bound_actual_pg17_runtime",
+      "runtimeCases": {
+        "malformedClassifierInputs": 37,
+        "validClassifierInputs": 16,
+        "invalidPositions": "first/last/middle after valid elements",
+        "malformedKinds": [
+          "null",
+          "blank",
+          "whitespace",
+          "unknown",
+          "number",
+          "object",
+          "boolean",
+          "nested array",
+          "empty/non-array container"
+        ],
+        "actualTick": "mixed valid/null held, no model queue, repeat tick scanned 0"
+      },
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6oxVfH",
@@ -254,15 +350,26 @@
           "receiptSha256": "ae9ad574fd38e02caefdaed8c7004ec296d9a7ea088e1353dfcda41b540a1bf4",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "ae9ad574fd38e02caefdaed8c7004ec296d9a7ea088e1353dfcda41b540a1bf4",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/tests/test_pipeline_restart_integration.py",
           "sha256": "b1a09f77677b885eecb1b87d41cc526a812764366f2b36097af13aa1e045c10e",
-          "receiptSha256": "281f6e0a37d0d66beb77ca16a80ea20bd8bea8350454fe46775d3e59c7c1d780",
-          "receiptMatch": false,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "b1a09f77677b885eecb1b87d41cc526a812764366f2b36097af13aa1e045c10e",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": "281f6e0a37d0d66beb77ca16a80ea20bd8bea8350454fe46775d3e59c7c1d780",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "b1a09f77677b885eecb1b87d41cc526a812764366f2b36097af13aa1e045c10e",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -286,7 +393,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6oxVfM",
@@ -297,9 +405,9 @@
       "exportIsResolved": false,
       "resolutionCondition": "Changed deferred classification must be applied or requeued rather than permanently skipped by prior fingerprints.",
       "currentFinding": "Forward deferred reclassification applies hold or queues replacement current-input recheck.",
-      "status": "pending_source_bound_verification",
-      "finalForLocalReview": false,
-      "auditPhase": "provisional",
+      "status": "locally_verified",
+      "finalForLocalReview": true,
+      "auditPhase": "final_current_commit_runtime_bound",
       "sourceAndTestBindings": [
         {
           "path": "backend/supabase/migrations/20261004120000_restaurant_review_gemini_decision.sql",
@@ -307,7 +415,12 @@
           "receiptSha256": "76c323a3f563a8ef4f20cc35aea9bf495a8f035cad3ed59391f40ed4f1d8fcfc",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "76c323a3f563a8ef4f20cc35aea9bf495a8f035cad3ed59391f40ed4f1d8fcfc",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/migrations/20261004172622_restaurant_review_deferred_reclassification.sql",
@@ -315,7 +428,12 @@
           "receiptSha256": "de64777c29fc14b52522f0e2451d4072951ea3b0c3717783bfd1242db38eed40",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "de64777c29fc14b52522f0e2451d4072951ea3b0c3717783bfd1242db38eed40",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/tests/test_restaurant_review_deferred_reclassification.py",
@@ -323,7 +441,12 @@
           "receiptSha256": "f5e710b98479f4342535d04c3b2f47b95fc7740ce9337ce73e958b29eeff8f52",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "f5e710b98479f4342535d04c3b2f47b95fc7740ce9337ce73e958b29eeff8f52",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -331,20 +454,45 @@
           "path": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
           "sha256": "42ec64f23d0c1904bc0946b47d7f5a6d2660306f3b94d9ca8934f5b5b9be6d70",
           "exists": true
+        },
+        {
+          "path": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "sha256": "2af27a3a7188d8a8fcc32463105abd050d3aaa8f4940a33c53708314b9397673",
+          "exists": true
+        },
+        {
+          "path": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime/deferred-worker-runtime.json",
+          "sha256": "0cf9ff27d4c4d56f12b0231482a3f69112ef3a13f08c40c6d4c32b656ca7f738",
+          "exists": true
+        },
+        {
+          "path": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime/source-runtime-bindings.json",
+          "sha256": "e194d771b6629865f9da7024e7915e235add0abbf2b31acc844cfa157da381e3",
+          "exists": true
         }
       ],
       "initialClassification": {
         "path": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
         "statusNotUsedAsCompletionProof": "addressed"
       },
-      "remaining": [
-        "Current source satisfies the reviewed condition, but this classification receipt records inspected test pointers rather than a fresh exact-source passing execution. Bind retained replay/test proof or run affected local checks."
-      ],
+      "remaining": [],
       "remoteResolvedByAudit": false,
       "deploymentVerified": false,
-      "remainingGates": [],
+      "remainingGates": [
+        "Canonical PG15 clean-source replay is separate and still in progress. Local isolated PG17 service-role execution is not an operating apply or provider-quality receipt."
+      ],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "pending_named_proof"
+      "verificationStatus": "passed_current_bound_actual_pg17_runtime",
+      "runtimeCases": [
+        "prior-fingerprint exclusion with available budget",
+        "applied-fingerprint exclusion with available budget",
+        "actual worker claim + complete using synthetic source-bound valid judgment DTO -> confirmed daily-limit deferred",
+        "different-row duplicate-phone constraint changes classification while deferred row fingerprint remains identical",
+        "actual tick applies hold, ledger applied/reason duplicate_requires_review/outcome hold",
+        "same-request readback identical; new batch scanned 0; no queue/claim remains",
+        "one claim and maxCallsPerClaim=1 preserved"
+      ],
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6oxXry",
@@ -367,7 +515,11 @@
           "receiptSuperseded": true,
           "historicalReceiptSha256": "64d4a5841b3332abccf4767c0a438f6794717ad5e9aefb6cf1d9e7d74cc3e474",
           "stableAtLedgerFinalRead": true,
-          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json"
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "64d4a5841b3332abccf4767c0a438f6794717ad5e9aefb6cf1d9e7d74cc3e474",
+          "commitMatch": true
         },
         {
           "path": "backend/bin/tests/review_decision_gemini.test.mjs",
@@ -377,7 +529,11 @@
           "receiptSuperseded": true,
           "historicalReceiptSha256": "210016aa0262b724461f07849c50f811070d0fcf9829a2af8a8f2617eb3a2d74",
           "stableAtLedgerFinalRead": true,
-          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json"
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "210016aa0262b724461f07849c50f811070d0fcf9829a2af8a8f2617eb3a2d74",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -402,7 +558,8 @@
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
       "verificationStatus": "passed_current_bound_evidence",
-      "currentValidation": "6 Node24 SDK tests passed with source lock-matched @google/genai2.24.0, only synthetic/intercepted requests"
+      "currentValidation": "6 Node24 SDK tests passed with source lock-matched @google/genai2.24.0, only synthetic/intercepted requests",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6oxXr1",
@@ -423,7 +580,12 @@
           "receiptSha256": "80136fd1ab95451f9f8922bbd6809797ad849bfc167b3e4e62fbead0cd58584b",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "80136fd1ab95451f9f8922bbd6809797ad849bfc167b3e4e62fbead0cd58584b",
+          "commitMatch": true
         },
         {
           "path": "apps/web/types/knowledge-graph.ts",
@@ -431,7 +593,12 @@
           "receiptSha256": "d9adfd90785490c3cdda89cbcc3d1e84270caeb84774962e2bb9b634217ffecc",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "d9adfd90785490c3cdda89cbcc3d1e84270caeb84774962e2bb9b634217ffecc",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -450,7 +617,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6oxXr3",
@@ -472,7 +640,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "793d4c51ab60196c9bb2fa51d74de30e5a5ecb813bfafb8c6e1e7ab5c3e3c974"
+          "historicalReceiptSha256": "793d4c51ab60196c9bb2fa51d74de30e5a5ecb813bfafb8c6e1e7ab5c3e3c974",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "bdc3eab4355b2cdcb8cb91e536e436e0a0325a1198dd3f57153ae49c4b31a54f",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-users-mutation-scope.test.ts",
@@ -481,7 +654,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "268039ccffdf8f8bc9b02afac7a15d2c313a9b357b242206847e4bb74ec58ef8"
+          "historicalReceiptSha256": "268039ccffdf8f8bc9b02afac7a15d2c313a9b357b242206847e4bb74ec58ef8",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "1d72375cca38087b20a3d14c5bfdd5287122dbac1d4f0c8401accd9a5584615e",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -540,7 +718,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6oxtOq",
@@ -561,7 +740,12 @@
           "receiptSha256": "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/publication-batch/verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86",
+          "commitMatch": true
         },
         {
           "path": "backend/knowledge_graph/tests/test_longform_analysis.py",
@@ -569,7 +753,12 @@
           "receiptSha256": "c8eb823f3fd51731f5164df7a9d2831d250bd2a2c041cf45f6b8e8cb125689b9",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "c8eb823f3fd51731f5164df7a9d2831d250bd2a2c041cf45f6b8e8cb125689b9",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -593,7 +782,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6oxtOt",
@@ -616,7 +806,11 @@
           "receiptSuperseded": true,
           "historicalReceiptSha256": "178a3029d5d6761c68adbd55e22545286efd26b32460d2454646cc2e1cdea647",
           "stableAtLedgerFinalRead": true,
-          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json"
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "178a3029d5d6761c68adbd55e22545286efd26b32460d2454646cc2e1cdea647",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/mobile-desktop-parity-source.test.ts",
@@ -626,7 +820,11 @@
           "receiptSuperseded": true,
           "historicalReceiptSha256": "a3719c81e40210fbb0ae99f9cce6b27b137fdfdfd83c341bd975959edf7450d0",
           "stableAtLedgerFinalRead": true,
-          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json"
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "a3719c81e40210fbb0ae99f9cce6b27b137fdfdfd83c341bd975959edf7450d0",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -651,7 +849,8 @@
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
       "verificationStatus": "passed_current_bound_evidence",
-      "currentValidation": "Banner responsive/guard source case passed within selected37 and full web3223; source evidence only"
+      "currentValidation": "Banner responsive/guard source case passed within selected37 and full web3223; source evidence only",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6oxtOv",
@@ -673,7 +872,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "7490ac33cb15d0a8f59bd8f154487cbe75cc16732c7a860003c4b281f7d67fae"
+          "historicalReceiptSha256": "7490ac33cb15d0a8f59bd8f154487cbe75cc16732c7a860003c4b281f7d67fae",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "523582aeb764484cc08675a57716ba3b706a0ffb1216d933b838c66eb0e5cc2c",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/pipeline-flow-view-model.ts",
@@ -682,7 +886,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "25ae84ca521b20339e42e425575b8778ca391e835c532efa9937d719572a9a91"
+          "historicalReceiptSha256": "25ae84ca521b20339e42e425575b8778ca391e835c532efa9937d719572a9a91",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "3b759a1a33cff70d7263f77e41a5b59dba4945bde90dd6ede44b94177a0bdf38",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/pipeline-flow-view-model.test.ts",
@@ -691,7 +900,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "b1f159771ade01d222e08f70b2bc5f1566b9777dc0f8dbe6d929d3330dc009f3"
+          "historicalReceiptSha256": "b1f159771ade01d222e08f70b2bc5f1566b9777dc0f8dbe6d929d3330dc009f3",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "5e4a81052121728cd5e6187f36bf8dd2593fe065441e05fc7243a289279bc9b5",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -740,7 +954,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6ozOtb",
@@ -763,7 +978,11 @@
           "receiptSuperseded": true,
           "historicalReceiptSha256": "a17af9470c5ce0816b673ff9f5ffd5332726875ac3924764547d8f2eb85f9545",
           "stableAtLedgerFinalRead": true,
-          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json"
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "a17af9470c5ce0816b673ff9f5ffd5332726875ac3924764547d8f2eb85f9545",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
@@ -771,7 +990,12 @@
           "receiptSha256": "4363941d284cd9eb23431c0498d69468959566e92c39db8a5df5426cf3496237",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "4363941d284cd9eb23431c0498d69468959566e92c39db8a5df5426cf3496237",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/tests/test_g014_owner_final_replay.py",
@@ -781,7 +1005,11 @@
           "receiptSuperseded": true,
           "historicalReceiptSha256": "ca66f653cb95fa681b4f7809f5843036bbd49353234fa0bcbf25cd51ed42f8ca",
           "stableAtLedgerFinalRead": true,
-          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json"
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "ca66f653cb95fa681b4f7809f5843036bbd49353234fa0bcbf25cd51ed42f8ca",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -808,7 +1036,8 @@
       ],
       "sourceReviewStatus": "addressed_in_current_source",
       "verificationStatus": "passed_current_bound_evidence",
-      "currentValidation": "2 source contract tests passed; verifier is outside active migration chain; full canonical PG15 remains separate"
+      "currentValidation": "2 source contract tests passed; verifier is outside active migration chain; full canonical PG15 remains separate",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6o0iU5",
@@ -829,7 +1058,12 @@
           "receiptSha256": "7d99a6adbbd97707bed0b79d0c659d1ac9563d65e94c197848f8900fcbcb52bc",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "7d99a6adbbd97707bed0b79d0c659d1ac9563d65e94c197848f8900fcbcb52bc",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/operations-view-model.ts",
@@ -837,7 +1071,12 @@
           "receiptSha256": "585d05678fdbe082d9e91d86ec7bb7215c0e5733c1e57f264912df94eddb178c",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "585d05678fdbe082d9e91d86ec7bb7215c0e5733c1e57f264912df94eddb178c",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-operations-view-model.test.ts",
@@ -845,7 +1084,12 @@
           "receiptSha256": "a357c6259a931faa5b042cd94e60809abef52f12a7f56fab81b4bc3d3bc1edbb",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "a357c6259a931faa5b042cd94e60809abef52f12a7f56fab81b4bc3d3bc1edbb",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -864,7 +1108,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6o0iU8",
@@ -887,7 +1132,11 @@
           "receiptSuperseded": true,
           "historicalReceiptSha256": "ee773aeb062d58f5170b213f3ca672aafe0ec2673c2bb6f9f8dd0ba97967163a",
           "stableAtLedgerFinalRead": true,
-          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json"
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "ee773aeb062d58f5170b213f3ca672aafe0ec2673c2bb6f9f8dd0ba97967163a",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-evaluation-reload-state.test.ts",
@@ -897,7 +1146,11 @@
           "receiptSuperseded": true,
           "historicalReceiptSha256": null,
           "stableAtLedgerFinalRead": true,
-          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json"
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "09f4055e8afaa5e2f8842d91c9259f2536a2f4d621ce05cb3baf6f97b1777a22",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -922,7 +1175,8 @@
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
       "verificationStatus": "passed_current_bound_evidence",
-      "currentValidation": "3 actual extracted paged callback tests passed: failed/late reload cannot republish stale stats/revision"
+      "currentValidation": "3 actual extracted paged callback tests passed: failed/late reload cannot republish stale stats/revision",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6o0iU-",
@@ -944,7 +1198,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "1af2143ca6a697b4f7f313365a5e1662cf14fd951b241293c03d66c4373dd7b4"
+          "historicalReceiptSha256": "1af2143ca6a697b4f7f313365a5e1662cf14fd951b241293c03d66c4373dd7b4",
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "1af2143ca6a697b4f7f313365a5e1662cf14fd951b241293c03d66c4373dd7b4",
+          "commitMatch": true
         },
         {
           "path": "backend/restaurant-crawling/scripts/tests/test_gemini_chunk_generation_config.mjs",
@@ -953,7 +1212,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "c757455012adef64cd6b435aa802a7885012a2423baba567de90ad91cac3f028"
+          "historicalReceiptSha256": "c757455012adef64cd6b435aa802a7885012a2423baba567de90ad91cac3f028",
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "c757455012adef64cd6b435aa802a7885012a2423baba567de90ad91cac3f028",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/gemini-client.mjs",
@@ -962,7 +1226,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141"
+          "historicalReceiptSha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141",
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/tests/gemini-client.test.mjs",
@@ -971,7 +1240,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1"
+          "historicalReceiptSha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1",
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -1015,7 +1289,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6o1c8T",
@@ -1037,7 +1312,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "d423d3a6715234f741c10cfbd6dbdf7ca2f373d6282cc654e8592bf088761bd9"
+          "historicalReceiptSha256": "d423d3a6715234f741c10cfbd6dbdf7ca2f373d6282cc654e8592bf088761bd9",
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "d423d3a6715234f741c10cfbd6dbdf7ca2f373d6282cc654e8592bf088761bd9",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/gemini-client.mjs",
@@ -1046,7 +1326,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141"
+          "historicalReceiptSha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141",
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/tests/gemini-client.test.mjs",
@@ -1055,7 +1340,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1"
+          "historicalReceiptSha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1",
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -1099,7 +1389,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6o1c8W",
@@ -1117,18 +1408,30 @@
         {
           "path": "backend/supabase/migrations/20261003171449_restaurant_review_manual_guards.sql",
           "sha256": "e988b188bef59dead799b0de45713833b6d913af2a5b1ab27e4a27b1d8f98271",
-          "receiptSha256": null,
-          "receiptMatch": null,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "e988b188bef59dead799b0de45713833b6d913af2a5b1ab27e4a27b1d8f98271",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": null,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "e988b188bef59dead799b0de45713833b6d913af2a5b1ab27e4a27b1d8f98271",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/migrations/20261004120000_restaurant_review_gemini_decision.sql",
           "sha256": "76c323a3f563a8ef4f20cc35aea9bf495a8f035cad3ed59391f40ed4f1d8fcfc",
-          "receiptSha256": null,
-          "receiptMatch": null,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "76c323a3f563a8ef4f20cc35aea9bf495a8f035cad3ed59391f40ed4f1d8fcfc",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": null,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "76c323a3f563a8ef4f20cc35aea9bf495a8f035cad3ed59391f40ed4f1d8fcfc",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql",
@@ -1137,7 +1440,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3"
+          "historicalReceiptSha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -1217,7 +1525,8 @@
         "Prior service-role revision FOR UPDATE 42501 gap resolved by fixed-lock-runtime.json (actual service_role); no broad table/role grant or lock bypass."
       ],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6o1c8X",
@@ -1238,7 +1547,12 @@
           "receiptSha256": "5790ef350dae4aaf012681e3a94423cd1490eb4c3837fa9c8901c56d07d19b1a",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "5790ef350dae4aaf012681e3a94423cd1490eb4c3837fa9c8901c56d07d19b1a",
+          "commitMatch": true
         },
         {
           "path": "backend/bin/tests/test_restaurant_review_automation.py",
@@ -1246,7 +1560,12 @@
           "receiptSha256": "a6b2c5cbcf3e5822a44ee4835989b80e754422d4a12dd39d5bcebb6051473762",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "a6b2c5cbcf3e5822a44ee4835989b80e754422d4a12dd39d5bcebb6051473762",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -1280,7 +1599,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6pyg6w",
@@ -1303,7 +1623,11 @@
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
           "historicalReceiptSha256": "ac95a69229ef6f05d1cf1c8ae499a0d789dda1b950ce493dfa7d5953443ee09f",
-          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/react-quality-graph-fix.json"
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "c76fb4fbceeb37241324a43bae369ce358d82e803f308089aab4a653410e8a68",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/knowledge-graph-shards.ts",
@@ -1311,7 +1635,12 @@
           "receiptSha256": "e6952da7522b587223170b4ee2e44a5d8835ddd772b5d5a4a85a0bb4897659ea",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "e6952da7522b587223170b4ee2e44a5d8835ddd772b5d5a4a85a0bb4897659ea",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-knowledge-graph-titles.test.ts",
@@ -1319,7 +1648,12 @@
           "receiptSha256": "1317726201f95449e08c4fc8ccb023e5cdc1f3c955605456c577a6c8cbe7ed63",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "1317726201f95449e08c4fc8ccb023e5cdc1f3c955605456c577a6c8cbe7ed63",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -1394,7 +1728,8 @@
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
       "verificationStatus": "passed_current_bound_evidence",
-      "receiptSupersession": "Only AdminKnowledgeGraphPanel entry of approved-source-manifest is superseded by react-quality-graph-fix; other 11 entries retain original hashes."
+      "receiptSupersession": "Only AdminKnowledgeGraphPanel entry of approved-source-manifest is superseded by react-quality-graph-fix; other 11 entries retain original hashes.",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6pyg62",
@@ -1415,7 +1750,12 @@
           "receiptSha256": "585d05678fdbe082d9e91d86ec7bb7215c0e5733c1e57f264912df94eddb178c",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "585d05678fdbe082d9e91d86ec7bb7215c0e5733c1e57f264912df94eddb178c",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-operations-view-model.test.ts",
@@ -1423,7 +1763,12 @@
           "receiptSha256": "a357c6259a931faa5b042cd94e60809abef52f12a7f56fab81b4bc3d3bc1edbb",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "a357c6259a931faa5b042cd94e60809abef52f12a7f56fab81b4bc3d3bc1edbb",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -1442,7 +1787,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "contradicted_premise",
-      "verificationStatus": "not_required_for_contradicted_premise"
+      "verificationStatus": "not_required_for_contradicted_premise",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6pzgm5",
@@ -1464,7 +1810,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "7490ac33cb15d0a8f59bd8f154487cbe75cc16732c7a860003c4b281f7d67fae"
+          "historicalReceiptSha256": "7490ac33cb15d0a8f59bd8f154487cbe75cc16732c7a860003c4b281f7d67fae",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "523582aeb764484cc08675a57716ba3b706a0ffb1216d933b838c66eb0e5cc2c",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/pipeline-flow-view-model.ts",
@@ -1473,7 +1824,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "25ae84ca521b20339e42e425575b8778ca391e835c532efa9937d719572a9a91"
+          "historicalReceiptSha256": "25ae84ca521b20339e42e425575b8778ca391e835c532efa9937d719572a9a91",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "3b759a1a33cff70d7263f77e41a5b59dba4945bde90dd6ede44b94177a0bdf38",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/pipeline-flow-view-model.test.ts",
@@ -1482,7 +1838,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "b1f159771ade01d222e08f70b2bc5f1566b9777dc0f8dbe6d929d3330dc009f3"
+          "historicalReceiptSha256": "b1f159771ade01d222e08f70b2bc5f1566b9777dc0f8dbe6d929d3330dc009f3",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "5e4a81052121728cd5e6187f36bf8dd2593fe065441e05fc7243a289279bc9b5",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -1541,7 +1902,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6pzgnD",
@@ -1559,10 +1921,16 @@
         {
           "path": "backend/pipeline_control/media_cache.py",
           "sha256": "dd37a41df96bc9c36b8f5e174e5c9451b5d0915640e7f5dfb053602f0afd2926",
-          "receiptSha256": "b07b8660bb080a01cdc1de82a4b710d666012b0bbe7cf83b4c84774dca750f0f",
-          "receiptMatch": false,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "dd37a41df96bc9c36b8f5e174e5c9451b5d0915640e7f5dfb053602f0afd2926",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": "b07b8660bb080a01cdc1de82a4b710d666012b0bbe7cf83b4c84774dca750f0f",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "dd37a41df96bc9c36b8f5e174e5c9451b5d0915640e7f5dfb053602f0afd2926",
+          "commitMatch": true
         },
         {
           "path": "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
@@ -1570,7 +1938,12 @@
           "receiptSha256": "5c1bca0a0b28d778fd9eefcc69f72c83c88515a33e04ba10ad305ae25ae9c11a",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "5c1bca0a0b28d778fd9eefcc69f72c83c88515a33e04ba10ad305ae25ae9c11a",
+          "commitMatch": true
         },
         {
           "path": "backend/restaurant-crawling/scripts/tests/test_heatmap_video_candidate_regression.js",
@@ -1578,7 +1951,12 @@
           "receiptSha256": "711b62bcbc68eb1611cff5838e25f6696c145895158f6bd15687db65be815783",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "711b62bcbc68eb1611cff5838e25f6696c145895158f6bd15687db65be815783",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -1602,7 +1980,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6pzgnM",
@@ -1623,7 +2002,12 @@
           "receiptSha256": "bd331ffe0ad988b2172be6b315d26f50a769b0c026a8dd43f69e69806c0f39c7",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "bd331ffe0ad988b2172be6b315d26f50a769b0c026a8dd43f69e69806c0f39c7",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/use-record-action.tsx",
@@ -1631,7 +2015,12 @@
           "receiptSha256": "c8aa512489c4d0a6a8bcc155d2f40f5940b8019c7738e11ff4c21edfc8fd1a86",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "c8aa512489c4d0a6a8bcc155d2f40f5940b8019c7738e11ff4c21edfc8fd1a86",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-record-action-client.test.ts",
@@ -1639,7 +2028,12 @@
           "receiptSha256": "e53aff8df1277858f3b26aec78656347269cc55b9efd2ec71e50aa5b3363b9b2",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "e53aff8df1277858f3b26aec78656347269cc55b9efd2ec71e50aa5b3363b9b2",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-record-action-follow-up.test.ts",
@@ -1647,7 +2041,12 @@
           "receiptSha256": "3e16dbe7473eaad7a610238fb8a33290a4e7a78ed18574e4bf376fa0f8a9d021",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "3e16dbe7473eaad7a610238fb8a33290a4e7a78ed18574e4bf376fa0f8a9d021",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -1676,7 +2075,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6pz8hq",
@@ -1698,7 +2098,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "99c5543d225d81f7570d69323546dbe1ee886fac3b086007544643af22e48db7"
+          "historicalReceiptSha256": "99c5543d225d81f7570d69323546dbe1ee886fac3b086007544643af22e48db7",
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "99c5543d225d81f7570d69323546dbe1ee886fac3b086007544643af22e48db7",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/gemini-client.mjs",
@@ -1707,7 +2112,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141"
+          "historicalReceiptSha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141",
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/tests/gemini-client.test.mjs",
@@ -1716,7 +2126,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1"
+          "historicalReceiptSha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1",
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -1760,7 +2175,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6pz8ht",
@@ -1781,7 +2197,12 @@
           "receiptSha256": "7a169e8ffccbc2ec4444574215d5d07441bfc15bde7d184033febf2ec5095a24",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "7a169e8ffccbc2ec4444574215d5d07441bfc15bde7d184033febf2ec5095a24",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/gemini-client.mjs",
@@ -1790,7 +2211,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141"
+          "historicalReceiptSha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141",
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "c6572c6601fe3eabfb2688799ea650f2d8ead24d353bc8e3ab7e5f58665ac141",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/tests/gemini-client.test.mjs",
@@ -1799,7 +2225,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1"
+          "historicalReceiptSha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1",
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "db2ab63b52e3f614cb56bf91ff7bea07f8fe6900c95099c782be004cd664bcc1",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -1843,7 +2274,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6pz8hv",
@@ -1864,7 +2296,12 @@
           "receiptSha256": "5c1bca0a0b28d778fd9eefcc69f72c83c88515a33e04ba10ad305ae25ae9c11a",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "5c1bca0a0b28d778fd9eefcc69f72c83c88515a33e04ba10ad305ae25ae9c11a",
+          "commitMatch": true
         },
         {
           "path": "backend/restaurant-crawling/scripts/tests/test_heatmap_video_candidate_regression.js",
@@ -1872,7 +2309,12 @@
           "receiptSha256": "711b62bcbc68eb1611cff5838e25f6696c145895158f6bd15687db65be815783",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "711b62bcbc68eb1611cff5838e25f6696c145895158f6bd15687db65be815783",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -1896,7 +2338,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6pz8hy",
@@ -1917,7 +2360,12 @@
           "receiptSha256": "66b2263047b772adffde8d204a849d2eabee013df46212a8d3d3f81a4cda44c8",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "66b2263047b772adffde8d204a849d2eabee013df46212a8d3d3f81a4cda44c8",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/tests/test_media_review_followthrough.py",
@@ -1925,7 +2373,12 @@
           "receiptSha256": "e7f84c08675456597e74b9ff4cbab20dc60a9f0850d4a2eab6673e2a1eda84c1",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/media-fixes/artifact-map.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "e7f84c08675456597e74b9ff4cbab20dc60a9f0850d4a2eab6673e2a1eda84c1",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -1949,7 +2402,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6p2B3h",
@@ -1970,7 +2424,12 @@
           "receiptSha256": "15365d873b9a1814ff2572610370e2c48095ebb54381fb903aac901ebf4a01db",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "15365d873b9a1814ff2572610370e2c48095ebb54381fb903aac901ebf4a01db",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/storyboard/production-model-catalog.ts",
@@ -1978,7 +2437,12 @@
           "receiptSha256": "db1667d375c8407defc289634ea38491cac06759fa9f15312d7a65e10a3dded8",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/artifact-map.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "db1667d375c8407defc289634ea38491cac06759fa9f15312d7a65e10a3dded8",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/storyboard/production-store.ts",
@@ -1986,7 +2450,12 @@
           "receiptSha256": "a2c74604f9668f3354d2fd9c2e69ba87e72ab3cc4bd2f177ab9f361c78406db9",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "a2c74604f9668f3354d2fd9c2e69ba87e72ab3cc4bd2f177ab9f361c78406db9",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/storyboard-production-api.test.ts",
@@ -1994,7 +2463,12 @@
           "receiptSha256": "63bfa3c69b58b0beba4dead33c7aefddb13d9ae52623fcc0a06ce7a3aa6cb9a0",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "63bfa3c69b58b0beba4dead33c7aefddb13d9ae52623fcc0a06ce7a3aa6cb9a0",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/storyboard-production-catalog.test.ts",
@@ -2002,7 +2476,12 @@
           "receiptSha256": "6cc4aeafdce021efefa5da57ca032bee3eaca9a1b9c2d9b53f18dfe829a7a835",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/artifact-map.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "6cc4aeafdce021efefa5da57ca032bee3eaca9a1b9c2d9b53f18dfe829a7a835",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -2043,7 +2522,8 @@
         "Operational worker capability/authorized frame root configuration and deployment remain outside this local catalog verification."
       ],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6p2B3s",
@@ -2061,26 +2541,38 @@
         {
           "path": "apps/web/performance/current-schema-record-20261009/pg15/head-15d82aa1/run-a/migration-chain.txt",
           "sha256": "c41631b8449fb44f2b948d2ac4818911c6c78914e56331c2fed417c06c7fc47d",
-          "receiptSha256": null,
-          "receiptMatch": null,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "c41631b8449fb44f2b948d2ac4818911c6c78914e56331c2fed417c06c7fc47d",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": null,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "retained_auxiliary_evidence"
         },
         {
           "path": "apps/web/performance/phased-record-followthrough-20261009/comparison.json",
           "sha256": "dc3e60bb2ed7c33a3d8b303cb40d7697c4ceab049ecfbc926b8ac77aada72d41",
-          "receiptSha256": null,
-          "receiptMatch": null,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "dc3e60bb2ed7c33a3d8b303cb40d7697c4ceab049ecfbc926b8ac77aada72d41",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": null,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "retained_auxiliary_evidence"
         },
         {
           "path": "backend/supabase/migrations/20260828000100_hosted_candidate_identity_unique.sql",
           "sha256": "ff6d5035e1dd553a5fe2f9b230de629fd44c42914697669769dde5aa86aed320",
-          "receiptSha256": null,
-          "receiptMatch": null,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "ff6d5035e1dd553a5fe2f9b230de629fd44c42914697669769dde5aa86aed320",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": null,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "ff6d5035e1dd553a5fe2f9b230de629fd44c42914697669769dde5aa86aed320",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
@@ -2089,7 +2581,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95"
+          "historicalReceiptSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -2171,7 +2668,8 @@
         "Operating adoption/deployment was not executed; the optional index-convergence proposal remains unadopted."
       ],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6p2B30",
@@ -2193,15 +2691,26 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "df92369624a080f630fb666b9d923f907671230c78f090a5051d2b3047cff3aa"
+          "historicalReceiptSha256": "df92369624a080f630fb666b9d923f907671230c78f090a5051d2b3047cff3aa",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "df92369624a080f630fb666b9d923f907671230c78f090a5051d2b3047cff3aa",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/normalize-evaluation-record.ts",
           "sha256": "4163901d4da302c8db405ceac5f02ce543522226bc0e3de67caab653ac90d334",
-          "receiptSha256": null,
-          "receiptMatch": null,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "4163901d4da302c8db405ceac5f02ce543522226bc0e3de67caab653ac90d334",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": null,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "4163901d4da302c8db405ceac5f02ce543522226bc0e3de67caab653ac90d334",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-record-metadata-roundtrip.test.ts",
@@ -2210,15 +2719,26 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "45567b68fdce5667c1dd0410c5c4fe8f0964f451446a79745172f9c992a1ba65"
+          "historicalReceiptSha256": "45567b68fdce5667c1dd0410c5c4fe8f0964f451446a79745172f9c992a1ba65",
+          "currentReceipt": "apps/web/performance/record-review-fixes-20261009/final-receipt.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "45567b68fdce5667c1dd0410c5c4fe8f0964f451446a79745172f9c992a1ba65",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/migrations/20261003215116_admin_evaluation_keyset_queries.sql",
           "sha256": "ed293b5bf50c4dabb58518640ffba0de50c5f6edf18acadb9bae7430a88606f3",
-          "receiptSha256": null,
-          "receiptMatch": null,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "ed293b5bf50c4dabb58518640ffba0de50c5f6edf18acadb9bae7430a88606f3",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": null,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "ed293b5bf50c4dabb58518640ffba0de50c5f6edf18acadb9bae7430a88606f3",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
@@ -2227,15 +2747,26 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95"
+          "historicalReceiptSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/tests/test_admin_record_actions_positive_reaudit.py",
           "sha256": "ff90a5bbc5c0eba6e7a26019cd8b2f66ac175fdcf1be1306db1f22a5b76c9e0a",
-          "receiptSha256": null,
-          "receiptMatch": null,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "ff90a5bbc5c0eba6e7a26019cd8b2f66ac175fdcf1be1306db1f22a5b76c9e0a",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": null,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "ff90a5bbc5c0eba6e7a26019cd8b2f66ac175fdcf1be1306db1f22a5b76c9e0a",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -2317,7 +2848,8 @@
         "Operating adoption/deployment was not executed; the optional index-convergence proposal remains unadopted."
       ],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6p2B33",
@@ -2338,7 +2870,12 @@
           "receiptSha256": "86069a2334aaec0a63b4f666ca6e83b4701dd123eb76f2638c9b048486d49710",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "86069a2334aaec0a63b4f666ca6e83b4701dd123eb76f2638c9b048486d49710",
+          "commitMatch": true
         },
         {
           "path": "backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh",
@@ -2346,7 +2883,12 @@
           "receiptSha256": "b9d8337cc0b508a84592c4922ada84555268e257cfc91eef7aba28479da52206",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "b9d8337cc0b508a84592c4922ada84555268e257cfc91eef7aba28479da52206",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/tests/test_media_review_followthrough.py",
@@ -2354,7 +2896,12 @@
           "receiptSha256": "e7f84c08675456597e74b9ff4cbab20dc60a9f0850d4a2eab6673e2a1eda84c1",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/media-fixes/artifact-map.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "e7f84c08675456597e74b9ff4cbab20dc60a9f0850d4a2eab6673e2a1eda84c1",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -2378,7 +2925,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qTx8x",
@@ -2399,7 +2947,12 @@
           "receiptSha256": "d266c947bc04d3a23f1edff94df9e662e7632bf2067d2d6b5e4f3435c7bb1197",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "d266c947bc04d3a23f1edff94df9e662e7632bf2067d2d6b5e4f3435c7bb1197",
+          "commitMatch": true
         },
         {
           "path": "backend/restaurant-crawling/scripts/tests/test_collect_meta_checkpoint.py",
@@ -2407,7 +2960,12 @@
           "receiptSha256": "afad5eb25251531a6599b1b61be08c925a49b833d5a02725d239c43af39a260f",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "afad5eb25251531a6599b1b61be08c925a49b833d5a02725d239c43af39a260f",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -2441,7 +2999,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qTx83",
@@ -2462,7 +3021,12 @@
           "receiptSha256": "d266c947bc04d3a23f1edff94df9e662e7632bf2067d2d6b5e4f3435c7bb1197",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "d266c947bc04d3a23f1edff94df9e662e7632bf2067d2d6b5e4f3435c7bb1197",
+          "commitMatch": true
         },
         {
           "path": "backend/restaurant-crawling/scripts/tests/test_collect_meta_checkpoint.py",
@@ -2470,7 +3034,12 @@
           "receiptSha256": "afad5eb25251531a6599b1b61be08c925a49b833d5a02725d239c43af39a260f",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "afad5eb25251531a6599b1b61be08c925a49b833d5a02725d239c43af39a260f",
+          "commitMatch": true
         },
         {
           "path": "backend/restaurant-crawling/scripts/tests/test_collect_meta_thumbnail_security.py",
@@ -2478,7 +3047,12 @@
           "receiptSha256": "eac5203bf254f46558e68208c51fa77dd369befabf39faabd14fac3ca979f282",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "eac5203bf254f46558e68208c51fa77dd369befabf39faabd14fac3ca979f282",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -2512,7 +3086,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qTx9B",
@@ -2533,7 +3108,12 @@
           "receiptSha256": "e4d8e3b282913535bc8b3ea0999705c485c89ea4480c763e026cefc8f0dc4e8e",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "e4d8e3b282913535bc8b3ea0999705c485c89ea4480c763e026cefc8f0dc4e8e",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/tests/test_pipeline_performance.py",
@@ -2541,7 +3121,12 @@
           "receiptSha256": "20fd9743a2dfc0e95ecc67cf6326c03046c6a89c024256c10b990fc73f5d8775",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "20fd9743a2dfc0e95ecc67cf6326c03046c6a89c024256c10b990fc73f5d8775",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -2575,7 +3160,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qTx9K",
@@ -2596,7 +3182,12 @@
           "receiptSha256": "6967dc46f4ea849d43dcbc9678130b5057e26fff9e462ee0aa8208c441f2785c",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "6967dc46f4ea849d43dcbc9678130b5057e26fff9e462ee0aa8208c441f2785c",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/storyboard/rag-candidate-admission.ts",
@@ -2604,7 +3195,12 @@
           "receiptSha256": "abc76f8fd4fad8c596603ffe7591afcb98856e6da057fc06f6ae0d9af577d4a3",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/artifact-map.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "abc76f8fd4fad8c596603ffe7591afcb98856e6da057fc06f6ae0d9af577d4a3",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/storyboard/rag-worker-client.ts",
@@ -2613,7 +3209,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "71e12fb37cfe138eecbe6e361694d7b217fa61ebb1e9161c973826a2f6aaa6c4"
+          "historicalReceiptSha256": "71e12fb37cfe138eecbe6e361694d7b217fa61ebb1e9161c973826a2f6aaa6c4",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "13a25b844d86e195e10b7d688b19cd1809a26def14ed7c9eacfb19341d9a9a4e",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/storyboard-gemini-rag.test.ts",
@@ -2621,7 +3222,12 @@
           "receiptSha256": "b1c4684af8c8c1f9b56a7ce1f0528d62f33dec05e5b6e3ebc879ddac02c7ead1",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "b1c4684af8c8c1f9b56a7ce1f0528d62f33dec05e5b6e3ebc879ddac02c7ead1",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/storyboard-rag-admission.test.ts",
@@ -2629,7 +3235,12 @@
           "receiptSha256": "7fe75d97e3df4391258d5430c801e9b9b061fd0dd83f874e549724c8d843826c",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/artifact-map.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "7fe75d97e3df4391258d5430c801e9b9b061fd0dd83f874e549724c8d843826c",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -2683,7 +3294,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qjvAp",
@@ -2704,7 +3316,12 @@
           "receiptSha256": "2fe0559855a2a740a9d805a806abcd6a0772d373f0eaaaccc60787bee97ce121",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "2fe0559855a2a740a9d805a806abcd6a0772d373f0eaaaccc60787bee97ce121",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-evaluation-name.test.ts",
@@ -2712,7 +3329,12 @@
           "receiptSha256": "e8929bdb7a9a9b7d8ffab169ec039e8bbe85117430616d799bf68f67753d22e9",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "e8929bdb7a9a9b7d8ffab169ec039e8bbe85117430616d799bf68f67753d22e9",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/migrations/20261003215116_admin_evaluation_keyset_queries.sql",
@@ -2720,7 +3342,12 @@
           "receiptSha256": "ed293b5bf50c4dabb58518640ffba0de50c5f6edf18acadb9bae7430a88606f3",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "ed293b5bf50c4dabb58518640ffba0de50c5f6edf18acadb9bae7430a88606f3",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -2739,7 +3366,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "contradicted_premise",
-      "verificationStatus": "not_required_for_contradicted_premise"
+      "verificationStatus": "not_required_for_contradicted_premise",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qlQpu",
@@ -2760,7 +3388,12 @@
           "receiptSha256": "66b2263047b772adffde8d204a849d2eabee013df46212a8d3d3f81a4cda44c8",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "66b2263047b772adffde8d204a849d2eabee013df46212a8d3d3f81a4cda44c8",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/tests/test_media_review_followthrough.py",
@@ -2768,7 +3401,12 @@
           "receiptSha256": "e7f84c08675456597e74b9ff4cbab20dc60a9f0850d4a2eab6673e2a1eda84c1",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/media-fixes/artifact-map.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "e7f84c08675456597e74b9ff4cbab20dc60a9f0850d4a2eab6673e2a1eda84c1",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -2792,7 +3430,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qlQp4",
@@ -2810,10 +3449,16 @@
         {
           "path": "backend/supabase/migrations/20260828000100_hosted_candidate_identity_unique.sql",
           "sha256": "ff6d5035e1dd553a5fe2f9b230de629fd44c42914697669769dde5aa86aed320",
-          "receiptSha256": null,
-          "receiptMatch": null,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "ff6d5035e1dd553a5fe2f9b230de629fd44c42914697669769dde5aa86aed320",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": null,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "ff6d5035e1dd553a5fe2f9b230de629fd44c42914697669769dde5aa86aed320",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
@@ -2822,7 +3467,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95"
+          "historicalReceiptSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -2904,7 +3554,8 @@
         "Operating adoption/deployment was not executed; the optional index-convergence proposal remains unadopted."
       ],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qlQqB",
@@ -2925,7 +3576,12 @@
           "receiptSha256": "dd37a41df96bc9c36b8f5e174e5c9451b5d0915640e7f5dfb053602f0afd2926",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "dd37a41df96bc9c36b8f5e174e5c9451b5d0915640e7f5dfb053602f0afd2926",
+          "commitMatch": true
         },
         {
           "path": "backend/pipeline_control/state_machine.py",
@@ -2933,7 +3589,12 @@
           "receiptSha256": "1a6d1becf45939d7db9b882d8941aded6aa0664d3b14b7fd74bb9f022f351e84",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": null,
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "1a6d1becf45939d7db9b882d8941aded6aa0664d3b14b7fd74bb9f022f351e84",
+          "commitMatch": true
         },
         {
           "path": "backend/pipeline_control/worker.py",
@@ -2941,7 +3602,12 @@
           "receiptSha256": "aa43c2d3158370078b9faa950c2c939657a6dd80280a785f11bd18f3d4479c8f",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "aa43c2d3158370078b9faa950c2c939657a6dd80280a785f11bd18f3d4479c8f",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/tests/test_media_review_followthrough.py",
@@ -2949,7 +3615,12 @@
           "receiptSha256": "e7f84c08675456597e74b9ff4cbab20dc60a9f0850d4a2eab6673e2a1eda84c1",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/media-fixes/artifact-map.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "e7f84c08675456597e74b9ff4cbab20dc60a9f0850d4a2eab6673e2a1eda84c1",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -2973,7 +3644,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qlQqH",
@@ -2994,7 +3666,12 @@
           "receiptSha256": "dd37a41df96bc9c36b8f5e174e5c9451b5d0915640e7f5dfb053602f0afd2926",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "dd37a41df96bc9c36b8f5e174e5c9451b5d0915640e7f5dfb053602f0afd2926",
+          "commitMatch": true
         },
         {
           "path": "backend/pipeline_control/worker.py",
@@ -3002,7 +3679,12 @@
           "receiptSha256": "aa43c2d3158370078b9faa950c2c939657a6dd80280a785f11bd18f3d4479c8f",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "aa43c2d3158370078b9faa950c2c939657a6dd80280a785f11bd18f3d4479c8f",
+          "commitMatch": true
         },
         {
           "path": "backend/utils/tests/test_media_review_followthrough.py",
@@ -3010,7 +3692,12 @@
           "receiptSha256": "e7f84c08675456597e74b9ff4cbab20dc60a9f0850d4a2eab6673e2a1eda84c1",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/media-fixes/artifact-map.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "e7f84c08675456597e74b9ff4cbab20dc60a9f0850d4a2eab6673e2a1eda84c1",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -3034,7 +3721,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qmBxR",
@@ -3056,7 +3744,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "71e12fb37cfe138eecbe6e361694d7b217fa61ebb1e9161c973826a2f6aaa6c4"
+          "historicalReceiptSha256": "71e12fb37cfe138eecbe6e361694d7b217fa61ebb1e9161c973826a2f6aaa6c4",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "13a25b844d86e195e10b7d688b19cd1809a26def14ed7c9eacfb19341d9a9a4e",
+          "commitMatch": true
         },
         {
           "path": "backend/storyboard-agent/scripts/run_rag_worker.py",
@@ -3064,7 +3757,12 @@
           "receiptSha256": "2b5b5745e189800c58d03bc07312bfbb86e3f49b769736b49efbc23fa59b5be7",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "2b5b5745e189800c58d03bc07312bfbb86e3f49b769736b49efbc23fa59b5be7",
+          "commitMatch": true
         },
         {
           "path": "backend/storyboard-agent/src/rag_worker.py",
@@ -3072,7 +3770,12 @@
           "receiptSha256": "dc704b7a7e595c30e4e46bd8dba183b932143ca9c6f3c3b52984fc9c7be2f6a4",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "dc704b7a7e595c30e4e46bd8dba183b932143ca9c6f3c3b52984fc9c7be2f6a4",
+          "commitMatch": true
         },
         {
           "path": "backend/storyboard-agent/tests/test_rag_worker_boundary.py",
@@ -3080,7 +3783,12 @@
           "receiptSha256": "f1578e25cadf466b6b48a577bb660432850017416f0a228d102cf1601a7882a3",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/rag-and-storyboard/artifact-map.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "f1578e25cadf466b6b48a577bb660432850017416f0a228d102cf1601a7882a3",
+          "commitMatch": true
         },
         {
           "path": "backend/storyboard-agent/tests/test_rag_worker_observability.py",
@@ -3088,7 +3796,12 @@
           "receiptSha256": "9617f4d5361649fc5de1068ffed01cf4d6413e7694d259562b3caddcdc0235af",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "9617f4d5361649fc5de1068ffed01cf4d6413e7694d259562b3caddcdc0235af",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -3142,7 +3855,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qme8W",
@@ -3165,7 +3879,11 @@
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
           "historicalReceiptSha256": "ac95a69229ef6f05d1cf1c8ae499a0d789dda1b950ce493dfa7d5953443ee09f",
-          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/react-quality-graph-fix.json"
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "c76fb4fbceeb37241324a43bae369ce358d82e803f308089aab4a653410e8a68",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/knowledge-graph-shards.ts",
@@ -3173,7 +3891,12 @@
           "receiptSha256": "e6952da7522b587223170b4ee2e44a5d8835ddd772b5d5a4a85a0bb4897659ea",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "e6952da7522b587223170b4ee2e44a5d8835ddd772b5d5a4a85a0bb4897659ea",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-knowledge-graph-titles.test.ts",
@@ -3181,7 +3904,12 @@
           "receiptSha256": "1317726201f95449e08c4fc8ccb023e5cdc1f3c955605456c577a6c8cbe7ed63",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "1317726201f95449e08c4fc8ccb023e5cdc1f3c955605456c577a6c8cbe7ed63",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -3256,7 +3984,8 @@
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
       "verificationStatus": "passed_current_bound_evidence",
-      "receiptSupersession": "Only AdminKnowledgeGraphPanel entry of approved-source-manifest is superseded by react-quality-graph-fix; other 11 entries retain original hashes."
+      "receiptSupersession": "Only AdminKnowledgeGraphPanel entry of approved-source-manifest is superseded by react-quality-graph-fix; other 11 entries retain original hashes.",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qm-hc",
@@ -3277,7 +4006,12 @@
           "receiptSha256": "bd331ffe0ad988b2172be6b315d26f50a769b0c026a8dd43f69e69806c0f39c7",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "bd331ffe0ad988b2172be6b315d26f50a769b0c026a8dd43f69e69806c0f39c7",
+          "commitMatch": true
         },
         {
           "path": "apps/web/lib/admin/use-record-action.tsx",
@@ -3285,7 +4019,12 @@
           "receiptSha256": "c8aa512489c4d0a6a8bcc155d2f40f5940b8019c7738e11ff4c21edfc8fd1a86",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "c8aa512489c4d0a6a8bcc155d2f40f5940b8019c7738e11ff4c21edfc8fd1a86",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-record-action-client.test.ts",
@@ -3293,7 +4032,12 @@
           "receiptSha256": "e53aff8df1277858f3b26aec78656347269cc55b9efd2ec71e50aa5b3363b9b2",
           "receiptMatch": true,
           "receiptSuperseded": true,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "e53aff8df1277858f3b26aec78656347269cc55b9efd2ec71e50aa5b3363b9b2",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-record-action-follow-up.test.ts",
@@ -3301,7 +4045,12 @@
           "receiptSha256": "3e16dbe7473eaad7a610238fb8a33290a4e7a78ed18574e4bf376fa0f8a9d021",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "3e16dbe7473eaad7a610238fb8a33290a4e7a78ed18574e4bf376fa0f8a9d021",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -3330,7 +4079,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qm-hm",
@@ -3352,7 +4102,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "c6039a28d239071cc634da0817ccabca52c7d3da4acc5bf00212774aa61020c0"
+          "historicalReceiptSha256": "c6039a28d239071cc634da0817ccabca52c7d3da4acc5bf00212774aa61020c0",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "f8dcebe1fac30b1d9906788712f6cb0117197a63d5b37a1751eed23dc231749b",
+          "commitMatch": true
         },
         {
           "path": "apps/web/components/admin/AdminUsersPanel.tsx",
@@ -3361,7 +4116,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "793d4c51ab60196c9bb2fa51d74de30e5a5ecb813bfafb8c6e1e7ab5c3e3c974"
+          "historicalReceiptSha256": "793d4c51ab60196c9bb2fa51d74de30e5a5ecb813bfafb8c6e1e7ab5c3e3c974",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "bdc3eab4355b2cdcb8cb91e536e436e0a0325a1198dd3f57153ae49c4b31a54f",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-users-mutation-scope.test.ts",
@@ -3370,7 +4130,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "268039ccffdf8f8bc9b02afac7a15d2c313a9b357b242206847e4bb74ec58ef8"
+          "historicalReceiptSha256": "268039ccffdf8f8bc9b02afac7a15d2c313a9b357b242206847e4bb74ec58ef8",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "1d72375cca38087b20a3d14c5bfdd5287122dbac1d4f0c8401accd9a5584615e",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -3429,7 +4194,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qm-ht",
@@ -3451,7 +4217,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "03607c04b8be53ca41c005be818b303cf35fc2c663c3f8faece5a407cfd850a5"
+          "historicalReceiptSha256": "03607c04b8be53ca41c005be818b303cf35fc2c663c3f8faece5a407cfd850a5",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "5ac591b330752f003cb0b703436acc6a3605ab4884467c888d8daa264f3add52",
+          "commitMatch": true
         },
         {
           "path": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
@@ -3460,7 +4231,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "3e9b52cca2a0f2b276e9175975d657149ac7ed64ae67ca6e6849522c101a44bf"
+          "historicalReceiptSha256": "3e9b52cca2a0f2b276e9175975d657149ac7ed64ae67ca6e6849522c101a44bf",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "fca88da9967813e8856e6e93cd742ed597135a170b346f71431ec9a90a96a8d4",
+          "commitMatch": true
         },
         {
           "path": "apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts",
@@ -3469,7 +4245,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "c45a0532abbe58039c128ac045204fe5c893c9f0b267de4c89421981b76baee0"
+          "historicalReceiptSha256": "c45a0532abbe58039c128ac045204fe5c893c9f0b267de4c89421981b76baee0",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "b384dab65461048497cbdb6456260fcc7fec845ae5c178abb2ee1bf2231b6905",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -3528,7 +4309,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qnYiv",
@@ -3546,10 +4328,16 @@
         {
           "path": "backend/supabase/migrations/20260124_create_restaurants.sql",
           "sha256": "73b1453e2dbe70ff72f375e408b89e023c81a79d6931ccc48688d180013eb557",
-          "receiptSha256": null,
-          "receiptMatch": null,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "73b1453e2dbe70ff72f375e408b89e023c81a79d6931ccc48688d180013eb557",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": null,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "73b1453e2dbe70ff72f375e408b89e023c81a79d6931ccc48688d180013eb557",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
@@ -3558,7 +4346,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95"
+          "historicalReceiptSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -3640,7 +4433,8 @@
         "Operating adoption/deployment was not executed; the optional index-convergence proposal remains unadopted."
       ],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qnYiz",
@@ -3661,15 +4455,26 @@
           "receiptSha256": "7660b1650c8cd974991437948d65e70cb7c8a65665a16eeb90162e0c2fe3e119",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "7660b1650c8cd974991437948d65e70cb7c8a65665a16eeb90162e0c2fe3e119",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
           "sha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
-          "receiptSha256": "9a8d6e4407e72f2cce1ba38a00b6a2115ea0c64fa089e8362f816463d5115551",
-          "receiptMatch": false,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": "9a8d6e4407e72f2cce1ba38a00b6a2115ea0c64fa089e8362f816463d5115551",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/tests/test_admin_record_actions_positive_reaudit.py",
@@ -3677,7 +4482,12 @@
           "receiptSha256": "ff90a5bbc5c0eba6e7a26019cd8b2f66ac175fdcf1be1306db1f22a5b76c9e0a",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "ff90a5bbc5c0eba6e7a26019cd8b2f66ac175fdcf1be1306db1f22a5b76c9e0a",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/tests/test_admin_record_actions_regressions.py",
@@ -3685,7 +4495,12 @@
           "receiptSha256": "4da5586c2c52826df84966de8ac7afab5597f320352d9c47a0ce01055276abf0",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/sql-review.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "4da5586c2c52826df84966de8ac7afab5597f320352d9c47a0ce01055276abf0",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -3704,7 +4519,8 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "contradicted_premise",
-      "verificationStatus": "not_required_for_contradicted_premise"
+      "verificationStatus": "not_required_for_contradicted_premise",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qnYi2",
@@ -3722,18 +4538,30 @@
         {
           "path": "apps/web/app/mypage/submissions/edit/page.tsx",
           "sha256": "da8ccb8c2d81a7e22ff71c4cea1e073ac17caeb777987b58f33c7a9741e64efb",
-          "receiptSha256": null,
-          "receiptMatch": null,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "da8ccb8c2d81a7e22ff71c4cea1e073ac17caeb777987b58f33c7a9741e64efb",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": null,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "da8ccb8c2d81a7e22ff71c4cea1e073ac17caeb777987b58f33c7a9741e64efb",
+          "commitMatch": true
         },
         {
           "path": "apps/web/app/mypage/submissions/new/page.tsx",
           "sha256": "e2b850e6c790c54a631854e19289c6059ad86cd3784d9e1c7f0530bdfd55db46",
-          "receiptSha256": null,
-          "receiptMatch": null,
-          "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "receiptSha256": "e2b850e6c790c54a631854e19289c6059ad86cd3784d9e1c7f0530bdfd55db46",
+          "receiptMatch": true,
+          "receiptSuperseded": true,
+          "stableAtLedgerFinalRead": true,
+          "historicalReceiptSha256": null,
+          "currentReceipt": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "e2b850e6c790c54a631854e19289c6059ad86cd3784d9e1c7f0530bdfd55db46",
+          "commitMatch": true
         },
         {
           "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
@@ -3742,7 +4570,12 @@
           "receiptMatch": true,
           "receiptSuperseded": true,
           "stableAtLedgerFinalRead": true,
-          "historicalReceiptSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95"
+          "historicalReceiptSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -3824,7 +4657,8 @@
         "Operating adoption/deployment was not executed; the optional index-convergence proposal remains unadopted."
       ],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     },
     {
       "threadId": "PRRT_kwDOQGRyNc6qnYi8",
@@ -3845,7 +4679,12 @@
           "receiptSha256": "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/publication-batch/verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86",
+          "commitMatch": true
         },
         {
           "path": "backend/knowledge_graph/osk_projection.py",
@@ -3853,7 +4692,12 @@
           "receiptSha256": "a61120dd1faae686e0721001f84d60b9e06469e86d1fdc33fde940f368d9b3c7",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "a61120dd1faae686e0721001f84d60b9e06469e86d1fdc33fde940f368d9b3c7",
+          "commitMatch": true
         },
         {
           "path": "backend/knowledge_graph/osk_publication.py",
@@ -3861,7 +4705,12 @@
           "receiptSha256": "51dfaff2fbb11cdc7f89d0b09ddb8b72de59e2f79bec54206dc82b7f574ca7b0",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "51dfaff2fbb11cdc7f89d0b09ddb8b72de59e2f79bec54206dc82b7f574ca7b0",
+          "commitMatch": true
         },
         {
           "path": "backend/knowledge_graph/publication_checkpoint.py",
@@ -3869,7 +4718,12 @@
           "receiptSha256": "37813ce9e8fea70174ba3b8f321b99e86e7445a3b22a96ef3ec1f6bebf4a0156",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/publication-batch/verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "37813ce9e8fea70174ba3b8f321b99e86e7445a3b22a96ef3ec1f6bebf4a0156",
+          "commitMatch": true
         },
         {
           "path": "backend/knowledge_graph/publication_pages.py",
@@ -3877,7 +4731,12 @@
           "receiptSha256": "fca4b0d87ff26ea79fb3b8329179d882757d807c90819f9076b9f75beade20bf",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/publication-batch/verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "fca4b0d87ff26ea79fb3b8329179d882757d807c90819f9076b9f75beade20bf",
+          "commitMatch": true
         },
         {
           "path": "backend/knowledge_graph/tests/test_osk_publication.py",
@@ -3885,7 +4744,12 @@
           "receiptSha256": "373b7a94651aa944bc4337b806800f1d1a354f1bb2be25ccd45de859eef5a3b8",
           "receiptMatch": true,
           "receiptSuperseded": false,
-          "stableAtLedgerFinalRead": true
+          "stableAtLedgerFinalRead": true,
+          "currentReceipt": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+          "bindingRole": "current_product_or_test_source",
+          "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+          "commitSha256": "373b7a94651aa944bc4337b806800f1d1a354f1bb2be25ccd45de859eef5a3b8",
+          "commitMatch": true
         }
       ],
       "verificationEvidence": [
@@ -3906,14 +4770,15 @@
       "deploymentVerified": false,
       "remainingGates": [],
       "sourceReviewStatus": "addressed_in_current_source",
-      "verificationStatus": "passed_current_bound_evidence"
+      "verificationStatus": "passed_current_bound_evidence",
+      "exactBindingVerified": true
     }
   ],
   "limits": [
     "Hashes were computed from actual current files; outdated/resolved flags never establish correctness.",
     "Local source/test/fixture/browser evidence does not establish deployment, hosted SQL apply or live account/provider/vault behavior.",
     "Proof source mismatches remain incomplete; subsequent edits require refreshing this ledger.",
-    "This read-only audit executed no tests; root/source-bound receipts provide the retained test executions. Category/deferred missing runtime proof is not inferred from 35 skipped Python tests."
+    "This read-only audit executed no tests. Exact current source and test receipts, including isolated actual PG17 category/deferred cases, were verified. Source-only reconstruction binds runtime bodies but is not itself counted as runtime execution."
   ],
   "auditSourceStableAtFinalRead": true,
   "currentReceiptManifests": [
@@ -4006,6 +4871,21 @@
       "path": "apps/web/performance/pr-review-followthrough-20261009/react-quality-graph-fix.json",
       "sha256": "95fd267e3cbdd3d47c08a33f5973a488dbd9152fc2ee81325eacace6f1a16f30",
       "exists": true
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+      "sha256": "2af27a3a7188d8a8fcc32463105abd050d3aaa8f4940a33c53708314b9397673",
+      "exists": true
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+      "sha256": "ac2bbb1176c351bb4a1673a47284c43dc0f3d7a90cfcf0e202069d21cee4d2ac",
+      "exists": true
+    },
+    {
+      "path": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime/source-runtime-bindings.json",
+      "sha256": "e194d771b6629865f9da7024e7915e235add0abbf2b31acc844cfa157da381e3",
+      "exists": true
     }
   ],
   "historicalArtifactMapAudits": [
@@ -4088,10 +4968,11 @@
     "contradicted_premise": 3
   },
   "rootIntegrationGates": [
-    "Root full web suite passed 3223 / skipped 9 / failed 0 with 1330 source files unchanged before/after. Only subsequent graph query parameter delta is covered by separate current-component/local-reader proof and 19 passing affected tests.",
-    "Final build and canonical PG15 clean-source replay remain pending separate gates; operational adoption was not performed."
+    "Full web suite: 3223 pass, 9 skipped, 0 failed; 1330 before/after hashes stable during suite. Separate subsequent graph change: 19 affected tests and unchanged 92-node membership.",
+    "Final Next16.3.8 build: exit0, 50 pages and route CSS boundary checks; full lint exit0 and native/compat parity diagnostics0.",
+    "Canonical PG15 clean-source validation is proceeding separately. No operating apply/deployment/remote resolution inferred."
   ],
-  "currentManifestDigest": "e82dfdb3f6db635097c91ca02ae355c2462d9de299c39cbc88fc004bda582f6f",
+  "currentManifestDigest": "a8fb86b27f973d944650e62b57bd7485f636f080d7767e9b5315c1d802816f93",
   "receiptAuditsCurrent": [
     {
       "name": "web",
@@ -4214,8 +5095,8 @@
     "sourceFilesBeforeAfterEqual": 1330,
     "postSuiteDelta": "Only graph node query parameter removed after separate reproduced byte-bound edge-cursor defect; 19 affected tests pass. Final build pending.",
     "bindingReceipt": {
-      "path": "apps/web/performance/pr-review-followthrough-20261009/root-remaining-validation.json",
-      "sha256": "3f42719c92007cd82caff0b7e7d24d2740069b1c00d6c35d07ae9d9e4886ad95",
+      "path": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+      "sha256": "ac2bbb1176c351bb4a1673a47284c43dc0f3d7a90cfcf0e202069d21cee4d2ac",
       "exists": true
     },
     "postSuiteDeltaReceipt": {
@@ -4223,6 +5104,68 @@
       "sha256": "95fd267e3cbdd3d47c08a33f5973a488dbd9152fc2ee81325eacace6f1a16f30",
       "exists": true
     },
-    "scope": "Local test execution only; 9 skipped tests are not passes."
+    "scope": "Local test execution only; 9 skipped tests are not passes.",
+    "finalBuild": {
+      "exitCode": 0,
+      "next": "16.3.8",
+      "pages": 50,
+      "routeCssBoundaries": true
+    },
+    "fullLintExitCode": 0,
+    "nativeCompatParityDiagnostics": 0,
+    "sourceTreeBeforeManifest": {
+      "path": "/Users/twoimo/.codex/runtime-cache/pipeline-recovery-20261007/review-batch-web-source-before-20261009.json",
+      "sha256": "8f5f2babc4cc341e26c6883d388191eed94a5f7bf8d20d150cf8bfba6517fed6",
+      "exists": true
+    },
+    "currentSourceDeltaFromSuiteSnapshot": [
+      "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx"
+    ]
+  },
+  "currentSourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+  "exactBindingAudit": {
+    "sourceCommit": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f",
+    "uniqueCommittedProductAndTestSources": 107,
+    "missingBindings": [],
+    "mismatchedBindings": [],
+    "all48ThreadsExact": true
+  },
+  "finalReviewReady": true,
+  "fullGoalComplete": false,
+  "operatingAdoptionVerified": false,
+  "rootBatchReceipt": {
+    "path": "apps/web/performance/pr-review-followthrough-20261009/root-batch-verification.json",
+    "sha256": "ac2bbb1176c351bb4a1673a47284c43dc0f3d7a90cfcf0e202069d21cee4d2ac",
+    "exists": true
+  },
+  "remainingRuntimeReceipt": {
+    "path": "apps/web/performance/pr-review-followthrough-20261009/remaining-runtime-proof.json",
+    "sha256": "2af27a3a7188d8a8fcc32463105abd050d3aaa8f4940a33c53708314b9397673",
+    "exists": true
+  },
+  "currentRuntimeArtifactIntegrity": {
+    "artifacts": 23,
+    "sourceFiles": 7,
+    "stopCasReceipts": 4,
+    "missingOrMismatched": 0,
+    "actualBodyHashesEqualDerivedCommittedBodies": true,
+    "sourceOnlyReconstructionCountedAsRuntime": false
+  },
+  "remoteActions": {
+    "posts": 0,
+    "resolutions": 0,
+    "operatingWrites": 0,
+    "paidCalls": 0,
+    "commitOrPushByAudit": 0
+  },
+  "finalIntegrityReadback": {
+    "coverage": 48,
+    "missingThreadIds": 0,
+    "duplicateThreadIds": 0,
+    "uniqueCommittedProductAndTestSources": 107,
+    "currentReceiptManifestEntries": 21,
+    "sourceOrReceiptDrift": 0,
+    "fullGoalComplete": false,
+    "finalReviewReady": true
   }
 }
