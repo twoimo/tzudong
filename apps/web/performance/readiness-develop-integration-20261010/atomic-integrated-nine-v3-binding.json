@@ -1,0 +1,61 @@
+{
+  "sources": [
+    {
+      "source": "20261004190259_admin_record_guarded_actions.sql",
+      "bytes": 60166,
+      "sha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+      "outerEnvelope": true
+    },
+    {
+      "source": "20261004192657_admin_evaluation_raw_warning_groups.sql",
+      "bytes": 13706,
+      "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a",
+      "outerEnvelope": true
+    },
+    {
+      "source": "20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+      "bytes": 5957,
+      "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020",
+      "outerEnvelope": true
+    },
+    {
+      "source": "20261008192455_review_media_commit_cleanup.sql",
+      "bytes": 17278,
+      "sha256": "1b018884a0ba8bb25e6a9e31fa831e349bd4442118e5d4bf1699464e09e16c3c",
+      "outerEnvelope": true
+    },
+    {
+      "source": "20261008200719_review_verification_private.sql",
+      "bytes": 5281,
+      "sha256": "92b469ab0ed1a23bf91c1ab5a3f8e92d45cf0f4e06e5fa602d6a34ad0497a51b",
+      "outerEnvelope": true
+    },
+    {
+      "source": "20261008201635_review_media_catalog_integration.sql",
+      "bytes": 47177,
+      "sha256": "6e820eb535bc514e78f258110e36dff00537bcaefcffd8b354356107ca9c09fe",
+      "outerEnvelope": true
+    },
+    {
+      "source": "20261009022915_restaurant_review_manual_preview_eligibility.sql",
+      "bytes": 7769,
+      "sha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3",
+      "outerEnvelope": true
+    },
+    {
+      "source": "20261009091342_admin_record_private_verification_cleanup.sql",
+      "bytes": 13185,
+      "sha256": "b596b200e52c6813a4cfa1b0a2818625f067864549e8854f3497afdcdab706da",
+      "outerEnvelope": true
+    },
+    {
+      "source": "20261009101645_admin_user_management_rpc_forward.sql",
+      "bytes": 40392,
+      "sha256": "2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae",
+      "outerEnvelope": false
+    }
+  ],
+  "sha256": "ec6c564ba82ec6a49306afee1f9d8b9fd445b661a72d3a0d1dbe0216241dee2e",
+  "transform": "exact outer envelope removal, M6 unchanged whole-file body",
+  "operatingApplied": false
+}

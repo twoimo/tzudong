@@ -1,0 +1,79 @@
+{
+  "index": 1047,
+  "actualModelVersion": "gemini-3.8-flash",
+  "requestedThinkingLevel": "HIGH",
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokenCount": 2742,
+    "candidatesTokenCount": 519,
+    "totalTokenCount": 47828,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 2742
+      }
+    ],
+    "thoughtsTokenCount": 44567,
+    "serviceTier": "standard"
+  },
+  "inputSha256": "2bd485ab39e7423476cf930b246c2ba58aed0421d2b809d1158e171007957069",
+  "promptSha256": "7a279af1b9586e9b2f482f1e2b23cdb93bcc013d0daf2e4dbc9277c64a277ae7",
+  "jobName": "batches/6bfttrdehg67rw0qp7mf95l6dsvy2d38285d",
+  "thoughtsPersisted": false,
+  "rows": [
+    {
+      "key": "r0600",
+      "status": "fix",
+      "issues": [
+        "EDITORIAL_FIRST_PERSON"
+      ],
+      "revisedReviewSha256": "9882b9ddda77695be3b3eac38aa3f4ae3b8717634220081a460380344d3f3392"
+    },
+    {
+      "key": "r0601",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0602",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0603",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0604",
+      "status": "needs_source",
+      "issues": [
+        "EMPTY_REVIEW"
+      ],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0605",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0606",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0607",
+      "status": "fix",
+      "issues": [
+        "PROMOTIONAL_VOICE"
+      ],
+      "revisedReviewSha256": "eecfa441ee8029e64de2c3ef1e7e679d86fc50ec7f7b2d818b506158a02f9571"
+    }
+  ]
+}

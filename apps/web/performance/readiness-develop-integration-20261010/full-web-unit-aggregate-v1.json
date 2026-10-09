@@ -1,0 +1,12 @@
+{
+  "sourceHead": "035021658ab94be77194fa8d59f7f2095adf5514",
+  "node": "24.21.0",
+  "npm": "11.6.2",
+  "bun": "1.4.0",
+  "pass": 3347,
+  "skip": 11,
+  "fail": 0,
+  "laneCount": 19,
+  "rawLogSha256": "65a686c6035cc3a7336ae8cdaac0039e6be5b35c77e23b599885f1650f83ebe5",
+  "postCensusDisplayChange": false
+}

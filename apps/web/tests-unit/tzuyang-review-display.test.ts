@@ -19,6 +19,12 @@ describe('public Tzuyang review display', () => {
         expect(formatTzuyangReviewForDisplay('첫 문장[ts:2].\n\n다음 문장[ts:3].')).toBe('첫 문장.\n\n다음 문장.');
         expect(formatTzuyangReviewForDisplay('[ts:알 수 없음] [기타:12]')).toBe('[기타:12]');
     });
+    test('cleans legacy wrappers and emphasis without erasing criticism or quantities', () => {
+        expect(formatTzuyangReviewForDisplay('**주꾸미**는 겉이 짰다고 했습니다 (ts:623, 781).\n국수는 2인분이며 쫄깃합니다{ts:256, 416-422}.'))
+            .toBe('주꾸미는 겉이 짰다고 했습니다.\n국수는 2인분이며 쫄깃합니다.');
+        const content = '영업 (11:32, 19:16), 양은 (2~4인분), 할인 {기간:2026}. 2*3, **미완성';
+        expect(formatTzuyangReviewForDisplay(content)).toBe(content);
+    });
     test('leaves source review identity, visit count inputs and video metadata intact', () => {
         const source = { id:'fixture-restaurant', name:'검증 맛집', tzuyang_review:'본문[ts:1]',
             mergedTzuyangReviews:['본문[ts:1]', '본문[ts:2]'],

@@ -1,0 +1,84 @@
+{
+  "index": 1015,
+  "actualModelVersion": "gemini-3.8-flash",
+  "requestedThinkingLevel": "HIGH",
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokenCount": 2383,
+    "candidatesTokenCount": 817,
+    "totalTokenCount": 36947,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 2383
+      }
+    ],
+    "thoughtsTokenCount": 33747,
+    "serviceTier": "standard"
+  },
+  "inputSha256": "c926f968fac89ad55ce1c4c63afc5c1dd22c25d6dfa9f4a8bdb134a5c8bd63ff",
+  "promptSha256": "7a279af1b9586e9b2f482f1e2b23cdb93bcc013d0daf2e4dbc9277c64a277ae7",
+  "jobName": "batches/6bfttrdehg67rw0qp7mf95l6dsvy2d38285d",
+  "thoughtsPersisted": false,
+  "rows": [
+    {
+      "key": "r0344",
+      "status": "needs_source",
+      "issues": [
+        "EMPTY_REVIEW"
+      ],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0345",
+      "status": "fix",
+      "issues": [
+        "BROKEN_PROSE"
+      ],
+      "revisedReviewSha256": "34362c09834fd9ebed434c5d7b262026981c081d7efa05f0aeb09fae46ad301a"
+    },
+    {
+      "key": "r0346",
+      "status": "fix",
+      "issues": [
+        "BROKEN_PROSE"
+      ],
+      "revisedReviewSha256": "963d9f944243fe6e29969d95a2b6c5565372af768e493a6d334cd9d576c1a711"
+    },
+    {
+      "key": "r0347",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0348",
+      "status": "needs_source",
+      "issues": [
+        "INTERNAL_MARKER",
+        "EMPTY_REVIEW"
+      ],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0349",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0350",
+      "status": "fix",
+      "issues": [
+        "PROMOTIONAL_VOICE"
+      ],
+      "revisedReviewSha256": "e1291d0879046b8b2eb3559ae125c7157c8231f4cef99ac4a85217654ab7febc"
+    },
+    {
+      "key": "r0351",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

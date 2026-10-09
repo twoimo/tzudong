@@ -1,0 +1,10 @@
+{
+  "observedAtUtc": "2026-10-09T14:56:28.976Z",
+  "name": "batches/6bfttrdehg67rw0qp7mf95l6dsvy2d38285d",
+  "status": "ingested",
+  "admittedRows": 1427,
+  "admittedRequests": 179,
+  "incomplete": [],
+  "operatingWrites": 0,
+  "state": "JOB_STATE_SUCCEEDED"
+}

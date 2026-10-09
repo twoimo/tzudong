@@ -1,0 +1,79 @@
+{
+  "index": 1008,
+  "actualModelVersion": "gemini-3.8-flash",
+  "requestedThinkingLevel": "HIGH",
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokenCount": 2766,
+    "candidatesTokenCount": 580,
+    "totalTokenCount": 32718,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 2766
+      }
+    ],
+    "thoughtsTokenCount": 29372,
+    "serviceTier": "standard"
+  },
+  "inputSha256": "7f152ccd9e0d76a7517a11f81cf0776aff98f87d0bb4fa31c52bc541efbb0c98",
+  "promptSha256": "7a279af1b9586e9b2f482f1e2b23cdb93bcc013d0daf2e4dbc9277c64a277ae7",
+  "jobName": "batches/6bfttrdehg67rw0qp7mf95l6dsvy2d38285d",
+  "thoughtsPersisted": false,
+  "rows": [
+    {
+      "key": "r0288",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0289",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0290",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0291",
+      "status": "fix",
+      "issues": [
+        "BROKEN_PROSE"
+      ],
+      "revisedReviewSha256": "fe6e49227dc34ce078b3d4cc527bf2c9f162dbd6440da484ef0002bd98ee9a88"
+    },
+    {
+      "key": "r0292",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0293",
+      "status": "fix",
+      "issues": [
+        "BROKEN_PROSE"
+      ],
+      "revisedReviewSha256": "8af6b9efb44ff73a74e9c6b6048543e83f63a38d09cf7ece391074845531a636"
+    },
+    {
+      "key": "r0294",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0295",
+      "status": "fix",
+      "issues": [
+        "BROKEN_PROSE"
+      ],
+      "revisedReviewSha256": "6e631a7fe26eb6044ec9a2cabccf240bc369f1ace18ec5b4a59ccd0948be2c30"
+    }
+  ]
+}
