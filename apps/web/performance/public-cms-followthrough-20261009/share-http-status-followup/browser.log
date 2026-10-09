@@ -1,0 +1,24 @@
+
+Running 12 tests using 1 worker
+
+(node:1289) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/12] [fixture-development] › tests/share-http-status.spec.ts:4:2 › HTTP status and bounded recovery for invalid-code
+[2/12] [fixture-development] › tests/share-http-status.spec.ts:4:2 › HTTP status and bounded recovery for MISSNG
+[3/12] [fixture-development] › tests/share-http-status.spec.ts:4:2 › HTTP status and bounded recovery for FAIL00
+[4/12] [fixture-development] › tests/share-http-status.spec.ts:20:1 › valid review and unsafe target retain HTTP307 with no response-body success substitution
+[5/12] [fixture-development] › tests/share-http-status.spec.ts:25:2 › standalone CSS system light supports small viewport and visible focus
+[6/12] [fixture-development] › tests/share-http-status.spec.ts:25:2 › standalone CSS system dark supports small viewport and visible focus
+(node:1804) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[7/12] [fixture-production] › tests/share-http-status.spec.ts:4:2 › HTTP status and bounded recovery for invalid-code
+[8/12] [fixture-production] › tests/share-http-status.spec.ts:4:2 › HTTP status and bounded recovery for MISSNG
+[9/12] [fixture-production] › tests/share-http-status.spec.ts:4:2 › HTTP status and bounded recovery for FAIL00
+[10/12] [fixture-production] › tests/share-http-status.spec.ts:20:1 › valid review and unsafe target retain HTTP307 with no response-body success substitution
+[11/12] [fixture-production] › tests/share-http-status.spec.ts:25:2 › standalone CSS system light supports small viewport and visible focus
+[12/12] [fixture-production] › tests/share-http-status.spec.ts:25:2 › standalone CSS system dark supports small viewport and visible focus
+  12 passed (8.7s)

@@ -1,0 +1,10 @@
+
+Running 2 tests using 1 worker
+
+(node:97647) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/2] tests/public-cms-readonly.spec.ts:108:3 › stamp list and search failures stay distinct from empty success at tablet
+[2/2] tests/public-cms-readonly.spec.ts:108:3 › stamp list and search failures stay distinct from empty success at mobile
+  2 passed (39.4s)

@@ -1,0 +1,18 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/short-url-read.test.ts:
+(pass) bounded short URL read outcomes > accepts allocator codes and rejects malformed codes before lookup [0.17ms]
+(pass) bounded short URL read outcomes > separates missing rows from provider failures and invalid shapes [0.12ms]
+(pass) bounded short URL read outcomes > redirects only allowed targets and retains the safe home fallback [0.03ms]
+(pass) bounded short URL read outcomes > never passes provider diagnostics to the target validator or result [0.05ms]
+
+tests-unit/short-url-page-runtime.test.ts:
+(pass) short URL page expected-failure runtime > invalid code returns bounded notice without constructing a data client [0.47ms]
+(pass) short URL page expected-failure runtime > missing row returns bounded notice with a deadline on the read [0.10ms]
+(pass) short URL page expected-failure runtime > provider error and thrown reads return retryable notices without leaking diagnostics [0.10ms]
+(pass) short URL page expected-failure runtime > same-origin review redirects remain outside the lookup catch and unsafe targets go home [0.23ms]
+
+ 8 pass
+ 0 fail
+ 43 expect() calls
+Ran 8 tests across 2 files. [131.00ms]
