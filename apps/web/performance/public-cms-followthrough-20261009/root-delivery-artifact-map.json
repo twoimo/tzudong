@@ -1219,6 +1219,32 @@
     "unit.log": {
       "sha256": "74258dad34b9d642478607dcb7b163042e191099459ec03aaba82e831b719cf2",
       "bytes": 6376
+    },
+    "share-http-status-followup/README.md": {
+      "sha256": "dd7e21cfeaf476889a5b60c883873df005ecbcf79c5d875325fdbe2aafbe7cce",
+      "bytes": 5183
+    },
+    "share-http-status-followup/final-artifact-map.json": {
+      "sha256": "6e188de9a76685286337e5c91e9674ddd38197c7f338e56e14972822c014e3e1",
+      "bytes": 11495
+    },
+    "share-http-status-followup/final-summary.json": {
+      "sha256": "9b6fae802f0dca8b564cbf5a388f9577d5f1348ddc6629ef74df1b4b0ae640e3",
+      "bytes": 3027
+    },
+    "share-http-status-followup/owned-cleanup-readback.json": {
+      "sha256": "bc5bb94ef307887643e345c92d03d7069dde14f769de47fed9d6c1644782e68b",
+      "bytes": 1760
     }
+  },
+  "finalBrowserContract": {
+    "cases": 14,
+    "unexpected": 0,
+    "invalidOrMissing": 404,
+    "providerOrControlCharacterFailure": 503,
+    "safeOrUnsafeHomeRedirect": 307,
+    "fixtureProcessesRemaining": 0,
+    "rebuildableGeneratedOutputsRemoved": true,
+    "themeScope": "system light/dark; stored app manual preference not read"
   }
 }

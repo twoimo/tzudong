@@ -1,0 +1,241 @@
+{
+  "kind": "source-measurement-isolated-rebuild-map",
+  "sources": [
+    {
+      "path": "app/s/[code]/route.ts",
+      "sha256": "88ca0aab9e39d6452e5f597c005866e83d05df940c92796b10cdf0ad8f12b008",
+      "bytes": 2166
+    },
+    {
+      "path": "lib/share/short-url-read.ts",
+      "sha256": "a8eaee174aa790b441fb47fcb872db30c1c4462d14767aa14b800f5b926c52ae",
+      "bytes": 1043
+    },
+    {
+      "path": "lib/share/short-url-response.ts",
+      "sha256": "d4d3c4cc5b70f80b9dc83841347b5d85aaac29800ea05c9c4ed3e9699b283ae3",
+      "bytes": 1845
+    },
+    {
+      "path": "public/styles/share-fallback.css",
+      "sha256": "b858341ee008e743b980cec05a741f0c5dfd91037b0e43f9c799c4b0095b2a42",
+      "bytes": 1872
+    },
+    {
+      "path": "tests/share-http-status.spec.ts",
+      "sha256": "04a7998e0b73fca7c40e081894710779ce2ebac123c4949ce40a1d198f58b92a",
+      "bytes": 3131
+    },
+    {
+      "path": "tests-unit/short-url-read.test.ts",
+      "sha256": "0f1a9f4c547ef4574f42fb167d16ace25ba188a61e94165054afea6a40803e74",
+      "bytes": 2122
+    },
+    {
+      "path": "tests-unit/short-url-page-runtime.test.ts",
+      "sha256": "94b0545a054fb049c5b464c6b8360bf869f33757182f367a0907e5b85258be4d",
+      "bytes": 3219
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/next.config.mjs",
+      "sha256": "f36b281f0f77242a474bef111ce753a65477e0037100e53e4577c1291b5be354",
+      "bytes": 265
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/package.json",
+      "sha256": "4ee716bb7272fb85ad6d1d2cfef0f8153579b22504e832a890991d8f02775847",
+      "bytes": 71
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/app/layout.jsx",
+      "sha256": "11f5fa06642ccfce8562248b0d9a9d94a1cdef57d798d32406e486ebb39c8dd0",
+      "bytes": 140
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/app/not-found.jsx",
+      "sha256": "ec0149eeb1840002a74aea61ce2238db5f4994443d944c1c61c9cd14ba46ec1b",
+      "bytes": 266
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/app/page.jsx",
+      "sha256": "cfea6018bb91e12264a9eedaa28146b3b63f63e0905c775fc5d987a556b21bf9",
+      "bytes": 84
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/public/logo.webp",
+      "sha256": "3d9d4357db43e6554e2d04ed448df60b927402d8189b92da86db20174b8717b6",
+      "bytes": 5578
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/public/styles/share-fallback.css",
+      "sha256": "b858341ee008e743b980cec05a741f0c5dfd91037b0e43f9c799c4b0095b2a42",
+      "bytes": 1872
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/app/notice/[code]/page.js",
+      "sha256": "63d57b44498afae9cc1bf3e0e48c06c5c876770fd4363cb20518738fecee0810",
+      "bytes": 2435
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/app/s/[code]/route.js",
+      "sha256": "a2bb481bcee80c3b0835c8f787e70b070c0afd99f78d4813257aa813b2707a2e",
+      "bytes": 2030
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture/app/legacy/[code]/page.js",
+      "sha256": "8f0e8d984f83d6933b09bcb60f17e3b7b30b6e7b162b76a630fd572deab2c242",
+      "bytes": 1908
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/prepare-fixture.mjs",
+      "sha256": "38b45d7c60bd276b46e051ad9cd6b27e576353bae6fcace5f2c498a19207f4ad",
+      "bytes": 2525
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/run-fixture.mjs",
+      "sha256": "9d2250dba78245044b73678c54a3ba7bc1134ccd9807612ab372be226a68f760",
+      "bytes": 2814
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/browser.config.mjs",
+      "sha256": "183789636cb8d85deebb2ae81168c956c8890f1abc8e8f4f68b53ac3754d1ca7",
+      "bytes": 941
+    }
+  ],
+  "measurementAndRebuildProof": [
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/http-comparison.json",
+      "sha256": "b372db18bcf6c2e96fb7b81cf718360184ff437d1b431e33aac63bb10271b43d",
+      "bytes": 6643
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/http-probe.log",
+      "sha256": "857595f063e496209144eeb05cf84ff63be96392f196b5d4c86d721e96119290",
+      "bytes": 1058
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-results.json",
+      "sha256": "f4eeaea4066f177fee245b90b8cd836583e44c33160cf65452ee55e02f4bb14a",
+      "bytes": 18553
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser.log",
+      "sha256": "a5aab6335ad1b056a427d124ea1e84d9ce5411de28c5e1f1d6bfb0c2a03e7556",
+      "bytes": 2232
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-spec-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/unit.log",
+      "sha256": "b9a3ca672bf13f4ca447595e6c4d24d867f5993930eb352ccdee7a2182b222f0",
+      "bytes": 1294
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/source-unit.log",
+      "sha256": "364bf956c750b2e43f875661eea1d280daeb475af80b8ee658ccf4f912184ab5",
+      "bytes": 2921
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/security-unit.log",
+      "sha256": "4268dde05405efa6cfa89276eecff4297b7b312ca9fcbbebef2dc9ff0b406a67",
+      "bytes": 315
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/typecheck-restored-env.log",
+      "sha256": "7915177aa811efd08b195a7efbbec80388df1c13967fe2e77aea51aeccf228b8",
+      "bytes": 510
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/fixture-production-final-rebuild.log",
+      "sha256": "f53d613cf5aab9fe166213e33e75bb5858f7aec8e2d757870a5d007745d29920",
+      "bytes": 725
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/owned-cleanup-readback.json",
+      "sha256": "bc5bb94ef307887643e345c92d03d7069dde14f769de47fed9d6c1644782e68b",
+      "bytes": 1760
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-summary.json",
+      "sha256": "9b6fae802f0dca8b564cbf5a388f9577d5f1348ddc6629ef74df1b4b0ae640e3",
+      "bytes": 3027
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output/share-http-status-HTTP-sta-f980e-bounded-recovery-for-CTRL00-fixture-production/status-notice.png",
+      "sha256": "8d347b766897c127205c92d85a1b4937b5ef4be2b1e831b0d320559dd9df6a8c",
+      "bytes": 25148
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output/share-http-status-standalo-891b3--viewport-and-visible-focus-fixture-development/notice-light.png",
+      "sha256": "124ef92aeea774b892418979003177c5354dda36f42e9a241e0180f926f0341f",
+      "bytes": 22416
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output/share-http-status-HTTP-sta-0bb02-d-recovery-for-invalid-code-fixture-development/status-notice.png",
+      "sha256": "b707d6d3448032cdf28105f31fd060e9a108a627c28a343932133fa6b52e58f4",
+      "bytes": 23605
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output/share-http-status-HTTP-sta-3081b-bounded-recovery-for-FAIL00-fixture-production/status-notice.png",
+      "sha256": "8d347b766897c127205c92d85a1b4937b5ef4be2b1e831b0d320559dd9df6a8c",
+      "bytes": 25148
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output/share-http-status-standalo-0ab9f--viewport-and-visible-focus-fixture-production/notice-dark.png",
+      "sha256": "66db7e80527f8c2db52269dc0dde61664b8efe40e6570e8452c897f597838321",
+      "bytes": 17763
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output/share-http-status-HTTP-sta-3081b-bounded-recovery-for-FAIL00-fixture-development/status-notice.png",
+      "sha256": "8d347b766897c127205c92d85a1b4937b5ef4be2b1e831b0d320559dd9df6a8c",
+      "bytes": 25148
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output/share-http-status-HTTP-sta-f980e-bounded-recovery-for-CTRL00-fixture-development/status-notice.png",
+      "sha256": "8d347b766897c127205c92d85a1b4937b5ef4be2b1e831b0d320559dd9df6a8c",
+      "bytes": 25148
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output/share-http-status-HTTP-sta-35f47-bounded-recovery-for-MISSNG-fixture-development/status-notice.png",
+      "sha256": "b707d6d3448032cdf28105f31fd060e9a108a627c28a343932133fa6b52e58f4",
+      "bytes": 23605
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output/share-http-status-HTTP-sta-35f47-bounded-recovery-for-MISSNG-fixture-production/status-notice.png",
+      "sha256": "b707d6d3448032cdf28105f31fd060e9a108a627c28a343932133fa6b52e58f4",
+      "bytes": 23605
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output/share-http-status-HTTP-sta-0bb02-d-recovery-for-invalid-code-fixture-production/status-notice.png",
+      "sha256": "b707d6d3448032cdf28105f31fd060e9a108a627c28a343932133fa6b52e58f4",
+      "bytes": 23605
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output/share-http-status-standalo-0ab9f--viewport-and-visible-focus-fixture-development/notice-dark.png",
+      "sha256": "66db7e80527f8c2db52269dc0dde61664b8efe40e6570e8452c897f597838321",
+      "bytes": 17763
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/share-http-status-followup/final-browser-output/share-http-status-standalo-891b3--viewport-and-visible-focus-fixture-production/notice-light.png",
+      "sha256": "124ef92aeea774b892418979003177c5354dda36f42e9a241e0180f926f0341f",
+      "bytes": 22416
+    }
+  ],
+  "excluded": [
+    "fixture/.next",
+    "fixture/.next-dev",
+    "fixture/.next-production",
+    "fixture/node_modules",
+    "generated Next type backup contents",
+    "historical raw captures remain preserved separately"
+  ],
+  "scope": "Isolated fixture production rebuild is not the root final web build or deployment."
+}
