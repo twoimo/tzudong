@@ -1,0 +1,52 @@
+test_authoritative_legacy_edit_and_cleanup (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_authoritative_legacy_edit_and_cleanup) ... ok
+test_commit_cleanup_and_permissions (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_commit_cleanup_and_permissions) ... ok
+test_concurrent_reattach_waits_for_retirement (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_concurrent_reattach_waits_for_retirement) ... ok
+test_concurrent_upload_waits_for_retirement (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_concurrent_upload_waits_for_retirement) ... ok
+test_direct_delete_queues_authoritative_media_and_rolls_back (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_direct_delete_queues_authoritative_media_and_rolls_back) ... ok
+test_existing_composer_compensation_retires_only_canonical_orphans (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_existing_composer_compensation_retires_only_canonical_orphans) ... ok
+test_global_legacy_reference_protection (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_global_legacy_reference_protection) ... ok
+test_historical_url_delete_normalizes_owned_paths (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_historical_url_delete_normalizes_owned_paths) ... ok
+test_historical_url_edit_removes_only_authoritative_values (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_historical_url_edit_removes_only_authoritative_values) ... ok
+test_independent_trigger_readback_rejects_disabled_or_missing_queue (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_independent_trigger_readback_rejects_disabled_or_missing_queue) ... ok
+test_minimum_owner_upload_trigger_and_cleanup (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_minimum_owner_upload_trigger_and_cleanup) ... ok
+test_private_shadow_upload_rejected (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_private_shadow_upload_rejected) ... ok
+test_private_verification_access_and_cleanup (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_private_verification_access_and_cleanup) ... ok
+test_retired_uploads_rejected_after_cleanup (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_retired_uploads_rejected_after_cleanup) ... ok
+test_storage_update_cannot_bypass_retirement_or_shadow (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_storage_update_cannot_bypass_retirement_or_shadow) ... FAIL
+test_canonical_readback_reuses_the_complete_migration_postconditions (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_canonical_readback_reuses_the_complete_migration_postconditions) ... ok
+test_claim_transition_pins_existing_helper_without_auth_schema_grant (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_claim_transition_pins_existing_helper_without_auth_schema_grant) ... ok
+test_complete_receipt_remains_admitted (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_complete_receipt_remains_admitted) ... ok
+test_final_function_bodies_are_bound_to_both_canonical_sources (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_final_function_bodies_are_bound_to_both_canonical_sources) ... ok
+test_ledger_applies_integration_normally_and_retains_current_overlap_proofs (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_ledger_applies_integration_normally_and_retains_current_overlap_proofs) ... ok
+test_protected_identity_transition_reconstructs_from_immutable_source (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_protected_identity_transition_reconstructs_from_immutable_source) ... ok
+test_rejects_every_function_owner_body_role_and_identity_drift (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_rejects_every_function_owner_body_role_and_identity_drift) ... ok
+test_rejects_integer_substitutes_for_function_boolean_metadata (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_rejects_integer_substitutes_for_function_boolean_metadata) ... ok
+test_rejects_old_public_select_policy_leaking_the_private_bucket (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_rejects_old_public_select_policy_leaking_the_private_bucket) ... ok
+test_rejects_policy_bit_role_command_and_full_predicate_drift (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_rejects_policy_bit_role_command_and_full_predicate_drift) ... ok
+test_rejects_predicate_or_true_even_when_every_expected_token_survives (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_rejects_predicate_or_true_even_when_every_expected_token_survives) ... ok
+test_rejects_private_bucket_public_name_size_and_mime_drift (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_rejects_private_bucket_public_name_size_and_mime_drift) ... ok
+test_storage_ddl_uses_existing_hook_without_global_privilege_fallback (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_storage_ddl_uses_existing_hook_without_global_privilege_fallback) ... ok
+test_transition_preserves_assertions_manifest_and_role_memberships (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_transition_preserves_assertions_manifest_and_role_memberships) ... ok
+
+======================================================================
+FAIL: test_storage_update_cannot_bypass_retirement_or_shadow (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_storage_update_cannot_bypass_retirement_or_shadow)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_commit_cleanup.py", line 473, in test_storage_update_cannot_bypass_retirement_or_shadow
+            self.sql(f"""
+            ~~~~~~~~^^^^^
+    GRANT UPDATE ON storage.objects TO authenticated;
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<15 lines>...
+    SELECT public.check_test((WITH changed AS (UPDATE storage.objects SET name=name WHERE name='{OLD}' RETURNING 1) SELECT count(*) FROM changed)=0,'REVIEW_TEST_LIVE_REPLACE_DENIED');
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """)
+    ^^^^
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_commit_cleanup.py", line 173, in sql
+    raise AssertionError(code.group(1) if code else 'REVIEW_TEST_SQL_FAILED')
+AssertionError: REVIEW_TEST_SQL_FAILED
+
+----------------------------------------------------------------------
+Ran 29 tests in 6.454s
+
+FAILED (failures=1)

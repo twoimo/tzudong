@@ -1,0 +1,145 @@
+15.8.1.085: Pulling from supabase/postgres
+dd9939731164: Pulling fs layer
+26e4e560b6af: Pulling fs layer
+c39b7a2fc820: Pulling fs layer
+b75d93122802: Pulling fs layer
+ecd83b6c3544: Pulling fs layer
+9924014064b0: Pulling fs layer
+e18600744f62: Pulling fs layer
+c661ccd1bf2d: Pulling fs layer
+4f4fb700ef54: Pulling fs layer
+7b514386deb3: Pulling fs layer
+8cc131c77b7c: Pulling fs layer
+cc5cfad681ae: Pulling fs layer
+3e3250715ca0: Pulling fs layer
+3a525b9711ca: Pulling fs layer
+c14f7d937f90: Pulling fs layer
+b220cc4642c1: Pulling fs layer
+0beb48d4f87e: Pulling fs layer
+dba1974e6497: Pulling fs layer
+8e7ffd792864: Pulling fs layer
+12d1c1a3dcf6: Pulling fs layer
+2bc59754e905: Pulling fs layer
+1b8cf381c60b: Pulling fs layer
+42f740ffed7b: Pulling fs layer
+94fc8ddffed3: Pulling fs layer
+4f4fb700ef54: Pulling fs layer
+7820c9867bc2: Pulling fs layer
+2543bb6a39df: Pulling fs layer
+d0bfa8b093ec: Pulling fs layer
+7a7596d49a18: Pulling fs layer
+2114c143b894: Pulling fs layer
+fffc8bb3c482: Pulling fs layer
+3e63681b1ac3: Pulling fs layer
+a5aaab89806a: Pulling fs layer
+86bdabb8dcb2: Pulling fs layer
+31cfdbdf1315: Pulling fs layer
+7249d38e7026: Pulling fs layer
+f419cee96f43: Pulling fs layer
+0abdfd470e95: Pulling fs layer
+0451f76e354d: Pulling fs layer
+208d3e87af3d: Pulling fs layer
+9efca1ca4df4: Pulling fs layer
+4f4fb700ef54: Pulling fs layer
+cd161de96d33: Pulling fs layer
+6d9f496a114f: Pulling fs layer
+e91aac72ffce: Pulling fs layer
+a84cb02c809e: Pulling fs layer
+68a7ae552b70: Pulling fs layer
+82577e89588b: Pulling fs layer
+4f4fb700ef54: Already exists
+3e3250715ca0: Download complete
+2543bb6a39df: Download complete
+0beb48d4f87e: Download complete
+2bc59754e905: Download complete
+c14f7d937f90: Download complete
+b220cc4642c1: Download complete
+42f740ffed7b: Download complete
+3a525b9711ca: Download complete
+8e7ffd792864: Download complete
+dba1974e6497: Download complete
+1b8cf381c60b: Download complete
+94fc8ddffed3: Download complete
+d0bfa8b093ec: Download complete
+dd9939731164: Download complete
+b75d93122802: Download complete
+c39b7a2fc820: Download complete
+26e4e560b6af: Download complete
+7a7596d49a18: Download complete
+cc5cfad681ae: Download complete
+3e63681b1ac3: Download complete
+a5aaab89806a: Download complete
+86bdabb8dcb2: Download complete
+31cfdbdf1315: Download complete
+7249d38e7026: Download complete
+fffc8bb3c482: Download complete
+0451f76e354d: Download complete
+c661ccd1bf2d: Download complete
+2114c143b894: Download complete
+cd161de96d33: Download complete
+208d3e87af3d: Download complete
+6d9f496a114f: Download complete
+7820c9867bc2: Download complete
+7b514386deb3: Download complete
+0abdfd470e95: Download complete
+e91aac72ffce: Download complete
+9efca1ca4df4: Download complete
+68a7ae552b70: Download complete
+a84cb02c809e: Download complete
+f419cee96f43: Download complete
+fd627d0e9ed8: Download complete
+12d1c1a3dcf6: Download complete
+9924014064b0: Download complete
+e18600744f62: Download complete
+ecd83b6c3544: Download complete
+82577e89588b: Download complete
+ecd83b6c3544: Pull complete
+8cc131c77b7c: Download complete
+68a7ae552b70: Pull complete
+82577e89588b: Pull complete
+dd9939731164: Pull complete
+9924014064b0: Pull complete
+4f4fb700ef54: Pull complete
+c661ccd1bf2d: Pull complete
+8cc131c77b7c: Pull complete
+c39b7a2fc820: Pull complete
+26e4e560b6af: Pull complete
+3e3250715ca0: Pull complete
+0beb48d4f87e: Pull complete
+c14f7d937f90: Pull complete
+b220cc4642c1: Pull complete
+3a525b9711ca: Pull complete
+dba1974e6497: Pull complete
+cc5cfad681ae: Pull complete
+7b514386deb3: Pull complete
+e18600744f62: Pull complete
+8e7ffd792864: Pull complete
+2bc59754e905: Pull complete
+42f740ffed7b: Pull complete
+1b8cf381c60b: Pull complete
+94fc8ddffed3: Pull complete
+12d1c1a3dcf6: Pull complete
+7820c9867bc2: Pull complete
+2543bb6a39df: Pull complete
+d0bfa8b093ec: Pull complete
+7a7596d49a18: Pull complete
+3e63681b1ac3: Pull complete
+a5aaab89806a: Pull complete
+86bdabb8dcb2: Pull complete
+31cfdbdf1315: Pull complete
+7249d38e7026: Pull complete
+fffc8bb3c482: Pull complete
+0451f76e354d: Pull complete
+2114c143b894: Pull complete
+cd161de96d33: Pull complete
+208d3e87af3d: Pull complete
+6d9f496a114f: Pull complete
+0abdfd470e95: Pull complete
+9efca1ca4df4: Pull complete
+f419cee96f43: Pull complete
+b75d93122802: Pull complete
+e91aac72ffce: Pull complete
+a84cb02c809e: Pull complete
+Digest: sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b
+Status: Downloaded newer image for supabase/postgres:15.8.1.085
+docker.io/supabase/postgres:15.8.1.085

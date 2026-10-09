@@ -122,7 +122,9 @@ class GeneratorWiringTests(unittest.TestCase):
         self.assertEqual(s.count('env -i PATH="$PATH" HOME="$HOME" DOCKER_CONFIG="$docker_config"'),4)
         self.assertIn('db_amd64_manifest_digest=\'sha256:caae3d066f437332d593011e3e7ecf78ab005ce9b89378efd53f97f0410563ad\'',s)
         self.assertIn('db_image=\'supabase/postgres@sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b\'',s)
-        self.assertIn('image inspect --platform linux/amd64',s)
+        self.assertIn('image_inspect_platform_args=(--platform linux/amd64)',s)
+        self.assertIn('[[ "$platform" == \'linux/amd64\' ]]',s)
+        self.assertIn('configure_image_inspection\n',s)
         self.assertNotIn('docker context use',s)
     def test_existing_compose_cli_keeps_config_endpoint_and_arguments_isolated(self):
         source=(ROOT/'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh').read_text()

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { buildDesktopStampHomeRedirectPath, buildHomeAuthLoginPath, buildStampReviewContinuationPath } from "@/lib/auth/auth-redirect";
 import dynamic from "next/dynamic";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, List, Grid } from "lucide-react";
 import { MapPanelHeader } from "@/components/home/map-panel-chrome";
@@ -187,16 +188,21 @@ export default function StampPage() {
     const { user, isLoading: authLoading } = useAuth();
     const queryClient = useQueryClient();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const reviewContinuationQuery = searchParams?.toString() ?? '';
     // const { isMobileOrTablet, isDesktop } = useDeviceType(); // Hook check replaced
     const { isMobileOrTablet, isDesktop } = useDeviceType(); // Keep for logic usage later, but NOT for redirect
     const [isMounted, setIsMounted] = useState(false);
+    const reviewContinuationHandled = useRef<string | null>(null);
 
     useEffect(() => {
         setIsMounted(true);
 
         const redirectIfDesktop = () => {
-            if (window.innerWidth > BREAKPOINTS.tabletMax) {
-                router.replace('/?panel=stamp');
+            if (window.location.pathname === '/stamp' && window.innerWidth > BREAKPOINTS.tabletMax) {
+                if (reviewContinuationHandled.current) return;
+                const redirectPath = buildDesktopStampHomeRedirectPath(window.location.search);
+                if (redirectPath) router.replace(redirectPath);
             }
         };
 
@@ -232,6 +238,7 @@ export default function StampPage() {
 
     // 리뷰 모달 상태
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [reviewContinuationError, setReviewContinuationError] = useState<string | null>(null);
     const [showStampGuide, setShowStampGuide] = useState(false);
     const [editingReview, setEditingReview] = useState<{
         id: string;
@@ -323,6 +330,41 @@ export default function StampPage() {
         includeVerifiedReviewCounts: false,
     });
     const totalRestaurantCount = allMergedRestaurants.length;
+
+    useEffect(() => {
+        const continuationParameters = new URLSearchParams(reviewContinuationQuery);
+        const restaurantId = continuationParameters.get('restaurant');
+        if (continuationParameters.get('writeReview') !== '1') {
+            if (restaurantId !== reviewContinuationHandled.current) {
+                reviewContinuationHandled.current = null;
+            }
+            return;
+        }
+        if (!restaurantId || authLoading || isRestaurantsLoading || reviewContinuationHandled.current === restaurantId) return;
+        const next = buildStampReviewContinuationPath(restaurantId);
+        if (next === '/stamp') {
+            setReviewContinuationError('리뷰를 작성할 맛집을 다시 선택해 주세요.');
+            return;
+        }
+        if (!user) {
+            router.replace(buildHomeAuthLoginPath({ reason: 'review', next }));
+            return;
+        }
+        const restaurant = allMergedRestaurants.find(item => item.id === restaurantId
+            || item.mergedRestaurants?.some(merged => merged.id === restaurantId));
+        if (!restaurant) {
+            setReviewContinuationError('맛집 정보를 확인할 수 없습니다. 목록에서 다시 선택해 주세요.');
+            return;
+        }
+        reviewContinuationHandled.current = restaurantId;
+        setReviewContinuationError(null);
+        setSelectedRestaurant(restaurant);
+        setIsRightPanelVisible(true);
+        setIsReviewModalOpen(true);
+        const parameters = continuationParameters;
+        parameters.delete('writeReview');
+        router.replace(`${window.location.pathname}?${parameters.toString()}`, { scroll: false });
+    }, [allMergedRestaurants, authLoading, isRestaurantsLoading, reviewContinuationQuery, router, user]);
 
     // 검색 시 사용할 전체 맛집 데이터 조회 (RPC 함수 사용)
     const { data: allRestaurants = [], isLoading: isSearchLoading, isError: isSearchError, refetch: refetchSearch } = useQuery({
@@ -766,12 +808,13 @@ export default function StampPage() {
     }, [user, queryClient, selectedRestaurant]);
 
     const handleWriteReview = useCallback(() => {
+        if (!selectedRestaurant) return;
         if (!user) {
-            console.warn('로그인이 필요합니다.');
+            router.push(buildHomeAuthLoginPath({ reason: 'review', next: buildStampReviewContinuationPath(selectedRestaurant.id) }));
             return;
         }
         setIsReviewModalOpen(true);
-    }, [user]);
+    }, [router, selectedRestaurant, user]);
 
     const handleReviewClick = useCallback((review: Review) => {
         setSelectedReview(review);
@@ -863,7 +906,9 @@ export default function StampPage() {
     const shouldShowStampViewToggle = isMounted && !isMobileOrTablet;
     const shouldShowStampFilters = isMounted && (!isMobileOrTablet || isFilterExpanded);
 
-    if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax) return null;
+    const hasReviewContinuation = searchParams?.get('writeReview') === '1'
+        || isReviewModalOpen;
+    if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax && !hasReviewContinuation) return null;
 
     return (
         <>
@@ -1100,6 +1145,7 @@ export default function StampPage() {
                                 </Button>
                             </div>
                         </MapPanelHeader>
+                        {reviewContinuationError && <p role="alert" className="px-4 py-2 text-sm text-destructive">{reviewContinuationError}</p>}
 
                         <div
                             className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background"
@@ -1330,7 +1376,16 @@ export default function StampPage() {
             {isReviewModalOpen && (
                 <ReviewModal
                     isOpen={isReviewModalOpen}
-                    onClose={() => setIsReviewModalOpen(false)}
+                    onClose={() => {
+                        setIsReviewModalOpen(false);
+                        if (window.innerWidth > BREAKPOINTS.tabletMax && reviewContinuationHandled.current) {
+                            reviewContinuationHandled.current = null;
+                            const parameters = new URLSearchParams(window.location.search);
+                            parameters.delete('writeReview');
+                            const redirectPath = buildDesktopStampHomeRedirectPath(parameters.toString());
+                            if (redirectPath) router.replace(redirectPath);
+                        }
+                    }}
                     restaurant={selectedRestaurant ? { id: selectedRestaurant.id, name: selectedRestaurant.name } : null}
                     onSuccess={() => {
                         queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });

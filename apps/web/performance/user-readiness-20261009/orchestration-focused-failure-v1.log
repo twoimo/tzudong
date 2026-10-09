@@ -1,0 +1,156 @@
+..F.......................................E............................EE..E.......EE..............................EE.......E.................F...........................
+======================================================================
+ERROR: test_schedule_pbt (unittest.loader._FailedTest.test_schedule_pbt)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_schedule_pbt
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 141, in loadTestsFromName
+    module = __import__(module_name)
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/pipeline_control/test_schedule_pbt.py", line 13, in <module>
+    from hypothesis import given, settings
+ModuleNotFoundError: No module named 'hypothesis'
+
+
+======================================================================
+ERROR: test_health_pbt (unittest.loader._FailedTest.test_health_pbt)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_health_pbt
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 141, in loadTestsFromName
+    module = __import__(module_name)
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/pipeline_control/test_health_pbt.py", line 14, in <module>
+    from hypothesis import given, settings
+ModuleNotFoundError: No module named 'hypothesis'
+
+
+======================================================================
+ERROR: test_manifest_pbt (unittest.loader._FailedTest.test_manifest_pbt)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_manifest_pbt
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 141, in loadTestsFromName
+    module = __import__(module_name)
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/pipeline_control/test_manifest_pbt.py", line 26, in <module>
+    from hypothesis import given, settings
+ModuleNotFoundError: No module named 'hypothesis'
+
+
+======================================================================
+ERROR: test_profiles_pbt (unittest.loader._FailedTest.test_profiles_pbt)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_profiles_pbt
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 141, in loadTestsFromName
+    module = __import__(module_name)
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/pipeline_control/test_profiles_pbt.py", line 18, in <module>
+    from hypothesis import HealthCheck, given, settings
+ModuleNotFoundError: No module named 'hypothesis'
+
+
+======================================================================
+ERROR: test_publish_gate_pbt (unittest.loader._FailedTest.test_publish_gate_pbt)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_publish_gate_pbt
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 141, in loadTestsFromName
+    module = __import__(module_name)
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/pipeline_control/test_publish_gate_pbt.py", line 31, in <module>
+    from hypothesis import given, settings
+ModuleNotFoundError: No module named 'hypothesis'
+
+
+======================================================================
+ERROR: test_reflection_pbt (unittest.loader._FailedTest.test_reflection_pbt)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_reflection_pbt
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 141, in loadTestsFromName
+    module = __import__(module_name)
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/pipeline_control/test_reflection_pbt.py", line 17, in <module>
+    from hypothesis import given, settings
+ModuleNotFoundError: No module named 'hypothesis'
+
+
+======================================================================
+ERROR: test_supabase_boundary_pbt (unittest.loader._FailedTest.test_supabase_boundary_pbt)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_supabase_boundary_pbt
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 141, in loadTestsFromName
+    module = __import__(module_name)
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/utils/tests/test_supabase_boundary_pbt.py", line 30, in <module>
+    from hypothesis import assume, given, settings
+ModuleNotFoundError: No module named 'hypothesis'
+
+
+======================================================================
+ERROR: test_env_contract_pbt (unittest.loader._FailedTest.test_env_contract_pbt)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_env_contract_pbt
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 141, in loadTestsFromName
+    module = __import__(module_name)
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/utils/tests/test_env_contract_pbt.py", line 27, in <module>
+    from hypothesis import assume, given, settings
+ModuleNotFoundError: No module named 'hypothesis'
+
+
+======================================================================
+ERROR: test_backfill_planner_pbt (unittest.loader._FailedTest.test_backfill_planner_pbt)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_backfill_planner_pbt
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 141, in loadTestsFromName
+    module = __import__(module_name)
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/utils/tests/test_backfill_planner_pbt.py", line 41, in <module>
+    from hypothesis import given, settings
+ModuleNotFoundError: No module named 'hypothesis'
+
+
+======================================================================
+FAIL: test_json_cli_emits_parseable_schema_without_raw_diagnostics (backend.pipeline_control.test_readiness_unittest.CliContractTest.test_json_cli_emits_parseable_schema_without_raw_diagnostics)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/pipeline_control/test_readiness_unittest.py", line 589, in test_json_cli_emits_parseable_schema_without_raw_diagnostics
+    self.assertEqual(report["blockerCodes"], [BLOCKER_SOURCE_DIRTY] if dirty else [])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: ['dependency_missing', 'source_dirty'] != ['source_dirty']
+
+First differing element 0:
+'dependency_missing'
+'source_dirty'
+
+First list contains 1 additional elements.
+First extra element 1:
+'source_dirty'
+
+- ['dependency_missing', 'source_dirty']
++ ['source_dirty']
+
+======================================================================
+FAIL: test_new_r4_index_name_is_not_created_by_a_prior_migration (backend.utils.tests.test_governance_boundaries.GovernanceAppliedMigrationImmutabilityTest.test_new_r4_index_name_is_not_created_by_a_prior_migration)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/utils/tests/test_governance_boundaries.py", line 492, in test_new_r4_index_name_is_not_created_by_a_prior_migration
+    self.assertEqual(
+    ~~~~~~~~~~~~~~~~^
+        clobbered,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        ),
+        ^^
+    )
+    ^
+AssertionError: Lists differ: ['20261004190259_admin_record_guarded_actions.sql'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'20261004190259_admin_record_guarded_actions.sql'
+
+- ['20261004190259_admin_record_guarded_actions.sql']
++ [] : idx_restaurants_active_candidate_identity is already defined by prior migration(s) ['20261004190259_admin_record_guarded_actions.sql']; the R4 constraint must be a genuinely new object (R9.7)
+
+----------------------------------------------------------------------
+Ran 170 tests in 2.123s
+
+FAILED (failures=2, errors=9)

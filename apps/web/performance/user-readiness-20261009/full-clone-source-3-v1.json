@@ -1,0 +1,14 @@
+{
+  "stage": "review-media-source-3",
+  "source": "20261008201635_review_media_catalog_integration.sql",
+  "sourceSha256": "6d200af697c391043da366a54743db9865c87708188933026221d14f2c9ffcd9",
+  "sourceBytes": 39691,
+  "exit": 3,
+  "sqlState": "42601",
+  "timestamp": "2026-10-08T20:52:14.094336+00:00",
+  "userRowsCopied": 0,
+  "operatingWrites": false,
+  "actor": "postgres",
+  "serverVersion": "17.6",
+  "ddlDiagnosticPersisted": false
+}

@@ -693,6 +693,20 @@ def build_readiness_report(
     }
 
 
+def _failed_test_ids(output: str, modules: Sequence[str]) -> list[str]:
+    """Only static unittest identifiers; never subtest values or diagnostics."""
+    labels: set[str] = set()
+    for method, identity in re.findall(
+        r"^(?:FAIL|ERROR): (test_[A-Za-z0-9_]+) \(([A-Za-z_][A-Za-z0-9_.]*)\)$",
+        output, re.MULTILINE,
+    ):
+        if (len(identity) <= MAX_REPORTED_LABEL_LENGTH
+                and identity.endswith("." + method)
+                and any(identity.startswith(module + ".") for module in modules)):
+            labels.add(identity)
+    return sorted(labels)[:MAX_REPORTED_ITEMS]
+
+
 def run_test_plan(
     repo_root: Path,
     *,
@@ -727,13 +741,16 @@ def run_test_plan(
     combined = f"{completed.stdout or ''}\n{completed.stderr or ''}"
     counts = [int(match) for match in _TEST_COUNT.findall(combined)]
     passed = completed.returncode == 0
-    return {
+    result = {
         "status": TEST_STATUS_PASSED if passed else TEST_STATUS_FAILED,
         "reasonCode": None if passed else BLOCKER_TESTS_FAILED,
         "exitCode": int(completed.returncode),
         "durationMilliseconds": duration_ms,
         "testsRun": counts[-1] if counts else None,
     }
+    if not passed:
+        result["failedTestIds"] = _failed_test_ids(combined, modules)
+    return result
 
 
 def attach_test_execution(

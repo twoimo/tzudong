@@ -1,0 +1,32 @@
+{
+  "all": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 7,
+    "critical": 0,
+    "total": 7
+  },
+  "production": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "remainingPackages": [
+    "@next/eslint-plugin-next",
+    "@parcel/watcher",
+    "@tailwindcss/cli",
+    "braces",
+    "eslint-config-next",
+    "fast-glob",
+    "micromatch"
+  ],
+  "remainingAdvisories": [
+    "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
+  ],
+  "gateSuppressed": false,
+  "forceDowngrade": false
+}

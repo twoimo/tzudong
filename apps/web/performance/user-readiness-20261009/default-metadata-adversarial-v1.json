@@ -1,0 +1,39 @@
+{
+  "canonicalAtomicSourceSha256": "4309c706e2e12c216b6f8cf2a719c0cd3306e1de8fd24e94b8312e54ac999cf1",
+  "engine": "Supabase PostgreSQL17.6",
+  "actor": "postgres",
+  "cases": [
+    {
+      "case": "defaults",
+      "rejected": true,
+      "code": "review_media_catalog_preservation_drift",
+      "boundedDiagnostics": {
+        "assertionsPreserved": true,
+        "membershipPreserved": true,
+        "changedMetadataFields": [
+          "proargdefaults"
+        ],
+        "publicNamespacePreserved": true,
+        "functionMetadataPreserved": false
+      },
+      "transactionRolledBack": true
+    },
+    {
+      "case": "parallel",
+      "rejected": true,
+      "code": "review_media_catalog_preservation_drift",
+      "boundedDiagnostics": {
+        "assertionsPreserved": true,
+        "membershipPreserved": true,
+        "changedMetadataFields": [
+          "proparallel"
+        ],
+        "publicNamespacePreserved": true,
+        "functionMetadataPreserved": false
+      },
+      "transactionRolledBack": true
+    }
+  ],
+  "realUserRows": 0,
+  "operatingWrites": false
+}

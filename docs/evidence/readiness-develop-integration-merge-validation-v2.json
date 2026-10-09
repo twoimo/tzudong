@@ -1,0 +1,35 @@
+{
+  "mergeFrom": "a3c30cdb379f4bfe930a355bbe13175958d98aef",
+  "candidateBeforeMerge": "66639fc1877020623845a66cd16ee23a86d97519",
+  "sourceConflictsResolved": 7,
+  "focusedWeb": {
+    "pass": 59,
+    "fail": 0
+  },
+  "pythonChecks": {
+    "executed": 21,
+    "skipped": 10,
+    "failed": 0,
+    "passed": 11
+  },
+  "typecheckParity": {
+    "diagnostics": 0,
+    "logicalInputs": 3139,
+    "native": "7.0.2",
+    "compat": "6.0.2"
+  },
+  "node": "24.21.0",
+  "npm": "11.6.2",
+  "bun": "1.4.0",
+  "lockIdentity": 899,
+  "lockIdentityChangedDuringMerge": false,
+  "hostedWrites": 0,
+  "sourceMigrationCount": 132,
+  "frozenEvidencePreserved": true,
+  "lint": "passed",
+  "frozenBunInstall": {
+    "passed": true,
+    "ignoreScripts": true,
+    "lifecycleDownloadsNotTested": true
+  }
+}

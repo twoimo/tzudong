@@ -284,7 +284,7 @@ describe('privacy onboarding challenge', () => {
     const authContext = source('contexts/AuthContext.tsx');
     const onboardingPage = source('app/privacy/onboarding/page.tsx');
 
-    expect(callbackRoute).toContain('return redirectWithOnboardingCookiesCleared(origin, buildHomePrivacyOnboardingPath());');
+    expect(callbackRoute).toContain('return redirectWithOnboardingCookiesCleared(origin, buildHomePrivacyOnboardingPath(next));');
     expect(callbackRoute).toContain('if (userError || !user?.id || !UUID_PATTERN.test(user.id))');
     expect(authContext).toContain('function isLiteralLoopSafePrivacyOnboarding()');
     expect(authContext).toContain("window.location.pathname === '/privacy/onboarding'");
@@ -359,7 +359,7 @@ describe('privacy onboarding challenge', () => {
     expect(loginEligibilityIndex).toBeGreaterThan(-1);
     expect(passwordLogin.indexOf('toast.success("로그인 성공!")')).toBeGreaterThan(loginEligibilityIndex);
     expect(passwordLogin.indexOf('dispatchHomeAuthSessionUpdated({')).toBeGreaterThan(loginEligibilityIndex);
-    expect(passwordLogin.indexOf('redirectAfterAdminLogin()')).toBeGreaterThan(loginEligibilityIndex);
+    expect(passwordLogin.indexOf('redirectAfterRequestedLogin()')).toBeGreaterThan(loginEligibilityIndex);
     expect(passwordLogin).toContain('setAuthTab("signup")');
     expect(passwordLogin).toContain('setIsExistingAccountRecovery(true)');
     expect(passwordLogin).toContain('현재 개인정보 처리방침과 연령 확인을 완료해주세요.');
@@ -370,7 +370,7 @@ describe('privacy onboarding challenge', () => {
     expect(passwordSignup).toContain('action: "password_signup"');
     expect(passwordSignup.indexOf('toast.success("회원가입 완료! 환영합니다.")')).toBeGreaterThan(signupEligibilityIndex);
     expect(passwordSignup.indexOf('dispatchHomeAuthSessionUpdated({', signupEligibilityIndex)).toBeGreaterThan(signupEligibilityIndex);
-    expect(passwordSignup.indexOf('redirectAfterAdminLogin()', signupEligibilityIndex)).toBeGreaterThan(signupEligibilityIndex);
+    expect(passwordSignup.indexOf('redirectAfterRequestedLogin()', signupEligibilityIndex)).toBeGreaterThan(signupEligibilityIndex);
   });
 });
 describe('live privacy eligibility receipt', () => {

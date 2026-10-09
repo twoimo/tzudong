@@ -1,0 +1,10 @@
+✔ JSON published date sorts descending with nulls last before limit and offset (1.630667ms)
+✔ unsupported JSON order and null semantics fail explicitly (0.38425ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 57.739709

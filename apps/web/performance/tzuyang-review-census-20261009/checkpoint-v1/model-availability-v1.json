@@ -1,0 +1,16 @@
+{
+  "requestedModel": "gemini-3.8-flash",
+  "requestedThinkingLevel": "HIGH",
+  "checkedAtUtc": "2026-10-09T09:51:15.258Z",
+  "keyEmitted": false,
+  "status": "available",
+  "name": "models/gemini-3.8-flash",
+  "inputTokenLimit": 1048576,
+  "outputTokenLimit": 65536,
+  "supportedActions": [
+    "generateContent",
+    "countTokens",
+    "createCachedContent",
+    "batchGenerateContent"
+  ]
+}

@@ -267,4 +267,4 @@ export function verifyBuildRouteCssBoundaries({ nextDirectory = resolve(".next")
     readRouteCss(nextDirectory, readManifest(nextDirectory, ["server", "app", "home-frame", "page_client-reference-manifest.js"], "deferred", readFile), DEFERRED_ROUTE_KEY, readFile),
   );
 }
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) { const result = verifyBuildRouteCssBoundaries(); console.log(`Verified route CSS boundaries: home ${result.homeBytes} bytes; general app ${result.generalAppBytes} bytes; admin ${result.adminBytes} bytes; deferred ${result.deferredBytes} bytes.`); }
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) { const result = verifyBuildRouteCssBoundaries({ nextDirectory: resolve(process.env.TZUDONG_NEXT_DIST_DIR ?? ".next") }); console.log(`Verified route CSS boundaries: home ${result.homeBytes} bytes; general app ${result.generalAppBytes} bytes; admin ${result.adminBytes} bytes; deferred ${result.deferredBytes} bytes.`); }

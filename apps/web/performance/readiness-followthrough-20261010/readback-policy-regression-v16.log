@@ -1,0 +1,14 @@
+.....F.........
+======================================================================
+FAIL: test_ledger_applies_integration_normally_and_retains_current_overlap_proofs (backend.supabase.tests.test_review_media_catalog_integration.ReviewMediaCatalogIntegrationTests.test_ledger_applies_integration_normally_and_retains_current_overlap_proofs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_catalog_integration.py", line 149, in test_ledger_applies_integration_normally_and_retains_current_overlap_proofs
+    self.assertEqual(len(files), 130)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+AssertionError: 132 != 130
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.517s
+
+FAILED (failures=1)

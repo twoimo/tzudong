@@ -105,7 +105,7 @@ def _receipt_rows(include_order_drift: bool = False):
         ["storage_policies", "storage", "objects", "tzudong_profile_avatar_delete_own", "DELETE", ["authenticated"], "profile-avatars foldername uid()", None],
         ["storage_policies", "storage", "objects", "tzudong_profile_avatar_insert_own", "INSERT", ["authenticated"], None, "profile-avatars foldername uid()"],
         ["storage_policies", "storage", "objects", "tzudong_profile_avatar_update_own", "UPDATE", ["authenticated"], "profile-avatars foldername uid()", "profile-avatars foldername uid()"],
-        ["storage_policies", "storage", "objects", "tzudong_public_media_read", "SELECT", ["anon", "authenticated"], "ad-banner-images profile-avatars review-photos", None],
+        ["storage_policies", "storage", "objects", "tzudong_public_media_read", "SELECT", ["anon", "authenticated"], "(bucket_id = ANY (ARRAY['profile-avatars'::text, 'review-photos'::text, 'ad-banner-images'::text]))", None],
         ["storage_policies", "storage", "objects", "tzudong_review_photo_delete_own", "DELETE", ["authenticated"], "review-photos foldername uid()", None],
         ["storage_policies", "storage", "objects", "tzudong_review_photo_insert_own", "INSERT", ["authenticated"], None, "review-photos foldername uid()"],
         ["storage_policies", "storage", "objects", "tzudong_review_photo_update_own", "UPDATE", ["authenticated"], "review-photos foldername uid()", "review-photos foldername uid()"],
@@ -237,6 +237,19 @@ def _receipt_rows(include_order_drift: bool = False):
         ["seed_realtime", "supabase_realtime", "public", "review_likes"],
         ["seed_realtime", "supabase_realtime", "public", "reviews"],
     ]
+    for row in rows:
+        if row[0] in {"policies", "storage_policies"}:
+            row.append(True)
+    rows.extend([
+        ["storage_buckets", "review-verifications", "review-verifications", False, 5242880,
+         ["image/jpeg", "image/png", "image/webp", "image/avif"]],
+        ["seed_buckets", "review-verifications", "review-verifications", False],
+        *[["review_media_functions", *row] for row in local_migrate.REVIEW_MEDIA_FUNCTIONS],
+        *[["storage_policies", "storage", "objects", name, *values]
+          for name, values in local_migrate.REVIEW_MEDIA_STORAGE_POLICIES.items()],
+    ])
+    rows.sort(key=lambda row: (local_migrate.READBACK_SECTIONS.index(row[0]),
+                              local_migrate._receipt_row_key(row[0], row)))
     if include_order_drift:
         rows.insert(5, ["columns", "public", "sample", 2, "name", "text", False, None])
         rows[4], rows[5] = rows[5], rows[4]
@@ -471,8 +484,8 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
 
     def test_manifest_contains_exactly_current_immutable_units(self) -> None:
         manifest = local_migrate.build_manifest()
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 129)
-        self.assertEqual(len(manifest["source"]["files"]), 129)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 132)
+        self.assertEqual(len(manifest["source"]["files"]), 132)
         self.assertEqual(
             manifest["source"]["files"][-1]["path"],
             "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",

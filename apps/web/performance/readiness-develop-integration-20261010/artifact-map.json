@@ -1,0 +1,677 @@
+{
+  "schemaVersion": 1,
+  "files": [
+    {
+      "path": "atomic-integrated-nine-v3-binding.json",
+      "bytes": 2192,
+      "sha256": "eddaa532d617a966b38d6632cb32b0d6ff342b215c45733b31baa86c43321b50"
+    },
+    {
+      "path": "atomic-integrated-nine-v3.sql",
+      "bytes": 211487,
+      "sha256": "ec6c564ba82ec6a49306afee1f9d8b9fd445b661a72d3a0d1dbe0216241dee2e"
+    },
+    {
+      "path": "atomic-integrated-nine-v4-exact-pg17-proof.json",
+      "bytes": 1677,
+      "sha256": "47a3214a97f714e153e3f2b619917fc62b04e6bc7dd6121e1667bcba9bb9bccc"
+    },
+    {
+      "path": "atomic-integrated-nine-v4.log",
+      "bytes": 123,
+      "sha256": "ea439733a9591ce5ab96eb9fd3e24d205bd7e474b917c30a405e3ba6b210f322"
+    },
+    {
+      "path": "browser-readiness-develop-v7.log",
+      "bytes": 1094,
+      "sha256": "56878a9a39bc9b4c7b851601c122e15c335aa1c56f456913af607b203ef3a6cf"
+    },
+    {
+      "path": "browser-readiness-develop-v8.json",
+      "bytes": 2799,
+      "sha256": "eb8ab1652db4dd09f5fa8b64811120e6fedac8edc24abd882b3e89201d12cfb9"
+    },
+    {
+      "path": "browser-readiness-develop-v8.mjs",
+      "bytes": 9936,
+      "sha256": "dd7acfb0c0f1f881ce4c892caf6a61b5f5de46019b697cae3dace0056329b82d"
+    },
+    {
+      "path": "browser-script-binding-v7.json",
+      "bytes": 314,
+      "sha256": "dd1a208924d68d91c304c99e44ac096d6fd0070060c6649baab6b23a48ac419c"
+    },
+    {
+      "path": "canonical-dual-replay-v11.json",
+      "bytes": 182,
+      "sha256": "6ff64378ecc0865893b5f4eb2e8c23525800f51953e51cad7238c47693f463ca"
+    },
+    {
+      "path": "canonical-dual-replay-v12.json",
+      "bytes": 380,
+      "sha256": "64aa567d1db978b547d55ccf2a5004a94c6a9d77f8a8733cbd43b4e952943b1d"
+    },
+    {
+      "path": "canonical-dual-replay-v13.json",
+      "bytes": 439,
+      "sha256": "17181fe933e325d2b325304190147ac5cdd5deaca9f817d05504e38f79564640"
+    },
+    {
+      "path": "canonical-pg15-a1/00000000000001-auth-schema.sql",
+      "bytes": 4547,
+      "sha256": "65a4a55ba3248716eb4946a8677be41c94bc90eafaa22c0eb95b09908f96fa4f"
+    },
+    {
+      "path": "canonical-pg15-a1/BOOTSTRAP_SOURCES.v1.json",
+      "bytes": 2415,
+      "sha256": "b830180f845de2897f01edad6519d86b06f1fdff0d7c1be3744786245dd00ce0"
+    },
+    {
+      "path": "canonical-pg15-a1/G026_RECONSTRUCTION_BUNDLE.v4.json",
+      "bytes": 46901,
+      "sha256": "15c849887cf3cd9641181545146bbf1226b3c0a2dc45f84d892022dd9041f5a5"
+    },
+    {
+      "path": "canonical-pg15-a1/G026_RECONSTRUCTION_REPAIRS.v4.sql",
+      "bytes": 46700,
+      "sha256": "efc0c0ea9a8632801c5dbae81da74fe125fa57f1eafba8d4ad0708d03ce698cb"
+    },
+    {
+      "path": "canonical-pg15-a1/G026_RECONSTRUCTION_TRANSITION.v4.sql",
+      "bytes": 36415,
+      "sha256": "ee1e2cd1219c56c162793aa1ecd46245e7683fc7d95c726bd2fe9a01f8a170bd"
+    },
+    {
+      "path": "canonical-pg15-a1/GOTRUE_MIGRATIONS.v1.json",
+      "bytes": 17328,
+      "sha256": "6319949789d86712478d731d0c1d4e75eeb0be5796977f4f2243ac3fc36eca23"
+    },
+    {
+      "path": "canonical-pg15-a1/GOTRUE_PLATFORM.v1.json",
+      "bytes": 938,
+      "sha256": "a2e148b5d9d8d2089444f693cda4cca2f1cf73dfa0600663ee98f5ccc5645330"
+    },
+    {
+      "path": "canonical-pg15-a1/RECONSTRUCTION_SOURCES.v1.json",
+      "bytes": 5331,
+      "sha256": "1f87d2bb4d64b9c4771bacad881a8c6effdca072ba0b22732a8373123a6f836e"
+    },
+    {
+      "path": "canonical-pg15-a1/RECONSTRUCTION_SOURCES.v1.zip",
+      "bytes": 152235,
+      "sha256": "21a2b4b6050c05f405a158bf81287b56d4de349189abcb6419090f4dc54c3fc3"
+    },
+    {
+      "path": "canonical-pg15-a1/SHA256SUMS",
+      "bytes": 5680,
+      "sha256": "d42a9e6d309a7ec1e86bd1c258d50da530720fab867c61095b581364358d5572"
+    },
+    {
+      "path": "canonical-pg15-a1/STORAGE_TENANT_MIGRATIONS.v1.json",
+      "bytes": 12601,
+      "sha256": "ea7340b95af9d0fccf493842d8b67b90f3bde290ea718dc3d4b431f321ba2968"
+    },
+    {
+      "path": "canonical-pg15-a1/admin-management-group-overlap-receipt.json",
+      "bytes": 292,
+      "sha256": "3bdaa7be4d1e90378857dfbf5439fbfb024d862b1ee210049e19beeb066e6370"
+    },
+    {
+      "path": "canonical-pg15-a1/admin-management-group-overlap-verification.sql",
+      "bytes": 17413,
+      "sha256": "0481649aff11e7342313adad2490201231493c57fc67b2f4ce77bd17294a6743"
+    },
+    {
+      "path": "canonical-pg15-a1/admin-user-ids-overlap-receipt.json",
+      "bytes": 378,
+      "sha256": "571dae70b18ae7a4731c531e7259892bb52f6534c7e6483c141b16fe9599f9da"
+    },
+    {
+      "path": "canonical-pg15-a1/admin-user-ids-overlap-verification.sql",
+      "bytes": 4587,
+      "sha256": "2f9b182877b730fcb1b0624a76ce837312a378d274864ccaf7518a861b56655a"
+    },
+    {
+      "path": "canonical-pg15-a1/admin-user-rpc-forward-overlap-receipt.json",
+      "bytes": 515,
+      "sha256": "a2b00b1810be6bafd4dec7b4a301c0ca27afc0be0ffd24b7347da3fd8f112950"
+    },
+    {
+      "path": "canonical-pg15-a1/admin-user-rpc-forward-overlap-verification.sql",
+      "bytes": 17645,
+      "sha256": "d40a19e1a3564a6a22b92d857e6aece7968a097311cf37a8a7782d917266dbb7"
+    },
+    {
+      "path": "canonical-pg15-a1/advisor-prerequisite-recovery.json",
+      "bytes": 2530,
+      "sha256": "1e9586e10fed739414ca02a28b6e88c6c49f7bc3733ceeb9f53fb21d8e165bbf"
+    },
+    {
+      "path": "canonical-pg15-a1/advisor-prerequisites.sql",
+      "bytes": 11201,
+      "sha256": "182c3464ed1bed1df72779719785f8a09f28d3f7339fec6b54ef6a2ac649d236"
+    },
+    {
+      "path": "canonical-pg15-a1/advisor-replay.sql",
+      "bytes": 18511,
+      "sha256": "c882e8ef90cc350aaccfc95cb78655d9109cb37ea493a74729ce7b713616a5bc"
+    },
+    {
+      "path": "canonical-pg15-a1/artifact-manifest.txt",
+      "bytes": 1918,
+      "sha256": "ec7f3771722786fa0e8bb93e1cf7a00239dbf0477ee184d989eba53ffad3bc42"
+    },
+    {
+      "path": "canonical-pg15-a1/auth-schema-migrations.expected.tsv",
+      "bytes": 1068,
+      "sha256": "cc7b19a099a9ace26dd1f9edd1d5c0ef3be4eda0a2d8f4291e7f170cdaf66033"
+    },
+    {
+      "path": "canonical-pg15-a1/auth-schema-migrations.tsv",
+      "bytes": 1068,
+      "sha256": "cc7b19a099a9ace26dd1f9edd1d5c0ef3be4eda0a2d8f4291e7f170cdaf66033"
+    },
+    {
+      "path": "canonical-pg15-a1/catalog-manifest-tuples.sql",
+      "bytes": 569221,
+      "sha256": "2973ffa68e5986e15fec4a75bcde7b65830be9bcd3f74a6e0bde58e27d7712e9"
+    },
+    {
+      "path": "canonical-pg15-a1/catalog-manifest.jsonl",
+      "bytes": 632475,
+      "sha256": "c464490344c5f307b243f07e51cfc8c906f0e2022cd4965b15a289b9925a2197"
+    },
+    {
+      "path": "canonical-pg15-a1/duplicate-migration-source-pairs.sha256",
+      "bytes": 2110,
+      "sha256": "598c4adb7d4fd0fefcd63e9553e69e453e8ea120fd9ea69f35ca52429d2a393d"
+    },
+    {
+      "path": "canonical-pg15-a1/evidence-scope.txt",
+      "bytes": 96,
+      "sha256": "2a75b95a815d8c005e12a55cbb4475991caa72797a6b144606340c96785dad21"
+    },
+    {
+      "path": "canonical-pg15-a1/g014-owner-final-pg15-receipt.json",
+      "bytes": 436,
+      "sha256": "b9afb0a52a58442b335183bfe9cf24a39282e23f8a612b2980b22811467d2d4d"
+    },
+    {
+      "path": "canonical-pg15-a1/g014-owner-final-pg15-verification.sql",
+      "bytes": 2481,
+      "sha256": "152ad5d6ad561667857bf6f14bf0786678b7ea86ec987c8ea899684aa55df73b"
+    },
+    {
+      "path": "canonical-pg15-a1/g014-owner-pg15-receipt.json",
+      "bytes": 188,
+      "sha256": "61a46ed728fbe34cef4794bf4da36adf1004fd238ca84067520f1d644a64ec6c"
+    },
+    {
+      "path": "canonical-pg15-a1/g014-owner-pg15-verification.sql",
+      "bytes": 2233,
+      "sha256": "3a95ed40845582f62d8f404c509539eb35f2f82f841c6c91830a9c6a8921fb69"
+    },
+    {
+      "path": "canonical-pg15-a1/g016-identity-pg15-receipt.json",
+      "bytes": 430,
+      "sha256": "30cfcf23c08176e7deca7b7c1d0bc57a9f5a72c68a65529d681dfca9797e4bc3"
+    },
+    {
+      "path": "canonical-pg15-a1/g016-identity-pg15-verification.sql",
+      "bytes": 2077,
+      "sha256": "c76f00dc5841e8700f7f3b9a96358de66ecf068213ee4f752febb3ebed33f838"
+    },
+    {
+      "path": "canonical-pg15-a1/g026-behavior-receipt.json",
+      "bytes": 99,
+      "sha256": "bed8c985ea1fdbc723bab692dde7e2272103404591e3caf8a4d3b22ce8aaa775"
+    },
+    {
+      "path": "canonical-pg15-a1/g026-readback-receipt.json",
+      "bytes": 403,
+      "sha256": "d0ec04cd1305be25b2bd690212d01b43e582405736e066d7aa6db7ac793a2870"
+    },
+    {
+      "path": "canonical-pg15-a1/g026-semantic-receipt.json",
+      "bytes": 26992,
+      "sha256": "294ee12d814f4d57a3016856de6148857944d1aecab548aba57a29795d268ecc"
+    },
+    {
+      "path": "canonical-pg15-a1/g026-validation-ledger.json",
+      "bytes": 266,
+      "sha256": "fa2cd41d9ffc21422a7909a2a5baf019089e8d1b9ba44fe18c6219269f483932"
+    },
+    {
+      "path": "canonical-pg15-a1/gotrue-container-migration-files.tsv",
+      "bytes": 7575,
+      "sha256": "940726314b6de5197971c9930f19e39fe9ed86e63e68bb70f44c70173d9d0817"
+    },
+    {
+      "path": "canonical-pg15-a1/gotrue-inventory-files.tsv",
+      "bytes": 7575,
+      "sha256": "940726314b6de5197971c9930f19e39fe9ed86e63e68bb70f44c70173d9d0817"
+    },
+    {
+      "path": "canonical-pg15-a1/gotrue-schema-migrations.expected.tsv",
+      "bytes": 963,
+      "sha256": "0895f5d65417f06124956570a45b81dd8d16a6f464f2d95b21f42deace5b0392"
+    },
+    {
+      "path": "canonical-pg15-a1/gotrue-schema-migrations.tsv",
+      "bytes": 963,
+      "sha256": "0895f5d65417f06124956570a45b81dd8d16a6f464f2d95b21f42deace5b0392"
+    },
+    {
+      "path": "canonical-pg15-a1/initialization-inputs.sha256",
+      "bytes": 24839,
+      "sha256": "b99a0297240cbc31b708ce5e3a033fb6f24347e67b495d90d1c4ae011e79d3f1"
+    },
+    {
+      "path": "canonical-pg15-a1/metadata.json",
+      "bytes": 10626,
+      "sha256": "c2674a52debdab8c59ade748e5f0c157bb5b989afcb8093773aef171b9e9cb5d"
+    },
+    {
+      "path": "canonical-pg15-a1/migration-chain.txt",
+      "bytes": 49247,
+      "sha256": "61ef029beecbdb460fa884db28d5fb582c328edc28a0ca2521bff57425e28d81"
+    },
+    {
+      "path": "canonical-pg15-a1/operational-archive-binding.json",
+      "bytes": 1840,
+      "sha256": "ef1e021fe1b0e14bdf1823ca55cd9cca613fdd758cc384343eeb31c5c468f383"
+    },
+    {
+      "path": "canonical-pg15-a1/platform-auth-schema-migrations.expected.tsv",
+      "bytes": 105,
+      "sha256": "2162867bfea35746f6eadc6b159a6a97445edd9fd9b32f3fa6315b2bd8821cf1"
+    },
+    {
+      "path": "canonical-pg15-a1/platform-auth-schema-migrations.manifest.tsv",
+      "bytes": 105,
+      "sha256": "2162867bfea35746f6eadc6b159a6a97445edd9fd9b32f3fa6315b2bd8821cf1"
+    },
+    {
+      "path": "canonical-pg15-a1/postgres-image-00000000000001-auth-schema.sql",
+      "bytes": 4547,
+      "sha256": "65a4a55ba3248716eb4946a8677be41c94bc90eafaa22c0eb95b09908f96fa4f"
+    },
+    {
+      "path": "canonical-pg15-a1/pre-20260214-overlap-classification.jsonl",
+      "bytes": 4298,
+      "sha256": "6069520cf3785e1d62645620ee007dd970a0ab878319736a287a0e2d9159a913"
+    },
+    {
+      "path": "canonical-pg15-a1/reconstruction-compatibility-exclusions.jsonl",
+      "bytes": 576,
+      "sha256": "60cf29bf76e53190a9673fac0bb29cf0710b7006073f40ebd15b83092421bfc8"
+    },
+    {
+      "path": "canonical-pg15-a1/reconstruction-compatibility-relocations.jsonl",
+      "bytes": 584,
+      "sha256": "c3713b67addd73a151960339292cc4b521a608074bb9c6c7ed236669bb303819"
+    },
+    {
+      "path": "canonical-pg15-a1/reconstruction-source-members.tsv",
+      "bytes": 1616,
+      "sha256": "8e3ce4ea05f31cf3fa54994d7521f4585b0837213a4c080a42f88af680777a88"
+    },
+    {
+      "path": "canonical-pg15-a1/storage-container-migration-files.tsv",
+      "bytes": 5043,
+      "sha256": "eaff5a388de5e75f29e7d8c07f2515baaea4293bc240ea24d03f7bc3ebc0e044"
+    },
+    {
+      "path": "canonical-pg15-a1/storage-inventory-files.tsv",
+      "bytes": 5043,
+      "sha256": "eaff5a388de5e75f29e7d8c07f2515baaea4293bc240ea24d03f7bc3ebc0e044"
+    },
+    {
+      "path": "canonical-pg15-a1/storage-migration-inventory-source-map.tsv",
+      "bytes": 1790,
+      "sha256": "c02e0b4f9190dc39273b4e83805b03f72054ad25532f981739ad35e61cdee7b3"
+    },
+    {
+      "path": "canonical-pg15-a1/storage-migration-ledger.tsv",
+      "bytes": 3424,
+      "sha256": "00430c437693847538f7572558f5cad113d8ae1f06a02a2bca46573201074e54"
+    },
+    {
+      "path": "canonical-pg15-a1/storage-migration-native-file-ledger.expected.tsv",
+      "bytes": 3424,
+      "sha256": "00430c437693847538f7572558f5cad113d8ae1f06a02a2bca46573201074e54"
+    },
+    {
+      "path": "canonical-pg15-a1/storage-migration-native-source-map.tsv",
+      "bytes": 1790,
+      "sha256": "c02e0b4f9190dc39273b4e83805b03f72054ad25532f981739ad35e61cdee7b3"
+    },
+    {
+      "path": "canonical-pg15-a3/00000000000001-auth-schema.sql",
+      "bytes": 4547,
+      "sha256": "65a4a55ba3248716eb4946a8677be41c94bc90eafaa22c0eb95b09908f96fa4f"
+    },
+    {
+      "path": "canonical-pg15-a3/BOOTSTRAP_SOURCES.v1.json",
+      "bytes": 2415,
+      "sha256": "b830180f845de2897f01edad6519d86b06f1fdff0d7c1be3744786245dd00ce0"
+    },
+    {
+      "path": "canonical-pg15-a3/G026_RECONSTRUCTION_BUNDLE.v4.json",
+      "bytes": 46901,
+      "sha256": "15c849887cf3cd9641181545146bbf1226b3c0a2dc45f84d892022dd9041f5a5"
+    },
+    {
+      "path": "canonical-pg15-a3/G026_RECONSTRUCTION_REPAIRS.v4.sql",
+      "bytes": 46700,
+      "sha256": "efc0c0ea9a8632801c5dbae81da74fe125fa57f1eafba8d4ad0708d03ce698cb"
+    },
+    {
+      "path": "canonical-pg15-a3/G026_RECONSTRUCTION_TRANSITION.v4.sql",
+      "bytes": 36415,
+      "sha256": "ee1e2cd1219c56c162793aa1ecd46245e7683fc7d95c726bd2fe9a01f8a170bd"
+    },
+    {
+      "path": "canonical-pg15-a3/GOTRUE_MIGRATIONS.v1.json",
+      "bytes": 17328,
+      "sha256": "6319949789d86712478d731d0c1d4e75eeb0be5796977f4f2243ac3fc36eca23"
+    },
+    {
+      "path": "canonical-pg15-a3/GOTRUE_PLATFORM.v1.json",
+      "bytes": 938,
+      "sha256": "a2e148b5d9d8d2089444f693cda4cca2f1cf73dfa0600663ee98f5ccc5645330"
+    },
+    {
+      "path": "canonical-pg15-a3/RECONSTRUCTION_SOURCES.v1.json",
+      "bytes": 5331,
+      "sha256": "1f87d2bb4d64b9c4771bacad881a8c6effdca072ba0b22732a8373123a6f836e"
+    },
+    {
+      "path": "canonical-pg15-a3/RECONSTRUCTION_SOURCES.v1.zip",
+      "bytes": 152235,
+      "sha256": "21a2b4b6050c05f405a158bf81287b56d4de349189abcb6419090f4dc54c3fc3"
+    },
+    {
+      "path": "canonical-pg15-a3/SHA256SUMS",
+      "bytes": 5680,
+      "sha256": "d42a9e6d309a7ec1e86bd1c258d50da530720fab867c61095b581364358d5572"
+    },
+    {
+      "path": "canonical-pg15-a3/STORAGE_TENANT_MIGRATIONS.v1.json",
+      "bytes": 12601,
+      "sha256": "ea7340b95af9d0fccf493842d8b67b90f3bde290ea718dc3d4b431f321ba2968"
+    },
+    {
+      "path": "canonical-pg15-a3/admin-management-group-overlap-receipt.json",
+      "bytes": 292,
+      "sha256": "3bdaa7be4d1e90378857dfbf5439fbfb024d862b1ee210049e19beeb066e6370"
+    },
+    {
+      "path": "canonical-pg15-a3/admin-management-group-overlap-verification.sql",
+      "bytes": 17413,
+      "sha256": "0481649aff11e7342313adad2490201231493c57fc67b2f4ce77bd17294a6743"
+    },
+    {
+      "path": "canonical-pg15-a3/admin-user-ids-overlap-receipt.json",
+      "bytes": 378,
+      "sha256": "571dae70b18ae7a4731c531e7259892bb52f6534c7e6483c141b16fe9599f9da"
+    },
+    {
+      "path": "canonical-pg15-a3/admin-user-ids-overlap-verification.sql",
+      "bytes": 4587,
+      "sha256": "2f9b182877b730fcb1b0624a76ce837312a378d274864ccaf7518a861b56655a"
+    },
+    {
+      "path": "canonical-pg15-a3/admin-user-rpc-forward-overlap-receipt.json",
+      "bytes": 515,
+      "sha256": "a2b00b1810be6bafd4dec7b4a301c0ca27afc0be0ffd24b7347da3fd8f112950"
+    },
+    {
+      "path": "canonical-pg15-a3/admin-user-rpc-forward-overlap-verification.sql",
+      "bytes": 17645,
+      "sha256": "d40a19e1a3564a6a22b92d857e6aece7968a097311cf37a8a7782d917266dbb7"
+    },
+    {
+      "path": "canonical-pg15-a3/advisor-prerequisite-recovery.json",
+      "bytes": 2530,
+      "sha256": "1e9586e10fed739414ca02a28b6e88c6c49f7bc3733ceeb9f53fb21d8e165bbf"
+    },
+    {
+      "path": "canonical-pg15-a3/advisor-prerequisites.sql",
+      "bytes": 11201,
+      "sha256": "182c3464ed1bed1df72779719785f8a09f28d3f7339fec6b54ef6a2ac649d236"
+    },
+    {
+      "path": "canonical-pg15-a3/advisor-replay.sql",
+      "bytes": 18511,
+      "sha256": "c882e8ef90cc350aaccfc95cb78655d9109cb37ea493a74729ce7b713616a5bc"
+    },
+    {
+      "path": "canonical-pg15-a3/artifact-manifest.txt",
+      "bytes": 1918,
+      "sha256": "ec7f3771722786fa0e8bb93e1cf7a00239dbf0477ee184d989eba53ffad3bc42"
+    },
+    {
+      "path": "canonical-pg15-a3/auth-schema-migrations.expected.tsv",
+      "bytes": 1068,
+      "sha256": "cc7b19a099a9ace26dd1f9edd1d5c0ef3be4eda0a2d8f4291e7f170cdaf66033"
+    },
+    {
+      "path": "canonical-pg15-a3/auth-schema-migrations.tsv",
+      "bytes": 1068,
+      "sha256": "cc7b19a099a9ace26dd1f9edd1d5c0ef3be4eda0a2d8f4291e7f170cdaf66033"
+    },
+    {
+      "path": "canonical-pg15-a3/catalog-manifest-tuples.sql",
+      "bytes": 569221,
+      "sha256": "2973ffa68e5986e15fec4a75bcde7b65830be9bcd3f74a6e0bde58e27d7712e9"
+    },
+    {
+      "path": "canonical-pg15-a3/catalog-manifest.jsonl",
+      "bytes": 632475,
+      "sha256": "c464490344c5f307b243f07e51cfc8c906f0e2022cd4965b15a289b9925a2197"
+    },
+    {
+      "path": "canonical-pg15-a3/duplicate-migration-source-pairs.sha256",
+      "bytes": 2110,
+      "sha256": "598c4adb7d4fd0fefcd63e9553e69e453e8ea120fd9ea69f35ca52429d2a393d"
+    },
+    {
+      "path": "canonical-pg15-a3/evidence-scope.txt",
+      "bytes": 96,
+      "sha256": "2a75b95a815d8c005e12a55cbb4475991caa72797a6b144606340c96785dad21"
+    },
+    {
+      "path": "canonical-pg15-a3/g014-owner-final-pg15-receipt.json",
+      "bytes": 436,
+      "sha256": "b9afb0a52a58442b335183bfe9cf24a39282e23f8a612b2980b22811467d2d4d"
+    },
+    {
+      "path": "canonical-pg15-a3/g014-owner-final-pg15-verification.sql",
+      "bytes": 2481,
+      "sha256": "152ad5d6ad561667857bf6f14bf0786678b7ea86ec987c8ea899684aa55df73b"
+    },
+    {
+      "path": "canonical-pg15-a3/g014-owner-pg15-receipt.json",
+      "bytes": 188,
+      "sha256": "61a46ed728fbe34cef4794bf4da36adf1004fd238ca84067520f1d644a64ec6c"
+    },
+    {
+      "path": "canonical-pg15-a3/g014-owner-pg15-verification.sql",
+      "bytes": 2233,
+      "sha256": "3a95ed40845582f62d8f404c509539eb35f2f82f841c6c91830a9c6a8921fb69"
+    },
+    {
+      "path": "canonical-pg15-a3/g016-identity-pg15-receipt.json",
+      "bytes": 430,
+      "sha256": "30cfcf23c08176e7deca7b7c1d0bc57a9f5a72c68a65529d681dfca9797e4bc3"
+    },
+    {
+      "path": "canonical-pg15-a3/g016-identity-pg15-verification.sql",
+      "bytes": 2077,
+      "sha256": "c76f00dc5841e8700f7f3b9a96358de66ecf068213ee4f752febb3ebed33f838"
+    },
+    {
+      "path": "canonical-pg15-a3/g026-behavior-receipt.json",
+      "bytes": 99,
+      "sha256": "bed8c985ea1fdbc723bab692dde7e2272103404591e3caf8a4d3b22ce8aaa775"
+    },
+    {
+      "path": "canonical-pg15-a3/g026-readback-receipt.json",
+      "bytes": 403,
+      "sha256": "d0ec04cd1305be25b2bd690212d01b43e582405736e066d7aa6db7ac793a2870"
+    },
+    {
+      "path": "canonical-pg15-a3/g026-semantic-receipt.json",
+      "bytes": 26992,
+      "sha256": "294ee12d814f4d57a3016856de6148857944d1aecab548aba57a29795d268ecc"
+    },
+    {
+      "path": "canonical-pg15-a3/g026-validation-ledger.json",
+      "bytes": 266,
+      "sha256": "fa2cd41d9ffc21422a7909a2a5baf019089e8d1b9ba44fe18c6219269f483932"
+    },
+    {
+      "path": "canonical-pg15-a3/gotrue-container-migration-files.tsv",
+      "bytes": 7575,
+      "sha256": "940726314b6de5197971c9930f19e39fe9ed86e63e68bb70f44c70173d9d0817"
+    },
+    {
+      "path": "canonical-pg15-a3/gotrue-inventory-files.tsv",
+      "bytes": 7575,
+      "sha256": "940726314b6de5197971c9930f19e39fe9ed86e63e68bb70f44c70173d9d0817"
+    },
+    {
+      "path": "canonical-pg15-a3/gotrue-schema-migrations.expected.tsv",
+      "bytes": 963,
+      "sha256": "0895f5d65417f06124956570a45b81dd8d16a6f464f2d95b21f42deace5b0392"
+    },
+    {
+      "path": "canonical-pg15-a3/gotrue-schema-migrations.tsv",
+      "bytes": 963,
+      "sha256": "0895f5d65417f06124956570a45b81dd8d16a6f464f2d95b21f42deace5b0392"
+    },
+    {
+      "path": "canonical-pg15-a3/initialization-inputs.sha256",
+      "bytes": 24839,
+      "sha256": "b99a0297240cbc31b708ce5e3a033fb6f24347e67b495d90d1c4ae011e79d3f1"
+    },
+    {
+      "path": "canonical-pg15-a3/metadata.json",
+      "bytes": 10626,
+      "sha256": "c2674a52debdab8c59ade748e5f0c157bb5b989afcb8093773aef171b9e9cb5d"
+    },
+    {
+      "path": "canonical-pg15-a3/migration-chain.txt",
+      "bytes": 49247,
+      "sha256": "61ef029beecbdb460fa884db28d5fb582c328edc28a0ca2521bff57425e28d81"
+    },
+    {
+      "path": "canonical-pg15-a3/operational-archive-binding.json",
+      "bytes": 1840,
+      "sha256": "ef1e021fe1b0e14bdf1823ca55cd9cca613fdd758cc384343eeb31c5c468f383"
+    },
+    {
+      "path": "canonical-pg15-a3/platform-auth-schema-migrations.expected.tsv",
+      "bytes": 105,
+      "sha256": "2162867bfea35746f6eadc6b159a6a97445edd9fd9b32f3fa6315b2bd8821cf1"
+    },
+    {
+      "path": "canonical-pg15-a3/platform-auth-schema-migrations.manifest.tsv",
+      "bytes": 105,
+      "sha256": "2162867bfea35746f6eadc6b159a6a97445edd9fd9b32f3fa6315b2bd8821cf1"
+    },
+    {
+      "path": "canonical-pg15-a3/postgres-image-00000000000001-auth-schema.sql",
+      "bytes": 4547,
+      "sha256": "65a4a55ba3248716eb4946a8677be41c94bc90eafaa22c0eb95b09908f96fa4f"
+    },
+    {
+      "path": "canonical-pg15-a3/pre-20260214-overlap-classification.jsonl",
+      "bytes": 4298,
+      "sha256": "6069520cf3785e1d62645620ee007dd970a0ab878319736a287a0e2d9159a913"
+    },
+    {
+      "path": "canonical-pg15-a3/reconstruction-compatibility-exclusions.jsonl",
+      "bytes": 576,
+      "sha256": "60cf29bf76e53190a9673fac0bb29cf0710b7006073f40ebd15b83092421bfc8"
+    },
+    {
+      "path": "canonical-pg15-a3/reconstruction-compatibility-relocations.jsonl",
+      "bytes": 584,
+      "sha256": "c3713b67addd73a151960339292cc4b521a608074bb9c6c7ed236669bb303819"
+    },
+    {
+      "path": "canonical-pg15-a3/reconstruction-source-members.tsv",
+      "bytes": 1616,
+      "sha256": "8e3ce4ea05f31cf3fa54994d7521f4585b0837213a4c080a42f88af680777a88"
+    },
+    {
+      "path": "canonical-pg15-a3/storage-container-migration-files.tsv",
+      "bytes": 5043,
+      "sha256": "eaff5a388de5e75f29e7d8c07f2515baaea4293bc240ea24d03f7bc3ebc0e044"
+    },
+    {
+      "path": "canonical-pg15-a3/storage-inventory-files.tsv",
+      "bytes": 5043,
+      "sha256": "eaff5a388de5e75f29e7d8c07f2515baaea4293bc240ea24d03f7bc3ebc0e044"
+    },
+    {
+      "path": "canonical-pg15-a3/storage-migration-inventory-source-map.tsv",
+      "bytes": 1790,
+      "sha256": "c02e0b4f9190dc39273b4e83805b03f72054ad25532f981739ad35e61cdee7b3"
+    },
+    {
+      "path": "canonical-pg15-a3/storage-migration-ledger.tsv",
+      "bytes": 3424,
+      "sha256": "00430c437693847538f7572558f5cad113d8ae1f06a02a2bca46573201074e54"
+    },
+    {
+      "path": "canonical-pg15-a3/storage-migration-native-file-ledger.expected.tsv",
+      "bytes": 3424,
+      "sha256": "00430c437693847538f7572558f5cad113d8ae1f06a02a2bca46573201074e54"
+    },
+    {
+      "path": "canonical-pg15-a3/storage-migration-native-source-map.tsv",
+      "bytes": 1790,
+      "sha256": "c02e0b4f9190dc39273b4e83805b03f72054ad25532f981739ad35e61cdee7b3"
+    },
+    {
+      "path": "census-contract-tests-v8.log",
+      "bytes": 131,
+      "sha256": "4a0575895c1304ccb04484e2d78b8ff2702952797a6ff8d741fd42d88fa6c898"
+    },
+    {
+      "path": "census-display-tests-v8.log",
+      "bytes": 1624,
+      "sha256": "6b74d0ac4892e2728d50b78cd5faabe5e1da27987f3d249b7f80576990070656"
+    },
+    {
+      "path": "census-parser-tests-v8.log",
+      "bytes": 226,
+      "sha256": "7d4781b2ad0ea4009ba8d0d78d44825469a2422f1f5a4699b1d14b3bf35908f6"
+    },
+    {
+      "path": "full-web-unit-aggregate-v1.json",
+      "bytes": 305,
+      "sha256": "d5255803f3bf765b594997d3b9439ac79c908c90b77e94141d384ac14c94e36b"
+    },
+    {
+      "path": "production-build-v7.log",
+      "bytes": 5876,
+      "sha256": "91d8caa02384ffec455bcb65ce0371039ca74447bb429f4283df971000efbbfa"
+    },
+    {
+      "path": "route-css-v7.log",
+      "bytes": 119,
+      "sha256": "e658b588eb4e25e19eb55c986c16594f823e19550a10d88f87afee4c53c6130e"
+    },
+    {
+      "path": "verify-atomic-integrated-nine-v4.py",
+      "bytes": 4594,
+      "sha256": "579f26f12422d1d1932e1760773c5b6cdc1b4da1662be2ff3fea9f430864daec"
+    }
+  ],
+  "performanceAdmission": 0,
+  "operatingWrites": 0
+}

@@ -1,0 +1,36 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/auth-user-continuation.test.ts:
+(pass) requested user login continuation > keeps MY and review destinations while ordinary in-page login stays put [0.19ms]
+(pass) requested user login continuation > retains the administrator boundary and rejects unsafe destinations [0.02ms]
+(pass) requested user login continuation > binds the resumed stamp composer to the selected public restaurant ID [0.13ms]
+(pass) requested user login continuation > keeps a verified destination through exact privacy recovery URLs [0.19ms]
+(pass) requested user login continuation > holds the desktop stamp route until its selected review continuation is consumed [0.25ms]
+(pass) requested user login continuation > keeps the new-password UI aligned with the server 72-character bound [0.15ms]
+
+tests-unit/privacy-onboarding-route-runtime.test.ts:
+(pass) privacy onboarding full route runtime contracts > password start -> create -> recovery replay (email confirmation false) [146.38ms]
+(pass) privacy onboarding full route runtime contracts > password start -> create -> recovery replay (email confirmation true) [51.64ms]
+(pass) privacy onboarding full route runtime contracts > email-confirmed signup restores the server-validated destination through the callback [43.61ms]
+(pass) privacy onboarding full route runtime contracts > an already open legacy signup form retains its default confirmation destination [35.36ms]
+(pass) privacy onboarding full route runtime contracts > password signup rejects an external continuation before account creation [46.92ms]
+(pass) privacy onboarding full route runtime contracts > existing password account confirms and accepts same-challenge replay without creating an account [56.87ms]
+(pass) privacy onboarding full route runtime contracts > OAuth callback none [40.68ms]
+(pass) privacy onboarding full route runtime contracts > OAuth callback confirmation [46.02ms]
+(pass) privacy onboarding full route runtime contracts > OAuth callback eligibility [35.35ms]
+(pass) privacy onboarding full route runtime contracts > OAuth callback nonce [41.44ms]
+(pass) privacy onboarding full route runtime contracts > stale no-challenge OAuth recovery keeps only a validated user continuation [36.83ms]
+(pass) privacy onboarding full route runtime contracts > OAuth rejects tamper before exchanging provider code [45.37ms]
+(pass) privacy onboarding full route runtime contracts > OAuth rejects expiry before exchanging provider code [31.70ms]
+(pass) privacy onboarding full route runtime contracts > OAuth rejects origin before exchanging provider code [27.91ms]
+(pass) privacy onboarding full route runtime contracts > OAuth rejects nonce before exchanging provider code [43.63ms]
+(pass) privacy onboarding full route runtime contracts > OAuth rejects secret before exchanging provider code [44.79ms]
+(pass) privacy onboarding full route runtime contracts > password rejects tamper, expiry, wrong secret and cross-origin before signup [165.57ms]
+(pass) privacy onboarding full route runtime contracts > password finalization denies confirmation [40.90ms]
+(pass) privacy onboarding full route runtime contracts > password finalization denies eligibility [36.77ms]
+(pass) privacy onboarding full route runtime contracts > under-14 start remains denied before challenge or identity creation [36.28ms]
+
+ 26 pass
+ 0 fail
+ 188 expect() calls
+Ran 26 tests across 2 files. [1206.00ms]

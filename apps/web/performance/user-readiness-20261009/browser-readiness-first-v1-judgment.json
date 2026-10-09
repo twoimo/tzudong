@@ -1,0 +1,10 @@
+{
+  "setupAdmission": false,
+  "functionalChecksCompleted": 10,
+  "originalUnsupportedFixtureQueries": 2,
+  "cause": "JSON date order unsupported by copied fixture v6",
+  "laterCorrection": "fixture-query-v7.mjs and browser-readiness-flow-v3.mjs",
+  "originalProgramExitGuardIncorrect": true,
+  "correction": "v2/v3 return exit1 on false passed result",
+  "realUserFieldAdmission": 0
+}

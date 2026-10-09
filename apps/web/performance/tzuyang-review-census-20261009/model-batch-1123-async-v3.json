@@ -1,0 +1,81 @@
+{
+  "index": 1123,
+  "actualModelVersion": "gemini-3.8-flash",
+  "requestedThinkingLevel": "HIGH",
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokenCount": 2320,
+    "candidatesTokenCount": 625,
+    "totalTokenCount": 28531,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 2320
+      }
+    ],
+    "thoughtsTokenCount": 25586,
+    "serviceTier": "standard"
+  },
+  "inputSha256": "8bb5f3fc804636f639a4a000c60d1fb283da901959a8da21b64ff5f2d9ba1ef8",
+  "promptSha256": "7a279af1b9586e9b2f482f1e2b23cdb93bcc013d0daf2e4dbc9277c64a277ae7",
+  "jobName": "batches/6bfttrdehg67rw0qp7mf95l6dsvy2d38285d",
+  "thoughtsPersisted": false,
+  "rows": [
+    {
+      "key": "r1208",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r1209",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r1210",
+      "status": "fix",
+      "issues": [
+        "PROMOTIONAL_VOICE"
+      ],
+      "revisedReviewSha256": "1f42c9e8483d041dad5b148fff7c0cf1f7dd1241c6f2825ccb7c30270363c9f3"
+    },
+    {
+      "key": "r1211",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r1212",
+      "status": "needs_source",
+      "issues": [
+        "NEEDS_VIDEO_EVIDENCE"
+      ],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r1213",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r1214",
+      "status": "fix",
+      "issues": [
+        "PROMOTIONAL_VOICE"
+      ],
+      "revisedReviewSha256": "8737b31e591d3d8fb8d6f9b99cdc614492bcae814869ba6c7ef156687f718b13"
+    },
+    {
+      "key": "r1215",
+      "status": "needs_source",
+      "issues": [
+        "EMPTY_REVIEW"
+      ],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

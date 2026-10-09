@@ -1,0 +1,11 @@
+{
+  "commonFiles": 58,
+  "equalFiles": 58,
+  "differingFiles": [],
+  "metadataDifferences": [],
+  "canonicalMigrations": 145,
+  "manifestRowCount": 1960,
+  "operatingProof": false,
+  "migrationNamesSha256": "0bfd6ffb7e01b055c22a165c29a2c351d39e8d46d0af9a3cf2c0221ae136658f",
+  "correction": "v11 counted all 245 initialization/baseline/source lines, not application migrations"
+}

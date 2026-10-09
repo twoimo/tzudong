@@ -1,0 +1,57 @@
+{
+  "sourceSha256": "ec6c564ba82ec6a49306afee1f9d8b9fd445b661a72d3a0d1dbe0216241dee2e",
+  "context": "colima-tzudong-catalog-20261007",
+  "container": "tzudong-ranking-clone-20261008",
+  "input": {
+    "engine": "17.6",
+    "reviews": 0,
+    "manifest": 1963,
+    "profiles": 0
+  },
+  "actor": "postgres",
+  "atomicAll9": true,
+  "ownerAnonymousProbes": [
+    {
+      "ownerRPCsPassed": 7,
+      "privateSchemaDenied": true
+    },
+    {
+      "anonRPCDenied": true,
+      "privateSchemaDenied": true
+    }
+  ],
+  "rollbackExactBeforeAfterEqual": true,
+  "before": {
+    "members": "f8a54adbc187f6341ec23c8fa8f2115b",
+    "manifest": "5161af691dd836638aafa24c98af62df",
+    "policies": "b5020313da04106143fb885659172fc9",
+    "functions": "5f217bc361c77b90493d14d9e40ffb27",
+    "relations": "0b5c476daf0d2f448204f356ab9755f6",
+    "defaultACL": "b39a6aa2273f39b73602ebccebb5923e",
+    "constraints": "5d661bdb7b0e7c770721d8c65f3b27b5",
+    "mediaPresent": false
+  },
+  "after": {
+    "members": "f8a54adbc187f6341ec23c8fa8f2115b",
+    "manifest": "5161af691dd836638aafa24c98af62df",
+    "policies": "b5020313da04106143fb885659172fc9",
+    "functions": "5f217bc361c77b90493d14d9e40ffb27",
+    "relations": "0b5c476daf0d2f448204f356ab9755f6",
+    "defaultACL": "b39a6aa2273f39b73602ebccebb5923e",
+    "constraints": "5d661bdb7b0e7c770721d8c65f3b27b5",
+    "mediaPresent": false
+  },
+  "fingerprintSchemas": [
+    "public",
+    "privacy_retention",
+    "review_media_private",
+    "pipeline_control"
+  ],
+  "fingerprintAdditional": [
+    "relations",
+    "policies including storage",
+    "global defaultACL",
+    "constraints including storage"
+  ],
+  "operatingWrites": false
+}

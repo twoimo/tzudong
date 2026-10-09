@@ -1,0 +1,10 @@
+{
+  "frozenSourcePreserved": true,
+  "workingChange": "final blank line only",
+  "pythonAstEqual": true,
+  "frozenSourceSha256": "5b7dbc6645c422c10f451a777c9cfdcd5171d0d4109d92eeac862f27428eb24e",
+  "workingSourceSha256": "1d11628fef1953b63bb69aa1bab4308d48a75abf58d8365a121b74d91ebfcee3",
+  "scopedGitAttribute": "checkpoint-v1/census_admission_v1.py whitespace=-blank-at-eof",
+  "ignoredLogsIndividuallyAdmitted": 14,
+  "credentialHitsInFrozenFiles": 0
+}

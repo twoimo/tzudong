@@ -1,0 +1,84 @@
+{
+  "jobName": "batches/ou10609mribyd7b806gebolzxtvkjmcjngzv",
+  "inputSha256": "15cef2bc99725755b7d3def73e2e8aca52d48032af825d1a0fe9f920098bb15b",
+  "promptSha256": "7a279af1b9586e9b2f482f1e2b23cdb93bcc013d0daf2e4dbc9277c64a277ae7",
+  "actualModelVersion": "gemini-3.8-flash",
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokenCount": 2482,
+    "candidatesTokenCount": 475,
+    "totalTokenCount": 50804,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 2482
+      }
+    ],
+    "thoughtsTokenCount": 47847,
+    "serviceTier": "standard"
+  },
+  "thoughtsPersisted": false,
+  "sourceSnapshotSha256": "b8f06e7c5867b5ac2d8dfe5283e1ffdcf2a103a34f2e1d29333169fe4c5d38d8",
+  "rows": [
+    {
+      "key": "r0224",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0225",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0226",
+      "status": "needs_source",
+      "issues": [
+        "EMPTY_REVIEW",
+        "NEEDS_VIDEO_EVIDENCE"
+      ],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0227",
+      "status": "fix",
+      "issues": [
+        "EDITORIAL_FIRST_PERSON"
+      ],
+      "revisedReviewSha256": "10af7499eab9b2d7624b1467a3ee0f39d62095266f32485c68a34bb662e73777"
+    },
+    {
+      "key": "r0228",
+      "status": "needs_source",
+      "issues": [
+        "EMPTY_REVIEW",
+        "NEEDS_VIDEO_EVIDENCE"
+      ],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0229",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0230",
+      "status": "needs_source",
+      "issues": [
+        "RECORD_MISMATCH"
+      ],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0231",
+      "status": "fix",
+      "issues": [
+        "RAW_FORMATTING"
+      ],
+      "revisedReviewSha256": "d9fc391fc57dfe41e3becd278ca1e2e10b83cb4e3b0fac4a2c86d84212d071f3"
+    }
+  ]
+}

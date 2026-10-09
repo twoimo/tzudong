@@ -1,0 +1,8 @@
+{
+  "status": "passed",
+  "summarySha256": "e87094ee21cd163f1931a174f691c70ed7cc0905c6d06ec3e4af26dc36476b51",
+  "byteIdenticalReproduction": true,
+  "independentCountSum": true,
+  "currentReleaseMetricInstances": 20,
+  "performanceAdmission": 0
+}

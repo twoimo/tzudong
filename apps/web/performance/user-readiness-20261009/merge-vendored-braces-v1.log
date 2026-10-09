@@ -1,0 +1,11 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/braces-depth-boundary.test.ts:
+(pass) private brace parser resource boundary > retains ordinary path alternatives, ranges, escapes and AST consumption [1.44ms]
+(pass) private brace parser resource boundary > rejects deep brace and parentheses input before recursive walkers [1.15ms]
+(pass) private brace parser resource boundary > bounds direct AST depth and rejects cycles without following parent references [0.26ms]
+
+ 3 pass
+ 0 fail
+ 22 expect() calls
+Ran 3 tests across 1 file. [137.00ms]

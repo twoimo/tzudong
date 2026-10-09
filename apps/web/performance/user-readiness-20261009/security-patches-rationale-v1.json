@@ -1,0 +1,39 @@
+{
+  "officialPatchedVersions": {
+    "next": "16.3.8",
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2"
+  },
+  "selected": {
+    "next": "16.3.8",
+    "@next/bundle-analyzer": "16.3.8",
+    "eslint-config-next": "16.3.8",
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2"
+  },
+  "sources": [
+    "https://github.com/advisories/GHSA-cjq9-62q9-8jv4",
+    "https://github.com/advisories/GHSA-wq5f-xc86-pv6w",
+    "https://github.com/advisories/GHSA-68fv-2mgg-jv7q"
+  ],
+  "remainingUnpatched": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+  "allAuditBeforeHighPackages": 10,
+  "allAuditAfterHighPackages": 7,
+  "productionAuditAfter": 0,
+  "auditUnits": "affected package owner chains, not independent vulnerabilities",
+  "suppression": false,
+  "downgrade": false,
+  "sourceOnlyUntilDeploymentReadback": true,
+  "runtimesPreserved": [
+    "Node24.21.0",
+    "npm11.6.2",
+    "Bun1.4.0",
+    "nativeTS7.0.2",
+    "compatTS6.0.2"
+  ],
+  "lockAuthority": "npm package-lock.json",
+  "npmBunIdentityAndIntegrityParity": 820,
+  "BunFrozenInstallPassed": true,
+  "installScriptsIgnoredOnlyInIsolatedBunValidation": true,
+  "ownRepoNpmInstallDefaultPolicy": true
+}

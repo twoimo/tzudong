@@ -1,0 +1,24 @@
+{
+  "index": 6,
+  "inputSha256": "faef1ff348b4f7625036eedfa9683fa00968e78ec79b6c8021898d0d6b9aab22",
+  "promptSha256": "7a279af1b9586e9b2f482f1e2b23cdb93bcc013d0daf2e4dbc9277c64a277ae7",
+  "requestedModel": "gemini-3.8-flash",
+  "actualModelVersion": "gemini-3.8-flash",
+  "thinkingLevel": "HIGH",
+  "finishReason": "MAX_TOKENS",
+  "candidateCount": 1,
+  "usage": {
+    "promptTokenCount": 4790,
+    "candidatesTokenCount": 1295,
+    "totalTokenCount": 37542,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 4790
+      }
+    ],
+    "thoughtsTokenCount": 31457,
+    "serviceTier": "standard"
+  },
+  "rawThoughtsPersisted": false
+}

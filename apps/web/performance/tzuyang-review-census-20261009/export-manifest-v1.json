@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "startedAtUtc": "2026-10-09T09:52:20.108Z",
+  "endedAtUtc": "2026-10-09T09:52:22.559Z",
+  "project": "aqlcofblfxdrjhhdmarw",
+  "table": "restaurants",
+  "field": "tzuyang_review",
+  "scope": "all current rows, general user reviews excluded",
+  "count": 1659,
+  "initialExactCount": 1659,
+  "pages": 4,
+  "nonemptyReviews": 1437,
+  "emptyReviews": 222,
+  "uniqueReviewBodies": 1343,
+  "byStatus": {
+    "approved": 763,
+    "deleted": 890,
+    "hold": 6
+  },
+  "byChannel": {
+    "tzuyang": 1641,
+    "null": 18
+  },
+  "sourceSnapshotSha256": "b8f06e7c5867b5ac2d8dfe5283e1ffdcf2a103a34f2e1d29333169fe4c5d38d8",
+  "sourceSnapshotBytes": 1999972,
+  "privateCustody": "/Users/twoimo/.codex/runtime-cache/tzuyang-review-census-20261009/restaurants-review-snapshot-v1.json",
+  "publicEvidenceContainsReviewText": false,
+  "adminLockedRows": 511,
+  "operatingWrites": 0,
+  "limitations": [
+    "Keyset pagination is not one database transaction; apply requires fresh per-record readback/CAS.",
+    "A repeated body can belong to multiple records; full coverage must retain every stable row ID."
+  ]
+}

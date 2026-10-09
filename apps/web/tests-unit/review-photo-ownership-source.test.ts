@@ -19,16 +19,14 @@ describe('review photo ownership source contracts', () => {
   test('ReviewEditModal validates ownership before rendering, persisting, or deleting object keys', () => {
     const modalSource = source('components/reviews/ReviewEditModal.tsx');
 
-    expect(modalSource).toContain('getCanonicalReviewPhotoObjectPath');
-    expect(modalSource).toContain('getCanonicalReviewPhotoObjectPaths');
-    expect(modalSource).toContain('getOwnedFoodPhotoPaths');
-    expect(modalSource).toContain('buildReviewPhotoObjectPath');
-    expect(modalSource).toContain('cleanupCanonicalReviewPhotoObjects');
-    expect(modalSource).toContain('resolveReviewPhotoUrl(path, foodPhotoOwnership)');
-    expect(modalSource).toContain('.eq("user_id", user.id)');
-    expect(modalSource).toContain('const removedCleanup = await cleanupOwnedFoodPhotos(');
-    expect(modalSource).toContain('[...existingFoodPhotos, ...removedPhotos]');
-    expect(modalSource).toContain('const cleanup = await cleanupOwnedFoodPhotos(allPhotos, foodPhotoOwnership)');
+    expect(modalSource).toContain('getEditableFoodPhotoValues');
+    expect(modalSource).toContain('restoreEditableFoodPhotoValues');
+    expect(modalSource).toContain('ReviewMediaMutation');
+    expect(modalSource).toContain('resolveReviewPhotoUrl(storedValue, foodPhotoOwnership)');
+    const helper = source('lib/reviews/review-media-mutation.ts');
+    expect(helper).toContain(".eq('user_id', ownerId)");
+    expect(helper).toContain('getCanonicalReviewPhotoObjectPath(path, { ownerId, reviewId: review_id, purpose })');
+    expect(modalSource).not.toContain('cleanupOwnedFoodPhotos');
     expect(modalSource).not.toContain('.remove(removedPhotos)');
     expect(modalSource).not.toContain("from('review-photos').getPublicUrl");
   });

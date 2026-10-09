@@ -1,0 +1,98 @@
+{
+  "observedAtUtc": "2026-10-09T12:35:11.325482+00:00",
+  "parallelPrimaryTasks": 2,
+  "maximumRetriesPerTask": 1,
+  "tasks": [
+    {
+      "task": "sql-review",
+      "requestedModel": "chatgpt-web/gpt-6-sol",
+      "requestedEffort": "max",
+      "resolvedByInstalledPolicy": "chatgpt-web/gpt-6-pro",
+      "provider": "local-router",
+      "responseModelMetadataReturned": false,
+      "threadIds": [
+        "01a12092-760c-7911-9c65-bd7a22b83e39"
+      ],
+      "clientTurnCompleted": false,
+      "clientTurnFailed": true,
+      "substantiveReviewCompleted": false,
+      "sourceReadBlocked": false,
+      "finalSha256": null,
+      "commandCompletions": 0,
+      "clientReportedUsage": []
+    },
+    {
+      "task": "memory-review",
+      "requestedModel": "chatgpt-web/gpt-6-sol",
+      "requestedEffort": "max",
+      "resolvedByInstalledPolicy": "chatgpt-web/gpt-6-pro",
+      "provider": "local-router",
+      "responseModelMetadataReturned": false,
+      "threadIds": [
+        "01a12092-760d-7a40-916c-ad8f9cc73560"
+      ],
+      "clientTurnCompleted": false,
+      "clientTurnFailed": true,
+      "substantiveReviewCompleted": false,
+      "sourceReadBlocked": false,
+      "finalSha256": null,
+      "commandCompletions": 6,
+      "clientReportedUsage": []
+    },
+    {
+      "task": "sql-review-attempt2",
+      "requestedModel": "chatgpt-web/gpt-6-sol",
+      "requestedEffort": "max",
+      "resolvedByInstalledPolicy": "chatgpt-web/gpt-6-pro",
+      "provider": "local-router",
+      "responseModelMetadataReturned": false,
+      "threadIds": [
+        "01a12097-ce5a-74d0-895a-ab647a835ec6"
+      ],
+      "clientTurnCompleted": true,
+      "clientTurnFailed": false,
+      "substantiveReviewCompleted": false,
+      "sourceReadBlocked": true,
+      "finalSha256": "1c3be9d49b8e7abebb1c059c0f80814a912a7c087d064f176560b22f6cefa9d5",
+      "commandCompletions": 3,
+      "clientReportedUsage": [
+        {
+          "input_tokens": 111231,
+          "cached_input_tokens": 0,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 1252,
+          "reasoning_output_tokens": 0
+        }
+      ]
+    },
+    {
+      "task": "memory-review-attempt2",
+      "requestedModel": "chatgpt-web/gpt-6-sol",
+      "requestedEffort": "max",
+      "resolvedByInstalledPolicy": "chatgpt-web/gpt-6-pro",
+      "provider": "local-router",
+      "responseModelMetadataReturned": false,
+      "threadIds": [
+        "01a1209e-a5da-7db1-80da-0a819a30fa6f"
+      ],
+      "clientTurnCompleted": false,
+      "clientTurnFailed": true,
+      "substantiveReviewCompleted": false,
+      "sourceReadBlocked": false,
+      "finalSha256": null,
+      "commandCompletions": 0,
+      "clientReportedUsage": []
+    }
+  ],
+  "globalSettingsChanged": false,
+  "alternateModelUsed": false,
+  "phoneUse": false,
+  "normalInferenceBillingUnknown": true,
+  "capacityPurchase": false,
+  "automaticApprovalRejection": {
+    "action": "local SQL and media source read",
+    "reason": "security status could not be determined",
+    "didNotBypass": true
+  },
+  "runtimeEvidenceClass": "requested settings and installed routing binding; provider model metadata is absent"
+}

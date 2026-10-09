@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createSupabaseJsClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CookieOptions } from '@supabase/ssr';
 import type { Database } from '@/integrations/supabase/types';
 import {
   clearOnboardingChallenge,
@@ -34,18 +35,21 @@ import {
 } from '@/lib/security/bounded-json-request';
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createClientForCookieStore } from '@/lib/supabase/server';
 import {
   isSignupProfileStateReady,
   readSignupProfileState,
 } from '@/lib/profile-mutation';
+import { getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
 
 export const runtime = 'nodejs';
 
 const MAX_REQUEST_BYTES = 16 * 1024;
+const DEFAULT_PRODUCTION_REDIRECT_ORIGIN = 'https://www.tzudong.app';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HEX_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
-const PASSWORD_SIGNUP_KEYS = ['action', 'email', 'password', 'nickname'];
+const PASSWORD_SIGNUP_LEGACY_KEYS = ['action', 'email', 'password', 'nickname'];
+const PASSWORD_SIGNUP_KEYS = [...PASSWORD_SIGNUP_LEGACY_KEYS, 'next'];
 const EXISTING_ACCOUNT_KEYS = ['action'] as const;
 const PASSWORD_RECOVERY_CODE = 'ONBOARDING_PASSWORD_LOGIN_REQUIRED';
 const PASSWORD_RECOVERY_KEYS = [
@@ -63,6 +67,7 @@ type PasswordSignupRequest = {
   email: string;
   password: string;
   nickname: string;
+  next?: string;
 };
 type ExistingAccountRequest = Readonly<{
   action: 'existing_account';
@@ -201,6 +206,53 @@ function readPasswordRecovery(value: string | undefined, origin: string): Passwo
 
 function requestOrigin(request: NextRequest) {
   return new URL(request.url).origin;
+}
+
+function trustedAuthRedirectOrigin(request: NextRequest) {
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configuredSiteUrl) {
+    try {
+      return new URL(configuredSiteUrl).origin;
+    } catch {
+      return DEFAULT_PRODUCTION_REDIRECT_ORIGIN;
+    }
+  }
+
+  return process.env.NODE_ENV === 'production'
+    ? DEFAULT_PRODUCTION_REDIRECT_ORIGIN
+    : requestOrigin(request);
+}
+
+function passwordSignupEmailRedirectTo(request: NextRequest, next: string) {
+  const callbackUrl = new URL('/auth/callback', trustedAuthRedirectOrigin(request));
+  if (next !== '/') callbackUrl.searchParams.set('next', next);
+  return callbackUrl.toString();
+}
+
+type PasswordSignupCookieMutation = Readonly<{
+  name: string;
+  value: string;
+  options: CookieOptions;
+}>;
+
+function createPasswordSignupClient(request: NextRequest) {
+  const cookieMutations = new Map<string, PasswordSignupCookieMutation>();
+  const client = createClientForCookieStore({
+    getAll: () => request.cookies.getAll(),
+    set(name, value, options) {
+      cookieMutations.set(name, { name, value, options });
+    },
+  });
+  return { client, cookieMutations };
+}
+
+function applyPasswordSignupCookies(
+  response: NextResponse,
+  cookieMutations: ReadonlyMap<string, PasswordSignupCookieMutation>,
+) {
+  for (const { name, value, options } of cookieMutations.values()) {
+    response.cookies.set({ ...options, name, value });
+  }
 }
 
 type CurrentPolicyVersion = Readonly<{
@@ -351,11 +403,13 @@ async function confirmChallenge(
 }
 
 function validPasswordSignup(value: Record<string, unknown>): value is PasswordSignupRequest {
-  return hasExactKeys(value, PASSWORD_SIGNUP_KEYS)
+  return (hasExactKeys(value, PASSWORD_SIGNUP_KEYS) || hasExactKeys(value, PASSWORD_SIGNUP_LEGACY_KEYS))
     && value.action === 'password_signup'
     && typeof value.email === 'string' && value.email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email)
     && typeof value.password === 'string' && value.password.length >= 8 && value.password.length <= 72
-    && typeof value.nickname === 'string' && value.nickname.trim().length >= 2 && value.nickname.trim().length <= 20;
+    && typeof value.nickname === 'string' && value.nickname.trim().length >= 2 && value.nickname.trim().length <= 20
+    && (!Object.hasOwn(value, 'next')
+      || (typeof value.next === 'string' && value.next === getSafeAuthNextPath(value.next)));
 }
 function validExistingAccountRequest(value: Record<string, unknown>): value is ExistingAccountRequest {
   return hasExactKeys(value, EXISTING_ACCOUNT_KEYS) && value.action === 'existing_account';
@@ -664,17 +718,14 @@ async function createPasswordAccount(request: NextRequest, body: Record<string, 
     return errorResponse('ONBOARDING_ACCOUNT_CREATE_UNAVAILABLE', 503, request);
   }
 
-  const signupClient = createSupabaseJsClient<Database>(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-      persistSession: false,
-    },
-  });
+  const { client: signupClient, cookieMutations: signupCookieMutations } = createPasswordSignupClient(request);
   const { data, error } = await signupClient.auth.signUp({
     email: body.email,
     password: body.password,
-    options: { data: { nickname: body.nickname.trim() } },
+    options: {
+      data: { nickname: body.nickname.trim() },
+      emailRedirectTo: passwordSignupEmailRedirectTo(request, body.next ?? '/'),
+    },
   });
   const user = data.user;
   const userId = isRecord(user) && typeof user.id === 'string' && UUID_PATTERN.test(user.id)
@@ -764,6 +815,7 @@ async function createPasswordAccount(request: NextRequest, body: Record<string, 
     status: 'created',
     emailConfirmationRequired: !data.session,
   }, { status: 201 }));
+  if (!data.session) applyPasswordSignupCookies(response, signupCookieMutations);
   setPasswordRecovery(response, recoveryCookie);
   clearOnboardingChallenge(response);
   return response;

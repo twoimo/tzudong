@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 1,
+  "observedAtUtc": "2026-10-09T13:56:05.612082+00:00",
+  "totalRows": 1659,
+  "completedRows": 232,
+  "remainingRows": 1427,
+  "complete": false,
+  "statusCounts": {
+    "ok": 165,
+    "fix": 21,
+    "needs_source": 46
+  },
+  "issueCounts": {
+    "DUPLICATE_WITHIN_REVIEW": 1,
+    "EMPTY_REVIEW": 32,
+    "BROKEN_PROSE": 10,
+    "NEEDS_VIDEO_EVIDENCE": 15,
+    "EDITORIAL_FIRST_PERSON": 2,
+    "INTERNAL_MARKER": 4,
+    "RECORD_MISMATCH": 9,
+    "RAW_FORMATTING": 4,
+    "CONTRADICTION": 1,
+    "PROMOTIONAL_VOICE": 3
+  },
+  "completedBatches": [
+    {
+      "index": 0,
+      "rows": 8,
+      "startedAtUtc": "2026-10-09T10:08:12.294Z",
+      "endedAtUtc": "2026-10-09T10:12:15.557Z",
+      "inputSha256": "8b04406e573e89b4ebf8e45dff49bacda2155055761379aa8845665c7e442ce8"
+    },
+    {
+      "index": 1,
+      "rows": 24,
+      "startedAtUtc": "2026-10-09T10:14:40.825Z",
+      "endedAtUtc": "2026-10-09T10:18:24.915Z",
+      "inputSha256": "669b934cfe28228c09dc276ddc0a579acdd739ed83dfd935cb802707e606b93e"
+    },
+    {
+      "index": 2,
+      "rows": 24,
+      "startedAtUtc": "2026-10-09T10:18:24.916Z",
+      "endedAtUtc": "2026-10-09T10:20:36.928Z",
+      "inputSha256": "170042352415d88f2e71a2794f64ad578ff4031d120b3cd21a8d046ebc613b99"
+    },
+    {
+      "index": 3,
+      "rows": 24,
+      "startedAtUtc": "2026-10-09T10:20:36.929Z",
+      "endedAtUtc": "2026-10-09T10:24:36.105Z",
+      "inputSha256": "efc95c7d7bfcc025033ec084eb731cd83c42411247f7ebbe5fe5fa885ec53abe"
+    },
+    {
+      "index": 4,
+      "rows": 24,
+      "startedAtUtc": "2026-10-09T10:24:36.106Z",
+      "endedAtUtc": "2026-10-09T10:26:54.495Z",
+      "inputSha256": "3d30b6512df81b44dfc9eaf4bd871a6e04d9c29282b081f8b666e6b650bf6bb6"
+    },
+    {
+      "index": 5,
+      "rows": 24,
+      "startedAtUtc": "2026-10-09T10:26:54.496Z",
+      "endedAtUtc": "2026-10-09T10:30:47.240Z",
+      "inputSha256": "63010e7ed88b16de1ecaf4251c1ea080ae67afcd0d1b839ca449f15b6f10ec43"
+    },
+    {
+      "index": 6,
+      "rows": 24,
+      "startedAtUtc": "2026-10-09T10:38:38.685Z",
+      "endedAtUtc": "2026-10-09T10:43:28.138Z",
+      "inputSha256": "faef1ff348b4f7625036eedfa9683fa00968e78ec79b6c8021898d0d6b9aab22"
+    },
+    {
+      "index": 7,
+      "rows": 24,
+      "startedAtUtc": "2026-10-09T11:07:25.539Z",
+      "endedAtUtc": "2026-10-09T11:12:31.229Z",
+      "inputSha256": "d7e468128372f3f4f4816bd74b20db96cc21b5da1cc849a6fdcd003979b69435"
+    },
+    {
+      "index": 8,
+      "rows": 24,
+      "startedAtUtc": "2026-10-09T11:12:31.230Z",
+      "endedAtUtc": "2026-10-09T11:15:18.499Z",
+      "inputSha256": "6054d136809f77f941bb55b68e9d9091c4193c40f347f0bfa7505fd6087cde69"
+    },
+    {
+      "index": 9,
+      "rows": 24,
+      "startedAtUtc": "2026-10-09T11:15:18.499Z",
+      "endedAtUtc": "2026-10-09T11:19:32.835Z",
+      "inputSha256": "3f44840f4064ad7be2b8b06d700716a0a2704fbbb63597e5783b851bed377646"
+    },
+    {
+      "index": 1000,
+      "rows": 8,
+      "startedAtUtc": "2026-10-09T13:06:33.038399791Z",
+      "endedAtUtc": "2026-10-09T13:20:45.640633042Z",
+      "inputSha256": "15cef2bc99725755b7d3def73e2e8aca52d48032af825d1a0fe9f920098bb15b"
+    }
+  ],
+  "usageOfCompletedResponsesOnly": {
+    "promptTokenCount": 46321,
+    "candidatesTokenCount": 9336,
+    "thoughtsTokenCount": 362016,
+    "totalTokenCount": 417673
+  },
+  "failedAttemptsUsageUnknown": true,
+  "proposalMechanicalChecks": [
+    {
+      "key": "r0003",
+      "sourceReviewSha256": "06cbc20e88f07a2e0cd1c64d0fc533dd659d9f5182fa27b115a5c73eb3eab8b0",
+      "proposalSha256": "957fe6655acd210f994309ec3e06c2cc04e31ba25c6e32cd65cdd1d7702746a5",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": true,
+      "adminLocked": true,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0007",
+      "sourceReviewSha256": "370ee63cc38c46570b701be06308f4dab13de34d05e4a2179ecb0c242acef7cf",
+      "proposalSha256": "2496c7e0f8adc8037503b835ff069eb332a2977a9b2319e3adbbf8ecefbe4db8",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": true,
+      "adminLocked": true,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0012",
+      "sourceReviewSha256": "23c59787aebb11c837900f24237810044eba31cd8f8c0db830b5798fabed1004",
+      "proposalSha256": "ebe287926c3d39bb92be6e9a5f799ff9c99d278e70613595a828d5817de4981b",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": false,
+      "adminLocked": true,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0045",
+      "sourceReviewSha256": "3dcb382437e880c0a77aca6be5a194c97d2c34c13e8bafbf0dd37aaa2494c405",
+      "proposalSha256": "47e03d85c600af474742631e86400a8c77f919aade78799743e8e82456db666c",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": false,
+      "adminLocked": true,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0072",
+      "sourceReviewSha256": "ba7c493ed37c9348b325504083c62fe5b784773e4c2c35e5cda7b67d055dfeea",
+      "proposalSha256": "d96fd9d50d52452a0995bd669f6ec6bdcb04861134b86d8391be3c8ebbd64ccc",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": false,
+      "adminLocked": true,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0116",
+      "sourceReviewSha256": "6021e2d7afd7fdeffeb6084c352504be0e856a73d05a88052bcec2fb3d5b2c3b",
+      "proposalSha256": "00c864bbd8f3e3ed2adc7f2c8d085fa46baba96e6eede2363105d346de1c4cc2",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": false,
+      "adminLocked": true,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0127",
+      "sourceReviewSha256": "f91ab7b90a1d220b71ad36e90602950660c46122091e1d4a7ef6cde4311be294",
+      "proposalSha256": "cdaf450d82b1c4250b8effebaa2974e7bc4ad0b03d8feda3557f4fcb1ffe95d7",
+      "mechanicalFlags": [
+        "NUMERIC_PRESERVATION_REVIEW"
+      ],
+      "deletedRowPreserved": false,
+      "adminLocked": true,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0130",
+      "sourceReviewSha256": "6d36b6e319f2aea549eebc62874e6a3befab7c1df2e76f27feac365d914dec0a",
+      "proposalSha256": "672e5bcf9a7b56b59edb6b6202eb2a13bbd615cf5a0b77b21f198d5c67c3f5d5",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": false,
+      "adminLocked": true,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0131",
+      "sourceReviewSha256": "9ad6170a7887a502341696ecc287b04c029b66ba3c4348e69a44c6898911ca0c",
+      "proposalSha256": "c3ad1ca083b5402244f46840de7ed8063f76d95b54133540ad74b08962018e52",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": true,
+      "adminLocked": false,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0133",
+      "sourceReviewSha256": "068a05140a3eda951e93f34c6427802ebf2233a9fca09035e747aa990a4995b6",
+      "proposalSha256": "2fa859fc87349de01a9a8b4efb17a7ffa48c1de6620146f42ecdddacdcbbc6aa",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": true,
+      "adminLocked": false,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0136",
+      "sourceReviewSha256": "d7a7fff7a56eae5375ed4695f57f9cb43c53d9862383b7aa7e66de52b0d6e1b5",
+      "proposalSha256": "919e4a06b04928cdd6172ab4737d0405275230188bebe215dea7758377916a82",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": false,
+      "adminLocked": true,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0142",
+      "sourceReviewSha256": "84469759315e8600fd995b810e869948769dd3164e79e159906533b827e08bfd",
+      "proposalSha256": "368bb646ab21987f0de0a3677a157b41c8d965c6fa58ad73f1efad485f23fa73",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": true,
+      "adminLocked": false,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0144",
+      "sourceReviewSha256": "ccc552ac322a4639b310615ed4f11055e6b5de1a097a7875e36f9615a6fd3be7",
+      "proposalSha256": "4cd49fc288348176eabf40b3b3b7a066708c29ba1caeb347f0f7bdaaae83fb98",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": true,
+      "adminLocked": false,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0147",
+      "sourceReviewSha256": "3f71dcc86aff91476ad8c07cf69b6415cbba31678da03265284f721d61928069",
+      "proposalSha256": "aa34c2dbd8a1bc025ccfe4bcd0167b0bc67b8461c56da5e2ab41b4c2fc2a6426",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": true,
+      "adminLocked": false,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0148",
+      "sourceReviewSha256": "b65670add878640f4d2bfb62c84415eba4f4ca83630ed23142fc608886c34061",
+      "proposalSha256": "c901891c3b81c6bc70b511a89008891a0335246a8cfc14200bbbb7728a67368a",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": true,
+      "adminLocked": false,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0149",
+      "sourceReviewSha256": "78003ed0e32b710707d4331eb1f699b8165a7ea069743f680f7a5651c8d77690",
+      "proposalSha256": "4a8255d0410021fe79667851014f0d2a6ef26048c0ad154f41c7d55ed1fb89a1",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": true,
+      "adminLocked": false,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0159",
+      "sourceReviewSha256": "87de78d9bcfebf88bf3a97df6eea9b6a20d35e888afeb6a25bd0c33fe159f3f6",
+      "proposalSha256": "8783d041e5c7b10f261d1e2bf4c512926eab4c9df589d99df1261999d582dfe9",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": true,
+      "adminLocked": false,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0180",
+      "sourceReviewSha256": "68a02c15a48a7956c350f665118e50c9c154e12520ac5fbfd3233defb3e41439",
+      "proposalSha256": "8f304028e13a75084fa3b559c03b8dd9b93cdc9440324f392a97dab27d2cbdae",
+      "mechanicalFlags": [
+        "NUMERIC_PRESERVATION_REVIEW"
+      ],
+      "deletedRowPreserved": true,
+      "adminLocked": false,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0214",
+      "sourceReviewSha256": "ac2c242c8e91a4719f8baec7e68654c444d3e4ef60b6bbebc809da5268963b6b",
+      "proposalSha256": "a43368a91b96164347c558d5dfab3d9f8dafb347a3d770b937682c23d8b8f297",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": false,
+      "adminLocked": true,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0227",
+      "sourceReviewSha256": "add429027d45153f26f6b49ff1f9c9fdbb13a4595d577dc7daae9925fd9055ca",
+      "proposalSha256": "10af7499eab9b2d7624b1467a3ee0f39d62095266f32485c68a34bb662e73777",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": false,
+      "adminLocked": false,
+      "semanticApprovalNotEstablished": true
+    },
+    {
+      "key": "r0231",
+      "sourceReviewSha256": "4655abb285069c2b7296dd8294e717bde8e1d0a9f63a8b39bf81a4c09b8e1355",
+      "proposalSha256": "d9fc391fc57dfe41e3becd278ca1e2e10b83cb4e3b0fac4a2c86d84212d071f3",
+      "mechanicalFlags": [],
+      "deletedRowPreserved": true,
+      "adminLocked": false,
+      "semanticApprovalNotEstablished": true
+    }
+  ],
+  "model": "gemini-3.8-flash",
+  "thinkingLevel": "HIGH",
+  "operatingWrites": 0,
+  "rawReviewTextPersistedInPublicEvidence": false,
+  "limitations": [
+    "Metadata/title is not a full video or transcript fact check.",
+    "Mechanical flags neither certify semantic equivalence nor authorize an automatic update.",
+    "Deleted states remain deleted; empty reviews are not fabricated."
+  ]
+}

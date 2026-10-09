@@ -1,0 +1,242 @@
+{
+  "base": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "files": [
+    {
+      "path": ".github/scripts/build-nightly-local-publication.py",
+      "sha256": "080a3531bafa35ec773b20d0d174953b12c4c7c1b4c8fd82d7e8c2862a492c6e",
+      "bytes": 15253
+    },
+    {
+      "path": ".github/scripts/verify-nightly-local-publication.py",
+      "sha256": "9befe3e9c41bcd1d7ec9bf07565b7cb8daf91517f44942093a5c7f38bd44e00e",
+      "bytes": 50352
+    },
+    {
+      "path": "apps/web/app/api/admin/ocr-receipts/process/route.ts",
+      "sha256": "97e06f6547233de94102a55cb7e824b1b905e4a1469b0b33248da3a2b66956be",
+      "bytes": 28571
+    },
+    {
+      "path": "apps/web/app/api/admin/review-verification/[reviewId]/route.ts",
+      "sha256": "81d13794b922ad000da6e474aae0b3fc347f901c8fe23602c67f824bbca5d403",
+      "bytes": 1309
+    },
+    {
+      "path": "apps/web/app/mypage/reviews/page.tsx",
+      "sha256": "5f97843610fdefae875d9084add99995c84dc4e645cf737aa99d24d1860bae5c",
+      "bytes": 28318
+    },
+    {
+      "path": "apps/web/app/stamp/page.tsx",
+      "sha256": "a54fd24ab6b1276932522cbcd4ef86a248e1a6d4ed90173765b27123ee116124",
+      "bytes": 73139
+    },
+    {
+      "path": "apps/web/bun.lock",
+      "sha256": "7af0d1a11b0ef4ed35b487d5bb0ae0a596957527d397275d6511a7e8636dbd70",
+      "bytes": 226217
+    },
+    {
+      "path": "apps/web/components/auth/AuthModal.tsx",
+      "sha256": "5ce8c301327d1faa085d94e4c28c54df89c453b276e3f9c3682cee9bd40d68d7",
+      "bytes": 52180
+    },
+    {
+      "path": "apps/web/components/reviews/ReviewEditModal.tsx",
+      "sha256": "93bdfa362bb0b0d3c54cbd6aaf0b2f4cb067d5b7b77ebbc378dd7808351ffcd6",
+      "bytes": 64567
+    },
+    {
+      "path": "apps/web/components/reviews/ReviewModal.tsx",
+      "sha256": "9c77bfe7125634766f37bd4037d5e9a5611dd74074c25e5e46a1bac9a3e5b0a9",
+      "bytes": 203700
+    },
+    {
+      "path": "apps/web/components/search/RestaurantSearch.tsx",
+      "sha256": "3d3980d19fae0e91f10898faa62999ea18d432490d2669104576872265285254",
+      "bytes": 26433
+    },
+    {
+      "path": "apps/web/lib/auth/auth-redirect.ts",
+      "sha256": "ba90e87d39582ceb5e37661ed74f26b98e9818dbd470522fa289a4278d98b776",
+      "bytes": 3474
+    },
+    {
+      "path": "apps/web/lib/review-photo-url.ts",
+      "sha256": "2fc48c3aca5e9132539c38fc4a75430f4e4c1477df19044c97aadabb9d8f8028",
+      "bytes": 12473
+    },
+    {
+      "path": "apps/web/lib/reviews/private-verification-handler.ts",
+      "sha256": "109323c99d9ccb256b079f97ea5d65d658936ffdbb71427ba042f5690ef78d8e",
+      "bytes": 2037
+    },
+    {
+      "path": "apps/web/lib/reviews/private-verification.ts",
+      "sha256": "a057e01f3c171d1779b52af7c1072a39d1004bb2f18a62238a1026cbebb98b9e",
+      "bytes": 843
+    },
+    {
+      "path": "apps/web/lib/reviews/review-media-mutation.ts",
+      "sha256": "706f14f18c2bf56912ced200d41a7e19d69b19eb2452df742c67bfd95a6588a4",
+      "bytes": 14477
+    },
+    {
+      "path": "apps/web/lib/search-count.ts",
+      "sha256": "03b336dbb4ccb08521bec725b8ec7927b86817e61919c09d9d8e94f8fc5a772e",
+      "bytes": 613
+    },
+    {
+      "path": "apps/web/package-lock.json",
+      "sha256": "2dffc6e9e81714108517b44d1b0ed37c034ee619db4937af1de270d3c322254f",
+      "bytes": 459932
+    },
+    {
+      "path": "apps/web/package.json",
+      "sha256": "9d8edf9da03a6ecc3477712df7ff293bea2553332f849db329dbaaac9d0a8dad",
+      "bytes": 7448
+    },
+    {
+      "path": "apps/web/scripts/run-nightly-regression.mjs",
+      "sha256": "65ddae7de28a24b9db6236bc80a26682bf655e8d20209ebb1314fba83f486663",
+      "bytes": 75216
+    },
+    {
+      "path": "apps/web/tests-unit/auth-admin-login-redirect.test.ts",
+      "sha256": "e571652401f9f8c00b35f0cdb51b03b3720180b91bd449b37f9faa72789cb60d",
+      "bytes": 23851
+    },
+    {
+      "path": "apps/web/tests-unit/auth-user-continuation.test.ts",
+      "sha256": "b3070c2168938cdd375a68870229cd2271a333290f645c1e1b2363d1ea4dd472",
+      "bytes": 1930
+    },
+    {
+      "path": "apps/web/tests-unit/mypage-crud-contract.test.ts",
+      "sha256": "b238f95f9503fdf8a5872497a179674b1ce3f451761a6c3e3348aae0c5c2b441",
+      "bytes": 13386
+    },
+    {
+      "path": "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+      "sha256": "0381718e2ca415e6c467269a01619a01eae6c12b0a418e677ef62b771c894263",
+      "bytes": 82692
+    },
+    {
+      "path": "apps/web/tests-unit/privacy-onboarding.test.ts",
+      "sha256": "1848fafe3ea2eb0793c617b4f3d38c4c9213d495989fce68934ab70404abd951",
+      "bytes": 41805
+    },
+    {
+      "path": "apps/web/tests-unit/private-review-verification.test.ts",
+      "sha256": "0b10fed60499ba39c8782f2a123eb76633c53a08b95c003bb2c6785adbdf1c19",
+      "bytes": 4468
+    },
+    {
+      "path": "apps/web/tests-unit/review-edit-modal-photo-cleanup.test.ts",
+      "sha256": "702238a3abe8ac4f32d3a1314244703ff030e8a4b5b11f07aed25d04437334f9",
+      "bytes": 1300
+    },
+    {
+      "path": "apps/web/tests-unit/review-media-mutation.test.ts",
+      "sha256": "8ba975d1606a1000affbbb3fa333345a4a3dc2af65f2d051d873460d83608ea0",
+      "bytes": 13114
+    },
+    {
+      "path": "apps/web/tests-unit/review-photo-ownership-source.test.ts",
+      "sha256": "f30895eef651ad65d0db86225e35e50ce6c05ef7487e623eb8894c0bc9fd72fe",
+      "bytes": 3183
+    },
+    {
+      "path": "apps/web/tests-unit/review-photo-url-security.test.ts",
+      "sha256": "da0d374eb6b8762f32700ac00a5a3dc7db290b4bbd2e35870d02fd70a9b03850",
+      "bytes": 10654
+    },
+    {
+      "path": "apps/web/tests-unit/review-save-submit.test.ts",
+      "sha256": "4ec9f553762afe5406316f3287043bcdcbdecdb098ccae2d288145fab41a6831",
+      "bytes": 34382
+    },
+    {
+      "path": "apps/web/tests-unit/search-count-refresh.test.ts",
+      "sha256": "6b3b3dcc875f30200f66364342b47a3762f5460139c93df71f4f4a176ee23de6",
+      "bytes": 620
+    },
+    {
+      "path": "apps/web/tests-unit/storage-server-client.test.ts",
+      "sha256": "933123d6a563615f8d56d48196c22e024823f652c4ac1d02d600c1b08c7634e3",
+      "bytes": 4799
+    },
+    {
+      "path": "apps/web/tests-unit/web-quality-performance-source.test.ts",
+      "sha256": "4fbc2817b0c66b69a877e6c35177d644418ae3c38cc63e6f08e0921e4bbcd68d",
+      "bytes": 228109
+    },
+    {
+      "path": "apps/web/tests-unit/zz-ocr-route-contract.test.ts",
+      "sha256": "096ad42fffe9202b7c28be366ca272eb853c55690ce26c8bcbcaef8352136ca7",
+      "bytes": 34363
+    },
+    {
+      "path": "backend/supabase/migrations/20261008192455_review_media_commit_cleanup.sql",
+      "sha256": "d0ce077fc3869f89b451a84229f12ed0df3b4452ce91186eac66f50982a4accd",
+      "bytes": 16654
+    },
+    {
+      "path": "backend/supabase/migrations/20261008200719_review_verification_private.sql",
+      "sha256": "c8d34e3ec2f4d8e06e02c5cb0b4dc91b9bc16cd7aa01c4ab29907db86137440d",
+      "bytes": 3294
+    },
+    {
+      "path": "backend/supabase/migrations/20261008201635_review_media_catalog_integration.sql",
+      "sha256": "16aee71b0ce9a0e4f1daa26168c42d1a734f71963f2963966628c9581f4d76c6",
+      "bytes": 42298
+    },
+    {
+      "path": "backend/supabase/scripts/local-migrate.py",
+      "sha256": "98a5a07995b62a5de4e6834af1ca93ac67882bc1f854d90e1cad666eb749911a",
+      "bytes": 211547
+    },
+    {
+      "path": "backend/supabase/scripts/local_catalog_readback.sql",
+      "sha256": "61f0e667869193e12f9b03e00604eb667e8a34bc1cb7742eb11d7c663dfbc9d0",
+      "bytes": 104512
+    },
+    {
+      "path": "backend/supabase/tests/test_local_function_runtime_contract.py",
+      "sha256": "9e53da64440771cbc7f710de290826d6286c621f51be9973274546da9daf2a61",
+      "bytes": 24424
+    },
+    {
+      "path": "backend/supabase/tests/test_local_publication_verifier.py",
+      "sha256": "6ba4251028c4ff170be546b90987474c732a592007841ceccb1a2aeb83e7af38",
+      "bytes": 72456
+    },
+    {
+      "path": "backend/supabase/tests/test_local_replay_contract.py",
+      "sha256": "f9db93ac2dfde08f1dea89a0666909a1bfdbaad7808c0cbf8e3e5f40baae645b",
+      "bytes": 11282
+    },
+    {
+      "path": "backend/supabase/tests/test_local_seed_receipt_contract.py",
+      "sha256": "65e8382067a27f856ae7e42e6d3081d21299be62c31754377565d02b774ea16b",
+      "bytes": 47990
+    },
+    {
+      "path": "backend/supabase/tests/test_review_media_catalog_integration.py",
+      "sha256": "efe3fc6915f7174904647d5244e3c6eddd74951ab0277025eb485bf6f0350384",
+      "bytes": 11820
+    },
+    {
+      "path": "backend/supabase/tests/test_review_media_commit_cleanup.py",
+      "sha256": "c18fad5963e6638b3e3072356c757b303d0e06e61f9ed6b40c6419ce63ae6832",
+      "bytes": 26055
+    },
+    {
+      "path": "docs/operations/nightly-regression.md",
+      "sha256": "c4ec5222b29b46ffd18a9ad8d701110941e65cea056eb41870c22fa6fdde73f3",
+      "bytes": 36489
+    }
+  ],
+  "performanceCandidateIncluded": false,
+  "secretsIncluded": false
+}

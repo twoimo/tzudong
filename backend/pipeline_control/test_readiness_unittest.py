@@ -461,6 +461,36 @@ class TestExecutionTest(unittest.TestCase):
         self.assertNotIn("stdout", result)
         self.assertNotIn("stderr", result)
 
+    def test_failure_ids_exclude_raw_diagnostics_subtests_and_foreign_modules(self) -> None:
+        output = "\n".join([
+            "FAIL: test_alpha (example.tests.Case.test_alpha)",
+            "ERROR: test_beta (example.tests.Case.test_beta)",
+            "FAIL: test_alpha (example.tests.Case.test_alpha)",
+            "FAIL: test_secret (foreign.tests.Case.test_secret)",
+            "FAIL: test_alpha (example.tests.Case.test_alpha) (token='private')",
+            "provider raw Authorization: secret",
+        ])
+        completed = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr=output)
+        result = run_test_plan(Path("."), modules=("example.tests",),
+            runner=mock.Mock(return_value=completed),
+            monotonic=mock.Mock(side_effect=[0.0, 1.0]))
+        self.assertEqual(result["failedTestIds"], ["example.tests.Case.test_alpha", "example.tests.Case.test_beta"])
+        self.assertNotIn("private", json.dumps(result))
+        self.assertNotIn("Authorization", json.dumps(result))
+
+    def test_failure_id_custody_is_bounded_and_healthy_shape_is_unchanged(self) -> None:
+        output = "\n".join(f"FAIL: test_{i:03d} (example.tests.Case.test_{i:03d})" for i in range(80))
+        for code in (0, 1):
+            completed = subprocess.CompletedProcess(args=[], returncode=code, stdout="", stderr=output)
+            result = run_test_plan(Path("."), modules=("example.tests",),
+                runner=mock.Mock(return_value=completed),
+                monotonic=mock.Mock(side_effect=[0.0, 1.0]))
+            if code:
+                self.assertEqual(len(result["failedTestIds"]), 50)
+                self.assertEqual(result["status"], TEST_STATUS_FAILED)
+            else:
+                self.assertNotIn("failedTestIds", result)
+
     def test_failed_execution_uses_bounded_code(self) -> None:
         completed = subprocess.CompletedProcess(
             args=[], returncode=7, stdout="secret-shaped raw output", stderr="provider detail"

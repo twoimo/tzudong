@@ -56,10 +56,10 @@ describe("mypage CRUD QA/QC source contracts", () => {
       'const REVIEW_DELETE_CONFIRMATION = "리뷰삭제"',
     );
     expect(reviewsSource).toContain('.from("reviews")');
-    expect(reviewsSource).toContain(".delete()");
-    expect(reviewsSource).toContain('.eq("id", reviewId)');
+    expect(reviewsSource).toContain("deleteMutation.current!.run({ ownerId, reviewId, kind: 'delete' })");
+    expect(reviewsSource).not.toContain('.delete()');
     expect(reviewsSource).toContain('.eq("user_id", user.id)');
-    expect(reviewsSource).toContain('queryKey: ["user-reviews"]');
+    expect(reviewsSource).toContain("['user-reviews', 'user-stamp-reviews', 'user-stamps', 'user-stats', 'restaurant-reviews']");
     expect(reviewsSource).toContain('aria-label="리뷰 삭제 확인"');
   });
 

@@ -1,0 +1,15 @@
+{
+  "checks": 7,
+  "pass": 7,
+  "fail": 0,
+  "skip": 0,
+  "runtime": "Node24.19.0",
+  "networkRequests": 0,
+  "hostedWrites": 0,
+  "sourceSha256": {
+    "batch-state-v2.mjs": "0af0ba8a1489f07aad3fd1797cbea3226440719c24df87f6f1397f53ce4db887",
+    "batch-state-v2.test.mjs": "2a5680af554fd4fd295c5abc383efa8c94df6e8abdc3879f0c13faebf03ef211",
+    "audit-response-v2.mjs": "1a013d5a7facbb6a0edb786dee73d39371e58898874ddda92161eb8ac8b25712",
+    "audit-response-v2.test.mjs": "31a1bf7d8b2453444762290546e8a3a6ea5e0bb399916c618f579192981f7d17"
+  }
+}

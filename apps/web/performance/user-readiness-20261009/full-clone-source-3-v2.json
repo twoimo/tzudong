@@ -1,0 +1,12 @@
+{
+  "stage": "review-media-source-3",
+  "sourceSha256": "09414b000a933622c6e89c42c99e6ecbd84b68d2d8992f8fd12c31fd9621e220",
+  "exit": 3,
+  "fixedCode": "review_media_catalog_public_read_drift",
+  "SQLSourceError": "ERROR:  review_media_catalog_public_read_drift",
+  "SQLSourceLine": "",
+  "actor": "postgres",
+  "serverVersion": "17.6",
+  "operatingWrites": false,
+  "priorSyntaxFix": "parenthesized IF CASE expressions"
+}

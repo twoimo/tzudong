@@ -1,0 +1,13 @@
+.F.....
+======================================================================
+FAIL: test_dispositions_and_candidate_presence_are_current (backend.utils.tests.test_platform_modernization_reconciliation.PlatformModernizationReconciliationTests.test_dispositions_and_candidate_presence_are_current)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/utils/tests/test_platform_modernization_reconciliation.py", line 120, in test_dispositions_and_candidate_presence_are_current
+    self.assertEqual(counts["source_exact_present"], 65)
+AssertionError: 64 != 65
+
+----------------------------------------------------------------------
+Ran 7 tests in 4.558s
+
+FAILED (failures=1)

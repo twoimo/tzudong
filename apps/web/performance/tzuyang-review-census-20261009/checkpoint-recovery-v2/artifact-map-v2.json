@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "purpose": "batch result rejection and bounded High pilot recovery, not full corpus approval",
+  "performanceAdmission": 0,
+  "hostedWrites": 0,
+  "privateRawResponsesIncluded": false,
+  "artifacts": [
+    {
+      "path": "STATUS-v5.md",
+      "bytes": 3065,
+      "sha256": "37b84bb72bd5b21098b3c2a8f167ff37e4c06ae399c50d3be82fe9a8e0f5963b"
+    },
+    {
+      "path": "audit-response-v2.mjs",
+      "bytes": 843,
+      "sha256": "1a013d5a7facbb6a0edb786dee73d39371e58898874ddda92161eb8ac8b25712"
+    },
+    {
+      "path": "audit-response-v2.test.mjs",
+      "bytes": 1214,
+      "sha256": "31a1bf7d8b2453444762290546e8a3a6ea5e0bb399916c618f579192981f7d17"
+    },
+    {
+      "path": "batch-ingest-v2-status-1791550373553.json",
+      "bytes": 3740,
+      "sha256": "4ec354820b66a3acd37c510803f61c5d52957d75a88dac93ed6854eee37ca521"
+    },
+    {
+      "path": "batch-ingest-v2-status-1791550837833.json",
+      "bytes": 4436,
+      "sha256": "edaf5deeedf29c7c6984e7741e0f041e730024525dcbbfe0d4b18486f7645e9b"
+    },
+    {
+      "path": "batch-recovery-tests-v2.json",
+      "bytes": 546,
+      "sha256": "b59e7fdc67f52ade9ecfbcf284142c7100618cbd7bb06c8b97b9c9f8512b95f0"
+    },
+    {
+      "path": "batch-rejection-readback-v2.json",
+      "bytes": 24421,
+      "sha256": "d5ec144c98b13e6e9243d91510c41cdffc77a275a90d34c6da082e578cb73211"
+    },
+    {
+      "path": "batch-state-v2.mjs",
+      "bytes": 1263,
+      "sha256": "0af0ba8a1489f07aad3fd1797cbea3226440719c24df87f6f1397f53ce4db887"
+    },
+    {
+      "path": "batch-state-v2.test.mjs",
+      "bytes": 2215,
+      "sha256": "2a5680af554fd4fd295c5abc383efa8c94df6e8abdc3879f0c13faebf03ef211"
+    },
+    {
+      "path": "ingest-batch-v2.mjs",
+      "bytes": 4804,
+      "sha256": "90a2b2e8e6140e332ca58040200422c4d628fe0bf0e66c4c8b5cdb26f551e1de"
+    },
+    {
+      "path": "ingest-pilot-schema-v2.mjs",
+      "bytes": 4915,
+      "sha256": "2bab125dafabdf8bcccc4d7560875a3fa3d18e849769d56f8c5730e26714dfe1"
+    },
+    {
+      "path": "offline-wire-verification-v2.json",
+      "bytes": 311,
+      "sha256": "422e1a406464204e1c4d002744d90b01135e4b7acc8467236f55145247c005f8"
+    },
+    {
+      "path": "pilot-batch-schema-v2.mjs",
+      "bytes": 4825,
+      "sha256": "638be74411ccf9f469ec7f90389d39217ce0722a3795efaa56abec2dbfe0d403"
+    },
+    {
+      "path": "pilot-ingest-status-1791551520484.json",
+      "bytes": 213,
+      "sha256": "de7bd41be21087b1f4544e87f87166de5cb4ebfd6d86ce78fbfa6408a944570e"
+    },
+    {
+      "path": "pilot-schema-intent-v2.json",
+      "bytes": 216,
+      "sha256": "4d5d57e20ec15d57602bc2994cdbddea3e0932c67f4d16dd11bd4f3c5b148a82"
+    },
+    {
+      "path": "pilot-schema-job-v2.json",
+      "bytes": 843,
+      "sha256": "aef5f7b8636b62d1d2f515ce67dfece7cb08468d82b710565e6e21ccae2870ad"
+    },
+    {
+      "path": "pilot-schema-status-1791551199546.json",
+      "bytes": 843,
+      "sha256": "4d5789415596fa9c001b44ed10ae7aaf1f3d3eebe7fa2df86ba2f3d1e5331626"
+    }
+  ]
+}

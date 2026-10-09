@@ -1,0 +1,37 @@
+{
+  "sourceSha256": "4309c706e2e12c216b6f8cf2a719c0cd3306e1de8fd24e94b8312e54ac999cf1",
+  "context": "colima-tzudong-catalog-20261007",
+  "container": "tzudong-ranking-clone-20261008",
+  "input": {
+    "engine": "17.6",
+    "reviews": 0,
+    "manifest": 1963,
+    "profiles": 0
+  },
+  "actor": "postgres",
+  "atomicAll3": true,
+  "ownerAnonymousProbes": [
+    {
+      "ownerRPCsPassed": 6,
+      "privateSchemaDenied": true
+    },
+    {
+      "anonRPCDenied": true,
+      "privateSchemaDenied": true
+    }
+  ],
+  "rollbackExactBeforeAfterEqual": true,
+  "before": {
+    "members": "f8a54adbc187f6341ec23c8fa8f2115b",
+    "manifest": "5161af691dd836638aafa24c98af62df",
+    "functions": "7278a6619531ace995de2a482a4ffa92",
+    "mediaPresent": false
+  },
+  "after": {
+    "members": "f8a54adbc187f6341ec23c8fa8f2115b",
+    "manifest": "5161af691dd836638aafa24c98af62df",
+    "functions": "7278a6619531ace995de2a482a4ffa92",
+    "mediaPresent": false
+  },
+  "operatingWrites": false
+}

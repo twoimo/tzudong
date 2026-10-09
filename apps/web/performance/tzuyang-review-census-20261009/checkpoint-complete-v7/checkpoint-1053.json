@@ -1,0 +1,129 @@
+{
+  "actualModelVersion": "gemini-3.8-flash",
+  "index": 1053,
+  "inputSha256": "6991547bb8350f4c5e738817b56755edafecc3c080fac7f6b4f249724430d701",
+  "model": "gemini-3.8-flash",
+  "promptSha256": "7a279af1b9586e9b2f482f1e2b23cdb93bcc013d0daf2e4dbc9277c64a277ae7",
+  "rawPrivateCheckpointSha256": "6d6780b52a27882b6983967e1449db3e8329001487dfae7fe4a3c3e6c6b1939c",
+  "rows": [
+    {
+      "adminLocked": false,
+      "channelVerified": true,
+      "issues": [
+        "RECORD_MISMATCH"
+      ],
+      "key": "r0648",
+      "nonempty": true,
+      "recordStatus": "approved",
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceRecordSha256": "e3eb63e2bde1d3fc95e9bc766c9bdccff930f3f027d83c06c7cf2882ea1f2339",
+      "sourceReviewSha256": "8b3318d2cb49508f2e6618937208eca72183b0ac3ee876f7f63ea6f19264d430",
+      "status": "needs_source"
+    },
+    {
+      "adminLocked": true,
+      "channelVerified": true,
+      "issues": [],
+      "key": "r0649",
+      "nonempty": true,
+      "recordStatus": "approved",
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceRecordSha256": "d210a9241b68020095c24a119ce19d22c9b6cad7ff09c95d802fa678812d63f9",
+      "sourceReviewSha256": "b657f8137b8beb1e464c876debfe5210a85345c0988e4bf2c9b210e9d8c53b0a",
+      "status": "ok"
+    },
+    {
+      "adminLocked": false,
+      "channelVerified": true,
+      "issues": [
+        "EMPTY_REVIEW"
+      ],
+      "key": "r0650",
+      "nonempty": false,
+      "recordStatus": "deleted",
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceRecordSha256": "a34ba322c6768d46c47895939e675623864fa6b279dfd2cb00b3d8ed576f5808",
+      "sourceReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status": "needs_source"
+    },
+    {
+      "adminLocked": false,
+      "channelVerified": true,
+      "issues": [
+        "EMPTY_REVIEW"
+      ],
+      "key": "r0651",
+      "nonempty": false,
+      "recordStatus": "approved",
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceRecordSha256": "4a5f3128ad6974e17a70f247a5bc676a128cf73d56b195fcabb543a4c1913101",
+      "sourceReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status": "needs_source"
+    },
+    {
+      "adminLocked": false,
+      "channelVerified": true,
+      "issues": [],
+      "key": "r0652",
+      "nonempty": true,
+      "recordStatus": "approved",
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceRecordSha256": "652386ed9676001609fa44d61fd8635c1d5548c9dfccccdc6d91d649dcf5d7de",
+      "sourceReviewSha256": "e1a9006968759ebf8371ba89a9b5fcb71e75981d8629f3d3de987a82759396a6",
+      "status": "ok"
+    },
+    {
+      "adminLocked": true,
+      "channelVerified": true,
+      "issues": [],
+      "key": "r0653",
+      "nonempty": true,
+      "recordStatus": "approved",
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceRecordSha256": "0b7a4486bab0b796658993e07756ac0597ce445e9f27e1a601c3cc91ae335eca",
+      "sourceReviewSha256": "eb02817a27aab9a4eaac4175c6d62126b75dc621da9770df1939a44877c7cf4c",
+      "status": "ok"
+    },
+    {
+      "adminLocked": false,
+      "channelVerified": true,
+      "issues": [],
+      "key": "r0654",
+      "nonempty": true,
+      "recordStatus": "approved",
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceRecordSha256": "88341b902548493a489f2a3ef525cab556d74dd088745f2a518f4987ebf49309",
+      "sourceReviewSha256": "6656659837284d787cb2ce58ad99641f8ca2ca17731810567136fdbdafd8e292",
+      "status": "ok"
+    },
+    {
+      "adminLocked": false,
+      "channelVerified": true,
+      "issues": [
+        "NEEDS_VIDEO_EVIDENCE"
+      ],
+      "key": "r0655",
+      "nonempty": true,
+      "recordStatus": "deleted",
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceRecordSha256": "5331507c8bbe7bfc1398f1813f403d7d8349382f215ab17e25222a566dfc46c0",
+      "sourceReviewSha256": "b99874cfbbba05ae3eb5b027f4dd86c3a78112fb0b06c2d3d25f2f409444fead",
+      "status": "needs_source"
+    }
+  ],
+  "sourceSnapshotSha256": "b8f06e7c5867b5ac2d8dfe5283e1ffdcf2a103a34f2e1d29333169fe4c5d38d8",
+  "thinkingLevel": "HIGH",
+  "usage": {
+    "candidatesTokenCount": 196,
+    "promptTokenCount": 2621,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 2621
+      }
+    ],
+    "serviceTier": "standard",
+    "thoughtsTokenCount": 29222,
+    "totalTokenCount": 32039
+  }
+}

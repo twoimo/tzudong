@@ -94,8 +94,8 @@ const LOOPBACK_PORTS = isLocalNightlyMode
     ]);
 const NAVER_SDK_HOST = 'oapi.map.naver.com';
 const SUPABASE_PATH = /\/(?:rest|auth|storage|realtime|functions)\/v1(?:\/|$)/;
-const LOCAL_NIGHTLY_STORAGE_OBJECT_PREFIX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/nightly-browser-cors\/review\.webp$/;
-const LOCAL_NIGHTLY_STORAGE_UPLOAD_PATH = /^\/storage\/v1\/object\/review-photos\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/nightly-browser-cors\/review\.webp$/;
+const LOCAL_NIGHTLY_STORAGE_OBJECT_PREFIX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/reviews\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/food\/nightly-browser-cors\.webp$/;
+const LOCAL_NIGHTLY_STORAGE_UPLOAD_PATH = /^\/storage\/v1\/object\/review-photos\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/reviews\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/food\/nightly-browser-cors\.webp$/;
 const LOCAL_NIGHTLY_PROFILE_AVATAR_OPERATION_ID = '00000000-0000-4000-8000-000000000905';
 const LOCAL_NIGHTLY_PROFILE_AVATAR_OBJECT_PREFIX = new RegExp(
     `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/avatar-${LOCAL_NIGHTLY_PROFILE_AVATAR_OPERATION_ID}\\.jpg$`,

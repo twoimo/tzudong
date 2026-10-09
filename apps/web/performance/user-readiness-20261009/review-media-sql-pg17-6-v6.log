@@ -1,0 +1,11 @@
+test_authoritative_legacy_edit_and_cleanup (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_authoritative_legacy_edit_and_cleanup) ... ok
+test_commit_cleanup_and_permissions (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_commit_cleanup_and_permissions) ... ok
+test_concurrent_reattach_waits_for_retirement (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_concurrent_reattach_waits_for_retirement) ... ok
+test_existing_composer_compensation_retires_only_canonical_orphans (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_existing_composer_compensation_retires_only_canonical_orphans) ... ok
+test_global_legacy_reference_protection (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_global_legacy_reference_protection) ... ok
+test_private_verification_access_and_cleanup (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_private_verification_access_and_cleanup) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 3.373s
+
+OK

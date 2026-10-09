@@ -1,0 +1,12 @@
+{
+  "failedIndex": 7,
+  "failure": "terminal local streaming failure; HTTP status not returned",
+  "previousInferenceBillingUnknown": true,
+  "databaseOrApplicationWrite": false,
+  "explicitRetryLimit": 1,
+  "automaticRetries": 1,
+  "sourceModelPromptHighUnchanged": true,
+  "newTransportCheckpointContainsMetadataOnly": true,
+  "completeAcceptanceUnchanged": "STOP and all original keys; partial rows never admitted",
+  "completed152Reused": true
+}

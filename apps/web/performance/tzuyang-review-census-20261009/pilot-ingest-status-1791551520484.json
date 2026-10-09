@@ -1,0 +1,8 @@
+{
+  "observedAtUtc": "2026-10-09T13:11:59.850Z",
+  "name": "batches/ou10609mribyd7b806gebolzxtvkjmcjngzv",
+  "status": "pending",
+  "addedAdmittedRows": 0,
+  "operatingWrites": 0,
+  "state": "JOB_STATE_RUNNING"
+}

@@ -1,0 +1,9 @@
+file:///Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/performance/tzuyang-review-census-20261009/audit-gemini-v2.mjs:33
+ catch(error){writeFileSync(new URL('./model-failed-v2-'+label+'-v1.json',import.meta.url),JSON.stringify({index,inputSha256,promptSha256:hash(prompt),model:'gemini-3.8-flash',thinkingLevel:'HIGH',httpStatus:typeof error?.status==='number'?error.status:null,providerMessagePersisted:false})+'\n',{flag:'wx'});throw Error('GEMINI_BATCH_UNCONFIRMED');}
+                                                                                                                                                                                                                                                                                                                           ^
+
+Error: GEMINI_BATCH_UNCONFIRMED
+    at file:///Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/performance/tzuyang-review-census-20261009/audit-gemini-v2.mjs:33:316
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+Node.js v24.21.0

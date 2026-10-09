@@ -458,7 +458,7 @@ describe('OCR extract route privacy and normalization contract', () => {
     expect(processRouteSource).toContain(".select('id, receipt_hash, receipt_data, is_duplicate, ocr_processed_at')");
     expect(processRouteSource).not.toContain('uploadToStorage');
     expect(processRouteSource).not.toContain('ocr-debug/');
-    expect(processRouteSource).toContain("const storage = storageAdmin.from('review-photos')");
+    expect(processRouteSource).toContain('const storage = storageAdmin.from(REVIEW_VERIFICATION_BUCKET)');
     expect(processRouteSource).not.toContain("supabase.storage.from('review-photos')");
     expect(processRouteSource).toContain('storage.upload(newObjectPath, canonicalImage');
     expect(processRouteSource).not.toContain('raw: ocrData');
@@ -584,7 +584,10 @@ describe('OCR extract route privacy and normalization contract', () => {
     expect(processRouteSource).toContain('PHONE_LIKE_PATTERN');
     expect(processRouteSource).toContain('SAFE_OCR_FAILURE_CODES');
     expect(processRouteSource).toContain("return errorResponse(PRIVACY_UNSAFE_VALUE_REASON, 422);");
-    expect(processRouteSource).toContain("storage.download(review.verification_photo)");
+    expect(processRouteSource).toContain('downloadReviewVerification(storageAdmin, receiptObjectPath)');
+    expect(processRouteSource).toContain(".eq('verification_photo', oldStoredValue)");
+    expect(processRouteSource).toContain('the authoritative review-media UPDATE');
+    expect(processRouteSource).not.toContain('removeOriginalReceiptObject');
     expect(processRouteSource).not.toContain('getPublicUrl');
     expect(processRouteSource).not.toContain('publicUrl');
     expect(processRouteSource).not.toContain('fetch(');
@@ -659,17 +662,17 @@ describe('OCR extract route privacy and normalization contract', () => {
     const verifyIndex = replacementSource.indexOf(
       'const uploadedImage = await downloadPrivateReceiptObject',
     );
-    const conditionalUpdateIndex = replacementSource.indexOf(".eq('verification_photo', oldObjectPath)");
-    const oldDeleteIndex = replacementSource.indexOf('storage.remove([oldObjectPath])');
+    const conditionalUpdateIndex = replacementSource.indexOf(".eq('verification_photo', oldStoredValue)");
 
     expect(processRouteSource).toContain('canonicalStorageImage.bytes.byteLength < downloadedImage.bytes.byteLength');
-    expect(processRouteSource).toContain('assertSafeReceiptObjectPath(review.verification_photo)');
+    expect(processRouteSource).toContain('assertSafeReceiptObjectPath(receiptObjectPath)');
     expect(processRouteSource).not.toContain('getPublicUrl');
     expect(processRouteSource).not.toContain('publicUrl');
     expect(uploadIndex).toBeGreaterThanOrEqual(0);
     expect(verifyIndex).toBeGreaterThan(uploadIndex);
     expect(conditionalUpdateIndex).toBeGreaterThan(verifyIndex);
-    expect(oldDeleteIndex).toBeGreaterThan(conditionalUpdateIndex);
+    expect(replacementSource).not.toContain('removeOriginalReceiptObject');
+    expect(replacementSource).toContain('durable retirement fence');
     for (const failureBoundary of [
       'uploadError',
       'uploadedImage.bytes.equals(canonicalImage)',
@@ -677,7 +680,7 @@ describe('OCR extract route privacy and normalization contract', () => {
       'currentReadbackError',
       'removeReplacementObject(storageAdmin, newObjectPath)',
       'replacementStateIndeterminate',
-      'removeOldObjectError',
+      'canDiscardReceiptReplacement(',
     ]) {
       expect(replacementSource).toContain(failureBoundary);
     }

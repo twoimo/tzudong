@@ -1,0 +1,67 @@
+{
+  "observedAtUtc": "2026-10-09T12:26:00.719723+00:00",
+  "parallelStart": true,
+  "primaryTaskCount": 2,
+  "sqlRetryCount": 1,
+  "memoryRetryCount": 1,
+  "globalSettingsChanged": false,
+  "fallbackUsed": false,
+  "capacityPurchase": false,
+  "phoneUse": false,
+  "tasks": [
+    {
+      "task": "sql-review",
+      "requestedModel": "chatgpt-web/gpt-6-sol",
+      "effort": "max",
+      "provider": "local-router",
+      "routedAliasFromCurrentPolicy": "chatgpt-web/gpt-6-pro",
+      "threadIds": [
+        "01a12092-760c-7911-9c65-bd7a22b83e39"
+      ],
+      "turnCompleted": false,
+      "reviewCompleted": false,
+      "terminalFailureClass": "stream",
+      "blockedLocalSourceRead": false,
+      "finalBytes": 0,
+      "finalSha256": null
+    },
+    {
+      "task": "memory-review",
+      "requestedModel": "chatgpt-web/gpt-6-sol",
+      "effort": "max",
+      "provider": "local-router",
+      "routedAliasFromCurrentPolicy": "chatgpt-web/gpt-6-pro",
+      "threadIds": [
+        "01a12092-760d-7a40-916c-ad8f9cc73560"
+      ],
+      "turnCompleted": false,
+      "reviewCompleted": false,
+      "terminalFailureClass": "stream",
+      "blockedLocalSourceRead": false,
+      "finalBytes": 0,
+      "finalSha256": null
+    },
+    {
+      "task": "sql-review-attempt2",
+      "requestedModel": "chatgpt-web/gpt-6-sol",
+      "effort": "max",
+      "provider": "local-router",
+      "routedAliasFromCurrentPolicy": "chatgpt-web/gpt-6-pro",
+      "threadIds": [
+        "01a12097-ce5a-74d0-895a-ab647a835ec6"
+      ],
+      "turnCompleted": true,
+      "reviewCompleted": false,
+      "terminalFailureClass": null,
+      "blockedLocalSourceRead": true,
+      "finalBytes": 1222,
+      "finalSha256": "1c3be9d49b8e7abebb1c059c0f80814a912a7c087d064f176560b22f6cefa9d5"
+    }
+  ],
+  "pendingTask": "memory-review-attempt2",
+  "automaticApprovalRejection": {
+    "action": "read SQL and media source locally",
+    "reason": "security status could not be determined",
+    "didNotBypass": true
+  }
+}

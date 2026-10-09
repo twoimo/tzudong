@@ -1,0 +1,96 @@
+FFFFF
+======================================================================
+FAIL: test_direct_delete_queues_authoritative_media_and_rolls_back (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_direct_delete_queues_authoritative_media_and_rolls_back)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_commit_cleanup.py", line 344, in test_direct_delete_queues_authoritative_media_and_rolls_back
+            self.sql(f"""
+            ~~~~~~~~^^^^^
+    UPDATE storage.objects SET bucket_id = 'review-verifications' WHERE name = '{VERIFY}';
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<14 lines>...
+    SELECT public.check_test(public.finish_review_media_cleanup() = 0,'REVIEW_TEST_DIRECT_DRAIN');
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """)
+    ^^^^
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_commit_cleanup.py", line 172, in sql
+    raise AssertionError(code.group(1) if code else 'REVIEW_TEST_SQL_FAILED')
+AssertionError: REVIEW_TEST_DIRECT_QUEUE
+
+======================================================================
+FAIL: test_private_shadow_upload_rejected (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_private_shadow_upload_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_commit_cleanup.py", line 365, in test_private_shadow_upload_rejected
+            self.sql(f"""
+            ~~~~~~~~^^^^^
+    SET ROLE authenticated; SET request.jwt.claim.sub = '{OWNER}';
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    SELECT public.check_test((SELECT is_verified FROM public.reviews WHERE id='{REVIEW}'),'REVIEW_TEST_MODERATION_PRESERVED');
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """)
+    ^^^^
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_commit_cleanup.py", line 172, in sql
+    raise AssertionError(code.group(1) if code else 'REVIEW_TEST_SQL_FAILED')
+AssertionError: REVIEW_TEST_PRIVATE_SHADOW
+
+======================================================================
+FAIL: test_retired_uploads_rejected_after_cleanup (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_retired_uploads_rejected_after_cleanup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_commit_cleanup.py", line 378, in test_retired_uploads_rejected_after_cleanup
+            self.sql(f"""
+            ~~~~~~~~^^^^^
+    SET ROLE authenticated; SET request.jwt.claim.sub = '{OWNER}';
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+    END $$;
+    ^^^^^^^
+    """)
+    ^^^^
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_commit_cleanup.py", line 172, in sql
+    raise AssertionError(code.group(1) if code else 'REVIEW_TEST_SQL_FAILED')
+AssertionError: REVIEW_TEST_RETIRED_FOOD_UPLOAD
+
+======================================================================
+FAIL: test_historical_url_edit_removes_only_authoritative_values (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_historical_url_edit_removes_only_authoritative_values)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_commit_cleanup.py", line 396, in test_historical_url_edit_removes_only_authoritative_values
+            self.sql(f"""
+            ~~~~~~~~^^^^^
+    SET ROLE authenticated; SET request.jwt.claim.sub = '{OWNER}';
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<8 lines>...
+    SELECT public.check_test(EXISTS(SELECT 1 FROM storage.objects WHERE name='{BASE}/food/history-1.webp'),'REVIEW_TEST_RETAINED_HISTORY_PROTECTED');
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """)
+    ^^^^
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_commit_cleanup.py", line 172, in sql
+    raise AssertionError(code.group(1) if code else 'REVIEW_TEST_SQL_FAILED')
+AssertionError: REVIEW_TEST_HISTORICAL_EDIT
+
+======================================================================
+FAIL: test_historical_url_delete_normalizes_owned_paths (backend.supabase.tests.test_review_media_commit_cleanup.ReviewMediaSQL.test_historical_url_delete_normalizes_owned_paths)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_commit_cleanup.py", line 410, in test_historical_url_delete_normalizes_owned_paths
+            self.sql(f"""
+            ~~~~~~~~^^^^^
+    DELETE FROM public.reviews WHERE id='{REVIEW}';
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    SELECT public.check_test((SELECT count(*) FROM review_media_private.cleanup)=11,'REVIEW_TEST_HISTORICAL_DELETE_QUEUE');
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    SELECT public.check_test(NOT EXISTS(SELECT 1 FROM review_media_private.cleanup WHERE path LIKE 'https:%'),'REVIEW_TEST_HISTORY_NO_URL_QUEUE');
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """)
+    ^^^^
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/supabase/tests/test_review_media_commit_cleanup.py", line 172, in sql
+    raise AssertionError(code.group(1) if code else 'REVIEW_TEST_SQL_FAILED')
+AssertionError: REVIEW_TEST_HISTORICAL_DELETE_QUEUE
+
+----------------------------------------------------------------------
+Ran 5 tests in 2.624s
+
+FAILED (failures=5)

@@ -1,0 +1,81 @@
+{
+  "index": 1029,
+  "actualModelVersion": "gemini-3.8-flash",
+  "requestedThinkingLevel": "HIGH",
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokenCount": 2987,
+    "candidatesTokenCount": 631,
+    "totalTokenCount": 42269,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 2987
+      }
+    ],
+    "thoughtsTokenCount": 38651,
+    "serviceTier": "standard"
+  },
+  "inputSha256": "c4a413b9022210069dfc4d34c132a90864c9a6fa594ad19c74015ec87b1adc27",
+  "promptSha256": "7a279af1b9586e9b2f482f1e2b23cdb93bcc013d0daf2e4dbc9277c64a277ae7",
+  "jobName": "batches/6bfttrdehg67rw0qp7mf95l6dsvy2d38285d",
+  "thoughtsPersisted": false,
+  "rows": [
+    {
+      "key": "r0456",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0457",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0458",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0459",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0460",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r0461",
+      "status": "fix",
+      "issues": [
+        "INTERNAL_MARKER"
+      ],
+      "revisedReviewSha256": "4c2e0da4fab6585042fbbad35076ba09877088cc9b993dd01e4a1274f5989c32"
+    },
+    {
+      "key": "r0462",
+      "status": "fix",
+      "issues": [
+        "BROKEN_PROSE"
+      ],
+      "revisedReviewSha256": "c0080accc1b24ec4a201d3aacd96a538cbed0ec9b883b62ae482f3da8079bde6"
+    },
+    {
+      "key": "r0463",
+      "status": "needs_source",
+      "issues": [
+        "EDITORIAL_FIRST_PERSON",
+        "RECORD_MISMATCH",
+        "NEEDS_VIDEO_EVIDENCE"
+      ],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

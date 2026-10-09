@@ -412,7 +412,7 @@ describe('independent late Storage upload uncertainty (offline)', () => {
         });
     }
 
-    test('ordinary insert rejection without unanswered upload remains safely retryable on identical paths', async () => {
+    test('ordinary insert rejection with complete compensation retries on fresh paths', async () => {
         const f = fixture();
         const insert = f.deps.insert;
         f.deps.insert = async () => ({ error: { code: '42501' } });
@@ -420,9 +420,14 @@ describe('independent late Storage upload uncertainty (offline)', () => {
         expect(f.objects.size).toBe(0);
         f.deps.insert = insert;
         expect(await f.operation.submit(f.draft)).toBe('saved');
-        expect(f.ids).toHaveLength(1);
-        expect(f.preparations).toHaveLength(1);
-        expectSamePreparedUploads(f);
+        expect(f.ids).toHaveLength(2);
+        expect(f.preparations).toHaveLength(2);
+        expect(f.ids[1]).not.toBe(f.ids[0]);
+        const retired = new Set(f.preparations[0].map(item => item.path));
+        expect(f.preparations[1].every(item => !retired.has(item.path))).toBe(true);
+        expect([...retired].every(path => !f.objects.has(path))).toBe(true);
+        expect(f.insertions[0].id).toBe(f.ids[1]);
+        expect(f.insertions[0].allAvailable).toBe(true);
         expect(f.uploads).toHaveLength(6);
         expect(f.orphanPaths()).toEqual([]);
     });

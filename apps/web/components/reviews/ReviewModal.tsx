@@ -36,6 +36,14 @@ const FOOD_PHOTO_OPTIONS = {
     fileType: "image/webp" as const,
     useWebWorker: true,
 };
+const SUPPORTED_RECEIPT_MIME_TYPES = new Set([
+    "image/avif",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+]);
+const RECEIPT_IMAGE_ACCEPT = "image/avif,image/jpeg,image/png,image/webp";
+const isSupportedReceiptImage = (file: File): boolean => SUPPORTED_RECEIPT_MIME_TYPES.has(file.type);
 
 // 안전한 랜덤 파일명 생성 유틸리티 (한글 파일명 문제 해결)
 const generateSafeFilename = (extension: string = ".webp"): string => {
@@ -47,6 +55,7 @@ const generateSafeFilename = (extension: string = ".webp"): string => {
 // 영수증 이미지 준비 (OCR 정확도 유지, 너무 큰 파일만 리사이즈)
 // OCR 후 서버에서 WebP로 압축됨
 const prepareReceiptImage = async (file: File): Promise<File> => {
+    if (!isSupportedReceiptImage(file)) throw new Error('REVIEW_VERIFICATION_FORMAT_UNSUPPORTED');
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
     const safeFileName = generateSafeFilename(`.${ext}`);
 
@@ -115,11 +124,11 @@ function createReviewSaveOperation(
             });
             return uploads;
         },
-        upload: ({ path, file }) => supabase.storage.from('review-photos').upload(path, file, {
+        upload: ({ path, file, purpose }) => supabase.storage.from(purpose === 'verification' ? 'review-verifications' : 'review-photos').upload(path, file, {
             cacheControl: '3600', upsert: false,
         }),
-        verifyUpload: async ({ path, file }) => {
-            const { data, error } = await supabase.storage.from('review-photos').info(path);
+        verifyUpload: async ({ path, file, purpose }) => {
+            const { data, error } = await supabase.storage.from(purpose === 'verification' ? 'review-verifications' : 'review-photos').info(path);
             return !error && data !== null && data.size === file.size
                 && (!file.type || data.contentType === file.type);
         },
@@ -143,7 +152,7 @@ function createReviewSaveOperation(
                 cleanupCanonicalReviewPhotoObjects(
                     uploads.filter(upload => upload.purpose === purpose).map(upload => upload.path),
                     { ownerId, reviewId, purpose },
-                    supabase.storage.from('review-photos'),
+                    supabase.storage.from(purpose === 'verification' ? 'review-verifications' : 'review-photos'),
                 )
             )));
             return results.every(result => result.success);
@@ -779,6 +788,14 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
 
     // 메모이제이션된 이벤트 핸들러들
     const handleVerificationPhotoSelected = (file: File) => {
+        if (!isSupportedReceiptImage(file)) {
+            toast({
+                title: "지원하지 않는 영수증 형식",
+                description: "JPG, PNG, WebP 또는 AVIF 이미지를 선택해 주세요.",
+                variant: "destructive",
+            });
+            return;
+        }
         replaceVerificationPhoto(file);
         verificationFileInputRef.current?.blur();
         if (verificationInputMode === "ai") {
@@ -839,7 +856,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         setIsVerificationDragging(false);
 
         const files = Array.from(e.dataTransfer.files);
-        const imageFiles = files.filter(file => file.type.startsWith('image/'));
+        const imageFiles = files.filter(isSupportedReceiptImage);
 
         if (imageFiles.length > 0) {
             handleVerificationPhotoSelected(imageFiles[0]);
@@ -2107,7 +2124,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                         </div>
                                     )}
                                 </div>
-                                <input ref={verificationFileInputRef} type="file" accept="image/*" onChange={handleVerificationPhotoChange} className="hidden" />
+                                <input ref={verificationFileInputRef} type="file" accept={RECEIPT_IMAGE_ACCEPT} onChange={handleVerificationPhotoChange} className="hidden" />
 
                                 {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
                                 {isAnalyzing && (
@@ -2619,7 +2636,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                 </div>
                                             )}
                                         </div>
-                                        <input ref={verificationFileInputRef} type="file" accept="image/*" onChange={handleVerificationPhotoChange} className="hidden" />
+                                        <input ref={verificationFileInputRef} type="file" accept={RECEIPT_IMAGE_ACCEPT} onChange={handleVerificationPhotoChange} className="hidden" />
 
                                         {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
                                         {isAnalyzing && (
@@ -3212,7 +3229,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                 </div>
                                             )}
                                         </div>
-                                        <input ref={verificationFileInputRef} type="file" accept="image/*" onChange={handleVerificationPhotoChange} className="hidden" />
+                                        <input ref={verificationFileInputRef} type="file" accept={RECEIPT_IMAGE_ACCEPT} onChange={handleVerificationPhotoChange} className="hidden" />
 
                                         {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
                                         {isAnalyzing && (

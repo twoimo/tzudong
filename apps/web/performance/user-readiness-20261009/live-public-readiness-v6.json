@@ -1,0 +1,341 @@
+{
+  "sourceHarnessSha": "21655753d25f233e815da3900765f21d82dd34d2",
+  "startedAtUtc": "2026-10-09T11:04:02.018Z",
+  "environment": "live www anonymous desktop Chrome; viewport mobile/tablet emulation",
+  "physicalDevice": false,
+  "fieldAdmission": 0,
+  "serviceMutationAllowed": false,
+  "cases": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/leaderboard",
+      "expectedTitle": "랭킹",
+      "titleVisible": true,
+      "rankingErrorObserved": false,
+      "headerPixelsCaptured": true,
+      "finalRoute": "/leaderboard",
+      "headerVariant": "page"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/feed",
+      "expectedTitle": "리뷰",
+      "titleVisible": true,
+      "rankingErrorObserved": false,
+      "headerPixelsCaptured": true,
+      "finalRoute": "/feed",
+      "headerVariant": "page"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/stamp",
+      "expectedTitle": "도장",
+      "titleVisible": true,
+      "rankingErrorObserved": false,
+      "headerPixelsCaptured": true,
+      "finalRoute": "/stamp",
+      "headerVariant": "page"
+    },
+    {
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "path": "/leaderboard",
+      "expectedTitle": "랭킹",
+      "titleVisible": true,
+      "rankingErrorObserved": false,
+      "headerPixelsCaptured": true,
+      "finalRoute": "/leaderboard",
+      "headerVariant": "page"
+    },
+    {
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "path": "/feed",
+      "expectedTitle": "리뷰",
+      "titleVisible": true,
+      "rankingErrorObserved": false,
+      "headerPixelsCaptured": true,
+      "finalRoute": "/feed",
+      "headerVariant": "page"
+    },
+    {
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "path": "/stamp",
+      "expectedTitle": "도장",
+      "titleVisible": true,
+      "rankingErrorObserved": false,
+      "headerPixelsCaptured": true,
+      "finalRoute": "/stamp",
+      "headerVariant": "page"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/leaderboard",
+      "expectedTitle": "랭킹",
+      "titleVisible": true,
+      "rankingErrorObserved": false,
+      "headerPixelsCaptured": true,
+      "finalRoute": "/",
+      "headerVariant": "panel"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/feed",
+      "expectedTitle": "리뷰",
+      "titleVisible": true,
+      "rankingErrorObserved": false,
+      "headerPixelsCaptured": true,
+      "finalRoute": "/",
+      "headerVariant": "panel"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/stamp",
+      "expectedTitle": "도장",
+      "titleVisible": true,
+      "rankingErrorObserved": false,
+      "headerPixelsCaptured": true,
+      "finalRoute": "/",
+      "headerVariant": "panel"
+    }
+  ],
+  "responses": [
+    {
+      "path": "/rest/v1/rpc/read_public_profile_leaderboard_page",
+      "status": 200,
+      "viewportWidth": 390
+    },
+    {
+      "path": "/rest/v1/reviews",
+      "status": 200,
+      "viewportWidth": 390
+    },
+    {
+      "path": "/rest/v1/rpc/read_public_profile_summaries",
+      "status": 200,
+      "viewportWidth": 390
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 390
+    },
+    {
+      "path": "/rest/v1/rpc/read_public_profile_leaderboard_page",
+      "status": 200,
+      "viewportWidth": 820
+    },
+    {
+      "path": "/rest/v1/reviews",
+      "status": 200,
+      "viewportWidth": 820
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 820
+    },
+    {
+      "path": "/rest/v1/rpc/read_public_profile_summaries",
+      "status": 200,
+      "viewportWidth": 820
+    },
+    {
+      "path": "/rest/v1/rpc/read_public_profile_leaderboard_page",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/rpc/read_public_profile_leaderboard_page",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/announcements",
+      "status": 401,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/reviews",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurant_popular_rank_snapshots",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/reviews",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/rpc/read_public_profile_summaries",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/reviews",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/announcements",
+      "status": 401,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurant_popular_rank_snapshots",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/announcements",
+      "status": 401,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/reviews",
+      "status": 200,
+      "viewportWidth": 1440
+    },
+    {
+      "path": "/rest/v1/restaurants",
+      "status": 200,
+      "viewportWidth": 1440
+    }
+  ],
+  "blockedMutations": 24,
+  "pageErrors": 0,
+  "consoleErrors": 30,
+  "passed": true,
+  "browserVersion": "154.0.8037.98",
+  "activeCase": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "path": "/stamp",
+    "phase": "header-pixels",
+    "finalRoute": "/",
+    "headerVariant": "panel",
+    "headingBox": {
+      "x": 12,
+      "y": 81,
+      "width": 64.640625,
+      "height": 20
+    }
+  },
+  "endedAtUtc": "2026-10-09T11:04:20.031Z"
+}

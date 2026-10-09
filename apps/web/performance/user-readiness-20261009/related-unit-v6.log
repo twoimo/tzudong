@@ -1,0 +1,723 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/review-photo-ownership-source.test.ts:
+(pass) review photo ownership source contracts > ReviewCard resolves only owner- and review-bound public URLs [0.40ms]
+(pass) review photo ownership source contracts > ReviewEditModal validates ownership before rendering, persisting, or deleting object keys [0.81ms]
+(pass) review photo ownership source contracts > local File previews are restricted and revoked [0.18ms]
+(pass) review photo ownership source contracts > the review composer uploads and persists one canonical review id [0.60ms]
+
+tests-unit/auth-existing-account-recovery.test.ts:
+(pass) existing account privacy recovery > issues a newer token greater than the previous token [0.92ms]
+(pass) existing account privacy recovery > end clears only the matching recovery token [0.51ms]
+(pass) existing account privacy recovery > normalizes email casing and surrounding whitespace [0.28ms]
+(pass) existing account privacy recovery > treats null, undefined, and empty user email as inactive [0.28ms]
+(pass) existing account privacy recovery > is active before the 30 second deadline and inactive at expiration [0.38ms]
+(pass) existing account privacy recovery > expiration check clears the stored recovery state [0.44ms]
+(pass) existing account privacy recovery > repeated begin keeps only the latest recovery active [0.28ms]
+
+tests-unit/review-edit-modal-photo-cleanup.test.ts:
+(pass) shared review mutation UI boundary > both UIs use commit-aware mutations and cannot directly remove photos or rows [0.41ms]
+(pass) shared review mutation UI boundary > uncertain requests keep their retry action and cleanup can resume without a review card [0.10ms]
+
+tests-unit/auth-ui-events.test.ts:
+(pass) auth ui request events > uses a stable global event name for login prompts [0.01ms]
+(pass) auth ui request events > preserves caller metadata and fills a timestamp [0.06ms]
+(pass) auth ui request events > dispatches explicit home auth session state for lazy home providers [0.14ms]
+(pass) auth ui request events > defers login prompts briefly when a Supabase session hint exists [0.36ms]
+(pass) auth ui request events > opens the login prompt after the grace period when a session hint is stale [0.08ms]
+(pass) auth ui request events > forces known logged-out desktop prompts without waiting for stale session hints [0.04ms]
+
+tests-unit/private-review-verification.test.ts:
+(pass) private review verification image boundary > authorization fails before database or Storage access [1.24ms]
+(pass) private review verification image boundary > invalid IDs and foreign owner, purpose, or arbitrary URL are rejected [1.78ms]
+(pass) private review verification image boundary > authorized bounded image is delivered without caching or a signed URL [2.71ms]
+(pass) private review verification image boundary > oversize, unsupported format and provider diagnostics stay bounded and fixed [1.40ms]
+(pass) private review verification image boundary > new canonical images never fall back to public Storage; legacy first tries private [0.13ms]
+
+tests-unit/review-save-submit.test.ts:
+135 |         const f = fixture(); await f.submit();
+136 |         const clear = evaluate(`${nodeText(source, 'clearDraft')};`, {
+137 |             ...f.bindings, selectedRestaurant: null, restaurant: null,
+138 |             setLastSavedAt() {}, useCallback: (callback: unknown) => callback,
+139 |         }) as () => Promise<boolean>;
+140 |         expect(await clear()).toBe(true);
+                                    ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:140:31)
+(fail) actual ReviewModal submit and Supabase adapter > saved cleanup owns its revision even after the current restaurant selection is cleared [202.76ms]
+141 |         expect(f.rows.size).toBe(1); expect(f.counts.inserts).toBe(1);
+142 |         expect(f.counts.removes).toBe(0); expect(f.objects.size).toBe(2);
+143 |     });
+144 |     test('known success writes pending review with canonical owner/review-bound photos', async () => {
+145 |         const f = fixture(); await f.submit();
+146 |         expect(f.rows.size).toBe(1); expect(f.objects.size).toBe(2);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:146:29)
+(fail) actual ReviewModal submit and Supabase adapter > known success writes pending review with canonical owner/review-bound photos [59.14ms]
+150 |         expect(row.food_photos[0].startsWith(`${row.user_id}/reviews/${row.id}/food/`)).toBe(true);
+151 |     });
+152 |     test('definite insert denial compensates and keeps input draft', async () => {
+153 |         const f = fixture(); f.setMode('denied'); await f.submit(); await f.submit();
+154 |         expect(f.rows.size).toBe(0); expect(f.objects.size).toBe(0); expect(f.counts.cleared).toBe(0);
+155 |         expect(f.counts.closes).toBe(0); expect(f.messages.every(item => item.title === '리뷰 등록 실패')).toBe(true);
+                                                                                                           ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:155:102)
+(fail) actual ReviewModal submit and Supabase adapter > definite insert denial compensates and keeps input draft [72.07ms]
+154 |         expect(f.rows.size).toBe(0); expect(f.objects.size).toBe(0); expect(f.counts.cleared).toBe(0);
+155 |         expect(f.counts.closes).toBe(0); expect(f.messages.every(item => item.title === '리뷰 등록 실패')).toBe(true);
+156 |     });
+157 |     test('lost commit reply reads by owner AND ID before reporting success', async () => {
+158 |         const f = fixture(); f.setMode('lost'); await f.submit(); await f.submit();
+159 |         expect(f.rows.size).toBe(1); expect(f.counts.inserts).toBe(1); expect(f.counts.uploads).toBe(2); expect(f.counts.removes).toBe(0);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:159:29)
+(fail) actual ReviewModal submit and Supabase adapter > lost commit reply reads by owner AND ID before reporting success [39.37ms]
+160 |         expect(f.filters[0]).toEqual({ id: [...f.rows.keys()][0], user_id: 'fixture-owner' });
+161 |         expect(f.selected[0]).toBe('id, user_id, restaurant_id, verification_photo, food_photos');
+162 |     });
+163 |     test('unavailable readback blocks duplicate write and leaves draft/photos intact', async () => {
+164 |         const f = fixture(); f.setMode('lost-read-fails'); await f.submit(); await f.submit();
+165 |         expect(f.rows.size).toBe(1); expect(f.counts.inserts).toBe(1); expect(f.counts.uploads).toBe(2);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:165:29)
+(fail) actual ReviewModal submit and Supabase adapter > unavailable readback blocks duplicate write and leaves draft/photos intact [49.33ms]
+167 |         expect(f.messages.every(item => item.title === '저장 상태 확인 필요')).toBe(true);
+168 |         f.setMode('normal'); await f.submit(); expect(f.counts.success).toBe(1);
+169 |     });
+170 |     test('actual submit ref rejects same-tick double submit', async () => {
+171 |         const f = fixture(); await Promise.all([f.submit(), f.submit()]);
+172 |         expect(f.counts.inserts).toBe(1); expect(f.counts.uploads).toBe(2); expect(f.counts.success).toBe(1);
+                                       ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:172:34)
+(fail) actual ReviewModal submit and Supabase adapter > actual submit ref rejects same-tick double submit [53.59ms]
+173 |     });
+174 |     test('changed input during submit is preserved after committed original draft', async () => {
+175 |         const f = fixture(); const pending = f.submit();
+176 |         f.bindings.latestSaveInputsRef.current = { ...f.bindings.latestSaveInputsRef.current, content: 'Changed during submission' };
+177 |         await pending;
+178 |         expect(f.rows.size).toBe(1); expect(f.counts.cleared).toBe(1); expect(f.counts.closes).toBe(0);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:178:29)
+(fail) actual ReviewModal submit and Supabase adapter > changed input during submit is preserved after committed original draft [79.02ms]
+185 |     test('close during committed insert reports success and notifies consumers once', async () => {
+186 |         const f = fixture();
+187 |         let closing: Promise<void> | undefined;
+188 |         f.onInsert(() => { closing = f.close()(); });
+189 |         await f.submit(); await closing;
+190 |         expect(f.rows.size).toBe(1); expect(f.counts.cleared).toBe(1); expect(f.counts.success).toBe(1);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:190:29)
+(fail) actual ReviewModal submit and Supabase adapter > close during committed insert reports success and notifies consumers once [52.04ms]
+196 |         f.onInsert(() => {
+197 |             f.bindings.saveOwnerRef.current = state === 'unmounted' ? undefined as unknown as string : 'different-owner';
+198 |             f.bindings.composerOpenRef.current = false;
+199 |         });
+200 |         await f.submit();
+201 |         expect(f.rows.size).toBe(1); expect(f.counts.cleared).toBe(1);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:201:29)
+(fail) actual ReviewModal submit and Supabase adapter > known commit completes scoped draft cleanup after unmounted without callbacks or photo removal [53.83ms]
+196 |         f.onInsert(() => {
+197 |             f.bindings.saveOwnerRef.current = state === 'unmounted' ? undefined as unknown as string : 'different-owner';
+198 |             f.bindings.composerOpenRef.current = false;
+199 |         });
+200 |         await f.submit();
+201 |         expect(f.rows.size).toBe(1); expect(f.counts.cleared).toBe(1);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:201:29)
+(fail) actual ReviewModal submit and Supabase adapter > known commit completes scoped draft cleanup after different-owner without callbacks or photo removal [36.02ms]
+204 |     });
+205 |     test('unmount with unanswered insert never clears its draft or saved photos', async () => {
+206 |         const f = fixture(); f.setMode('lost-read-fails');
+207 |         f.onInsert(() => { f.bindings.saveOwnerRef.current = undefined as unknown as string; });
+208 |         await f.submit();
+209 |         expect(f.rows.size).toBe(1); expect(f.counts.cleared).toBe(0);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:209:29)
+(fail) actual ReviewModal submit and Supabase adapter > unmount with unanswered insert never clears its draft or saved photos [41.39ms]
+(pass) actual ReviewModal submit and Supabase adapter > unmount during draft snapshot capture cannot dispatch a review write [42.50ms]
+220 |         expect(f.rows.size).toBe(0); expect(f.counts.uploads).toBe(0); expect(f.counts.inserts).toBe(0);
+221 |     });
+222 |     test('close readback can discover earlier commit and notify consumers', async () => {
+223 |         const f = fixture(); f.setMode('lost-read-fails'); await f.submit();
+224 |         f.setMode('normal'); await f.close()();
+225 |         expect(f.rows.size).toBe(1); expect(f.counts.success).toBe(1); expect(f.counts.closes).toBe(1);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:225:29)
+(fail) actual ReviewModal submit and Supabase adapter > close readback can discover earlier commit and notify consumers [51.27ms]
+232 |             ...f.bindings, useCallback: (callback: unknown) => callback,
+233 |         }) as () => void;
+234 |         // Evaluate after replacing the callback because VM globals are copied.
+235 |         const submit = evaluate(`${nodeText(source, 'handleSubmit')};`, f.bindings) as () => Promise<void>;
+236 |         await submit(); await submit();
+237 |         expect(f.rows.size).toBe(1); expect(f.counts.inserts).toBe(1); expect(f.counts.uploads).toBe(2);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:237:29)
+(fail) actual ReviewModal submit and Supabase adapter > callback failure never reports database failure or permits a duplicate retry [56.43ms]
+240 |     test('draft deletion failure offers cleanup retry with the original saved operation', async () => {
+241 |         const f = fixture();
+242 |         f.bindings.clearDraft = async () => false;
+243 |         const failedCleanupSubmit = evaluate(`${nodeText(source, 'handleSubmit')};`, f.bindings) as () => Promise<void>;
+244 |         await failedCleanupSubmit();
+245 |         expect(f.recoveryStates).toEqual(['draft-cleanup']); expect(f.counts.closes).toBe(0);
+                                       ^
+error: expect(received).toEqual(expected)
+
+- [
+-   "draft-cleanup",
+- ]
++ []
+
+- Expected  - 3
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:245:34)
+(fail) actual ReviewModal submit and Supabase adapter > draft deletion failure offers cleanup retry with the original saved operation [41.85ms]
+(pass) actual ReviewModal submit and Supabase adapter > recovery renders an accessible new-tab edit destination and disables every create control [26.75ms]
+259 |     test('actual close handler retains form and blocks close for unresolved write', async () => {
+260 |         const f = fixture(); f.setMode('lost-read-fails'); await f.submit();
+261 |         const close = evaluate(`${nodeText(source, 'handleClose')};`, {
+262 |             ...f.bindings, useCallback: (callback: unknown) => callback, onClose: () => { f.counts.closes++; }, replaceVerificationPhoto() {},
+263 |         }) as () => Promise<void>;
+264 |         await close(); expect(f.counts.closes).toBe(0); expect(f.objects.size).toBe(2);
+                                                                                     ^
+error: expect(received).toBe(expected)
+
+Expected: 2
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:264:80)
+(fail) actual ReviewModal submit and Supabase adapter > actual close handler retains form and blocks close for unresolved write [51.94ms]
+ReferenceError: executeMutation is not defined
+      at <anonymous> (evalmachine.<anonymous>:2:22)
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:284:10)
+(fail) actual ReviewModal submit and Supabase adapter > actual edit handler still updates owned existing row and resets moderation [4.50ms]
+(pass) actual draft handlers and IndexedDB deletion boundary > awaits in-flight autosave then prepared cleanup and suppresses late autosave [28.87ms]
+(pass) actual draft handlers and IndexedDB deletion boundary > clearDraft reports deletion failure rather than acknowledging cleanup [7.96ms]
+389 | describe('composer-owned draft revisions', () => {
+390 |     test('pre-capture B saved at the same key survives A submit', async () => {
+391 |         const s = revisionFixture(); await s.autoSave(); s.tick();
+392 |         await s.api.saveDraft(s.input('Independent composer B synthetic text'));
+393 |         const replacement = s.read(); await s.submit();
+394 |         expect(s.f.counts.inserts).toBe(1); expect(s.f.counts.success).toBe(1);
+                                         ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:394:36)
+(fail) composer-owned draft revisions > pre-capture B saved at the same key survives A submit [90.72ms]
+399 |         if (kind === 'upload') s.f.setUploadError({ statusCode: '403' }); else s.f.setMode('denied');
+400 |         await s.submit(); expect(s.f.objects.size).toBe(0); expect(s.f.counts.success).toBe(0);
+401 |         const before = s.read(); s.tick(); await s.autoSave();
+402 |         expect(s.read()?.savedAt).not.toBe(before?.savedAt);
+403 |         s.f.setUploadError(null); s.f.setMode('normal'); await s.submit();
+404 |         expect(s.read()).toBeUndefined(); expect(s.f.rows.size).toBe(1);
+                               ^
+error: expect(received).toBeUndefined()
+
+Received: {
+  userId: "fixture-owner",
+  restaurantId: "fixture-restaurant",
+  currentStep: 3,
+  visitedDate: "2026-10-04",
+  visitedTime: "12:00",
+  categories: [ "한식" ],
+  content: "Synthetic offline fixture review content only.",
+  savedAt: "2026-10-08T20:26:59.239Z",
+  expiresAt: 1791577619239,
+}
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:404:26)
+(fail) composer-owned draft revisions > fully compensated upload rejection refreshes same-composer autosave timestamp on retry [99.70ms]
+399 |         if (kind === 'upload') s.f.setUploadError({ statusCode: '403' }); else s.f.setMode('denied');
+400 |         await s.submit(); expect(s.f.objects.size).toBe(0); expect(s.f.counts.success).toBe(0);
+401 |         const before = s.read(); s.tick(); await s.autoSave();
+402 |         expect(s.read()?.savedAt).not.toBe(before?.savedAt);
+403 |         s.f.setUploadError(null); s.f.setMode('normal'); await s.submit();
+404 |         expect(s.read()).toBeUndefined(); expect(s.f.rows.size).toBe(1);
+                               ^
+error: expect(received).toBeUndefined()
+
+Received: {
+  userId: "fixture-owner",
+  restaurantId: "fixture-restaurant",
+  currentStep: 3,
+  visitedDate: "2026-10-04",
+  visitedTime: "12:00",
+  categories: [ "한식" ],
+  content: "Synthetic offline fixture review content only.",
+  savedAt: "2026-10-08T20:26:59.347Z",
+  expiresAt: 1791577619347,
+}
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:404:26)
+(fail) composer-owned draft revisions > fully compensated insert rejection refreshes same-composer autosave timestamp on retry [100.53ms]
+408 |         const unowned = revisionFixture(); await unowned.api.saveDraft(unowned.input());
+409 |         const row = unowned.read(); await unowned.submit();
+410 |         expect(unowned.read()).toEqual(row); expect(unowned.events.deletes).toBe(0);
+411 |         const restored = revisionFixture(); await restored.api.saveDraft(restored.input());
+412 |         await restored.load(); await restored.submit();
+413 |         expect(restored.read()).toBeUndefined(); expect(restored.events.deletes).toBe(1);
+                                      ^
+error: expect(received).toBeUndefined()
+
+Received: {
+  userId: "fixture-owner",
+  restaurantId: "fixture-restaurant",
+  currentStep: 3,
+  visitedDate: "2026-10-04",
+  visitedTime: "12:00",
+  categories: [ "한식" ],
+  content: "Synthetic offline fixture review content only.",
+  savedAt: "2026-10-08T20:26:59.512Z",
+  expiresAt: 1791577619512,
+}
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:413:33)
+(fail) composer-owned draft revisions > no own revision cannot delete an existing row; restored revision can [144.22ms]
+(pass) composer-owned draft revisions > absent owned row never authorizes a subsequently saved row [61.01ms]
+(pass) composer-owned draft revisions > B timestamp-only replacement before capture survives [102.43ms]
+425 |     });
+426 |     test('compensated retry cannot acquire B revision from the current IDB row', async () => {
+427 |         const s = revisionFixture(); await s.autoSave(); s.f.setMode('denied'); await s.submit();
+428 |         s.tick(); await s.api.saveDraft(s.input('Composer B after compensation'));
+429 |         const row = s.read(); s.f.setMode('normal'); await s.submit();
+430 |         expect(s.read()).toEqual(row); expect(s.events.captures).toBe(2);
+                                                                       ^
+error: expect(received).toBe(expected)
+
+Expected: 2
+Received: 1
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:430:66)
+(fail) composer-owned draft revisions > compensated retry cannot acquire B revision from the current IDB row [95.93ms]
+432 |     test.each(['unknown-insert', 'unanswered-upload'])('%s never refreshes to a later same-composer autosave', async kind => {
+433 |         const s = revisionFixture(); await s.autoSave();
+434 |         if (kind === 'unknown-insert') s.f.setMode('lost-read-fails'); else s.f.setUploadError({ statusCode: '503' });
+435 |         await s.submit(); s.tick(); await s.autoSave(); const row = s.read();
+436 |         s.f.setMode('normal'); s.f.setUploadError(null); await s.submit();
+437 |         expect(s.f.counts.success).toBe(1); expect(s.events.captures).toBe(1);
+                                         ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:437:36)
+(fail) composer-owned draft revisions > unknown-insert never refreshes to a later same-composer autosave [139.65ms]
+432 |     test.each(['unknown-insert', 'unanswered-upload'])('%s never refreshes to a later same-composer autosave', async kind => {
+433 |         const s = revisionFixture(); await s.autoSave();
+434 |         if (kind === 'unknown-insert') s.f.setMode('lost-read-fails'); else s.f.setUploadError({ statusCode: '503' });
+435 |         await s.submit(); s.tick(); await s.autoSave(); const row = s.read();
+436 |         s.f.setMode('normal'); s.f.setUploadError(null); await s.submit();
+437 |         expect(s.f.counts.success).toBe(1); expect(s.events.captures).toBe(1);
+                                         ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:437:36)
+(fail) composer-owned draft revisions > unanswered-upload never refreshes to a later same-composer autosave [121.09ms]
+437 |         expect(s.f.counts.success).toBe(1); expect(s.events.captures).toBe(1);
+438 |         expect(s.read()).toEqual(row); expect(s.events.deletes).toBe(0);
+439 |     });
+440 |     test('known commit cleanup retry retains original revision after later autosave', async () => {
+441 |         const s = revisionFixture(); await s.autoSave(); s.failDelete(true); await s.submit();
+442 |         expect(s.f.recoveryStates).toEqual(['draft-cleanup']);
+                                         ^
+error: expect(received).toEqual(expected)
+
+- [
+-   "draft-cleanup",
+- ]
++ []
+
+- Expected  - 3
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:442:36)
+(fail) composer-owned draft revisions > known commit cleanup retry retains original revision after later autosave [88.75ms]
+447 |     test('capture IO failure blocks writes and retry uses only the remembered revision', async () => {
+448 |         const s = revisionFixture(); await s.autoSave(); s.failCapture(true); await s.submit();
+449 |         expect(s.f.counts.uploads).toBe(0); expect(s.f.counts.inserts).toBe(0);
+450 |         s.failCapture(false); s.tick(); await s.api.saveDraft(s.input('Composer B during capture failure'));
+451 |         const row = s.read(); await s.submit();
+452 |         expect(s.f.counts.success).toBe(1); expect(s.events.captures).toBe(2); expect(s.read()).toEqual(row);
+                                         ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:452:36)
+(fail) composer-owned draft revisions > capture IO failure blocks writes and retry uses only the remembered revision [196.93ms]
+(pass) composer-owned draft revisions > scope mismatch cannot grant cleanup authority [59.50ms]
+(pass) composer-owned draft revisions > late autoSave completion cannot restore old scope authority [94.66ms]
+(pass) composer-owned draft revisions > late loadDraft completion cannot restore old scope authority [101.54ms]
+472 |     });
+473 | 
+474 |     test('expired owned revision cannot block submit or acquire a fresh B row', async () => {
+475 |         const s = revisionFixture(); await s.autoSave(); s.tick(86_400_001);
+476 |         await s.api.saveDraft(s.input('Fresh composer B after TTL')); const row = s.read();
+477 |         await s.submit(); expect(s.f.counts.success).toBe(1); expect(s.read()).toEqual(row);
+                                                           ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/tests-unit/review-save-submit.test.ts:477:54)
+(fail) composer-owned draft revisions > expired owned revision cannot block submit or acquire a fresh B row [74.13ms]
+
+tests-unit/search-count-refresh.test.ts:
+(pass) disabled search analytics does not trigger a redundant popularity read [0.11ms]
+(pass) only an applied counter mutation refreshes popularity [0.01ms]
+
+tests-unit/review-save-operation.test.ts:
+(pass) bounded review save operation (offline) > known success and unchanged retry write one row and photo set [0.79ms]
+(pass) bounded review save operation (offline) > definite denial cleans uploads and retains ID and paths across five retries [0.81ms]
+(pass) bounded review save operation (offline) > lost commit reply (returned) recovers without reupload or second insert [0.22ms]
+(pass) bounded review save operation (offline) > lost commit reply (thrown) recovers without reupload or second insert [0.06ms]
+(pass) bounded review save operation (offline) > failed readback blocks retry, replacement and cancellation without deleting committed photos [0.13ms]
+(pass) bounded review save operation (offline) > thrown readback failure and subsequent empty read never prove rollback [0.15ms]
+(pass) bounded review save operation (offline) > empty ambiguous read allows same-ID insert retry without reupload, but never cleanup/new ID [0.19ms]
+(pass) bounded review save operation (offline) > a rejection on retry cannot erase an earlier unknown write [0.09ms]
+(pass) bounded review save operation (offline) > changed draft (content) gets new ID after definite rejection cleanup [0.14ms]
+(pass) bounded review save operation (offline) > changed draft (file) gets new ID after definite rejection cleanup [0.05ms]
+(pass) bounded review save operation (offline) > changed draft after recovered commit never silently creates another review [0.22ms]
+(pass) bounded review save operation (offline) > explicit partial rejection waits for late sibling upload before exact owned cleanup [0.19ms]
+(pass) bounded review save operation (offline) > receipt upload denial does not start food uploads or insert [0.06ms]
+(pass) bounded review save operation (offline) > cleanup failure blocks replacement and retains only the exact operation set [0.14ms]
+(pass) bounded review save operation (offline) > remove success with failed storage readback retains cleanup obligation [0.31ms]
+(pass) bounded review save operation (offline) > cancel during compression prevents storage and insert [0.12ms]
+(pass) bounded review save operation (offline) > cancel during uploads waits for completion and cleans without insert [0.13ms]
+(pass) bounded review save operation (offline) > cancel after insert dispatch preserves committed references [0.28ms]
+(pass) bounded review save operation (offline) > owner transition prevents uploads, insert and cross-owner cleanup/retry [0.18ms]
+(pass) bounded review save operation (offline) > mismatched row never authorizes success or cleanup [0.12ms]
+(pass) bounded review save operation (offline) > no arbitrary photo cap is introduced [0.39ms]
+(pass) bounded review save operation (offline) > invalid ownership is rejected before any storage mutation [0.22ms]
+
+tests-unit/mypage-mobile-cleanup-contract.test.ts:
+(pass) mypage mobile cleanup source contracts > layout fills the viewport without duplicate return chrome [0.98ms]
+(pass) mypage mobile cleanup source contracts > profile page keeps a quiet mobile-first action hierarchy without noisy duplicate chrome [3.85ms]
+(pass) mypage mobile cleanup source contracts > profile dashboard keeps exactly one border around the whole surface [0.45ms]
+(pass) mypage mobile cleanup source contracts > mobile loading keeps static mypage chrome and uses borderless dynamic skeletons [0.41ms]
+(pass) mypage mobile cleanup source contracts > mypage sections share a calm responsive frame across desktop and mobile [1.26ms]
+(pass) mypage mobile cleanup source contracts > profile photo controls are compact and not duplicated as a large mobile identity card [0.43ms]
+(pass) mypage mobile cleanup source contracts > mobile icon-only mypage actions have labels and touch-sized targets [1.03ms]
+(pass) mypage mobile cleanup source contracts > mypage list cards avoid cramped md columns and clipped card content [0.57ms]
+(pass) mypage mobile cleanup source contracts > mypage desktop cards fill stretched rows and keep touch targets [0.29ms]
+
+tests-unit/review-media-mutation.test.ts:
+(pass) review commit and media failure boundaries > DB rejection before commit preserves old media and retires only unused uploads [1.51ms]
+(pass) review commit and media failure boundaries > throw-after: committed upload survives; cleanup follows receipt [0.45ms]
+(pass) review commit and media failure boundaries > error-after: committed upload survives; cleanup follows receipt [0.05ms]
+(pass) review commit and media failure boundaries > unknown result later confirmed committed does not reupload or remutate [0.15ms]
+(pass) review commit and media failure boundaries > error-before: missing receipt never authorizes compensation [0.08ms]
+(pass) review commit and media failure boundaries > throw-before: missing receipt never authorizes compensation [0.14ms]
+(pass) review commit and media failure boundaries > missing row is not a successful delete [0.07ms]
+(pass) review commit and media failure boundaries > unauthorized owner cannot mutate or delete media [0.22ms]
+(pass) review commit and media failure boundaries > partial Storage failure after commit survives page revisit for both purposes [0.23ms]
+(pass) review commit and media failure boundaries > delete transport failure after completion is resolved by metadata readback [0.12ms]
+(pass) review commit and media failure boundaries > cleanup RPC failure after commit does not replay the mutation [0.18ms]
+(pass) review commit and media failure boundaries > concurrent clicks share one operation [0.14ms]
+(pass) review commit and media failure boundaries > upload uncertainty verifies the same key and never deletes a live upload [0.14ms]
+(pass) review commit and media failure boundaries > incomplete upload retries frozen paths before any DB write [0.14ms]
+(pass) review commit and media failure boundaries > owner change during upload blocks mutation and cleanup [0.14ms]
+(pass) review commit and media failure boundaries > cleanup validates owner, review and purpose on all returned paths [0.28ms]
+(pass) review commit and media failure boundaries > stale baseline cannot replace a concurrent edit [0.05ms]
+(pass) review commit and media failure boundaries > missing migration fails before uploading or mutating [0.04ms]
+(pass) review commit and media failure boundaries > a different action cannot join an active edit and report its result as a deletion [0.09ms]
+(pass) review commit and media failure boundaries > feedback never exposes provider diagnostics [0.09ms]
+
+tests-unit/review-upload-uncertainty.test.ts:
+(pass) independent late Storage upload uncertainty (offline) > known success and unchanged retry allocate, prepare and insert exactly once [0.57ms]
+(pass) independent late Storage upload uncertainty (offline) > receipt late commit after returned failure and settled cancellation stays retained [0.37ms]
+(pass) independent late Storage upload uncertainty (offline) > receipt late commit after returned failure and in-flight cancellation stays retained [0.07ms]
+(pass) independent late Storage upload uncertainty (offline) > receipt late commit after thrown failure and settled cancellation stays retained [0.05ms]
+(pass) independent late Storage upload uncertainty (offline) > receipt late commit after thrown failure and in-flight cancellation stays retained [0.03ms]
+(pass) independent late Storage upload uncertainty (offline) > parallel food returned failure keeps late sibling and original server commit owned [0.23ms]
+(pass) independent late Storage upload uncertainty (offline) > parallel food thrown failure keeps late sibling and original server commit owned [0.06ms]
+(pass) independent late Storage upload uncertainty (offline) > explicit status=400 with no earlier uncertainty permits cleanup and replacement [0.14ms]
+(pass) independent late Storage upload uncertainty (offline) > explicit statusCode=400 with no earlier uncertainty permits cleanup and replacement [0.39ms]
+(pass) independent late Storage upload uncertainty (offline) > explicit status=401 with no earlier uncertainty permits cleanup and replacement [0.20ms]
+(pass) independent late Storage upload uncertainty (offline) > explicit statusCode=401 with no earlier uncertainty permits cleanup and replacement [0.04ms]
+(pass) independent late Storage upload uncertainty (offline) > explicit status=403 with no earlier uncertainty permits cleanup and replacement [0.03ms]
+(pass) independent late Storage upload uncertainty (offline) > explicit statusCode=403 with no earlier uncertainty permits cleanup and replacement [0.03ms]
+(pass) independent late Storage upload uncertainty (offline) > explicit status=413 with no earlier uncertainty permits cleanup and replacement [0.05ms]
+(pass) independent late Storage upload uncertainty (offline) > explicit statusCode=413 with no earlier uncertainty permits cleanup and replacement [0.16ms]
+(pass) independent late Storage upload uncertainty (offline) > explicit status=415 with no earlier uncertainty permits cleanup and replacement [0.06ms]
+(pass) independent late Storage upload uncertainty (offline) > explicit statusCode=415 with no earlier uncertainty permits cleanup and replacement [0.04ms]
+(pass) independent late Storage upload uncertainty (offline) > explicit status=422 with no earlier uncertainty permits cleanup and replacement [0.05ms]
+(pass) independent late Storage upload uncertainty (offline) > explicit statusCode=422 with no earlier uncertainty permits cleanup and replacement [0.55ms]
+(pass) independent late Storage upload uncertainty (offline) > non-definite upload error {"status":409} never authorizes cleanup [0.39ms]
+(pass) independent late Storage upload uncertainty (offline) > non-definite upload error {"statusCode":"409"} never authorizes cleanup [0.04ms]
+(pass) independent late Storage upload uncertainty (offline) > non-definite upload error {"status":500} never authorizes cleanup [0.02ms]
+(pass) independent late Storage upload uncertainty (offline) > non-definite upload error {"statusCode":"503"} never authorizes cleanup [0.02ms]
+(pass) independent late Storage upload uncertainty (offline) > non-definite upload error {"code":"transport"} never authorizes cleanup [0.02ms]
+(pass) independent late Storage upload uncertainty (offline) > non-definite upload error {} never authorizes cleanup [0.03ms]
+(pass) independent late Storage upload uncertainty (offline) > SQL-looking code without a Storage HTTP outcome cannot prove rollback [0.13ms]
+(pass) independent late Storage upload uncertainty (offline) > upload rejection {"statusCode":"400"} on retry cannot erase an earlier unanswered receipt [0.32ms]
+(pass) independent late Storage upload uncertainty (offline) > upload rejection {"statusCode":"401"} on retry cannot erase an earlier unanswered receipt [0.06ms]
+(pass) independent late Storage upload uncertainty (offline) > upload rejection {"statusCode":"403"} on retry cannot erase an earlier unanswered receipt [0.04ms]
+(pass) independent late Storage upload uncertainty (offline) > upload rejection {"statusCode":"413"} on retry cannot erase an earlier unanswered receipt [0.03ms]
+(pass) independent late Storage upload uncertainty (offline) > upload rejection {"statusCode":"415"} on retry cannot erase an earlier unanswered receipt [0.03ms]
+(pass) independent late Storage upload uncertainty (offline) > upload rejection {"statusCode":"422"} on retry cannot erase an earlier unanswered receipt [0.03ms]
+(pass) independent late Storage upload uncertainty (offline) > upload rejection {"code":"42501"} on retry cannot erase an earlier unanswered receipt [0.12ms]
+(pass) independent late Storage upload uncertainty (offline) > upload rejection {"status":503,"code":"42501"} on retry cannot erase an earlier unanswered receipt [0.04ms]
+(pass) independent late Storage upload uncertainty (offline) > upload rejection {"statusCode":"409","code":"23514"} on retry cannot erase an earlier unanswered receipt [0.03ms]
+(pass) independent late Storage upload uncertainty (offline) > affirmative metadata recovers late receipt on original ID without reupload [0.19ms]
+(pass) independent late Storage upload uncertainty (offline) > affirmative metadata recovers late food on original ID without reupload [0.05ms]
+(pass) independent late Storage upload uncertainty (offline) > success on same-path retry before original commit may finalize one matching review [0.17ms]
+(pass) independent late Storage upload uncertainty (offline) > metadata plus definite insert rejection must retain earlier upload uncertainty [0.27ms]
+(pass) independent late Storage upload uncertainty (offline) > retry-success plus definite insert rejection must retain earlier upload uncertainty [0.10ms]
+(pass) independent late Storage upload uncertainty (offline) > ordinary insert rejection without unanswered upload remains safely retryable on identical paths [0.14ms]
+(pass) independent late Storage upload uncertainty (offline) > metadata missing cannot certify availability or release upload uncertainty [0.14ms]
+(pass) independent late Storage upload uncertainty (offline) > metadata size-mismatch cannot certify availability or release upload uncertainty [0.03ms]
+(pass) independent late Storage upload uncertainty (offline) > metadata mime-mismatch cannot certify availability or release upload uncertainty [0.33ms]
+(pass) independent late Storage upload uncertainty (offline) > metadata size-missing cannot certify availability or release upload uncertainty [0.05ms]
+(pass) independent late Storage upload uncertainty (offline) > metadata mime-missing cannot certify availability or release upload uncertainty [0.03ms]
+(pass) independent late Storage upload uncertainty (offline) > metadata denied cannot certify availability or release upload uncertainty [0.04ms]
+(pass) independent late Storage upload uncertainty (offline) > metadata throws cannot certify availability or release upload uncertainty [0.06ms]
+(pass) independent late Storage upload uncertainty (offline) > optional metadata verifier may be absent without making transport failure definite [0.12ms]
+(pass) independent late Storage upload uncertainty (offline) > owner transition during receipt to signed-out blocks retry, replacement and cleanup [0.25ms]
+(pass) independent late Storage upload uncertainty (offline) > owner transition during food to signed-out blocks retry, replacement and cleanup [0.05ms]
+(pass) independent late Storage upload uncertainty (offline) > owner transition during receipt to other-owner blocks retry, replacement and cleanup [0.03ms]
+(pass) independent late Storage upload uncertainty (offline) > owner transition during food to other-owner blocks retry, replacement and cleanup [0.03ms]
+(pass) independent late Storage upload uncertainty (offline) > owner transition while affirmative metadata is pending prevents the next upload or insert [0.14ms]
+(pass) independent late Storage upload uncertainty (offline) > matching saved review resolves uncertainty without cleanup and release permits a new operation [0.16ms]
+(pass) independent late Storage upload uncertainty (offline) > mismatched saved row id cannot release unanswered uploads [0.13ms]
+(pass) independent late Storage upload uncertainty (offline) > mismatched saved row owner cannot release unanswered uploads [0.06ms]
+(pass) independent late Storage upload uncertainty (offline) > mismatched saved row restaurant cannot release unanswered uploads [0.02ms]
+(pass) independent late Storage upload uncertainty (offline) > mismatched saved row receipt cannot release unanswered uploads [0.02ms]
+(pass) independent late Storage upload uncertainty (offline) > mismatched saved row food cannot release unanswered uploads [0.03ms]
+(pass) independent late Storage upload uncertainty (offline) > mismatched saved row food-order cannot release unanswered uploads [0.13ms]
+(pass) independent late Storage upload uncertainty (offline) > owner transition during matching review readback never releases the old owner operation [0.21ms]
+(pass) independent late Storage upload uncertainty (offline) > repeated absent metadata and rejected retries do not expire or cap the retained operation [0.65ms]
+(pass) independent late Storage upload uncertainty (offline) > forty-eight food uploads start in parallel after receipt and complete without application timers [0.33ms]
+
+tests-unit/review-draft-deletion-browser.test.ts:
+(pass) captured draft deletion is atomic, scoped, retryable and protects replacement rows [1230.77ms]
+
+tests-unit/auth-user-continuation.test.ts:
+(pass) requested user login continuation > keeps MY and review destinations while ordinary in-page login stays put [0.17ms]
+(pass) requested user login continuation > retains the administrator boundary and rejects unsafe destinations [0.02ms]
+(pass) requested user login continuation > binds the resumed stamp composer to the selected public restaurant ID [0.10ms]
+
+tests-unit/review-save-owner-lifecycle.test.ts:
+(pass) real React owner-key remount clears A inputs, unblocks B, and protects unknown A photos [1358.59ms]
+
+tests-unit/mypage-crud-contract.test.ts:
+(pass) mypage CRUD QA/QC source contracts > profile update flows guard nickname, avatar, and password mutations by the signed-in user [0.45ms]
+(pass) mypage CRUD QA/QC source contracts > bookmark and review deletion are owner-scoped and invalidate their read models [0.65ms]
+(pass) mypage CRUD QA/QC source contracts > submission create flows insert parent and child rows with rollback on child insert failure [1.32ms]
+(pass) mypage CRUD QA/QC source contracts > submission history deletion goes through an authenticated owner-checking API route [0.99ms]
+(pass) mypage CRUD QA/QC source contracts > permanent account delete uses a bearer-bound one-time proof and preserves the durable worker/readback boundary [0.67ms]
+
+tests-unit/review-draft-privacy.test.ts:
+(pass) review draft privacy persistence > uses a v3 compound scope key with bounded expiry metadata [0.03ms]
+(pass) review draft privacy persistence > constructs persisted and returned rows field-by-field without media [0.04ms]
+(pass) review draft privacy persistence > uses bounded cursors for cleanup, user lists, and deletion readback [0.04ms]
+
+tests-unit/review-modal-ocr-ux.test.ts:
+(pass) review modal OCR UX helpers > suppresses automatic OCR navigation while the user is actively editing [0.04ms]
+(pass) review modal OCR UX helpers > keeps automatic OCR navigation disabled after manual step movement
+(pass) review modal OCR UX helpers > tracks persistent AI-filled field markers without mutating previous sets [0.03ms]
+(pass) review modal OCR UX helpers > orders progress stages for the compact SSE timeline [0.01ms]
+(pass) review modal OCR selected restaurant guard > does not replace selected restaurant from fuzzy OCR-only match [0.10ms]
+(pass) review modal OCR terminal recovery contract > keeps the receipt photo attached and reuses one terminal notice helper [0.35ms]
+(pass) review modal OCR terminal recovery contract > uses safe user-facing copy for force OCR refresh toggle [0.13ms]
+
+tests-unit/review-modal-map-panel-helpers.test.ts:
+(pass) review modal desktop map-panel helpers > maps arrow keys to predictable one-step panel movement [0.09ms]
+(pass) review modal desktop map-panel helpers > ignores non-movement keys and supports custom step sizes [0.02ms]
+
+tests-unit/review-photo-url-security.test.ts:
+(pass) review photo URL trust boundary > verification images resolve to the authenticated admin route, never a public or signed URL [0.42ms]
+(pass) review photo URL trust boundary > builds and resolves a canonical key bound to its owner and review [0.07ms]
+(pass) review photo URL trust boundary > rejects another owner, review, or purpose [0.01ms]
+(pass) review photo URL trust boundary > resolves same-origin public review-photo URLs back to the owned object [0.03ms]
+(pass) review photo URL trust boundary > rejects absolute URLs, buckets, traversal, encoded separators, queries, and fragments [0.04ms]
+(pass) review photo URL trust boundary > rejects controls, malformed key shapes, and unsupported image extensions [0.03ms]
+(pass) review photo URL trust boundary > fails closed without owner binding and for invalid cache-buster values [0.02ms]
+(pass) review photo URL trust boundary > resolves the historical composer layout for the owning user only [0.07ms]
+(pass) review photo URL trust boundary > resolves the configured loopback origin instead of requiring https [0.03ms]
+(pass) review photo URL trust boundary > normalizes browser filenames into the canonical filename grammar [0.10ms]
+(pass) review photo URL trust boundary > rejects an arbitrary tracker origin even when the storage client generates that origin [0.01ms]
+(pass) review photo URL trust boundary > deduplicates cleanup keys and verifies removal through storage readback [0.23ms]
+(pass) review photo URL trust boundary > retains the exact canonical retry set when remove resolves an error or readback finds an object [0.17ms]
+
+tests-unit/auth-admin-login-redirect.test.ts:
+(pass) proxy emits a fresh nonce-bound enforcing CSP and forwards the nonce to rendering [2.62ms]
+(pass) password recovery proof > is user-bound and can be consumed only once [0.03ms]
+(pass) public eligibility proxy > public eligibility skip decisions keep session hints eligible for live checks [0.04ms]
+(pass) public eligibility proxy > only the exact method/path matrix can bypass eligibility [0.10ms]
+(pass) public eligibility proxy > credentialless public pages and APIs bypass session lookup [0.77ms]
+(pass) public eligibility proxy > onboarding, callback, and health loop-safe paths remain available to held sessions [1.83ms]
+(pass) admin auth redirect helpers > 관리자 next 경로와 쿼리를 안전하게 보존한다 [0.06ms]
+(pass) admin auth redirect helpers > 홈 로그인 모달 요청 URL을 읽고 검증된 next만 넘긴다 [0.05ms]
+(pass) admin auth redirect helpers > privacy onboarding uses one exact loop-safe home modal URL [0.03ms]
+(pass) admin auth redirect helpers > 홈 쿼리 로그인 성공은 success-aware cleanup을 사용하고 관리자 redirect는 assign을 유지한다 [1.22ms]
+(pass) admin middleware login redirect > 미로그인 관리자는 auth required 화면 대신 홈 로그인 모달 URL로 보낸다 [2.13ms]
+(pass) admin middleware login redirect > 관리자 로그인 리디렉션은 초과 길이 또는 잘못된 next 컨텍스트를 루트로 제한한다 [0.70ms]
+(pass) admin middleware login redirect > 활성 세션 확인이 실패하면 로그인 화면으로 닫힌다 [0.99ms]
+(pass) admin middleware login redirect > 로그인했지만 관리자가 아니면 홈으로 보낸다 [0.62ms]
+(pass) admin middleware login redirect > 관리자는 요청한 관리자 페이지를 그대로 통과한다 [0.38ms]
+(pass) admin middleware login redirect > 마이페이지 인증 리디렉션은 캐시하지 않는다 [0.52ms]
+(pass) admin middleware login redirect > Supabase 설정이 없으면 보호된 관리자 JSON 응답을 캐시하지 않는다 [0.72ms]
+(pass) 관리자 보호 경로의 비탐색 요청은 리디렉션 대신 닫힌 JSON 응답을 받는다 [0.63ms]
+(pass) 관리자 권한 및 상태 권한 오류는 API 요청을 fail closed 한다 [0.76ms]
+(pass) live eligibility denials, malformed receipts, and RPC failures close protected sessions [1.03ms]
+(pass) existing accounts are classification-only and missing privacy evidence stays onboarding-required [0.15ms]
+
+tests-unit/auth-release-smoke-source.test.ts:
+(pass) origin, storage, and Supabase validation fail closed [0.59ms]
+(pass) authenticated browser proof is challenge-bound, redacted, and fail-closed [0.92ms]
+(pass) release smoke classifies existing sessions only and cannot create privacy admission evidence [0.35ms]
+(pass) proof transport bypasses hostile page code and routing blocks egress before dispatch [0.70ms]
+(pass) release CLI is strict, canonical, and independent from environment trust inputs [0.44ms]
+(pass) deployment receipt digest is canonical and binds release tuple fields [1.29ms]
+(pass) cell, metadata, final path, and revocation proof are strict [0.97ms]
+(pass) bounded helpers fail on spawn error, nonzero exit, output overflow, and hangs [56.71ms]
+(pass) Windows cleanup accepts normal exit only after targeted job-boundary verification [50.53ms]
+(pass) Windows broker control channel is nonce-bound and fails closed on missing proof [0.44ms]
+(pass) Windows PowerShell startup progress filtering is exact and preserves diagnostics [0.10ms]
+(pass) fake Windows broker requires READY, ACK, STARTED, COMPLETE, and control-channel close [65.55ms]
+(pass) POSIX cleanup requires the owned PID-namespace supervisor and child output remains redacted [113.18ms]
+(pass) parent lifecycle cleanup drains local child handles after verified timeout teardown, handles spawn failure, and rejects cleanup ambiguity [115.96ms]
+(pass) child output cap discards oversized combined output before teardown [1.26ms]
+(skip) production controller tears down a real resistant descendant and closes pipes
+(pass) bound session identity requires canonical duplicate-free JWT claims and a bounded opaque refresh digest [2.02ms]
+(pass) authoritative identity and preflight RPCs bind the dedicated user, refresh digest, and exact lease [1.57ms]
+(pass) authoritative revocation retries idempotently and requires exact readback [1.11ms]
+(pass) browser child cannot revoke or receive parent-only Supabase credentials [3.05ms]
+(pass) revocation migration, active-session authorization, and containment are fail closed [2.08ms]
+(pass) Linux supervisor runtime selection fails closed outside verified Node 24 [0.18ms]
+
+tests-unit/mypage-reviews-read-runtime.test.ts:
+(pass) my-reviews read status and retry > a successful empty result stays distinct from a read failure [2.42ms]
+(pass) my-reviews read status and retry > returned-error rejects with a fixed error and a retry recovers the saved review [0.84ms]
+(pass) my-reviews read status and retry > thrown-error rejects with a fixed error and a retry recovers the saved review [0.20ms]
+(pass) my-reviews read status and retry > restaurant-error rejects with a fixed error and a retry recovers the saved review [0.13ms]
+(pass) my-reviews read status and retry > canonical-error rejects with a fixed error and a retry recovers the saved review [0.08ms]
+(pass) my-reviews read status and retry > a failed refresh keeps prior successful data available rather than replacing it with empty data [0.24ms]
+
+tests-unit/auth-callback-session.test.ts:
+(pass) rejected callback session revocation > signs out globally first and then locally [1.03ms]
+(pass) rejected callback session revocation > still attempts the local sign out when the global sign out fails [0.43ms]
+(pass) rejected callback session revocation > swallows a local sign out failure after a successful global sign out [0.46ms]
+(pass) rejected callback session revocation > never rejects even when both sign out attempts fail [0.47ms]
+(pass) rejected callback session revocation > swallows non-Error rejections without leaking them [0.41ms]
+(pass) rejected callback session revocation > does not rethrow a synchronous sign out throw [0.72ms]
+(pass) rejected callback session revocation > createCallbackSupabaseClient delegates to the configured server client factory [0.41ms]
+
+tests-unit/review-close-revision-browser.test.ts:
+(pass) real React and IDB composer revision orderings [1774.96ms]
+
+tests-unit/review-draft-revision-browser.test.ts:
+(pass) real React and IDB composer revision orderings [1784.53ms]
+
+1 tests skipped:
+(skip) production controller tears down a real resistant descendant and closes pipes
+
+
+26 tests failed:
+(fail) actual ReviewModal submit and Supabase adapter > saved cleanup owns its revision even after the current restaurant selection is cleared [202.76ms]
+(fail) actual ReviewModal submit and Supabase adapter > known success writes pending review with canonical owner/review-bound photos [59.14ms]
+(fail) actual ReviewModal submit and Supabase adapter > definite insert denial compensates and keeps input draft [72.07ms]
+(fail) actual ReviewModal submit and Supabase adapter > lost commit reply reads by owner AND ID before reporting success [39.37ms]
+(fail) actual ReviewModal submit and Supabase adapter > unavailable readback blocks duplicate write and leaves draft/photos intact [49.33ms]
+(fail) actual ReviewModal submit and Supabase adapter > actual submit ref rejects same-tick double submit [53.59ms]
+(fail) actual ReviewModal submit and Supabase adapter > changed input during submit is preserved after committed original draft [79.02ms]
+(fail) actual ReviewModal submit and Supabase adapter > close during committed insert reports success and notifies consumers once [52.04ms]
+(fail) actual ReviewModal submit and Supabase adapter > known commit completes scoped draft cleanup after unmounted without callbacks or photo removal [53.83ms]
+(fail) actual ReviewModal submit and Supabase adapter > known commit completes scoped draft cleanup after different-owner without callbacks or photo removal [36.02ms]
+(fail) actual ReviewModal submit and Supabase adapter > unmount with unanswered insert never clears its draft or saved photos [41.39ms]
+(fail) actual ReviewModal submit and Supabase adapter > close readback can discover earlier commit and notify consumers [51.27ms]
+(fail) actual ReviewModal submit and Supabase adapter > callback failure never reports database failure or permits a duplicate retry [56.43ms]
+(fail) actual ReviewModal submit and Supabase adapter > draft deletion failure offers cleanup retry with the original saved operation [41.85ms]
+(fail) actual ReviewModal submit and Supabase adapter > actual close handler retains form and blocks close for unresolved write [51.94ms]
+(fail) actual ReviewModal submit and Supabase adapter > actual edit handler still updates owned existing row and resets moderation [4.50ms]
+(fail) composer-owned draft revisions > pre-capture B saved at the same key survives A submit [90.72ms]
+(fail) composer-owned draft revisions > fully compensated upload rejection refreshes same-composer autosave timestamp on retry [99.70ms]
+(fail) composer-owned draft revisions > fully compensated insert rejection refreshes same-composer autosave timestamp on retry [100.53ms]
+(fail) composer-owned draft revisions > no own revision cannot delete an existing row; restored revision can [144.22ms]
+(fail) composer-owned draft revisions > compensated retry cannot acquire B revision from the current IDB row [95.93ms]
+(fail) composer-owned draft revisions > unknown-insert never refreshes to a later same-composer autosave [139.65ms]
+(fail) composer-owned draft revisions > unanswered-upload never refreshes to a later same-composer autosave [121.09ms]
+(fail) composer-owned draft revisions > known commit cleanup retry retains original revision after later autosave [88.75ms]
+(fail) composer-owned draft revisions > capture IO failure blocks writes and retry uses only the remembered revision [196.93ms]
+(fail) composer-owned draft revisions > expired owned revision cannot block submit or acquire a fresh B row [74.13ms]
+
+ 242 pass
+ 1 skip
+ 26 fail
+ 2865 expect() calls
+Ran 269 tests across 25 files. [10.06s]

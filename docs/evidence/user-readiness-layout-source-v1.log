@@ -1,0 +1,21 @@
+....F...............F...................
+======================================================================
+FAIL: test_layout_manifest_matches_versioned_and_candidate_files (backend.utils.tests.test_layout_naming_source_recovery.LayoutNamingSourceRecoveryTests.test_layout_manifest_matches_versioned_and_candidate_files)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/utils/tests/test_layout_naming_source_recovery.py", line 74, in test_layout_manifest_matches_versioned_and_candidate_files
+    self.assertEqual(result["trackedDirectoryCount"], 38)
+AssertionError: 39 != 38
+
+======================================================================
+FAIL: test_committed_manifest_passes_on_real_tree (backend.bin.tests.test_check_layout_manifest_unittest.RealTreeTest.test_committed_manifest_passes_on_real_tree)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/backend/bin/tests/test_check_layout_manifest_unittest.py", line 418, in test_committed_manifest_passes_on_real_tree
+    self.assertEqual(result["trackedDirectoryCount"], 38)
+AssertionError: 39 != 38
+
+----------------------------------------------------------------------
+Ran 40 tests in 0.359s
+
+FAILED (failures=2)

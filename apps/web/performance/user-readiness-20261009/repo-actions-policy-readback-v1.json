@@ -1,0 +1,22 @@
+{
+  "repository": "twoimo/tzudong",
+  "oldPin": "opentofu/setup-opentofu@9d84900f3238fab8cd84ce47d658d25dd008be2f",
+  "newPin": "opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4",
+  "sameActionRepository": true,
+  "samePatternCount": true,
+  "exactReadback": true,
+  "policy": {
+    "enabled": true,
+    "allowed_actions": "selected",
+    "selected_actions_url": "https://api.github.com/repositories/1080324661/actions/permissions/selected-actions",
+    "sha_pinning_required": true
+  },
+  "selectedActions": {
+    "github_owned_allowed": true,
+    "patterns_allowed": [
+      "denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282",
+      "opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4"
+    ],
+    "verified_allowed": true
+  }
+}

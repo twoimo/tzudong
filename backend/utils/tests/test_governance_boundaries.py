@@ -489,7 +489,7 @@ class GovernanceAppliedMigrationImmutabilityTest(unittest.TestCase):
         # An additive migration must not clobber an object an applied migration created.
         clobbered: list[str] = []
         for path in self.migration_files:
-            if path.name == NEW_R4_MIGRATION:
+            if path.name >= NEW_R4_MIGRATION:
                 continue
             body = _strip_sql_comments(path.read_text(encoding="utf-8"))
             # An exception-handler allowlist may name the constraint without
@@ -505,6 +505,20 @@ class GovernanceAppliedMigrationImmutabilityTest(unittest.TestCase):
                 f"{clobbered}; the R4 constraint must be a genuinely new object (R9.7)"
             ),
         )
+
+    def test_r4_name_scan_preserves_prior_collision_detection_with_newer_references(self) -> None:
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            prior = Path(directory) / "20260827000000_fixture.sql"
+            newer = Path(directory) / "20261001000000_fixture.sql"
+            prior.write_text(f"CREATE UNIQUE INDEX {NEW_R4_INDEX_NAME} ON fixture(id);", encoding="utf-8")
+            newer.write_text(f"SELECT '{NEW_R4_INDEX_NAME}' FROM pg_indexes;", encoding="utf-8")
+            with patch.object(self, "migration_files", [newer]):
+                self.test_new_r4_index_name_is_not_created_by_a_prior_migration()
+            with patch.object(self, "migration_files", [prior, newer]):
+                with self.assertRaises(AssertionError):
+                    self.test_new_r4_index_name_is_not_created_by_a_prior_migration()
 
     def test_new_r4_migration_remains_after_its_referenced_history(self) -> None:
         # The R4 migration must remain ordered after the applied migration it extends.

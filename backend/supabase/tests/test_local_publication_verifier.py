@@ -1024,6 +1024,7 @@ complete_lifecycle_stage
             for ordinal, marker in enumerate(verifier.SEQUENCE_MARKERS, 1)
         ]
         section_counts = {section: 1 for section in verifier.READBACK_SECTIONS}
+        section_counts.update(review_media_functions=14, storage_policies=22, storage_buckets=7, seed_buckets=7)
         payloads["local-migration-summary.json"].update({
             "schema": "local-migration-publication-summary-v1",
             "project_name": "tzudong-local-123456abcdef",
@@ -1056,7 +1057,7 @@ complete_lifecycle_stage
             "readback_sql_sha256": verifier.sha256_file(
                 REPOSITORY_ROOT / local_migrate.READBACK_SOURCE
             ),
-            "readback_row_count": len(section_counts),
+            "readback_row_count": sum(section_counts.values()),
             "readback_section_counts": section_counts,
             "readback_sha256": digest,
             "catalog_sha256": digest,
@@ -1085,11 +1086,23 @@ complete_lifecycle_stage
             self._write_bundle(root)
             verifier.verify(root)
 
-    def test_publication_uses_the_current_129_unit_manifest(self) -> None:
-        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 129)
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 129)
-        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 129)
-        self.assertEqual(builder.EXPECTED_LEDGER_UNITS, 129)
+    def test_publication_uses_the_current_132_unit_manifest(self) -> None:
+        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 132)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 132)
+        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 132)
+        self.assertEqual(builder.EXPECTED_LEDGER_UNITS, 132)
+    def test_publication_rejects_review_media_catalog_counts_even_with_matching_total(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payloads = self._write_bundle(root)
+            original = payloads["local-migration-summary.json"]
+            for section in ("review_media_functions", "storage_policies", "storage_buckets", "seed_buckets"):
+                changed = copy.deepcopy(original)
+                changed["readback_section_counts"][section] -= 1
+                changed["readback_row_count"] -= 1
+                (root / "local-migration-summary.json").write_text(json.dumps(changed), encoding="utf-8")
+                with self.subTest(section=section), self.assertRaisesRegex(SystemExit, "readback summary mismatch"):
+                    verifier.verify(root)
 
     def test_rejects_missing_or_extra_manifest_units_with_recomputed_chain(self) -> None:
         manifest = local_migrate.verify_manifest()

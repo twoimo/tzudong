@@ -1,0 +1,82 @@
+{
+  "index": 1110,
+  "actualModelVersion": "gemini-3.8-flash",
+  "requestedThinkingLevel": "HIGH",
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokenCount": 2576,
+    "candidatesTokenCount": 459,
+    "totalTokenCount": 59332,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 2576
+      }
+    ],
+    "thoughtsTokenCount": 56297,
+    "serviceTier": "standard"
+  },
+  "inputSha256": "a21791e28dab1c6ed13ff642cb9dfd9114eabad13dc520e5305e10c91d5b3478",
+  "promptSha256": "7a279af1b9586e9b2f482f1e2b23cdb93bcc013d0daf2e4dbc9277c64a277ae7",
+  "jobName": "batches/6bfttrdehg67rw0qp7mf95l6dsvy2d38285d",
+  "thoughtsPersisted": false,
+  "rows": [
+    {
+      "key": "r1104",
+      "status": "needs_source",
+      "issues": [
+        "RECORD_MISMATCH"
+      ],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r1105",
+      "status": "fix",
+      "issues": [
+        "BROKEN_PROSE"
+      ],
+      "revisedReviewSha256": "0d130e866e64f480948d2372a18240210bb6d30674978eac3b0a11a1c908da15"
+    },
+    {
+      "key": "r1106",
+      "status": "fix",
+      "issues": [
+        "RAW_FORMATTING",
+        "PROMOTIONAL_VOICE"
+      ],
+      "revisedReviewSha256": "d7093966d4a5d2b047babf2f0eb2d2793c5a507ebbe1c845f3c76273f41fcb84"
+    },
+    {
+      "key": "r1107",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r1108",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r1109",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r1110",
+      "status": "needs_source",
+      "issues": [
+        "NEEDS_VIDEO_EVIDENCE"
+      ],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "r1111",
+      "status": "ok",
+      "issues": [],
+      "revisedReviewSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

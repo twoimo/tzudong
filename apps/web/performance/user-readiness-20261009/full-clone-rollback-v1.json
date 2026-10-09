@@ -1,0 +1,21 @@
+{
+  "atomicSourceSha256": "eac350c48a0c1424f1caf33f9b1daf5e76b73ccdffa33033c025bd6486f7f53a",
+  "exactBeforeAfterEqual": true,
+  "before": {
+    "members": "f8a54adbc187f6341ec23c8fa8f2115b",
+    "manifest": "5161af691dd836638aafa24c98af62df",
+    "functions": "e8fa97e289226e519a00138d04d8880b",
+    "mediaPresent": false
+  },
+  "after": {
+    "members": "f8a54adbc187f6341ec23c8fa8f2115b",
+    "manifest": "5161af691dd836638aafa24c98af62df",
+    "functions": "e8fa97e289226e519a00138d04d8880b",
+    "mediaPresent": false
+  },
+  "status": "passed",
+  "role": "postgres",
+  "engine": "17.6",
+  "userRowsCopied": 0,
+  "operatingWrites": false
+}

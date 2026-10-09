@@ -28,6 +28,8 @@ const {
   cleanupCanonicalReviewPhotoObjects,
   getCanonicalReviewPhotoObjectPath,
   getLegacyReviewPhotoObjectPath,
+  getOwnedReviewPhotoObjectPath,
+  getOwnedReviewPhotoValues,
   normalizeReviewPhotoFilename,
   resolveReviewPhotoUrl,
 } = await import('../lib/review-photo-url.ts?security-contract');
@@ -43,6 +45,14 @@ afterAll(() => {
 });
 
 describe('review photo URL trust boundary', () => {
+  test('verification images resolve to the authenticated admin route, never a public or signed URL', () => {
+    const ownership = { ...OWNER, purpose: 'verification' as const };
+    const path = 'owner-123/reviews/review-456/verification/proof.webp';
+    expect(resolveReviewPhotoUrl(path, ownership)).toBe('/api/admin/review-verification/review-456');
+    expect(resolveReviewPhotoUrl('owner-123/1789717467000_verification_proof.jpg', ownership))
+      .toBe('/api/admin/review-verification/review-456');
+    expect(resolveReviewPhotoUrl(path.replace('owner-123', 'other-owner'), ownership)).toBeNull();
+  });
   test('builds and resolves a canonical key bound to its owner and review', () => {
     expect(buildReviewPhotoObjectPath(OWNER, 'food-1.webp')).toBe(VALID_PATH);
     expect(getCanonicalReviewPhotoObjectPath(VALID_PATH, OWNER)).toBe(VALID_PATH);
@@ -72,8 +82,19 @@ describe('review photo URL trust boundary', () => {
   test('resolves same-origin public review-photo URLs back to the owned object', () => {
     const publicUrl = `${SUPABASE_ORIGIN}/storage/v1/object/public/review-photos/${VALID_PATH}`;
     expect(getCanonicalReviewPhotoObjectPath(publicUrl, OWNER)).toBeNull();
+    expect(getOwnedReviewPhotoObjectPath(publicUrl, OWNER)).toBe(VALID_PATH);
     expect(resolveReviewPhotoUrl(publicUrl, OWNER)).toBe(publicUrl);
     expect(resolveReviewPhotoUrl(`${publicUrl}?t=1`, OWNER)).toBe(publicUrl);
+  });
+
+  test('keeps authoritative historical values exact for the edit final-list contract', () => {
+    const publicUrl = `${SUPABASE_ORIGIN}/storage/v1/object/public/review-photos/${VALID_PATH}`;
+    const legacyPath = 'owner-123/1789717467000_food_0_1789717467001_k3j9x2m.webp';
+    expect(getOwnedReviewPhotoValues(
+      [publicUrl, VALID_PATH, legacyPath, publicUrl, 'https://evil.example/tracker.webp'],
+      OWNER,
+      SUPABASE_ORIGIN,
+    )).toEqual([publicUrl, VALID_PATH, legacyPath, publicUrl]);
   });
 
   test('rejects absolute URLs, buckets, traversal, encoded separators, queries, and fragments', () => {

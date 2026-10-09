@@ -1,0 +1,5 @@
+{
+  "field": "exportManifest SHA in HANDOFF-v7",
+  "clarification": "b8f06e7c... is the source snapshot SHA256, not the manifest-file SHA256. The exact value is export-manifest-v1.json.sourceSnapshotSha256.",
+  "originalHandoffPreserved": true
+}

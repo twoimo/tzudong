@@ -1,0 +1,13 @@
+{
+  "offline": true,
+  "networkRequests": 0,
+  "sdkMockTransportIntercepts": 1,
+  "requests": 60,
+  "promptTextEqual": true,
+  "inputTextEqual": true,
+  "schemaEqual": true,
+  "thinkingHigh": true,
+  "metadataEqual": true,
+  "rawBodiesPersistedInPublicEvidence": false,
+  "serverRuntimeEchoNotObserved": true
+}

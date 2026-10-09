@@ -15,6 +15,8 @@ on:
       - 'backend/supabase/tests/test_g014_diagnostic_admission.py'
       - 'backend/supabase/tests/test_restaurant_refresh_apply_boundary.py'
       - 'backend/supabase/scripts/transform_g014_guardian_replay.py'
+      - 'backend/supabase/scripts/transform_storyboard_owner_replay.py'
+      - 'backend/supabase/tests/test_storyboard_owner_replay.py'
       - 'backend/supabase/tests/test_g014_guardian_replay.py'
       - 'backend/supabase/scripts/recover_advisor_replay_prerequisites.py'
       - 'backend/supabase/tests/test_advisor_replay_prerequisites.py'
@@ -106,6 +108,7 @@ jobs:
           backend.supabase.tests.test_catalog_docker_endpoint
           backend.supabase.tests.test_registration_replay
           backend.supabase.tests.test_g014_catalog_baseline_generator
+          backend.supabase.tests.test_storyboard_owner_replay
           backend.supabase.tests.test_reconstruction_source_archive
           backend.supabase.tests.test_g024_source_reconstruction
           backend.supabase.tests.test_compare_g024_clean_replays

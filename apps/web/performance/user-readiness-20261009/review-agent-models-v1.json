@@ -1,0 +1,29 @@
+{
+  "scope": "19 PR review findings; user-authorized disjoint parallel fixes",
+  "settingsChanged": false,
+  "additionalCapacityPurchased": false,
+  "servingAttestationAvailable": false,
+  "agents": [
+    {
+      "id": "01a11fcf-c5f1-7343-9f26-5706a82399bf",
+      "scope": "SQL media security boundaries",
+      "explicitRequestedModel": "gpt-6-astra",
+      "sessionModel": "gpt-6-astra",
+      "sessionEffort": "xhigh"
+    },
+    {
+      "id": "01a11fcf-c75f-7df2-a1ce-cbe91d663801",
+      "scope": "auth continuation",
+      "explicitRequestedModel": null,
+      "sessionModel": "gpt-5.6-sol",
+      "sessionEffort": "xhigh"
+    },
+    {
+      "id": "01a11fcf-c88e-7f90-aff0-79abcf90dd4f",
+      "scope": "frontend media and private verification",
+      "explicitRequestedModel": null,
+      "sessionModel": "gpt-5.6-sol",
+      "sessionEffort": "xhigh"
+    }
+  ]
+}

@@ -82,7 +82,7 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
 
     def test_admission_accepts_exact_current_source_replay_dispositions(self):
         snapshot, bindings = self._migration_admission_fixture()
-        self.assertEqual(len(snapshot["ledger"]), 129)
+        self.assertEqual(len(snapshot["ledger"]), 132)
         self.assertEqual([row["status"] for row in snapshot["ledger"] if row["replayProof"]],
                          ["verified-existing", "verified-existing", "legacy-contract-preserved",
                           "verified-existing"])

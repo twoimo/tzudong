@@ -41,6 +41,7 @@ relevant_sources=(
   'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
   'backend/supabase/scripts/catalog_docker_endpoint.py'
   'backend/supabase/scripts/transform_g014_guardian_replay.py'
+  'backend/supabase/scripts/transform_storyboard_owner_replay.py'
   'backend/supabase/scripts/transform_registration_replay.py'
   'backend/supabase/scripts/transform_advisor_replay.py'
   'backend/supabase/scripts/verify_admin_user_ids_replay.py'
@@ -113,6 +114,30 @@ docker_local() {
   env -i PATH="$PATH" HOME="$HOME" DOCKER_CONFIG="$docker_config" \
     DOCKER_HOST="$docker_endpoint" docker "$@"
 }
+
+# IMAGE_INSPECT_COMPAT_BEGIN
+image_inspect_platform_args=()
+configure_image_inspection() {
+  local help api major minor
+  help=$(docker_local image inspect --help) || return 1
+  api=$(docker_local version --format '{{.Server.APIVersion}}') || return 1
+  image_inspect_platform_args=()
+  if [[ "$help" == *--platform* && "$api" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+    major=${BASH_REMATCH[1]}; minor=${BASH_REMATCH[2]}
+    if ((major > 1 || (major == 1 && minor >= 49))); then
+      image_inspect_platform_args=(--platform linux/amd64)
+    fi
+  fi
+}
+inspect_amd64_image() {
+  docker_local image inspect "${image_inspect_platform_args[@]}" "$@"
+}
+available_amd64_image() {
+  local platform
+  platform=$(inspect_amd64_image "$1" --format '{{.Os}}/{{.Architecture}}') || return 1
+  [[ "$platform" == 'linux/amd64' ]]
+}
+# IMAGE_INSPECT_COMPAT_END
 
 compose_host_path() {
   case "$(uname -s)" in
@@ -662,18 +687,20 @@ fi || {
 # The public, digest-pinned image is a reproducible build dependency, never
 # a source of catalog data. Compose itself remains pull-free. Select the same
 # pinned AMD64 variant for inspection and execution on multi-architecture stores.
-# Docker image inspect --platform requires API 1.49+; unsupported clients deny.
-if ! docker_local image inspect --platform linux/amd64 "$db_image" >/dev/null; then
+# Inspect uses explicit platform when the existing client/server support it.
+# Older clients inspect their local selection, which must still be linux/amd64.
+configure_image_inspection
+if ! available_amd64_image "$db_image"; then
   docker_local pull --platform linux/amd64 "$db_image" >/dev/null
 fi
-docker_local image inspect --platform linux/amd64 "$db_image" >/dev/null || {
+available_amd64_image "$db_image" || {
   printf 'required pinned DB image is unavailable after pull\n' >&2
   exit 1
 }
-[[ $(docker_local image inspect --platform linux/amd64 "$db_image" --format '{{.Architecture}}') == 'amd64' ]] || {
+[[ $(inspect_amd64_image "$db_image" --format '{{.Architecture}}') == 'amd64' ]] || {
   printf 'required Postgres image architecture is not amd64\n' >&2; exit 1;
 }
-db_resolved_repo_digests=$(docker_local image inspect --platform linux/amd64 "$db_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
+db_resolved_repo_digests=$(inspect_amd64_image "$db_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
 [[ "$db_resolved_repo_digests" == *"@${db_index_digest}"* || "$db_resolved_repo_digests" == *"@${db_amd64_manifest_digest}"* ]] || {
   printf 'Postgres resolved RepoDigest does not match pinned index or amd64 manifest evidence\n' >&2; exit 1;
 }
@@ -690,31 +717,31 @@ cmp -s "$platform_auth_bootstrap" "$platform_auth_image_evidence" || {
   exit 1
 }
 platform_auth_image_sha256=$(sha256sum -- "$platform_auth_image_evidence" | cut -d' ' -f1)
-if ! docker_local image inspect --platform linux/amd64 "$storage_image" >/dev/null; then
+if ! available_amd64_image "$storage_image"; then
   docker_local pull --platform linux/amd64 "$storage_image" >/dev/null
 fi
-docker_local image inspect --platform linux/amd64 "$storage_image" >/dev/null || {
+available_amd64_image "$storage_image" || {
   printf 'required pinned Storage image is unavailable after pull\n' >&2; exit 1;
 }
-[[ $(docker_local image inspect --platform linux/amd64 "$storage_image" --format '{{.Architecture}}') == 'amd64' ]] || {
+[[ $(inspect_amd64_image "$storage_image" --format '{{.Architecture}}') == 'amd64' ]] || {
   printf 'required Storage image architecture is not amd64\n' >&2; exit 1;
 }
-storage_resolved_image_id=$(docker_local image inspect --platform linux/amd64 "$storage_image" --format '{{.Id}}')
-storage_resolved_repo_digests=$(docker_local image inspect --platform linux/amd64 "$storage_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
+storage_resolved_image_id=$(inspect_amd64_image "$storage_image" --format '{{.Id}}')
+storage_resolved_repo_digests=$(inspect_amd64_image "$storage_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
 [[ "$storage_resolved_repo_digests" == *"@${storage_index_digest}"* || "$storage_resolved_repo_digests" == *"@${storage_amd64_manifest_digest}"* ]] || {
   printf 'Storage resolved RepoDigest does not match pinned index or amd64 manifest evidence\n' >&2; exit 1;
 }
-if ! docker_local image inspect --platform linux/amd64 "$gotrue_image" >/dev/null; then
+if ! available_amd64_image "$gotrue_image"; then
   docker_local pull --platform linux/amd64 "$gotrue_image" >/dev/null
 fi
-docker_local image inspect --platform linux/amd64 "$gotrue_image" >/dev/null || {
+available_amd64_image "$gotrue_image" || {
   printf 'required pinned GoTrue image is unavailable after pull\n' >&2; exit 1;
 }
-[[ $(docker_local image inspect --platform linux/amd64 "$gotrue_image" --format '{{.Architecture}}') == 'amd64' ]] || {
+[[ $(inspect_amd64_image "$gotrue_image" --format '{{.Architecture}}') == 'amd64' ]] || {
   printf 'required GoTrue image architecture is not amd64\n' >&2; exit 1;
 }
-gotrue_resolved_image_id=$(docker_local image inspect --platform linux/amd64 "$gotrue_image" --format '{{.Id}}')
-gotrue_resolved_repo_digests=$(docker_local image inspect --platform linux/amd64 "$gotrue_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
+gotrue_resolved_image_id=$(inspect_amd64_image "$gotrue_image" --format '{{.Id}}')
+gotrue_resolved_repo_digests=$(inspect_amd64_image "$gotrue_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
 [[ "$gotrue_resolved_repo_digests" == *"@${gotrue_index_digest}"* || "$gotrue_resolved_repo_digests" == *"@${gotrue_amd64_manifest_digest}"* ]] || {
   printf 'GoTrue resolved RepoDigest does not match pinned index or amd64 manifest evidence\n' >&2; exit 1;
 }
@@ -1380,6 +1407,8 @@ g026_phase_b_applied=0
 previous_effective_filename=''
 for migration in "${effective_migrations[@]}"; do
   canonical_path=${migration#"$repo_root"/}
+  # Static repository filenames only; never emit SQL bodies or environment data.
+  printf 'catalog_source_apply %s\n' "${migration##*/}"
   if [[ ${migration##*/} == '20260713002000_g014_public_api_private_boundary.sql' ]]; then
     g026_apply_repairs 'g026-phase-b-before-20260713002000_g014_public_api_private_boundary.sql'
     ((g026_phase_b_applied += 1))
@@ -1395,7 +1424,7 @@ for migration in "${effective_migrations[@]}"; do
       g026_chain_apply 'registration-pg15-replay-window' "$registration_replay"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$registration_replay"
       ;;
-    20260918021531_storyboard_mlx_worker.sql|20260920021531_storyboard_historical_restore.sql|20261003000812_storyboard_gemini_only.sql|20261003182338_storyboard_service_role_bridge.sql)
+    20261003000812_storyboard_gemini_only.sql|20261003182338_storyboard_service_role_bridge.sql)
       storyboard_replay="$work_dir/${migration##*/}.owner-replay.sql"
       python3 "$script_dir/transform_storyboard_history_replay.py" \
         --source "$migration" --bundle "$g026_bundle" --output "$storyboard_replay"
@@ -1564,6 +1593,12 @@ for migration in "${effective_migrations[@]}"; do
       }
       g026_chain_apply "self-contained-replay:${migration##*/}" "$migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$migration"
+      ;;
+    20260918021531_storyboard_mlx_worker.sql|20260920021531_storyboard_historical_restore.sql)
+      transformed_migration="$work_dir/storyboard-owner-replay-${migration##*/}"
+      python3 "$script_dir/transform_storyboard_owner_replay.py" --source "$migration" --output "$transformed_migration"
+      g026_chain_apply "storyboard-owner-lease-replay:${migration##*/}" "$transformed_migration"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
     *)
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$migration"
@@ -1797,8 +1832,8 @@ jsonl_hash=$(sha256sum -- "$jsonl" | cut -d' ' -f1)
 tuple_hash=$(sha256sum -- "$tuple_evidence" | cut -d' ' -f1)
 chain_hash=$(sha256sum -- "$chain_file" | cut -d' ' -f1)
 source_sha=$(git -C "$repo_root" rev-parse HEAD)
-resolved_image_id=$(docker_local image inspect --platform linux/amd64 "$db_image" --format '{{.Id}}')
-resolved_image_digest=$(docker_local image inspect --platform linux/amd64 "$db_image" --format '{{index .RepoDigests 0}}')
+resolved_image_id=$(inspect_amd64_image "$db_image" --format '{{.Id}}')
+resolved_image_digest=$(inspect_amd64_image "$db_image" --format '{{index .RepoDigests 0}}')
 server_version=$(compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres -At -c 'SHOW server_version;')
 row_count=$(wc -l <"$jsonl" | tr -d '[:space:]')
 reconstruction_entries=$(jq -c '.entries' "$reconstruction_manifest")

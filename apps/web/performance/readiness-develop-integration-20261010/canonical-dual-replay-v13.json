@@ -1,0 +1,15 @@
+{
+  "canonicalReplaySourceUnits": 137,
+  "replayNamesSha256": "41213298c767f5d0dbec8af2a879a806ae47966ea52e950d83e88458d23a8607",
+  "boundApplicationMigrationInputs": 145,
+  "allBoundInitializationSourceInputs": 245,
+  "retainedFileEquality": {
+    "count": 58,
+    "different": 0
+  },
+  "priorIncorrectCountArtifactsPreserved": [
+    "canonical-dual-replay-v11.json",
+    "canonical-dual-replay-v12.json"
+  ],
+  "operatingProof": false
+}

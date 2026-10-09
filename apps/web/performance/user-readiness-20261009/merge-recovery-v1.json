@@ -1,0 +1,31 @@
+[
+  {
+    "priorRun": "37854357198",
+    "priorHead": "4fb173ab3bcc8f2d34e9b95be1e41b7eb76374f5",
+    "failureCode": "G014 public RPC effective grantee matrix does not match the allowlist",
+    "source": "20261008084856_public_profile_leaderboard_read_boundary.sql",
+    "resolution": "Merged current develop, including already committed exact service RPC registry; preserved predecessor SQL and assertions.",
+    "newHead": "92b4db44435464bee5ceb7dd0abcbb6765860745",
+    "canonicalUnits": 130,
+    "localTests": {
+      "mergeFirst": {
+        "total": 119,
+        "failures": 4,
+        "errors": 36,
+        "cause": "transitional count 129 vs actual 130"
+      },
+      "mergeSecond": {
+        "total": 119,
+        "failures": 1,
+        "cause": "new replay contract contains five sources vs old expectation three"
+      },
+      "failedModuleRepair": {
+        "tests": 13,
+        "failures": 0
+      }
+    },
+    "sourceOnly": true,
+    "hostedWrites": 0,
+    "phoneHoldPreserved": true
+  }
+]

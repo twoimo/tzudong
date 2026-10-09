@@ -1,0 +1,10 @@
+{
+  "scope": "saved default colima endpoint admitted by unchanged catalog_docker_endpoint.py; inherited DOCKER_CONTEXT override deliberately ignored",
+  "status": "blocked",
+  "failure": "containerd snapshot creation: no space left on device",
+  "operatingWrites": false,
+  "existingImagesOrContainersPruned": false,
+  "defaultContextChanged": false,
+  "namedContextImagePulled": "supabase/postgres:15.8.1.085",
+  "remaining": "canonical PG15.8 replay still unverified; fresh CI and isolated named-profile paths remain"
+}

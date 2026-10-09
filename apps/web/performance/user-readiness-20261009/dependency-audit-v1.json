@@ -1,0 +1,204 @@
+{
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 10,
+      "critical": 0,
+      "total": 10
+    },
+    "dependencies": {
+      "prod": 329,
+      "dev": 461,
+      "optional": 129,
+      "peer": 22,
+      "peerOptional": 0,
+      "total": 837
+    }
+  },
+  "findings": [
+    {
+      "name": "@next/eslint-plugin-next",
+      "severity": "high",
+      "direct": false,
+      "range": ">=14.3.0-canary.0",
+      "fixAvailable": {
+        "name": "eslint-config-next",
+        "version": "14.2.35",
+        "isSemVerMajor": true
+      },
+      "via": [
+        "fast-glob"
+      ]
+    },
+    {
+      "name": "@parcel/watcher",
+      "severity": "high",
+      "direct": false,
+      "range": "2.1.0 - 2.5.1",
+      "fixAvailable": {
+        "name": "@tailwindcss/cli",
+        "version": "4.3.0",
+        "isSemVerMajor": true
+      },
+      "via": [
+        "micromatch"
+      ]
+    },
+    {
+      "name": "@tailwindcss/cli",
+      "severity": "high",
+      "direct": true,
+      "range": "<=0.0.0-insiders.f861d5c || >=4.3.1",
+      "fixAvailable": {
+        "name": "@tailwindcss/cli",
+        "version": "4.3.0",
+        "isSemVerMajor": true
+      },
+      "via": [
+        "@parcel/watcher"
+      ]
+    },
+    {
+      "name": "braces",
+      "severity": "high",
+      "direct": false,
+      "range": "*",
+      "fixAvailable": {
+        "name": "@tailwindcss/cli",
+        "version": "4.3.0",
+        "isSemVerMajor": true
+      },
+      "via": [
+        {
+          "name": "braces",
+          "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+          "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+          "range": "<=3.0.3"
+        }
+      ]
+    },
+    {
+      "name": "eslint-config-next",
+      "severity": "high",
+      "direct": true,
+      "range": ">=14.3.0-canary.0",
+      "fixAvailable": {
+        "name": "eslint-config-next",
+        "version": "14.2.35",
+        "isSemVerMajor": true
+      },
+      "via": [
+        "@next/eslint-plugin-next"
+      ]
+    },
+    {
+      "name": "fast-glob",
+      "severity": "high",
+      "direct": false,
+      "range": "*",
+      "fixAvailable": {
+        "name": "eslint-config-next",
+        "version": "14.2.35",
+        "isSemVerMajor": true
+      },
+      "via": [
+        "micromatch"
+      ]
+    },
+    {
+      "name": "micromatch",
+      "severity": "high",
+      "direct": false,
+      "range": ">=0.2.0",
+      "fixAvailable": {
+        "name": "@tailwindcss/cli",
+        "version": "4.3.0",
+        "isSemVerMajor": true
+      },
+      "via": [
+        "braces"
+      ]
+    },
+    {
+      "name": "next",
+      "severity": "high",
+      "direct": true,
+      "range": "16.0.0 - 16.3.7",
+      "fixAvailable": {
+        "name": "next",
+        "version": "16.4.0",
+        "isSemVerMajor": false
+      },
+      "via": [
+        {
+          "name": "next",
+          "title": "Next.js: Pending `use cache` fill can leak Draft Mode content into regular responses and persisted pages",
+          "url": "https://github.com/advisories/GHSA-3w37-wq28-93x7",
+          "range": ">=16.3.0 <16.3.8"
+        },
+        {
+          "name": "next",
+          "title": "Next.js has cache poisoning of SSG and ISR pages in self-hosted applications",
+          "url": "https://github.com/advisories/GHSA-4jqv-mc3x-m676",
+          "range": ">=16.0.0 <16.3.8"
+        },
+        {
+          "name": "next",
+          "title": "Next.js has information disclosure in development server's Model Context Protocol endpoint",
+          "url": "https://github.com/advisories/GHSA-39w2-rjm5-chcv",
+          "range": ">=16.0.0 <16.3.8"
+        },
+        {
+          "name": "next",
+          "title": "Next.js has information disclosure in App Router metadata image routes via dynamicParams bypass",
+          "url": "https://github.com/advisories/GHSA-f87g-xv8r-7p7x",
+          "range": ">=16.0.0 <16.3.8"
+        },
+        {
+          "name": "next",
+          "title": "Next.js has cache poisoning in SSG/ISR rendering that leads to cross-user content substitution and persistent denial of service",
+          "url": "https://github.com/advisories/GHSA-mcj8-r9mp-w47p",
+          "range": ">=16.0.0 <16.3.8"
+        },
+        {
+          "name": "next",
+          "title": "Next.js has Server-Side Request Forgery in Image Optimization",
+          "url": "https://github.com/advisories/GHSA-cjq9-62q9-8jv4",
+          "range": ">=16.0.0 <16.3.8"
+        }
+      ]
+    },
+    {
+      "name": "sharp",
+      "severity": "high",
+      "direct": true,
+      "range": "<0.35.5",
+      "fixAvailable": true,
+      "via": [
+        {
+          "name": "sharp",
+          "title": "sharp : Vulnerability in librsvg dependency CVE-2026-96889",
+          "url": "https://github.com/advisories/GHSA-wq5f-xc86-pv6w",
+          "range": "<0.35.5"
+        }
+      ]
+    },
+    {
+      "name": "source-map-js",
+      "severity": "high",
+      "direct": false,
+      "range": "1.0.0 - 1.2.1",
+      "fixAvailable": true,
+      "via": [
+        {
+          "name": "source-map-js",
+          "title": "source-map-js allows event-loop denial of service through indexed source-map section offsets",
+          "url": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q",
+          "range": ">=1.0.0 <1.2.2"
+        }
+      ]
+    }
+  ]
+}

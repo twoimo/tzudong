@@ -45,7 +45,6 @@ const PREEXISTING_ADDITIONAL_CLIENT_SITES = [
   'lib/dashboard/supabase.ts', // server-side dashboard read client (see admin dashboard contracts)
   'lib/public-insights/treemap.ts', // server-side public insights read client
   'app/api/account/delete/route.ts', // self account deletion service-role path (account-deletion contracts)
-  'app/api/privacy/onboarding/route.ts', // challenge-bound onboarding client (privacy-onboarding contract)
   'app/api/shorten/route.ts', // public + service-role clients (api-security-source contract)
   'app/s/[code]/route.ts', // public short-url redirect anon read client
   'scripts/capture-youtube-kpi-snapshot.mjs', // KPI snapshot CLI (server-side tooling)

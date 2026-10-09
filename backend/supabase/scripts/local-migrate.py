@@ -116,7 +116,7 @@ MIGRATION_ORDER_OVERRIDES = {
 }
 SEED_SOURCE = Path("backend/supabase/scripts/local-seed.sql")
 READBACK_SOURCE = Path("backend/supabase/scripts/local_catalog_readback.sql")
-EXPECTED_LEDGER_UNITS = 129
+EXPECTED_LEDGER_UNITS = 132
 EXPECTED_SERVICES = (
     "analytics", "auth", "db", "functions", "imgproxy", "kong", "mail",
     "meta", "realtime", "rest", "storage", "studio", "supavisor", "vector",
@@ -270,6 +270,7 @@ READBACK_SECTIONS = (
     "admin_map_overlay_rpc",
     "admin_map_overlay_table_grants",
     "admin_map_overlay_policies",
+    "review_media_functions",
     "auth_users",
     "auth_identities",
     "profiles",
@@ -283,9 +284,226 @@ READBACK_SECTIONS = (
     "seed_buckets",
     "seed_realtime",
 )
-CATALOG_SECTIONS = READBACK_SECTIONS[:22]
-SEED_SECTIONS = READBACK_SECTIONS[22:]
+CATALOG_SECTIONS = READBACK_SECTIONS[:23]
+SEED_SECTIONS = READBACK_SECTIONS[23:]
+REVIEW_MEDIA_FUNCTIONS = [['public.finish_review_media_cleanup()',
+  'privacy_workflow_owner',
+  'bigint',
+  True,
+  'v',
+  ['search_path=""'],
+  'f6c4e71988ed2b789b887484af5fdf2e482bde98f1d1c5b5d4e7ad124c314bd1',
+  False,
+  True,
+  False,
+  ['authenticated']],
+ ['public.mutate_review_with_media(uuid,uuid,text,timestamp with time zone,text,text[],text[])',
+  'privacy_workflow_owner',
+  'text',
+  True,
+  'v',
+  ['search_path=""'],
+  '50bfad7bc4fc7ddbc9d9379e8eb13facd938a15f66553576cc69fbcf69aa98b1',
+  False,
+  True,
+  False,
+  ['authenticated']],
+ ['public.pending_review_media_cleanup()',
+  'privacy_workflow_owner',
+  'TABLE(path text, owner_id uuid, review_id uuid, purpose text)',
+  True,
+  'v',
+  ['search_path=""'],
+  '5a92c8f282c895eabaa77f8cf3f452fb659bac33bd519ed8cf439dc1f2905c7b',
+  False,
+  True,
+  False,
+  ['authenticated']],
+ ['public.queue_review_upload_cleanup(uuid,text[])',
+  'privacy_workflow_owner',
+  'text',
+  True,
+  'v',
+  ['search_path=""'],
+  '89c3b573891f598cac5df6ce9a3217639092801a7439ec0404f338f2097114a8',
+  False,
+  True,
+  False,
+  ['authenticated']],
+ ['public.read_review_media_commit(uuid,uuid,text)',
+  'privacy_workflow_owner',
+  'text',
+  True,
+  'v',
+  ['search_path=""'],
+  '2f14abfc04864f369467f5ac5f0603defa149b8023d7e6b04e2bb8535f8a268e',
+  False,
+  True,
+  False,
+  ['authenticated']],
+ ['public.review_media_delete_allowed(text)',
+  'privacy_workflow_owner',
+  'boolean',
+  True,
+  'v',
+  ['search_path=""'],
+  'a75dbd787dd388b0761bee11c82a56d5f410688e4cfd953181bce4d613062ae7',
+  False,
+  True,
+  False,
+  ['authenticated']],
+ ['public.review_media_upload_allowed(text,text)',
+  'privacy_workflow_owner',
+  'boolean',
+  True,
+  'v',
+  ['search_path=""'],
+  '298c6a127f3a44a193b78be8c1f2577ab58aa34c772b66ccd53f774d807cc90c',
+  False,
+  True,
+  False,
+  ['authenticated']],
+ ['review_media_private.canonical(text,uuid,uuid,text)',
+  'privacy_workflow_owner',
+  'boolean',
+  False,
+  'i',
+  ['search_path=""'],
+  '87d8397c36cf4c7b986f75cbc2788979333a76be2cc26dc5522cd362f62414a9',
+  False,
+  False,
+  False,
+  []],
+ ['review_media_private.enqueue_removed()',
+  'privacy_workflow_owner',
+  'trigger',
+  True,
+  'v',
+  ['search_path=""'],
+  '7edb21d70ea3ff81ab90e13617e8c1c2749b54b1506f1ff42aaa6c5dc33f9e38',
+  False,
+  False,
+  False,
+  []],
+ ['review_media_private.guard_references()',
+  'privacy_workflow_owner',
+  'trigger',
+  True,
+  'v',
+  ['search_path=""'],
+  '846030547ffd76e17596755d7eee4279dcb9b563361435260826071d2f250d59',
+  False,
+  False,
+  False,
+  []],
+ ['review_media_private.lock_changes()',
+  'privacy_workflow_owner',
+  'trigger',
+  True,
+  'v',
+  ['search_path=""'],
+  '381d89aa6bbf5a59c2ee0fef2a7392ef705147252b324527201b8b6f74376250',
+  False,
+  False,
+  False,
+  []],
+ ['review_media_private.owned_legacy(text,uuid,text)',
+  'privacy_workflow_owner',
+  'boolean',
+  False,
+  'i',
+  ['search_path=""'],
+  'a2d55f09f03fcaeedd77461198511673da7342a6a4873d37227f9cf612090980',
+  False,
+  False,
+  False,
+  []],
+ ['review_media_private.reference_key(text)',
+  'privacy_workflow_owner',
+  'text',
+  False,
+  'i',
+  ['search_path=""'],
+  'a8910cb09bfd959951045e8b0b8233b1e2a8bdc45073abeebdfc26b552b1dae7',
+  False,
+  False,
+  False,
+  []],
+ ['review_media_private.referenced(text)',
+  'privacy_workflow_owner',
+  'boolean',
+  True,
+  'v',
+  ['search_path=""'],
+  'cc295115d85a3a11b380e1378e2ee91b0d9f7f587c68839653f54ed826c398ce',
+  False,
+  False,
+  False,
+  []]]
+REVIEW_MEDIA_STORAGE_POLICIES = {'review_media_safe_delete': ('DELETE',
+                              ['authenticated'],
+                              "((bucket_id <> 'review-photos'::text) OR review_media_delete_allowed(name))",
+                              None,
+                              False),
+ 'review_media_safe_insert': ('INSERT',
+                              ['authenticated'],
+                              None,
+                              "((bucket_id <> ALL (ARRAY['review-photos'::text, 'review-verifications'::text])) OR review_media_upload_allowed(bucket_id, name))",
+                              False),
+ 'review_media_safe_update': ('UPDATE',
+                              ['authenticated'],
+                              "((bucket_id <> ALL (ARRAY['review-photos'::text, 'review-verifications'::text])) OR review_media_upload_allowed(bucket_id, name))",
+                              "((bucket_id <> ALL (ARRAY['review-photos'::text, 'review-verifications'::text])) OR review_media_upload_allowed(bucket_id, name))",
+                              False),
+ 'review_media_workflow_read': ('SELECT',
+                                ['privacy_workflow_owner'],
+                                "(bucket_id = ANY (ARRAY['review-photos'::text, "
+                                "'review-verifications'::text]))",
+                                None,
+                                True),
+ 'review_photos_food_insert': ('INSERT',
+                               ['authenticated'],
+                               None,
+                               "((bucket_id <> 'review-photos'::text) OR ((split_part(name, '/'::text, 4) = "
+                               "'food'::text) AND ((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS uid))))",
+                               False),
+ 'review_photos_food_update': ('UPDATE',
+                               ['authenticated'],
+                               "((bucket_id <> 'review-photos'::text) OR ((split_part(name, '/'::text, 4) = "
+                               "'food'::text) AND ((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS uid))))",
+                               "((bucket_id <> 'review-photos'::text) OR ((split_part(name, '/'::text, 4) = "
+                               "'food'::text) AND ((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS uid))))",
+                               False),
+ 'review_verifications_owner_delete': ('DELETE',
+                                       ['authenticated'],
+                                       "((bucket_id = 'review-verifications'::text) AND "
+                                       '((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS '
+                                       'uid)))',
+                                       None,
+                                       True),
+ 'review_verifications_owner_insert': ('INSERT',
+                                       ['authenticated'],
+                                       None,
+                                       "((bucket_id = 'review-verifications'::text) AND "
+                                       '((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS '
+                                       "uid)) AND (split_part(name, '/'::text, 4) = 'verification'::text))",
+                                       True),
+ 'review_verifications_owner_read': ('SELECT',
+                                     ['authenticated'],
+                                     "((bucket_id = 'review-verifications'::text) AND "
+                                     '(((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS '
+                                     "uid)) OR has_role(( SELECT auth.uid() AS uid), 'admin'::app_role)))",
+                                     None,
+                                     True),
+ 'review_verifications_safe_delete': ('DELETE',
+                                      ['authenticated'],
+                                      "((bucket_id <> 'review-verifications'::text) OR "
+                                      'review_media_delete_allowed(name))',
+                                      None,
+                                      False)}
+
 CATALOG_FIELDS = {
+    "review_media_functions": ("signature", "owner", "result", "definer", "volatility", "config", "body_sha256", "anon_execute", "authenticated_execute", "service_execute", "allowlist"),
     "extensions": ("name", "schema", "version", "owner"),
     "roles": ("name", "superuser", "create_db", "create_role", "can_login", "member_of"),
     "schemas": ("name", "owner"),
@@ -302,10 +520,10 @@ CATALOG_FIELDS = {
         "declared_search_path",
         "normalized_definition_sha256",
     ),
-    "policies": ("schema", "relation", "name", "command", "roles", "normalized_using", "normalized_check"),
+    "policies": ("schema", "relation", "name", "command", "roles", "normalized_using", "normalized_check", "permissive"),
     "triggers": ("schema", "relation", "name", "timing", "events", "normalized_definition"),
     "storage_buckets": ("id", "name", "public", "file_size_limit", "allowed_mime_types"),
-    "storage_policies": ("schema", "relation", "name", "command", "roles", "normalized_using", "normalized_check"),
+    "storage_policies": ("schema", "relation", "name", "command", "roles", "normalized_using", "normalized_check", "permissive"),
     "realtime_membership": ("publication", "schema", "relation"),
     "public_read_function_grants": ("function", "role", "execute"),
     "public_read_table_grants": (
@@ -2493,6 +2711,7 @@ def _receipt_row_key(section: str, row: list[Any]) -> tuple[Any, ...]:
         "functions": (1, 2, 3),
         "policies": (1, 2, 3),
         "triggers": (1, 2, 3),
+        "review_media_functions": (1,),
         "storage_buckets": (1, 2),
         "storage_policies": (1, 2, 3),
         "realtime_membership": (1, 2, 3),
@@ -2998,6 +3217,7 @@ def _validate_seed_invariants(records: list[list[Any]]) -> None:
         ["seed_buckets", "avatars", "avatars", True],
         ["seed_buckets", "profile-avatars", "profile-avatars", True],
         ["seed_buckets", "review-photos", "review-photos", True],
+        ["seed_buckets", "review-verifications", "review-verifications", False],
         ["seed_buckets", "storyboard-private", "storyboard-private", False],
         ["seed_buckets", "youtube-thumbnail-releases", "youtube-thumbnail-releases", False],
     ]
@@ -3010,12 +3230,13 @@ def _validate_seed_invariants(records: list[list[Any]]) -> None:
         ("avatars", "avatars", True),
         ("profile-avatars", "profile-avatars", True),
         ("review-photos", "review-photos", True),
+        ("review-verifications", "review-verifications", False),
         ("storyboard-private", "storyboard-private", False),
         ("youtube-thumbnail-releases", "youtube-thumbnail-releases", False),
     ]:
         _receipt_error("receipt_bucket_fixture")
     storage_policies = [row for row in records if row[0] == "storage_policies"]
-    if len(storage_policies) != 12 or any(row[1:3] != ["storage", "objects"] for row in storage_policies):
+    if len(storage_policies) != 22 or any(row[1:3] != ["storage", "objects"] for row in storage_policies):
         _receipt_error("receipt_storage_policy_fixture")
     policy_names = {row[3] for row in storage_policies}
     expected_policy_names = {
@@ -3026,6 +3247,7 @@ def _validate_seed_invariants(records: list[list[Any]]) -> None:
         "tzudong_public_media_read", "tzudong_review_photo_delete_own",
         "tzudong_review_photo_insert_own", "tzudong_review_photo_update_own",
     }
+    expected_policy_names.update(REVIEW_MEDIA_STORAGE_POLICIES)
     if policy_names != expected_policy_names:
         _receipt_error("receipt_storage_policy_fixture")
     policy_contracts = {
@@ -3043,6 +3265,17 @@ def _validate_seed_invariants(records: list[list[Any]]) -> None:
         "tzudong_review_photo_update_own": ("UPDATE", ["authenticated"], ("review-photos", "foldername", "uid()"), ("review-photos", "foldername", "uid()")),
     }
     for row in storage_policies:
+        if row[3] in REVIEW_MEDIA_STORAGE_POLICIES:
+            expected = REVIEW_MEDIA_STORAGE_POLICIES[row[3]]
+            if row[4:] != list(expected) or type(row[8]) is not bool:
+                _receipt_error("receipt_review_media_storage_policy")
+            continue
+        if row[8] is not True:
+            _receipt_error("receipt_storage_policy_fixture")
+        if row[3] == "tzudong_public_media_read" and row[6] != (
+            "(bucket_id = ANY (ARRAY['profile-avatars'::text, 'review-photos'::text, 'ad-banner-images'::text]))"
+        ):
+            _receipt_error("receipt_review_media_public_read")
         command, roles, using_tokens, check_tokens = policy_contracts[row[3]]
         if row[4] != command or row[5] != roles:
             _receipt_error("receipt_storage_policy_fixture")
@@ -3052,6 +3285,11 @@ def _validate_seed_invariants(records: list[list[Any]]) -> None:
                     _receipt_error("receipt_storage_policy_fixture")
             elif not isinstance(expression, str) or any(token not in expression for token in tokens):
                 _receipt_error("receipt_storage_policy_fixture")
+    if any(type(row[3]) is not bool for row in storage_buckets) or [row for row in storage_buckets if row[1] == "review-verifications"] != [[
+        "storage_buckets", "review-verifications", "review-verifications", False, 5242880,
+        ["image/jpeg", "image/png", "image/webp", "image/avif"],
+    ]]:
+        _receipt_error("receipt_review_media_private_bucket")
     realtime = [row for row in records if row[0] == "seed_realtime"]
     expected_realtime = [
         ["seed_realtime", "supabase_realtime", "public", "notifications"],
@@ -3132,6 +3370,11 @@ def parse_readback(value: bytes | str | Sequence[Any]) -> list[list[Any]]:
     _validate_auth_catalog(records)
     _validate_public_read_contract(records)
     _validate_admin_map_overlay_contract(records)
+    media_functions = [row[1:] for row in records if row[0] == "review_media_functions"]
+    if media_functions != REVIEW_MEDIA_FUNCTIONS or any(
+        type(row[index]) is not bool for row in media_functions for index in (3, 7, 8, 9)
+    ):
+        _receipt_error("receipt_review_media_function_contract")
     _validate_seed_invariants(records)
     return records
 
