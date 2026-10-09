@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "cleanReplayRuns": 2,
+  "equivalentRetainedFiles": 56,
+  "totalRetainedFiles": 58,
+  "differingFiles": [
+    "SHA256SUMS",
+    "metadata.json"
+  ],
+  "metadataDifference": {
+    "source_sha": [
+      "fb64ecabc8946b7d75dafb2cc68a72472b64227d",
+      "8a0565a30d5964b3de4ca13292d917425e067a52"
+    ]
+  },
+  "otherMetadataExactlyEqual": true,
+  "sourceLedgerUnits": 132,
+  "boundMigrationFiles": 145,
+  "replayLoggedEntries": 137,
+  "operatingWrites": 0,
+  "priorA2ServiceNotRunningPreserved": true,
+  "exactWebHead": "fb64ecabc8946b7d75dafb2cc68a72472b64227d",
+  "fullWebUnit": {
+    "pass": 3352,
+    "skip": 11,
+    "fail": 0
+  },
+  "runtimeAndTestInputsUnchanged": 1171,
+  "browser": {
+    "cases": 13,
+    "pageError": 0,
+    "unsupportedFixture": 0,
+    "consoleError": 13,
+    "CSP": 7,
+    "other": 6,
+    "realAccountWritten": false,
+    "fieldAdmission": 0,
+    "physicalDevice": false
+  },
+  "nativePG17Proof": "../readiness-develop-integration-20261010/atomic-integrated-nine-v4-exact-pg17-proof.json",
+  "postNativeReadbackChange": "early Storage inventory 20 to exact22; all10 review-media policies delegated to unchanged exact predicate block; Python15 pass and nightly30 pass"
+}
