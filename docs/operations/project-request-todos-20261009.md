@@ -706,3 +706,13 @@ Five-stage 11개 private receipt와 forward prior-state receipt의 실제 canoni
 - root의 현재 영향받은 검사: auth/same-origin43, nightly30, seed21, page server19 = 고유113개 통과. TypeScript native/compat parity diagnostics0·logical inputs3,134, auth ESLint와 소유 변경의 diff check 통과. agent가 별도로 publication/runtime81, evaluation/normalization24를 확인했으며 중복 합산하지 않는다. 새 source 수정은 아직 배포되지 않았다.
 
 현재 운영 PostgreSQL170006·ledger80/latest20261008124858·맛집1,659건이다. 이번 후속의 Auth 설정 쓰기1회 외 운영 SQL·Storage 삭제·추가 충전·신규 Gemini inference는 0회다. 증빙: `continuity-recovery-20261009/web-operating-followthrough-20261009/`.
+
+## 2026-10-10 실제 Preview에서 발견한 호환성 회귀와 수정
+
+운영 metadata에서 warning RPC0개를 확인했고, develop `d847a7195b9add458a469742b6c33c38410cbcc7`의 READY Preview에서 맛집 관리가 고정 조회 오류로 닫히는 것을 실제 확인했다. 앞선 bounded aggregate-only 수정의 전환기 회귀이며 숨기지 않는다. main 승격 전에 raw·aggregate 두 RPC가 모두 첫 요청의 정확한 PGRST202로 없을 때만 제한된 stream을 허용하도록 수정한다.
+
+전환기 예산은 200행×10배치=2,000행과1행 sentinel이다. 관련 view는 restaurants와 UUID 기본키 index의1:1 조인이므로 현재1,659개는82.95%·잔여341개의 범위에 있다. 2,001행 이상이면 부분 경고를 반환하지 않고 전체 unavailable로 종료한다. 공급자 quota가 아니며 기존 explicit/정확한 Unicode·capacity admission 경로의50,000행 의미는 보존한다.
+
+같은1,659행 합성 입력의7쌍에서 cold DB 호출은13→14(+1,+7.69%)로 악화했다. 이전 source와 경고1,658건이7쌍 모두 일치했고 실제 네트워크0회다. 전환기 최악 요청 상한은255→16(-239,-93.73%)이다. Aggregate가 있는 별도 경로의5회 상한과 구분한다. 고정 호출 수와 상한이므로 모집단95%CI를 만들지 않으며 운영 지연·비용·쿼타 절감을 주장하지 않는다.
+
+root page server23개/231assertions 통과, agent의 범위 수정 전 관련27개/723assertions 통과를 별도 보존한다. 새 호환 소스의 실제 Preview 조회 복구는 아직 확인 전이며 운영 SQL·Storage·catalog reload는0회다. 증빙: `continuity-recovery-20261009/double-missing-warning-fix-20261010/`.
