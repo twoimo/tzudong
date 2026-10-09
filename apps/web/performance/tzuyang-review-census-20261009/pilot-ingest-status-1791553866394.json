@@ -1,0 +1,9 @@
+{
+  "observedAtUtc": "2026-10-09T13:51:04.835Z",
+  "name": "batches/ou10609mribyd7b806gebolzxtvkjmcjngzv",
+  "status": "validated_pilot",
+  "addedAdmittedRows": 8,
+  "operatingWrites": 0,
+  "state": "JOB_STATE_SUCCEEDED",
+  "totalCensusNotEstablished": true
+}
