@@ -1,0 +1,13 @@
+{
+  "ignoredArtifactsExplicitlyAdmitted": 135,
+  "classes": [
+    ".jsonl",
+    ".log"
+  ],
+  "jsonlParsed": true,
+  "zipMembersScanned": true,
+  "mapSha256": "4909f0c694d49b932cb2749acd303100d6cc3fa7ece35863cb93f2f6333391a7",
+  "privateSourceDataExportExcluded": true,
+  "credentialPatternHits": 0,
+  "commit": "098d1bfd8793a7c12304b0a0f5c6a8b6cc7dc532"
+}
