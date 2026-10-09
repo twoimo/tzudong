@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "sourceBase": "d847a7195b9add458a469742b6c33c38410cbcc7",
+  "sourceFiles": {
+    "apps/web/lib/admin/evaluation-page-server.ts": "25f1ed021b7eb5a66e2f6abdbbd14e5c43cc7c3cc83d284f2eea912a196ce600",
+    "apps/web/tests-unit/admin-evaluation-page-server.test.ts": "52297580735ad0748944061811de2427bc1128360f5d9109e5d883ab171489d0"
+  },
+  "readOnlyHostedObservation": {
+    "warningRpcCount": 0,
+    "restaurantCount": 1659
+  },
+  "observedPreviewRegression": {
+    "sha": "d847a7195b9add458a469742b6c33c38410cbcc7",
+    "fixedError": "검수 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+    "sourceFixDeployed": false
+  },
+  "localTests": {
+    "rootPageServer": {
+      "pass": 23,
+      "fail": 0,
+      "assertions": 231
+    },
+    "agentRelatedBeforeRootScopeCorrection": {
+      "pass": 27,
+      "fail": 0,
+      "assertions": 723
+    }
+  },
+  "pairedExperiment": {
+    "samples": 7,
+    "rows": 1659,
+    "beforeCalls": 13,
+    "afterCalls": 14,
+    "absoluteDifference": 1,
+    "relativeIncreasePercent": 7.6923076923076925,
+    "warningsEqualAllPairs": true,
+    "networkCalls": 0,
+    "runtimeLatencyMeasured": false,
+    "confidenceInterval": null,
+    "basis": "deterministic call counts with repeated synthetic input; no population confidence interval"
+  },
+  "requestBudget": {
+    "doubleMissingMaxDataRows": 2000,
+    "sentinelRows": 1,
+    "maxSuccessfulColdCalls": 16,
+    "legacyMaxColdCalls": 255,
+    "absoluteMaxDifference": -239,
+    "maximumCallReductionPercent": 93.72549019607843,
+    "rawMissingAggregatePresentColdCalls": 5,
+    "currentPopulationBudgetPercent": 82.95,
+    "remainingRows": 341,
+    "explicitAndAdmittedLegacyStreamMaxRows": 50000,
+    "budgetIsProviderQuota": false
+  },
+  "harnessAttempts": [
+    "server-only marker unresolved; no experiment output",
+    "baseline outside tsconfig alias unresolved; no experiment output",
+    "tsconfig override completed all seven pairs; Bun emitted directory-mismatch warning, exit0"
+  ],
+  "operations": {
+    "schemaWrites": 0,
+    "catalogReloads": 0,
+    "storageDeletes": 0,
+    "newGeminiInference": 0
+  },
+  "limits": [
+    "Call counts are local replay, not operational latency or cost.",
+    "The cold call count regresses by one when both RPCs are missing.",
+    "Capacity failure returns unavailable, never partial warning.",
+    "Future growth requires the raw-warning migration before this transitional budget is exceeded."
+  ]
+}
