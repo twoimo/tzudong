@@ -1,0 +1,22 @@
+{
+  "status": "read-only preparation delivered",
+  "document": "docs/operations/record-sql-release-preparation-20261009.md",
+  "documentSha256": "c4edabc3acd5b7000daef216a441a6f859805e8756471aeea3f2a7f2f952284c",
+  "auditSha256": "4a850a6ec4a6dd6216e247daa924170178cba069f10df649c13e6dc186be4f95",
+  "f319RagSourceSha256": "3de7ba1f9b3bba85b8b6cce47c6c020e08c4638adbcf4cbf2c043caa3bddfb54",
+  "manifestRegistered": 0,
+  "activeFreezeNewApplyPathSupported": false,
+  "currentApprovedManifestAndWorkflowUnchanged": true,
+  "fourSqlHashesUnchanged": true,
+  "operatingActions": 0,
+  "newApprovalRequests": 0,
+  "sourceChanges": "one new docs/operations preparation only; evidence outputs",
+  "materialTechnicalGaps": [
+    "four manifest entries and exact prior/terminal target bindings absent",
+    "active workflow permits only two old G016 verification exceptions; G03429 does not select four SQLs",
+    "no audited generic thaw transition in G037/G038; keep continuity",
+    "per-file COMMIT and external JSON check do not establish atomic four-file/terminal rollback",
+    "generic apply runner lacks ledger insert; supported ledger-aware execution/readback needed",
+    "old authenticated RPC private-helper denial persists; raw f319 rollback requires BAAI and old build/env/cron contract"
+  ]
+}
