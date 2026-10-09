@@ -1,0 +1,21 @@
+{
+  "status": "proposal ready for root adoption; runtime complete",
+  "sourceEdits": false,
+  "existingManifestPinAndWorkflowUnchanged": true,
+  "operatingWrites": false,
+  "pendingRuntimeHandle": null,
+  "ownedResourcesCleaned": true,
+  "parentContainerIdUnchangedAndRunning": true,
+  "integrationFiles": [
+    "proposed pure helper apps/web/scripts/supabase-migration-transaction.mjs",
+    "existing apps/web/scripts/apply-supabase-migration.mjs load/apply/catch branches",
+    "existing relevant unit tests"
+  ],
+  "adoptionProposal": "exact-integration-proposal.md",
+  "runtime": [
+    "transaction-runtime.json",
+    "admission-batch-runtime.json",
+    "response-loss-runtime.json"
+  ],
+  "g014PrivilegeLimitation": "Writer lacks direct 4 assertion EXECUTE; no grant fallback. Separate inspector gate or root-reviewed additions inside existing unapplied registration helpers."
+}

@@ -1,0 +1,72 @@
+{
+  "status": "passed",
+  "engine": "pg17",
+  "operatingWrites": false,
+  "actualCaller": "applyMigrationWithTerminalReadback",
+  "cases": [
+    {
+      "mode": "valid",
+      "code": null,
+      "state": {
+        "table": true,
+        "ledger": true
+      },
+      "driverCalls": 1
+    },
+    {
+      "mode": "mismatch",
+      "code": "MIGRATION_PSQL_FAILED_P0001",
+      "state": {
+        "table": false,
+        "ledger": false
+      },
+      "driverCalls": 2
+    },
+    {
+      "mode": "ddl",
+      "code": "MIGRATION_PSQL_FAILED_42P01",
+      "state": {
+        "table": false,
+        "ledger": false
+      },
+      "driverCalls": 2
+    },
+    {
+      "mode": "lost_ack",
+      "state": {
+        "table": true,
+        "ledger": true
+      },
+      "driverCalls": 2,
+      "terminal": {
+        "ready": true
+      }
+    },
+    {
+      "mode": "multirow",
+      "state": {
+        "table": false,
+        "ledger": false
+      }
+    },
+    {
+      "mode": "invalidjson",
+      "state": {
+        "table": false,
+        "ledger": false
+      }
+    }
+  ],
+  "version": "17.6",
+  "reconciliationShape": {
+    "ledger_exists": true,
+    "ledger_equal": true,
+    "prior": {
+      "absent": false
+    },
+    "terminal": {
+      "ready": true
+    }
+  },
+  "ownedDbDropped": true
+}

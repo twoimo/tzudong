@@ -1,0 +1,21 @@
+{
+  "model": "gemini-3.8-flash",
+  "watchCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+  "longformVideoCount": 1069,
+  "cache": {
+    "reusable": 2,
+    "new": 1066,
+    "readback_required": 1,
+    "corrupt": 0
+  },
+  "segmentSecondsUpper": 900,
+  "remainingSegments": 2003,
+  "remainingWork": {
+    "callsMin": 0,
+    "callsUpper": 4006,
+    "generationCallsUpper": 2003,
+    "countCallsUpper": 2003,
+    "inputTokenReservationUpper": 2100297728
+  },
+  "costVerified": false
+}

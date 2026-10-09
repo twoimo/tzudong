@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-09T05:01:00.758Z",
+  "project": {
+    "id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "name": "tzudong",
+    "teamId": "team_OUj64KeLxJI3PkEbOaFZnorA"
+  },
+  "id": "dpl_He2HgNHEkNsdbQg556dGJsreTEgr",
+  "url": "https://tzudong-76i12vmwe-twoimos-projects.vercel.app",
+  "state": "READY",
+  "gitSha": "614b249175c35636a7062bf05cb01ebad538b10d",
+  "gitRef": "develop",
+  "source": "git",
+  "target": null,
+  "createdAt": 1791520288510,
+  "buildingAt": 1791520289809,
+  "ready": 1791520514009,
+  "productionAdoptionVerified": false,
+  "newDeploymentCreatedByHelper": false
+}

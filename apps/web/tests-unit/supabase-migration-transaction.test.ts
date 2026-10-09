@@ -1,0 +1,78 @@
+import { expect, test } from 'bun:test';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { migrationEnvelope, statementSpans, atomicMigrationSql, reconciliationSql, reconciliationOutcome } from '../scripts/supabase-migration-transaction.mjs';
+import { applyMigrationWithTerminalReadback, readOriginalStatementVector, main, RELEASE_MIGRATION_MANIFEST_PATH } from '../scripts/apply-supabase-migration.mjs';
+const sha=(value:string)=>createHash('sha256').update(value).digest('hex');
+const source='-- fixture\nBEGIN;\nCREATE TABLE fixture_atomic(id int);\nCOMMIT;\n';
+const migration={id:'fixture_atomic',path:'backend/supabase/migrations/20261009120000_fixture_atomic.sql',sha256:sha(source),expectedPriorState:{query:"SELECT '{\"absent\":true}'::text;",expected:{absent:true}},terminalReadback:{query:"SELECT '{\"ready\":true}'::text;",expected:{ready:true}}};
+const vector=(sql:string)=>statementSpans(sql).map((s:{token:string})=>s.token);
+const plan=()=>migrationEnvelope(Buffer.from(source),migration,vector(source));
+
+test('four exact source envelopes agree with pinned provider-source parser and preserve body bytes',()=>{
+  for(const name of ['20261004190259_admin_record_guarded_actions.sql','20261004192657_admin_evaluation_raw_warning_groups.sql','20261004194715_admin_evaluation_raw_warning_invoker_contract.sql','20261009022915_restaurant_review_manual_preview_eligibility.sql']){
+    const path=`backend/supabase/migrations/${name}`;const bytes=readFileSync(new URL(`../../../${path}`,import.meta.url));
+    const m={...migration,path,sha256:createHash('sha256').update(bytes).digest('hex')};
+    const v=readOriginalStatementVector(m,bytes);const p=migrationEnvelope(bytes,m,v);
+    expect(p.originalVector).toEqual(v);expect(p.execution).not.toBe(bytes.toString());expect(p.sourceSha256).toBe(m.sha256);
+  }
+});
+test('hash/vector drift and all intermediate control aliases are rejected before a call',()=>{
+  expect(()=>migrationEnvelope(Buffer.from(source+' '),migration,vector(source))).toThrow('DIGEST_MISMATCH');
+  expect(()=>migrationEnvelope(Buffer.from(source),migration,['BEGIN'])).toThrow('VECTOR_MISMATCH');
+  for(const control of ['COMMIT','END','ROLLBACK','ABORT','START TRANSACTION','SAVEPOINT a','RELEASE a','PREPARE TRANSACTION \'x\'']){
+    const sql=source.replace('CREATE TABLE',`${control};\nCREATE TABLE`);const m={...migration,sha256:sha(sql)};
+    expect(()=>migrationEnvelope(Buffer.from(sql),m,vector(sql))).toThrow('TRANSACTION_CONTROL_DENIED');
+  }
+});
+test('quoted/dollar/comment control text remains untouched; unsupported meta commands reject',()=>{
+  const sql="BEGIN;DO $body$ BEGIN PERFORM 'COMMIT;'; /* ROLLBACK; */ END $body$;COMMIT;";
+  const p=migrationEnvelope(Buffer.from(sql),{...migration,sha256:sha(sql)},vector(sql));
+  expect(p.execution).toContain("PERFORM 'COMMIT;'");expect(p.execution).toContain('/* ROLLBACK; */');
+  expect(()=>statementSpans('\\include arbitrary.sql')).toThrow('META_COMMAND_DENIED');
+});
+test('server guards precede ledger and no source transaction boundary reaches payload',()=>{
+  const sql=atomicMigrationSql(plan(),migration);
+  expect(sql).toContain('INTO STRICT');expect(sql).toContain('IS DISTINCT FROM');expect(sql).toContain('MIGRATION_PRIOR_STATE_MISMATCH');
+  expect(sql.indexOf('MIGRATION_TERMINAL_READBACK_FAILED')).toBeLessThan(sql.indexOf('INSERT INTO supabase_migrations.schema_migrations'));
+  expect(sql).toContain(JSON.stringify(vector(source)).replaceAll("'","''"));
+  expect(statementSpans(sql).some((s:{token:string})=>/^(BEGIN|COMMIT)\b/i.test(s.token))).toBe(false);
+});
+test('insufficient query contracts deny before connection; no forged expected default',()=>{
+  for(const query of ['UPDATE secret SET x=1','SELECT 1; SELECT 2','WITH x AS (DELETE FROM x RETURNING *) SELECT * FROM x','\\echo bad']){
+    let calls=0;const m={...migration,expectedPriorState:{...migration.expectedPriorState,query}};
+    expect(()=>applyMigrationWithTerminalReadback('fixture',m,source,{readVectorImpl:()=>vector(source),runPsqlImpl:()=>{calls++;return '';}})).toThrow();expect(calls).toBe(0);
+  }
+});
+test('lost ACK makes exactly one fresh read-only reconciliation, never resends',()=>{
+  const calls:string[]=[];const result=applyMigrationWithTerminalReadback('fixture',migration,source,{readVectorImpl:()=>vector(source),runPsqlImpl:(_url:string,sql:string)=>{
+    calls.push(sql);if(calls.length===1)throw new Error('lost acknowledgement');
+    return JSON.stringify({ledger_exists:true,ledger_equal:true,prior:{absent:false},terminal:{ready:true}});
+  }});
+  expect(result).toEqual({ready:true});expect(calls).toHaveLength(2);expect(calls[1]).toContain('SET TRANSACTION READ ONLY');expect(calls[1]).not.toContain('INSERT INTO');
+});
+test('conflict/unknown are fixed outcomes and not-applied retains bounded failure',()=>{
+  expect(reconciliationOutcome({ledger_exists:true,ledger_equal:false,terminal:{ready:true}},migration)).toBe('partial_conflict');
+  expect(reconciliationOutcome({ledger_exists:false,ledger_equal:false,prior:{absent:true}},migration)).toBe('not_applied');
+  expect(reconciliationSql(plan(),migration)).toContain('FROM jsonb_each');
+  expect(reconciliationSql(plan(),migration)).not.toContain('SELECT value FROM (');
+});
+test('existing caller preserves pinned dry-run and valid provider-owned verify-only shape',async()=>{
+  const manifest=JSON.parse(readFileSync(RELEASE_MIGRATION_MANIFEST_PATH,'utf8'));const pin='515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d';
+  for(const m of manifest.migrations.filter((x:{id:string})=>x.id.startsWith('g016_'))){
+    const receipt={version:1,provider:'supabase',migration_id:m.id,migration_sha256:m.sha256,manifest_sha256:pin,receipt_id:'fixture-provider-123'};
+    let calls=0;const result=await main(['--migration-id',m.id,'--verify-terminal-state','--provider-receipt',JSON.stringify(receipt)],{environment:{RELEASE_MIGRATION_MANIFEST_SHA256:pin,PROVIDER_MIGRATION_RECEIPT_SHA256:sha(JSON.stringify(receipt)+'\n'),SUPABASE_DB_URL:'fixture'},runPsqlImpl:()=>{calls++;return JSON.stringify(m.terminalReadback.expected);},readVectorImpl:()=>{throw Error('must not build apply envelope');}});
+    expect(result.terminal_readback).toEqual(m.terminalReadback.expected);expect(result.migration_applied).toBe(false);expect(calls).toBe(1);
+  }
+});
+
+test('exit0 truncated/contaminated/mismatched stdout reconciles once after committed state',()=>{
+  for(const bad of ['', '{"ready":', 'untrusted extra stdout', '{"ready":false}']){
+    let calls=0;const result=applyMigrationWithTerminalReadback('fixture',migration,source,{readVectorImpl:()=>vector(source),runPsqlImpl:()=>{calls++;return calls===1?bad:JSON.stringify({ledger_exists:true,ledger_equal:true,prior:{absent:false},terminal:{ready:true}});}});
+    expect(result).toEqual({ready:true});expect(calls).toBe(2);
+  }
+});
+test('local psql startup and raw diagnostics stay outside the executor contract',()=>{
+  const text=readFileSync(new URL('../scripts/apply-supabase-migration.mjs',import.meta.url),'utf8');
+  expect(text).toContain('--no-psqlrc');expect(text).not.toContain('result.stderr.trim()');
+});

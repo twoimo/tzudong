@@ -54,6 +54,59 @@ class SegmentExecutionTests(unittest.TestCase):
                 patch.object(m.adapter, "invoke", side_effect=self.invoke):
             return m.execute(rows or [self.row], self.info, self.state, config or self.config, limits or self.limits, batch_id=batch_id)
 
+    def test_failure_receipts_add_only_optional_bounded_status_and_fixed_category(self):
+        cases=[(400,"invalid_request"),(401,"authentication"),(403,"authentication"),(429,"rate_limit"),(500,"server_error"),(503,"server_error"),
+               (None,"unknown"),(True,"unknown"),("400","unknown"),(99,"unknown"),(600,"unknown")]
+        root=self.state
+        for index,(value,category) in enumerate(cases):
+            with self.subTest(status=value):
+                self.state=root/f"status-{index}"
+                status=m.adapter.bounded_http_status(value)
+                def failed(**kwargs):
+                    self.calls.append(kwargs)
+                    observed={"operation":"count","httpOutcome":"http_success","responseId":None,"requestSha256":"e"*64,
+                              "usage":m.adapter.usage(None),"countedInputTokens":100}
+                    kwargs["observe"](observed)
+                    outcome="http_rejected" if status is not None and 400<=status<500 else "http_server_error" if status is not None and status>=500 else "transport_uncertain"
+                    kwargs["observe"]({**observed,"operation":"generate","httpOutcome":outcome})
+                    error=m.adapter.AdapterError("WATCH_HTTP_REJECTED" if outcome=="http_rejected" else "WATCH_TRANSPORT_UNCERTAIN")
+                    error.http_status=value
+                    error.http_category="private raw diagnostic"
+                    raise error
+                with patch.dict(m.os.environ,{"GEMINI_API_KEY":"synthetic-key"}),patch.object(m,"verify_checkout"),patch.object(m,"project_budget",return_value=self.budget),patch.object(m.adapter,"invoke",side_effect=failed):
+                    before=len(self.calls);m.execute([self.row],self.info,self.state,self.config,self.limits,batch_id="case")
+                    m.execute([self.row],self.info,self.state,self.config,self.limits,batch_id="another-case")
+                    self.assertEqual(len(self.calls)-before,1)
+                _,path,_=m.paths(self.state,m.segment_rows(self.row,self.config)[0],self.config)
+                receipt=m.checked_document(path)
+                self.assertEqual(receipt['httpCategory'],category)
+                if status is None:self.assertNotIn('httpStatus',receipt)
+                else:self.assertEqual(receipt['httpStatus'],status)
+                self.assertNotIn('private',path.read_text())
+                self.assertEqual(m.readback([self.row],self.state,self.config)['unresolved'],1)
+        self.state=root
+
+    def test_completed_predecessor_source_drift_never_becomes_a_new_paid_job(self):
+        self.execute()
+        _,receipt_path,evidence_path=m.paths(self.state,self.row,self.config)
+        old=m.checked_document(receipt_path)
+        previous={**self.config.identity,'adapterSha256':m.HTTP_STATUS_PREDECESSOR_SOURCES[0],
+                  'policySha256':m.HTTP_STATUS_PREDECESSOR_SOURCES[1]}
+        old['identity']={**old['identity'],'configSha256':m.digest(previous)}
+        prior=receipt_path.parent/(m.digest(old['identity'])+'.receipt.json')
+        m.atomic_document(prior,old)
+        receipt_path.unlink();evidence_path.unlink()
+        original=prior.read_bytes();calls=len(self.calls)
+        self.assertEqual(m.cached_state(self.state,self.row,self.config),'readback_required')
+        result=self.execute(batch_id='new-source')
+        self.assertEqual(result['blocked'],1)
+        self.assertEqual(len(self.calls),calls)
+        self.assertEqual(prior.read_bytes(),original)
+        self.assertEqual(m.readback([self.row],self.state,self.config)['unresolved'],1)
+        self.assertEqual(prior.read_bytes(),original)
+        self.assertEqual(self.config.identity['adapterSha256'],m.hashlib.sha256(m.Path(m.adapter.__file__).read_bytes()).hexdigest())
+        self.assertEqual(self.config.identity['policySha256'],m.hashlib.sha256(m.Path(m.__file__).read_bytes()).hexdigest())
+
     def test_longest_inventory_video_has_bounded_gapless_full_coverage(self):
         row = {**self.row, "durationSeconds": 17653}
         config = m.replace(self.config, input_limit=1048576, segment_seconds=900)

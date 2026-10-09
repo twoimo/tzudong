@@ -1,0 +1,11 @@
+# Authorized single execution: stopped on provider rejection
+
+835-second full clip -D43ezc57z8 was dispatched once using the exact existing funded vault key in process memory only, with both private key aliases made equal. Root's fresh UI/local suffix binding was confirmed; no key value or key-derived fingerprint was recorded. The approved model, prompt/schema, static clip/media policy, projectConcurrency1/RPM1 and protocol2 limits were preserved.
+
+Live PID30788, tool session22894, batch one-full-D43ezc57z8-20261009T045604Z. It is now completed/exit3 and no longer running. CountTokens succeeded with 86492 input tokens. One generation was sent after pacing and received HTTP4xx; there was no response ID, generation usage or output. Segment receipt is rejected/WATCH_HTTP_REJECTED; reservation2 calls/1048576 input/65536 output is exhausted. No provider request was retried or added. The existing adapter retains fixed status class, not the exact HTTP status/diagnostic, so this evidence cannot distinguish 400,403,429 or another 4xx cause.
+
+Local readback performed0 provider calls, recovered0/unresolved1 and left receipt hashes unchanged. Cached state is readback_required. No full-video or segment analysis output exists; the watched-video schema/coverage result could not be validated. No visual/audio independent verification or vault publication is claimed.
+
+Usage/billing: token count86492 is preflight input count, not a verified billed usage receipt. Generation Standard model-window price upper USD1.032192 remains a bound, not actual cost. Official GetTokens is interpreted as the unbilled counting utility, but direct REST zero-charge attribution, total KRW charge and eligible GCP credit consumption are unverified. Existing aggregate funding snapshots are not this operation's billing proof.
+
+All original source/config/state hashes remain unchanged; new batch and rejected receipts are bound in execution-result.json and privately snapshotted0600. Caption collector stays paused/rate-limit. Preserve the spent batch and reject receipt. Diagnose the request/API contract offline before any new explicitly instructed provider operation; no original response ID exists for GET recovery. Official response_format permits object or array; its appearance alone does not establish the unknown 4xx cause.

@@ -1,0 +1,250 @@
+{
+  "status": "passed",
+  "engine": "pg15",
+  "actualCaller": "applyMigrationWithTerminalReadback",
+  "operatingWrites": false,
+  "dockerContext": "colima-tzudong-catalog-20261007",
+  "container": "tzudong-atomic-impl-pg15-20261009",
+  "expectedImageDigest": "sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b",
+  "database": "continuity_sql_pg15_53307_1791527021644",
+  "cases": [
+    {
+      "name": "strict_3_column_success",
+      "value": {
+        "ready": true
+      },
+      "code": null,
+      "calls": 1,
+      "firstCode": null,
+      "firstFixedSqlCode": null,
+      "state": {
+        "table": true,
+        "ledger": true
+      }
+    },
+    {
+      "name": "terminal_mismatch",
+      "value": null,
+      "code": "MIGRATION_TERMINAL_READBACK_FAILED",
+      "calls": 2,
+      "firstCode": "MIGRATION_PSQL_FAILED_P0001",
+      "firstFixedSqlCode": "MIGRATION_TERMINAL_READBACK_FAILED",
+      "state": {
+        "table": false,
+        "ledger": false
+      }
+    },
+    {
+      "name": "lost_ack",
+      "value": {
+        "ready": true
+      },
+      "code": null,
+      "calls": 2,
+      "firstCode": null,
+      "firstFixedSqlCode": null,
+      "state": {
+        "table": true,
+        "ledger": true
+      }
+    },
+    {
+      "name": "exit0_stdout_empty",
+      "value": {
+        "ready": true
+      },
+      "code": null,
+      "calls": 2,
+      "firstCode": null,
+      "firstFixedSqlCode": null,
+      "state": {
+        "table": true,
+        "ledger": true
+      }
+    },
+    {
+      "name": "exit0_stdout_truncated",
+      "value": {
+        "ready": true
+      },
+      "code": null,
+      "calls": 2,
+      "firstCode": null,
+      "firstFixedSqlCode": null,
+      "state": {
+        "table": true,
+        "ledger": true
+      }
+    },
+    {
+      "name": "exit0_stdout_contaminated",
+      "value": {
+        "ready": true
+      },
+      "code": null,
+      "calls": 2,
+      "firstCode": null,
+      "firstFixedSqlCode": null,
+      "state": {
+        "table": true,
+        "ledger": true
+      }
+    },
+    {
+      "name": "exit0_stdout_mismatched",
+      "value": {
+        "ready": true
+      },
+      "code": null,
+      "calls": 2,
+      "firstCode": null,
+      "firstFixedSqlCode": null,
+      "state": {
+        "table": true,
+        "ledger": true
+      }
+    },
+    {
+      "name": "ledger_conflict",
+      "value": null,
+      "code": "MIGRATION_RECONCILIATION_CONFLICT",
+      "calls": 2,
+      "firstCode": "MIGRATION_PSQL_FAILED_P0001",
+      "firstFixedSqlCode": "MIGRATION_LEDGER_CONFLICT",
+      "state": {
+        "table": false,
+        "ledger": true
+      }
+    },
+    {
+      "name": "privilege_select_only_denied_before_ddl",
+      "value": null,
+      "code": "MIGRATION_LEDGER_UNAVAILABLE",
+      "calls": 2,
+      "firstCode": "MIGRATION_PSQL_FAILED_P0001",
+      "firstFixedSqlCode": "MIGRATION_LEDGER_UNAVAILABLE",
+      "state": {
+        "table": false,
+        "ledger": false
+      }
+    },
+    {
+      "name": "privilege_insert_only_denied_before_ddl",
+      "value": null,
+      "code": "MIGRATION_OUTCOME_UNCONFIRMED",
+      "calls": 2,
+      "firstCode": "MIGRATION_PSQL_FAILED_P0001",
+      "firstFixedSqlCode": "MIGRATION_LEDGER_UNAVAILABLE",
+      "state": {
+        "table": false,
+        "ledger": false
+      }
+    },
+    {
+      "name": "strict_6_column_success",
+      "value": {
+        "ready": true
+      },
+      "code": null,
+      "calls": 1,
+      "firstCode": null,
+      "firstFixedSqlCode": null,
+      "state": {
+        "table": true,
+        "ledger": true
+      }
+    },
+    {
+      "name": "unknown_7_column_profile_denied",
+      "value": null,
+      "code": "MIGRATION_LEDGER_CONTRACT_INSUFFICIENT",
+      "calls": 2,
+      "firstCode": "MIGRATION_PSQL_FAILED_P0001",
+      "firstFixedSqlCode": "MIGRATION_LEDGER_CONTRACT_INSUFFICIENT",
+      "state": {
+        "table": false,
+        "ledger": false
+      }
+    },
+    {
+      "name": "malformed_6_column_profile_denied",
+      "value": null,
+      "code": "MIGRATION_LEDGER_CONTRACT_INSUFFICIENT",
+      "calls": 2,
+      "firstCode": "MIGRATION_PSQL_FAILED_P0001",
+      "firstFixedSqlCode": "MIGRATION_LEDGER_CONTRACT_INSUFFICIENT",
+      "state": {
+        "table": false,
+        "ledger": false
+      }
+    }
+  ],
+  "cleanup": {
+    "databaseDropped": true,
+    "rolesDropped": true
+  },
+  "containerId": "58ad2c2c9b0929ad0a44682d53ad66855d8db576eed46fb8ef6812fb09f412c6",
+  "networkMode": "none",
+  "publishedPorts": 0,
+  "serverVersion": "15.8",
+  "firstCaseDiagnostic": {
+    "execution": {
+      "value": {
+        "ready": true
+      },
+      "code": null,
+      "calls": 1,
+      "firstCode": null,
+      "firstFixedSqlCode": null
+    },
+    "state": {
+      "table": true,
+      "ledger": true
+    }
+  },
+  "privilegeDiagnostics": [
+    {
+      "label": "select_only",
+      "execution": {
+        "value": null,
+        "code": "MIGRATION_LEDGER_UNAVAILABLE",
+        "calls": 2,
+        "firstCode": "MIGRATION_PSQL_FAILED_P0001",
+        "firstFixedSqlCode": "MIGRATION_LEDGER_UNAVAILABLE"
+      },
+      "state": {
+        "table": false,
+        "ledger": false
+      }
+    },
+    {
+      "label": "insert_only",
+      "execution": {
+        "value": null,
+        "code": "MIGRATION_OUTCOME_UNCONFIRMED",
+        "calls": 2,
+        "firstCode": "MIGRATION_PSQL_FAILED_P0001",
+        "firstFixedSqlCode": "MIGRATION_LEDGER_UNAVAILABLE"
+      },
+      "state": {
+        "table": false,
+        "ledger": false
+      }
+    }
+  ],
+  "reconciliation": {
+    "ledger_exists": true,
+    "ledger_equal": true,
+    "prior": {
+      "absent": false
+    },
+    "terminal": {
+      "ready": true
+    }
+  },
+  "sourceHashes": {
+    "apply": "a5596ae76cfb0a2d23002230d2f21b045e68f9866b5822b32a7474a86208a0c2",
+    "transaction": "3ca3608e61ef16601462dc9a517948dc4b224d7acc621244a1e3d79fce6ef08d",
+    "transactionTests": "94bfa49dfe3743f03ae71af9155eb4a3ce1c923948f4ed910506f9b65f57b40b"
+  }
+}

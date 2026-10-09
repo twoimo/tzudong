@@ -47,6 +47,12 @@ MAX_SEGMENTS = 1024
 # This producer's only ANALYSIS_EVIDENCE_INVALID path is parse_watch_report ->
 # validate_analysis -> _evidence, after a zero subprocess exit. Its generic
 # AnalysisError handler incorrectly called this terminal rejection "uncertain".
+# Explicit predecessor source hashes, reviewed for this diagnostic-only change.
+# They are never substituted into the active config identity or admitted for execution.
+HTTP_STATUS_PREDECESSOR_SOURCES = (
+    "e3a27b22b7e4fc140687a7f87302ce8a319ba0a3a332de189f692e6c9abcb81c",
+    "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86",
+)
 LEGACY_REJECTION_PRODUCER = "344f80e48d104a4a0142ef8d0597fb9bd0d7d631"
 LEGACY_REJECTION_SOURCE_SHA256 = "12ec9fd76cd6990487f58d7a0c92a36cf018ac770fa771564a28d8e0468602ef"
 
@@ -839,6 +845,16 @@ def cached_state(state: Path, row, config, *, repair=None):
         return "reusable"
     if evidence_path.exists() or list(directory.rglob(".pending-*")):
         return "readback_required"
+    if config.protocol == 2:
+        predecessor = {**config.identity, "adapterSha256": HTTP_STATUS_PREDECESSOR_SOURCES[0],
+                       "policySha256": HTTP_STATUS_PREDECESSOR_SOURCES[1]}
+        predecessor_identity = {**identity(row, config), "configSha256": digest(predecessor)}
+        if any(checked_document(path).get("identity") == predecessor_identity
+               for path in directory.glob("*.receipt.json")):
+            # Code-only fingerprint drift must not turn a completed paid result into
+            # another POST. Do not pretend its old source recipe is the current one:
+            # keep it readback-required until exact-source compatibility is reviewed.
+            return "readback_required"
     return "new"
 
 
@@ -1085,6 +1101,12 @@ def execute(rows, inventory_info, state: Path, config, limits, *, batch_id=None,
                             confirmed = observation and observation["httpOutcome"] in ("http_success", "http_rejected")
                             rejected = confirmed and error.code not in ("WATCH_RESPONSE_NOT_COMPLETED", "WATCH_TRANSPORT_UNCERTAIN")
                             receipt.update(state="rejected" if rejected else "uncertain", code=error.code)
+                            if isinstance(error, adapter.AdapterError):
+                                # Optional new failure diagnostics; observation and old receipts remain unchanged.
+                                status = adapter.bounded_http_status(error.http_status)
+                                receipt["httpCategory"] = adapter.http_category(status)
+                                if status is not None:
+                                    receipt["httpStatus"] = status
                             failed = True
                         except (OSError, ValueError, TypeError, TimeoutError):
                             receipt.update(state="uncertain", code="WATCH_TRANSPORT_UNCERTAIN")
@@ -1122,6 +1144,10 @@ def readback(rows, state, config, *, provider=False, max_calls=0):
             with file_lock(state / "locks" / ("video-" + row["videoId"] + ".lock")):
                 _, receipt_path, evidence_path = paths(state, row, config)
                 if not receipt_path.exists():
+                    # A changed code fingerprint does not erase prior unresolved or
+                    # predecessor-completed receipts; local readback must report them.
+                    if cached_state(state, row, config) == "readback_required":
+                        raise AnalysisError("READBACK_REQUIRED")
                     continue
                 receipt = checked_document(receipt_path)
                 admitted_membership(receipt.get("membershipEvidence"))

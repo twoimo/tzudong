@@ -606,3 +606,29 @@ PR #3099의48개 review를 현재 source와 대조했다.43개는 source/test bi
 정확한 Vercel 프로젝트를 read-only로 확인했으나99b12562와2b6e7339의 배포는 모두CANCELED였다. GitHub의 Vercel success를 실제READY·운영 배포 성공으로 해석하지 않는다. 취소 사유는 미확인, 추가 배포·환경·freeze 변경은 하지 않았다.
 
 운영 준비안 `docs/operations/record-sql-release-preparation-20261009.md`에 네 SQL의 exact SHA/현재manifest 미등록, active freeze 절차 제외, source COMMIT/terminal mismatch/ledger 기록 경계, legacy42501 및 Gemini 정책을 유지하는 rollback 부족분을 연결했다. Source-only 검사와 정식 운영 admission을 구분하며 운영 승인 내용·freeze·환경·큐는 변경하지 않았다.
+
+## 실행 후속 — develop preview·실제 수집/분석
+
+- [x] 필수Release/Promotion Path와현재sourcehead를확인하고PR3099를보호된develop에merge했다. SHA614b249175c35636a7062bf05cb01ebad538b10d, 후보56819502와tree동일. 원본dirty/user CLAUDE와queue는보존했다.
+- [x] exactGit-integrated preview dpl_He2HgNHEkNsdbQg556dGJsreTEgr의READY를확인했다. 인증된GET27개 및익명관리자API4개401을검증했다. 실제OAuth관리자세션/지도·전체clientdata/운영쓰기의성공증거는아니다.
+- [x] funded계정에서GCP₩9.47만·prepay₩10,000·autoRechargeOFF와3.8Flash의RPM1000/TPM2M/RPD10K표시한도를읽었다.28일peak와현재잔여quota·개별청구를구분한다.
+- [x] 롯데0488삭제preview를다시확인했지만유효대체수단요구와기존대체카드의invalid상태가유지돼취소했다. 삭제/새카드/충전/서비스해제0.
+- [x] 공개metadata200후collector를첫1편/동시성1만시도했다. caption429/exit75에서중단,완료611/pending459/추가·변경0,재전송0.
+- [x] 기존claude-video·Gemini3.8로새835초롱폼1편을기존보다낮은2call한도에서실행했다. countTokens86492성공, generation4xx거부,분석출력없음/재전송0. 정확한status·개별비용·독립검증은미확정. GetTokens무료문구의countTokens대응은추론으로명시했다.
+- [ ] 실제거부의HTTPstatus/공식payload를진단하고boundedreceipt를보완한다. 기존rejected기록과no-resend를보존한다.
+- [ ] 기존migrationcaller에작은puretransactionhelper를통합해prior→DDL→terminal→원본statementvectorledger를DBcommit전에검증하고unknownACK는readback만수행한다. 기존3개manifest/pin/providerverify/G037은변경하지않는다.
+- [ ] 정식DBadmission/SQL등록·data/main승격·production배포와실제admin/providerflows를완료한다. developREADY를운영완료로세지않는다.
+
+증빙: release-readiness-refresh/protected-develop-merge.json, vercel-preview-diagnosis-20261009/MERGE_PREVIEW_VERIFICATION.md, longform-public-resume-20261009/result.json, longform-bounded-analysis-plan-20261009/execution-result.json.
+
+## 중단 후 복구와 현재 검증
+
+Git 스냅샷 `7d4080365c237ed1effd6e66eb8e81332173b922`에서 작업 소유 파일 113개를 새 후보로 정확히 복구했다. 부모는 `614b2491`이다. 사용자 `CLAUDE.md` 편집은 보존하고 stage에서 제외했다. 수정 소스 7개의 SHA를 확인했다.
+
+현재 검증은 Python 4개 모듈 80개 통과, Bun 2개 파일 18개 통과·124 assertions, PG15.8·17.6 각각 13개 사례다. Node24 targeted ESLint와 native7.0.2/compat6.0.2 parity는 진단 0개로 통과했다. 기존 승인 manifest 3개·pin·G037·SQL 4개 및 package/lock은 변경하지 않았다. 권한 부족은 DDL 전에 거부하며, 불확실한 COMMIT 응답과 exit0 뒤 손상된 stdout은 readback 1회로만 확인한다.
+
+합성 Gemini Interactions 요청 세 건을 각각 POST 1회·재시도 0회로 실행했다. 기본 텍스트는 200·78 tokens·2.460322초, 영상 없이 5,335-byte 전체 스키마를 넣은 요청은 400·사용량 미확인·1.192054초였다. 같은 입력과 65,536 output limit에서 response_format만 제거하면 200·1,982 tokens·18.149477초로 완료됐다. 하지만 synthetic DTO exact match가 false여서 스키마 제거는 채택하지 않는다. 서로 다른 조건의 지연은 성능 개선 비교가 아니며, 실제 청구·크레딧 귀속도 미확인이다. DTO와 제약을 유지하며 중복 스키마를 공유하는 대안을 준비한다.
+
+사용자는 미리보기 로그인 완료라고 답했다. 현재 toolset에는 Codex 브라우저 읽기 도구가 없으며, 지원되는 Aside 프로필에도 해당 탭이 없다. 로그인 탭 참조 연결 질문은 pending이다. 쿠키·토큰을 export하거나 CUA 거부를 우회하지 않는다. 실제 인증 흐름의 미검증 상태를 완료로 세지 않는다.
+
+소스·테스트·복구·미리보기·운영 증빙을 분리하며 전체 목표 완료 체크는 열린 상태다.

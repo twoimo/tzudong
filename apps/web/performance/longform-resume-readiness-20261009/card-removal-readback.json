@@ -1,0 +1,17 @@
+{
+  "observedDate": "2026-10-09",
+  "accountProjectBindingVerified": true,
+  "target": "Lotte ending 0488",
+  "targetPresentAfterCancel": true,
+  "providerRequiresReplacement": true,
+  "existingAlternative": "Expired and invalid; selection disabled",
+  "newCardEntryWouldBeRequired": true,
+  "deleteConfirmationSubmitted": false,
+  "previewCancelledAndReadBack": true,
+  "cardsAdded": 0,
+  "topups": 0,
+  "billingAccountClosedOrUnlinked": false,
+  "autoRechargeChanged": false,
+  "removalComplete": false,
+  "rawPaymentDetailsRetained": false
+}

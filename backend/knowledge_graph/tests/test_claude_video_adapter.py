@@ -4,6 +4,7 @@ import io
 import json
 from pathlib import Path
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 from urllib.error import HTTPError
 
@@ -139,6 +140,75 @@ class PinnedAdapterTests(unittest.TestCase):
                 self.assertEqual(self.observations[-1]["httpOutcome"], expected)
         self.assertNotIn("private", json.dumps(self.observations))
         self.assertNotIn("secret", json.dumps(self.observations))
+
+    def test_http_error_metadata_preserves_only_bounded_numeric_status_and_fixed_category(self):
+        categories={400:"invalid_request",401:"authentication",403:"authentication",429:"rate_limit",500:"server_error",503:"server_error"}
+        for code,category in categories.items():
+            with self.subTest(code=code):
+                self.requests.clear();self.observations.clear()
+                def rejected(request,**kwargs):
+                    self.requests.append(request.get_method())
+                    raise HTTPError(request.full_url,code,"private diagnostics",{"private-header":"never save"},io.BytesIO(b'{"error":{"message":"private OCR secret"}}'))
+                with patch.object(self.engine,"urlopen",side_effect=rejected),patch.object(adapter,"load_engine",return_value=self.engine):
+                    with self.assertRaises(adapter.AdapterError) as failure:adapter.invoke(**self.kwargs)
+                self.assertEqual(failure.exception.http_status,code)
+                self.assertEqual(failure.exception.http_category,category)
+                self.assertEqual(len(self.requests),1)
+                self.assertEqual(str(failure.exception),failure.exception.code)
+                self.assertEqual(set(self.observations[-1]),{"operation","httpOutcome","responseId","requestSha256","usage","countedInputTokens"})
+                self.assertNotIn("secret",json.dumps(self.observations))
+                self.assertNotIn("private",str(failure.exception))
+
+    def test_sdk_numeric_fields_and_invalid_metadata_are_not_diagnostic_parsing(self):
+        for field in ["code","status","statusCode","status_code"]:
+            for code in [100,400,429,599]:
+                self.assertEqual(adapter.bounded_http_status(SimpleNamespace(**{field:code})),code)
+        self.assertEqual(adapter.bounded_http_status(SimpleNamespace(response=SimpleNamespace(status_code=403))),403)
+        for value in [None,True,False,99,600,400.0,"400",{},[]]:
+            self.assertIsNone(adapter.bounded_http_status(value))
+            self.assertIsNone(adapter.bounded_http_status(SimpleNamespace(code=value)))
+            error=adapter.AdapterError("WATCH_TRANSPORT_UNCERTAIN",http_status=value)
+            self.assertIsNone(error.http_status)
+            self.assertEqual(error.http_category,"unknown")
+        self.assertIsNone(adapter.bounded_http_status(Exception('HTTP 429 private raw diagnostic')))
+
+    def test_sdk_transport_status_is_captured_without_error_message_or_retry(self):
+        class SyntheticSdkError(Exception):
+            status="RESOURCE_EXHAUSTED"
+            code=429
+        error=SyntheticSdkError("private raw provider secret")
+        with patch.object(self.engine,"urlopen",side_effect=error) as dispatch,patch.object(adapter,"load_engine",return_value=self.engine):
+            with self.assertRaises(adapter.AdapterError) as failure:adapter.invoke(**self.kwargs)
+        self.assertEqual(dispatch.call_count,1)
+        self.assertEqual(failure.exception.http_status,429)
+        self.assertEqual(failure.exception.http_category,"rate_limit")
+        self.assertEqual(self.observations[-1]['httpOutcome'],'http_rejected')
+        self.assertNotIn('private',str(failure.exception))
+        self.assertNotIn('private',json.dumps(self.observations))
+
+    def test_unknown_sdk_failure_remains_fixed_uncertain_without_raw_diagnostics(self):
+        error=RuntimeError("private provider message header secret")
+        with patch.object(self.engine,"urlopen",side_effect=error) as dispatch,patch.object(adapter,"load_engine",return_value=self.engine):
+            with self.assertRaises(adapter.AdapterError) as failure:adapter.invoke(**self.kwargs)
+        self.assertEqual(dispatch.call_count,1)
+        self.assertEqual(failure.exception.code,"WATCH_TRANSPORT_UNCERTAIN")
+        self.assertIsNone(failure.exception.http_status)
+        self.assertEqual(failure.exception.http_category,"unknown")
+        self.assertEqual(self.observations[-1]['httpOutcome'],'transport_uncertain')
+        self.assertNotIn('private',str(failure.exception))
+        self.assertNotIn('private',json.dumps(self.observations))
+
+    def test_successful_request_bytes_and_fingerprint_match_frozen_failure_request(self):
+        engine=adapter.load_engine(analysis.DEFAULT_CHECKOUT)
+        # Payload construction remains byte-identical to the pre-change request.
+        payload=adapter.request_payload(engine,"gemini-3.8-flash","-D43ezc57z8",0,835,
+            analysis.segment_prompt({"videoId":"-D43ezc57z8","durationSeconds":835,"segmentStartSeconds":0,"segmentEndSeconds":835}),65536)
+        self.assertEqual(adapter.digest(payload),"121a7580dde9db30051ec8c05c63f843a478eb59ec9e6900e39f27bd11c8d331")
+        self.requests.clear();self.observations.clear();self.run_fixture()
+        sent=self.requests[-1][2]
+        expected=adapter.request_payload(engine,"gemini-3.8-flash","ABCDEFGHIJK",900,1765.25,self.kwargs['prompt'],100)
+        self.assertEqual(adapter.canonical(sent),adapter.canonical(expected))
+        self.assertEqual(self.observations[-1]['requestSha256'],adapter.digest(expected))
 
     def test_original_id_readback_is_only_a_get_and_checks_request_binding(self):
         engine = adapter.load_engine(analysis.DEFAULT_CHECKOUT)

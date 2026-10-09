@@ -1,0 +1,18 @@
+{
+  "currentCache": {
+    "reusable": 2,
+    "new": 1065,
+    "readback_required": 2,
+    "corrupt": 0
+  },
+  "originalLegacySuccessesReusable": true,
+  "failedTargetCachedState": "readback_required",
+  "failedTargetLocalReadback": {
+    "phase": "readback",
+    "recovered": 0,
+    "unresolved": 1,
+    "readbackCalls": 0
+  },
+  "oldExecutionReceiptHashesUnchanged": true,
+  "providerPostCalls": 0
+}
