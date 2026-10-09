@@ -1024,7 +1024,7 @@ complete_lifecycle_stage
             for ordinal, marker in enumerate(verifier.SEQUENCE_MARKERS, 1)
         ]
         section_counts = {section: 1 for section in verifier.READBACK_SECTIONS}
-        section_counts.update(review_media_functions=12, storage_policies=20, storage_buckets=7, seed_buckets=7)
+        section_counts.update(review_media_functions=14, storage_policies=22, storage_buckets=7, seed_buckets=7)
         payloads["local-migration-summary.json"].update({
             "schema": "local-migration-publication-summary-v1",
             "project_name": "tzudong-local-123456abcdef",

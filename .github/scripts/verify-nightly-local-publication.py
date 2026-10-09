@@ -780,8 +780,8 @@ def verify_migration_summary(
         or set(section_counts) != set(READBACK_SECTIONS)
         or any(type(value) is not int or value < 0 for value in section_counts.values())
         or any(section_counts[section] < 1 for section in READBACK_SECTIONS)
-        or section_counts.get("review_media_functions") != 12
-        or section_counts.get("storage_policies") != 20
+        or section_counts.get("review_media_functions") != 14
+        or section_counts.get("storage_policies") != 22
         or section_counts.get("storage_buckets") != 7
         or section_counts.get("seed_buckets") != 7
         or payload.get("readback_row_count") != sum(section_counts.values())
