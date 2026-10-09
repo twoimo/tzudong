@@ -46,6 +46,7 @@ relevant_sources=(
   'backend/supabase/scripts/transform_advisor_replay.py'
   'backend/supabase/scripts/verify_admin_user_ids_replay.py'
   'backend/supabase/scripts/verify_admin_management_group_replay.py'
+  'backend/supabase/scripts/verify_admin_user_management_rpc_forward_replay.py'
   'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
   'backend/supabase/scripts/verify_g014_owner_final_replay.py'
   'backend/supabase/scripts/verify_g016_identity_correction_replay.py'
@@ -1498,6 +1499,28 @@ for migration in "${effective_migrations[@]}"; do
         "$staging_dir/admin-management-group-overlap-receipt.json" >/dev/null
       g026_chain_apply "admin-management-group-source-overlap-receipt" "$staging_dir/admin-management-group-overlap-receipt.json"
       ;;
+    20261009101645_admin_user_management_rpc_forward.sql)
+      admin_rpc_forward_verification="$staging_dir/admin-user-rpc-forward-overlap-verification.sql"
+      g026_chain_apply "admin-user-rpc-forward-source-overlap-verifier" \
+        "$script_dir/verify_admin_user_management_rpc_forward_replay.py"
+      python3 "$script_dir/verify_admin_user_management_rpc_forward_replay.py" \
+        --source "$migration" \
+        --predecessor "$backend_migrations_dir/20260906053936_admin_management_group_catalog_slice.sql" \
+        --output "$admin_rpc_forward_verification"
+      g026_chain_apply "admin-user-rpc-forward-source-overlap-verification" "$admin_rpc_forward_verification"
+      compose exec -T db psql -XAtq -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres \
+        <"$admin_rpc_forward_verification" >"$staging_dir/admin-user-rpc-forward-overlap-receipt.json"
+      jq -e '.schema == "admin-user-rpc-forward-source-replay-v1" and
+        .source_sha256 == "2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae" and
+        .accepted_source_sha256 == "4fea6a4912536cf1c1531b092d309f8206a7c6d28edd0558a9fceae940757b00" and
+        .predecessor_sha256 == "b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf" and
+        .disposition == "already-present-contract-verified" and .read_only == true and
+        .operating_sql_executed == false and .required_operating_server_version_num == 170006 and
+        .required_operating_ledger_count == 85' \
+        "$staging_dir/admin-user-rpc-forward-overlap-receipt.json" >/dev/null
+      g026_chain_apply "admin-user-rpc-forward-source-overlap-receipt" \
+        "$staging_dir/admin-user-rpc-forward-overlap-receipt.json"
+      ;;
     20260906040116_admin_user_ids_catalog_slice.sql)
       admin_ids_verification="$staging_dir/admin-user-ids-overlap-verification.sql"
       python3 "$script_dir/verify_admin_user_ids_replay.py" \
@@ -1847,6 +1870,7 @@ jq -n --arg source_sha "$source_sha" --arg migration_chain_sha256 "$chain_hash" 
     advisor-prerequisite-recovery.json advisor-prerequisites.sql advisor-replay.sql \
     admin-user-ids-overlap-verification.sql admin-user-ids-overlap-receipt.json \
     admin-management-group-overlap-verification.sql admin-management-group-overlap-receipt.json \
+    admin-user-rpc-forward-overlap-verification.sql admin-user-rpc-forward-overlap-receipt.json \
     g014-owner-pg15-verification.sql g014-owner-pg15-receipt.json \
     g014-owner-final-pg15-verification.sql g014-owner-final-pg15-receipt.json \
     g016-identity-pg15-verification.sql g016-identity-pg15-receipt.json \

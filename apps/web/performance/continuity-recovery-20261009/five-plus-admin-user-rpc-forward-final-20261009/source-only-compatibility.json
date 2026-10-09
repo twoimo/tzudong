@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "kind": "admin-user-rpc-forward-source-only-pg15-compatibility",
+  "status": "source-contract-passed-runtime-ci-pending-clean-checkout",
+  "cause": {
+    "rawOperatingSqlPg15Compatible": false,
+    "reason": "forward pins PostgreSQL 17.6 and uses PG16+ pg_auth_members inherit_option/set_option plus GRANT membership option syntax",
+    "directRawReplayRequired": false,
+    "supportedClassification": "verified-existing",
+    "mechanism": "hash-bound read-only overlap verifier through local_replay_contract",
+    "blindExclusion": false
+  },
+  "operatingContractPreserved": {
+    "serverVersionNum": 170006,
+    "ledgerCountBefore": 85,
+    "targetFunctionsRequiredAbsent": true,
+    "operatingSqlExecutedBySourceReplay": false
+  },
+  "bindings": {
+    "forward": {
+      "path": "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",
+      "sha256": "b96126240399e580ed6b7198edbd3d0af44b26ec5cab66073c037b331ec8eb26"
+    },
+    "acceptedSource": {
+      "path": "backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql",
+      "sha256": "4fea6a4912536cf1c1531b092d309f8206a7c6d28edd0558a9fceae940757b00"
+    },
+    "canonicalPredecessor": {
+      "path": "backend/supabase/migrations/20260812000300_local_admin_data_boundary_convergence.sql",
+      "sha256": "b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf"
+    },
+    "verifier": {
+      "path": "backend/supabase/scripts/verify_admin_user_management_rpc_forward_replay.py",
+      "sha256": "ce83b548f2488be4e64f6f859e1a03466624303cb7aaf62dc866c75905cf9f76",
+      "generatedSqlSha256": "1f59707fd6b1d8743fa2b69140728265f1d5ff76fb1fb5e495b64b8cc7a3daa7",
+      "generatedSqlBytes": 17645
+    },
+    "localReplayContract": {
+      "path": "backend/supabase/scripts/local_replay_contract.py",
+      "sha256": "d4b7ac523badc2d4e08e53d05b044f42c6a6e0f5a7ce84299904588ec59a222d"
+    },
+    "generateJob": {
+      "path": "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+      "sha256": "977082784370a793ceae297a933dc4f8b2bfd7d23670d1aa451d6cce57cfbac4"
+    }
+  },
+  "guardEquivalence": {
+    "dependency": true,
+    "target": true,
+    "source": "accepted 202609 source"
+  },
+  "verification": {
+    "sourceOnlyVerifierAndReplayContractTests": {
+      "status": "passed",
+      "tests": 20
+    },
+    "dedicatedForwardPlannerTests": {
+      "status": "passed",
+      "tests": 7
+    },
+    "generatorShellSyntax": {
+      "status": "passed"
+    },
+    "fullPinnedPg15Generate": {
+      "status": "pending-clean-checkout",
+      "reason": "generator intentionally rejects dirty relevant sources; current authorized changes are uncommitted"
+    }
+  },
+  "scope": {
+    "hostedWrites": false,
+    "operatingWrites": false,
+    "manifestOrControllerWrites": false
+  }
+}

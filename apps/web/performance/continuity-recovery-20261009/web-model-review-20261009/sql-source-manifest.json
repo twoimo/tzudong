@@ -1,0 +1,32 @@
+[
+  {
+    "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+    "sha256": "82e35949f693e54c0629fd2f98935b4c4b5b79227c66d6bc6dccb0584b5493f0",
+    "bytes": 14804
+  },
+  {
+    "path": "apps/web/scripts/supabase-migration-bundle.mjs",
+    "sha256": "fdc6c175fe77cc11b6252c6d9b326061d67639c6e7fff728e94e70a85f25c5b6",
+    "bytes": 12236
+  },
+  {
+    "path": "apps/web/scripts/admin-record-sql-successor.mjs",
+    "sha256": "4e5771efa2173bb9a02a44acd5d854a7cc5e7588935e0bcc7077683b2d28619a",
+    "bytes": 32664
+  },
+  {
+    "path": "apps/web/scripts/apply-supabase-migration.mjs",
+    "sha256": "b86ebb0e1194c4b164f57467475e09afa3ef03655968732bd0d6c57e37789a0e",
+    "bytes": 20613
+  },
+  {
+    "path": "apps/web/performance/continuity-recovery-20261009/actual-five-stage-replay-20261009/README.md",
+    "sha256": "24980198dda0797f23f163f4095f23080d8e123985b92082f15bc8582748fe96",
+    "bytes": 2918
+  },
+  {
+    "path": "apps/web/performance/continuity-recovery-20261009/actual-five-stage-replay-20261009/proof.json",
+    "sha256": "65f80bebfb67c41cf18138a69478bf06d8743cbb3ed705f97133fb75eaf6af98",
+    "bytes": 12107
+  }
+]

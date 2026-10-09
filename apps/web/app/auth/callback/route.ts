@@ -12,6 +12,7 @@ import {
   hasLivePrivacyEligibilityReceipt,
 } from '@/lib/privacy/eligibility';
 import { buildHomePrivacyOnboardingPath, getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
+import { getTrustedAuthCallbackOrigin } from '@/lib/auth/callback-origin';
 import {
   createCallbackSupabaseClient,
   revokeRejectedCallbackSession,
@@ -20,7 +21,6 @@ import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 
 export const runtime = 'nodejs';
 
-const DEFAULT_PRODUCTION_REDIRECT_ORIGIN = 'https://www.tzudong.app';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_OAUTH_CODE_LENGTH = 2048;
 const MAX_CALLBACK_VALUE_LENGTH = 2048;
@@ -76,39 +76,15 @@ function parseCallbackQuery(searchParams: URLSearchParams): CallbackQuery | null
 type CallbackSupabaseClient = Awaited<ReturnType<typeof createCallbackSupabaseClient>>;
 type OnboardingChallenge = NonNullable<ReturnType<typeof readOnboardingChallenge>>;
 
-function getTrustedRedirectOrigin(requestOrigin: string) {
-  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (configuredSiteUrl) {
-    try {
-      return new URL(configuredSiteUrl).origin;
-    } catch {
-      return DEFAULT_PRODUCTION_REDIRECT_ORIGIN;
-    }
-  }
-
-  if (process.env.NODE_ENV !== 'production') {
-    try {
-      return new URL(requestOrigin).origin;
-    } catch {
-      return DEFAULT_PRODUCTION_REDIRECT_ORIGIN;
-    }
-  }
-
-  return DEFAULT_PRODUCTION_REDIRECT_ORIGIN;
-}
-
-
-
-
 function redirectWithOnboardingCookiesCleared(origin: string, path = '/') {
-  const response = NextResponse.redirect(`${getTrustedRedirectOrigin(origin)}${path}`);
+  const response = NextResponse.redirect(`${getTrustedAuthCallbackOrigin(origin)}${path}`);
   response.headers.set('Cache-Control', 'no-store');
   clearOnboardingCookies(response);
   return response;
 }
 
 function rejectedCallbackRedirect(request: Request, origin: string) {
-  const response = NextResponse.redirect(`${getTrustedRedirectOrigin(origin)}/`);
+  const response = NextResponse.redirect(`${getTrustedAuthCallbackOrigin(origin)}/`);
   response.headers.set('Cache-Control', 'no-store');
   clearRejectedOnboardingCookies(response, request);
   return response;

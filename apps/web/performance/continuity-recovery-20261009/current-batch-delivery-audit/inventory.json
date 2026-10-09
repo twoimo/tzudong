@@ -1,0 +1,211 @@
+{
+  "schema": "tzudong.current-batch-delivery-audit.v1",
+  "auditedAtUtc": "2026-10-09T10:21:35Z",
+  "head": "8571b65b5e8079d2f238389aaf68f41740aa170e",
+  "branch": "codex/pipeline-continuity-20261009",
+  "scope": {
+    "sourceMutation": false,
+    "providerCalls": 0,
+    "hostedWrites": 0,
+    "operatingDatabaseWrites": 0,
+    "excluded": [
+      "apps/web/CLAUDE.md",
+      "apps/web/supabase/.temp/",
+      "backend/supabase/.temp/",
+      "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",
+      "admin-user RPC forward evidence still owned by the separate agent"
+    ]
+  },
+  "artifactMaps": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-five-stage-replay-20261009/artifact-map.json",
+      "sha256": "0cd2ddfc3a5e790004f5578d0e66767834a81a98444c216881160f1c9943d225",
+      "entries": 16,
+      "hashMismatches": 0,
+      "detachedHashMatches": true,
+      "classification": "local synthetic full-schema PostgreSQL 17.6 replay"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/artifact-map.json",
+      "sha256": "966346025a73963df65bc3ebd3545daef97fd7edabb8fb5269e167c5df363827",
+      "entries": 7,
+      "hashMismatches": 0,
+      "detachedHashMatches": true,
+      "classification": "current source plus exact PostgreSQL 17.6 five-stage evidence"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/historical-pg17.11-source/historical-artifact-map.json",
+      "sha256": "3a164bc4131f7a005b443c6d9babd79fe8400dcc24d8474b23ff36859e82d4a5",
+      "entries": 6,
+      "hashMismatches": 0,
+      "detachedHashMatches": true,
+      "classification": "historical PostgreSQL 17.11 source snapshot resolved through adjacent source copies"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/local-contract-proposal/implementation-artifact-map.json",
+      "sha256": "3fa68ad4077577758f8a712116f4e1969366546ff991d594d1c92f7b6b695aea",
+      "entries": 10,
+      "hashMismatches": 0,
+      "classification": "local offline contract and cache-continuity evidence"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/local-contract-proposal/artifact-map.json",
+      "sha256": "976c500d72f572323ba80a0c6c32fae9c28a8c540f55b2d7f627b990837a7416",
+      "entries": 4,
+      "hashMismatches": 0,
+      "classification": "local bounded schema proposal evidence"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/wire-schema-acceptance-20261009/artifact-map.json",
+      "sha256": "3989be06400abaf6947f13d5f4cf1dfa1432eadd41fe446181c6864f2ecffb83",
+      "entries": 5,
+      "hashMismatches": 0,
+      "classification": "one-shot hosted provider wire acceptance; no video and no production adoption"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/sql-correctness-and-five-stage-8571b65b/artifact-map.json",
+      "sha256": "827b41d9ccc63e049aebf3d004ef5f7a575d7933ee4e88432726f90c8c4dd844",
+      "entries": 2,
+      "hashMismatches": 0,
+      "classification": "local source and test receipt"
+    }
+  ],
+  "sourceBindings": {
+    "exactFiveStageMigrations": {
+      "entries": 5,
+      "hashMismatches": 0,
+      "byteMismatches": 0
+    },
+    "exactFiveStageHelpers": {
+      "entries": 4,
+      "hashMismatches": 0
+    },
+    "sqlSuccessorProof": {
+      "entries": 11,
+      "hashMismatches": 0,
+      "byteMismatches": 0
+    },
+    "geminiImplementation": {
+      "entries": 10,
+      "hashMismatches": 0,
+      "byteMismatches": 0
+    },
+    "authAndSameOriginCurrentSource": {
+      "entries": 6,
+      "hashMismatches": 0,
+      "files": [
+        {
+          "path": "apps/web/app/auth/callback/route.ts",
+          "bytes": 7343,
+          "sha256": "d2cbe66c89c2961c362bda29241c0a540c3edf6e6d73981bc043cad7d39127d9"
+        },
+        {
+          "path": "apps/web/lib/auth/callback-origin.ts",
+          "bytes": 1559,
+          "sha256": "ac03bcf4cd7fef2b768685f2d26e2c21b1ff091d02e73f55d484382349074109"
+        },
+        {
+          "path": "apps/web/lib/security/same-origin-mutation.ts",
+          "bytes": 4500,
+          "sha256": "f2a29de2b838275e905e00738de21543c2611b5f220c99fd9f2b0178bfce6b75"
+        },
+        {
+          "path": "apps/web/tests-unit/auth-callback-origin.test.ts",
+          "bytes": 2813,
+          "sha256": "028a43bfb4c90cc8a646a1cdae613443fbdb3b23387cd132adb5dbaff485aa5f"
+        },
+        {
+          "path": "apps/web/tests-unit/same-origin-mutation.test.ts",
+          "bytes": 10207,
+          "sha256": "84b3d7e8da046dba3997538bf6f2fdf1e929b36158567f2b21ecdea9a68bd800"
+        },
+        {
+          "path": "apps/web/tests-unit/web-quality-performance-source.test.ts",
+          "bytes": 228896,
+          "sha256": "b46cf3e9001d96170097c927c4ae2bf3d7a639188f8042aae4e1e16580fb2ee6"
+        }
+      ],
+      "verificationReceipt": "apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/current-source-checks.json",
+      "verificationReceiptSha256": "a841a9c8807d4b6d000b5aa31185059ef17cae45df2722179e17f88f30342225"
+    }
+  },
+  "previewReceipts": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/authenticated-readback-before.json",
+      "sha256": "55ddb26fa93def2f570180ae04cd95932fad0b623294ea4e42dcd197223f934b",
+      "classification": "hosted authenticated read-only preimage at deployed SHA 614b249175c35636a7062bf05cb01ebad538b10d"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/preview-service-role-configuration.json",
+      "sha256": "c8855959bed235a3ea7641f49b9726994a0a3fef1827a611e23981e4751b3111",
+      "classification": "hosted Preview configuration write receipt; historical checkpoint before redeploy"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/preview-redeploy-preimage.json",
+      "sha256": "545739957cac3676867b36ce3d707ccba77c82686bb35adc6cb2889cab6dd220",
+      "classification": "hosted read-only deployment preimage"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/preview-redeploy-dispatch.json",
+      "sha256": "4c88504a53008f8f94091cd3fae3a32f1130fe26122a704f082dc9f6a51828c7",
+      "classification": "hosted Preview deployment dispatch receipt; terminal state is supplied by the later readback"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/authenticated-readback-after.json",
+      "sha256": "a9fdf094d5564f9f55cd00fd6ec6d732d84250f71094eade824e1e26cef9525e",
+      "classification": "hosted authenticated read-only terminal readback at deployed SHA 614b249175c35636a7062bf05cb01ebad538b10d"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/preview-redeploy-readback.json",
+      "sha256": "29681190fc39c54e8a9283434c846c47a91026bfacd2469d9639bdc27c55f0af",
+      "classification": "hosted read-only terminal deployment readback at deployed SHA 614b249175c35636a7062bf05cb01ebad538b10d"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/environment-metadata.json",
+      "sha256": "4ec14469e660ce4a07bdf441805c794dadfce6dff7d6781c6c00524a35e45f3d",
+      "classification": "hosted read-only environment metadata; key names and scopes only, no values"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/dashboard-source-fix-evidence.json",
+      "sha256": "e6ee409910c9de8a1e3f51966d1720333ef00792c530d6bca23eaa9e15bf8c01",
+      "classification": "local source and test evidence; all three recorded source hashes match"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/current-source-checks.json",
+      "sha256": "a841a9c8807d4b6d000b5aa31185059ef17cae45df2722179e17f88f30342225",
+      "classification": "local current-working-source receipt; 109 tests and compiler parity passed, with no hosted deployment claim"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/same-origin-preview-fix-evidence.json",
+      "sha256": "e821aec4693a2688ea9665eaa80f874091aedc6feb8b2554f1a8f5b386a39efe",
+      "classification": "local source evidence held from current staging because its dependency hash and typecheck result are stale"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/authenticated-preview-20261009/user-management-rpc-readback.json",
+      "sha256": "de4c2312f3397697bc515329b8f026317f2bed46c68b1abc725129e91be774c1",
+      "classification": "operating read-only catalog receipt held with the separately owned RPC forward"
+    }
+  ],
+  "privacyScan": {
+    "scope": "the targeted exact-five-stage, SQL bundle, Gemini implementation and wire, and Preview evidence sets",
+    "emailValues": 0,
+    "googleApiKeyValues": 0,
+    "supabaseSecretValues": 0,
+    "jwtValues": 0,
+    "authorizationHeaderValues": 0,
+    "cookieHeaderValues": 0,
+    "rawOcrValues": 0,
+    "nonemptySensitiveJsonKeys": 0,
+    "personalRows": 0,
+    "numericFalsePositives": "migration versions, fixture identifiers, timestamps and hashes only"
+  },
+  "findings": {
+    "blockingForAuditedReadyList": 0,
+    "heldFromReadyList": 3,
+    "heldCategories": [
+      "the superseded same-origin evidence file, whose dependency hash and earlier parity status remain stale; current source is covered separately",
+      "superseded private-verification PG17.6 replay bound to an earlier migration body",
+      "four-stage rollout proposal that predates the now-present successor"
+    ]
+  }
+}

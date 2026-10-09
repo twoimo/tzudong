@@ -1,0 +1,33 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-record-sql-successor.test.ts:
+(pass) protected main readback resolves the actual remote ref instead of trusting local HEAD [487.82ms]
+(pass) dedicated manifest pins the exact five-source chain, full vectors, toolchain and untouched legacy manifest [0.39ms]
+(pass) production manifest loader either binds the exact current toolchain or fails closed on source drift [107.45ms]
+(pass) production manifest launch hold rejects before checkout, transport or journal creation [4.05ms]
+(pass) fresh admission binds exact revision, rehearsal, rollback, external fences and all five schema/ledger stages [4.25ms]
+(pass) private canonical receipt bytes bind project, source, stage state, rollback and each writer fence [14.42ms]
+(pass) compiled plan checks catalog and ledger roots at every stage under an advisory and ledger-locked outer transaction [242.92ms]
+(pass) successful controller preflights before create-once journal and applies once without persisting the URI [225.62ms]
+(pass) source mismatch, journal collision and fresh preflight mismatch all stop before mutation [228.98ms]
+(pass) lost acknowledgement never resends and journals bounded unconfirmed outcome after one readonly reconciliation [246.03ms]
+(pass) target identity accepts only exact direct and official project-bound pooler endpoints [0.27ms]
+(pass) psql transport keeps the URI out of argv and bounds verbose server diagnostics [0.33ms]
+(pass) state query is a single read-only SELECT contract and does not expand the generic G016 path [5.21ms]
+
+tests-unit/admin-user-rpc-forward-successor.test.ts:
+(pass) dedicated held manifest pins the post-five chain and exact forward source/vector [0.07ms]
+(pass) production manifest launch hold rejects before admission, checkout or transport access [0.10ms]
+(pass) fresh admission and compiled plan bind exact 85 preimage, shared lock and one 85 to 86 ledger insert [27.37ms]
+(pass) wrong version, count, five-stage state, target state and protected revision fail closed [6.06ms]
+(pass) operating readback hash requires canonical private bytes bound to project, source and prior state [2.76ms]
+(pass) wrong project target and fresh preflight mismatch stop before mutation [1.56ms]
+(pass) wrong or stale protected main revision fails before database transport [0.68ms]
+(pass) a real frozen detached checkout can prepare admission after commit without manifest hash self-reference [599.66ms]
+(pass) success uses one read-only preflight and one atomic apply through the successor runner contract [18.69ms]
+(pass) lost acknowledgement never resends and returns only bounded unconfirmed outcome after readonly reconciliation [30.88ms]
+
+ 23 pass
+ 0 fail
+ 216 expect() calls
+Ran 23 tests across 2 files. [2.51s]

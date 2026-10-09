@@ -148,26 +148,43 @@ async function pipelineFetch(path: string, init: RequestInit = {}): Promise<Resp
   }
 }
 
+function githubRepository(): string | null {
+  const explicit = process.env.GITHUB_REPOSITORY?.trim() || "";
+  const split =
+    process.env.GITHUB_OWNER?.trim() || process.env.GITHUB_REPO?.trim()
+      ? `${process.env.GITHUB_OWNER?.trim() || ""}/${process.env.GITHUB_REPO?.trim() || ""}`
+      : "";
+  const repository = explicit || split || "twoimo/tzudong";
+  return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) ? repository : null;
+}
+
 async function readGithubCrawlerSnapshot() {
-  const repository = process.env.GITHUB_REPOSITORY?.trim() || "twoimo/tzudong";
-  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
+  const repository = githubRepository();
+  if (!repository) {
     return null;
   }
   const token = process.env.GITHUB_TOKEN?.trim() || process.env.INSIGHT_GITHUB_TOKEN?.trim() || "";
-  const headers: Record<string, string> = {
+  const publicHeaders: Record<string, string> = {
     Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2026-03-10",
     "User-Agent": "tzudong-admin-pipeline",
   };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+  const headers = token ? { ...publicHeaders, Authorization: `Bearer ${token}` } : publicHeaders;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PIPELINE_UPSTREAM_TIMEOUT_MS);
   try {
-    const response = await fetch(
-      `https://api.github.com/repos/${repository}/actions/workflows/daily-crawler.yml/runs?per_page=1&branch=main`,
+    const url = `https://api.github.com/repos/${repository}/actions/workflows/daily-crawler.yml/runs?per_page=1&branch=main`;
+    let response = await fetch(
+      url,
       { headers, signal: controller.signal, cache: "no-store" },
     );
+    if (token && [401, 403, 404].includes(response.status)) {
+      response = await fetch(url, {
+        headers: publicHeaders,
+        signal: controller.signal,
+        cache: "no-store",
+      });
+    }
     if (!response.ok) {
       return null;
     }

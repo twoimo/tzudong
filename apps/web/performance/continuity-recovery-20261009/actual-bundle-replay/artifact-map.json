@@ -1,0 +1,24 @@
+{
+  "kind": "actual-four-bundle-replay-artifact-map",
+  "status": "passed",
+  "artifacts": {
+    "README.md": "bc2853f017c4508c61cd2a7eb2d0ef9b5a1391acde6b4af0262e297474997dde",
+    "orchestrate.mjs": "00dea5d9a61495d4e6c020c50ad96475d135a336d8326ace823b48eabeac29b1",
+    "ownership-receipt.json": "a0d6d13ba1da0ea128ef53d6d01124a423b1729f5cd687128399e9550181b8fe",
+    "pristine-reconstruction.json": "3bc8ba7b6507299257b8fdac0fe9fbfb31d9ff3d8f82756321492b23a1568055",
+    "proof.json": "ef0a12c3e6b46fd3b99c535e7ab43e1bfb5d58306595ccd9e4c3534f0a0b2f7b",
+    "replay.mjs": "f4abf908de7be0945f02fc5a18c138b69db749985604542889c683a3b67d0a25",
+    "role-bootstrap.json": "9800b3a0d8092044b931bcb5ec43108db97dc3cd765d801d11d6dd7e41276fd5",
+    "attempt-1/ownership-receipt.json": "fe0bfcfa62144547ca21082c9160c313b769aca42c6e96a1f6f2c363c46ebc17",
+    "attempt-1/role-bootstrap.json": "aa10620136a3a938200b3391fceaa3fcc6402bc4f3c1429972fae2c1c33fecf9"
+  },
+  "scope": {
+    "engine": "PostgreSQL 17.6",
+    "fullSchemaSnapshot": true,
+    "actualMigrationCount": 4,
+    "hostedWrites": false,
+    "operatingWrites": false,
+    "hostedLedgerRowsCopied": 0,
+    "fixturePrefix": "local-synthetic-only"
+  }
+}

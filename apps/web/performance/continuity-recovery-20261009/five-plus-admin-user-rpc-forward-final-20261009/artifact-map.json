@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "kind": "five-plus-admin-user-rpc-forward-final-artifact-map",
+  "status": "passed",
+  "sourceHead": "c90544c813a89b077084953e42fb1431a4b1efed",
+  "terminalNonce": "c2454dfb75b5b017fb4055f5",
+  "postgres": {
+    "nativeAdmission": {
+      "version": "17.6",
+      "versionNum": 170006,
+      "fullSchemaEligible": false
+    },
+    "fullSchemaReplay": {
+      "version": "17.6",
+      "versionNum": 170006,
+      "imageDigest": "sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+      "imageSource": "local-cache-only",
+      "pullPolicy": "never",
+      "network": "none",
+      "publishedPorts": 0
+    }
+  },
+  "fiveStage": {
+    "manifestSha256": "a7ed53ed124576039e1d49ae62f46626e9747c2c2a0d4711e93c4fc5f1b24140",
+    "sourceRoot": "fecccabd16de11d37e54d28517331ba8fcd7fa177859844d8490af7a221cc732",
+    "entries": 5
+  },
+  "sources": [
+    {
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "bytes": 60166,
+      "sha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95",
+      "statementCount": 39,
+      "statementVectorSha256": "5038d14ce704d494889562f04d33cacae7bd7a117bf4cd2341752bd3b40f12af",
+      "role": "five-stage"
+    },
+    {
+      "path": "backend/supabase/migrations/20261004192657_admin_evaluation_raw_warning_groups.sql",
+      "bytes": 13706,
+      "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a",
+      "statementCount": 10,
+      "statementVectorSha256": "082fec2c22c8588e262bbe6cd936cb30f6b100c3f5b2ffec489ff144bbdfc5f8",
+      "role": "five-stage"
+    },
+    {
+      "path": "backend/supabase/migrations/20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+      "bytes": 5957,
+      "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020",
+      "statementCount": 4,
+      "statementVectorSha256": "f211b61f0959413d40783cd62b4221e9ec30d92792ad86b61ca186f504c6c0e1",
+      "role": "five-stage"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql",
+      "bytes": 7769,
+      "sha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3",
+      "statementCount": 4,
+      "statementVectorSha256": "ab55e1704f6b54134d7153603d55f948b19ab2c8ac9dfdf31d7ea1ef82d43958",
+      "role": "five-stage"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009091342_admin_record_private_verification_cleanup.sql",
+      "bytes": 12195,
+      "sha256": "03c8ebabaaf7255e1c5ab5dedf59a95782b78dbc960668870ea80fc8780ab3af",
+      "statementCount": 13,
+      "statementVectorSha256": "147414379f4eebdc1274257419629107a80be59ec3203a064f29c82472760003",
+      "role": "five-stage"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",
+      "bytes": 40392,
+      "sha256": "b96126240399e580ed6b7198edbd3d0af44b26ec5cab66073c037b331ec8eb26",
+      "statementCount": 2,
+      "statementVectorSha256": "949cbb0862da3e62c190cdeafd23051198178440584b9ebf3f96cec1f062d9c6",
+      "role": "forward"
+    },
+    {
+      "path": "backend/supabase/scripts/verify_admin_user_management_rpc_forward_replay.py",
+      "bytes": 2750,
+      "sha256": "ce83b548f2488be4e64f6f859e1a03466624303cb7aaf62dc866c75905cf9f76",
+      "role": "pg15-read-only-verifier"
+    },
+    {
+      "path": "backend/supabase/scripts/local_replay_contract.py",
+      "bytes": 18023,
+      "sha256": "d4b7ac523badc2d4e08e53d05b044f42c6a6e0f5a7ce84299904588ec59a222d",
+      "role": "supported-source-replay-classification"
+    },
+    {
+      "path": "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+      "bytes": 120926,
+      "sha256": "977082784370a793ceae297a933dc4f8b2bfd7d23670d1aa451d6cce57cfbac4",
+      "role": "pinned-pg15-generator-integration"
+    },
+    {
+      "path": "backend/supabase/tests/test_admin_user_management_rpc_forward_replay.py",
+      "bytes": 4817,
+      "sha256": "6232ad3451dff7e1a0d6a044ccb107917ec168d0e82ea98496b18e0d8447c4a3",
+      "role": "source-replay-tests"
+    },
+    {
+      "path": ".github/admin-record-sql-successor.v1.json",
+      "bytes": 106114,
+      "sha256": "a7ed53ed124576039e1d49ae62f46626e9747c2c2a0d4711e93c4fc5f1b24140",
+      "role": "five-stage-held-manifest"
+    },
+    {
+      "path": ".github/admin-user-rpc-forward-successor.v1.json",
+      "bytes": 2397,
+      "sha256": "a0bddef8d49a8dd5042ecc012388db5448ce65cd09f508e1b605fd6a604022ad",
+      "role": "forward-held-manifest"
+    },
+    {
+      "path": "apps/web/scripts/admin-user-rpc-forward-successor.mjs",
+      "bytes": 31766,
+      "sha256": "47339a1a5f94f66dfe11f4a26a4a2396246c44737a6068aa29e298b941429a7b",
+      "role": "forward-planner"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-user-rpc-forward-successor.test.ts",
+      "bytes": 11611,
+      "sha256": "27041e07182f44c7dae36fefb06f40e65d5f19e0aa495bf99520b233ff235760",
+      "role": "forward-planner-tests"
+    }
+  ],
+  "artifacts": {
+    "README.md": "4c0277029a2832a9b3b8c25240d08c50c2d8cd8a8413e0f4936af0c0555a04da",
+    "attempt-1/native-admission.json": "9dd56fc207b4f8babd2e5891efc9f5840c492edd9cb41e2ed777f0cc48c599da",
+    "attempt-1/ownership-receipt.json": "1f444ff28238bafbe366512378369529be1587ebeb1c91ea3d9ed502d35fc87d",
+    "native-admission.json": "ba72f94b1a7c5b3a9d6f83a36fa3b29b16ddd751260664071e73f05214a9aa21",
+    "orchestrate.mjs": "3d303589166a92981235dc5297f5ea121819906df2455202ba2d264ac7916255",
+    "ownership-receipt.json": "bde894d67caa1031ea79f6c9450d70554d1cffcd2d9962227f34b59e5016908c",
+    "pristine-reconstruction.json": "7b671bc786ee88b77b26fef2e567fd88b722bd52a0c63d90c704d2d18904fd10",
+    "proof.json": "f585710ef57899e7de5dbaebd1c5117104a74a7e331bd24bdfd289939f701881",
+    "replay.mjs": "1ed4becfaa5ff82343911b0b1247e2d1c741709652bf7d34f9dd31a6525ccd3c",
+    "role-bootstrap.json": "2d90d709c4a408bb4b14d43cb2729b0ca7bff114bb06fea62401eb3b7dbb2357",
+    "rpc-contract-fixture.sql": "5fbafce0fbe4c32ca3124c24dff717fe55d1fed08f10129c77249b1bc6560641",
+    "source-only-compatibility.json": "405026cb2efbdb6fd8585e9a94fe54ce2adc1395afd709e9cef5bb4e428dde95"
+  },
+  "transport": "psql --single-transaction --file=-",
+  "runtime": {
+    "postFiveLedgerCount": 8,
+    "finalLedgerCount": 9,
+    "prefixCount": 3,
+    "terminalMismatchRollbackExact": true,
+    "preimageDriftRollbackExact": true,
+    "forwardCommitted": true,
+    "metadataBound": 200,
+    "auditStored": 52,
+    "auditReturned": 50,
+    "positiveAppendCount": 52,
+    "rpcFixtureRollbackExact": true
+  },
+  "sourceOnlyCompatibility": {
+    "classification": "verified-existing",
+    "rawOperatingSqlExecuted": false,
+    "blindExclusion": false,
+    "generatedVerifierSqlSha256": "1f59707fd6b1d8743fa2b69140728265f1d5ff76fb1fb5e495b64b8cc7a3daa7",
+    "targetPg15Generate": "pending-clean-checkout"
+  },
+  "scope": {
+    "hostedWrites": false,
+    "operatingWrites": false,
+    "userRowsCopied": 0,
+    "hostedLedgerRowsCopied": 0,
+    "sharedManifestOrControllerEditedByRun": false
+  },
+  "cleanup": {
+    "nativeClusterRemoved": true,
+    "containerRemoved": true,
+    "volumeRemoved": true,
+    "temporaryScriptsRemoved": true
+  }
+}

@@ -74,46 +74,98 @@ describe('admin action boundary',()=>{
    expect(removes).toBe(state==='pending'?1:0);expect(phases.includes('cleanup_absent')).toBe(state==='pending');expect(result.mediaCleanupPending).toBe(state!=='pending');
   }
  });
- test('guarded review cleanup routes verification jobs to the private bucket',async()=>{
-  let present=true;const buckets:string[]=[];
-  const rpc:RecordActionRpc=async args=>({error:null,data:args.p_phase==='readback'
-   ?{...receipt,action:'review.delete',mediaCleanupPending:present}
-   :args.p_phase==='cleanup_read'
-    ?{jobs:[{id:jobId,bucket:'review-verifications',objectName:`${actor}/reviews/${target}/verification/proof.jpg`,state:'pending'}]}
-    :{ok:true,claimed:true}});
-  await resumeRecordMediaCleanup(rpc,{exists:async bucket=>{buckets.push(bucket);return present;},remove:async bucket=>{buckets.push(bucket);present=false;}},actor,operationId,unitAdmission);
-  expect(buckets).toEqual(['review-verifications','review-verifications','review-verifications']);
- });
- test('guarded verification cleanup removes and reads back private plus legacy public objects',async()=>{
-  const objectName=`${actor}/reviews/${target}/verification/proof.jpg`;
-  const publicJob='55555555-5555-4555-8555-555555555555';
-  const jobs=[
-   {id:jobId,bucket:'review-verifications',objectName,state:'pending'},
-   {id:publicJob,bucket:'review-photos',objectName,state:'pending'},
-  ] as const;
-  const keys=new Map(jobs.map(job=>[job.id,`${job.bucket}:${job.objectName}`]));
-  const present=new Set(keys.values());const storageCalls:string[]=[];
+ test('mixed private and legacy verification cleanup deletes and reads back both bounded buckets',async()=>{
+  const objectName=`${actor}/reviews/${target}/verification/proof.jpg`,legacyJob='55555555-5555-4555-8555-555555555555';
+  const jobs=[{id:jobId,bucket:'review-verifications',objectName,state:'pending'},{id:legacyJob,bucket:'review-photos',objectName,state:'pending'}] as const;
+  const keys=new Map(jobs.map(job=>[job.id,`${job.bucket}:${job.objectName}`])),present=new Set(keys.values()),storageCalls:string[]=[];
   const rpc:RecordActionRpc=async args=>{
    if(args.p_phase==='readback')return {error:null,data:{...receipt,action:'review.delete',mediaCleanupPending:present.size>0}};
    if(args.p_phase==='cleanup_read')return {error:null,data:{jobs}};
    if(args.p_phase==='cleanup_absent')present.delete(keys.get(String((args.p_payload as {jobId?:unknown})?.jobId))??'');
    return {error:null,data:{ok:true,claimed:true}};
   };
-  const result=await resumeRecordMediaCleanup(rpc,{
-   exists:async(bucket,path)=>{const key=`${bucket}:${path}`;storageCalls.push(`exists:${key}`);return present.has(key);},
-   remove:async(bucket,path)=>{const key=`${bucket}:${path}`;storageCalls.push(`remove:${key}`);present.delete(key);},
-  },actor,operationId,unitAdmission);
+  const result=await resumeRecordMediaCleanup(rpc,{exists:async(bucket,path)=>{const key=`${bucket}:${path}`;storageCalls.push(`exists:${key}`);return present.has(key);},remove:async(bucket,path)=>{const key=`${bucket}:${path}`;storageCalls.push(`remove:${key}`);present.delete(key);}},actor,operationId,unitAdmission);
   expect(result.mediaCleanupPending).toBe(false);
   expect(storageCalls).toEqual([
    `exists:review-verifications:${objectName}`,`remove:review-verifications:${objectName}`,`exists:review-verifications:${objectName}`,
    `exists:review-photos:${objectName}`,`remove:review-photos:${objectName}`,`exists:review-photos:${objectName}`,
   ]);
  });
- test('private bucket jobs cannot target food objects',async()=>{
-  const rpc:RecordActionRpc=async args=>({error:null,data:args.p_phase==='readback'
-   ?{...receipt,action:'review.delete'}
-   :{jobs:[{id:jobId,bucket:'review-verifications',objectName:`${actor}/reviews/${target}/food/fixture.jpg`,state:'pending'}]}});
-  await expect(resumeRecordMediaCleanup(rpc,{exists:async()=>true,remove:async()=>{}},actor,operationId,unitAdmission)).rejects.toThrow('UNCERTAIN');
+ test('cleanup rejects an unbounded bucket or a private food path before touching Storage',async()=>{
+  const otherReview='77777777-7777-4777-8777-777777777777';
+  for(const job of [
+   {id:jobId,bucket:'profile-avatars',objectName:`${actor}/reviews/${target}/verification/proof.jpg`,state:'pending'},
+   {id:jobId,bucket:'review-verifications',objectName:`${actor}/reviews/${target}/food/proof.jpg`,state:'pending'},
+   {id:jobId,bucket:'review-photos',objectName:`${actor}/reviews/${otherReview}/food/proof.jpg`,state:'pending'},
+  ]){
+   let storageCalls=0;
+   const rpc:RecordActionRpc=async args=>({error:null,data:args.p_phase==='readback'?{...receipt,action:'review.delete'}:{jobs:[job]}});
+   await expect(resumeRecordMediaCleanup(rpc,{exists:async()=>{storageCalls++;return true;},remove:async()=>{storageCalls++;}},actor,operationId,unitAdmission)).rejects.toThrow('RECORD_ACTION_UNCERTAIN');
+   expect(storageCalls).toBe(0);
+  }
+ });
+ test('private cleanup restart reconciles absence without repeating deletion',async()=>{
+  const objectName=`${actor}/reviews/${target}/verification/proof.jpg`,phases:string[]=[];let state:'pending'|'uncertain'|'done'='pending',present=true,removes=0,postDeleteReadback=true;
+  const rpc:RecordActionRpc=async args=>{
+   phases.push(String(args.p_phase));
+   if(args.p_phase==='readback')return {error:null,data:{...receipt,action:'review.delete',mediaCleanupPending:state!=='done'}};
+   if(args.p_phase==='cleanup_read')return {error:null,data:{jobs:state==='done'?[]:[{id:jobId,bucket:'review-verifications',objectName,state}]}};
+   if(args.p_phase==='cleanup_uncertain')state='uncertain';
+   if(args.p_phase==='cleanup_absent')state='done';
+   return {error:null,data:{ok:true,claimed:true}};
+  };
+  const storage={exists:async()=>{if(postDeleteReadback&&!present){postDeleteReadback=false;throw Error('lost readback');}return present;},remove:async(bucket:string)=>{expect(bucket).toBe('review-verifications');removes++;present=false;throw Error('lost delete ACK');}};
+  expect((await resumeRecordMediaCleanup(rpc,storage,actor,operationId,unitAdmission)).mediaCleanupPending).toBe(true);
+  expect((await resumeRecordMediaCleanup(rpc,storage,actor,operationId,unitAdmission)).mediaCleanupPending).toBe(false);
+  expect(removes).toBe(1);expect(phases.filter(phase=>phase==='cleanup_claim')).toHaveLength(1);expect(phases).toContain('cleanup_uncertain');expect(phases).toContain('cleanup_absent');
+ });
+ test('one metadata read failure preserves uncertainty while later independent jobs complete',async()=>{
+  const firstPath=`${actor}/reviews/${target}/food/first.jpg`,secondPath=`${actor}/reviews/${target}/verification/second.jpg`,secondId='66666666-6666-4666-8666-666666666666';
+  const states=new Map([[jobId,'pending'],[secondId,'pending']]),present=new Set([firstPath,secondPath]),phases:string[]=[],removed:string[]=[];let failFirstRead=true;
+  const rpc:RecordActionRpc=async args=>{
+   phases.push(String(args.p_phase));
+   if(args.p_phase==='readback')return {error:null,data:{...receipt,action:'review.delete',mediaCleanupPending:[...states.values()].some(state=>state!=='done')}};
+   if(args.p_phase==='cleanup_read')return {error:null,data:{jobs:[
+    {id:jobId,bucket:'review-photos',objectName:firstPath,state:states.get(jobId)},
+    {id:secondId,bucket:'review-verifications',objectName:secondPath,state:states.get(secondId)},
+   ].filter(job=>job.state!=='done')}};
+   const id=String((args.p_payload as {jobId?:unknown})?.jobId);
+   if(args.p_phase==='cleanup_claim')states.set(id,'inflight');
+   if(args.p_phase==='cleanup_absent')states.set(id,'done');
+   return {error:null,data:{ok:true,claimed:true}};
+  };
+  const storage={exists:async(_bucket:string,path:string)=>{if(path===firstPath&&failFirstRead){failFirstRead=false;throw Error('metadata unavailable');}return present.has(path);},remove:async(_bucket:string,path:string)=>{removed.push(path);present.delete(path);}};
+  await expect(resumeRecordMediaCleanup(rpc,storage,actor,operationId,unitAdmission)).rejects.toThrow('RECORD_ACTION_UNCERTAIN');
+  expect(states.get(jobId)).toBe('pending');expect(states.get(secondId)).toBe('done');expect(removed).toEqual([secondPath]);
+  const recovered=await resumeRecordMediaCleanup(rpc,storage,actor,operationId,unitAdmission);
+  expect(recovered.mediaCleanupPending).toBe(false);expect(removed).toEqual([secondPath,firstPath]);
+  expect(phases.filter(phase=>phase==='cleanup_claim')).toHaveLength(2);
+ });
+ test('twenty-six cleanup jobs finish in two bounded pages with no omission or repeated deletion',async()=>{
+  const jobs=Array.from({length:26},(_,index)=>({
+   id:`00000000-0000-4000-8000-${String(index+1).padStart(12,'0')}`,
+   bucket:index===25?'review-verifications' as const:'review-photos' as const,
+   objectName:`${actor}/reviews/${target}/${index===25?'verification':'food'}/fixture-${String(index+1).padStart(2,'0')}.jpg`,
+   state:'pending' as 'pending'|'inflight'|'uncertain'|'done',
+  }));
+  const present=new Set(jobs.map(job=>`${job.bucket}:${job.objectName}`)),removed:string[]=[];
+  const rpc:RecordActionRpc=async args=>{
+   if(args.p_phase==='readback')return {error:null,data:{...receipt,action:'review.delete',mediaCleanupPending:jobs.some(job=>job.state!=='done')}};
+   if(args.p_phase==='cleanup_read')return {error:null,data:{jobs:jobs.filter(job=>job.state!=='done').slice(0,25)}};
+   const id=String((args.p_payload as {jobId?:unknown})?.jobId),job=jobs.find(candidate=>candidate.id===id)!;
+   if(args.p_phase==='cleanup_claim'){job.state='inflight';return {error:null,data:{claimed:true}};}
+   if(args.p_phase==='cleanup_absent')job.state='done';
+   return {error:null,data:{ok:true}};
+  };
+  const storage={
+   exists:async(bucket:string,path:string)=>present.has(`${bucket}:${path}`),
+   remove:async(bucket:string,path:string)=>{const key=`${bucket}:${path}`;removed.push(key);present.delete(key);},
+  };
+  expect((await resumeRecordMediaCleanup(rpc,storage,actor,operationId,unitAdmission)).mediaCleanupPending).toBe(true);
+  expect(removed).toHaveLength(25);
+  expect((await resumeRecordMediaCleanup(rpc,storage,actor,operationId,unitAdmission)).mediaCleanupPending).toBe(false);
+  expect(removed).toHaveLength(26);expect(new Set(removed).size).toBe(26);
+  expect(jobs.every(job=>job.state==='done')).toBe(true);expect(present.size).toBe(0);
  });
 });
 

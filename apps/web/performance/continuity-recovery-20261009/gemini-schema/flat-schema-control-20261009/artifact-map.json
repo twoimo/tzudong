@@ -1,0 +1,16 @@
+{
+  "artifacts": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/flat-schema-control-20261009/root-admission.json",
+      "role": "pre_request_admission",
+      "bytes": 2089,
+      "sha256": "bd9fe29becf7936ed014b24ffc4034d1f9962a7f83448dea610e55ab0d4799b9"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/flat-schema-control-20261009/proof.json",
+      "role": "sanitized_success_result",
+      "bytes": 269,
+      "sha256": "27c7cb096dca3b4c1aff08cbbe6ddf70e6e5a3f08cbb35f816c52df3371ae901"
+    }
+  ]
+}

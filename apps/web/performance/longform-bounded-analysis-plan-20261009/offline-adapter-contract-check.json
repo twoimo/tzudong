@@ -1,0 +1,34 @@
+{
+  "originalRequestSha256": "121a7580dde9db30051ec8c05c63f843a478eb59ec9e6900e39f27bd11c8d331",
+  "reconstructedPayloadMatchesOriginalFingerprint": true,
+  "officialOpenApiSha256": "106eeb911d76f8e887ab16efaad3f38381708f6fa36988bf98a65a37f1d84028",
+  "checks": {
+    "modelAndGenerationKeysMatchOfficial": true,
+    "videoInputKeysMatchOfficial": true,
+    "clipKeysMatchOfficial": true,
+    "clipTypesAreDurationStrings": true,
+    "responseFormatKeysMatchOfficial": true,
+    "textJsonSchemaShapeMatchesOfficial": true
+  },
+  "sdkFixture": {
+    "offlineMockOnly": true,
+    "remoteNetworkRequests": 0,
+    "localSyntheticRequests": 1,
+    "requestTransmittedBySdkFixture": true,
+    "payloadSemanticsPreserved": true,
+    "errorShape": {
+      "class": "BadRequestError",
+      "name": "BadRequestError",
+      "status": 400,
+      "statusCode": 400,
+      "code": null,
+      "status_code": null
+    }
+  },
+  "schemaMetrics": {
+    "canonicalSchemaBytes": 5335,
+    "payloadCanonicalBytes": 8011
+  },
+  "providerPostsSent": 0,
+  "sourceEdited": false
+}

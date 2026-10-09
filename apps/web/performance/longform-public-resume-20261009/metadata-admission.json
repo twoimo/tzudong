@@ -1,0 +1,13 @@
+{
+  "observedAtUtc": "2026-10-09T04:39:25.216121+00:00",
+  "videoId": "O_hj9Ge-Fdk",
+  "endpoint": "youtube.com/oembed",
+  "requestsAllowed": 1,
+  "retries": 0,
+  "redirectsAllowed": false,
+  "collectorStarted": false,
+  "httpStatus": 200,
+  "metadataMatchesPublicYoutube": true,
+  "responseSha256": "8c5fcbfcc108d4b24d2bfcbbdb5bbb10eca6e335d3f821d6c9f69861463e5135",
+  "admitted": true
+}

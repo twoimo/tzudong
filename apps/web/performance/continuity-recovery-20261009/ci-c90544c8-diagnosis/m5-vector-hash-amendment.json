@@ -1,0 +1,33 @@
+{
+  "schema": "g037-release-vector-hash-amendment-v1",
+  "capturedAt": "2026-10-09T11:06:41Z",
+  "amends": {
+    "path": "apps/web/performance/continuity-recovery-20261009/ci-c90544c8-diagnosis/metadata-default-normalization-evidence.json",
+    "sha256": "f4aaf5f7eadeaf37c675ec0f5f0535c584f7986602d0b5e44d04ecf75db50237"
+  },
+  "clarification": {
+    "authoritativeReleaseVectorAlgorithm": "sha256(UTF8(JSON.stringify(g037Output.statements)))",
+    "historicalProbeAlgorithm": "sha256(raw G037 CLI stdout including its trailing newline)",
+    "historicalProbeDigestsRemainEvidenceOnly": true,
+    "stableMigrationSourceChangedByAmendment": false
+  },
+  "preimage": {
+    "sourceSha256": "f58a41a339663e9c6aa79fc233573e0ad15d6f253f0afae62e30b67e8180a065",
+    "sourceBytes": 11649,
+    "statementCount": 13,
+    "authoritativeReleaseVectorSha256": "efd37cbc628681232e53d3b404a90cb52fe57e659b67214826fb475f90a79143",
+    "historicalRawCliStdoutSha256": "b63d52a0a5196ff3713527db8838b2d4eabc9c90a3f2b317239a662ff017118d"
+  },
+  "final": {
+    "sourceSha256": "03c8ebabaaf7255e1c5ab5dedf59a95782b78dbc960668870ea80fc8780ab3af",
+    "sourceBytes": 12195,
+    "statementCount": 13,
+    "authoritativeReleaseVectorSha256": "147414379f4eebdc1274257419629107a80be59ec3203a064f29c82472760003",
+    "historicalRawCliStdoutSha256": "4a43888dd3a94f92c97fee0b5e7ae0f34c5e9ace0536b527a986dc5f1ec26013"
+  },
+  "crossCheck": {
+    "preimageMatchesHeldManifest": true,
+    "finalSourceMatchesStableM5": true,
+    "finalStatementCountMatchesStableM5": true
+  }
+}

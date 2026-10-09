@@ -1,0 +1,132 @@
+{
+  "project": "tzudong",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "environment": "preview",
+  "node": "24.21.0",
+  "cli": "56.5.0",
+  "exit": 0,
+  "rows": [
+    {
+      "key": "GEMINI_API_KEY",
+      "target": [
+        "preview"
+      ],
+      "type": "sensitive",
+      "gitBranch": "develop"
+    },
+    {
+      "key": "GEMINI_API_KEY",
+      "target": [
+        "preview"
+      ],
+      "type": "sensitive",
+      "gitBranch": "data"
+    },
+    {
+      "key": "NEXT_PUBLIC_NAVER_CLIENT_ID",
+      "target": [
+        "development",
+        "preview"
+      ],
+      "type": "encrypted",
+      "gitBranch": null
+    },
+    {
+      "key": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "target": [
+        "development",
+        "preview"
+      ],
+      "type": "encrypted",
+      "gitBranch": null
+    },
+    {
+      "key": "YOUTUBE_API_KEY",
+      "target": [
+        "production",
+        "preview"
+      ],
+      "type": "sensitive",
+      "gitBranch": null
+    },
+    {
+      "key": "GEMINI_OCR_YEON",
+      "target": [
+        "production",
+        "preview"
+      ],
+      "type": "sensitive",
+      "gitBranch": null
+    },
+    {
+      "key": "GOOGLE_GEOCODING_API_KEY",
+      "target": [
+        "preview"
+      ],
+      "type": "sensitive",
+      "gitBranch": null
+    },
+    {
+      "key": "NEXT_PUBLIC_SITE_URL",
+      "target": [
+        "development",
+        "preview",
+        "production"
+      ],
+      "type": "encrypted",
+      "gitBranch": null
+    },
+    {
+      "key": "GITHUB_TOKEN",
+      "target": [
+        "development",
+        "preview",
+        "production"
+      ],
+      "type": "encrypted",
+      "gitBranch": null
+    },
+    {
+      "key": "GITHUB_OWNER",
+      "target": [
+        "development",
+        "preview",
+        "production"
+      ],
+      "type": "encrypted",
+      "gitBranch": null
+    },
+    {
+      "key": "GITHUB_REPO",
+      "target": [
+        "development",
+        "preview",
+        "production"
+      ],
+      "type": "encrypted",
+      "gitBranch": null
+    },
+    {
+      "key": "NEXT_PUBLIC_SUPABASE_URL",
+      "target": [
+        "production",
+        "preview",
+        "development"
+      ],
+      "type": "encrypted",
+      "gitBranch": null
+    },
+    {
+      "key": "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY",
+      "target": [
+        "preview",
+        "development"
+      ],
+      "type": "encrypted",
+      "gitBranch": null
+    }
+  ],
+  "count": 13,
+  "valuesRead": false,
+  "writes": false
+}

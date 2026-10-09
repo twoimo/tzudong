@@ -1,0 +1,27 @@
+{
+  "status": "unconfirmed",
+  "engine": "pg17",
+  "actualCaller": "applyMigrationWithTerminalReadback",
+  "operatingWrites": false,
+  "dockerContext": "colima-tzudong-catalog-20261007",
+  "container": "tzudong-atomic-impl-pg17-20261009",
+  "expectedImageDigest": "sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+  "database": "continuity_sql_pg17_51237_1791526890643",
+  "cases": [],
+  "cleanup": {
+    "databaseDropped": true,
+    "rolesDropped": true
+  },
+  "containerId": "0045df06e674f489eb6b55ef5150cc2cc731ec4a7f05f46bc833dc422e888d7c",
+  "networkMode": "none",
+  "publishedPorts": 0,
+  "serverVersion": "17.6",
+  "failure": {
+    "code": "STRICT3_CALLER_FAILED"
+  },
+  "sourceHashes": {
+    "apply": "a5596ae76cfb0a2d23002230d2f21b045e68f9866b5822b32a7474a86208a0c2",
+    "transaction": "3ca3608e61ef16601462dc9a517948dc4b224d7acc621244a1e3d79fce6ef08d",
+    "transactionTests": "94bfa49dfe3743f03ae71af9155eb4a3ce1c923948f4ed910506f9b65f57b40b"
+  }
+}

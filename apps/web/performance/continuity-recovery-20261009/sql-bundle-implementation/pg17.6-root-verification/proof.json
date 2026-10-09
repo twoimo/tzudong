@@ -1,0 +1,65 @@
+{
+  "observedAt": "2026-10-09T08:07:06.514478+00:00",
+  "sourceBindings": [
+    {
+      "path": "apps/web/scripts/supabase-migration-bundle.mjs",
+      "sha256": "9c9de03f16211058bdc03023e88933b26eb4149aef8f6776d11d4036e448f449"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-bundle.test.ts",
+      "sha256": "5b3600c07aba01608ed580cd4d17a04498592d989df8e60ab6044f78a066b76f"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-bundle-pg17.test.ts",
+      "sha256": "b8273ebfe6112b5ea2bef14d8342cc3dd55db3161f68bdf77f653fc506c0fcb0"
+    }
+  ],
+  "targetVersion": "17.6",
+  "isolatedOwnedCluster": true,
+  "tcpListenDisabled": true,
+  "databaseWritesScope": "generated four-stage fixture only",
+  "actualFourProductionSqlExecuted": false,
+  "unit": {
+    "files": 3,
+    "pass": 27,
+    "fail": 0,
+    "assertions": 256
+  },
+  "pg": {
+    "pass": 1,
+    "fail": 0,
+    "assertions": 31,
+    "stagesRolledBack": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "globalTerminalMismatchRolledBack": true,
+    "partialPriorDenied": true,
+    "successFourRowsAssertedWithinTest": true,
+    "afterTestResetReadback": {
+      "version": "17.6",
+      "tcpListenDisabled": true,
+      "ledgerRows": 3,
+      "targetRows": 0,
+      "prefixRows": 3
+    },
+    "prefixRootAlgorithm": "SHA-256 over ordered canonical jsonb version/name/statements rows"
+  },
+  "targetAdmission": {
+    "cases": 5,
+    "unexpectedPsqlCalls": 0
+  },
+  "cleanup": {
+    "ownedDatabaseDropped": true,
+    "ownedServerStopped": true,
+    "cachedExistingServersTouched": false
+  },
+  "rejectedRootExpectation": {
+    "expectedTargetRows": 4,
+    "observedTargetRows": 0,
+    "reason": "The integration test deliberately reset generated target rows after verifying the successful four-row commit. Root corrected its post-test cleanup expectation without rerunning or rewriting the successful test."
+  },
+  "operatingWrites": false
+}

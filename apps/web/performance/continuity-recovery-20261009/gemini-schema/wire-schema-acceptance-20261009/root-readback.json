@@ -1,0 +1,75 @@
+{
+  "classification": "completed",
+  "terminal": {
+    "responseReached": true,
+    "httpStatus": 200,
+    "completed": true
+  },
+  "control": {
+    "model": "gemini-3.8-flash",
+    "modelMatch": true,
+    "schemaValidation": true,
+    "wireSchemaValidation": true,
+    "expectedVideoId": true,
+    "fullValidatorPass": false,
+    "originalSchemaConstraintPass": false,
+    "usage": {
+      "inputTokens": 82,
+      "outputTokens": 62,
+      "thinkingTokens": 109,
+      "cachedTokens": 0,
+      "toolTokens": 0,
+      "totalTokens": 253,
+      "totalMatchesParts": true
+    },
+    "elapsedSeconds": 2.838956,
+    "responseDtoSha256": "ca2eea03032b6e4c7ca60b327052c4a3003f57f4030df03b6a86df9e512a9ce0"
+  },
+  "request": {
+    "payloadCanonicalBytes": 914,
+    "payloadSha256": "1bb888763dc647849967c89dc5eca5dcfec912245aa48e6246307f1cf5fba4a2",
+    "schemaCanonicalBytes": 365,
+    "schemaSha256": "e3f27356cdb188197c709fb607446f606fc250f60ef84bd7bd89062c2e71c360",
+    "promptSha256": "81377b15578f67767fab3a8b4a72cede12c75a83544f103109ca4b437a4f671b",
+    "hasVideo": false,
+    "store": false,
+    "maxOutputTokens": 65536
+  },
+  "execution": {
+    "providerPosts": 1,
+    "retries": 0,
+    "providerReadbacks": 0,
+    "redirects": 0,
+    "automaticVariants": 0,
+    "videoCalls": 0,
+    "requestsPerMinuteMaximum": 1,
+    "concurrencyMaximum": 1,
+    "timeoutSeconds": 120
+  },
+  "interpretation": {
+    "providerWireAcceptance": "passed",
+    "fullValidatorBooleanExpectedForSyntheticPrompt": false,
+    "fullValidatorReason": "The fixed no-video prompt requires partial coverage and empty evidence, while the product validator requires complete coverage and at least one evidenced summary fact.",
+    "independentVideoOutputQuality": "not_evaluated",
+    "productionSourceAdoption": "not_performed"
+  },
+  "persistence": {
+    "rawBody": false,
+    "generatedText": false,
+    "headers": false,
+    "key": false,
+    "responseId": false,
+    "successCacheWrite": false,
+    "failedReceiptWrite": false,
+    "queueWrite": false,
+    "vaultWrite": false,
+    "productionSourceWrite": false
+  },
+  "integrity": {
+    "rootAdmissionSha256": "f418a5897d487b1505e16df4117582f1c0955efbee5ab242494adfe413a69264",
+    "probeHarnessSha256": "72af68fe181dc6f6f539ee24c8f547e37144514c9e8c0f66db079cd798272392",
+    "dispatchJournalSha256": "0199aa7262911e025bf3b01443cc00f97ee1fafceac53df31be06014c491a827",
+    "proofSha256": "825f10a4b413ee2653dad7f7bbab8b64bd12d37f2f34d05493578d9dc08209f2",
+    "implementationArtifactMapSha256": "3fa68ad4077577758f8a712116f4e1969366546ff991d594d1c92f7b6b695aea"
+  }
+}

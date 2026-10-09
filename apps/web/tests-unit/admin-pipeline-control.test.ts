@@ -41,6 +41,7 @@ function githubGetFixture(run: unknown, denial?: number, githubStatus = 200, pay
     if (url === "https://pipeline.fixture/v1/targets") return new Response("unavailable", { status: 503 });
     expect(url).toBe("https://api.github.com/repos/synthetic/repo/actions/workflows/daily-crawler.yml/runs?per_page=1&branch=main");
     expect(init.headers).not.toHaveProperty("Authorization");
+    expect(init.headers).toHaveProperty("X-GitHub-Api-Version", "2026-03-10");
     return Response.json(payloadOverride === undefined ? { workflow_runs: run === undefined ? [] : [run] } : payloadOverride, { status: githubStatus });
   }, async () => denial ? { ok: false, response: Response.json({ error: "Forbidden" }, { status: denial }) } : { ok: true },
   { env: { GITHUB_REPOSITORY: "synthetic/repo" } }, { json: Response.json }, "https://pipeline.fixture", 1000,
@@ -120,6 +121,51 @@ describe("GitHub pipeline fallback GET semantics", () => {
     expect((await githubGetFixture({ id: 123, status: "completed", conclusion: "success" }, undefined, 503).get()).status).toBe(502);
     for (const payload of [null, {}, { workflow_runs: null }, { workflow_runs: { 0: { id: 123, status: "completed", conclusion: "failure" } } }]) {
       expect((await githubGetFixture(undefined, undefined, 200, payload).get()).status).toBe(502);
+    }
+  });
+
+  test("uses split repository configuration and recovers a public read from a rejected token", async () => {
+    for (const denial of [401, 403, 404]) {
+      const requests: Array<{ url: string; authorization: string | null }> = [];
+      const get = createPipelineGet(async (input: string, init: RequestInit = {}) => {
+        const url = String(input);
+        const headers = init.headers as Record<string, string> | undefined;
+        requests.push({ url, authorization: headers?.Authorization ?? null });
+        if (url === "https://pipeline.fixture/v1/targets") {
+          return new Response("unavailable", { status: 503 });
+        }
+        expect(url).toBe("https://api.github.com/repos/twoimo/tzudong/actions/workflows/daily-crawler.yml/runs?per_page=1&branch=main");
+        expect(headers).toHaveProperty("X-GitHub-Api-Version", "2026-03-10");
+        if (headers?.Authorization) {
+          return Response.json({ message: "fixed-denial" }, { status: denial });
+        }
+        return Response.json({ workflow_runs: [{ id: 523, status: "completed", conclusion: "success" }] });
+      }, async () => ({ ok: true }), {
+        env: {
+          GITHUB_OWNER: "twoimo",
+          GITHUB_REPO: "tzudong",
+          GITHUB_TOKEN: "fixture-token",
+        },
+      }, { json: Response.json }, "https://pipeline.fixture", 1000,
+      () => ({}), () => [], parseGithubWorkflowState);
+
+      const response = await get();
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        source: "github_actions",
+        githubRun: { id: "523", status: "completed", conclusion: "success" },
+      });
+      expect(requests).toEqual([
+        { url: "https://pipeline.fixture/v1/targets", authorization: null },
+        {
+          url: "https://api.github.com/repos/twoimo/tzudong/actions/workflows/daily-crawler.yml/runs?per_page=1&branch=main",
+          authorization: "Bearer fixture-token",
+        },
+        {
+          url: "https://api.github.com/repos/twoimo/tzudong/actions/workflows/daily-crawler.yml/runs?per_page=1&branch=main",
+          authorization: null,
+        },
+      ]);
     }
   });
 });

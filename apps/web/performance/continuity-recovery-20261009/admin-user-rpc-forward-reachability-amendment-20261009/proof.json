@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "kind": "admin-user-rpc-forward-launch-reachability-amendment",
+  "status": "passed-held",
+  "observedAt": "2026-10-09T11:20:41.327122Z",
+  "problem": "tracked ready manifest previously required its own future protected commit SHA",
+  "resolution": {
+    "trackedManifestRevisionIndependent": true,
+    "manifestProtectedRevisionFieldAbsent": true,
+    "stableProtectedSource": {
+      "remote": "origin",
+      "repositoryUrl": "https://github.com/twoimo/tzudong.git",
+      "ref": "refs/heads/main"
+    },
+    "privateAdmissionBindsSourceRevision": true,
+    "privateAdmissionBindsProtectedReadbackSha256": true,
+    "requiresCleanDetachedCheckoutAtAdmissionRevision": true,
+    "requiresCurrentProtectedMainAtAdmissionRevision": true,
+    "mainReadbackOccursBeforeDatabaseTransport": true
+  },
+  "sources": {
+    "manifest": {
+      "path": ".github/admin-user-rpc-forward-successor.v1.json",
+      "sha256": "c2148750d782a7d9b7bb5da00091a2723b003a5a391a1738af01492f9c40fbdf"
+    },
+    "planner": {
+      "path": "apps/web/scripts/admin-user-rpc-forward-successor.mjs",
+      "sha256": "05c93ec6cb3d2235fffa6b17364001c288ff3482947037921609d7dca12b8403"
+    },
+    "tests": {
+      "path": "apps/web/tests-unit/admin-user-rpc-forward-successor.test.ts",
+      "sha256": "74012ca7370869963fd27c944405fb43779e87c994eb323241b35bc4a82d3569"
+    }
+  },
+  "protectedMainReadback": {
+    "schemaVersion": 1,
+    "projectRef": "aqlcofblfxdrjhhdmarw",
+    "repositoryUrl": "https://github.com/twoimo/tzudong.git",
+    "ref": "refs/heads/main",
+    "revision": "f31904e6dca2d9b608259cf150c5d0894db0928e",
+    "bindingSha256": "cca7bd5d45402ff01157a951262fea6005a079d43cfb1622afc08ef8c5e310f5"
+  },
+  "currentCheckout": {
+    "revision": "c90544c813a89b077084953e42fb1431a4b1efed",
+    "clean": false,
+    "detached": false
+  },
+  "launch": {
+    "state": "held",
+    "readyNow": false,
+    "reason": "current checkout is not a clean detached checkout at current protected main and no fresh operating admission was issued"
+  },
+  "tests": {
+    "bun": {
+      "status": "passed",
+      "count": 9
+    },
+    "realGitFixture": {
+      "revisionIndependentManifestCommittedBeforeRevisionKnown": true,
+      "cleanDetachedRevisionMatched": true,
+      "protectedMainMatched": true,
+      "staleAdmissionRejectedAfterMainAdvanced": true,
+      "databaseTransportCallsOnStaleMain": 0
+    },
+    "wrongMainRevisionFailsClosed": true,
+    "launchHeldStopsBeforeAdmissionGitRemoteOrTransport": true,
+    "noResendAfterLostAcknowledgement": true
+  },
+  "preserved": {
+    "serverVersionNum": 170006,
+    "projectRef": "aqlcofblfxdrjhhdmarw",
+    "ledgerTransition": {
+      "beforeFive": 80,
+      "afterFive": 85,
+      "afterForward": 86
+    },
+    "sourceAndVectorGuards": true,
+    "freshnessMinutes": 15,
+    "serializedApply": true,
+    "noResend": true
+  },
+  "frozenRuntimeProofs": {
+    "fivePlusForwardProofSha256": "f585710ef57899e7de5dbaebd1c5117104a74a7e331bd24bdfd289939f701881",
+    "fivePlusForwardArtifactMapSha256": "44683b4fdfedc2ef5406cfe2f28bd630022db014d8fe0a6ec844b1f25fb2a67a",
+    "priorForwardProofSha256": "d7e81d4d562c3bc4086a67528f4127a0f235a94a6ad923396e52a7e2a3a64974"
+  },
+  "scope": {
+    "hostedDatabaseReads": false,
+    "hostedDatabaseWrites": false,
+    "gitRemoteRead": true,
+    "gitPush": false,
+    "projectCommit": false,
+    "launchChangedToReady": false
+  }
+}

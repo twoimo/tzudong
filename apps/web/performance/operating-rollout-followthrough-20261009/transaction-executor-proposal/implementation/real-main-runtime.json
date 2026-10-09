@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "operatingWrites": false,
+  "actualCliMain": true,
+  "approvedManifestUnchanged": true,
+  "terminalReadback": {
+    "restaurant_refresh_history_terminal_state": true
+  },
+  "ledgerVersion": "20260531105250",
+  "existingUriContractPreserved": true,
+  "managedLedgerRecorded": true,
+  "ownedDbDropped": true
+}

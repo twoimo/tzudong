@@ -1,0 +1,62 @@
+{
+  "admittedAt": "2026-10-09T07:33:07Z",
+  "admission": "admitted",
+  "executionAuthorized": true,
+  "purpose": "diagnose_exact_previous_synthetic_rejection",
+  "preconditions": {
+    "sanitizerRegressionTests": 15,
+    "sanitizerRegressionFailures": 0,
+    "sanitizerSha256": "cb0b4317d40fbd4b6f785208e1c5369b30acdcdcb4177048da2384b58302002e",
+    "testProofSha256": "e37f6b975af2964061f62d851e6a9cecfad4971004e24fa08a60bdfa2cf4a8f9",
+    "deepJsonRecursionFailsClosed": true,
+    "typedIndexDigitsMaximum": 6,
+    "sharedBudgetNamespaceReuseRequired": true
+  },
+  "request": {
+    "model": "gemini-3.8-flash",
+    "maxOutputTokens": 65536,
+    "store": false,
+    "hasVideo": false,
+    "hasTools": false,
+    "hasCache": false,
+    "hasHistory": false,
+    "promptSha256": "81377b15578f67767fab3a8b4a72cede12c75a83544f103109ca4b437a4f671b",
+    "payloadCanonicalBytes": 2553,
+    "payloadSha256": "a9dcf0aa926e214d3b7d0e91e35e7ea1c575086c4b2ed04d87b4ca19335587ae",
+    "schemaCanonicalBytes": 2004,
+    "schemaSha256": "d72c43afe8d12d0a85a815d8ec70ce107dc40e0bc97d2dfbedfeaf6065846953"
+  },
+  "executionLimits": {
+    "providerPostMaximum": 1,
+    "retries": 0,
+    "automaticRetry": false,
+    "readbacks": 0,
+    "redirects": 0,
+    "timeoutSeconds": 120,
+    "requestsPerMinuteMaximum": 1,
+    "concurrencyMaximum": 1,
+    "maxResponseBodyBytesInMemory": 65536,
+    "generationRateCapUsd": 1.032192
+  },
+  "decisions": {
+    "newSchemaRepresentationExperiment": false,
+    "failed835VideoResend": false,
+    "productionAdoption": false,
+    "factoredSchemaAcceptance": false,
+    "unknownOutcomeAllowsFollowup": false
+  },
+  "persistence": {
+    "sanitizedFixedOutputOnly": true,
+    "rawBody": false,
+    "message": false,
+    "headers": false,
+    "key": false,
+    "responseId": false,
+    "generatedText": false,
+    "failedReceiptWrite": false,
+    "successCacheWrite": false,
+    "queueWrite": false,
+    "vaultWrite": false,
+    "productionSourceWrite": false
+  }
+}

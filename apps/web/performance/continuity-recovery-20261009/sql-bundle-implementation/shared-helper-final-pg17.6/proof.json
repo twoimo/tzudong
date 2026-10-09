@@ -1,0 +1,37 @@
+{
+  "observedAt": "2026-10-09T08:35:37.586360+00:00",
+  "sourceBindings": [
+    {
+      "path": "apps/web/scripts/supabase-migration-bundle.mjs",
+      "sha256": "8c717ae3708885b0ff23f5dde3f52c8b1629eece82b4acb40f1a306b4313d481"
+    },
+    {
+      "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+      "sha256": "ba054d1c2c9c8eb2d19a110c4b58be999f52521880cbf66aef02ce963b97bbb5"
+    },
+    {
+      "path": "apps/web/scripts/apply-supabase-migration.mjs",
+      "sha256": "5d35096b97b5a541cd5d940c6d800e607f55c31500d70874dfe1639e065aa733"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-bundle-pg17.test.ts",
+      "sha256": "b8273ebfe6112b5ea2bef14d8342cc3dd55db3161f68bdf77f653fc506c0fcb0"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-bundle.test.ts",
+      "sha256": "baa1644977445e0bd2b0ad3d6d2e7e8ba2daac6c54d34c026f6fa7e93e3711ac"
+    }
+  ],
+  "version": "17.6",
+  "tcpListen": false,
+  "unitPass": 34,
+  "unitAssertions": 307,
+  "pgIntegrationPass": 1,
+  "pgAssertions": 31,
+  "actualFourSqlScope": "compile only; database scenarios use generated four-stage fixtures",
+  "singleMigrationActualPgCases": 6,
+  "singleMigrationReceipt": "../../pr-resume/review-disposition-71da8656/root-pg17.6-verification/result.json",
+  "ownedDatabaseDropped": true,
+  "ownedServerStopped": true,
+  "operatingWrites": false
+}

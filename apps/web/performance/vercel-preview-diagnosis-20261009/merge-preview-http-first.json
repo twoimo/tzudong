@@ -1,0 +1,65 @@
+{
+  "deploymentId": "dpl_He2HgNHEkNsdbQg556dGJsreTEgr",
+  "url": "https://tzudong-76i12vmwe-twoimos-projects.vercel.app",
+  "gitSha": "614b249175c35636a7062bf05cb01ebad538b10d",
+  "officialClient": "vercel curl56.5.0 fullURL path",
+  "existingCredentialOnly": true,
+  "newProtectionTokenCreated": false,
+  "privateSecretUsedInMemoryOnly": true,
+  "rawHeadersBodiesSaved": false,
+  "records": [
+    {
+      "path": "/",
+      "method": "GET",
+      "cliExit": 0,
+      "httpStatus": 200,
+      "contentType": "text/html; charset=utf-8",
+      "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "vercelErrorCode": null,
+      "bodyBytes": 22477,
+      "titleIsTzudong": true,
+      "platformProtectionPage": false,
+      "locationPath": null
+    },
+    {
+      "path": "/login",
+      "method": "GET",
+      "cliExit": 0,
+      "httpStatus": 404,
+      "contentType": "text/html; charset=utf-8",
+      "cacheControl": "public, max-age=0, must-revalidate",
+      "vercelErrorCode": null,
+      "bodyBytes": 2021,
+      "titleIsTzudong": false,
+      "platformProtectionPage": false,
+      "locationPath": null
+    },
+    {
+      "path": "/admin",
+      "method": "GET",
+      "cliExit": 0,
+      "httpStatus": 307,
+      "contentType": "text/plain",
+      "cacheControl": "no-store",
+      "vercelErrorCode": null,
+      "bodyBytes": 15,
+      "titleIsTzudong": false,
+      "platformProtectionPage": false,
+      "locationPath": "/"
+    },
+    {
+      "path": "/api/admin/knowledge-graph",
+      "method": "GET",
+      "cliExit": 0,
+      "httpStatus": 401,
+      "contentType": "application/json",
+      "cacheControl": "no-store",
+      "vercelErrorCode": null,
+      "bodyBytes": 24,
+      "titleIsTzudong": false,
+      "platformProtectionPage": false,
+      "locationPath": null,
+      "boundedErrorCode": "Unauthorized"
+    }
+  ]
+}

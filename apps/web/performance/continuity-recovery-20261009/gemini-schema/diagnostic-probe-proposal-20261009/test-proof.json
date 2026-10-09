@@ -1,0 +1,9 @@
+{
+  "verifiedAt": "2026-10-09T07:32:37Z",
+  "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -q test_sanitizer.py",
+  "testsRun": 15,
+  "failures": 0,
+  "errors": 0,
+  "result": "pass",
+  "providerCalls": 0
+}

@@ -1,0 +1,14 @@
+{
+  "schemaValidation": true,
+  "modelMatch": true,
+  "usage": {
+    "inputTokens": 82,
+    "outputTokens": 19,
+    "thinkingTokens": 855,
+    "cachedTokens": 0,
+    "toolTokens": 0,
+    "totalTokens": 956
+  },
+  "elapsedSeconds": 7.802805,
+  "expectedVideoId": true
+}

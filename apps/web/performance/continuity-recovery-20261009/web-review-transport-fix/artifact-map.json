@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "sha256",
+  "artifacts": [
+    {
+      "path": "apps/web/scripts/apply-supabase-migration.mjs",
+      "category": "current-source",
+      "sha256": "02c404e0be3e81b7c8d4d7766ff29e750b1797f5ad49b5f496168170e21192d4"
+    },
+    {
+      "path": "apps/web/scripts/admin-record-sql-successor.mjs",
+      "category": "current-source",
+      "sha256": "18975e2a80eae230bb461f3d77fab4eb2e3f4846dc8c1a3c1def83e363207b35"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-sql-successor.test.ts",
+      "category": "current-test",
+      "sha256": "db3b91743b0b8a73cbf649c1f8a345f8edee1ba0ba166abd5b5d1d6b1142302d"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-apply-source.test.ts",
+      "category": "current-test",
+      "sha256": "76f40be7b0383e97844a943fe7a86c91896e2f6aad5c3ad8e09415310b79b1d7"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-sql-successor-runner-pg17.test.ts",
+      "category": "current-test",
+      "sha256": "ca7903afce132586d2f9a266060b9f1d50ceb846499552697f8a95bd86396a2f"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-review-transport-fix/README.md",
+      "category": "evidence-boundary",
+      "sha256": "23c7095345a003369270746393f504d2ba708cd77ff20cd01c78856c90684e73"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-review-transport-fix/runtime-proof.json",
+      "category": "local-runtime-proof",
+      "sha256": "abbb4de6758134ade9db6f5507015093215a130d1a81d47b897752696bc601ae"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/web-review-transport-fix/checks.txt",
+      "category": "verification-inventory",
+      "sha256": "f07151fd7e99b90a02841d09feb097695e71c24f94a462c48b36e80c9ad902af"
+    }
+  ]
+}

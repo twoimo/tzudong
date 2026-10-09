@@ -114,6 +114,7 @@
     "nanoid": "3.3.18",
     "postcss": "^8.5.28",
     "sharp": "0.35.5",
+    "source-map-js": "1.2.2",
   },
   "packages": {
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],

@@ -3179,6 +3179,7 @@ describe("web quality performance source contracts", () => {
     const naverGeocodeSource = source("app/api/naver-geocode/route.ts");
     const youtubeMetaSource = source("app/api/youtube-meta/route.ts");
     const authCallbackSource = source("app/auth/callback/route.ts");
+    const authCallbackOriginSource = source("lib/auth/callback-origin.ts");
     const authRedirectSource = source("lib/auth/auth-redirect.ts");
     const shortenSource = source("app/api/shorten/route.ts");
     const shortRedirectSource = source("app/s/[code]/route.ts");
@@ -3238,25 +3239,31 @@ describe("web quality performance source contracts", () => {
     expect(source("lib/share/short-url-read.ts")).toContain(
       "target: isSafeTarget(trimmed) ? trimmed : '/'",
     );
-    expect(authCallbackSource).toContain("function getTrustedRedirectOrigin");
+    expect(authCallbackSource).toContain("getTrustedAuthCallbackOrigin(origin)");
     expect(authCallbackSource).toContain("getSafeAuthNextPath(searchParams.get('next'))");
     expect(authRedirectSource).toContain("export function getSafeAuthNextPath");
     expect(authRedirectSource).toContain("next.startsWith('//')");
     expect(authRedirectSource).toContain("SAFE_AUTH_NEXT_PATH_PATTERN");
     expect(authCallbackSource).not.toContain("if (!next.startsWith('/'))");
-    expect(authCallbackSource).toContain("DEFAULT_PRODUCTION_REDIRECT_ORIGIN");
-    expect(authCallbackSource).toContain("https://www.tzudong.app");
-    expect(authCallbackSource).toContain("NEXT_PUBLIC_SITE_URL");
-    expect(authCallbackSource).toContain("new URL(configuredSiteUrl).origin");
-    expect(authCallbackSource).toContain(
-      "process.env.NODE_ENV !== 'production'",
+    expect(authCallbackOriginSource).toContain("DEFAULT_PRODUCTION_REDIRECT_ORIGIN");
+    expect(authCallbackOriginSource).toContain("https://www.tzudong.app");
+    expect(authCallbackOriginSource).toContain("env.NEXT_PUBLIC_SITE_URL");
+    expect(authCallbackOriginSource).toContain("new URL(configuredSiteUrl).origin");
+    expect(authCallbackOriginSource).toContain("env.VERCEL_ENV !== 'preview'");
+    expect(authCallbackOriginSource).toContain("env.VERCEL_URL");
+    expect(authCallbackOriginSource).toContain("labels.at(-2)?.toLowerCase() !== 'vercel'");
+    expect(authCallbackOriginSource).toContain("labels.at(-1)?.toLowerCase() !== 'app'");
+    expect(authCallbackOriginSource).toContain(
+      "env.NODE_ENV !== 'production'",
     );
-    expect(authCallbackSource).toContain("new URL(requestOrigin).origin");
-    expect(authCallbackSource).toContain(
+    expect(authCallbackOriginSource).toContain("new URL(requestOrigin).origin");
+    expect(authCallbackOriginSource).toContain(
       "return DEFAULT_PRODUCTION_REDIRECT_ORIGIN;",
     );
-    expect(authCallbackSource).toContain("getTrustedRedirectOrigin(origin)}");
+    expect(authCallbackSource).toContain("getTrustedAuthCallbackOrigin(origin)}");
     expect(authCallbackSource).not.toContain("x-forwarded-host");
+    expect(authCallbackOriginSource).not.toContain("x-forwarded-host");
+    expect(authCallbackOriginSource).not.toContain("request.headers");
     expect(shortenSource).toContain(
       "const DEFAULT_SITE_ORIGIN = 'https://www.tzudong.app';",
     );

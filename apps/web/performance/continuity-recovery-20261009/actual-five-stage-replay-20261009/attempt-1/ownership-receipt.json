@@ -1,0 +1,25 @@
+{
+  "kind": "actual-five-bundle-owned-cluster",
+  "status": "unconfirmed",
+  "nonce": "6280fc8b621ed4f8d38bf133",
+  "container": "tzudong-actual-five-6280fc8b621ed4f8d38bf133",
+  "volume": "tzudong-actual-five-6280fc8b621ed4f8d38bf133",
+  "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+  "owner": "actual-five-6280fc8b621ed4f8d38bf133",
+  "network": "none",
+  "publishedPorts": 0,
+  "operatingWrites": false,
+  "hostedWrites": false,
+  "cleanup": {
+    "nativeClusterRemoved": true,
+    "containerRemoved": true,
+    "volumeRemoved": false,
+    "temporaryScriptsRemoved": true
+  },
+  "failure": {
+    "code": "NATIVE_ADMISSION_FAILED",
+    "fixedCode": null,
+    "exitCode": null
+  },
+  "completedAt": "2026-10-09T09:49:34.295Z"
+}

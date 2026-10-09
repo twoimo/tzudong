@@ -1,0 +1,31 @@
+{
+  "cases": [
+    {
+      "case": "remote_host",
+      "deniedBeforePsql": true,
+      "fixedCode": "PG17_FIXTURE_TARGET_INVALID"
+    },
+    {
+      "case": "host_override",
+      "deniedBeforePsql": true,
+      "fixedCode": "PG17_FIXTURE_TARGET_INVALID"
+    },
+    {
+      "case": "shared_database",
+      "deniedBeforePsql": true,
+      "fixedCode": "PG17_FIXTURE_TARGET_INVALID"
+    },
+    {
+      "case": "connection_options",
+      "deniedBeforePsql": true,
+      "fixedCode": "PG17_FIXTURE_TARGET_INVALID"
+    },
+    {
+      "case": "missing_fixture_id",
+      "deniedBeforePsql": true,
+      "fixedCode": "PG17_FIXTURE_IDENTITY_REQUIRED"
+    }
+  ],
+  "unexpectedPsqlCalls": 0,
+  "operatingConnections": 0
+}

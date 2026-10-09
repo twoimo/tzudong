@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "operatingWrites": false,
+  "sourceEdits": false,
+  "scope": "own disposable DB/session only",
+  "automaticResend": false,
+  "actualClientCutAfterVisibleCommit": true,
+  "clientExit": 0,
+  "outcome": "response_uncertain_then_fresh_readback_committed",
+  "freshConnectionReconciliationExact": true,
+  "ownedSessionIdentityChecked": true,
+  "ownedDbDropped": true
+}

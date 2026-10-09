@@ -1,0 +1,118 @@
+{
+  "cases": [
+    {
+      "videoId": "-D43ezc57z8",
+      "startSeconds": 0,
+      "endSeconds": 1,
+      "expandedExact": true,
+      "originalUnmodified": true,
+      "originalBytes": 5313,
+      "factoredBytes": 2000,
+      "originalSha256": "3df2595b50183a4d853fdd9888c1da52d8d700de3e8e487270499e0b5175dce8",
+      "candidateSha256": "83b6262fbc7627af6f1ac9b97448e608c749584422517ea9d7faba36a835bac5"
+    },
+    {
+      "videoId": "-D43ezc57z8",
+      "startSeconds": 0,
+      "endSeconds": 835,
+      "expandedExact": true,
+      "originalUnmodified": true,
+      "originalBytes": 5335,
+      "factoredBytes": 2004,
+      "originalSha256": "7168c8153f3922ebc33cfdd6f4a07e89e947374e5af882dc122bade3495a9efd",
+      "candidateSha256": "d72c43afe8d12d0a85a815d8ec70ce107dc40e0bc97d2dfbedfeaf6065846953"
+    },
+    {
+      "videoId": "-D43ezc57z8",
+      "startSeconds": 0.125,
+      "endSeconds": 0.875,
+      "expandedExact": true,
+      "originalUnmodified": true,
+      "originalBytes": 5401,
+      "factoredBytes": 2016,
+      "originalSha256": "fff4832a5b0c95c2a59d0f46bcacc6a0ba813155b407d031371efbc13d828b85",
+      "candidateSha256": "d0be8e7ade0d2e1425493da1af1da0b058d1e2d9f1f080647486147c93443349"
+    },
+    {
+      "videoId": "-D43ezc57z8",
+      "startSeconds": 601.25,
+      "endSeconds": 1202.5,
+      "expandedExact": true,
+      "originalUnmodified": true,
+      "originalBytes": 5423,
+      "factoredBytes": 2020,
+      "originalSha256": "685173519ebdb7e143c43f6d820ee184363b6a65ef04ab4315372c139d25288a",
+      "candidateSha256": "a9893ccf60f6e1205418d1b9d1972b0da13578fd994be7a04f1c81d3a75e5fce"
+    },
+    {
+      "videoId": "-D43ezc57z8",
+      "startSeconds": 86400,
+      "endSeconds": 172800,
+      "expandedExact": true,
+      "originalUnmodified": true,
+      "originalBytes": 5412,
+      "factoredBytes": 2018,
+      "originalSha256": "fe8ce9f8f840cdc74184bdfc46e5e036a4f8be607c8cd8ecc9508cfc26f97cdd",
+      "candidateSha256": "5e056d8ff79d7997eee527c03d0873545ebb987f4b93db24e11faee2f5cbf9fe"
+    },
+    {
+      "videoId": "A_bcDEf12-3",
+      "startSeconds": 0,
+      "endSeconds": 1,
+      "expandedExact": true,
+      "originalUnmodified": true,
+      "originalBytes": 5313,
+      "factoredBytes": 2000,
+      "originalSha256": "423bdc022223bf2729d68ed8f7f77105ecc8611293f36a56f9ee286662f2ccbe",
+      "candidateSha256": "724e2316703177ffb7a626f434ad5dc725efb202a11b702b9372cf676966bfb4"
+    },
+    {
+      "videoId": "A_bcDEf12-3",
+      "startSeconds": 0,
+      "endSeconds": 835,
+      "expandedExact": true,
+      "originalUnmodified": true,
+      "originalBytes": 5335,
+      "factoredBytes": 2004,
+      "originalSha256": "964a2251b5d632b67051996a948d6b75af61eca6e10912228702d5aaa6279e50",
+      "candidateSha256": "1bdad58f4a1bf74c71bbc722834be6515144d51479f1524db28fa49d58e0d3b1"
+    },
+    {
+      "videoId": "A_bcDEf12-3",
+      "startSeconds": 0.125,
+      "endSeconds": 0.875,
+      "expandedExact": true,
+      "originalUnmodified": true,
+      "originalBytes": 5401,
+      "factoredBytes": 2016,
+      "originalSha256": "680119dac6bb765b70905ea8ccf70871a053be1535b3ecd9ab7267d446371e8d",
+      "candidateSha256": "3f8d8087e2cf1551af922960bb82499c66fead66b14d9143253915e89064b69f"
+    },
+    {
+      "videoId": "A_bcDEf12-3",
+      "startSeconds": 601.25,
+      "endSeconds": 1202.5,
+      "expandedExact": true,
+      "originalUnmodified": true,
+      "originalBytes": 5423,
+      "factoredBytes": 2020,
+      "originalSha256": "923887d0c9e9fb3e7bc61afac88c59ae06dbf6eddf8d3969830d9103d615e873",
+      "candidateSha256": "a1546b8607cd894af9b1c970214a76e9ceaf2de5afef198e86b8039bb0646310"
+    },
+    {
+      "videoId": "A_bcDEf12-3",
+      "startSeconds": 86400,
+      "endSeconds": 172800,
+      "expandedExact": true,
+      "originalUnmodified": true,
+      "originalBytes": 5412,
+      "factoredBytes": 2018,
+      "originalSha256": "875adacc8ae4a7d832346fb34eb18f6d1985571926d5a7f2f72ab73bb4f36139",
+      "candidateSha256": "502434559d3136e42eac2f83d8a72e38d2e7f1e41791934af6b0abaaa9f8a6ed"
+    }
+  ],
+  "pass": 10,
+  "providerCalls": 0,
+  "productionSourceChanged": false,
+  "claimScope": "Exact canonical expansion for declared ID and numeric-boundary fixtures only; API acceptance and media quality unverified."
+}

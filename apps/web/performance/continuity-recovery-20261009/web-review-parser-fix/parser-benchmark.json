@@ -1,0 +1,55 @@
+{
+  "schema": "tzudong-sql-parser-paired-benchmark-v1",
+  "runtime": {
+    "node": "v24.21.0"
+  },
+  "corpus": {
+    "migrations": 4,
+    "iterations_per_sample": 25,
+    "parser_calls_per_sample": 100,
+    "pairs": 7
+  },
+  "milliseconds": {
+    "before": [
+      40.735709,
+      37.277416999999986,
+      57.47104200000001,
+      35.239750000000015,
+      41.417209000000014,
+      43.08045800000002,
+      37.29120899999998
+    ],
+    "after": [
+      45.841667,
+      39.012291999999974,
+      41.19466700000004,
+      42.44354100000004,
+      39.277417000000014,
+      51.61925000000002,
+      38.38816600000007
+    ],
+    "before_p50": 40.735709,
+    "before_p75": 42.24883350000002,
+    "before_p95": 53.1538668,
+    "after_p50": 41.19466700000004,
+    "after_p75": 44.14260400000002,
+    "after_p95": 49.88597510000001
+  },
+  "paired_speed_change_percent": {
+    "samples": [
+      -12.534354072492027,
+      -4.653957112961955,
+      28.321002079621195,
+      -20.442230719570997,
+      5.166432146598771,
+      -19.820569224217618,
+      -2.9415967715074323
+    ],
+    "mean": -3.843610524932866,
+    "bootstrap95": [
+      -14.379358263505521,
+      8.870236254488853
+    ]
+  },
+  "interpretation": "Positive means the corrected parser was faster on the four unchanged reviewed migrations. The interval crosses zero, so no speed change is claimed."
+}

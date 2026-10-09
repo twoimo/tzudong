@@ -1,0 +1,11 @@
+{
+  "reportedBy": "/root/current_batch_delivery_audit",
+  "passed": 365,
+  "failed": 0,
+  "canonicalModules": ".github/workflows/security-audit.yml:351",
+  "verificationTime": "2026-10-09T22:06:34+09:00",
+  "followupSourceTestsPassed": 23,
+  "rawRedirectedLog": false,
+  "rootReexecution": false,
+  "scope": "365 suite before final3 forward hash changes; final3 changes outside suite and inventory; related23 checked after"
+}

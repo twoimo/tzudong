@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "admin_user_rpc_forward_successor_v1",
+  "purpose": "admin-user-rpc-post-five-forward",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "executorRole": "postgres",
+  "serverVersionNum": 170006,
+  "advisoryLockKey": "7311754282260165",
+  "stateRootAlgorithm": "admin-user-rpc-forward-state/v1",
+  "launchPolicy": {
+    "state": "held",
+    "code": "FORWARD_LAUNCH_HELD",
+    "reason": "fresh-protected-source-and-operating-readback-required"
+  },
+  "protectedRevision": null,
+  "operatingTransition": {
+    "beforeFive": 80,
+    "afterFive": 85,
+    "afterForward": 86
+  },
+  "fiveStage": {
+    "path": ".github/admin-record-sql-successor.v1.json",
+    "sha256": "a7ed53ed124576039e1d49ae62f46626e9747c2c2a0d4711e93c4fc5f1b24140",
+    "sourceRoot": "fecccabd16de11d37e54d28517331ba8fcd7fa177859844d8490af7a221cc732",
+    "entries": 5
+  },
+  "acceptedSource": {
+    "path": "backend/supabase/migrations/20260906053936_admin_management_group_catalog_slice.sql",
+    "bytes": 33858,
+    "sha256": "4fea6a4912536cf1c1531b092d309f8206a7c6d28edd0558a9fceae940757b00"
+  },
+  "migration": {
+    "id": "admin_user_management_rpc_forward",
+    "version": "20261009101645",
+    "name": "admin_user_management_rpc_forward",
+    "path": "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",
+    "bytes": 40392,
+    "sha256": "b96126240399e580ed6b7198edbd3d0af44b26ec5cab66073c037b331ec8eb26",
+    "statementCount": 2,
+    "statementVectorSha256": "949cbb0862da3e62c190cdeafd23051198178440584b9ebf3f96cec1f062d9c6"
+  },
+  "runner": {
+    "module": "apps/web/scripts/admin-record-sql-successor.mjs",
+    "export": "createSuccessorPsqlRunner"
+  },
+  "toolchain": [
+    {
+      "path": "apps/web/scripts/admin-record-sql-successor.mjs",
+      "sha256": "18975e2a80eae230bb461f3d77fab4eb2e3f4846dc8c1a3c1def83e363207b35"
+    },
+    {
+      "path": "apps/web/scripts/apply-supabase-migration.mjs",
+      "sha256": "02c404e0be3e81b7c8d4d7766ff29e750b1797f5ad49b5f496168170e21192d4"
+    },
+    {
+      "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+      "sha256": "9268c882d1cb128d798f65faeb87ac3b1cc1fc3d52e843f8695b0c2ab3aa5b53"
+    },
+    {
+      "path": "backend/supabase/scripts/g037_supabase_statement_vector.mjs",
+      "sha256": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd"
+    }
+  ]
+}

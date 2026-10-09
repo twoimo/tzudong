@@ -1,0 +1,15 @@
+{
+  "schema": "pr3150-sql-correctness-five-stage-artifacts/v1",
+  "artifacts": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/sql-correctness-and-five-stage-8571b65b/proof.json",
+      "bytes": 6957,
+      "sha256": "7322d062c132eeac06eb7ae09b7c11aebc07941413c1b788e6d37c463ffd6c5c"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/sql-correctness-and-five-stage-8571b65b/checks.txt",
+      "bytes": 689,
+      "sha256": "d6602a1aaa84c3b38f3d00f9e900ec2b5eae80732d6d72c6aebaac156940f2c8"
+    }
+  ]
+}

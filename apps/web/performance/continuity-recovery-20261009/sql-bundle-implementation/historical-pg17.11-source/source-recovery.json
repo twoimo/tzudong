@@ -1,0 +1,23 @@
+{
+  "method": "Invert known root edits and require exact original artifact SHA before writing; no historical measurement or map changed",
+  "sources": [
+    {
+      "historicalPath": "apps/web/scripts/supabase-migration-bundle.mjs",
+      "archivePath": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/historical-pg17.11-source/supabase-migration-bundle.mjs.source.txt",
+      "sha256": "6b18008ae960dc96178f26a83383a81103afb0b4b62571c0804809a93e336d43",
+      "matchesOriginalArtifactMap": true
+    },
+    {
+      "historicalPath": "apps/web/tests-unit/supabase-migration-bundle.test.ts",
+      "archivePath": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/historical-pg17.11-source/supabase-migration-bundle.test.ts.source.txt",
+      "sha256": "04b89d4c7ae38f3235b01cab44036bc34536f33a3bf40cb0bac19f4c4ac0d77f",
+      "matchesOriginalArtifactMap": true
+    },
+    {
+      "historicalPath": "apps/web/tests-unit/supabase-migration-bundle-pg17.test.ts",
+      "archivePath": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/historical-pg17.11-source/supabase-migration-bundle-pg17.test.ts.source.txt",
+      "sha256": "c4e454b00c8b51083fa9280f854af254a897114da5656243095d0e4942136b31",
+      "matchesOriginalArtifactMap": true
+    }
+  ]
+}

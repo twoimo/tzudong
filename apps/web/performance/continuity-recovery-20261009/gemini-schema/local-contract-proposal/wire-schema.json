@@ -1,0 +1,36 @@
+{
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "integer"
+    },
+    "videoId": {
+      "type": "string"
+    },
+    "coverage": {
+      "type": "object"
+    },
+    "summary": {
+      "type": "array"
+    },
+    "restaurants": {
+      "type": "array"
+    },
+    "claims": {
+      "type": "array"
+    },
+    "uncertainty": {
+      "type": "array"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "videoId",
+    "coverage",
+    "summary",
+    "restaurants",
+    "claims",
+    "uncertainty"
+  ],
+  "additionalProperties": false
+}

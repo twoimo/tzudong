@@ -8022,9 +8022,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "mb-0 shrink-0 rounded-2xl border border-destructive/20 bg-destructive/5",
     );
-    expect(consoleSource).toContain('title: "지표 데이터 로드 실패"');
+    expect(consoleSource).toContain('"지표 데이터 로드 실패"');
+    expect(consoleSource).toContain('"운영 데이터 일부 로드 실패"');
     expect(consoleSource).toContain(
-      'description: "대시보드 정적 영역은 유지합니다."',
+      '"조회·좋아요·댓글 지표를 확인하지 못했습니다."',
     );
     expect(consoleSource).toContain(
       "data-admin-sidebar-preference-placement={placement}",
@@ -8599,7 +8600,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "xl:grid-cols-[minmax(0,1fr)_360px]",
     );
     expect(bannersSource).toContain(
-      "bannersLoading ? <InlineCountSkeleton /> : sortedBanners.length",
+      "bannersLoading ? <InlineCountSkeleton /> : formatBannerCount(sortedBanners.length, '개')",
     );
     expect(bannersSource).toContain('aria-label="배너 목록 로딩 중"');
     expect(bannersSource).toContain("function BannerListItemSkeleton");

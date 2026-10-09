@@ -1,0 +1,47 @@
+{
+  "model": "gemini-3.8-flash",
+  "probeCount": 3,
+  "providerPostEach": 1,
+  "retries": 0,
+  "videoReplay": false,
+  "probes": [
+    {
+      "name": "basic_text",
+      "status": 200,
+      "completed": true,
+      "seconds": 2.460322,
+      "payloadSha256": "ac1146b128cb38a6178398c5bf2115efcb7f933ba4940d546b01b2872fb7c57c",
+      "input": 5,
+      "output": 1,
+      "thinking": 72,
+      "total": 78
+    },
+    {
+      "name": "full_schema_no_video",
+      "status": 400,
+      "completed": false,
+      "seconds": 1.192054,
+      "payloadSha256": "5b46a236cc80f8fc656f7151c3381bedd0a7d598971b65e806449f680fde897d",
+      "schemaBytes": 5335,
+      "schemaSha256": "7168c8153f3922ebc33cfdd6f4a07e89e947374e5af882dc122bade3495a9efd",
+      "usage": null,
+      "reason": "unknown"
+    },
+    {
+      "name": "same_text_output_limit_no_schema",
+      "status": 200,
+      "completed": true,
+      "seconds": 18.149477,
+      "payloadSha256": "57e83c7a03866070dfe7b09a1f842b011a6ac7e2acb9f59ee930d048f8253205",
+      "input": 82,
+      "output": 111,
+      "thinking": 1789,
+      "total": 1982,
+      "requiredDtoExact": false
+    }
+  ],
+  "standardPriceEstimateForKnownSuccessfulTokenUsageUsd": 0.007464,
+  "actualBillOrCreditDebitVerified": false,
+  "priceSource": "https://ai.google.dev/gemini-api/docs/pricing",
+  "claimScope": "Full response_format was necessary to reproduce400 without video; no-schema result DTO did not match. No latency improvement/quality/whole-video completion or actual money-saving claim."
+}

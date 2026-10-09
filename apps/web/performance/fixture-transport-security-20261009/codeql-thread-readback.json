@@ -1,0 +1,37 @@
+{
+  "observedAt": "2026-10-09T04:16:05.221411+00:00",
+  "currentSourceHead": "56819502aaa6993d847efb8b78a5bcd6a4ecdaf2",
+  "scannedSourceHead": "6c1680ac967bc1801019eb5b4cf520147214796d",
+  "scannedAffectedSourcesMatchCurrent": true,
+  "javascriptAnalysis": "success",
+  "CodeQL": "neutral",
+  "alerts": [
+    {
+      "id": 85,
+      "instanceRef": "refs/pull/3099/head",
+      "instanceState": "fixed",
+      "instanceSha": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f"
+    },
+    {
+      "id": 86,
+      "instanceRef": "refs/pull/3099/head",
+      "instanceState": "fixed",
+      "instanceSha": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f"
+    },
+    {
+      "id": 87,
+      "instanceRef": "refs/pull/3099/head",
+      "instanceState": "fixed",
+      "instanceSha": "99b1256297db3619c10b3d4e7fa3b108b4bdef5f"
+    }
+  ],
+  "resolvedIds": [
+    "PRRT_kwDOQGRyNc6qozds",
+    "PRRT_kwDOQGRyNc6qozdz",
+    "PRRT_kwDOQGRyNc6qozd2"
+  ],
+  "unresolvedTotal": 0,
+  "independentReadback": true,
+  "postingComments": false,
+  "fullGoalComplete": false
+}

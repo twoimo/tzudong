@@ -409,6 +409,11 @@ _DESTRUCTIVE_STATEMENT_RES = [
     re.compile(r"\bdelete\s+from\b", re.IGNORECASE),
 ]
 _CREATE_INDEX_RE = re.compile(r"\bcreate\b[^;]*\bindex\b", re.IGNORECASE)
+_CREATE_R4_INDEX_RE = re.compile(
+    rf"\bcreate\s+(?:unique\s+)?index\s+(?:concurrently\s+)?"
+    rf"(?:if\s+not\s+exists\s+)?(?:public\.)?{re.escape(NEW_R4_INDEX_NAME)}\b",
+    re.IGNORECASE,
+)
 
 
 def _strip_sql_comments(sql: str) -> str:
@@ -487,7 +492,10 @@ class GovernanceAppliedMigrationImmutabilityTest(unittest.TestCase):
             if path.name >= NEW_R4_MIGRATION:
                 continue
             body = _strip_sql_comments(path.read_text(encoding="utf-8"))
-            if NEW_R4_INDEX_NAME in body:
+            # An exception-handler allowlist may name the constraint without
+            # defining it. Only an earlier CREATE INDEX statement clobbers the
+            # additive migration's object.
+            if _CREATE_R4_INDEX_RE.search(body):
                 clobbered.append(path.name)
         self.assertEqual(
             clobbered,

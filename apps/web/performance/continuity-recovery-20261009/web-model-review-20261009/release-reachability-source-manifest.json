@@ -1,0 +1,12 @@
+[
+  {
+    "path": "apps/web/scripts/admin-user-rpc-forward-successor.mjs",
+    "sha256": "47339a1a5f94f66dfe11f4a26a4a2396246c44737a6068aa29e298b941429a7b",
+    "bytes": 31766
+  },
+  {
+    "path": ".github/admin-user-rpc-forward-successor.v1.json",
+    "sha256": "a0bddef8d49a8dd5042ecc012388db5448ce65cd09f508e1b605fd6a604022ad",
+    "bytes": 2397
+  }
+]

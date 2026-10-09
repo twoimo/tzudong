@@ -1,0 +1,92 @@
+{
+  "observedAt": "2026-10-09T07:08:14.920133+00:00",
+  "baseHead": "614b249175c35636a7062bf05cb01ebad538b10d",
+  "sourceBindings": [
+    {
+      "path": "apps/web/scripts/apply-supabase-migration.mjs",
+      "sha256": "a5596ae76cfb0a2d23002230d2f21b045e68f9866b5822b32a7474a86208a0c2",
+      "bytes": 19818
+    },
+    {
+      "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+      "sha256": "3ca3608e61ef16601462dc9a517948dc4b224d7acc621244a1e3d79fce6ef08d",
+      "bytes": 12009
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-transaction.test.ts",
+      "sha256": "8645a41ebe1235a1f0dec2c48814b5fe74281615456ab6714eaf1ae0766bebfe",
+      "bytes": 7173
+    },
+    {
+      "path": "backend/knowledge_graph/claude_video_adapter.py",
+      "sha256": "d3c9a61c9c2e33289abefe187bae0b394c09ca8e66ade4f7a4d6017e7685145b",
+      "bytes": 15196
+    },
+    {
+      "path": "backend/knowledge_graph/longform_analysis.py",
+      "sha256": "7934ff60da85f5a28a8884ecdfca2963785ba82edc78230fa7a90506b643aaa4",
+      "bytes": 74579
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_claude_video_adapter.py",
+      "sha256": "24a02d85117761399c1d36ca01d11fd7b9cf451ffb3061a0dc15fee8e4b2b086",
+      "bytes": 16961
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_longform_segments.py",
+      "sha256": "e4c834bcad71f6ff2c0e0a925f010aca612f6ea7e56c16b875e91be2a603f24b",
+      "bytes": 19170
+    }
+  ],
+  "python": {
+    "modules": 4,
+    "tests": 80,
+    "pass": 80,
+    "fail": 0,
+    "providerCalls": 0
+  },
+  "bun": {
+    "files": 2,
+    "tests": 18,
+    "pass": 18,
+    "fail": 0,
+    "assertions": 124
+  },
+  "postgres": {
+    "versions": [
+      "15.8",
+      "17.6"
+    ],
+    "casesEach": 13,
+    "sourceFreezeReceipt": "sql/source-freeze.json",
+    "isolatedNoOperatingWrites": true,
+    "prior19TestReportHistorical": "sql/summary.json",
+    "testMinimizationAmendment": "sql/test-minimization-amendment.json"
+  },
+  "lint": {
+    "files": 4,
+    "exitCode": 0,
+    "runtime": "Node24.21.0"
+  },
+  "compilerParity": {
+    "native": "7.0.2",
+    "compat": "6.0.2",
+    "diagnostics": 0,
+    "logicalInputs": 3128,
+    "logicalInputNamesSha256": "61ee49667160e15b0f9c183e58d0cf3913fcb917f6f3e3ff2c8ee095707c444f"
+  },
+  "dependencies": {
+    "npm": "11.6.2",
+    "install": "ci --ignore-scripts --no-audit --no-fund",
+    "exitCode": 0,
+    "packageManifestAndLockUnchanged": true
+  },
+  "userWork": {
+    "path": "apps/web/CLAUDE.md",
+    "sha256": "4b0edf64b35af8b5299de98e4178dbb09c660dbb2d8a66fba07b584e54b6943c",
+    "preservedExcludedFromStaging": true
+  },
+  "operatingWrites": false,
+  "productionDeployment": false,
+  "fullGoalComplete": false
+}

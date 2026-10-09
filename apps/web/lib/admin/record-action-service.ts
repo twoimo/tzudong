@@ -89,14 +89,16 @@ export async function resumeRecordMediaCleanup(runner: RecordActionRpc, storage:
   const base={p_actor:actor,p_operation_id:operationId};
   const jobs=z.strictObject({jobs:z.array(z.strictObject({id:z.uuid(),bucket:z.enum(['review-photos','review-verifications']),objectName:z.string().max(1024).regex(/^[0-9a-f-]{36}\/reviews\/[0-9a-f-]{36}\/(?:food|verification)\/[A-Za-z0-9][A-Za-z0-9._-]{0,239}\.(?:avif|jpe?g|png|webp)$/),state:z.enum(['pending','inflight','uncertain'])})).max(25)}).safeParse(await rpc(runner,{...base,p_phase:'cleanup_read'}));
   if (!jobs.success) throw new RecordActionError('RECORD_ACTION_UNCERTAIN',503);
-  if (jobs.data.jobs.some(job => job.bucket === 'review-verifications' && !job.objectName.includes('/verification/'))) {
-    throw new RecordActionError('RECORD_ACTION_UNCERTAIN',503);
-  }
+  if (receipt.targetIds.length!==1 || jobs.data.jobs.some(job=>{
+    const path=job.objectName.split('/');
+    return path[2]!==receipt.targetIds[0] || (job.bucket==='review-verifications' && path[3]!=='verification');
+  })) throw new RecordActionError('RECORD_ACTION_UNCERTAIN',503);
+  let storageReadUncertain=false;
   for (const job of jobs.data.jobs) {
     const payload={p_payload:{jobId:job.id}};
     // Read before every attempt. An inflight/uncertain attempt is NEVER automatically resent.
     let exists;
-    try { exists=await storage.exists(job.bucket,job.objectName); } catch { throw new RecordActionError('RECORD_ACTION_UNCERTAIN',503); }
+    try { exists=await storage.exists(job.bucket,job.objectName); } catch { storageReadUncertain=true; continue; }
     if (!exists) { await rpc(runner,{...base,...payload,p_phase:'cleanup_absent'}); continue; }
     if (job.state!=='pending') continue;
     const claim=await rpc(runner,{...base,...payload,p_phase:'cleanup_claim'});
@@ -107,5 +109,7 @@ export async function resumeRecordMediaCleanup(runner: RecordActionRpc, storage:
     try { absent=!(await storage.exists(job.bucket,job.objectName)); } catch { /* Preserve uncertainty. */ }
     await rpc(runner,{...base,...payload,p_phase:absent?'cleanup_absent':'cleanup_uncertain'});
   }
-  return readRecordAction(runner,actor,operationId);
+  const result=await readRecordAction(runner,actor,operationId);
+  if (storageReadUncertain) throw new RecordActionError('RECORD_ACTION_UNCERTAIN',503);
+  return result;
 }

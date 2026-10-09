@@ -47,6 +47,19 @@ MAX_SEGMENTS = 1024
 # This producer's only ANALYSIS_EVIDENCE_INVALID path is parse_watch_report ->
 # validate_analysis -> _evidence, after a zero subprocess exit. Its generic
 # AnalysisError handler incorrectly called this terminal rejection "uncertain".
+# Explicit predecessor source hashes, reviewed for this diagnostic-only change.
+# They are never substituted into the active config identity or admitted for execution.
+HTTP_STATUS_PREDECESSOR_SOURCES = (
+    "e3a27b22b7e4fc140687a7f87302ce8a319ba0a3a332de189f692e6c9abcb81c",
+    "9e219c106ec9cc70aaa8f4867a29af0767f0c7aee9cf92ad0df42a04eaa00c86",
+)
+# Exact sources that produced the full-schema static-segment receipts before the
+# transport-only schema reduction. They are admission evidence, never active
+# source fingerprints and never permission to resend an unresolved segment.
+WIRE_SCHEMA_PREDECESSOR_SOURCES = {
+    "adapterSha256": "d3c9a61c9c2e33289abefe187bae0b394c09ca8e66ade4f7a4d6017e7685145b",
+    "policySha256": "7934ff60da85f5a28a8884ecdfca2963785ba82edc78230fa7a90506b643aaa4",
+}
 LEGACY_REJECTION_PRODUCER = "344f80e48d104a4a0142ef8d0597fb9bd0d7d631"
 LEGACY_REJECTION_SOURCE_SHA256 = "12ec9fd76cd6990487f58d7a0c92a36cf018ac770fa771564a28d8e0468602ef"
 
@@ -320,9 +333,21 @@ class AnalysisConfig:
             return legacy
         return {**legacy, "processing": "static_segments", "schemaVersion": 2,
                 "segmentSeconds": self.segment_seconds, "callsReservedPerSegment": 2,
-                "responseSchemaSha256": digest(adapter.schema("ABCDEFGHIJK", 0, self.segment_seconds)),
+                "responseSchemaSha256": digest(adapter.wire_schema()),
+                "validatorSchemaSha256": digest(adapter.schema("ABCDEFGHIJK", 0, self.segment_seconds)),
                 "adapterSha256": hashlib.sha256(Path(adapter.__file__).read_bytes()).hexdigest(),
                 "policySha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+
+
+def wire_schema_predecessor_config(config: AnalysisConfig):
+    """Rebuild the exact prior config identity without making it active."""
+    if config.protocol != 2:
+        raise AnalysisError("READBACK_REQUIRED")
+    previous = dict(config.identity)
+    previous.pop("validatorSchemaSha256", None)
+    previous.update(responseSchemaSha256=digest(adapter.schema("ABCDEFGHIJK", 0, config.segment_seconds)),
+                    **WIRE_SCHEMA_PREDECESSOR_SOURCES)
+    return previous
 
 
 def load_model_evidence(path: Path, model: str, checkout: Path, timeout: int) -> AnalysisConfig:
@@ -505,7 +530,7 @@ def file_lock(path: Path):
         os.close(fd)
 
 
-def identity(row, config):
+def identity(row, config, *, config_identity=None):
     # Only analysis inputs invalidate the paid-result cache. A fresh membership
     # snapshot or model-document retrieval must not silently reanalyze a video.
     # YouTube IDs are the source identity; an optional content hash records a
@@ -513,22 +538,27 @@ def identity(row, config):
     source = {key: row.get(key) for key in ("videoId", "durationSeconds", "contentSha256")}
     if "segmentIndex" in row:
         source.update({key: row[key] for key in ("segmentIndex", "segmentStartSeconds", "segmentEndSeconds")})
-    return {"videoId": row["videoId"], "inputSha256": digest(source), "configSha256": digest(config.identity)}
+    return {"videoId": row["videoId"], "inputSha256": digest(source),
+            "configSha256": digest(config.identity if config_identity is None else config_identity)}
+
+
+def _exact_paths(state: Path, row, config, config_identity):
+    key = digest(identity(row, config, config_identity=config_identity))
+    directory = state / "videos" / row["videoId"]
+    if "segmentIndex" in row:
+        directory = directory / "segments" / digest(config_identity)
+    return directory, directory / (key + ".receipt.json"), directory / (key + ".analysis.json")
 
 
 def paths(state: Path, row, config, *, legacy_fallback=True):
-    key = digest(identity(row, config))
-    directory = state / "videos" / row["videoId"]
-    if "segmentIndex" in row:
-        directory = directory / "segments" / digest(config.identity)
-    elif config.protocol == 2 and legacy_fallback:
+    directory, receipt, evidence = _exact_paths(state, row, config, config.identity)
+    if "segmentIndex" not in row and config.protocol == 2 and legacy_fallback:
         legacy = replace(config, protocol=1)
-        old_key = digest(identity(row, legacy))
-        old_receipt = directory / (old_key + ".receipt.json")
-        if (not (directory / (key + ".receipt.json")).exists()
-                and not (directory / (key + ".repair.json")).exists() and old_receipt.is_file()):
-            key = old_key
-    return directory, directory / (key + ".receipt.json"), directory / (key + ".analysis.json")
+        old_directory, old_receipt, old_evidence = _exact_paths(state, row, legacy, legacy.identity)
+        repair = receipt.with_name(receipt.name.replace(".receipt.json", ".repair.json"))
+        if not receipt.exists() and not repair.exists() and old_receipt.is_file():
+            return old_directory, old_receipt, old_evidence
+    return directory, receipt, evidence
 
 
 @dataclass(frozen=True)
@@ -683,6 +713,26 @@ def segment_prompt(row):
             "Do not add observations from outside this interval.")
 
 
+def wire_schema_predecessor_segment_contract(row, config, engine):
+    """Bind old source/config, the exact segment schema, and request bytes."""
+    if any(key not in row for key in ("segmentIndex", "segmentStartSeconds", "segmentEndSeconds")):
+        raise AnalysisError("READBACK_REQUIRED")
+    config_identity = wire_schema_predecessor_config(config)
+    response_schema = adapter.schema(row["videoId"], row["segmentStartSeconds"], row["segmentEndSeconds"])
+    payload = adapter.predecessor_request_payload(
+        engine, config.model, row["videoId"], row["segmentStartSeconds"], row["segmentEndSeconds"],
+        segment_prompt(row), config.output_limit,
+    )
+    active_payload = adapter.request_payload(
+        engine, config.model, row["videoId"], row["segmentStartSeconds"], row["segmentEndSeconds"],
+        segment_prompt(row), config.output_limit,
+    )
+    return {"configIdentity": config_identity,
+            "receiptIdentity": identity(row, config, config_identity=config_identity),
+            "responseSchemaSha256": digest(response_schema), "requestSha256": adapter.digest(payload),
+            "activeRequestSha256": adapter.digest(active_payload)}
+
+
 def raw_analysis(value):
     value = decode(canonical(value))
     try:
@@ -716,14 +766,14 @@ def validate_observation(value):
     return value
 
 
-def validate_saved_evidence(evidence, row, config):
+def validate_saved_evidence(evidence, row, config, *, config_identity=None):
     if evidence.get("processing") == "static_full_video":
         return _validate_legacy_evidence(evidence, row, replace(config, protocol=1))
     expected = {"identity", "analysis", "usage", "reportSha256", "provider", "processing", "segments"}
     is_segment = "segmentIndex" in row
     if is_segment:
         expected = expected - {"segments"} | {"observation"}
-    if (set(evidence) != expected or evidence["identity"] != identity(row, config)
+    if (set(evidence) != expected or evidence["identity"] != identity(row, config, config_identity=config_identity)
             or evidence["provider"] != "gemini_via_claude_video"
             or evidence["processing"] != ("static_segment" if is_segment else "static_segments")
             or not SHA256.fullmatch(str(evidence["reportSha256"]))):
@@ -750,7 +800,7 @@ def validate_saved_evidence(evidence, row, config):
             raise AnalysisError("SEGMENT_COVERAGE_INVALID")
         for proof, span in zip(evidence["segments"], spans):
             if (not isinstance(proof, dict) or set(proof) != {"identity", "evidenceSha256", "receiptSha256"}
-                    or proof["identity"] != identity(span, config)
+                    or proof["identity"] != identity(span, config, config_identity=config_identity)
                     or not all(SHA256.fullmatch(str(proof[key])) for key in ("evidenceSha256", "receiptSha256"))):
                 raise AnalysisError("SEGMENT_COVERAGE_INVALID")
 
@@ -786,6 +836,285 @@ def segment_evidence(state, row, config):
     return receipt, evidence
 
 
+def _wire_schema_predecessor_segment_evidence(state, row, config, config_identity, engine):
+    contract = wire_schema_predecessor_segment_contract(row, config, engine)
+    if contract["configIdentity"] != config_identity:
+        raise AnalysisError("READBACK_REQUIRED")
+    _, receipt_path, evidence_path = _exact_paths(state, row, config, config_identity)
+    receipt, evidence = checked_document(receipt_path), checked_document(evidence_path)
+    admitted_membership(receipt.get("membershipEvidence"))
+    validate_saved_evidence(evidence, row, config, config_identity=config_identity)
+    if (receipt.get("state") != "succeeded" or receipt.get("identity") != contract["receiptIdentity"]
+            or receipt.get("evidenceSha256") != digest(evidence) or receipt.get("usage") != evidence["usage"]
+            or receipt.get("model") != config.model or type(receipt.get("callsAttempted")) is not int
+            or receipt["callsAttempted"] != 2 or type(receipt.get("reservedCalls")) is not int
+            or receipt["reservedCalls"] != 2 or receipt.get("reservedInputTokens") != config.input_limit
+            or receipt.get("reservedOutputTokens") != config.output_limit
+            or receipt.get("observationSha256") != digest(evidence["observation"])
+            or evidence["observation"].get("requestSha256") != contract["requestSha256"]
+            or any(key in receipt for key in ("batchId", "repairLineageSha256"))):
+        raise AnalysisError("SEGMENT_RECEIPT_INVALID")
+    observed_path = receipt_path.with_name(receipt_path.name.replace(".receipt.json", ".observation.json"))
+    if checked_document(observed_path) != evidence["observation"]:
+        raise AnalysisError("SEGMENT_RECEIPT_INVALID")
+    return receipt, evidence
+
+
+def _wire_schema_predecessor_state(state, row, config):
+    """Return reusable/readback_required for the one reviewed transport predecessor."""
+    if config.protocol != 2:
+        return None
+    config_identity = wire_schema_predecessor_config(config)
+    spans = segment_rows(row, config)
+    root_directory, receipt_path, evidence_path = _exact_paths(state, row, config, config_identity)
+    segment_directory = root_directory / "segments" / digest(config_identity)
+    if not receipt_path.exists() and not evidence_path.exists() and not segment_directory.exists():
+        return None
+    try:
+        if (not receipt_path.is_file() or not evidence_path.is_file()
+                or receipt_path.with_name(receipt_path.name.replace(".receipt.json", ".repair.json")).exists()
+                or list(segment_directory.glob("*.repair.json")) or list(segment_directory.glob("*.readback.json"))
+                or list(segment_directory.glob(".pending-*"))):
+            raise AnalysisError("READBACK_REQUIRED")
+        expected_receipts, expected_evidence, expected_observations = set(), set(), set()
+        for span in spans:
+            _, segment_receipt, segment_evidence_path = _exact_paths(state, span, config, config_identity)
+            expected_receipts.add(segment_receipt)
+            expected_evidence.add(segment_evidence_path)
+            expected_observations.add(segment_receipt.with_name(segment_receipt.name.replace(".receipt.json", ".observation.json")))
+        if (set(segment_directory.glob("*.receipt.json")) != expected_receipts
+                or set(segment_directory.glob("*.analysis.json")) != expected_evidence
+                or set(segment_directory.glob("*.observation.json")) != expected_observations):
+            raise AnalysisError("READBACK_REQUIRED")
+        verify_checkout(config)
+        engine = adapter.load_engine(config.checkout)
+        pairs = [_wire_schema_predecessor_segment_evidence(state, span, config, config_identity, engine) for span in spans]
+        receipts, parts = zip(*pairs)
+        receipt, evidence = checked_document(receipt_path), checked_document(evidence_path)
+        admitted_membership(receipt.get("membershipEvidence"))
+        validate_saved_evidence(evidence, row, config, config_identity=config_identity)
+        proofs = [{"identity": part["identity"], "evidenceSha256": digest(part), "receiptSha256": digest(part_receipt)}
+                  for part_receipt, part in pairs]
+        if (receipt.get("state") != "succeeded"
+                or receipt.get("identity") != identity(row, config, config_identity=config_identity)
+                or receipt.get("evidenceSha256") != digest(evidence) or receipt.get("usage") != evidence["usage"]
+                or receipt.get("model") != config.model or receipt.get("segmentCount") != len(pairs)
+                or receipt.get("callsAttempted") != sum(part["callsAttempted"] for part in receipts)
+                or receipt.get("reservedInputTokens") != len(parts) * config.input_limit
+                or receipt.get("reservedOutputTokens") != len(parts) * config.output_limit
+                or receipt.get("callAccounting") != "count_and_interactions_per_static_segment"
+                or evidence["segments"] != proofs or evidence["analysis"] != merged_analysis(parts, row)
+                or evidence["usage"] != combined_usage(parts)
+                or evidence["reportSha256"] != digest([part["reportSha256"] for part in parts])
+                or any(key in receipt for key in ("batchId", "repairLineageSha256"))):
+            raise AnalysisError("READBACK_REQUIRED")
+        return "reusable"
+    except (AnalysisError, adapter.AdapterError, OSError, ValueError, TypeError, AttributeError, KeyError):
+        return "readback_required"
+
+
+def _predecessor_readback_binding_path(receipt_path):
+    return receipt_path.with_name(receipt_path.name.replace(".receipt.json", ".readback.json"))
+
+
+def _predecessor_readback_binding(receipt, observation, normalized, contract):
+    value = {"kind": "wire_schema_predecessor_readback",
+             "receiptIdentitySha256": digest(contract["receiptIdentity"]),
+             "responseId": normalized["responseId"], "requestSha256": contract["requestSha256"],
+             "previousObservationSha256": digest(observation), "nextObservationSha256": digest(normalized)}
+    if (receipt.get("identity") != contract["receiptIdentity"]
+            or receipt.get("observationSha256") != value["previousObservationSha256"]
+            or observation["responseId"] != normalized["responseId"]
+            or observation["requestSha256"] != contract["requestSha256"]
+            or normalized["requestSha256"] != contract["requestSha256"]
+            or normalized["operation"] != "readback" or normalized["httpOutcome"] == "not_sent"):
+        raise AnalysisError("READBACK_REQUIRED")
+    return value
+
+
+def _recover_predecessor_readback_binding(receipt_path, observation_path, receipt, contract):
+    binding_path = _predecessor_readback_binding_path(receipt_path)
+    if not binding_path.exists():
+        return receipt
+    binding = checked_document(binding_path)
+    observation = validate_observation(checked_document(observation_path))
+    expected = {"kind", "receiptIdentitySha256", "responseId", "requestSha256",
+                "previousObservationSha256", "nextObservationSha256"}
+    if (set(binding) != expected or binding["kind"] != "wire_schema_predecessor_readback"
+            or binding["receiptIdentitySha256"] != digest(contract["receiptIdentity"])
+            or binding["responseId"] != observation["responseId"]
+            or binding["requestSha256"] != contract["requestSha256"]
+            or not SHA256.fullmatch(str(binding["previousObservationSha256"]))
+            or not SHA256.fullmatch(str(binding["nextObservationSha256"]))
+            or observation["requestSha256"] != contract["requestSha256"]
+            or observation["operation"] not in ("generate", "readback")
+            or observation["httpOutcome"] == "not_sent"):
+        raise AnalysisError("READBACK_REQUIRED")
+    receipt_hash = receipt.get("observationSha256")
+    observation_hash = digest(observation)
+    previous_hash, next_hash = binding["previousObservationSha256"], binding["nextObservationSha256"]
+    if receipt_hash == previous_hash and observation_hash == previous_hash:
+        binding_path.unlink()
+        return receipt
+    if receipt_hash == previous_hash and observation_hash == next_hash:
+        receipt.update(usage=observation["usage"], observationSha256=next_hash)
+        atomic_document(receipt_path, receipt)
+        binding_path.unlink()
+        return receipt
+    if receipt_hash == next_hash and observation_hash == next_hash:
+        binding_path.unlink()
+        return receipt
+    raise AnalysisError("READBACK_REQUIRED")
+
+
+def _wire_schema_predecessor_readback(state, row, config, *, provider, max_calls, result):
+    """Recover one reviewed predecessor using only its already-created IDs.
+
+    The adapter's GET path reconstructs the active request solely as a local
+    safety check. The provider never receives that payload. We first bind the
+    persisted response ID to the exact predecessor payload, then translate the
+    adapter's local active-request digest back to the predecessor digest before
+    persisting the GET observation.
+    """
+    if config.protocol != 2:
+        return False
+    config_identity = wire_schema_predecessor_config(config)
+    root_directory, root_receipt_path, root_evidence_path = _exact_paths(state, row, config, config_identity)
+    segment_directory = root_directory / "segments" / digest(config_identity)
+    if not root_receipt_path.exists() and not root_evidence_path.exists() and not segment_directory.exists():
+        return False
+    if root_evidence_path.exists():
+        if _wire_schema_predecessor_state(state, row, config) == "reusable":
+            return False
+    if (not root_receipt_path.is_file()
+            or root_receipt_path.with_name(root_receipt_path.name.replace(".receipt.json", ".repair.json")).exists()
+            or list(segment_directory.glob("*.repair.json")) or list(segment_directory.glob(".pending-*"))):
+        raise AnalysisError("READBACK_REQUIRED")
+    root_receipt = checked_document(root_receipt_path)
+    admitted_membership(root_receipt.get("membershipEvidence"))
+    if (root_receipt.get("identity") != identity(row, config, config_identity=config_identity)
+            or root_receipt.get("state") != "segmented" or root_receipt.get("model") != config.model
+            or root_receipt.get("code") != "SEGMENTS_PENDING"
+            or root_receipt.get("costVerified") is not False
+            or any(key in root_receipt for key in ("batchId", "repairLineageSha256"))):
+        raise AnalysisError("READBACK_REQUIRED")
+
+    spans = segment_rows(row, config)
+    expected_receipts, expected_evidence, expected_observations = set(), set(), set()
+    for span in spans:
+        _, receipt_path, evidence_path = _exact_paths(state, span, config, config_identity)
+        expected_receipts.add(receipt_path)
+        expected_evidence.add(evidence_path)
+        expected_observations.add(receipt_path.with_name(receipt_path.name.replace(".receipt.json", ".observation.json")))
+    if (not set(segment_directory.glob("*.receipt.json")).issubset(expected_receipts)
+            or not set(segment_directory.glob("*.analysis.json")).issubset(expected_evidence)
+            or not set(segment_directory.glob("*.observation.json")).issubset(expected_observations)):
+        raise AnalysisError("READBACK_REQUIRED")
+
+    verify_checkout(config)
+    engine = adapter.load_engine(config.checkout)
+    for span in spans:
+        contract = wire_schema_predecessor_segment_contract(span, config, engine)
+        _, receipt_path, evidence_path = _exact_paths(state, span, config, config_identity)
+        if not receipt_path.exists():
+            raise AnalysisError("READBACK_REQUIRED")
+        receipt = checked_document(receipt_path)
+        admitted_membership(receipt.get("membershipEvidence"))
+        if evidence_path.exists():
+            _wire_schema_predecessor_segment_evidence(state, span, config, config_identity, engine)
+            continue
+        observation_path = receipt_path.with_name(receipt_path.name.replace(".receipt.json", ".observation.json"))
+        receipt = _recover_predecessor_readback_binding(receipt_path, observation_path, receipt, contract)
+        observation = validate_observation(checked_document(observation_path))
+        if (receipt.get("identity") != contract["receiptIdentity"]
+                or receipt.get("model") != config.model or receipt.get("reservedCalls") != 2
+                or receipt.get("reservedInputTokens") != config.input_limit
+                or receipt.get("reservedOutputTokens") != config.output_limit
+                or receipt.get("observationSha256") != digest(observation)
+                or receipt.get("state") not in ("running", "uncertain", "rejected")
+                or observation["requestSha256"] != contract["requestSha256"]
+                or any(key in receipt for key in ("batchId", "repairLineageSha256"))
+                or not provider or not observation["responseId"]
+                or observation["operation"] not in ("generate", "readback")
+                or result["readbackCalls"] >= max_calls):
+            raise AnalysisError("READBACK_REQUIRED")
+        key = os.environ.get("GEMINI_CREDITS_API_KEY") or os.environ.get("GEMINI_API_KEY")
+        if not key:
+            raise AnalysisError("FUNDED_GEMINI_ENV_REQUIRED")
+        receipt["readbackCallsAttempted"] = receipt.get("readbackCallsAttempted", 0) + 1
+        atomic_document(receipt_path, receipt)
+        result["readbackCalls"] += 1
+        durable_observation = observation
+
+        def observe(value):
+            nonlocal durable_observation, receipt
+            observed = validate_observation(value)
+            if observed["requestSha256"] != contract["activeRequestSha256"]:
+                raise AnalysisError("READBACK_REQUIRED")
+            if observed["httpOutcome"] == "not_sent":
+                return
+            normalized = {**observed, "requestSha256": contract["requestSha256"]}
+            if (normalized["usage"]["totalTokens"] is None
+                    and durable_observation["usage"]["totalTokens"] is not None):
+                normalized["usage"] = durable_observation["usage"]
+            binding_path = _predecessor_readback_binding_path(receipt_path)
+            atomic_document(binding_path, _predecessor_readback_binding(
+                receipt, durable_observation, normalized, contract))
+            atomic_document(observation_path, normalized)
+            durable_observation = normalized
+            updated_receipt = {**receipt, "usage": normalized["usage"],
+                               "observationSha256": digest(normalized)}
+            atomic_document(receipt_path, updated_receipt)
+            receipt = updated_receipt
+            binding_path.unlink()
+
+        recovered = adapter.invoke(
+            checkout=config.checkout, model=config.model, video_id=row["videoId"],
+            start=span["segmentStartSeconds"], end=span["segmentEndSeconds"], prompt=segment_prompt(span),
+            input_limit=config.input_limit, output_limit=config.output_limit, timeout=config.timeout,
+            key=key, budget=project_budget(), observe=observe, response_id=observation["responseId"],
+            request_digest=contract["activeRequestSha256"], counted_input_tokens=observation["countedInputTokens"],
+        )
+        recovered_observation = validate_observation(recovered["observation"])
+        if recovered_observation["requestSha256"] != contract["activeRequestSha256"]:
+            raise AnalysisError("READBACK_REQUIRED")
+        recovered_observation = {**recovered_observation, "requestSha256": contract["requestSha256"]}
+        part = {"identity": contract["receiptIdentity"],
+                "analysis": validate_analysis(decode(recovered["text"]), span),
+                "usage": recovered_observation["usage"], "reportSha256": recovered["responseSha256"],
+                "provider": "gemini_via_claude_video", "processing": "static_segment",
+                "observation": recovered_observation}
+        validate_saved_evidence(part, span, config, config_identity=config_identity)
+        atomic_document(evidence_path, part)
+        receipt.update(state="succeeded", code="READBACK_COMPLETED", usage=part["usage"],
+                       evidenceSha256=digest(part), observationSha256=digest(part["observation"]))
+        atomic_document(receipt_path, receipt)
+
+    pairs = [_wire_schema_predecessor_segment_evidence(state, span, config, config_identity, engine) for span in spans]
+    receipts, parts = zip(*pairs)
+    proofs = [{"identity": part["identity"], "evidenceSha256": digest(part), "receiptSha256": digest(receipt)}
+              for receipt, part in pairs]
+    evidence = {"identity": identity(row, config, config_identity=config_identity),
+                "analysis": merged_analysis(parts, row), "usage": combined_usage(parts),
+                "reportSha256": digest([part["reportSha256"] for part in parts]),
+                "provider": "gemini_via_claude_video", "processing": "static_segments", "segments": proofs}
+    validate_saved_evidence(evidence, row, config, config_identity=config_identity)
+    if root_evidence_path.exists():
+        if checked_document(root_evidence_path) != evidence:
+            raise AnalysisError("READBACK_REQUIRED")
+    else:
+        atomic_document(root_evidence_path, evidence)
+    root_receipt.update(state="succeeded", code="READBACK_COMPLETED", usage=evidence["usage"],
+                        evidenceSha256=digest(evidence), callsAttempted=sum(part["callsAttempted"] for part in receipts),
+                        reservedInputTokens=len(parts) * config.input_limit,
+                        reservedOutputTokens=len(parts) * config.output_limit, segmentCount=len(parts),
+                        callAccounting="count_and_interactions_per_static_segment")
+    atomic_document(root_receipt_path, root_receipt)
+    if _wire_schema_predecessor_state(state, row, config) != "reusable":
+        raise AnalysisError("READBACK_REQUIRED")
+    return True
+
+
 def cached_state(state: Path, row, config, *, repair=None):
     admitted_row(row)
     lineage = repair_lineage(state, row, config, repair)
@@ -803,7 +1132,8 @@ def cached_state(state: Path, row, config, *, repair=None):
     if any(not path.with_name(path.name.replace(".analysis.json", ".receipt.json")).is_file()
            for path in directory.rglob("*.analysis.json")):
         return "readback_required"
-    for path in sorted(directory.rglob("*.receipt.json")):
+    receipt_paths = sorted(directory.rglob("*.receipt.json"))
+    for path in receipt_paths:
         receipt = checked_document(path)
         if receipt.get("state") not in ("succeeded", "running", "uncertain", "failed", "partial", "rejected", "segmented"):
             raise AnalysisError("RECEIPT_CORRUPT")
@@ -839,6 +1169,25 @@ def cached_state(state: Path, row, config, *, repair=None):
         return "reusable"
     if evidence_path.exists() or list(directory.rglob(".pending-*")):
         return "readback_required"
+    if not lineage:
+        predecessor_state = _wire_schema_predecessor_state(state, row, config)
+        if predecessor_state is not None:
+            return predecessor_state
+        if config.protocol == 2:
+            predecessor = {**config.identity, "adapterSha256": HTTP_STATUS_PREDECESSOR_SOURCES[0],
+                           "policySha256": HTTP_STATUS_PREDECESSOR_SOURCES[1]}
+            predecessor_identity = {**identity(row, config), "configSha256": digest(predecessor)}
+            if any(checked_document(path).get("identity") == predecessor_identity
+                   for path in directory.glob("*.receipt.json")):
+                # Code-only fingerprint drift must not turn a completed paid result into
+                # another POST. Do not pretend its old source recipe is the current one:
+                # keep it readback-required until exact-source compatibility is reviewed.
+                return "readback_required"
+        if receipt_paths:
+            # A prior paid attempt for the same video may differ by input, model,
+            # prompt, policy, or source. Never reinterpret that drift as permission
+            # for a fresh POST; only an explicit compatibility path may reuse it.
+            return "readback_required"
     return "new"
 
 
@@ -1085,6 +1434,12 @@ def execute(rows, inventory_info, state: Path, config, limits, *, batch_id=None,
                             confirmed = observation and observation["httpOutcome"] in ("http_success", "http_rejected")
                             rejected = confirmed and error.code not in ("WATCH_RESPONSE_NOT_COMPLETED", "WATCH_TRANSPORT_UNCERTAIN")
                             receipt.update(state="rejected" if rejected else "uncertain", code=error.code)
+                            if isinstance(error, adapter.AdapterError):
+                                # Optional new failure diagnostics; observation and old receipts remain unchanged.
+                                status = adapter.bounded_http_status(error.http_status)
+                                receipt["httpCategory"] = adapter.http_category(status)
+                                if status is not None:
+                                    receipt["httpStatus"] = status
                             failed = True
                         except (OSError, ValueError, TypeError, TimeoutError):
                             receipt.update(state="uncertain", code="WATCH_TRANSPORT_UNCERTAIN")
@@ -1122,6 +1477,14 @@ def readback(rows, state, config, *, provider=False, max_calls=0):
             with file_lock(state / "locks" / ("video-" + row["videoId"] + ".lock")):
                 _, receipt_path, evidence_path = paths(state, row, config)
                 if not receipt_path.exists():
+                    if _wire_schema_predecessor_readback(state, row, config, provider=provider,
+                                                         max_calls=max_calls, result=result):
+                        result["recovered"] += 1
+                        continue
+                    # A changed code fingerprint does not erase prior unresolved or
+                    # predecessor-completed receipts; local readback must report them.
+                    if cached_state(state, row, config) == "readback_required":
+                        raise AnalysisError("READBACK_REQUIRED")
                     continue
                 receipt = checked_document(receipt_path)
                 admitted_membership(receipt.get("membershipEvidence"))

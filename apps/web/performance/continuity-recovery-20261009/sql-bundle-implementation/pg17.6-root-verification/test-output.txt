@@ -1,0 +1,9 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/supabase-migration-bundle-pg17.test.ts:
+(pass) owned PG17 proves partial prior/global mismatch/stage failures roll back, then exact success commits four [575.98ms]
+
+ 1 pass
+ 0 fail
+ 31 expect() calls
+Ran 1 test across 1 file. [729.00ms]

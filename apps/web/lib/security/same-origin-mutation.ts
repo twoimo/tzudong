@@ -1,3 +1,5 @@
+import { getTrustedVercelPreviewOrigins } from '@/lib/auth/callback-origin';
+
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 const INTERNAL_CAPABILITY_ROUTES = new Map([
@@ -25,9 +27,25 @@ function parseCanonicalOrigin(value: string, production: boolean) {
   }
 }
 
+function getVercelPreviewOrigin(request: Request, env: NodeJS.ProcessEnv) {
+  if (env.VERCEL_ENV !== 'preview') return null;
+
+  const requestOrigin = parseCanonicalOrigin(new URL(request.url).origin, true);
+  if (!requestOrigin) return null;
+  const trustedOrigins = getTrustedVercelPreviewOrigins({
+    VERCEL_ENV: env.VERCEL_ENV,
+    VERCEL_URL: env.VERCEL_URL,
+    VERCEL_BRANCH_URL: env.VERCEL_BRANCH_URL,
+  });
+  return trustedOrigins.includes(requestOrigin) ? requestOrigin : null;
+}
+
 function expectedOrigin(request: Request, env: NodeJS.ProcessEnv) {
   const production = env.NODE_ENV === 'production';
   const configured = env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (env.VERCEL_ENV === 'preview') {
+    return getVercelPreviewOrigin(request, env);
+  }
   if (!production) {
     const requestOrigin = parseCanonicalOrigin(new URL(request.url).origin, false);
     const requestHost = requestOrigin ? new URL(requestOrigin).hostname : '';

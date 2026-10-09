@@ -24,9 +24,45 @@ USAGE_KEYS = {"total_input_tokens": "inputTokens", "total_output_tokens": "outpu
               "total_tool_use_tokens": "toolTokens", "total_tokens": "totalTokens"}
 
 
+def bounded_http_status(value):
+    """Numeric transport metadata only; never inspect diagnostic bodies/headers."""
+    if type(value) is int:
+        return value if 100 <= value <= 599 else None
+    if isinstance(value, HTTPError):
+        return bounded_http_status(value.code)
+    # SDKs differ: Python APIError.code/response.status_code, JS status/statusCode.
+    for name in ("status", "statusCode", "status_code", "code"):
+        try:
+            candidate = getattr(value, name, None)
+        except Exception:
+            continue
+        if type(candidate) is int and 100 <= candidate <= 599:
+            return candidate
+    try:
+        response = getattr(value, "response", None)
+        candidate = getattr(response, "status_code", None)
+    except Exception:
+        return None
+    return candidate if type(candidate) is int and 100 <= candidate <= 599 else None
+
+
+def http_category(status):
+    if status in (401, 403):
+        return "authentication"
+    if status == 429:
+        return "rate_limit"
+    if status is not None and 400 <= status < 500:
+        return "invalid_request"
+    if status is not None and 500 <= status <= 599:
+        return "server_error"
+    return "unknown"
+
+
 class AdapterError(Exception):
-    def __init__(self, code):
+    def __init__(self, code, *, http_status=None):
         self.code = code
+        self.http_status = bounded_http_status(http_status)
+        self.http_category = http_category(self.http_status)
         super().__init__(code)
 
 
@@ -63,6 +99,7 @@ def usage(value):
 
 
 def schema(video_id, start, end):
+    """Full semantic contract enforced again by ``validate_analysis``."""
     def obj(properties):
         return {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}
 
@@ -86,6 +123,15 @@ def schema(video_id, start, end):
                 "claims": facts, "uncertainty": strings})
 
 
+def wire_schema():
+    """Small transport contract; nested semantics stay fail-closed locally."""
+    properties = {"schemaVersion": {"type": "integer"}, "videoId": {"type": "string"},
+                  "coverage": {"type": "object"}, "summary": {"type": "array"},
+                  "restaurants": {"type": "array"}, "claims": {"type": "array"},
+                  "uncertainty": {"type": "array"}}
+    return {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}
+
+
 def load_engine(checkout):
     """Execute exact installed bytes in private modules, without bytecode writes."""
     scripts = Path(checkout) / "skills/watch/scripts"
@@ -104,15 +150,24 @@ def load_engine(checkout):
     return engine
 
 
-def request_payload(engine, model, video_id, start, end, prompt, output_limit):
+def _request_payload(engine, model, video_id, start, end, prompt, output_limit, response_schema):
     # The exact prompt passed by upstream ask is checked before dispatch.
     processing, _ = engine._processing((start, end))
     # Preserve fractional source boundaries; upstream rounds clip offsets.
     processing.update(start_offset=f"{start:g}s", end_offset=f"{end:g}s")
     return {"model": model, "input": [{"type": "video", "uri": f"https://www.youtube.com/watch?v={video_id}", "processing": processing},
                                        {"type": "text", "text": engine.build_prompt(prompt)}],
-            "response_format": {"type": "text", "mime_type": "application/json", "schema": schema(video_id, start, end)},
+            "response_format": {"type": "text", "mime_type": "application/json", "schema": response_schema},
             "generation_config": {"max_output_tokens": output_limit}}
+
+
+def request_payload(engine, model, video_id, start, end, prompt, output_limit):
+    return _request_payload(engine, model, video_id, start, end, prompt, output_limit, wire_schema())
+
+
+def predecessor_request_payload(engine, model, video_id, start, end, prompt, output_limit):
+    """Reconstruct the exact prior full-schema request for cache admission only."""
+    return _request_payload(engine, model, video_id, start, end, prompt, output_limit, schema(video_id, start, end))
 
 
 def count_payload(payload):
@@ -193,7 +248,19 @@ def invoke(*, checkout, model, video_id, start, end, prompt, input_limit, output
         except SystemExit:
             if observation["httpOutcome"] == "http_success":
                 observation["httpOutcome"] = "transport_uncertain"
-            raise AdapterError("WATCH_HTTP_REJECTED" if observation["httpOutcome"] == "http_rejected" else "WATCH_TRANSPORT_UNCERTAIN") from None
+            raise AdapterError("WATCH_HTTP_REJECTED" if observation["httpOutcome"] == "http_rejected" else "WATCH_TRANSPORT_UNCERTAIN",
+                               http_status=bounded_http_status(http_errors[-1]) if http_errors else None) from None
+        except Exception as error:
+            # An SDK-backed transport may raise directly rather than SystemExit.
+            # Preserve only its numeric transport status; unknown failures stay uncertain.
+            if isinstance(error, AdapterError):
+                raise
+            status = bounded_http_status(error)
+            if status is not None:
+                observation["httpOutcome"] = ("http_rejected" if 400 <= status < 500 else
+                                               "http_server_error" if status >= 500 else "http_unexpected")
+            raise AdapterError("WATCH_HTTP_REJECTED" if status is not None and 400 <= status < 500 else "WATCH_TRANSPORT_UNCERTAIN",
+                               http_status=status) from None
         finally:
             observe(dict(observation))
             for error in http_errors:

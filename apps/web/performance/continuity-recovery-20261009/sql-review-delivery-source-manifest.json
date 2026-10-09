@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 1,
+  "baseHead": "71da8656c45981e927821e935a09e00820e0bbd8",
+  "scope": "reviewed single and four-stage migration compilation with local PG17.6 evidence",
+  "verification": {
+    "unitPass": 34,
+    "unitAssertions": 307,
+    "exactPgVersion": "17.6",
+    "actualSqlCount": 4,
+    "g014Assertions": 4,
+    "guardedRecordCases": 6,
+    "manualPreviewCases": 5,
+    "typecheckNative": "7.0.2",
+    "typecheckCompat": "6.0.2"
+  },
+  "excluded": [
+    "apps/web/CLAUDE.md",
+    "backend wire WIP",
+    "operating successor WIP",
+    "dashboard WIP"
+  ],
+  "limits": [
+    "No hosted writes or deployment",
+    "Historical PG17.11 artifact source entries bind archived original source",
+    "Actual PG17.6 replay uses canonical schema and synthetic rows, not operating data"
+  ],
+  "files": [
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-bundle-replay/README.md",
+      "bytes": 1787,
+      "sha256": "bc2853f017c4508c61cd2a7eb2d0ef9b5a1391acde6b4af0262e297474997dde"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-bundle-replay/artifact-map.json",
+      "bytes": 1204,
+      "sha256": "ee07f563d8289bc11ff4294c5eb4526b8edcd720c92d50d64244bc039e09b521"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-bundle-replay/artifact-map.sha256",
+      "bytes": 84,
+      "sha256": "040c1dc5b2291bffd96acd0bf535c30561a5e0c05a062ee919ed68ffb97bd9f8"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-bundle-replay/attempt-1/ownership-receipt.json",
+      "bytes": 782,
+      "sha256": "fe0bfcfa62144547ca21082c9160c313b769aca42c6e96a1f6f2c363c46ebc17"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-bundle-replay/attempt-1/role-bootstrap.json",
+      "bytes": 542,
+      "sha256": "aa10620136a3a938200b3391fceaa3fcc6402bc4f3c1429972fae2c1c33fecf9"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-bundle-replay/orchestrate.mjs",
+      "bytes": 8597,
+      "sha256": "00dea5d9a61495d4e6c020c50ad96475d135a336d8326ace823b48eabeac29b1"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-bundle-replay/ownership-receipt.json",
+      "bytes": 918,
+      "sha256": "a0d6d13ba1da0ea128ef53d6d01124a423b1729f5cd687128399e9550181b8fe"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-bundle-replay/pristine-reconstruction.json",
+      "bytes": 4247,
+      "sha256": "3bc8ba7b6507299257b8fdac0fe9fbfb31d9ff3d8f82756321492b23a1568055"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-bundle-replay/proof.json",
+      "bytes": 8622,
+      "sha256": "ef0a12c3e6b46fd3b99c535e7ab43e1bfb5d58306595ccd9e4c3534f0a0b2f7b"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-bundle-replay/replay.mjs",
+      "bytes": 22908,
+      "sha256": "f4abf908de7be0945f02fc5a18c138b69db749985604542889c683a3b67d0a25"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/actual-bundle-replay/role-bootstrap.json",
+      "bytes": 542,
+      "sha256": "9800b3a0d8092044b931bcb5ec43108db97dc3cd765d801d11d6dd7e41276fd5"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/codeql-alert88-71da8656.json",
+      "bytes": 3135,
+      "sha256": "97829ca0a6bd4230efd588d0b34b342aa592166cad99c7b1b976e4dad9f606b3"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/design-reference-audit/README.md",
+      "bytes": 11074,
+      "sha256": "80058e94b178ea2f524c2406b279d9f47b33486fff7329fc0f265140ed60242c"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/diagnostic-probe-proposal-20261009/README.md",
+      "bytes": 2356,
+      "sha256": "7d8ed2f200bd682d23492fefb889bbfc7f0aa760694e8d9036c0e8e20174828c"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/diagnostic-probe-proposal-20261009/artifact-map.json",
+      "bytes": 923,
+      "sha256": "99fd81d8c8407462de986f2c487fa404ac5f45d53980ceece0fa7aa824ef08ab"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/diagnostic-probe-proposal-20261009/contract-review.md",
+      "bytes": 4801,
+      "sha256": "897fa8f4acd1c1e0eac5a3cbf080f3afa6fac61b0cde928b7cecddec22ffa7cf"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/diagnostic-probe-proposal-20261009/offline-admission.json",
+      "bytes": 2138,
+      "sha256": "c704cbbaa9da989afccab2810d24080df6778ba2759269e4d1d2172d18aedc57"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/diagnostic-probe-proposal-20261009/provider-reproduction-draft.md",
+      "bytes": 3081,
+      "sha256": "fdfdab7ba411b4953e156a1b4ad50a3fa02364a794dc1391bdbf012a1eab1ebe"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/diagnostic-probe-proposal-20261009/sanitizer.py",
+      "bytes": 8611,
+      "sha256": "cb0b4317d40fbd4b6f785208e1c5369b30acdcdcb4177048da2384b58302002e"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/diagnostic-probe-proposal-20261009/test-proof.json",
+      "bytes": 218,
+      "sha256": "e37f6b975af2964061f62d851e6a9cecfad4971004e24fa08a60bdfa2cf4a8f9"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/diagnostic-probe-proposal-20261009/test_sanitizer.py",
+      "bytes": 7906,
+      "sha256": "46bdd4162c94368dc85180b29f985bd2b88fcd32b4ead053d0cbe172cf75c574"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/diagnostic-probe-run-20261009/artifact-map.json",
+      "bytes": 1168,
+      "sha256": "99294753d9645340da6ef9c5b41a9db76e1d7c05681a92ffb752e5f2c3729e28"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/diagnostic-probe-run-20261009/proof.json",
+      "bytes": 228,
+      "sha256": "8e217ba80c4a2ee5b70088a37aef3795369c70aaf2044451a350b23d41398803"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/diagnostic-probe-run-20261009/root-admission.json",
+      "bytes": 1980,
+      "sha256": "e08a89fb55d833a2ba227b6eeab353c1a80d257be23165eaf6b3d20efe16c236"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/flat-schema-control-20261009/artifact-map.json",
+      "bytes": 589,
+      "sha256": "5286db8a26109cf09b01e9955c127e9dc95004ea1f1d61a593b497bdaf1a4ed2"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/flat-schema-control-20261009/proof.json",
+      "bytes": 269,
+      "sha256": "27c7cb096dca3b4c1aff08cbbe6ddf70e6e5a3f08cbb35f816c52df3371ae901"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/flat-schema-control-20261009/root-admission.json",
+      "bytes": 2089,
+      "sha256": "bd9fe29becf7936ed014b24ffc4034d1f9962a7f83448dea610e55ab0d4799b9"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/gemini-schema/flat-schema-control-20261009/root-readback.json",
+      "bytes": 3507,
+      "sha256": "09981589924635b1eb017e172a1bca1e671f2bac70b0c1b9ded21763e30fc408"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/operating-readonly-snapshot.json",
+      "bytes": 1086,
+      "sha256": "af358bf2823cf8fdde7a66e96e1685d7501654f74641238b4c11a039a81a4c7d"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-delivery-71da8656.json",
+      "bytes": 3557,
+      "sha256": "d61f9eb111c95e1bf818d64833c6ec56fec0f6f792de2fe1d7e3a19492a00eaf"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/pr3150-head-71da8656-20261009T075408Z.json",
+      "bytes": 10415,
+      "sha256": "00947e57c4c89c04fdf6f910d7fea3e46c65168a5320df20f0e08ac81b0772cd"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/review-disposition-71da8656/isolated-pg17-result.json",
+      "bytes": 3399,
+      "sha256": "a3eb7627b8cf9479fd400195f2818e9f0c22b8bdcd50ee5686ff30c080308a93"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/review-disposition-71da8656/portable-source-verifier-privacy-amendment-result.json",
+      "bytes": 2661,
+      "sha256": "b95e5823b1ade79c4d3cb0fdbc135eaab42507327153cbc97352a0e1c3eecd13"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/review-disposition-71da8656/portable-source-verifier-result.json",
+      "bytes": 2086,
+      "sha256": "2d7bda0cfa2ff58b7ead3cc6c88ef976411d6a6d486428e30861d3c2bd776e43"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/review-disposition-71da8656/portable-source-verifier.mjs",
+      "bytes": 4805,
+      "sha256": "4348199b81841a2a980e216b3228545a8b89b87d5424fa1aecef60f718ef6fc1"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/review-disposition-71da8656/privacy-error-boundary-amendment.json",
+      "bytes": 3394,
+      "sha256": "ac3e3158487054ed02d2dba3525081d7ece5736802dda75694b9224f3cadee37"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/review-disposition-71da8656/review-thread-dispositions.json",
+      "bytes": 5528,
+      "sha256": "265aa24a4f211a27f4b538910f76879b207e4213e64714d45d7e7edaf25afeeb"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/review-disposition-71da8656/root-pg17.6-verification/result.json",
+      "bytes": 1295,
+      "sha256": "b10b075ecc50cd5f9c8a588580f91aed01b51303840ccfa6dd46000b06ea965b"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/pr-resume/review-disposition-71da8656/verify-isolated-pg17.mjs",
+      "bytes": 12508,
+      "sha256": "04907bf8699f58006a6fe124a0cebc3604f38266647401793542f999ac68fcf4"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/artifact-map.json",
+      "bytes": 1300,
+      "sha256": "3a164bc4131f7a005b443c6d9babd79fe8400dcc24d8474b23ff36859e82d4a5"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/historical-pg17.11-source/source-recovery.json",
+      "bytes": 1327,
+      "sha256": "cf5195ed8818fd67bb8d3d1159c92d05ac7c6315045dc82508e8405df8827245"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/historical-pg17.11-source/supabase-migration-bundle-pg17.test.ts.source.txt",
+      "bytes": 10302,
+      "sha256": "c4e454b00c8b51083fa9280f854af254a897114da5656243095d0e4942136b31"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/historical-pg17.11-source/supabase-migration-bundle.mjs.source.txt",
+      "bytes": 10934,
+      "sha256": "6b18008ae960dc96178f26a83383a81103afb0b4b62571c0804809a93e336d43"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/historical-pg17.11-source/supabase-migration-bundle.test.ts.source.txt",
+      "bytes": 11994,
+      "sha256": "04b89d4c7ae38f3235b01cab44036bc34536f33a3bf40cb0bac19f4c4ac0d77f"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/pg17-test-output.txt",
+      "bytes": 288,
+      "sha256": "671591d667dc2e70564595ea09354e5e3969f394d161d04948335d42069fce26"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/pg17.6-root-verification/proof.json",
+      "bytes": 1930,
+      "sha256": "783bac34c51bf90febf0e3ccda7ee168e6626b83ad7bc2f751998c259f93c6f9"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/pg17.6-root-verification/target-admission.json",
+      "bytes": 715,
+      "sha256": "80cc0f3a36ce78c98301ed9299c8039b0ade11db44f0297d4b8071d4ad61af5d"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/pg17.6-root-verification/test-output.txt",
+      "bytes": 277,
+      "sha256": "27b317e0516947bae608454a909389389c1959550104530a78839b781affbb1e"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/proof.json",
+      "bytes": 4436,
+      "sha256": "5c875ddb71ea94544b40029275adcd81446ad8de3129a88230c36b381d22b160"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/regression-test-output.txt",
+      "bytes": 2222,
+      "sha256": "b59812026518a86974d622a5db32e585a081a1b96aaab5d52e8ce3dfd83eb808"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/shared-helper-final-pg17.6/proof.json",
+      "bytes": 1371,
+      "sha256": "8a19743332c999ab2608765a682ff470c10f99d0f2f093ddf99c4b321f3ea57a"
+    },
+    {
+      "path": "apps/web/performance/continuity-recovery-20261009/sql-bundle-implementation/shared-helper-final-pg17.6/test-output.txt",
+      "bytes": 277,
+      "sha256": "91fbd057ce59db7b1c849241840063cc3c54682b28686b82c0952ad3c99476f0"
+    },
+    {
+      "path": "apps/web/scripts/apply-supabase-migration.mjs",
+      "bytes": 20526,
+      "sha256": "5d35096b97b5a541cd5d940c6d800e607f55c31500d70874dfe1639e065aa733"
+    },
+    {
+      "path": "apps/web/scripts/supabase-migration-bundle.mjs",
+      "bytes": 11614,
+      "sha256": "8c717ae3708885b0ff23f5dde3f52c8b1629eece82b4acb40f1a306b4313d481"
+    },
+    {
+      "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+      "bytes": 13551,
+      "sha256": "ba054d1c2c9c8eb2d19a110c4b58be999f52521880cbf66aef02ce963b97bbb5"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-apply-source.test.ts",
+      "bytes": 12763,
+      "sha256": "76c8e15f6f3b61572e77d641fc62b8a2a11996f76bad48f9931e20e8b08bdb46"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-bundle-pg17.test.ts",
+      "bytes": 11687,
+      "sha256": "b8273ebfe6112b5ea2bef14d8342cc3dd55db3161f68bdf77f653fc506c0fcb0"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-bundle.test.ts",
+      "bytes": 14417,
+      "sha256": "baa1644977445e0bd2b0ad3d6d2e7e8ba2daac6c54d34c026f6fa7e93e3711ac"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-transaction.test.ts",
+      "bytes": 11512,
+      "sha256": "d3a717b9eeb05fe363ac2cbbf8f60bb289991c25cabbe2fcb81d53ffae7d51bd"
+    },
+    {
+      "path": "docs/operations/project-request-todos-20261009.md",
+      "bytes": 86560,
+      "sha256": "b51fcb78f73ac67e8b92b19d21fe1319800aa25d7dea7454504404c1b30ece1d"
+    }
+  ]
+}
