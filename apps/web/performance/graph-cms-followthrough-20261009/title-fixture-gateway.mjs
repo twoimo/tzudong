@@ -156,7 +156,9 @@ function api(pathname, params = new URLSearchParams()) {
 }
 
 const mockSupabase = http.createServer(async (req, res) => {
-  const path = new URL(req.url, 'http://127.0.0.1:20403').pathname;
+  let path;
+  try { path = new URL(req.url, 'http://127.0.0.1:20403').pathname; }
+  catch { return response(res, { error: 'FIXTURE_INPUT_INVALID' }, 400); }
   if (req.method === 'OPTIONS') return response(res, {});
   if (path === '/auth/v1/user') return response(res, fixtureUser);
   if (path.startsWith('/auth/v1/')) return response(res, { user: null, session: null });

@@ -1,5 +1,5 @@
 {
-  "measuredAt": "2026-10-09T04:06:50.543Z",
+  "measuredAt": "2026-10-09T03:57:21.805Z",
   "runtime": "v24.21.0",
   "environment": "Three actual Bun fixture gateways and Node HTTP sentinels on loopback. No Next, provider, hosted DB or production traffic.",
   "checks": [
@@ -21,8 +21,6 @@
     "graph-cms-followthrough-20261009/fixture-gateway.mjs: API mutation remains disabled",
     "graph-cms-followthrough-20261009/fixture-gateway.mjs: redirect not followed and cookie not copied",
     "graph-cms-followthrough-20261009/fixture-gateway.mjs: synthetic API preserved",
-    "graph-cms-followthrough-20261009/fixture-gateway.mjs: malformed mock URL returns bounded error",
-    "graph-cms-followthrough-20261009/fixture-gateway.mjs: synthetic mock remains available after malformed target",
     "graph-cms-followthrough-20261009/fixture-gateway.mjs: HMR preserved without auth forwarding",
     "graph-cms-followthrough-20261009/fixture-gateway.mjs: invalid target forms rejected",
     "graph-cms-followthrough-20261009/fixture-gateway.mjs: upgrade path, method, protocol and origin constrained",
@@ -45,8 +43,6 @@
     "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: API mutation remains disabled",
     "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: redirect not followed and cookie not copied",
     "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: synthetic API preserved",
-    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: malformed mock URL returns bounded error",
-    "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: synthetic mock remains available after malformed target",
     "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: HMR preserved without auth forwarding",
     "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: invalid target forms rejected",
     "graph-cms-followthrough-20261009/title-fixture-gateway.mjs: upgrade path, method, protocol and origin constrained",
@@ -69,16 +65,14 @@
     "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: API mutation remains disabled",
     "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: redirect not followed and cookie not copied",
     "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: synthetic API preserved",
-    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: malformed mock URL returns bounded error",
-    "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: synthetic mock remains available after malformed target",
     "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: HMR preserved without auth forwarding",
     "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: invalid target forms rejected",
     "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: upgrade path, method, protocol and origin constrained",
     "pr-review-followthrough-20261009/approved-fixture-gateway.mjs: port outside allowlist rejected",
     "external trap received zero requests"
   ],
-  "total": 73,
-  "passed": 73,
+  "total": 67,
+  "passed": 67,
   "trapCalls": 0,
   "cleanup": [
     {
@@ -105,23 +99,23 @@
     },
     {
       "path": "apps/web/performance/fixture-transport-security-20261009/verify-transport.mjs",
-      "sha256": "f5103b0aa984dcc340e5263c9d3e87e7052eeb54c747c97d047169f328ab0c3d",
-      "bytes": 9796
+      "sha256": "f55a4ee96ea1f41a6e32e5831d03e14512e7037a421885e539260eb010ad9965",
+      "bytes": 9248
     },
     {
       "path": "apps/web/performance/graph-cms-followthrough-20261009/fixture-gateway.mjs",
-      "sha256": "3874fa50526976c6b52ade81d5d68d47e61b673eae610d7280cd1b8b69a22d2a",
-      "bytes": 22955
+      "sha256": "88c481fd10b6962fb402d9cdaa655b1bed5df4ee001dd0c7cef261045e22fd0b",
+      "bytes": 22866
     },
     {
       "path": "apps/web/performance/graph-cms-followthrough-20261009/title-fixture-gateway.mjs",
-      "sha256": "bc55d908ff87ec8330225e1823d4de974a324bf90b06dbfbde37ca249b41bca5",
-      "bytes": 22993
+      "sha256": "bc280cfeaffe03b147308d9cbfef73d5366ab6e1c5d0fd71f4a7f635328f9209",
+      "bytes": 22904
     },
     {
       "path": "apps/web/performance/pr-review-followthrough-20261009/approved-fixture-gateway.mjs",
-      "sha256": "ebc667cf502309cc0b0cd69f18ad3ca7d3a3c38aafa82b04fb79b859454c5ad0",
-      "bytes": 23352
+      "sha256": "13a80dfec983748eaa49768c4079608333c49a8cbf279663ff28c10572629312",
+      "bytes": 23263
     }
   ],
   "fullGoalComplete": false,
@@ -131,7 +125,6 @@
     "exitCode": 0
   },
   "independentReview": {
-    "initialDestinationAnalysis": "Original concatenation already kept destinations on loopback; no demonstrated external SSRF exploit.",
-    "followup": "Independent review confirmed transport boundaries, then found uncaught malformed mock URL. Three handlers now return fixed 400, and six additional real mock checks passed."
+    "result": "Fixed string prefix already kept HTTP destination on loopback. Added bounded invalid-target handling, origin/Host enforcement, header allowlist, and fixed HTTP options to remove URL authority ambiguity. No demonstrated historical external SSRF exploit."
   }
 }

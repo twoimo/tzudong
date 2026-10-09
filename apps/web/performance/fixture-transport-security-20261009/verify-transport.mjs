@@ -90,6 +90,12 @@ try {
       check(`${relative}: redirect not followed and cookie not copied`, redirect.status === 302 && !redirect.headers['set-cookie'] && trapCalls === 0);
       const mock = await request(previewPort, '/api/admin/pipeline');
       check(`${relative}: synthetic API preserved`, mock.status === 200 && JSON.parse(mock.body).source === 'github_actions');
+      const malformedMock = await request(upstreamPort + 1, 'http://[invalid/');
+      check(`${relative}: malformed mock URL returns bounded error`, malformedMock.status === 400
+        && JSON.parse(malformedMock.body).error === 'FIXTURE_INPUT_INVALID');
+      const mockUser = await request(upstreamPort + 1, '/auth/v1/user', { headers: { origin } });
+      check(`${relative}: synthetic mock remains available after malformed target`, mockUser.status === 200
+        && JSON.parse(mockUser.body).id === '00000000-0000-4000-9000-000000000001');
       await new Promise((resolve, reject) => {
         const req = http.request({ hostname: '127.0.0.1', port: previewPort, path: '/_next/webpack-hmr', headers: {
           Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Key': 'synthetic-key',

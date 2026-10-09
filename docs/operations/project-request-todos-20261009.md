@@ -600,3 +600,7 @@ PR #3099의48개 review를 현재 source와 대조했다.43개는 source/test bi
 - [ ] 운영 SQL 4개와 구버전 호환성·정책을 유지하는 롤백을 정식 release contract에 연결한다. G037 freeze 및 아직 미확정된 외부 조건은 유지한다.
 
 증빙: `apps/web/performance/record-review-fixes-20261009/pg15/head-99b12562/final-verification.json`, `apps/web/performance/fixture-transport-security-20261009/transport-verification.json`. 전체 기능·운영 반영 완료 체크는 열린 상태다.
+
+후속 독립 검토에서 mock Supabase의 malformed URL 예외도 수정했다. 세 실제 gateway+mock 포트 총73개 검사가 통과했고 과거67검사 영수증은 보존했다. 현재 source/test109개의 해시를 확인한 뒤 기존48개 PR thread만 해결했다. 첫 GraphQL48건 요청의 resource limit 이후 실제36건 완료를 readback하고 남은12건만 처리했으며 완료 작업 재전송0건이다. 새CodeQL3건은 현재CI 결과 확인 전까지 열어 둔다.
+
+정확한 Vercel 프로젝트를 read-only로 확인했으나99b12562와2b6e7339의 배포는 모두CANCELED였다. GitHub의 Vercel success를 실제READY·운영 배포 성공으로 해석하지 않는다. 취소 사유는 미확인, 추가 배포·환경·freeze 변경은 하지 않았다.

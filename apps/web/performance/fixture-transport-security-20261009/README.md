@@ -4,7 +4,7 @@ Three authored visual fixtures used concatenated request-derived URLs. CodeQL re
 
 The transport now uses an HTTP options object with literal `127.0.0.1` and three allowed development ports. Incoming origin-form paths, Host and optional Origin are checked before any preview work. HMR permits only GET/websocket on `/_next/webpack-hmr`. Authentication, cookies and proxy headers are stripped; redirects are returned without following them, and upstream cookies are discarded.
 
-`verify-transport.mjs` starts all three real Bun fixtures with independent Node HTTP sentinels. 67 checks passed with zero requests to the external-destination trap. Valid UI/static paths, encoded paths, synthetic API data, redirect behavior, HMR, hostile targets and forwarding boundaries were checked. Five files passed Node24 ESLint. These checks do not prove rendered UI or hosted behavior. Required CI remains separate.
+`verify-transport.mjs` starts all three real Bun fixtures with independent Node HTTP sentinels. 73 checks passed with zero requests to the external-destination trap. Valid UI/static paths, encoded paths, synthetic API data, redirect behavior, HMR, hostile targets and forwarding boundaries were checked. Five files passed Node24 ESLint. These checks do not prove rendered UI or hosted behavior. Required CI remains separate.
 
 `original-bindings.json` preserves the exact old gateways and both historical artifact maps in `originals/*.txt`. Old screenshots and browser receipts bind to those frozen gateway bytes, not to the amended scripts. Original maps remain unchanged; resolve their three gateway entries through these explicit frozen bindings. `artifact-map.json` records current amendment files and gateway hashes.
 
@@ -15,3 +15,5 @@ Reproduce from `apps/web` with:
 ```
 
 No source dependencies, operating data, provider calls, freeze or production settings changed. Owned fixture children and sentinels were closed.
+
+Follow-up: malformed targets on each synthetic Supabase port now return fixed 400 and leave the valid synthetic-auth endpoint working. The prior 67-check receipt and first amendment map are preserved in `originals/`. Current GitHub review resolutions and exact Vercel inspection are separate receipts; both inspected commit deployments were CANCELED, so no READY-preview claim is made.
