@@ -9,7 +9,7 @@
   "advisoryLockKey": "7311754282260165",
   "stateRootAlgorithm": "admin-user-rpc-forward-state/v1",
   "launchPolicy": {
-    "state": "held",
+    "state": "ready",
     "code": "FORWARD_LAUNCH_HELD",
     "reason": "fresh-protected-source-and-operating-readback-required"
   },
@@ -25,7 +25,7 @@
   },
   "fiveStage": {
     "path": ".github/admin-record-sql-successor.v1.json",
-    "sha256": "02b6c26ea482b3c1689fb7538f47c53b00ade0fa0023dfb596007b556a9e0f26",
+    "sha256": "0388c89f64de3a0910af6646647856868e685bae1ae8dd375a46bdf70bb38b8d",
     "sourceRoot": "15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3",
     "entries": 5
   },
@@ -51,7 +51,7 @@
   "toolchain": [
     {
       "path": "apps/web/scripts/admin-record-sql-successor.mjs",
-      "sha256": "fae1ccd492c1fb9a7ed7165c6f120915cc1cb87c48f5cf24a45cb224ea7b726b"
+      "sha256": "c9b2c3335598bc21a5a721182ae45aae0d009be8684e7a1a2a0871e0cb921466"
     },
     {
       "path": "apps/web/scripts/apply-supabase-migration.mjs",
@@ -60,6 +60,10 @@
     {
       "path": "apps/web/scripts/supabase-migration-transaction.mjs",
       "sha256": "9268c882d1cb128d798f65faeb87ac3b1cc1fc3d52e843f8695b0c2ab3aa5b53"
+    },
+    {
+      "path": "apps/web/scripts/vercel-rollback-readback.mjs",
+      "sha256": "fa3876153f0e949d23115612cb34bc545c6c29bccb6ba2fd6042a38e70555e04"
     },
     {
       "path": "backend/supabase/scripts/g037_supabase_statement_vector.mjs",

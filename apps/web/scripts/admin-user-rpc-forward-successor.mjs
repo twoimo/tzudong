@@ -21,6 +21,14 @@ import {
   assertSuccessorDatabaseTarget,
   createSuccessorPsqlRunner,
 } from './admin-record-sql-successor.mjs';
+import {
+  TZUDONG_GITHUB_REPOSITORY,
+  TZUDONG_PRODUCTION_ALIASES,
+  TZUDONG_VERCEL_PROJECT_ID,
+  TZUDONG_VERCEL_TEAM_ID,
+  captureVercelRollbackReadbackSync,
+  normalizeVercelRollbackExpected,
+} from './vercel-rollback-readback.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 export const REPOSITORY_ROOT = resolve(dirname(SCRIPT_PATH), '../../..');
@@ -31,7 +39,9 @@ const PROJECT_REF = 'aqlcofblfxdrjhhdmarw';
 const HEX = /^[0-9a-f]{64}$/;
 const REVISION = /^[0-9a-f]{40}$/;
 const MAX_ADMISSION_AGE_MS = 15 * 60 * 1000;
+const GIT_REMOTE_READ_TIMEOUT_MS = 15_000;
 const OPERATING_READBACK_RECEIPT = 'operating-readback-receipt.json';
+const ROLLBACK_READBACK_RECEIPT = 'forward-rollback-readback-receipt.json';
 const FIVE_IDS = [
   'admin_record_guarded_actions',
   'admin_evaluation_raw_warning_groups',
@@ -61,7 +71,7 @@ const POST_FIVE_FUNCTIONS = [
   ['pipeline_control.lock_restaurant_review_catalog_revision()', '5fe3230899d7669896f562b5a7afa5e088761b3ecc26f531c13cf0953a569413', ['search_path=""', 'lock_timeout=2s'], true],
   ['pipeline_control.restaurant_review_manual_preview(uuid,text)', '2f680f3d2e7d94cac4ba1812c0ee29abb30885c3d6e6fa86bb0abbc1ef1e8eb1', ['search_path=""'], false],
   ['public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)', '7a73f41ceaf7e8cf106e073e6f2ee791aeaafd16d8a6d2a6d11af3d1a8289304', ['search_path=""'], false],
-  ['public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)', 'ab9c11c438e482bcdd1373ec3bb43a2abf579f535aad919a18a452930ec1912c', ['search_path=""'], false],
+  ['public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)', 'a18fad1f748d736371a9ab549a1ca483a5b2f321674fabe71b2411b7e58b3fc9', ['search_path=""'], false],
   ['public.restaurant_review_automation_manual(uuid,text,text,text,uuid)', 'b792a1646aac690fa2b2b1714978c762408c7a467c3fa8079a51763c956319e1', ['search_path=""', 'lock_timeout=2s'], false],
 ];
 const POST_FIVE_ASSERTIONS = [
@@ -177,6 +187,7 @@ export function loadForwardManifest({
     'apps/web/scripts/admin-record-sql-successor.mjs',
     'apps/web/scripts/apply-supabase-migration.mjs',
     'apps/web/scripts/supabase-migration-transaction.mjs',
+    'apps/web/scripts/vercel-rollback-readback.mjs',
     'backend/supabase/scripts/g037_supabase_statement_vector.mjs',
   ];
   if (!Array.isArray(manifest.toolchain)
@@ -473,16 +484,11 @@ function canonicalReceiptBytes(value) {
   return Buffer.from(`${JSON.stringify(canonical(value))}\n`);
 }
 
-function validateOperatingReadbackReceipt(admission, record, {
-  createdAt,
-  expiresAt,
-  nowMs,
-  receiptDirectory,
-}) {
+function readPrivateReceipt(receiptDirectory, fileName, expectedSha256) {
   if (typeof receiptDirectory !== 'string' || !isAbsolute(receiptDirectory)) {
     fail('FORWARD_ADMISSION_INVALID');
   }
-  const receiptPath = join(receiptDirectory, OPERATING_READBACK_RECEIPT);
+  const receiptPath = join(receiptDirectory, fileName);
   let status;
   let bytes;
   try {
@@ -499,12 +505,24 @@ function validateOperatingReadbackReceipt(admission, record, {
   }
   if (!status.isFile()
     || status.isSymbolicLink()
-    || (process.platform !== 'win32' && (status.mode & 0o077) !== 0)) {
-    fail('FORWARD_ADMISSION_INVALID');
-  }
-  if (sha256(bytes) !== admission.operatingReadbackSha256) fail('FORWARD_ADMISSION_INVALID');
+    || (process.platform !== 'win32' && (status.mode & 0o077) !== 0)
+    || sha256(bytes) !== expectedSha256) fail('FORWARD_ADMISSION_INVALID');
   const receipt = parseObject(bytes, 'FORWARD_ADMISSION_INVALID');
   if (!bytes.equals(canonicalReceiptBytes(receipt))) fail('FORWARD_ADMISSION_INVALID');
+  return receipt;
+}
+
+function validateOperatingReadbackReceipt(admission, record, {
+  createdAt,
+  expiresAt,
+  nowMs,
+  receiptDirectory,
+}) {
+  const receipt = readPrivateReceipt(
+    receiptDirectory,
+    OPERATING_READBACK_RECEIPT,
+    admission.operatingReadbackSha256,
+  );
   exactKeys(receipt, [
     'expiresAt', 'id', 'kind', 'manifestSha256', 'observedAt', 'priorState',
     'projectRef', 'purpose', 'schemaVersion', 'sourceRevision',
@@ -521,6 +539,51 @@ function validateOperatingReadbackReceipt(admission, record, {
     || !equal(receipt.priorState, admission.priorState)
     || !Number.isFinite(observedAt)
     || observedAt < createdAt
+    || observedAt >= expiresAt
+    || observedAt > nowMs + 30_000
+    || Date.parse(receipt.expiresAt) !== expiresAt) fail('FORWARD_ADMISSION_INVALID');
+}
+
+function validateRollbackReadbackReceipt(admission, record, {
+  createdAt,
+  expiresAt,
+  nowMs,
+  receiptDirectory,
+}) {
+  const receipt = readPrivateReceipt(
+    receiptDirectory,
+    ROLLBACK_READBACK_RECEIPT,
+    admission.rollback.readbackSha256,
+  );
+  exactKeys(receipt, [
+    'deploymentId', 'deploymentSha', 'deploymentUrl', 'expiresAt', 'gitRef', 'id', 'kind',
+    'manifestSha256', 'observedAt', 'productionAliases', 'projectId', 'projectRef',
+    'purpose', 'readyState', 'repository', 'schemaVersion', 'sourceRevision', 'state',
+    'target', 'teamId',
+  ], 'FORWARD_ADMISSION_INVALID');
+  const observedAt = Date.parse(receipt.observedAt);
+  if (receipt.schemaVersion !== 1
+    || receipt.kind !== 'forward-rollback-readback-receipt'
+    || receipt.id !== record.manifest.id
+    || receipt.projectRef !== record.manifest.projectRef
+    || receipt.purpose !== record.manifest.purpose
+    || receipt.manifestSha256 !== record.manifestSha256
+    || receipt.sourceRevision !== admission.sourceRevision
+    || receipt.expiresAt !== admission.expiresAt
+    || receipt.deploymentId !== admission.rollback.deploymentId
+    || receipt.deploymentSha !== admission.rollback.deploymentSha
+    || receipt.deploymentUrl !== admission.rollback.deploymentUrl
+    || receipt.gitRef !== admission.rollback.gitRef
+    || !equal(receipt.productionAliases, admission.rollback.productionAliases)
+    || receipt.projectId !== admission.rollback.projectId
+    || receipt.readyState !== admission.rollback.readyState
+    || receipt.repository !== admission.rollback.repository
+    || receipt.state !== admission.rollback.state
+    || receipt.target !== admission.rollback.target
+    || receipt.teamId !== admission.rollback.teamId
+    || !Number.isFinite(observedAt)
+    || observedAt < createdAt
+    || observedAt >= expiresAt
     || observedAt > nowMs + 30_000
     || Date.parse(receipt.expiresAt) !== expiresAt) fail('FORWARD_ADMISSION_INVALID');
 }
@@ -533,7 +596,7 @@ export function validateForwardAdmission(admission, record, {
   exactKeys(admission, [
     'createdAt', 'expiresAt', 'id', 'manifestSha256', 'operatingReadbackSha256',
     'priorState', 'projectRef', 'protectedSourceReadbackSha256', 'purpose',
-    'schemaVersion', 'sourceRevision',
+    'rollback', 'schemaVersion', 'sourceRevision',
   ], 'FORWARD_ADMISSION_INVALID');
   if (admission.schemaVersion !== 1
     || admission.id !== manifest.id
@@ -543,6 +606,29 @@ export function validateForwardAdmission(admission, record, {
     || !REVISION.test(admission.sourceRevision ?? '')) fail('FORWARD_ADMISSION_INVALID');
   assertHex(admission.protectedSourceReadbackSha256, 'FORWARD_ADMISSION_INVALID');
   assertHex(admission.operatingReadbackSha256, 'FORWARD_ADMISSION_INVALID');
+  exactKeys(admission.rollback, [
+    'deploymentId', 'deploymentSha', 'deploymentUrl', 'gitRef', 'productionAliases',
+    'projectId', 'readbackSha256', 'readyState', 'repository', 'state', 'target', 'teamId',
+  ], 'FORWARD_ADMISSION_INVALID');
+  if (!REVISION.test(admission.rollback.deploymentSha)) fail('FORWARD_ADMISSION_INVALID');
+  assertHex(admission.rollback.readbackSha256, 'FORWARD_ADMISSION_INVALID');
+  let normalizedRollback;
+  try {
+    normalizedRollback = normalizeVercelRollbackExpected({
+      deploymentId: admission.rollback.deploymentId,
+      deploymentUrl: admission.rollback.deploymentUrl,
+      gitRef: admission.rollback.gitRef,
+      gitSha: admission.rollback.deploymentSha,
+    });
+  } catch { fail('FORWARD_ADMISSION_INVALID'); }
+  if (normalizedRollback.deploymentUrl !== admission.rollback.deploymentUrl
+    || admission.rollback.projectId !== TZUDONG_VERCEL_PROJECT_ID
+    || admission.rollback.teamId !== TZUDONG_VERCEL_TEAM_ID
+    || admission.rollback.repository !== TZUDONG_GITHUB_REPOSITORY
+    || !equal(admission.rollback.productionAliases, TZUDONG_PRODUCTION_ALIASES)
+    || admission.rollback.readyState !== 'READY'
+    || admission.rollback.target !== 'production'
+    || admission.rollback.state !== 'ready') fail('FORWARD_ADMISSION_INVALID');
   if (admission.protectedSourceReadbackSha256
     !== protectedSourceReadbackBinding(manifest, admission.sourceRevision).sha256) {
     fail('FORWARD_ADMISSION_INVALID');
@@ -554,7 +640,7 @@ export function validateForwardAdmission(admission, record, {
     || expiresAt <= createdAt
     || expiresAt - createdAt > MAX_ADMISSION_AGE_MS
     || createdAt > nowMs + 30_000
-    || nowMs > expiresAt) fail('FORWARD_ADMISSION_EXPIRED');
+    || nowMs >= expiresAt) fail('FORWARD_ADMISSION_EXPIRED');
   validatePriorState(admission.priorState, manifest);
   validateOperatingReadbackReceipt(admission, record, {
     createdAt,
@@ -562,7 +648,43 @@ export function validateForwardAdmission(admission, record, {
     nowMs,
     receiptDirectory,
   });
+  validateRollbackReadbackReceipt(admission, record, {
+    createdAt,
+    expiresAt,
+    nowMs,
+    receiptDirectory,
+  });
   return Object.freeze({ createdAt, expiresAt });
+}
+
+function assertAdmissionFresh(expiresAt, value) {
+  const nowMs = value instanceof Date ? value.getTime() : NaN;
+  if (!Number.isFinite(nowMs) || nowMs >= expiresAt) fail('FORWARD_ADMISSION_EXPIRED');
+}
+
+function assertLiveRollbackReadback(admission, observed, { checkedAt, createdAt, expiresAt }) {
+  exactKeys(observed, [
+    'deploymentId', 'deploymentUrl', 'gitRef', 'gitSha', 'kind', 'observedAt',
+    'productionAliases', 'projectId', 'readyState', 'repository', 'schemaVersion',
+    'target', 'teamId',
+  ], 'FORWARD_ROLLBACK_READBACK_INVALID');
+  const liveObservedAt = Date.parse(observed.observedAt);
+  if (observed.schemaVersion !== 1
+    || observed.kind !== 'vercel-rollback-readback'
+    || observed.deploymentId !== admission.rollback.deploymentId
+    || observed.deploymentUrl !== admission.rollback.deploymentUrl
+    || observed.gitRef !== admission.rollback.gitRef
+    || observed.gitSha !== admission.rollback.deploymentSha
+    || !equal(observed.productionAliases, admission.rollback.productionAliases)
+    || observed.projectId !== admission.rollback.projectId
+    || observed.readyState !== admission.rollback.readyState
+    || observed.repository !== admission.rollback.repository
+    || observed.target !== admission.rollback.target
+    || observed.teamId !== admission.rollback.teamId
+    || !Number.isFinite(liveObservedAt)
+    || liveObservedAt < createdAt
+    || liveObservedAt >= expiresAt
+    || liveObservedAt > checkedAt.getTime()) fail('FORWARD_ROLLBACK_READBACK_INVALID');
 }
 
 export function assertForwardLaunchReady(manifest) {
@@ -654,10 +776,19 @@ export function protectedSourceReadbackBinding(manifest, revision) {
   return Object.freeze({ readback, sha256: sha256(JSON.stringify(canonical(readback))) });
 }
 
-export function currentProtectedMainReadback(manifest, { repositoryRoot = REPOSITORY_ROOT } = {}) {
+export function currentProtectedMainReadback(manifest, {
+  repositoryRoot = REPOSITORY_ROOT,
+  spawnImpl = spawnSync,
+} = {}) {
   if (!manifest?.protectedSource) fail('FORWARD_PROTECTED_SOURCE_INVALID');
   const run = args => {
-    const result = spawnSync('/usr/bin/git', args, { cwd: repositoryRoot, encoding: 'utf8' });
+    const result = spawnImpl('/usr/bin/git', args, {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      killSignal: 'SIGKILL',
+      maxBuffer: 1024 * 1024,
+      timeout: GIT_REMOTE_READ_TIMEOUT_MS,
+    });
     if (result.error || result.status !== 0) fail('FORWARD_PROTECTED_SOURCE_INVALID');
     return result.stdout.trim();
   };
@@ -703,12 +834,13 @@ export function runAdminUserRpcForward({
   loadManifestImpl = loadForwardManifest,
   now = () => new Date(),
   protectedMainReadbackImpl = currentProtectedMainReadback,
+  rollbackReadbackImpl = captureVercelRollbackReadbackSync,
   runPsqlImpl,
 } = {}) {
   const record = loadManifestImpl();
   assertForwardLaunchReady(record.manifest);
   const admission = loadPrivateAdmission(admissionPath);
-  validateForwardAdmission(admission, record, {
+  const admissionWindow = validateForwardAdmission(admission, record, {
     now: now(),
     receiptDirectory: dirname(resolve(admissionPath)),
   });
@@ -718,6 +850,30 @@ export function runAdminUserRpcForward({
     record.manifest,
     protectedMainReadbackImpl(record.manifest),
   );
+  let rollbackReadback;
+  try {
+    rollbackReadback = rollbackReadbackImpl({
+      expected: {
+        deploymentId: admission.rollback.deploymentId,
+        deploymentUrl: admission.rollback.deploymentUrl,
+        gitRef: admission.rollback.gitRef,
+        gitSha: admission.rollback.deploymentSha,
+      },
+      now,
+    });
+  } catch {
+    fail('FORWARD_ROLLBACK_READBACK_INVALID');
+  }
+  const rollbackCheckedAt = now();
+  assertAdmissionFresh(admissionWindow.expiresAt, rollbackCheckedAt);
+  try {
+    assertLiveRollbackReadback(admission, rollbackReadback, {
+      ...admissionWindow,
+      checkedAt: rollbackCheckedAt,
+    });
+  } catch {
+    fail('FORWARD_ROLLBACK_READBACK_INVALID');
+  }
   const { databaseUrl } = selectDirectDatabaseTransport(environment);
   assertSuccessorDatabaseTarget(databaseUrl, record.manifest);
   const transport = runPsqlImpl ?? createSuccessorPsqlRunner(databaseUrl, { environment });
@@ -734,6 +890,7 @@ export function runAdminUserRpcForward({
   }
   if (!equal(observed, admission.priorState)) fail('FORWARD_PREFLIGHT_MISMATCH');
   const plan = compileForwardPlan(record, admission);
+  assertAdmissionFresh(admissionWindow.expiresAt, now());
   const terminal = executeForwardPlan(databaseUrl, plan, { runPsqlImpl: transport });
   return Object.freeze({
     code: 'FORWARD_COMMITTED',

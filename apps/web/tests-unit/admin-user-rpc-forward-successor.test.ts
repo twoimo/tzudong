@@ -1,11 +1,12 @@
 import { afterAll, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import {
+  buildForwardPriorStateQuery,
   compileForwardPlan,
   currentForwardGitFacts,
   currentProtectedMainReadback,
@@ -21,6 +22,19 @@ const baseRecord = loadForwardManifest();
 const revision = 'a'.repeat(40);
 const fixedNow = new Date('2030-01-01T00:05:00.000Z');
 const databaseUrl = 'postgresql://postgres.aqlcofblfxdrjhhdmarw:private-password@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres';
+const rollbackIdentity = Object.freeze({
+  deploymentId: 'dpl_CLEMRdaLUrai3Ph9J2czNRA64pyw',
+  deploymentSha: '8257581e09f6f58f72f6e0e2c4aa7e6c72caab43',
+  deploymentUrl: 'https://tzudong-a7wf62m0v-twoimos-projects.vercel.app/',
+  gitRef: 'main',
+  productionAliases: ['tzudong.app', 'www.tzudong.app'],
+  projectId: 'prj_sau35J5uUtShIQ9OKofRtOVVnTSl',
+  readyState: 'READY',
+  repository: 'twoimo/tzudong',
+  state: 'ready',
+  target: 'production',
+  teamId: 'team_OUj64KeLxJI3PkEbOaFZnorA',
+});
 const directories: string[] = [];
 const canonical = (value: any): any => Array.isArray(value)
   ? value.map(canonical)
@@ -30,11 +44,52 @@ const canonical = (value: any): any => Array.isArray(value)
 const canonicalBytes = (value: any) => Buffer.from(`${JSON.stringify(canonical(value))}\n`);
 const digest = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 
+function sourceDerivedM5AdminRecordActionBody() {
+  const predecessorPath = baseRecord.fiveManifest.migrations[0].path;
+  const m5Path = baseRecord.fiveManifest.migrations[4].path;
+  const predecessorSql = readFileSync(new URL(`../../../${predecessorPath}`, import.meta.url), 'utf8');
+  const m5Sql = readFileSync(new URL(`../../../${m5Path}`, import.meta.url), 'utf8');
+  const bodyMatch = predecessorSql.match(
+    /CREATE FUNCTION public\.admin_record_action\([\s\S]*?\) RETURNS jsonb\nLANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS \$\$([\s\S]*?)\$\$;/,
+  );
+  expect(bodyMatch).not.toBeNull();
+  let body = bodyMatch![1];
+
+  const actionStart = m5Sql.indexOf(
+    "target := 'public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)'::regprocedure;",
+  );
+  const actionEnd = m5Sql.indexOf('  EXECUTE replace(definition, source, patched);', actionStart);
+  expect(actionStart).toBeGreaterThanOrEqual(0);
+  expect(actionEnd).toBeGreaterThan(actionStart);
+  const actionPatch = m5Sql.slice(actionStart, actionEnd);
+  const assignments = [...actionPatch.matchAll(
+    /\b(old_text|new_text)\s*:=\s*(?:\$(?:old|new)\$([\s\S]*?)\$(?:old|new)\$|'((?:''|[^'])*)')\s*;/g,
+  )].map(match => ({
+    key: match[1],
+    value: match[2] ?? match[3].replaceAll("''", "'"),
+  }));
+  expect(assignments).toHaveLength(14);
+  for (let index = 0; index < assignments.length; index += 2) {
+    expect(assignments[index].key).toBe('old_text');
+    expect(assignments[index + 1].key).toBe('new_text');
+    expect(body.includes(assignments[index].value)).toBe(true);
+    body = body.replaceAll(assignments[index].value, assignments[index + 1].value);
+  }
+  return body;
+}
+
 const readyRecord = Object.freeze({
   ...baseRecord,
   manifest: Object.freeze({
     ...baseRecord.manifest,
     launchPolicy: Object.freeze({ ...baseRecord.manifest.launchPolicy, state: 'ready' }),
+  }),
+});
+const heldRecord = Object.freeze({
+  ...baseRecord,
+  manifest: Object.freeze({
+    ...baseRecord.manifest,
+    launchPolicy: Object.freeze({ ...baseRecord.manifest.launchPolicy, state: 'held' }),
   }),
 });
 const protectedBinding = protectedSourceReadbackBinding(readyRecord.manifest, revision);
@@ -73,6 +128,10 @@ function admission(overrides: Record<string, unknown> = {}) {
     sourceRevision: revision,
     protectedSourceReadbackSha256: protectedBinding.sha256,
     operatingReadbackSha256: '5'.repeat(64),
+    rollback: {
+      ...structuredClone(rollbackIdentity),
+      readbackSha256: '6'.repeat(64),
+    },
     createdAt: '2030-01-01T00:00:00.000Z',
     expiresAt: '2030-01-01T00:10:00.000Z',
     priorState,
@@ -102,9 +161,36 @@ function privateAdmissionFiles(document = admission()) {
   const receiptPath = join(directory, 'operating-readback-receipt.json');
   writeFileSync(receiptPath, receiptBytes, { mode: 0o600 });
   chmodSync(receiptPath, 0o600);
+  const rollbackReceipt = {
+    schemaVersion: 1,
+    id: document.id,
+    kind: 'forward-rollback-readback-receipt',
+    projectRef: document.projectRef,
+    purpose: document.purpose,
+    manifestSha256: document.manifestSha256,
+    sourceRevision: document.sourceRevision,
+    observedAt: document.createdAt,
+    expiresAt: document.expiresAt,
+    deploymentId: document.rollback.deploymentId,
+    deploymentSha: document.rollback.deploymentSha,
+    deploymentUrl: document.rollback.deploymentUrl,
+    gitRef: document.rollback.gitRef,
+    productionAliases: document.rollback.productionAliases,
+    projectId: document.rollback.projectId,
+    readyState: document.rollback.readyState,
+    repository: document.rollback.repository,
+    state: document.rollback.state,
+    target: document.rollback.target,
+    teamId: document.rollback.teamId,
+  };
+  const rollbackReceiptBytes = canonicalBytes(rollbackReceipt);
+  document.rollback.readbackSha256 = digest(rollbackReceiptBytes);
+  const rollbackReceiptPath = join(directory, 'forward-rollback-readback-receipt.json');
+  writeFileSync(rollbackReceiptPath, rollbackReceiptBytes, { mode: 0o600 });
+  chmodSync(rollbackReceiptPath, 0o600);
   writeFileSync(admissionPath, `${JSON.stringify(document)}\n`, { mode: 0o600 });
   chmodSync(admissionPath, 0o600);
-  return { admissionPath, directory, document, receipt, receiptPath };
+  return { admissionPath, directory, document, receipt, receiptPath, rollbackReceipt, rollbackReceiptPath };
 }
 
 function privateAdmission(document = admission()) {
@@ -117,13 +203,28 @@ function dependencies(runPsqlImpl: (...args: any[]) => string) {
     loadManifestImpl: () => readyRecord,
     now: () => fixedNow,
     protectedMainReadbackImpl: () => protectedBinding.readback,
+    rollbackReadbackImpl: ({ expected, now }: any) => ({
+      schemaVersion: 1,
+      kind: 'vercel-rollback-readback',
+      projectId: rollbackIdentity.projectId,
+      teamId: rollbackIdentity.teamId,
+      deploymentId: expected.deploymentId,
+      deploymentUrl: expected.deploymentUrl,
+      readyState: rollbackIdentity.readyState,
+      target: rollbackIdentity.target,
+      repository: rollbackIdentity.repository,
+      gitSha: expected.gitSha,
+      gitRef: expected.gitRef,
+      productionAliases: [...rollbackIdentity.productionAliases],
+      observedAt: now().toISOString(),
+    }),
     runPsqlImpl,
   };
 }
 
-test('dedicated held manifest pins the post-five chain and exact forward source/vector', () => {
+test('dedicated ready manifest pins the post-five chain and exact forward source/vector', () => {
   expect(baseRecord.manifest.launchPolicy).toEqual({
-    state: 'held',
+    state: 'ready',
     code: 'FORWARD_LAUNCH_HELD',
     reason: 'fresh-protected-source-and-operating-readback-required',
   });
@@ -136,7 +237,7 @@ test('dedicated held manifest pins the post-five chain and exact forward source/
   expect(baseRecord.manifest.operatingTransition).toEqual({ beforeFive: 80, afterFive: 85, afterForward: 86 });
   expect(baseRecord.manifest.fiveStage).toMatchObject({
     entries: 5,
-    sha256: '02b6c26ea482b3c1689fb7538f47c53b00ade0fa0023dfb596007b556a9e0f26',
+    sha256: '0388c89f64de3a0910af6646647856868e685bae1ae8dd375a46bdf70bb38b8d',
     sourceRoot: '15da876acc3c544fef42ca3fe00c9a260c490d683a7d33593b53aac881f273f3',
   });
   expect(baseRecord.fiveManifest.migrations.map((migration: any) => migration.id)).toEqual([
@@ -159,7 +260,7 @@ test('dedicated held manifest pins the post-five chain and exact forward source/
   expect(baseRecord.manifest.toolchain).toEqual([
     {
       path: 'apps/web/scripts/admin-record-sql-successor.mjs',
-      sha256: 'fae1ccd492c1fb9a7ed7165c6f120915cc1cb87c48f5cf24a45cb224ea7b726b',
+      sha256: 'c9b2c3335598bc21a5a721182ae45aae0d009be8684e7a1a2a0871e0cb921466',
     },
     {
       path: 'apps/web/scripts/apply-supabase-migration.mjs',
@@ -170,13 +271,58 @@ test('dedicated held manifest pins the post-five chain and exact forward source/
       sha256: '9268c882d1cb128d798f65faeb87ac3b1cc1fc3d52e843f8695b0c2ab3aa5b53',
     },
     {
+      path: 'apps/web/scripts/vercel-rollback-readback.mjs',
+      sha256: 'fa3876153f0e949d23115612cb34bc545c6c29bccb6ba2fd6042a38e70555e04',
+    },
+    {
       path: 'backend/supabase/scripts/g037_supabase_statement_vector.mjs',
       sha256: '398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd',
     },
   ]);
 });
 
-test('production manifest launch hold rejects before admission, checkout or transport access', () => {
+test('post-five state query binds the admin action body derived from the exact M5 source', () => {
+  const bodySha256 = digest(sourceDerivedM5AdminRecordActionBody());
+  const query = buildForwardPriorStateQuery(baseRecord);
+  const queryHash = query.match(
+    /\('public\.admin_record_action\(uuid,text,uuid,text,uuid\[\],jsonb,text\)','([0-9a-f]{64})',ARRAY\[/,
+  );
+  expect(bodySha256).toBe('a18fad1f748d736371a9ab549a1ca483a5b2f321674fabe71b2411b7e58b3fc9');
+  expect(queryHash?.[1]).toBe(bodySha256);
+  expect(baseRecord.sourceBytes.toString('utf8')).toContain(bodySha256);
+});
+
+test('production ready manifest still rejects corrupt operating custody before checkout or transport access', () => {
+  const files = privateAdmissionFiles();
+  writeFileSync(files.receiptPath, '{}\n');
+  let gitCalls = 0;
+  let protectedReadbackCalls = 0;
+  let transportCalls = 0;
+  expect(() => runAdminUserRpcForward({
+    admissionPath: files.admissionPath,
+    environment: {},
+  }, {
+    now: () => fixedNow,
+    gitFactsImpl: () => {
+      gitCalls += 1;
+      return { clean: true, detached: true, revision };
+    },
+    loadManifestImpl: () => baseRecord,
+    protectedMainReadbackImpl: () => {
+      protectedReadbackCalls += 1;
+      return protectedBinding.readback;
+    },
+    runPsqlImpl: () => {
+      transportCalls += 1;
+      return '';
+    },
+  })).toThrow('FORWARD_ADMISSION_INVALID');
+  expect(gitCalls).toBe(0);
+  expect(protectedReadbackCalls).toBe(0);
+  expect(transportCalls).toBe(0);
+});
+
+test('in-memory held manifest rejects before admission, checkout or transport access', () => {
   let gitCalls = 0;
   let protectedReadbackCalls = 0;
   let transportCalls = 0;
@@ -188,7 +334,7 @@ test('production manifest launch hold rejects before admission, checkout or tran
       gitCalls += 1;
       return { clean: true, detached: true, revision };
     },
-    loadManifestImpl: () => baseRecord,
+    loadManifestImpl: () => heldRecord,
     protectedMainReadbackImpl: () => {
       protectedReadbackCalls += 1;
       return protectedBinding.readback;
@@ -210,6 +356,10 @@ test('fresh admission and compiled plan bind exact 85 preimage, shared lock and 
     now: fixedNow,
     receiptDirectory: files.directory,
   })).not.toThrow();
+  expect(() => validateForwardAdmission(document, readyRecord, {
+    now: new Date(document.expiresAt),
+    receiptDirectory: files.directory,
+  })).toThrow('FORWARD_ADMISSION_EXPIRED');
   const plan = compileForwardPlan(readyRecord, document);
   expect(plan.envelope.sourceSha256).toBe(readyRecord.manifest.migration.sha256);
   expect(plan.envelope.vectorSha256).toBe(readyRecord.manifest.migration.statementVectorSha256);
@@ -290,6 +440,17 @@ test('operating readback hash requires canonical private bytes bound to project,
       receiptDirectory: files.directory,
     })).toThrow('FORWARD_ADMISSION_INVALID');
   }
+  {
+    const files = privateAdmissionFiles();
+    const receipt = { ...files.rollbackReceipt, projectId: 'prj_stale_web_project' };
+    const bytes = canonicalBytes(receipt);
+    writeFileSync(files.rollbackReceiptPath, bytes, { mode: 0o600 });
+    files.document.rollback.readbackSha256 = digest(bytes);
+    expect(() => validateForwardAdmission(files.document, readyRecord, {
+      now: fixedNow,
+      receiptDirectory: files.directory,
+    })).toThrow('FORWARD_ADMISSION_INVALID');
+  }
 });
 
 test('wrong project target and fresh preflight mismatch stop before mutation', () => {
@@ -323,6 +484,95 @@ test('wrong project target and fresh preflight mismatch stop before mutation', (
     expect(calls[0]).toStartWith('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;');
     expect(calls[0]).not.toContain('INSERT INTO supabase_migrations.schema_migrations');
   }
+});
+
+test('admission expiring during preflight never issues a mutating apply', () => {
+  const files = privateAdmissionFiles();
+  const exactExpiry = new Date(files.document.expiresAt);
+  const clock = [fixedNow, fixedNow, fixedNow, exactExpiry, exactExpiry];
+  let clockCalls = 0;
+  const calls: string[] = [];
+  expect(() => runAdminUserRpcForward({
+    admissionPath: files.admissionPath,
+    environment: { SUPABASE_DB_URL: databaseUrl },
+  }, {
+    ...dependencies((_url, sql) => {
+      calls.push(sql);
+      return JSON.stringify(priorState);
+    }),
+    now: () => clock[Math.min(clockCalls++, clock.length - 1)],
+  })).toThrow('FORWARD_ADMISSION_EXPIRED');
+  expect(calls).toHaveLength(1);
+  expect(calls[0]).toStartWith('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;');
+  expect(calls[0]).not.toContain('INSERT INTO supabase_migrations.schema_migrations');
+});
+
+test('live rollback identity is checked once before database access', () => {
+  const admissionPath = privateAdmission();
+  let rollbackCalls = 0;
+  let transportCalls = 0;
+  expect(() => runAdminUserRpcForward({
+    admissionPath,
+    environment: { SUPABASE_DB_URL: databaseUrl },
+  }, {
+    ...dependencies(() => { transportCalls += 1; return ''; }),
+    rollbackReadbackImpl: ({ expected, now }: any) => {
+      rollbackCalls += 1;
+      return {
+        schemaVersion: 1,
+        kind: 'vercel-rollback-readback',
+        projectId: rollbackIdentity.projectId,
+        teamId: rollbackIdentity.teamId,
+        deploymentId: expected.deploymentId,
+        deploymentUrl: expected.deploymentUrl,
+        readyState: rollbackIdentity.readyState,
+        target: rollbackIdentity.target,
+        repository: 'other/repository',
+        gitSha: expected.gitSha,
+        gitRef: expected.gitRef,
+        productionAliases: [...rollbackIdentity.productionAliases],
+        observedAt: now().toISOString(),
+      };
+    },
+  })).toThrow('FORWARD_ROLLBACK_READBACK_INVALID');
+  expect(rollbackCalls).toBe(1);
+  expect(transportCalls).toBe(0);
+});
+
+test('live rollback readback crossing exact expiry stops before database access', () => {
+  const files = privateAdmissionFiles();
+  const exactExpiry = new Date(files.document.expiresAt);
+  const clock = [fixedNow, exactExpiry, exactExpiry];
+  let clockIndex = 0;
+  let rollbackCalls = 0;
+  let transportCalls = 0;
+  expect(() => runAdminUserRpcForward({
+    admissionPath: files.admissionPath,
+    environment: { SUPABASE_DB_URL: databaseUrl },
+  }, {
+    ...dependencies(() => { transportCalls += 1; return ''; }),
+    now: () => clock[Math.min(clockIndex++, clock.length - 1)],
+    rollbackReadbackImpl: ({ expected, now }: any) => {
+      rollbackCalls += 1;
+      return {
+        schemaVersion: 1,
+        kind: 'vercel-rollback-readback',
+        projectId: rollbackIdentity.projectId,
+        teamId: rollbackIdentity.teamId,
+        deploymentId: expected.deploymentId,
+        deploymentUrl: expected.deploymentUrl,
+        readyState: rollbackIdentity.readyState,
+        target: rollbackIdentity.target,
+        repository: rollbackIdentity.repository,
+        gitSha: expected.gitSha,
+        gitRef: expected.gitRef,
+        productionAliases: [...rollbackIdentity.productionAliases],
+        observedAt: now().toISOString(),
+      };
+    },
+  })).toThrow('FORWARD_ADMISSION_EXPIRED');
+  expect(rollbackCalls).toBe(1);
+  expect(transportCalls).toBe(0);
 });
 
 test('wrong or stale protected main revision fails before database transport', () => {
@@ -397,15 +647,34 @@ test('a real frozen detached checkout can prepare admission after commit without
   });
   const admissionPath = privateAdmission(document);
   const calls: string[] = [];
+  const protectedGitOptions: any[] = [];
   const terminal = expectedForwardTerminal(priorState);
   const dependencies = {
     gitFactsImpl: () => currentForwardGitFacts({ repositoryRoot: checkout }),
     loadManifestImpl: () => fixtureRecord,
     now: () => fixedNow,
-    protectedMainReadbackImpl: (manifest: any) => currentProtectedMainReadback(
-      manifest,
-      { repositoryRoot: checkout },
-    ),
+    protectedMainReadbackImpl: (manifest: any) => currentProtectedMainReadback(manifest, {
+      repositoryRoot: checkout,
+      spawnImpl: (command: string, args: string[], options: any) => {
+        protectedGitOptions.push(options);
+        return spawnSync(command, args, options);
+      },
+    }),
+    rollbackReadbackImpl: ({ expected, now }: any) => ({
+      schemaVersion: 1,
+      kind: 'vercel-rollback-readback',
+      projectId: rollbackIdentity.projectId,
+      teamId: rollbackIdentity.teamId,
+      deploymentId: expected.deploymentId,
+      deploymentUrl: expected.deploymentUrl,
+      readyState: rollbackIdentity.readyState,
+      target: rollbackIdentity.target,
+      repository: rollbackIdentity.repository,
+      gitSha: expected.gitSha,
+      gitRef: expected.gitRef,
+      productionAliases: [...rollbackIdentity.productionAliases],
+      observedAt: now().toISOString(),
+    }),
     runPsqlImpl: (_url: string, sql: string) => {
       calls.push(sql);
       return JSON.stringify(calls.length === 1 ? priorState : terminal);
@@ -416,6 +685,12 @@ test('a real frozen detached checkout can prepare admission after commit without
     environment: { SUPABASE_DB_URL: databaseUrl },
   }, dependencies)).toMatchObject({ sourceRevision: frozenRevision, status: 'committed' });
   expect(calls).toHaveLength(2);
+  expect(protectedGitOptions).toHaveLength(2);
+  expect(protectedGitOptions.every(options => (
+    options.timeout === 15_000
+    && options.killSignal === 'SIGKILL'
+    && options.maxBuffer === 1024 * 1024
+  ))).toBe(true);
 
   git(checkout, ['switch', '-c', 'advance-main']);
   writeFileSync(join(checkout, 'advance.txt'), 'new protected main\n');
