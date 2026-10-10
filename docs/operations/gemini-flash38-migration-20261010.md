@@ -19,11 +19,13 @@ OCR은 기존 3.6 기본값을 유지하고 명시적인 3.7 설정만 전환한
 
 로컬 검증 결과:
 
-- Python 크롤러 회귀·단계 실행·미디어 후속 처리·재시작 통합: 125개 실행, 122개 통과, Windows 전용 3개 건너뜀.
+- Python 크롤러 회귀·단계 실행·미디어 후속 처리·재시작 통합: 132개 실행, 129개 통과, Windows 전용 3개 건너뜀.
 - Node 공유 클라이언트·청크 요청: 29개 통과. 이전 모델의 실제 SDK 전송 URL, 응답 모델 출처, 요청 설정 보존, 최소 추론 거부 시 외부 전송·업로드·잔여 lease 0건을 검사한다.
 - JS·Python·셸 모델 호환 및 입력 검증: 4개 통과.
 - OCR 가짜 전송·재시도·취소: 14개 통과. 기존·신규 ID 중복 목록은 한 번만 요청되고 결과 메타데이터는 3.8을 기록한다.
 - TypeScript native 7.0.2 / compatibility 6.0.2 parity: 진단 0건. OCR 변경 대상 ESLint, Bash 문법 및 diff 공백 검사 통과.
+
+현재 후보 소스에 맞춰 정식 생성기로 207개 항목의 platform-modernization 목록을 갱신했고, 재현성 검사 7개가 통과했다. 원래 Git 출처·상태 분류·게이트는 유지한다.
 
 수정한 격리 fixture는 helper 누락 시 작업·출력·완료 기록 0건, 이전/신규 별칭의 캐시 동일성, 다른 모델·정책·시각 근거 변경의 무효화를 다시 검증했다.
 
@@ -34,6 +36,8 @@ node --test backend/utils/tests/gemini-model.test.mjs
 node --test backend/utils/tests/gemini-client.test.mjs backend/restaurant-crawling/scripts/tests/test_gemini_chunk_generation_config.mjs
 python3 -m unittest backend.utils.tests.test_run_daily_regression backend.utils.tests.test_stage_execution backend.utils.tests.test_media_review_followthrough
 python3 -m unittest backend.utils.tests.test_pipeline_restart_integration
+python3 backend/bin/build_platform_modernization_reconciliation.py --check
+python3 -m unittest backend.utils.tests.test_platform_modernization_reconciliation
 ```
 
 웹 패키지에서는 `bun test tests-unit/gemini-ocr.test.ts`, `npm run typecheck:parity`, 변경 대상 ESLint를 수행했다. 전체 테스트나 실제 공급자 품질 검증을 대신하지 않는다.
