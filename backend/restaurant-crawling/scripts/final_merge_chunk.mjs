@@ -1,3 +1,4 @@
+import { DEFAULT_GEMINI_MODEL, migrateDeprecatedGeminiModel } from '../../utils/gemini-model.mjs';
 import fs from 'fs';
 import path from 'path';
 import { omitUnsupportedGeminiSampling, createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../../utils/gemini-client.mjs';
@@ -56,7 +57,7 @@ async function main() {
             .replace('{FULL_TRANSCRIPT}', fullTranscriptText);
 
         const ai = createGeminiClient(apiKey);
-        const modelName = process.env.CURRENT_MODEL || 'gemini-3.7-flash';
+    const modelName = migrateDeprecatedGeminiModel(process.env.CURRENT_MODEL || DEFAULT_GEMINI_MODEL);
         const thinkingLevel = resolveThinkingLevel(
             process.env.GEMINI_FINAL_MERGE_THINKING_LEVEL,
             process.env.GEMINI_THINKING_LEVEL,

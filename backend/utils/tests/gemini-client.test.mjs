@@ -99,7 +99,7 @@ test('installed SDK default and explicit one-attempt policy each send exactly on
     } finally {await fixture.close();}
 });
 
-test('legacy and current SDK preserve model, prompt and generation settings on the wire',async()=>{
+test('shared client migrates the exact legacy model while preserving prompt and generation settings',async()=>{
     const bodies=[];const routes=[];
     const fixture=await serverFixture(async(req,res)=>{
         let data='';for await(const chunk of req)data+=chunk;
@@ -115,7 +115,8 @@ test('legacy and current SDK preserve model, prompt and generation settings on t
         assert.equal(result.text,'{"ok":true}');
         assert.deepEqual(bodies[0].contents,bodies[1].contents);
         assert.deepEqual(bodies[0].generationConfig,bodies[1].generationConfig);
-        assert.deepEqual(routes[0],routes[1]);
+        assert.equal(routes[0],'/v1beta/models/gemini-3.7-flash:generateContent');
+        assert.equal(routes[1],'/v1beta/models/gemini-3.8-flash:generateContent');
         assert.equal(await leases(),0);
     }finally{await fixture.close();}
 });
@@ -184,6 +185,7 @@ test('thinking fallback retains Gemini 3 default sampling and chunk output limit
     let request;
     const ai={models:{generateContent:async value=>{request=value;return {text:'{"ok":true}'};}}};
     await generateChunkContent(ai,'gemini-3.7-flash','fixture',{uri:'fixture-file',mimeType:'video/mp4'},'video/mp4','');
+    assert.equal(request.model,'gemini-3.8-flash');
     assert.equal(Object.hasOwn(request.config,'temperature'),false);
     assert.equal(request.config.maxOutputTokens,4096);
     assert.equal(request.config.thinkingConfig,undefined);
@@ -208,7 +210,8 @@ globalThis.fetch = async (input, init) => {
 };\n`);
     const scripts = ['../../restaurant-evaluation/scripts/gemini_api_request.mjs', '../../bin/review_recheck_gemini.mjs'];
     for (const script of scripts) {
-        for (const model of [undefined, 'gemini-2.5-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.8-flash', 'models/gemini-3.8-flash']) {
+        for (const model of [undefined, 'gemini-2.5-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.6-flash',
+            'gemini-3.7-flash', 'models/gemini-3.7-flash', 'gemini-3.8-flash', 'models/gemini-3.8-flash', 'gemini-3.8-flash-001']) {
             for (const thinking of ['LOW', 'MEDIUM', 'HIGH', 'MINIMAL', 'minimal']) {
                 fs.writeFileSync(wire, '');
                 fs.rmSync(output, { force: true });
@@ -222,7 +225,10 @@ globalThis.fetch = async (input, init) => {
                     ...(model ? { PRIMARY_MODEL: model } : {}),
                 };
                 const task = execute(process.execPath, ['--import', preload, fileURLToPath(new URL(script, import.meta.url)), input, output], { env });
-                const unsupported = model?.includes('gemini-3.8-flash') && thinking.toUpperCase() === 'MINIMAL';
+                const effectiveModel = model === undefined || model === 'gemini-3.7-flash' || model === 'models/gemini-3.7-flash'
+                    ? 'gemini-3.8-flash' : model;
+                const unsupported = /^models\/gemini-3\.8-flash(?:-[0-9]{3})?$|^gemini-3\.8-flash(?:-[0-9]{3})?$/.test(effectiveModel)
+                    && thinking.toUpperCase() === 'MINIMAL';
                 if (unsupported) {
                     await assert.rejects(task, error => error.code === 1);
                     assert.equal(fs.readFileSync(wire, 'utf8'), '');
@@ -232,7 +238,7 @@ globalThis.fetch = async (input, init) => {
                 await task;
                 const requests = fs.readFileSync(wire, 'utf8').trim().split('\n').map(line => JSON.parse(line));
                 assert.equal(requests.length, 1);
-                assert.equal(requests[0].path, `/v1beta/models/${(model || 'gemini-3.7-flash').replace(/^models\//, '')}:generateContent`);
+                assert.equal(requests[0].path, `/v1beta/models/${effectiveModel.replace(/^models\//, '')}:generateContent`);
                 assert.equal(requests[0].method, 'POST');
                 assert.deepEqual(requests[0].body.contents, [{ role: 'user', parts: [{ text: 'synthetic evaluation prompt' }] }]);
                 assert.deepEqual(requests[0].body.generationConfig, {
@@ -284,7 +290,7 @@ globalThis.fetch = async (input, init) => {
     const allKeys = 'GEMINI_CREDITS_API_KEY=synthetic-funded-key\nGEMINI_API_KEY=synthetic-generic-key\nGEMINI_API_KEY_BYEON=synthetic-legacy-key\n';
     const assertRequest = (request, keySource) => {
         assert.equal(request.keySource, keySource);
-        assert.equal(request.path, '/v1beta/models/gemini-3.7-flash:generateContent');
+        assert.equal(request.path, '/v1beta/models/gemini-3.8-flash:generateContent');
         assert.equal(request.method, 'POST');
         assert.deepEqual(request.body.generationConfig, { maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: 'MEDIUM' } });
         for (const name of ['temperature', 'topP', 'topK', 'top_p', 'top_k']) assert.equal(Object.hasOwn(request.body.generationConfig, name), false);
@@ -294,7 +300,7 @@ globalThis.fetch = async (input, init) => {
         const { stdout } = await fx.invoke();
         assert.equal(fx.requests().length, 1); assertRequest(fx.requests()[0], 'funded');
         const report = JSON.parse(fs.readFileSync(fx.output, 'utf8'));
-        assert.equal(report.model, 'gemini-3.7-flash');
+        assert.equal(report.model, 'gemini-3.8-flash');
         assert.equal(report.credentialSource, 'GEMINI_CREDITS_API_KEY');
         assert.deepEqual(report.config, { maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: 'MEDIUM' } });
         assert.deepEqual(report.configuredBudget, { projectScope: 'offline-probe-fixture', requestsPerMinute: 37, concurrency: 1 });
@@ -314,16 +320,16 @@ globalThis.fetch = async (input, init) => {
     });
     await t.test('SDK model provenance preserves a returned revision and rejects unknown metadata', async () => {
         for (const [name, returned, expected, provenance] of [
-            ['reported-base', 'gemini-3.7-flash', 'gemini-3.7-flash', 'sdk_reported_supported_id'],
-            ['reported-revision', 'models/gemini-3.7-flash-001', 'gemini-3.7-flash-001', 'sdk_reported_supported_id'],
-            ['reported-other-family', 'gemini-3.6-flash', null, 'unrecognized'],
+            ['reported-base', 'gemini-3.8-flash', 'gemini-3.8-flash', 'sdk_reported_supported_id'],
+            ['reported-revision', 'models/gemini-3.8-flash-001', 'gemini-3.8-flash-001', 'sdk_reported_supported_id'],
+            ['reported-other-family', 'gemini-3.7-flash', null, 'unrecognized'],
             ['reported-unsafe', 'provider diagnostic synthetic-funded-key', null, 'unrecognized'],
         ]) {
             const fx = setup(name, allKeys, 'ok', returned);
             await fx.invoke(); assert.equal(fx.requests().length, 1);
             const raw = fs.readFileSync(fx.output, 'utf8');
             const report = JSON.parse(raw);
-            assert.equal(report.model, 'gemini-3.7-flash'); assert.equal(report.status, 'ok');
+            assert.equal(report.model, 'gemini-3.8-flash'); assert.equal(report.status, 'ok');
             assert.equal(report.responseModelVersion, expected); assert.equal(report.responseModelProvenance, provenance);
             assert.equal(raw.includes('provider diagnostic'), false); assert.equal(raw.includes('synthetic-funded-key'), false);
         }
@@ -389,7 +395,7 @@ test('shared sampling policy removes only unsupported fields and never mutates c
         assert.deepEqual(config, { maxOutputTokens: 8192, responseMimeType: 'application/json', thinkingConfig: { thinkingLevel: 'HIGH' } });
         let wire;
         await generateWithProjectBudget({ models: { generateContent: async value => { wire = value; return { text: 'fixture' }; } } }, { model, contents: 'fixture', config: original });
-        assert.equal(wire.model, model);
+        assert.equal(wire.model, model === 'gemini-3.7-flash' ? 'gemini-3.8-flash' : model);
         for (const name of ['temperature', 'topP', 'topK', 'top_p', 'top_k']) assert.equal(Object.hasOwn(wire.config, name), false);
         assert.equal(wire.config.maxOutputTokens, 8192); assert.deepEqual(wire.config.thinkingConfig, { thinkingLevel: 'HIGH' });
     }
@@ -400,6 +406,25 @@ test('shared sampling policy removes only unsupported fields and never mutates c
     assert.deepEqual(original, before);
     assert.deepEqual(omitUnsupportedGeminiSampling('gemini-3.7-flash'), {});
     assert.equal(await leases(), 0);
+});
+
+test('shared client rejects minimal thinking on effective 3.8 before quota admission', async () => {
+    let calls=0;
+    const ai={models:{generateContent:async()=>{calls++;return {text:'must-not-run'};}}};
+    for (const model of ['gemini-3.8-flash','models/gemini-3.8-flash','gemini-3.8-flash-001',
+        'gemini-3.7-flash','models/gemini-3.7-flash']) {
+        await assert.rejects(generateWithProjectBudget(ai,{model,contents:'fixture',config:{thinkingConfig:{thinkingLevel:'minimal'}}}),
+            {code:'GEMINI_THINKING_LEVEL_UNSUPPORTED'});
+    }
+    assert.equal(calls,0);
+    assert.equal(await leases(),0);
+
+    let request;
+    await generateWithProjectBudget({models:{generateContent:async value=>{request=value;return {text:'ok'};}}},
+        {model:'gemini-2.5-flash',contents:'fixture',config:{thinkingConfig:{thinkingLevel:'MINIMAL'}}});
+    assert.equal(request.model,'gemini-2.5-flash');
+    assert.deepEqual(request.config.thinkingConfig,{thinkingLevel:'MINIMAL'});
+    assert.equal(await leases(),0);
 });
 
 test('crawler and final merge entrypoints retain older explicit sampling and modern request caps', async () => {
@@ -419,7 +444,8 @@ globalThis.fetch = async (input, init) => {
     for (const kind of ['crawl', 'merge']) {
         let expectedContents;
         const script = fileURLToPath(new URL(kind === 'crawl' ? '../../restaurant-crawling/scripts/gemini_api_request.mjs' : '../../restaurant-crawling/scripts/final_merge_chunk.mjs', import.meta.url));
-        for (const model of [undefined, 'gemini-2.5-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.6-flash', 'models/gemini-3.7-flash', 'gemini-3.8-flash']) {
+        for (const model of [undefined, 'gemini-2.5-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.6-flash',
+            'gemini-3.7-flash', 'models/gemini-3.7-flash', 'gemini-3.8-flash']) {
             fs.writeFileSync(wire, '');fs.rmSync(output,{force:true});
             const env={PATH:process.env.PATH,GEMINI_API_KEY:'synthetic-crawler-key',FX_CRAWLER_WIRE:wire,
                 GEMINI_BUDGET_PATH:path.join(local,'budget.sqlite'),GEMINI_BUDGET_PROJECT:'offline-crawler-fixture',
@@ -427,7 +453,8 @@ globalThis.fetch = async (input, init) => {
             await execute(process.execPath,['--import',preload,script,...(kind==='crawl'?[prompt,output]:[prompt,output,chunks,transcript])],{env});
             const requests=fs.readFileSync(wire,'utf8').trim().split('\n').map(line=>JSON.parse(line));assert.equal(requests.length,1);
             expectedContents ??= requests[0].body.contents;assert.deepEqual(requests[0].body.contents,expectedContents);
-            assert.equal(requests[0].path,`/v1beta/models/${(model||'gemini-3.7-flash').replace(/^models\//,'')}:generateContent`);
+            const effectiveModel=!model||model==='gemini-3.7-flash'||model==='models/gemini-3.7-flash'?'gemini-3.8-flash':model;
+            assert.equal(requests[0].path,`/v1beta/models/${effectiveModel.replace(/^models\//,'')}:generateContent`);
             assert.deepEqual(requests[0].body.generationConfig,{
                 ...(['gemini-2.5-flash','gemini-3.5-flash'].includes(model)?{temperature:kind==='crawl'?0.2:0.1}:{}),
                 maxOutputTokens:kind==='crawl'?4096:8192,...(kind==='merge'?{responseMimeType:'application/json'}:{}),

@@ -22,7 +22,7 @@ const hash=value=>createHash('sha256').update(value).digest('hex');
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'
     ?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const config=omitUnsupportedGeminiSampling('gemini-3.7-flash',{temperature:.1,maxOutputTokens:8192,responseMimeType:'application/json',thinkingConfig:{thinkingLevel:'MEDIUM'}});
+const config=omitUnsupportedGeminiSampling('gemini-3.8-flash',{temperature:.1,maxOutputTokens:8192,responseMimeType:'application/json',thinkingConfig:{thinkingLevel:'MEDIUM'}});
 let current;
 const server=createServer(async(req,res)=>{
     current.calls++;current.active++;current.peak=Math.max(current.peak,current.active);
@@ -42,12 +42,12 @@ try {
             const used=process.cpuUsage();const started=performance.now();let results;
             if(scenario==='unguarded-merge'){
                 if(implementation==='baseline'){
-                    const model=new GoogleGenerativeAI('fixture').getGenerativeModel({model:'gemini-3.7-flash',generationConfig:config},{baseUrl});
+                    const model=new GoogleGenerativeAI('fixture').getGenerativeModel({model:'gemini-3.8-flash',generationConfig:config},{baseUrl});
                     results=await Promise.all(Array.from({length:6},async()=>{const result=await model.generateContent('fixture');return result.response.text();}));
                 }else{
                     const ai=createGeminiClient('fixture');
                     results=await Promise.all(Array.from({length:6},async()=>{
-                        const result=await generateWithProjectBudget(ai,{model:'gemini-3.7-flash',contents:'fixture',config:{...config,httpOptions:{baseUrl}}});return result.text;
+                        const result=await generateWithProjectBudget(ai,{model:'gemini-3.8-flash',contents:'fixture',config:{...config,httpOptions:{baseUrl}}});return result.text;
                     }));
                 }
             }else{
@@ -58,7 +58,7 @@ try {
                     pending.push(response);return response;
                 }}};
                 const run=contents=>implementation==='candidate'
-                    ?generateWithProjectBudget(fake,{model:'gemini-3.7-flash',contents},contents==='first'?20:1000)
+                    ?generateWithProjectBudget(fake,{model:'gemini-3.8-flash',contents},contents==='first'?20:1000)
                     :withProjectBudget(async()=>{
                         if(contents!=='first')return fake.models.generateContent({contents});
                         let timer;
@@ -77,7 +77,7 @@ try {
                 configuredConcurrency:1,concurrencyViolations:Math.max(0,current.peak-1),
                 resultSha256:hash(JSON.stringify(results)),requestHashes:current.requestHashes});
         }
-    const sources=['backend/utils/gemini-client.mjs','backend/utils/provider-budget.mjs','backend/utils/provider_budget.py',
+    const sources=['backend/utils/gemini-client.mjs','backend/utils/gemini-model.mjs','backend/utils/provider-budget.mjs','backend/utils/provider_budget.py',
         'backend/restaurant-crawling/scripts/final_merge_chunk.mjs','backend/restaurant-crawling/scripts/gemini_chunk_video_request.mjs',
         'backend/restaurant-evaluation/scripts/gemini_api_request.mjs'];
     const report={kind:'controlled_gemini_admission_replay',measuredAt:new Date().toISOString(),

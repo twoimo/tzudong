@@ -124,6 +124,9 @@ time.sleep(0.15)
         script=ROOT/'backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh'
         copy=self.root/'backend/restaurant-crawling/scripts'/script.name
         copy.parent.mkdir(parents=True)
+        helper_dir=self.root/'backend/utils';helper_dir.mkdir(parents=True)
+        for helper in ['gemini-model.mjs','gemini-model.sh']:
+            shutil.copy2(ROOT/'backend/utils'/helper,helper_dir/helper)
         assets=self.root/'asset.txt';assets.write_text('synthetic asset')
         (copy.parent/'final_merge_chunk.mjs').write_text('synthetic asset')
         splitter=copy.parent/'split_video_chunks.mjs';splitter.write_text('synthetic splitter')
@@ -163,6 +166,13 @@ main() { process_channel tzuyang; }
             GEMINI_CHUNK_THINKING_LEVEL='LOW')
         bash='/opt/homebrew/bin/bash' if Path('/opt/homebrew/bin/bash').is_file() else shutil.which('bash')
         command=[bash,str(copy),'--channel','tzuyang','--url','https://www.youtube.com/watch?v='+video]
+        shell_helper=helper_dir/'gemini-model.sh';shell_helper.unlink()
+        missing_helper=subprocess.run(command,env=env,capture_output=True,timeout=15)
+        self.assertNotEqual(missing_helper.returncode,0)
+        self.assertFalse(self.calls.exists())
+        self.assertFalse((data/'crawling'/f'{video}.jsonl').exists())
+        self.assertFalse((data/'crawling/.receipts'/f'{video}.json').exists())
+        shutil.copy2(ROOT/'backend/utils/gemini-model.sh',shell_helper)
         with subprocess.Popen(command,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE) as first:
             with subprocess.Popen(command,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE) as second:
                 _,first_error=first.communicate(timeout=15);_,second_error=second.communicate(timeout=15)
@@ -177,6 +187,15 @@ main() { process_channel tzuyang; }
             self.assertEqual(completed.returncode,0,completed.stderr.decode()[-500:])
             self.assertEqual(len(self.calls.read_text().splitlines()),index)
 
+        # The deprecated alias and its replacement are the same effective model,
+        # so changing only the spelling must retain the current receipt.
+        alias_receipt=json.loads(receipt.read_text())['inputHash']
+        env.update(PRIMARY_MODEL='gemini-3.8-flash',FALLBACK_MODEL='gemini-3.8-flash')
+        completed=subprocess.run(command,env=env,capture_output=True,timeout=15)
+        self.assertEqual(completed.returncode,0,completed.stderr.decode()[-500:])
+        self.assertEqual(len(self.calls.read_text().splitlines()),3)
+        self.assertEqual(json.loads(receipt.read_text())['inputHash'],alias_receipt)
+
         # Exercise the real shell cache arguments: generation policy bytes,
         # both model selections and thinking changes must invalidate a receipt.
         original_output=(data/'crawling'/f'{video}.jsonl').read_bytes()
@@ -184,7 +203,7 @@ main() { process_channel tzuyang; }
         changed_policy=policy_source.replace('temperature: 0.2','temperature: 0.3')
         self.assertNotEqual(changed_policy,policy_source)
         mutations=[lambda: chunk_api.write_text(changed_policy),
-                   lambda: env.update(PRIMARY_MODEL='gemini-3.8-flash'),
+                   lambda: env.update(PRIMARY_MODEL='gemini-3.6-flash'),
                    lambda: env.update(FALLBACK_MODEL='gemini-2.5-flash'),
                    lambda: env.update(GEMINI_CHUNK_THINKING_LEVEL='HIGH')]
         for count,mutate in enumerate(mutations,4):

@@ -46,8 +46,10 @@ done
 fi
 
 # Gemini 모델 설정
-export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.7-flash}"
-export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.7-flash}"
+export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.8-flash}"
+export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.8-flash}"
+source "$PROJECT_ROOT/utils/gemini-model.sh" || exit 1
+migrate_deprecated_gemini_model_vars PRIMARY_MODEL FALLBACK_MODEL WEB_GEMINI_MODEL TZUDONG_STAGE_CURRENT_MODEL
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-LOW}"
 export GEMINI_CHUNK_THINKING_LEVEL="${GEMINI_CHUNK_THINKING_LEVEL:-$GEMINI_THINKING_LEVEL}"
@@ -270,7 +272,7 @@ run_chunk_web_fallback() {
     local fallback_prompt
     local fallback_segment
     local fallback_response
-    local web_model="${WEB_GEMINI_MODEL:-gemini-3.7-flash}"
+    local web_model="${WEB_GEMINI_MODEL:-gemini-3.8-flash}"
     local web_fallback_timeout_sec="${WEB_FALLBACK_TIMEOUT_SEC:-1200}"
 
     if ! [[ "$web_fallback_timeout_sec" =~ ^[0-9]+$ ]] || [ "$web_fallback_timeout_sec" -lt 1 ]; then
@@ -1038,9 +1040,10 @@ process_channel() {
             --asset "$SCRIPT_DIR/08-chunk-multimodal-crawling.sh"
             --asset "$SCRIPT_DIR/split_video_chunks.mjs" --asset "$SCRIPT_DIR/../prompts/final_merge_prompt.txt"
             --asset "$SCRIPT_DIR/final_merge_chunk.mjs" --asset "$PROJECT_ROOT/utils/gemini-client.mjs"
+            --asset "$PROJECT_ROOT/utils/gemini-model.mjs" --asset "$PROJECT_ROOT/utils/gemini-model.sh"
             --asset "$PROJECT_ROOT/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/utils/provider_budget.py"
             --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL"
-            --setting "${WEB_GEMINI_MODEL:-gemini-3.7-flash}" --setting "${FORCE_WEB_FALLBACK:-0}"
+            --setting "${WEB_GEMINI_MODEL:-gemini-3.8-flash}" --setting "${FORCE_WEB_FALLBACK:-0}"
             --setting "$GEMINI_CHUNK_THINKING_LEVEL" --setting "$GEMINI_FINAL_MERGE_THINKING_LEVEL"
             --output "$crawling_file")
         local visual_receipt_input="$full_data_path/visual-location/${video_id}.jsonl"
@@ -1178,7 +1181,7 @@ main() {
 import { GoogleGenAI } from '@google/genai';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const r = await ai.models.generateContent({
-    model: process.env.CURRENT_MODEL || 'gemini-3.7-flash',
+    model: process.env.CURRENT_MODEL || 'gemini-3.8-flash',
     contents: '1+1=?'
 });
 console.log(r.text);

@@ -1,3 +1,4 @@
+import { DEFAULT_GEMINI_MODEL, migrateDeprecatedGeminiModel } from '../../utils/gemini-model.mjs';
 import fs from 'fs';
 import path from 'path';
 import { omitUnsupportedGeminiSampling, createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../../utils/gemini-client.mjs';
@@ -117,7 +118,7 @@ async function main() {
         const ai = createGeminiClient(apiKey);
         
         // 환경변수 CURRENT_MODEL 우선, 없으면 기본 모델 사용
-        const modelName = process.env.CURRENT_MODEL || 'gemini-3.7-flash';
+    const modelName = migrateDeprecatedGeminiModel(process.env.CURRENT_MODEL || DEFAULT_GEMINI_MODEL);
         const thinkingLevel = resolveThinkingLevel(process.env.GEMINI_THINKING_LEVEL, 'LOW');
         console.log('DEBUG: Configuring Gemini model.');
         const request = {

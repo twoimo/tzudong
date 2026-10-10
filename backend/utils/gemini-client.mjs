@@ -1,6 +1,7 @@
 /** One SDK attempt per admitted operation; deadlines retain permits until settlement. */
 import { GoogleGenAI } from '@google/genai';
 import { applyProjectCooldown, withProjectBudget } from './provider-budget.mjs';
+import { migrateDeprecatedGeminiModel, assertSupportedGeminiThinking } from './gemini-model.mjs';
 
 function fixedError(code) {
     return Object.assign(new Error(code), { code });
@@ -64,10 +65,14 @@ export function omitUnsupportedGeminiSampling(model, config = {}) {
 
 export function generateWithProjectBudget(ai, request, timeoutMs = 300000) {
     if (request.config?.abortSignal?.aborted) return Promise.reject(fixedError('GEMINI_REQUEST_ABORTED'));
+    const model = migrateDeprecatedGeminiModel(request.model);
+    try { assertSupportedGeminiThinking(model, request.config?.thinkingConfig?.thinkingLevel); }
+    catch (error) { return Promise.reject(error); }
     return withProjectBudget(() => withGeminiDeadline(signal => ai.models.generateContent({
         ...request,
+        model,
         config: {
-            ...omitUnsupportedGeminiSampling(request.model, request.config),
+            ...omitUnsupportedGeminiSampling(model, request.config),
             abortSignal: signal,
             httpOptions: { ...request.config?.httpOptions, timeout: timeoutMs, retryOptions: { attempts: 1 } },
         },

@@ -355,8 +355,10 @@ fi
 
 # Gemini API 키 및 모델 설정
 export GEMINI_API_KEY="${GEMINI_API_KEY:-$GEMINI_API_KEY_BYEON}"
-export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.7-flash}"
-export FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3.7-flash}"
+export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.8-flash}"
+export FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3.8-flash}"
+source "$PROJECT_ROOT/backend/utils/gemini-model.sh" || exit 1
+migrate_deprecated_gemini_model_vars PRIMARY_MODEL FALLBACK_MODEL
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-LOW}"
 export LAAJ_THINKING_LEVEL="${LAAJ_THINKING_LEVEL:-MEDIUM}"
@@ -566,6 +568,7 @@ SCAN_CACHE_ARGS=(--receipt "$LAAJ_RESULTS_DIR/.receipts/{id}.json"
     --metadata "$META_DIR/{id}.jsonl" --asset "$PROMPT_FILE" --asset "$PARSER_SCRIPT"
     --asset "$SCRIPT_DIR/11-laaj-evaluation.sh" --asset "$GEMINI_API_SCRIPT"
     --asset "$PROJECT_ROOT/backend/utils/gemini-client.mjs"
+    --asset "$PROJECT_ROOT/backend/utils/gemini-model.mjs" --asset "$PROJECT_ROOT/backend/utils/gemini-model.sh"
     --asset "$PROJECT_ROOT/backend/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/backend/utils/provider_budget.py"
     --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL" --setting "$LAAJ_THINKING_LEVEL"
     --setting "$AGY_MODEL_LABEL" --output "$LAAJ_RESULTS_DIR/{id}.jsonl")
@@ -623,6 +626,7 @@ for i in "${!VIDEO_IDS[@]}"; do
         --metadata "$META_FILE" --asset "$PROMPT_FILE" --asset "$PARSER_SCRIPT"
         --asset "$SCRIPT_DIR/11-laaj-evaluation.sh" --asset "$GEMINI_API_SCRIPT"
         --asset "$PROJECT_ROOT/backend/utils/gemini-client.mjs"
+        --asset "$PROJECT_ROOT/backend/utils/gemini-model.mjs" --asset "$PROJECT_ROOT/backend/utils/gemini-model.sh"
         --asset "$PROJECT_ROOT/backend/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/backend/utils/provider_budget.py"
         --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL" --setting "$LAAJ_THINKING_LEVEL"
         --setting "$AGY_MODEL_LABEL" --output "$OUTPUT_FILE")

@@ -1,3 +1,4 @@
+import { DEFAULT_GEMINI_MODEL, migrateDeprecatedGeminiModel, assertSupportedGeminiThinking } from '../../utils/gemini-model.mjs';
 import { retryAfterSeconds } from '../../utils/provider-budget.mjs';
 import { omitUnsupportedGeminiSampling, createGeminiClient, generateWithProjectBudget, withGeminiDeadline as fetchWithTimeout, logGeminiUsage } from '../../utils/gemini-client.mjs';
 /**
@@ -295,7 +296,8 @@ async function main() {
         process.exit(1);
     }
 
-    const modelName = process.env.CURRENT_MODEL || 'gemini-3.7-flash';
+    const modelName = migrateDeprecatedGeminiModel(process.env.CURRENT_MODEL || DEFAULT_GEMINI_MODEL);
+    assertSupportedGeminiThinking(modelName, resolveThinkingLevel(process.env.GEMINI_CHUNK_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'LOW'));
     console.log('GEMINI_CHUNK_REQUEST_STARTED');
 
     const promptText = fs.readFileSync(promptFile, 'utf8');

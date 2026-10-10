@@ -1,5 +1,5 @@
 """Offline concrete regressions for cache outcomes, worker IO, health and recipe."""
-import json,os,io,re,shlex,subprocess,tempfile,unittest
+import json,os,io,re,shlex,shutil,subprocess,tempfile,unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -77,10 +77,12 @@ printf 'evaluation\\n' >> "$TEST_HEALTH_LOG"
  def test_shell_receipt_changes_for_web_route_and_optional_visual_bytes(self):
   source=(ROOT/'backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh').read_text();snippet=source.split('        local cache_args=(',1)[1].split('        local force_args=',1)[0];snippet='local cache_args=('+snippet
   with tempfile.TemporaryDirectory() as d:
-   root=Path(d);variables={'receipt_file':str(root/'receipt'),'transcript_file':str(root/'transcript.jsonl'),'meta_file':str(root/'meta.jsonl'),'crawling_file':str(root/'out.jsonl'),'SCRIPT_DIR':str(root/'scripts'),'PROJECT_ROOT':str(root/'backend'),'full_data_path':str(root/'data'),'video_id':'ABCDEFGHIJK','PRIMARY_MODEL':'gemini-3.7-flash','FALLBACK_MODEL':'gemini-3.7-flash','GEMINI_CHUNK_THINKING_LEVEL':'LOW','GEMINI_FINAL_MERGE_THINKING_LEVEL':'LOW'}
+   root=Path(d);helper_dir=root/'backend/utils';helper_dir.mkdir(parents=True)
+   for helper in ['gemini-model.mjs','gemini-model.sh']:shutil.copy2(ROOT/'backend/utils'/helper,helper_dir/helper)
+   variables={'receipt_file':str(root/'receipt'),'transcript_file':str(root/'transcript.jsonl'),'meta_file':str(root/'meta.jsonl'),'crawling_file':str(root/'out.jsonl'),'SCRIPT_DIR':str(root/'scripts'),'PROJECT_ROOT':str(root/'backend'),'full_data_path':str(root/'data'),'video_id':'ABCDEFGHIJK','PRIMARY_MODEL':'gemini-3.7-flash','FALLBACK_MODEL':'gemini-3.7-flash','GEMINI_CHUNK_THINKING_LEVEL':'LOW','GEMINI_FINAL_MERGE_THINKING_LEVEL':'LOW'}
    for key in ['PROMPT_FILE','CHUNK_PLANNER','MERGE_RESULTS','PARSER_SCRIPT','GEMINI_CHUNK_API']:variables[key]=str(root/key)
    def recipe(model='gemini-3.7-flash',route='0'):
-    v={**variables,'WEB_GEMINI_MODEL':model,'FORCE_WEB_FALLBACK':route};pre='\n'.join(k+'='+shlex.quote(x) for k,x in v.items());code=pre+'\ncapture(){\n'+snippet+'\nprintf "%s\\0" "${cache_args[@]}";\n}\ncapture'
+    v={**variables,'WEB_GEMINI_MODEL':model,'FORCE_WEB_FALLBACK':route};pre='\n'.join(k+'='+shlex.quote(x) for k,x in v.items());code=pre+'\nsource "$PROJECT_ROOT/utils/gemini-model.sh"\nmigrate_deprecated_gemini_model_vars PRIMARY_MODEL FALLBACK_MODEL WEB_GEMINI_MODEL TZUDONG_STAGE_CURRENT_MODEL\ncapture(){\n'+snippet+'\nprintf "%s\\0" "${cache_args[@]}";\n}\ncapture'
     args=subprocess.check_output(['/opt/homebrew/bin/bash','--noprofile','--norc','-c',code]).decode().split('\0')[:-1];groups={}
     for i in range(0,len(args),2):groups.setdefault(args[i],[]).append(args[i+1])
     for k in ['--input','--metadata','--asset']:
@@ -88,5 +90,5 @@ printf 'evaluation\\n' >> "$TEST_HEALTH_LOG"
       p=Path(name);p.parent.mkdir(parents=True,exist_ok=True)
       if not p.exists():p.write_text('{"fixture":true}\n' if p.suffix=='.jsonl' else 'asset')
     return fingerprint([Path(x) for x in groups['--input']],metadata=[Path(x) for x in groups['--metadata']],assets=[Path(x) for x in groups['--asset']],settings=groups['--setting'])
-   absent=recipe();self.assertNotEqual(absent,recipe('gemini-3.8-flash'));self.assertNotEqual(absent,recipe(route='1'))
+   absent=recipe();self.assertEqual(absent,recipe('gemini-3.8-flash'));self.assertNotEqual(absent,recipe('gemini-2.5-flash'));self.assertNotEqual(absent,recipe(route='1'))
    visual=root/'data/visual-location/ABCDEFGHIJK.jsonl';visual.parent.mkdir(parents=True);visual.write_text('{"candidate":"one"}\n');present=recipe();self.assertNotEqual(absent,present);visual.write_text('{"candidate":"two"}\n');self.assertNotEqual(present,recipe());visual.unlink();self.assertEqual(absent,recipe())

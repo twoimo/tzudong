@@ -3,9 +3,10 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { safeErrorName } from '../utils/privacy-log.mjs';
+import { DEFAULT_GEMINI_MODEL, migrateDeprecatedGeminiModel } from '../utils/gemini-model.mjs';
 
 function parseArgs(argv) {
-  const args = { output: '', model: process.env.CURRENT_MODEL || process.env.PRIMARY_MODEL || 'gemini-3.7-flash', requireApiAvailable: false, checkedAt: '' };
+  const args = { output: '', model: process.env.CURRENT_MODEL || process.env.PRIMARY_MODEL || DEFAULT_GEMINI_MODEL, requireApiAvailable: false, checkedAt: '' };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--output') args.output = argv[++i] || '';
@@ -13,6 +14,7 @@ function parseArgs(argv) {
     else if (arg === '--checked-at') args.checkedAt = argv[++i] || '';
     else if (arg === '--require-api-available') args.requireApiAvailable = true;
   }
+  args.model = migrateDeprecatedGeminiModel(args.model);
   return args;
 }
 

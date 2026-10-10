@@ -38,6 +38,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from utils.jsonl_utils import load_last_jsonl_record
+from utils.gemini_model import DEFAULT_GEMINI_MODEL, migrate_deprecated_gemini_model
 from utils.runtime_paths import load_backend_env, resolve_backend_root
 from utils.privacy_log import safe_error_name
 from utils.stage_cache import fingerprint, reusable, complete, atomic_write, stage_lock, retire_outputs
@@ -155,7 +156,7 @@ NON_RESTAURANT_HINTS = (
     "CU",
 )
 
-GEMINI_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.7-flash")
+GEMINI_MODEL = migrate_deprecated_gemini_model(os.getenv("GEMINI_FALLBACK_MODEL", DEFAULT_GEMINI_MODEL))
 GEMINI_TIMEOUT_SEC = int(os.getenv("GEMINI_FALLBACK_TIMEOUT_SEC", "90") or "90")
 
 
@@ -1367,7 +1368,7 @@ def main():
                 continue
             if not any(value is True for value in data.get("evaluation_target", {}).values()):
                 continue
-            input_hash = fingerprint([input_file], assets=[Path(__file__)], settings={
+            input_hash = fingerprint([input_file], assets=[Path(__file__), BACKEND_ROOT / "utils" / "gemini_model.py"], settings={
                 "naverInterval": _naver_pacer.interval, "ncpInterval": _ncp_pacer.interval,
                 "fallbackModel": GEMINI_MODEL, "fallbackTimeout": GEMINI_TIMEOUT_SEC,
             })

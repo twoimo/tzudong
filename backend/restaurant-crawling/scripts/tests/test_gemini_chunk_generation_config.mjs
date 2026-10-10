@@ -38,10 +38,12 @@ const cases = [
     ['gemini-3.5-flash-lite', undefined],
     ['gemini-3.6-flash', undefined],
     ['gemini-3.7-flash', undefined],
+    ['models/gemini-3.7-flash', undefined],
     ['models/gemini-3.7-flash-001', undefined],
     ['gemini-4.0-flash', undefined],
     ['gemini-3.8-flash', undefined],
     ['models/gemini-3.8-flash', undefined],
+    ['gemini-3.8-flash-001', undefined],
     ['gemini-2.5-flash', 0.2],
     ['models/gemini-2.0-flash', 0.2],
     ['gemini-30-flash', 0.2],
@@ -59,11 +61,21 @@ test('installed SDK serializes model-specific chunk config without changing cont
                     return Response.json(response);
                 },
             } });
-            const result = await generateChunkContent(ai, model, contents[0].parts[0].text,
+            const task = generateChunkContent(ai, model, contents[0].parts[0].text,
                 { uri: contents[0].parts[1].fileData.fileUri }, 'video/mp4', thinkingLevel);
+            const effectiveModel = model === 'gemini-3.7-flash' || model === 'models/gemini-3.7-flash'
+                ? 'gemini-3.8-flash' : model;
+            const rejectsMinimal = /^models\/gemini-3\.8-flash(?:-[0-9]{3})?$|^gemini-3\.8-flash(?:-[0-9]{3})?$/.test(effectiveModel)
+                && thinkingLevel === 'MINIMAL';
+            if (rejectsMinimal) {
+                await assert.rejects(task, { code: 'GEMINI_THINKING_LEVEL_UNSUPPORTED' });
+                assert.equal(requests.length, 0);
+                continue;
+            }
+            const result = await task;
             assert.equal(result.text, '{"fixture":true}');
             assert.equal(requests.length, 1);
-            assert.equal(requests[0].path, `/v1beta/models/${model.replace(/^models\//, '')}:generateContent`);
+            assert.equal(requests[0].path, `/v1beta/models/${effectiveModel.replace(/^models\//, '')}:generateContent`);
             assert.deepEqual(requests[0].body.contents, contents);
             assert.deepEqual(requests[0].body.generationConfig, {
                 ...(temperature === undefined ? {} : { temperature }),
@@ -120,7 +132,7 @@ globalThis.fetch = async (input, init) => {
 `);
 
 test('chunk CLI keeps sampling through thinking fallback and propagates other provider failures', async () => {
-    for (const model of [undefined, 'gemini-3.8-flash', 'models/gemini-3.8-flash', 'gemini-2.5-flash']) {
+    for (const model of [undefined, 'gemini-3.7-flash', 'models/gemini-3.7-flash', 'gemini-3.8-flash', 'models/gemini-3.8-flash', 'gemini-2.5-flash']) {
         for (const scenario of ['success', 'thinking', 'model', 'forbidden', 'quota']) {
             fs.writeFileSync(wire, '');
             fs.rmSync(output, { force: true });
@@ -141,7 +153,9 @@ test('chunk CLI keeps sampling through thinking fallback and propagates other pr
             assert.equal(requests.length, scenario === 'success' ? 1 : 2, `${model} / ${scenario}`);
             assert.equal(records.filter(record => record.cleanup).length, ['success', 'thinking'].includes(scenario) ? 1 : 2);
             for (const [index, request] of requests.entries()) {
-                assert.equal(request.path, `/v1beta/models/${(model || 'gemini-3.7-flash').replace(/^models\//, '')}:generateContent`);
+                const effectiveModel = !model || model === 'gemini-3.7-flash' || model === 'models/gemini-3.7-flash'
+                    ? 'gemini-3.8-flash' : model;
+                assert.equal(request.path, `/v1beta/models/${effectiveModel.replace(/^models\//, '')}:generateContent`);
                 assert.deepEqual(request.body.contents, contents);
                 assert.deepEqual(request.body.generationConfig, {
                     ...(model === 'gemini-2.5-flash' ? { temperature: 0.2 } : {}),
@@ -152,5 +166,24 @@ test('chunk CLI keeps sampling through thinking fallback and propagates other pr
             if (['success', 'thinking'].includes(scenario)) assert.equal(fs.readFileSync(output, 'utf8'), '{"fixture":true}');
             else assert.equal(fs.existsSync(output), false);
         }
+    }
+});
+
+test('chunk CLI rejects minimal on effective 3.8 before upload or quota admission', async () => {
+    for (const model of [undefined, 'gemini-3.7-flash', 'models/gemini-3.7-flash', 'gemini-3.8-flash', 'models/gemini-3.8-flash']) {
+        fs.writeFileSync(wire, '');
+        fs.rmSync(output, { force: true });
+        await assert.rejects(execute(process.execPath, ['--import', preload, script, prompt, output, video], {
+            env: {
+                PATH: process.env.PATH, ...budget,
+                GEMINI_API_KEY: 'synthetic-never-sent',
+                GEMINI_CHUNK_THINKING_LEVEL: 'minimal',
+                FX_WIRE: wire, FX_SCENARIO: 'success',
+                ...(model ? { CURRENT_MODEL: model } : {}),
+            },
+            timeout: 15000,
+        }), error => error.code === 1 && error.stderr.includes('GEMINI_THINKING_LEVEL_UNSUPPORTED'));
+        assert.equal(fs.readFileSync(wire, 'utf8'), '', String(model));
+        assert.equal(fs.existsSync(output), false, String(model));
     }
 });

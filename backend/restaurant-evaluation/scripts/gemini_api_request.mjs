@@ -1,3 +1,4 @@
+import { DEFAULT_GEMINI_MODEL, migrateDeprecatedGeminiModel } from '../../utils/gemini-model.mjs';
 import { omitUnsupportedGeminiSampling, createGeminiClient, generateWithProjectBudget, logGeminiUsage, requireGeminiText } from '../../utils/gemini-client.mjs';
 import fs from 'fs';
 import { logSafeError } from '../../utils/privacy-log.mjs';
@@ -53,7 +54,7 @@ async function main() {
         console.log("DEBUG: Reading prompt file...");
         const prompt = fs.readFileSync(promptFile, 'utf8');
         console.log(`DEBUG: Prompt Size=${prompt.length}`);
-        const modelName = process.env.PRIMARY_MODEL || 'gemini-3.7-flash';
+    const modelName = migrateDeprecatedGeminiModel(process.env.PRIMARY_MODEL || DEFAULT_GEMINI_MODEL);
         const thinkingLevel = resolveThinkingLevel(process.env.LAAJ_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'MEDIUM');
         const isGemini38 = modelName.replace(/^models\//, '') === 'gemini-3.8-flash';
         if (isGemini38 && thinkingLevel === 'MINIMAL') {
