@@ -15,7 +15,7 @@ describe('gemini receipt ocr helper', () => {
   test('retains older explicit sampling while omitting removed controls for modern Flash models', () => {
     const parts = buildGeminiReceiptOcrParts({ prompt: 'synthetic receipt', imageBase64: 'AA==', mimeType: 'image/png' });
     for (const model of ['gemini-3.5-flash-lite', 'gemini-3.5-flash-lite-001', 'gemini-3.6-flash',
-      'gemini-3.7-flash', 'gemini-3.8-flash', 'models/gemini-3.8-flash', 'gemini-4.0-flash']) {
+      'gemini-3.8-flash', 'models/gemini-3.8-flash', 'gemini-4.0-flash']) {
       const request = buildGeminiReceiptOcrRequest({ model, parts, thinkingLevel: 'MEDIUM' });
       expect(request.model).toBe(model);
       expect(request.config).not.toHaveProperty('temperature');
@@ -23,6 +23,11 @@ describe('gemini receipt ocr helper', () => {
       expect(request.config).not.toHaveProperty('topK');
       expect(request.config.responseMimeType).toBe('application/json');
       expect(request.config.thinkingConfig).toEqual({ thinkingLevel: 'MEDIUM' });
+    }
+    for (const model of ['gemini-3.7-flash', 'models/gemini-3.7-flash']) {
+      const request = buildGeminiReceiptOcrRequest({ model, parts, thinkingLevel: 'MEDIUM' });
+      expect(request.model).toBe('gemini-3.8-flash');
+      expect(request.config).not.toHaveProperty('temperature');
     }
     for (const model of ['gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-3.5-flash']) {
       expect(buildGeminiReceiptOcrRequest({ model, parts, thinkingLevel: 'MEDIUM' }).config.temperature).toBe(0);
@@ -54,6 +59,34 @@ describe('gemini receipt ocr helper', () => {
     expect(requests[2].config.temperature).toBe(0);
   });
 
+  test('migrates a legacy env model to the 3.8 wire URL and returned metadata', async () => {
+    const originalFetch = globalThis.fetch;
+    const paths: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      paths.push(new URL(request.url).pathname);
+      return Response.json({ candidates: [{ content: { parts: [{ text: '{"store_name":"레거시 식당"}' }] } }] });
+    }) as typeof fetch;
+
+    try {
+      const result = await callGeminiReceiptOcr({
+        apiKey: 'synthetic-wire-test',
+        imageBase64: 'AA==',
+        mimeType: 'image/png',
+        prompt: 'synthetic receipt',
+        env: { GEMINI_OCR_MODEL: 'models/gemini-3.7-flash' } as NodeJS.ProcessEnv,
+      });
+
+      expect(paths).toHaveLength(1);
+      expect(paths[0]).toEndWith('/models/gemini-3.8-flash:generateContent');
+      expect(result.model).toBe('gemini-3.8-flash');
+      expect(result.attempts.map(attempt => attempt.model)).toEqual(['gemini-3.8-flash']);
+      expect(result.data.store_name).toBe('레거시 식당');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test('does not spend a provider call after caller cancellation', async () => {
     const controller = new AbortController(); controller.abort(); let calls = 0;
     await expect(callGeminiReceiptOcr({ apiKey: 'test', imageBase64: '', mimeType: 'image/png', prompt: 'test',
@@ -78,6 +111,36 @@ describe('gemini receipt ocr helper', () => {
     expect(getGeminiOcrModels({} as NodeJS.ProcessEnv)).toEqual(['gemini-3.6-flash']);
     expect(getGeminiOcrModels({ GEMINI_OCR_DEFAULT_MODEL: 'gemini-env-default' } as NodeJS.ProcessEnv)).toEqual(['gemini-env-default']);
     expect(getGeminiOcrModels({ GEMINI_OCR_MODEL: ' a, b ,, c ' } as NodeJS.ProcessEnv)).toEqual(['a', 'b', 'c']);
+  });
+
+  test('normalizes exact 3.7 aliases before deduplication and preserves other model names', () => {
+    expect(getGeminiOcrDefaultModel({ GEMINI_OCR_DEFAULT_MODEL: 'gemini-3.7-flash' } as NodeJS.ProcessEnv)).toBe('gemini-3.8-flash');
+    expect(getGeminiOcrDefaultModel({ GEMINI_OCR_DEFAULT_MODEL: 'models/gemini-3.7-flash' } as NodeJS.ProcessEnv)).toBe('gemini-3.8-flash');
+    expect(getGeminiOcrModels({
+      GEMINI_OCR_MODEL: 'gemini-3.7-flash,gemini-3.8-flash,models/gemini-3.7-flash,gemini-3.7-flash-001,other-model',
+    } as NodeJS.ProcessEnv)).toEqual(['gemini-3.8-flash', 'gemini-3.7-flash-001', 'other-model']);
+  });
+
+  test('calls migrated aliases once while retaining other configured fallbacks', async () => {
+    const seenModels: string[] = [];
+    const result = await callGeminiReceiptOcr({
+      apiKey: 'gemini-test-key',
+      imageBase64: 'AA==',
+      mimeType: 'image/png',
+      prompt: 'synthetic receipt',
+      env: {
+        GEMINI_OCR_MODEL: 'gemini-3.7-flash,gemini-3.8-flash,models/gemini-3.7-flash,gemini-3.7-flash-001,other-model',
+      } as NodeJS.ProcessEnv,
+      generateContentImpl: async ({ model }) => {
+        seenModels.push(model);
+        if (model !== 'other-model') throw new Error('synthetic fallback');
+        return '{"store_name":"보존 식당"}';
+      },
+    });
+
+    expect(seenModels).toEqual(['gemini-3.8-flash', 'gemini-3.7-flash-001', 'other-model']);
+    expect(result.attempts.map(attempt => attempt.model)).toEqual(seenModels);
+    expect(result.model).toBe('other-model');
   });
 
 

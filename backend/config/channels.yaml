@@ -37,7 +37,7 @@ api:
     model: "gpt-4o-mini"
   gemini:
     models:
-      - "gemini-3.7-flash"
+      - "gemini-3.8-flash"
 
 # 수집 설정
 collection:

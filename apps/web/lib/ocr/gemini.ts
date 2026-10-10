@@ -11,6 +11,12 @@ export const GEMINI_OCR_FALLBACK_MODEL = 'gemini-3.6-flash';
 export const GEMINI_OCR_DEFAULT_THINKING_LEVEL = 'MEDIUM';
 export type GeminiOcrThinkingLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
+function normalizeGeminiOcrModel(model: string): string {
+  return model === 'gemini-3.7-flash' || model === 'models/gemini-3.7-flash'
+    ? 'gemini-3.8-flash'
+    : model;
+}
+
 export class GeminiOcrError extends Error {
   attempts: ReceiptOcrAttempt[];
 
@@ -29,11 +35,11 @@ function sanitizeCsv(value: string | undefined): string[] {
 }
 
 export function getGeminiOcrDefaultModel(env: NodeJS.ProcessEnv = process.env): string {
-  return env.GEMINI_OCR_DEFAULT_MODEL?.trim() || GEMINI_OCR_FALLBACK_MODEL;
+  return normalizeGeminiOcrModel(env.GEMINI_OCR_DEFAULT_MODEL?.trim() || GEMINI_OCR_FALLBACK_MODEL);
 }
 
 export function getGeminiOcrModels(env: NodeJS.ProcessEnv = process.env): string[] {
-  const configured = sanitizeCsv(env.GEMINI_OCR_MODEL);
+  const configured = sanitizeCsv(env.GEMINI_OCR_MODEL).map(normalizeGeminiOcrModel);
   if (configured.length) return [...new Set(configured)];
   return [getGeminiOcrDefaultModel(env)];
 }
@@ -81,13 +87,14 @@ export function buildGeminiReceiptOcrRequest(input: {
 }) {
   // Google removed sampling controls starting with 3.6 Flash and 3.5
   // Flash-Lite, including later releases. Preserve older explicit models.
-  const model = input.model.replace(/^models\//, '');
+  const requestModel = normalizeGeminiOcrModel(input.model);
+  const model = requestModel.replace(/^models\//, '');
   const version = /^gemini-(\d+)\.(\d+)-/.exec(model);
   const modern = /^gemini-3\.5-flash-lite(?:-|$)/.test(model)
     || (version !== null && (Number(version[1]) > 3
       || (Number(version[1]) === 3 && Number(version[2]) >= 6)));
   return {
-    model: input.model,
+    model: requestModel,
     contents: [{ role: 'user' as const, parts: input.parts }],
     config: {
       ...(modern ? {} : { temperature: 0 }),

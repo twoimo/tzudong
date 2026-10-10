@@ -29,7 +29,7 @@ async function main() {
         .find(name => typeof credentials[name] === 'string' && credentials[name].trim());
     const apiKey = credentialSource ? credentials[credentialSource].trim() : '';
     if (!apiKey) throw new Error('PROBE_KEY_MISSING');
-    // Gemini 3.6+ deprecates sampling overrides. Keep the explicit 3.7 model and all existing caps.
+    // Gemini 3.6+ deprecates sampling overrides. Keep the explicit 3.8 model and all existing caps.
     const config = { maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: 'MEDIUM' } };
     const report = {
         schemaVersion: 1,
@@ -37,7 +37,7 @@ async function main() {
         measuredAt: new Date().toISOString(),
         sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
         probeSourceSha256: sha256(fs.readFileSync(fileURLToPath(import.meta.url))),
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.8-flash',
         responseModelVersion: null,
         responseModelProvenance: 'not_reported',
         credentialSource,
@@ -95,7 +95,7 @@ async function main() {
         const responseModel = typeof response.modelVersion === 'string'
             ? response.modelVersion.replace(/^models\//, '') : null;
         // Retain the actual supported ID/revision, never synthesize it from the request.
-        report.responseModelVersion = /^gemini-3\.7-flash(?:-[0-9]{3})?$/.test(responseModel || '')
+        report.responseModelVersion = /^gemini-3\.8-flash(?:-[0-9]{3})?$/.test(responseModel || '')
             ? responseModel : null;
         report.responseModelProvenance = report.responseModelVersion ? 'sdk_reported_supported_id'
             : response.modelVersion == null ? 'not_reported' : 'unrecognized';
