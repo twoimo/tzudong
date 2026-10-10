@@ -622,8 +622,20 @@ class CliContractTest(unittest.TestCase):
             self.assertRegex(module, re.compile(r"^backend(?:\.[a-zA-Z0-9_]+)+$"))
 
     def test_security_audit_includes_backend_test_requirements(self) -> None:
-        workflow = self.SECURITY_WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("- backend/test-requirements.txt", workflow)
+        import shlex
+        import yaml
+
+        workflow = yaml.safe_load(self.SECURITY_WORKFLOW.read_text(encoding="utf-8"))
+        audit_steps = [
+            step["run"] for step in workflow["jobs"]["pip-audit"]["steps"]
+            if "pip_audit" in step.get("run", "")
+        ]
+        self.assertEqual(len(audit_steps), 1)
+        lexer = shlex.shlex(audit_steps[0], posix=True, punctuation_chars="();")
+        lexer.whitespace_split = True
+        tokens = list(lexer)
+        self.assertIn("backend/test-requirements.txt", tokens)
+        self.assertIn('python -m pip_audit -r "$requirements" --strict', audit_steps[0])
 
     def test_security_runs_for_ledger_only_changes(self) -> None:
         import fnmatch

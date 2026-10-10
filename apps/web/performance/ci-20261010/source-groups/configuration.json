@@ -1,0 +1,49 @@
+{
+  "bootstrap": {
+    "confidenceLevel": 0.95,
+    "method": "one-stage source-cluster percentile bootstrap; sample K source groups with replacement, concatenate complete selected clusters, then calculate run-weighted statistic",
+    "possibleResampledRunCountRange": [
+      3,
+      18
+    ],
+    "randomIndexGenerator": "splitmix64-v1",
+    "resampledClusterCount": 3,
+    "resamples": 10000,
+    "seed": 20261010,
+    "sourceGroupCount": 3
+  },
+  "dataAccess": {
+    "githubWorkflowRunQueries": false,
+    "rawLogReads": false,
+    "retainedSanitizedMetadataOnly": true
+  },
+  "distinctHeadCount": 7,
+  "inputs": {
+    "baselineArtifactMap": {
+      "path": "apps/web/performance/ci-20261010/artifact-map.json",
+      "sha256": "ad091212d4e223b711e761aafea797e2632a1ad4d5ff3c6c99d66fb74732a296"
+    },
+    "baselineSummary": {
+      "path": "apps/web/performance/ci-20261010/summary.json",
+      "sha256": "97d63069ebe0d62dae2841a44dad7db0644561bd717b064493470d8f5499ae0e"
+    },
+    "collector": {
+      "path": ".github/scripts/collect-ci-performance.py",
+      "sha256": "b53442332490b1386e936890c6ab7f21d4d6bd00602983880447a64bf0e2f2df"
+    },
+    "successfulRuns": {
+      "path": "apps/web/performance/ci-20261010/successful-runs.json",
+      "sha256": "245f7afc2345556e619fd7be23613b89ffa5561689bfc954b5ec3f43af9eb6b1"
+    }
+  },
+  "runCount": 9,
+  "schema": "tzudong-ci-performance/v1/source-group-sensitivity/configuration",
+  "sourceGroupCount": 3,
+  "treeResolution": {
+    "fetchPerformedByScript": false,
+    "localCommand": "git rev-parse --verify <head>^{tree}",
+    "resolvedRule": "group by exact full tree SHA",
+    "unresolvedRule": "mark unresolved and group only by full head SHA"
+  },
+  "unresolvedHeadCount": 0
+}

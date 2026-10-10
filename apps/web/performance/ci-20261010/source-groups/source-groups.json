@@ -1,0 +1,95 @@
+{
+  "groups": [
+    {
+      "groupKey": "tree:10396fb37745bfaff9fb3bff864f254afefaa745",
+      "headShas": [
+        "7343d92c77a0d4114db16871363c31b54b66ef82"
+      ],
+      "resolutionStatus": "resolved_exact_tree",
+      "runCount": 1,
+      "runIds": [
+        38039467558
+      ],
+      "treeSha": "10396fb37745bfaff9fb3bff864f254afefaa745"
+    },
+    {
+      "groupKey": "tree:11355dd1edd3845ef52d60b9926f5d901e0dc640",
+      "headShas": [
+        "a6eae5b4ac5225309e3cad0b3e8dc3b2f5dde525",
+        "a9ce6ba2be377594e30dc865c621f2854006aa79",
+        "d9144efed7212a3bdd2849231b7b851602811543",
+        "efef17c4087808ea50cd9cb6bd8f38265f4cc2ae"
+      ],
+      "resolutionStatus": "resolved_exact_tree",
+      "runCount": 6,
+      "runIds": [
+        37974853501,
+        37975198548,
+        37975317691,
+        37975584201,
+        37975717229,
+        37976075302
+      ],
+      "treeSha": "11355dd1edd3845ef52d60b9926f5d901e0dc640"
+    },
+    {
+      "groupKey": "tree:182af5df94bd32e545d134370fac94583bb343c8",
+      "headShas": [
+        "9986afefd546d20f4f2593b4ac41143f58f3f45f",
+        "f55117f878596447f286aece13acf903205af71c"
+      ],
+      "resolutionStatus": "resolved_exact_tree",
+      "runCount": 2,
+      "runIds": [
+        37968902769,
+        37969263340
+      ],
+      "treeSha": "182af5df94bd32e545d134370fac94583bb343c8"
+    }
+  ],
+  "resolutions": [
+    {
+      "groupKey": "tree:10396fb37745bfaff9fb3bff864f254afefaa745",
+      "headSha": "7343d92c77a0d4114db16871363c31b54b66ef82",
+      "resolutionStatus": "resolved_exact_tree",
+      "treeSha": "10396fb37745bfaff9fb3bff864f254afefaa745"
+    },
+    {
+      "groupKey": "tree:182af5df94bd32e545d134370fac94583bb343c8",
+      "headSha": "9986afefd546d20f4f2593b4ac41143f58f3f45f",
+      "resolutionStatus": "resolved_exact_tree",
+      "treeSha": "182af5df94bd32e545d134370fac94583bb343c8"
+    },
+    {
+      "groupKey": "tree:11355dd1edd3845ef52d60b9926f5d901e0dc640",
+      "headSha": "a6eae5b4ac5225309e3cad0b3e8dc3b2f5dde525",
+      "resolutionStatus": "resolved_exact_tree",
+      "treeSha": "11355dd1edd3845ef52d60b9926f5d901e0dc640"
+    },
+    {
+      "groupKey": "tree:11355dd1edd3845ef52d60b9926f5d901e0dc640",
+      "headSha": "a9ce6ba2be377594e30dc865c621f2854006aa79",
+      "resolutionStatus": "resolved_exact_tree",
+      "treeSha": "11355dd1edd3845ef52d60b9926f5d901e0dc640"
+    },
+    {
+      "groupKey": "tree:11355dd1edd3845ef52d60b9926f5d901e0dc640",
+      "headSha": "d9144efed7212a3bdd2849231b7b851602811543",
+      "resolutionStatus": "resolved_exact_tree",
+      "treeSha": "11355dd1edd3845ef52d60b9926f5d901e0dc640"
+    },
+    {
+      "groupKey": "tree:11355dd1edd3845ef52d60b9926f5d901e0dc640",
+      "headSha": "efef17c4087808ea50cd9cb6bd8f38265f4cc2ae",
+      "resolutionStatus": "resolved_exact_tree",
+      "treeSha": "11355dd1edd3845ef52d60b9926f5d901e0dc640"
+    },
+    {
+      "groupKey": "tree:182af5df94bd32e545d134370fac94583bb343c8",
+      "headSha": "f55117f878596447f286aece13acf903205af71c",
+      "resolutionStatus": "resolved_exact_tree",
+      "treeSha": "182af5df94bd32e545d134370fac94583bb343c8"
+    }
+  ],
+  "schema": "tzudong-ci-performance/v1/source-group-sensitivity/source-groups"
+}

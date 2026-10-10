@@ -1,0 +1,246 @@
+{
+  "analysisKind": "descriptive source-group bootstrap sensitivity",
+  "counterfactualStatus": "not_computed",
+  "interpretation": "Only 3 source groups are available. Cluster-bootstrap intervals are descriptive sensitivity ranges, not stable inferential confidence intervals.",
+  "limitedClusterCount": true,
+  "limits": [
+    "The baseline is observational and unpaired.",
+    "The original per-run bootstrap remains unchanged.",
+    "Identical Git trees are resampled as complete source clusters.",
+    "Unresolved commits remain explicit fallback head clusters.",
+    "No before/after performance improvement is measured."
+  ],
+  "metrics": {
+    "benchmarkContributionPercent": {
+      "baselinePerRunBootstrap95PercentileIntervals": {
+        "mean": [
+          43.765124,
+          46.941969
+        ],
+        "median": [
+          42.084942,
+          48.03124
+        ]
+      },
+      "observed": {
+        "max": 48.850932,
+        "mean": 45.426892,
+        "median": 45.844749,
+        "min": 41.013014,
+        "n": 9,
+        "p25": 44.73192,
+        "p75": 47.228049,
+        "sampleStandardDeviation": 2.587354
+      },
+      "sourceGroupClusterBootstrap95PercentileIntervals": {
+        "mean": [
+          44.80847,
+          47.228049
+        ],
+        "median": [
+          45.442968,
+          47.228049
+        ]
+      },
+      "sourceGroupObservedMeans": {
+        "tree:10396fb37745bfaff9fb3bff864f254afefaa745": 47.228049,
+        "tree:11355dd1edd3845ef52d60b9926f5d901e0dc640": 44.80847,
+        "tree:182af5df94bd32e545d134370fac94583bb343c8": 46.38158
+      },
+      "unit": "percent"
+    },
+    "benchmarkReportSeconds": {
+      "baselinePerRunBootstrap95PercentileIntervals": {
+        "mean": [
+          1341.0,
+          1503.444444
+        ],
+        "median": [
+          1308.0,
+          1573.0
+        ]
+      },
+      "observed": {
+        "max": 1576.0,
+        "mean": 1427.222222,
+        "median": 1438.0,
+        "min": 1166.0,
+        "n": 9,
+        "p25": 1367.0,
+        "p75": 1506.0,
+        "sampleStandardDeviation": 131.446546
+      },
+      "sourceGroupClusterBootstrap95PercentileIntervals": {
+        "mean": [
+          1393.0,
+          1576.0
+        ],
+        "median": [
+          1402.5,
+          1576.0
+        ]
+      },
+      "sourceGroupObservedMeans": {
+        "tree:10396fb37745bfaff9fb3bff864f254afefaa745": 1576.0,
+        "tree:11355dd1edd3845ef52d60b9926f5d901e0dc640": 1393.0,
+        "tree:182af5df94bd32e545d134370fac94583bb343c8": 1455.5
+      },
+      "unit": "seconds"
+    },
+    "criticalPathSeconds": {
+      "baselinePerRunBootstrap95PercentileIntervals": {
+        "mean": [
+          819.666667,
+          872.225
+        ],
+        "median": [
+          800.0,
+          903.0
+        ]
+      },
+      "observed": {
+        "max": 912.0,
+        "mean": 845.555556,
+        "median": 848.0,
+        "min": 787.0,
+        "n": 9,
+        "p25": 811.0,
+        "p75": 866.0,
+        "sampleStandardDeviation": 43.718163
+      },
+      "sourceGroupClusterBootstrap95PercentileIntervals": {
+        "mean": [
+          827.0,
+          861.0
+        ],
+        "median": [
+          827.0,
+          861.0
+        ]
+      },
+      "sourceGroupObservedMeans": {
+        "tree:10396fb37745bfaff9fb3bff864f254afefaa745": 827.0,
+        "tree:11355dd1edd3845ef52d60b9926f5d901e0dc640": 843.5,
+        "tree:182af5df94bd32e545d134370fac94583bb343c8": 861.0
+      },
+      "unit": "seconds"
+    },
+    "maxQueueSeconds": {
+      "baselinePerRunBootstrap95PercentileIntervals": {
+        "mean": [
+          3.555556,
+          19.447222
+        ],
+        "median": [
+          3.0,
+          10.0
+        ]
+      },
+      "observed": {
+        "max": 48.0,
+        "mean": 9.444444,
+        "median": 3.0,
+        "min": 3.0,
+        "n": 9,
+        "p25": 3.0,
+        "p75": 8.0,
+        "sampleStandardDeviation": 14.689376
+      },
+      "sourceGroupClusterBootstrap95PercentileIntervals": {
+        "mean": [
+          3.0,
+          25.5
+        ],
+        "median": [
+          3.0,
+          25.5
+        ]
+      },
+      "sourceGroupObservedMeans": {
+        "tree:10396fb37745bfaff9fb3bff864f254afefaa745": 3.0,
+        "tree:11355dd1edd3845ef52d60b9926f5d901e0dc640": 5.166667,
+        "tree:182af5df94bd32e545d134370fac94583bb343c8": 25.5
+      },
+      "unit": "seconds"
+    },
+    "runnerOccupiedSeconds": {
+      "baselinePerRunBootstrap95PercentileIntervals": {
+        "mean": [
+          3040.0,
+          3222.333333
+        ],
+        "median": [
+          3035.0,
+          3285.0
+        ]
+      },
+      "observed": {
+        "max": 3337.0,
+        "mean": 3137.111111,
+        "median": 3125.0,
+        "min": 2843.0,
+        "n": 9,
+        "p25": 3073.0,
+        "p75": 3220.0,
+        "sampleStandardDeviation": 148.22065
+      },
+      "sourceGroupClusterBootstrap95PercentileIntervals": {
+        "mean": [
+          3102.666667,
+          3337.0
+        ],
+        "median": [
+          3116.5,
+          3337.0
+        ]
+      },
+      "sourceGroupObservedMeans": {
+        "tree:10396fb37745bfaff9fb3bff864f254afefaa745": 3337.0,
+        "tree:11355dd1edd3845ef52d60b9926f5d901e0dc640": 3102.666667,
+        "tree:182af5df94bd32e545d134370fac94583bb343c8": 3140.5
+      },
+      "unit": "seconds"
+    },
+    "totalQueueSeconds": {
+      "baselinePerRunBootstrap95PercentileIntervals": {
+        "mean": [
+          16.555556,
+          39.666667
+        ],
+        "median": [
+          16.0,
+          25.0
+        ]
+      },
+      "observed": {
+        "max": 81.0,
+        "mean": 25.0,
+        "median": 18.0,
+        "min": 14.0,
+        "n": 9,
+        "p25": 16.0,
+        "p75": 20.0,
+        "sampleStandardDeviation": 21.230874
+      },
+      "sourceGroupClusterBootstrap95PercentileIntervals": {
+        "mean": [
+          16.0,
+          48.5
+        ],
+        "median": [
+          16.0,
+          48.5
+        ]
+      },
+      "sourceGroupObservedMeans": {
+        "tree:10396fb37745bfaff9fb3bff864f254afefaa745": 16.0,
+        "tree:11355dd1edd3845ef52d60b9926f5d901e0dc640": 18.666667,
+        "tree:182af5df94bd32e545d134370fac94583bb343c8": 48.5
+      },
+      "unit": "seconds"
+    }
+  },
+  "performanceImprovementClaim": false,
+  "schema": "tzudong-ci-performance/v1/source-group-sensitivity/summary",
+  "sourceGroupCount": 3
+}

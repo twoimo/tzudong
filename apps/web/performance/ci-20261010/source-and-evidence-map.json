@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "baseCommit": "a9ce6ba2be377594e30dc865c621f2854006aa79",
+  "files": [
+    {
+      "path": ".github/workflows/web-admin-ci.yml",
+      "sha256": "984fab56261b08dc64b12d70add53065a228f028a446c58b0b38ea9cdadc72a7",
+      "bytes": 21827
+    },
+    {
+      "path": ".github/workflows/security-audit.yml",
+      "sha256": "26c39366fc5eacb62f26c4ef8a18c74ec751e72bfc2a6091383f589b885f5266",
+      "bytes": 34882
+    },
+    {
+      "path": ".github/scripts/classify-ci-benchmark.mjs",
+      "sha256": "df28fd4b8cdc8f3a547620dc30bdfc3bc12da78ccc50092223d43c72f99f10d5",
+      "bytes": 5654
+    },
+    {
+      "path": ".github/scripts/classify-ci-benchmark.test.mjs",
+      "sha256": "3fb9b74051e533badb7e2151966aa1bc85349361cbb78496c2df131565443ea2",
+      "bytes": 7106
+    },
+    {
+      "path": ".github/scripts/collect-ci-performance.py",
+      "sha256": "b53442332490b1386e936890c6ab7f21d4d6bd00602983880447a64bf0e2f2df",
+      "bytes": 34050
+    },
+    {
+      "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+      "sha256": "dfdfe296409cdd251038bc2801cb7288d3ceb80118f37e4a3d2e5dfea002808a",
+      "bytes": 168157
+    },
+    {
+      "path": "apps/web/tests-unit/ci-benchmark-scope.test.ts",
+      "sha256": "dbd23de95a2c675805336a423f4c0807bfb1deeaae040d44382ab20864d699f8",
+      "bytes": 5671
+    },
+    {
+      "path": "apps/web/tests-unit/security-workflow-source.test.ts",
+      "sha256": "e17563a1c51fab3b7f94ab69d44db322e7b0e24a4d9cb13a6428d2193b8eff35",
+      "bytes": 16154
+    },
+    {
+      "path": "apps/web/tests-unit/dependency-modernization-server-compatibility.test.ts",
+      "sha256": "f7baefbedefeadd7751c480e5e5a3ae26a9faadb948c4f293c2673c116484223",
+      "bytes": 6661
+    },
+    {
+      "path": "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+      "sha256": "6045d662085fe3116257df26e9fe9003f983fc59df5749adda595f5454e65214",
+      "bytes": 82851
+    },
+    {
+      "path": "docs/operations/github-ci-performance-20261010.md",
+      "sha256": "eb23386fa8f6b98c7b3a8c1c680c328f7e19326751559ce07918acb202e13b71",
+      "bytes": 12181
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/artifact-map.json",
+      "sha256": "ad091212d4e223b711e761aafea797e2632a1ad4d5ff3c6c99d66fb74732a296",
+      "bytes": 1034
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/artifact-map.json.sha256",
+      "sha256": "4e85854a6fc0283cffc23b35d18f67c0f5ccb4d071cf24b5352a4191e9c41fd4",
+      "bytes": 84
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/artifact-map.json",
+      "sha256": "494e64974cee788b83873df1aff4d29541b68553bdb839bda835f9c2077ce98f",
+      "bytes": 1662
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/artifact-map.json.sha256",
+      "sha256": "dc2962c02a249cb9a0f3b9bee227df453227cac739c39ca2e35a1d0ed7ed0ed6",
+      "bytes": 84
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/artifact-map.json",
+      "sha256": "67b32783755ed910a1fc5d83d89b0c68800dcaf654d1adb49c616a9aef3d7ac7",
+      "bytes": 1294
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/artifact-map.json.sha256",
+      "sha256": "2a276bc632f960cba039cd661c7da8351253b81d6bd1e374ac853191e4a2d058",
+      "bytes": 84
+    },
+    {
+      "path": "backend/pipeline_control/test_readiness_unittest.py",
+      "sha256": "b0fe393f2758235bab5f6be6d53ca4bb6f6fe6e59e14c1076ba73da8c8779736",
+      "bytes": 27004
+    }
+  ]
+}
