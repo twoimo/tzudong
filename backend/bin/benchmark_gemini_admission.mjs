@@ -77,7 +77,7 @@ try {
                 configuredConcurrency:1,concurrencyViolations:Math.max(0,current.peak-1),
                 resultSha256:hash(JSON.stringify(results)),requestHashes:current.requestHashes});
         }
-    const sources=['backend/utils/gemini-client.mjs','backend/utils/provider-budget.mjs','backend/utils/provider_budget.py',
+    const sources=['backend/utils/gemini-client.mjs','backend/utils/gemini-model.mjs','backend/utils/provider-budget.mjs','backend/utils/provider_budget.py',
         'backend/restaurant-crawling/scripts/final_merge_chunk.mjs','backend/restaurant-crawling/scripts/gemini_chunk_video_request.mjs',
         'backend/restaurant-evaluation/scripts/gemini_api_request.mjs'];
     const report={kind:'controlled_gemini_admission_replay',measuredAt:new Date().toISOString(),

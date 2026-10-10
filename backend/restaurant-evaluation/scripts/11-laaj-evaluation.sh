@@ -357,7 +357,7 @@ fi
 export GEMINI_API_KEY="${GEMINI_API_KEY:-$GEMINI_API_KEY_BYEON}"
 export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.8-flash}"
 export FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3.8-flash}"
-source "$PROJECT_ROOT/backend/utils/gemini-model.sh"
+source "$PROJECT_ROOT/backend/utils/gemini-model.sh" || exit 1
 migrate_deprecated_gemini_model_vars PRIMARY_MODEL FALLBACK_MODEL
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-LOW}"

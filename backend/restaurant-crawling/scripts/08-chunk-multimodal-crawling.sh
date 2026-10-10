@@ -48,7 +48,7 @@ fi
 # Gemini 모델 설정
 export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.8-flash}"
 export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.8-flash}"
-source "$PROJECT_ROOT/utils/gemini-model.sh"
+source "$PROJECT_ROOT/utils/gemini-model.sh" || exit 1
 migrate_deprecated_gemini_model_vars PRIMARY_MODEL FALLBACK_MODEL WEB_GEMINI_MODEL TZUDONG_STAGE_CURRENT_MODEL
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-LOW}"
