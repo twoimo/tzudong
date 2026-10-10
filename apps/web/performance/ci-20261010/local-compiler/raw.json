@@ -1,0 +1,1013 @@
+{
+  "loadAverageAfter": [
+    12.873046875,
+    14.97265625,
+    14.109375
+  ],
+  "measuredPairs": [
+    {
+      "loadAverageAfter": [
+        16.16455078125,
+        15.701171875,
+        13.59814453125
+      ],
+      "loadAverageBefore": [
+        19.43359375,
+        15.697265625,
+        13.36865234375
+      ],
+      "order": [
+        "before",
+        "after"
+      ],
+      "pair": 1,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 1374.945792,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103055360,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 2840.311375,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1720745984,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 26425.505958,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1929986048,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 25262.679042,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1927135232,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 55904.48875,
+          "sequence": "before",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 353.040833,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103022592,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 25992.123792,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1864990720,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 26345.57025,
+          "sequence": "after",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        17.90380859375,
+        16.53466796875,
+        14.0888671875
+      ],
+      "loadAverageBefore": [
+        16.16455078125,
+        15.701171875,
+        13.59814453125
+      ],
+      "order": [
+        "after",
+        "before"
+      ],
+      "pair": 2,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 335.459667,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103006208,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 28322.911208,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2074951680,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 28658.683709,
+          "sequence": "after",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 362.895666,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103170048,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 2025.1625,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1728577536,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 16809.060541,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1922514944,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 20922.122625,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1927938048,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 40120.033833,
+          "sequence": "before",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        13.63037109375,
+        15.62890625,
+        13.9072265625
+      ],
+      "loadAverageBefore": [
+        17.90380859375,
+        16.53466796875,
+        14.0888671875
+      ],
+      "order": [
+        "before",
+        "after"
+      ],
+      "pair": 3,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 304.524167,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103006208,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 1945.673625,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1784496128,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 21845.251375,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1927806976,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 16029.0015,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1854210048,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 40125.076542,
+          "sequence": "before",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 238.615958,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103006208,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 17568.302666,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1927954432,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 17807.1805,
+          "sequence": "after",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        14.330078125,
+        15.26416015625,
+        13.8955078125
+      ],
+      "loadAverageBefore": [
+        13.63037109375,
+        15.62890625,
+        13.9072265625
+      ],
+      "order": [
+        "after",
+        "before"
+      ],
+      "pair": 4,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 254.454292,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103088128,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 18061.718416,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1917419520,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 18316.591333,
+          "sequence": "after",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 336.683125,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103055360,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 1973.935667,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1769193472,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 21576.219542,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2061287424,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 26919.243792,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1913602048,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 50806.774,
+          "sequence": "before",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        17.81884765625,
+        16.14697265625,
+        14.3447265625
+      ],
+      "loadAverageBefore": [
+        14.330078125,
+        15.26416015625,
+        13.8955078125
+      ],
+      "order": [
+        "before",
+        "after"
+      ],
+      "pair": 5,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 264.813333,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102776832,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 1697.145083,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1789673472,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 18720.966125,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1938964480,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 25129.141083,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1914257408,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 45812.719333,
+          "sequence": "before",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 324.67075,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 104005632,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 27714.529709,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1910079488,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 28039.552917,
+          "sequence": "after",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        14.154296875,
+        15.521484375,
+        14.23974609375
+      ],
+      "loadAverageBefore": [
+        17.81884765625,
+        16.14697265625,
+        14.3447265625
+      ],
+      "order": [
+        "after",
+        "before"
+      ],
+      "pair": 6,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 363.34525,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103055360,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 21359.044583,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2054979584,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 21722.925125,
+          "sequence": "after",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 272.653417,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102825984,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 1673.615083,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1773109248,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 14814.600125,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2057043968,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 23706.515375,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2059862016,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 40468.013958,
+          "sequence": "before",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        12.873046875,
+        14.97265625,
+        14.109375
+      ],
+      "loadAverageBefore": [
+        14.154296875,
+        15.521484375,
+        14.23974609375
+      ],
+      "order": [
+        "before",
+        "after"
+      ],
+      "pair": 7,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 352.5505,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102907904,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 1932.112084,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1747320832,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 15770.43825,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1933131776,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 15054.495625,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2071298048,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 33110.465625,
+          "sequence": "before",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 285.326166,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103383040,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 13988.181375,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1873330176,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 14273.811167,
+          "sequence": "after",
+          "success": true
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "benchmarkScriptSha256": "7d7eeaf1cdf9e3015f169969a35dc35e1edffcb19f7648add93b2ae559a0558d",
+    "bootstrap": {
+      "samples": 10000,
+      "seed": 20261010
+    },
+    "bunVersion": "1.4.0 (recorded project/runtime pin; Bun not invoked)",
+    "cpuCount": 18,
+    "createdAt": "2026-10-10T09:45:50.231373+00:00",
+    "gitHead": "a9ce6ba2be377594e30dc865c621f2854006aa79",
+    "gitStatusSha256": "66614aafdceae524e2793b00aa0a004bd2bc6374c1d583b7ac415b1d19aecb0a",
+    "loadAverageBefore": [
+      15.5263671875,
+      14.68994140625,
+      12.96435546875
+    ],
+    "machine": "arm64",
+    "nodePath": "/opt/homebrew/Cellar/node@24/24.21.0/bin/node",
+    "nodeVersion": "v24.21.0",
+    "npmPackageManagerPin": "npm@11.6.2",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "rssMeasurement": "/usr/bin/time -l maximum resident set size; descriptive only",
+    "schemaVersion": 1,
+    "sequences": {
+      "after": [
+        "verify",
+        "parity"
+      ],
+      "before": [
+        "verify",
+        "native",
+        "compat",
+        "parity"
+      ]
+    },
+    "sourceHashes": {
+      "package-lock.json": "ce2e7d9dee5cb837a77f504028452b5e04f9f96a3413bfa2e9a005fa5de7531d",
+      "package.json": "d271e307e944fca7aa8c354bf664733807ee6f03958de2ab05c2adf96fcd44be",
+      "scripts/run-typecheck.mjs": "3e006896b1c85d61b9b8f5ac0020822faf573212c473c70089b190d84313fb9d",
+      "scripts/verify-typescript-toolchain.mjs": "b7f7450e7477e3664b410b4a501df99317e2711c8c3db03911826a157d0689f5",
+      "tsconfig.json": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+    },
+    "sourceSnapshotMethod": "macOS cp -cR copy-on-write app clone; materialized top-level node_modules symlink while preserving package shims"
+  },
+  "warmups": []
+}

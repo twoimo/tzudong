@@ -217,12 +217,6 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        project:
-          - apps/web
-          - backend
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
@@ -235,26 +229,34 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+          cache-dependency-path: |
+            apps/web/package-lock.json
+            backend/package-lock.json
+
+      - name: Pin authoritative npm
+        run: |
+          npm install --global npm@11.6.2
+          test "$(npm --version)" = "11.6.2"
 
       - name: Audit npm dependencies
-        working-directory: ${{ matrix.project }}
-        run: npm audit --audit-level=moderate
+        run: |
+          set -uo pipefail
+          status=0
+          for project in apps/web backend; do
+            if ! (
+              cd "$project" &&
+              npm audit --audit-level=moderate
+            ); then
+              status=1
+            fi
+          done
+          exit "$status"
 
   pip-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        requirements:
-          - backend/test-requirements.txt
-          - backend/pipeline/requirements.txt
-          - backend/restaurant-crawling/scripts/requirements.txt
-          - backend/supabase/scripts/g037-hosted-closure-requirements.txt
-          - backend/pipeline-control/requirements.txt
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
@@ -271,7 +273,20 @@ jobs:
         run: python -m pip install --disable-pip-version-check 'pip-audit==2.10.1'
 
       - name: Audit Python requirements
-        run: python -m pip_audit -r "${{ matrix.requirements }}" --strict
+        run: |
+          set -uo pipefail
+          status=0
+          for requirements in \
+            backend/test-requirements.txt \
+            backend/pipeline/requirements.txt \
+            backend/restaurant-crawling/scripts/requirements.txt \
+            backend/supabase/scripts/g037-hosted-closure-requirements.txt \
+            backend/pipeline-control/requirements.txt; do
+            if ! python -m pip_audit -r "$requirements" --strict; then
+              status=1
+            fi
+          done
+          exit "$status"
 
   orchestration-readiness:
     runs-on: ubuntu-latest

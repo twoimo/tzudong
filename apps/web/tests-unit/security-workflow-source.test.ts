@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { delimiter, join } from 'node:path';
 
 const workflowPath = join(import.meta.dir, '..', '..', '..', '.github', 'workflows', 'security-audit.yml');
 const source = readFileSync(workflowPath, 'utf8').replace(/\r\n/g, '\n');
@@ -12,6 +14,79 @@ function jobBlock(name: string) {
   const remainder = source.slice(start + marker.length);
   const nextJob = remainder.search(/^  [A-Za-z0-9_-]+:\s*$/m);
   return nextJob < 0 ? source.slice(start) : source.slice(start, start + marker.length + nextJob);
+}
+
+function stepRunBlock(jobName: string, stepName: string) {
+  const lines = jobBlock(jobName).split('\n');
+  const step = lines.indexOf(`      - name: ${stepName}`);
+  if (step < 0 || lines[step + 1] !== '        run: |') {
+    throw new Error(`missing literal run block: ${jobName}/${stepName}`);
+  }
+
+  const commands: string[] = [];
+  for (const line of lines.slice(step + 2)) {
+    if (line !== '' && !line.startsWith('          ')) break;
+    commands.push(line.slice(10));
+  }
+  while (commands.at(-1) === '') commands.pop();
+  if (commands.length === 0) throw new Error(`empty literal run block: ${jobName}/${stepName}`);
+  return `${commands.join('\n')}\n`;
+}
+
+type AuditHarness = {
+  attempts: string[];
+  status: number | null;
+  signal: NodeJS.Signals | null;
+};
+
+function runAuditBlock(kind: 'npm' | 'python', script: string, failTarget = ''): AuditHarness {
+  const root = mkdtempSync(join(tmpdir(), `tzudong-security-${kind}-`));
+  const canonicalRoot = realpathSync(root);
+  const bin = join(root, 'bin');
+  const log = join(root, 'attempts.log');
+  mkdirSync(bin);
+  mkdirSync(join(root, 'apps', 'web'), { recursive: true });
+  mkdirSync(join(root, 'backend'), { recursive: true });
+
+  const fakeNpm = `#!/bin/bash
+set -u
+project="\${PWD#"$AUDIT_TEST_ROOT"/}"
+printf '%s|%s\\n' "$project" "$*" >> "$AUDIT_ATTEMPT_LOG"
+if [[ "$project" == "$AUDIT_FAIL_TARGET" ]]; then exit 37; fi
+exit 0
+`;
+  const fakePython = `#!/bin/bash
+set -u
+if [[ "$#" -ne 5 || "$1" != '-m' || "$2" != 'pip_audit' || "$3" != '-r' || "$5" != '--strict' ]]; then
+  exit 98
+fi
+requirements="$4"
+printf '%s|%s\\n' "$requirements" "$*" >> "$AUDIT_ATTEMPT_LOG"
+if [[ "$requirements" == "$AUDIT_FAIL_TARGET" ]]; then exit 37; fi
+exit 0
+`;
+
+  try {
+    writeFileSync(join(bin, kind), kind === 'npm' ? fakeNpm : fakePython, { mode: 0o755 });
+    const result = spawnSync('/bin/bash', ['--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', script], {
+      cwd: canonicalRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${bin}${delimiter}${process.env.PATH ?? ''}`,
+        AUDIT_ATTEMPT_LOG: log,
+        AUDIT_FAIL_TARGET: failTarget,
+        AUDIT_TEST_ROOT: canonicalRoot,
+      },
+      timeout: 5_000,
+    });
+    const attempts = existsSync(log)
+      ? readFileSync(log, 'utf8').trim().split('\n').filter(Boolean)
+      : [];
+    return { attempts, status: result.status, signal: result.signal };
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 }
 
 describe('security audit workflow source contract', () => {
@@ -46,12 +121,35 @@ describe('security audit workflow source contract', () => {
   });
 
   test('runs current bounded audits and commit-bound SBOM evidence', () => {
-    expect(jobBlock('npm-audit')).toContain('npm audit --audit-level=moderate');
-    expect(jobBlock('pip-audit')).toContain("'pip-audit==2.10.1'");
-    expect(jobBlock('pip-audit')).toContain('python -m pip_audit -r "${{ matrix.requirements }}" --strict');
-    expect(jobBlock('pip-audit')).toContain('backend/supabase/scripts/g037-hosted-closure-requirements.txt');
-    expect(jobBlock('pip-audit')).toContain('backend/pipeline-control/requirements.txt');
-    expect(jobBlock('pip-audit')).toContain('backend/test-requirements.txt');
+    const npmAudit = jobBlock('npm-audit');
+    expect(npmAudit).not.toContain('matrix:');
+    expect(npmAudit).toContain("node-version: '24'");
+    expect(npmAudit).toContain('npm install --global npm@11.6.2');
+    expect(npmAudit).toContain('test "$(npm --version)" = "11.6.2"');
+    expect(npmAudit).toContain('for project in apps/web backend; do');
+    expect(npmAudit).toContain('cd "$project" &&');
+    expect(npmAudit).toContain('npm audit --audit-level=moderate');
+    for (const lockfile of ['apps/web/package-lock.json', 'backend/package-lock.json']) {
+      expect(npmAudit.match(new RegExp(lockfile.replace('/', '\\/'), 'g'))).toHaveLength(1);
+    }
+    expect(npmAudit).toContain('status=0');
+    expect(npmAudit).toContain('status=1');
+    expect(npmAudit).toContain('exit "$status"');
+
+    const pipAudit = jobBlock('pip-audit');
+    expect(pipAudit).not.toContain('matrix:');
+    expect(pipAudit).toContain("'pip-audit==2.10.1'");
+    expect(pipAudit).toContain('if ! python -m pip_audit -r "$requirements" --strict; then');
+    for (const requirements of [
+      'backend/test-requirements.txt',
+      'backend/pipeline/requirements.txt',
+      'backend/restaurant-crawling/scripts/requirements.txt',
+      'backend/supabase/scripts/g037-hosted-closure-requirements.txt',
+      'backend/pipeline-control/requirements.txt',
+    ]) expect(pipAudit.match(new RegExp(requirements.replaceAll('/', '\\/'), 'g'))).toHaveLength(1);
+    expect(pipAudit).toContain('status=0');
+    expect(pipAudit).toContain('status=1');
+    expect(pipAudit).toContain('exit "$status"');
 
     const readiness = jobBlock('orchestration-readiness');
     expect(readiness).toContain('python-version: \'3.11\'');
@@ -136,5 +234,49 @@ describe('security audit workflow source contract', () => {
     expect(sbom).toContain('if-no-files-found: error');
     expect(sbom).toContain('retention-days: 7');
     expect(sbom).not.toMatch(/(?:secrets\.|TOKEN|PASSWORD|COOKIE)/);
+  });
+});
+
+describe('security audit workflow failure aggregation', () => {
+  test('the literal npm audit block attempts both projects after first or last failure', () => {
+    const script = stepRunBlock('npm-audit', 'Audit npm dependencies');
+    const inputs = ['apps/web', 'backend'];
+    const expected = inputs.map((input) => `${input}|audit --audit-level=moderate`);
+
+    for (const failTarget of inputs) {
+      const result = runAuditBlock('npm', script, failTarget);
+      expect(result.signal).toBeNull();
+      expect(result.attempts).toEqual(expected);
+      expect(result.status).toBe(1);
+    }
+
+    const success = runAuditBlock('npm', script);
+    expect(success.signal).toBeNull();
+    expect(success.status).toBe(0);
+    expect(success.attempts).toEqual(expected);
+  });
+
+  test('the literal pip audit block attempts all inputs after first, middle, or last failure', () => {
+    const script = stepRunBlock('pip-audit', 'Audit Python requirements');
+    const inputs = [
+      'backend/test-requirements.txt',
+      'backend/pipeline/requirements.txt',
+      'backend/restaurant-crawling/scripts/requirements.txt',
+      'backend/supabase/scripts/g037-hosted-closure-requirements.txt',
+      'backend/pipeline-control/requirements.txt',
+    ];
+    const expected = inputs.map((input) => `${input}|-m pip_audit -r ${input} --strict`);
+
+    for (const failTarget of [inputs[0], inputs[2], inputs[4]]) {
+      const result = runAuditBlock('python', script, failTarget);
+      expect(result.signal).toBeNull();
+      expect(result.attempts).toEqual(expected);
+      expect(result.status).toBe(1);
+    }
+
+    const success = runAuditBlock('python', script);
+    expect(success.signal).toBeNull();
+    expect(success.status).toBe(0);
+    expect(success.attempts).toEqual(expected);
   });
 });

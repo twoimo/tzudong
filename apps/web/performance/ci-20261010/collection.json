@@ -1,0 +1,27 @@
+{
+  "actorsRetained": false,
+  "apiDataScope": "workflow run plus job and step metadata only",
+  "capturedAtUtc": "2026-10-10T09:22:16Z",
+  "credentialValuesRetained": false,
+  "excludedRunCount": 1,
+  "fetchedRunCount": 10,
+  "logsFetched": false,
+  "orderedRunIds": [
+    38039467558,
+    38038933700,
+    37976075302,
+    37975717229,
+    37975584201,
+    37975317691,
+    37975198548,
+    37974853501,
+    37969263340,
+    37968902769
+  ],
+  "recentRunLimit": 10,
+  "repository": "twoimo/tzudong",
+  "runnerNamesRetained": false,
+  "schema": "tzudong-ci-performance/v1/collection",
+  "successfulRunCount": 9,
+  "workflow": "web-admin-ci.yml"
+}

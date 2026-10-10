@@ -14,52 +14,13 @@ on:
       - '.github/nightly-local-publication-allowlist.txt'
       - '.github/scripts/**'
       - 'apps/web/**'
-      - 'apps/web/app/**'
-      - 'apps/web/components/**'
-      - 'apps/web/constants/**'
-      - 'apps/web/contexts/**'
-      - 'apps/web/hooks/**'
-      - 'apps/web/integrations/**'
-      - 'apps/web/lib/**'
-      - 'apps/web/pages/**'
-      - 'apps/web/public/**'
-      - 'apps/web/styles/**'
-      - 'apps/web/supabase/**'
-      - 'apps/web/types/**'
       - 'backend/supabase/**'
-      - 'apps/web/app/admin/**'
-      - 'apps/web/app/api/admin/**'
-      - 'apps/web/app/api/auth/**'
-      - 'apps/web/components/admin/**'
-      - 'apps/web/lib/auth/**'
-      - 'apps/web/tests/**'
-      - 'apps/web/tests-unit/**'
-      - 'apps/web/scripts/**'
-      - 'apps/web/config/**'
-      - 'apps/web/performance/**'
-      - 'apps/web/fixtures/performance-backlog/**'
-      - 'apps/web/fixtures/typecheck-benchmark/**'
-      - 'apps/web/vercel.json'
-      - 'apps/web/package.json'
-      - 'apps/web/package-lock.json'
-      - 'apps/web/bun.lock'
-      - 'apps/web/tsconfig.json'
-      - 'apps/web/eslint.config.mjs'
-      - 'apps/web/playwright.config.ts'
-      - 'apps/web/playwright.release.config.ts'
-      - 'backend/bin/apply_tzuyang_address_evidence_ledger.mjs'
       - 'backend/package.json'
       - 'backend/package-lock.json'
       - 'backend/bin/tests/node-dependency-compatibility.test.mjs'
       - 'backend/bin/*.mjs'
       - 'backend/restaurant-crawling/scripts/**'
-      - 'backend/bin/build_tzuyang_address_evidence_ledger.mjs'
-      - 'backend/bin/build_tzuyang_case_review_pack.mjs'
       - 'backend/bin/naver_scrapling_fetch.py'
-      - 'backend/bin/build_tzuyang_operator_review_package.mjs'
-      - 'backend/bin/validate_tzuyang_address_evidence_ledger.mjs'
-      - 'backend/supabase/migrations/20260531105250_restaurant_refresh_history.sql'
-      - 'apps/web/supabase/migrations/20260531105250_restaurant_refresh_history.sql'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs'
@@ -77,52 +38,13 @@ on:
       - '.github/nightly-local-publication-allowlist.txt'
       - '.github/scripts/**'
       - 'apps/web/**'
-      - 'apps/web/app/**'
-      - 'apps/web/components/**'
-      - 'apps/web/constants/**'
-      - 'apps/web/contexts/**'
-      - 'apps/web/hooks/**'
-      - 'apps/web/integrations/**'
-      - 'apps/web/lib/**'
-      - 'apps/web/pages/**'
-      - 'apps/web/public/**'
-      - 'apps/web/styles/**'
-      - 'apps/web/supabase/**'
-      - 'apps/web/types/**'
       - 'backend/supabase/**'
-      - 'apps/web/app/admin/**'
-      - 'apps/web/app/api/admin/**'
-      - 'apps/web/app/api/auth/**'
-      - 'apps/web/components/admin/**'
-      - 'apps/web/lib/auth/**'
-      - 'apps/web/tests/**'
-      - 'apps/web/tests-unit/**'
-      - 'apps/web/scripts/**'
-      - 'apps/web/config/**'
-      - 'apps/web/performance/**'
-      - 'apps/web/fixtures/performance-backlog/**'
-      - 'apps/web/fixtures/typecheck-benchmark/**'
-      - 'apps/web/vercel.json'
-      - 'apps/web/package.json'
-      - 'apps/web/package-lock.json'
-      - 'apps/web/bun.lock'
-      - 'apps/web/tsconfig.json'
-      - 'apps/web/eslint.config.mjs'
-      - 'apps/web/playwright.config.ts'
-      - 'apps/web/playwright.release.config.ts'
-      - 'backend/bin/apply_tzuyang_address_evidence_ledger.mjs'
       - 'backend/package.json'
       - 'backend/package-lock.json'
       - 'backend/bin/tests/node-dependency-compatibility.test.mjs'
       - 'backend/bin/*.mjs'
       - 'backend/restaurant-crawling/scripts/**'
-      - 'backend/bin/build_tzuyang_address_evidence_ledger.mjs'
-      - 'backend/bin/build_tzuyang_case_review_pack.mjs'
       - 'backend/bin/naver_scrapling_fetch.py'
-      - 'backend/bin/build_tzuyang_operator_review_package.mjs'
-      - 'backend/bin/validate_tzuyang_address_evidence_ledger.mjs'
-      - 'backend/supabase/migrations/20260531105250_restaurant_refresh_history.sql'
-      - 'apps/web/supabase/migrations/20260531105250_restaurant_refresh_history.sql'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs'
@@ -183,10 +105,12 @@ jobs:
             cd "$root"
             npm ci
             sha256sum package-lock.json bun.lock > dependency-modernization-lock-hashes-npm.txt
-            TZUDONG_DEPENDENCY_PROOF_ROOT="$root" TZUDONG_NODE24_EXECUTABLE="$node_bin" TZUDONG_NPM_11_EXECUTABLE="$npm_bin" npm run test:dependency-modernization
-            npm run build
             npx playwright install --with-deps chromium
-            PLAYWRIGHT_WEB_SERVER_COMMAND="npm run start:playwright" npm run test:dependency-modernization:browser
+            TZUDONG_DEPENDENCY_PROOF_ROOT="$root" \
+              TZUDONG_NODE24_EXECUTABLE="$node_bin" \
+              TZUDONG_NPM_11_EXECUTABLE="$npm_bin" \
+              PLAYWRIGHT_WEB_SERVER_COMMAND="npm run start:playwright" \
+              npm run test:dependency-modernization:browser
           )
       - name: Supplemental Bun clean install and Node production probes
         run: |
@@ -223,6 +147,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: '24'
@@ -234,22 +159,31 @@ jobs:
       - name: Pin npm authority
         run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
       - run: npm ci
+      - name: Verify compiler scope classifier
+        working-directory: ${{ github.workspace }}
+        run: node --test .github/scripts/classify-ci-benchmark.test.mjs
+      - name: Classify compiler performance scope
+        id: scope
+        working-directory: ${{ github.workspace }}
+        run: node .github/scripts/classify-ci-benchmark.mjs
       - run: npm run typecheck:verify
-      - run: npm run typecheck:native
-      - run: npm run typecheck:compat
+        if: steps.scope.outputs.benchmark == 'false'
       - run: npm run typecheck:parity
+        if: steps.scope.outputs.benchmark == 'false'
       - id: benchmark
+        if: steps.scope.outputs.benchmark != 'false'
         continue-on-error: true
         run: |
           tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
           npm run typecheck:benchmark -- --profile ubuntu-npm --release-id "$tree" --output "$RUNNER_TEMP/ts7-release/$tree/ubuntu-npm/report.json"
       - id: report
+        if: steps.scope.outputs.benchmark != 'false'
         continue-on-error: true
         run: |
           tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
           node scripts/verify-typecheck-benchmark-report.mjs --report "$RUNNER_TEMP/ts7-release/$tree/ubuntu-npm/report.json" --tree "$tree" --profile ubuntu-npm --platform linux-x64 --installer npm
       - name: Upload npm benchmark evidence
-        if: always()
+        if: always() && steps.scope.outputs.benchmark != 'false'
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
         with:
           name: ts7-benchmark-ubuntu-npm-${{ github.run_id }}
@@ -257,7 +191,7 @@ jobs:
           if-no-files-found: error
           retention-days: 90
       - name: Fail closed on benchmark evidence
-        if: always()
+        if: always() && steps.scope.outputs.benchmark != 'false'
         run: test "${{ steps.benchmark.outcome }}" = success -a "${{ steps.report.outcome }}" = success
       - run: npm run lint
       - run: npm run test:unit
@@ -278,6 +212,7 @@ jobs:
           path: web-bun
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: '24'
@@ -285,22 +220,31 @@ jobs:
         with:
           bun-version: '1.4.0'
       - run: bun install --frozen-lockfile
+      - name: Verify compiler scope classifier
+        working-directory: ${{ github.workspace }}/web-bun
+        run: node --test .github/scripts/classify-ci-benchmark.test.mjs
+      - name: Classify compiler performance scope
+        id: scope
+        working-directory: ${{ github.workspace }}/web-bun
+        run: node .github/scripts/classify-ci-benchmark.mjs
       - run: bun run typecheck:verify
-      - run: bun run typecheck:native
-      - run: bun run typecheck:compat
+        if: steps.scope.outputs.benchmark == 'false'
       - run: bun run typecheck:parity
+        if: steps.scope.outputs.benchmark == 'false'
       - id: benchmark
+        if: steps.scope.outputs.benchmark != 'false'
         continue-on-error: true
         run: |
           tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
           bun run typecheck:benchmark -- --profile ubuntu-bun --release-id "$tree" --output "$RUNNER_TEMP/ts7-release/$tree/ubuntu-bun/report.json"
       - id: report
+        if: steps.scope.outputs.benchmark != 'false'
         continue-on-error: true
         run: |
           tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
           node scripts/verify-typecheck-benchmark-report.mjs --report "$RUNNER_TEMP/ts7-release/$tree/ubuntu-bun/report.json" --tree "$tree" --profile ubuntu-bun --platform linux-x64 --installer bun
       - name: Upload Bun benchmark evidence
-        if: always()
+        if: always() && steps.scope.outputs.benchmark != 'false'
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
         with:
           name: ts7-benchmark-ubuntu-bun-${{ github.run_id }}
@@ -308,7 +252,7 @@ jobs:
           if-no-files-found: error
           retention-days: 90
       - name: Fail closed on benchmark evidence
-        if: always()
+        if: always() && steps.scope.outputs.benchmark != 'false'
         run: test "${{ steps.benchmark.outcome }}" = success -a "${{ steps.report.outcome }}" = success
       - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
 
@@ -328,6 +272,7 @@ jobs:
           path: web-npm
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: '24'
@@ -342,17 +287,26 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or (npm --version) -ne '11.6.2') { exit 1 }
       - run: npm ci
       - run: npm run lint
+      - name: Verify compiler scope classifier
+        working-directory: ${{ github.workspace }}/web-npm
+        run: node --test .github/scripts/classify-ci-benchmark.test.mjs
+      - name: Classify compiler performance scope
+        id: scope
+        working-directory: ${{ github.workspace }}/web-npm
+        run: node .github/scripts/classify-ci-benchmark.mjs
       - run: npm run typecheck:verify
-      - run: npm run typecheck:native
-      - run: npm run typecheck:compat
+        if: steps.scope.outputs.benchmark == 'false'
       - run: npm run typecheck:parity
+        if: steps.scope.outputs.benchmark == 'false'
       - id: benchmark
+        if: steps.scope.outputs.benchmark != 'false'
         continue-on-error: true
         run: |
           $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
           $tree = git -C $root rev-parse 'HEAD^{tree}'
           npm run typecheck:benchmark -- --profile windows-npm --release-id $tree --output (Join-Path $env:RUNNER_TEMP "ts7-release\$tree\windows-npm\report.json")
       - id: report
+        if: steps.scope.outputs.benchmark != 'false'
         continue-on-error: true
         run: |
           $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
@@ -360,7 +314,7 @@ jobs:
           $report = Join-Path $env:RUNNER_TEMP "ts7-release\$tree\windows-npm\report.json"
           node scripts/verify-typecheck-benchmark-report.mjs --report $report --tree $tree --profile windows-npm --platform win32-x64 --installer npm
       - name: Upload npm benchmark evidence
-        if: always()
+        if: always() && steps.scope.outputs.benchmark != 'false'
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
         with:
           name: ts7-benchmark-windows-npm-${{ github.run_id }}
@@ -368,7 +322,7 @@ jobs:
           if-no-files-found: error
           retention-days: 90
       - name: Fail closed on benchmark evidence
-        if: always()
+        if: always() && steps.scope.outputs.benchmark != 'false'
         run: if ('${{ steps.benchmark.outcome }}' -ne 'success' -or '${{ steps.report.outcome }}' -ne 'success') { exit 1 }
       - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
 
@@ -388,6 +342,7 @@ jobs:
           path: web-bun
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: '24'
@@ -395,17 +350,26 @@ jobs:
         with:
           bun-version: '1.4.0'
       - run: bun install --frozen-lockfile
+      - name: Verify compiler scope classifier
+        working-directory: ${{ github.workspace }}/web-bun
+        run: node --test .github/scripts/classify-ci-benchmark.test.mjs
+      - name: Classify compiler performance scope
+        id: scope
+        working-directory: ${{ github.workspace }}/web-bun
+        run: node .github/scripts/classify-ci-benchmark.mjs
       - run: bun run typecheck:verify
-      - run: bun run typecheck:native
-      - run: bun run typecheck:compat
+        if: steps.scope.outputs.benchmark == 'false'
       - run: bun run typecheck:parity
+        if: steps.scope.outputs.benchmark == 'false'
       - id: benchmark
+        if: steps.scope.outputs.benchmark != 'false'
         continue-on-error: true
         run: |
           $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
           $tree = git -C $root rev-parse 'HEAD^{tree}'
           bun run typecheck:benchmark -- --profile windows-bun --release-id $tree --output (Join-Path $env:RUNNER_TEMP "ts7-release\$tree\windows-bun\report.json")
       - id: report
+        if: steps.scope.outputs.benchmark != 'false'
         continue-on-error: true
         run: |
           $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
@@ -413,7 +377,7 @@ jobs:
           $report = Join-Path $env:RUNNER_TEMP "ts7-release\$tree\windows-bun\report.json"
           node scripts/verify-typecheck-benchmark-report.mjs --report $report --tree $tree --profile windows-bun --platform win32-x64 --installer bun
       - name: Upload Bun benchmark evidence
-        if: always()
+        if: always() && steps.scope.outputs.benchmark != 'false'
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
         with:
           name: ts7-benchmark-windows-bun-${{ github.run_id }}
@@ -421,7 +385,7 @@ jobs:
           if-no-files-found: error
           retention-days: 90
       - name: Fail closed on benchmark evidence
-        if: always()
+        if: always() && steps.scope.outputs.benchmark != 'false'
         run: if ('${{ steps.benchmark.outcome }}' -ne 'success' -or '${{ steps.report.outcome }}' -ne 'success') { exit 1 }
       - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
   admin-address-consistency:
