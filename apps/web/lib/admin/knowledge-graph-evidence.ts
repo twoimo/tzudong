@@ -22,7 +22,7 @@ function clock(seconds: number): string {
 
 export function formatKnowledgeEvidence(evidence: KnowledgeEvidence): KnowledgeEvidenceDisplay {
   const range = evidence.startSeconds === 0 && evidence.endSeconds === null
-    ? '전체 영상'
+    ? '시간 정보 없음'
     : evidence.endSeconds === null
       ? `${clock(evidence.startSeconds)}부터`
       : evidence.endSeconds === evidence.startSeconds

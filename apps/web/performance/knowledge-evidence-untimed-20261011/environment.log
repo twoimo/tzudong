@@ -1,0 +1,7 @@
+v24.21.0
+11.19.0
+1.4.0
+{"next":"16.3.8","typescript":"npm:@typescript/typescript6@6.0.2","nativeTypescript":"npm:typescript@7.0.2"}
+d271e307e944fca7aa8c354bf664733807ee6f03958de2ab05c2adf96fcd44be  package.json
+ce2e7d9dee5cb837a77f504028452b5e04f9f96a3413bfa2e9a005fa5de7531d  package-lock.json
+fd7434274c9ddf7b7d93df3a43ce6a06ba447a7da1e139c7971b0d6d6150eccf  bun.lock

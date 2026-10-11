@@ -11,10 +11,10 @@ const evidence = (overrides: Partial<KnowledgeEvidence> = {}): KnowledgeEvidence
   ...overrides,
 });
 
-test('identifies the YouTube source and preserves whole-video unverified meaning', () => {
+test('identifies the YouTube source without implying viewing coverage for untimed evidence', () => {
   expect(formatKnowledgeEvidence(evidence())).toEqual({
     source: 'YouTube · ABCDEFGHIJK',
-    range: '전체 영상',
+    range: '시간 정보 없음',
     status: '미확인',
   });
 });

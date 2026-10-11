@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-11T12:02:16Z",
+  "candidateCommit": "8ca2231308c0175497d99186b48fbff8dc3659f6",
+  "correctionState": "working-tree amendment atop candidateCommit",
+  "historicalBefore": {
+    "sourceCommit": "8ca2231308c0175497d99186b48fbff8dc3659f6",
+    "formatterPathAtCommit": "apps/web/lib/admin/knowledge-graph-evidence.ts",
+    "formatterSnapshotPath": "performance/knowledge-evidence-untimed-20261011/formatter-before-8ca22313.ts",
+    "formatterSha256": "2743bfd2bda230d6a71b618bfb430cf766c754bbf27cc9c773f14d0b0df54e14",
+    "rejectedInterpretation": "startSeconds=0 and endSeconds=null displayed as 전체 영상",
+    "rejectionReason": "backend caption registration contract defines this pair as an untimed source link and explicitly says it is not viewing coverage",
+    "priorEvidenceArtifactMap": {
+      "path": "performance/knowledge-evidence-develop-20261011/artifact-map.json",
+      "bytes": 5056,
+      "sha256": "2e7c6baf59058316ec43420a4de7013e1a6c828097e56a8c1419c77dea5e243d"
+    }
+  },
+  "sources": {
+    "formatterAfter": {
+      "path": "lib/admin/knowledge-graph-evidence.ts",
+      "bytes": 1330,
+      "sha256": "b704e7137558172effb87a82594543377d996ce18006212a6c1e88dab16953a0"
+    },
+    "formatterTestAfter": {
+      "path": "tests-unit/admin-knowledge-graph-evidence.test.ts",
+      "bytes": 1360,
+      "sha256": "90efd43bf7b5f8d82bc8bf87018d44594e9f96f0290970177b6b1bb60d2d270f"
+    },
+    "viewer": {
+      "path": "components/admin/AdminKnowledgeGraphPanel.tsx",
+      "bytes": 15612,
+      "sha256": "2b7404aa62cc9d0271520b9517e8f6dbdadf10fff4c044cc9db82ddd153b9887"
+    },
+    "backendUntimedContract": {
+      "path": "../../backend/knowledge_graph/caption_osk_adapter.py",
+      "bytes": 10617,
+      "sha256": "83cec891cb5ee1453da591b519e8f54cb50ff10dbb07ca3aabd2e07e0aa0664d"
+    },
+    "graphManifest": {
+      "path": "data/knowledge-graph/tzudong.json",
+      "bytes": 1196,
+      "sha256": "9f23f634c05b17f682eb8639c0dba4019b28ddd9dc1eadbeff5f8ffd6c958c6d"
+    },
+    "nodeShard": {
+      "path": "data/knowledge-graph/shards/nodes-58e4515bb880b788ee0c4e64a5cd7c12100974acec9dfc3f828334d1f40417f7.json",
+      "bytes": 12752,
+      "sha256": "58e4515bb880b788ee0c4e64a5cd7c12100974acec9dfc3f828334d1f40417f7"
+    },
+    "formatterBeforeSnapshot": {
+      "path": "performance/knowledge-evidence-untimed-20261011/formatter-before-8ca22313.ts",
+      "bytes": 1323,
+      "sha256": "2743bfd2bda230d6a71b618bfb430cf766c754bbf27cc9c773f14d0b0df54e14"
+    }
+  }
+}

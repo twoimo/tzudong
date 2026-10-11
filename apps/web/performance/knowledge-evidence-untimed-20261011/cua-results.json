@@ -1,0 +1,161 @@
+{
+  "recordedAt": "2026-10-11T12:13:00.580Z",
+  "status": "passed-scoped",
+  "environment": "Cua IAB; synthetic loopback only",
+  "beforeCommit": "8ca2231308c0175497d99186b48fbff8dc3659f6",
+  "graphSizes": [
+    {
+      "documentWidth": 1440,
+      "edges": 88,
+      "nodes": 30,
+      "viewportWidth": 1440
+    },
+    {
+      "documentWidth": 1024,
+      "edges": 88,
+      "nodes": 30,
+      "viewportWidth": 1024
+    },
+    {
+      "documentWidth": 390,
+      "edges": 88,
+      "nodes": 30,
+      "viewportWidth": 390
+    }
+  ],
+  "evidenceCases": [
+    {
+      "kind": "bounded",
+      "documentWidth": 1440,
+      "href": "https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=81s",
+      "text": "YouTube · QWtvZ6NfNJ8\n1:21–1:24 · 미확인\n영상에서 근거 확인",
+      "viewportWidth": 1440
+    },
+    {
+      "kind": "untimed",
+      "documentWidth": 1440,
+      "href": "https://www.youtube.com/watch?v=3Z-ngM3DVi0",
+      "text": "YouTube · 3Z-ngM3DVi0\n시간 정보 없음 · 미확인\n영상에서 근거 확인",
+      "viewportWidth": 1440
+    },
+    {
+      "kind": "bounded",
+      "documentWidth": 1024,
+      "href": "https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=81s",
+      "text": "YouTube · QWtvZ6NfNJ8\n1:21–1:24 · 미확인\n영상에서 근거 확인",
+      "viewportWidth": 1024
+    },
+    {
+      "kind": "untimed",
+      "documentWidth": 1024,
+      "href": "https://www.youtube.com/watch?v=3Z-ngM3DVi0",
+      "text": "YouTube · 3Z-ngM3DVi0\n시간 정보 없음 · 미확인\n영상에서 근거 확인",
+      "viewportWidth": 1024
+    },
+    {
+      "kind": "bounded",
+      "documentWidth": 390,
+      "href": "https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=81s",
+      "text": "YouTube · QWtvZ6NfNJ8\n1:21–1:24 · 미확인\n영상에서 근거 확인",
+      "viewportWidth": 390
+    },
+    {
+      "kind": "untimed",
+      "documentWidth": 390,
+      "href": "https://www.youtube.com/watch?v=3Z-ngM3DVi0",
+      "text": "YouTube · 3Z-ngM3DVi0\n시간 정보 없음 · 미확인\n영상에서 근거 확인",
+      "viewportWidth": 390
+    }
+  ],
+  "events": [
+    {
+      "method": "Network.requestWillBeSent",
+      "sequence": 77,
+      "requestMethod": "GET",
+      "origin": "http://127.0.0.1:20504",
+      "path": "/api/admin/knowledge-graph"
+    },
+    {
+      "method": "Network.requestWillBeSent",
+      "sequence": 89,
+      "requestMethod": "GET",
+      "origin": "http://127.0.0.1:20504",
+      "path": "/api/admin/knowledge-graph"
+    },
+    {
+      "method": "Network.requestWillBeSent",
+      "sequence": 101,
+      "requestMethod": "GET",
+      "origin": "http://127.0.0.1:20504",
+      "path": "/api/admin/preferences/sidebar-order"
+    },
+    {
+      "method": "Network.requestWillBeSent",
+      "sequence": 102,
+      "requestMethod": "GET",
+      "origin": "http://127.0.0.1:20504",
+      "path": "/api/admin/pending-counts"
+    },
+    {
+      "method": "Network.requestWillBeSent",
+      "sequence": 103,
+      "requestMethod": "GET",
+      "origin": "http://127.0.0.1:20504",
+      "path": "/_next/image"
+    },
+    {
+      "method": "Network.requestWillBeSent",
+      "sequence": 122,
+      "requestMethod": "GET",
+      "origin": "http://127.0.0.1:20504",
+      "path": "/api/admin/knowledge-graph"
+    },
+    {
+      "method": "Network.requestWillBeSent",
+      "sequence": 132,
+      "requestMethod": "GET",
+      "origin": "http://127.0.0.1:20504",
+      "path": "/api/admin/knowledge-graph"
+    },
+    {
+      "method": "Network.requestWillBeSent",
+      "sequence": 144,
+      "requestMethod": "GET",
+      "origin": "http://127.0.0.1:20504",
+      "path": "/api/admin/knowledge-graph"
+    },
+    {
+      "method": "Network.requestWillBeSent",
+      "sequence": 150,
+      "requestMethod": "GET",
+      "origin": "http://127.0.0.1:20504",
+      "path": "/api/admin/knowledge-graph"
+    },
+    {
+      "method": "Network.requestWillBeSent",
+      "sequence": 159,
+      "requestMethod": "GET",
+      "origin": "http://127.0.0.1:20504",
+      "path": "/api/admin/knowledge-graph"
+    }
+  ],
+  "observed": {
+    "startCursor": 71,
+    "endCursor": 182,
+    "truncated": false,
+    "exceptions": 0,
+    "externalRequests": 0,
+    "writeRequests": 0,
+    "errorCount": 0,
+    "warningCount": 0
+  },
+  "setupObservations": [
+    "First semantic bootstrap click kept the page unchanged; DOM showed an enabled button and no error. Normal Enter activation then navigated successfully."
+  ],
+  "limits": [
+    "The event cursor begins after initial navigation.",
+    "Console is bounded to 100 matching entries and has no truncation signal.",
+    "No real auth, DB, provider, billing, deployment, large-graph paging or performance improvement proved by this fixture.",
+    "0/null is an untimed original source link; neither independent full-video coverage nor analysis completion is claimed."
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "status": "passed",
+  "revision": "285ba23b0eacb4a7069205b90e772b613daeadc6f34bbc18f0ad73afb3da6150",
+  "graph": {
+    "nodes": 30,
+    "edges": 88,
+    "evidenceItems": 36,
+    "untimedEvidenceItems": 9
+  },
+  "labels": {
+    "denominator": 9,
+    "beforeWholeVideoClaims": 9,
+    "afterWholeVideoClaims": 0,
+    "afterUntimedLabels": 9
+  },
+  "preserved": {
+    "idsUrlsStatusAndRangesSha256Before": "92b33b452510c10a0fdaac45e19cd048952ee3c1ed965f95a828e2136ea84cc9",
+    "idsUrlsStatusAndRangesSha256After": "92b33b452510c10a0fdaac45e19cd048952ee3c1ed965f95a828e2136ea84cc9",
+    "unchanged": true
+  },
+  "sourceData": {
+    "manifest": {
+      "path": "data/knowledge-graph/tzudong.json",
+      "bytes": 1196,
+      "sha256": "9f23f634c05b17f682eb8639c0dba4019b28ddd9dc1eadbeff5f8ffd6c958c6d"
+    },
+    "nodeShards": [
+      {
+        "path": "shards/nodes-58e4515bb880b788ee0c4e64a5cd7c12100974acec9dfc3f828334d1f40417f7.json",
+        "bytes": 12752,
+        "sha256": "58e4515bb880b788ee0c4e64a5cd7c12100974acec9dfc3f828334d1f40417f7"
+      }
+    ]
+  },
+  "comparisons": [
+    {
+      "nodeId": "261006-1dn0-bhr7lw23",
+      "videoId": "3Z-ngM3DVi0",
+      "url": "https://www.youtube.com/watch?v=3Z-ngM3DVi0",
+      "status": "unverified",
+      "beforeRange": "전체 영상",
+      "afterRange": "시간 정보 없음"
+    },
+    {
+      "nodeId": "261006-1dn0-hdeh43wq",
+      "videoId": "F93TnnxCNvY",
+      "url": "https://www.youtube.com/watch?v=F93TnnxCNvY",
+      "status": "unverified",
+      "beforeRange": "전체 영상",
+      "afterRange": "시간 정보 없음"
+    },
+    {
+      "nodeId": "261006-1dn0-q20wgonz",
+      "videoId": "BTyT60UWiLc",
+      "url": "https://www.youtube.com/watch?v=BTyT60UWiLc",
+      "status": "unverified",
+      "beforeRange": "전체 영상",
+      "afterRange": "시간 정보 없음"
+    },
+    {
+      "nodeId": "261006-1gn2-3lve41rq",
+      "videoId": "xRf_bhPFZrY",
+      "url": "https://www.youtube.com/watch?v=xRf_bhPFZrY",
+      "status": "unverified",
+      "beforeRange": "전체 영상",
+      "afterRange": "시간 정보 없음"
+    },
+    {
+      "nodeId": "261006-1gn2-s5yq4t2q",
+      "videoId": "Tsy8xRjMpB0",
+      "url": "https://www.youtube.com/watch?v=Tsy8xRjMpB0",
+      "status": "unverified",
+      "beforeRange": "전체 영상",
+      "afterRange": "시간 정보 없음"
+    },
+    {
+      "nodeId": "261006-1gn2-vuz3x3nu",
+      "videoId": "-C4280KT3S4",
+      "url": "https://www.youtube.com/watch?v=-C4280KT3S4",
+      "status": "unverified",
+      "beforeRange": "전체 영상",
+      "afterRange": "시간 정보 없음"
+    },
+    {
+      "nodeId": "261006-1i3c-axw2mngb",
+      "videoId": "Ck5UrobZuKA",
+      "url": "https://www.youtube.com/watch?v=Ck5UrobZuKA",
+      "status": "unverified",
+      "beforeRange": "전체 영상",
+      "afterRange": "시간 정보 없음"
+    },
+    {
+      "nodeId": "261006-1i3c-jib191x8",
+      "videoId": "zkOBLQUSEr0",
+      "url": "https://www.youtube.com/watch?v=zkOBLQUSEr0",
+      "status": "unverified",
+      "beforeRange": "전체 영상",
+      "afterRange": "시간 정보 없음"
+    },
+    {
+      "nodeId": "261006-1i3c-k0l3q5eb",
+      "videoId": "DNGGl1-jFcU",
+      "url": "https://www.youtube.com/watch?v=DNGGl1-jFcU",
+      "status": "unverified",
+      "beforeRange": "전체 영상",
+      "afterRange": "시간 정보 없음"
+    }
+  ],
+  "statistics": {
+    "method": "fixed exhaustive enumeration of the canonical 30-node export",
+    "samplingConfidenceInterval": null,
+    "explanation": "No sampling CI applies to exhaustive label counts. This check has no latency, provider, or quality-model implication."
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "recordedAt": "2026-10-11T12:14:31Z",
+  "candidateCommit": "8ca2231308c0175497d99186b48fbff8dc3659f6",
+  "status": "passed-scoped-local-and-cua",
+  "checks": {
+    "meaningContract": {
+      "status": "passed",
+      "nodes": 30,
+      "edges": 88,
+      "evidenceItems": 36,
+      "untimedDenominator": 9,
+      "beforeWholeVideoClaims": 9,
+      "afterWholeVideoClaims": 0,
+      "afterUntimedLabels": 9,
+      "identityHashBefore": "92b33b452510c10a0fdaac45e19cd048952ee3c1ed965f95a828e2136ea84cc9",
+      "identityHashAfter": "92b33b452510c10a0fdaac45e19cd048952ee3c1ed965f95a828e2136ea84cc9"
+    },
+    "unit": {
+      "status": "passed",
+      "tests": 32,
+      "failed": 0,
+      "assertions": 1495,
+      "files": 5
+    },
+    "eslint": {
+      "status": "passed",
+      "targets": 3
+    },
+    "typecheckParity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3142,
+      "firstAttempt": "failed in evidence-only script because Bun global had no project type; corrected to node:fs writeFileSync",
+      "productSourceChangedByRepair": false
+    },
+    "cua": {
+      "status": "passed-scoped",
+      "graphWidths": [
+        1440,
+        1024,
+        390
+      ],
+      "graphCases": 3,
+      "evidenceCases": 6,
+      "nodesPerGraph": 30,
+      "edgesPerGraph": 88,
+      "documentOverflowCases": 0,
+      "bounded": {
+        "videoId": "QWtvZ6NfNJ8",
+        "range": "1:21–1:24",
+        "url": "https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=81s"
+      },
+      "untimed": {
+        "videoId": "3Z-ngM3DVi0",
+        "range": "시간 정보 없음",
+        "url": "https://www.youtube.com/watch?v=3Z-ngM3DVi0"
+      },
+      "observed": {
+        "startCursor": 71,
+        "endCursor": 182,
+        "truncated": false,
+        "exceptions": 0,
+        "externalRequests": 0,
+        "writeRequests": 0,
+        "errorCount": 0,
+        "warningCount": 0
+      },
+      "jpegFiles": 9,
+      "jpegDimensions": {
+        "cua-1024-bounded.jpg": [
+          1024,
+          900
+        ],
+        "cua-1024-graph.jpg": [
+          1024,
+          900
+        ],
+        "cua-1024-untimed.jpg": [
+          1024,
+          900
+        ],
+        "cua-1440-bounded.jpg": [
+          1440,
+          1000
+        ],
+        "cua-1440-graph.jpg": [
+          1440,
+          1000
+        ],
+        "cua-1440-untimed.jpg": [
+          1440,
+          1000
+        ],
+        "cua-390-bounded.jpg": [
+          390,
+          844
+        ],
+        "cua-390-graph.jpg": [
+          390,
+          844
+        ],
+        "cua-390-untimed.jpg": [
+          390,
+          844
+        ]
+      },
+      "setupObservation": "First semantic bootstrap click had no effect while DOM showed enabled/no error; normal Enter navigation succeeded."
+    }
+  },
+  "files": {
+    "source-bindings.json": {
+      "bytes": 2543,
+      "sha256": "fa347955c6f73615d03a3e691e2010745beb8930d0f76ce5a3b92d803ced67d2"
+    },
+    "meaning-contract-check.ts": {
+      "bytes": 5096,
+      "sha256": "e18222eb95a478c5efb7fbc71b6cda8b99159323258ee0f33a3e95dd86dbd7bc"
+    },
+    "meaning-contract-results.json": {
+      "bytes": 3674,
+      "sha256": "e275d334fa6ade9a1b6ccf50e10cc5500b9cf8901e436b29f9b640614559f893"
+    },
+    "unit-tests.log": {
+      "bytes": 4519,
+      "sha256": "26ebe16a62c2f82d33bf0332db007f0be43e04f86b2404fd11c32a2cef95aff3"
+    },
+    "eslint.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "typecheck-parity.log": {
+      "bytes": 510,
+      "sha256": "488f51ebe18d89eba457faec3c77f203fcbbf7faf52ff86992b98699503694da"
+    },
+    "typecheck-parity-first-failure.log": {
+      "bytes": 105,
+      "sha256": "6e99e474c505df2b8693e2793a26deccc07b6b620151265af156050ab8b6daa0"
+    },
+    "cua-results.json": {
+      "bytes": 4872,
+      "sha256": "f512063520acb823705d758bea9c6d4f03102ab151cde1c5c17865977e9d3d96"
+    }
+  },
+  "statistics": {
+    "samplingConfidenceInterval": null,
+    "reason": "All 9 untimed labels in the fixed canonical 30-node export were enumerated; this has no sampling, latency, provider, or quality-model implication."
+  },
+  "cleanup": {
+    "listeners": {
+      "20502": 0,
+      "20503": 0,
+      "20504": 0
+    },
+    "temporaryNodeModulesLinkAbsent": true,
+    "tsconfigClean": true,
+    "ownedRuntimeStoppedByTrap": true
+  }
+}

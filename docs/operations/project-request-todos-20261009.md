@@ -740,3 +740,11 @@ root page server23개/231assertions 통과, agent의 범위 수정 전 관련27�
 - [ ] 지식 근거 변경의 보호 승격·배포와 실제 서비스 readback을 완료한다. 분석 완료0/1,071·미확인 근거 상태와 전체 목표의 열린 항목을 유지한다.
 
 지식 근거 증빙: `apps/web/performance/knowledge-evidence-develop-20261011/`. CI 상세 증빙과 6시간 읽기 전용 monitor는 PR #3168의 `docs/operations/github-ci-performance-20261010.md`, `docs/operations/github-ci-monitor-20261011.md`에 연결되며 미래 예약 실행 성공은 아직 확인 전이다. 이 후속에서 새 유료 호출·추가 충전·운영 SQL·Storage 삭제·운영 배포는0회다.
+
+## 2026-10-11 시간 없는 지식 근거 정정
+
+- [x] 위 기록의 ‘전체 영상 의미’ 해석을 철회한다. `caption_osk_adapter.py`의 `startSeconds=0/endSeconds=null`은 시간 없는 출처 링크이며 전체 시청 근거가 아니다. 이전 commit `8ca2231308c0175497d99186b48fbff8dc3659f6`의 증빙 34파일은 보존하고, 정정 증빙은 `apps/web/performance/knowledge-evidence-untimed-20261011/`에 분리했다.
+- [x] 고정 export의 근거36건 중 시간 없는9건을 전수 확인했다. 오해를 주는 ‘전체 영상’ 표시는9/9→0/9, ‘시간 정보 없음’은0/9→9/9다. ID·URL·상태·구간 해시는 동일하며 표본 추정이 아니므로95%CI는 적용하지 않는다. 분석 완료는 여전히0/1,071이다.
+- [x] 정정 소스의 관련32개 테스트·1,495 assertions, ESLint, typecheck parity 진단0과 합성 CUA 3개 폭·근거6개·그래프3개를 확인했다. 문서 가로 넘침·관측 예외·외부 요청·쓰기 요청·콘솔 오류는0이었다. 운영·공급자·전체 영상 검증으로 확대하지 않는다.
+- [x] 정정 전 develop `14ccd8775e52ab81143626515f850ee544907da9`의 READY Preview에서 기존 실제 관리자 세션으로 사용자 목록20행과 그래프30nodes/88edges를 읽었다. 이전 사용자 목록 오류 관측을 최신 상태로 간주하지 않는다. 저장·삭제·승인 검증은 수행하지 않았다.
+- [ ] 정정 소스의 보호 병합·배포 및 실제 화면 확인을 완료한다. 운영 읽기의 ledger86/latest20261009101645, 맛집1,659건, 신규 후속 SQL3개 미적용, 자동 검수OFF/version1/runs0/items0과 전체 목표의 남은 항목을 유지한다.
