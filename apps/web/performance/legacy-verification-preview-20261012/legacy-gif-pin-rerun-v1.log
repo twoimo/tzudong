@@ -1,0 +1,18 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/verify-pin-contract-source.test.ts:
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > owns the two bounded fixed codes and never mutates release-authority files [0.03ms]
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > verifies all six Pin_Contract items with declared vs resolved [0.17ms]
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > routes type checking through npm run typecheck:parity and guards the compiler root [0.04ms]
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > detects bun.lock vs package-lock.json conflicts and records list + count [0.01ms]
+(pass) Pin_Contract verifier source contract (design C2 / requirement 5) > fails closed on drift while still recording the per-item receipt [0.01ms]
+(pass) Pin_Contract declared values in the tree > package.json and both locks pin the exact contract versions [0.05ms]
+(pass) Pin_Contract verifier runtime behavior > rejects an absent repository compiler or emits a per-item installed-compiler receipt [277.29ms]
+(pass) Bun reconciliation is a failing pin gate > binds a packed local fork to the exact archive path and digest [2.20ms]
+(pass) Bun reconciliation is a failing pin gate > admits the same local package and rejects redirected, missing or escaping targets [0.12ms]
+(pass) Bun reconciliation is a failing pin gate > missing or differently resolved direct dependencies fail with otherwise matching pins [0.14ms]
+
+ 10 pass
+ 0 fail
+ 65 expect() calls
+Ran 10 tests across 1 file. [429.00ms]

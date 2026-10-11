@@ -1,0 +1,108 @@
+{
+  "files": {
+    "REPORT.md": {
+      "bytes": 3741,
+      "sha256": "88939717c1f98e404da38465fb56101c27a1d9eabb0ddc6c7de07085e538a153"
+    },
+    "build-legacy-gif-v1.mjs": {
+      "bytes": 1803,
+      "sha256": "2700f5ad96c4545f25afd5aa4017effa9d5f2ba42fe5f129e51fadc8512fabfa"
+    },
+    "build-legacy-gif-v2.mjs": {
+      "bytes": 1938,
+      "sha256": "2d143f1f2e55e476a5bb523326d18a57c2bf29bb55fa90b068d2d4ad5f516222"
+    },
+    "legacy-gif-after-v1.log": {
+      "bytes": 3884,
+      "sha256": "6abc2e46809ce9e8d64dd3fee561bbeaceea2586db4ce75fc40571b214e19b54"
+    },
+    "legacy-gif-before-v1.log": {
+      "bytes": 3720,
+      "sha256": "90658724294f88ed524aef390004d5982bbc1a546d542cf067251caa8938bd0d"
+    },
+    "legacy-gif-build-receipt-clarification-v1.json": {
+      "bytes": 508,
+      "sha256": "027f59eee07909b7a05427830b854e07ff30ef2101b3c07bc1b5a1da0fb3adf1"
+    },
+    "legacy-gif-build-v1.json": {
+      "bytes": 328,
+      "sha256": "ec7f75e71053c0fc88bc9d9b230abda4ed07898a7d2d78af3555fe768b0e151d"
+    },
+    "legacy-gif-build-v1.log": {
+      "bytes": 37487,
+      "sha256": "c1d5045439097f485f5c67a0e3b02cbf6c95a2c64712f4cf67bf0a9fc898e070"
+    },
+    "legacy-gif-build-v2.json": {
+      "bytes": 471,
+      "sha256": "db1335da58c5eb8c040c6adb3cecaf98d15d58a12ed707add121b112ecef7f55"
+    },
+    "legacy-gif-build-v2.log": {
+      "bytes": 1450,
+      "sha256": "40930e455e57180a1abe787177a4ed5551ce2143eb6ea0c96d6038248ee32235"
+    },
+    "legacy-gif-full-unit-v1.log": {
+      "bytes": 413783,
+      "sha256": "3de285bcc958daceac67a8b5a58dc50ffe084d4d75f8666be3312f5835bbbeac"
+    },
+    "legacy-gif-full-unit-v2.log": {
+      "bytes": 448574,
+      "sha256": "62f0ac4bea201688dc2b823e83f8007ec7d00751489fb1be5e4d563c292ab8f7"
+    },
+    "legacy-gif-lint-v1.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "legacy-gif-own-npm-ci-v1.log": {
+      "bytes": 119,
+      "sha256": "ad052949dd36e2b0c890fde4a0e187cced671e5a080a25246957dc58a82adb00"
+    },
+    "legacy-gif-parity-v1.log": {
+      "bytes": 428,
+      "sha256": "609e607b93b864d4a8d2fd6141f52b65497bdcf78f305393ee24a448f8a3910d"
+    },
+    "legacy-gif-parity-v2.log": {
+      "bytes": 428,
+      "sha256": "0cb151466328fa6088554a7637501893d12a4a6d3b2e4c7bbb05bc95ca312c25"
+    },
+    "legacy-gif-pin-rerun-v1.log": {
+      "bytes": 1601,
+      "sha256": "0783b56b5f67b77e7be76f523a7be480d5ed61862e02bf4184999e67a9143451"
+    },
+    "legacy-gif-pr-body-failure-v1.json": {
+      "bytes": 299,
+      "sha256": "bd1ba92752809e2365d5c7a4f8053bc842de11cca34faad7610a49c28345bfe5"
+    },
+    "source-after/apps/web/lib/review-photo-url.ts": {
+      "bytes": 14933,
+      "sha256": "811a669cada5b4938afc012a2e0f26ca82e080522306cfd424c2892cb979187e"
+    },
+    "source-after/apps/web/lib/reviews/private-verification-handler.ts": {
+      "bytes": 2176,
+      "sha256": "d0a606012eeb790eb2cf33a6f0c3bd33477f9a2b3009464e2d178c15817cc3ef"
+    },
+    "source-after/apps/web/tests-unit/private-review-verification.test.ts": {
+      "bytes": 14067,
+      "sha256": "c99759878126b4842b7d1d960aeb19370a4a787694369b51d11866c9b2c62a5a"
+    },
+    "source-before/apps/web/lib/review-photo-url.ts": {
+      "bytes": 13263,
+      "sha256": "74f2d5156bb5013912e7cff88a73828583e249a0b7a2171081406cfef9f7cb38"
+    },
+    "source-before/apps/web/lib/reviews/private-verification-handler.ts": {
+      "bytes": 2135,
+      "sha256": "0421a96fbbd3296438ccd56298212dd7f5f23c424421c3d7703fd8759c2ea18d"
+    },
+    "source-before/apps/web/tests-unit/private-review-verification.test.ts": {
+      "bytes": 11227,
+      "sha256": "8da755b6c2c3a71cc21ef4aa545b1d35d3f6cccb357306781b2af6077118cc28"
+    },
+    "source-binding-v1.json": {
+      "bytes": 1785,
+      "sha256": "b660872253316b1df7eaf9866ffef3a81b3b739e9ffb1b3b8aeb83f655cacd02"
+    }
+  },
+  "operatingWrites": 0,
+  "schema": "tzudong-functional-evidence-v1",
+  "sourceAfter": "b143ba4fc5747d4b26ddaea690861dcf82be3324",
+  "sourceBefore": "f72355616112c462708b76c3b091f13c1c264a45"
+}

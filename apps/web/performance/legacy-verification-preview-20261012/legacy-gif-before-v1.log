@@ -1,0 +1,48 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/private-review-verification.test.ts:
+(pass) private review verification image boundary > authorization fails before database or Storage access [0.23ms]
+(pass) private review verification image boundary > invalid IDs and foreign owner, purpose, or arbitrary URL are rejected [0.30ms]
+(pass) private review verification image boundary > authorized bounded image is delivered without caching or a signed URL [0.52ms]
+57 |         } }) } as unknown as SupabaseClient<Database>['storage'];
+58 |         const { deps } = fixture();
+59 |         deps.read = async () => ({ data: { user_id: owner, verification_photo: legacyKey }, error: null });
+60 |         deps.download = path => downloadReviewVerification(storage, path);
+61 |         const reply = await readPrivateVerificationImage(Promise.resolve({ reviewId: review }), deps);
+62 |         expect(reply.status).toBe(200);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 200
+Received: 404
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/sync-data-motion-20261012/tzudong/apps/web/tests-unit/private-review-verification.test.ts:62:30)
+(fail) private review verification image boundary > authoritative historical GIF previews preserve bytes through the missing-private fallback [0.29ms]
+71 |         process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://project-ref.supabase.co';
+72 |         const ownership = { ownerId: owner, reviewId: review, purpose: 'verification' as const };
+73 |         const legacyKey = `${owner}/1720000000000_verification_proof.gif`;
+74 |         try {
+75 |             for (const path of [legacyKey, `https://project-ref.supabase.co/storage/v1/object/public/review-photos/${legacyKey}`]) {
+76 |                 expect(resolveReviewPhotoUrl(path, ownership)).toBe(`/api/admin/review-verification/${review}`);
+                                                                    ^
+error: expect(received).toBe(expected)
+
+Expected: "/api/admin/review-verification/22222222-2222-4222-8222-222222222222"
+Received: null
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/sync-data-motion-20261012/tzudong/apps/web/tests-unit/private-review-verification.test.ts:76:64)
+(fail) private review verification image boundary > legacy GIF display uses the admin route without admitting GIF uploads or compensation [0.21ms]
+(pass) private review verification image boundary > oversize, unsupported format and provider diagnostics stay bounded and fixed [0.88ms]
+(pass) private review verification image boundary > canonical and legacy authoritative keys fall back to the pre-migration public bucket [0.14ms]
+(pass) private review verification image boundary > private success keeps authoritative bytes; legacy missing-object errors alone permit fallback [0.06ms]
+(pass) private review verification image boundary > authorization, missing bucket, transient and unknown failures never read stale public bytes [0.08ms]
+(pass) private review verification image boundary > thrown private transport failure propagates without a public fallback [0.04ms]
+(pass) private review verification image boundary > normalizes the authoritative same-origin historical URL before download [0.09ms]
+(pass) private review verification image boundary > resolved database failures are unavailable rather than authoritative absence [0.05ms]
+(pass) private review verification image boundary > only definitive object absence is 404; provider and credential failures are 503 [0.14ms]
+(pass) private review verification image boundary > authoritative row absence stays 404 while an empty successful transport stays 503 [0.04ms]
+
+ 12 pass
+ 2 fail
+ 77 expect() calls
+Ran 14 tests across 1 file. [111.00ms]

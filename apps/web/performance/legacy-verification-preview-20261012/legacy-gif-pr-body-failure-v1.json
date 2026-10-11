@@ -1,0 +1,1 @@
+{"status":"body-file-creation-failed","reason":"Unpinned stdin Python rejected the source encoding","pr":3193,"readyActionCompleted":true,"sourceHead":"b143ba4fc5747d4b26ddaea690861dcf82be3324","resolution":"Use the structured UTF-8 file editor and edit the existing PR; do not create another PR."}

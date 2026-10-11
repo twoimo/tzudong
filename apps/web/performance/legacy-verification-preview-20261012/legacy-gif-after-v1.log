@@ -1,0 +1,38 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/private-review-verification.test.ts:
+(pass) private review verification image boundary > authorization fails before database or Storage access [0.27ms]
+(pass) private review verification image boundary > invalid IDs and foreign owner, purpose, or arbitrary URL are rejected [0.48ms]
+(pass) private review verification image boundary > authorized bounded image is delivered without caching or a signed URL [0.26ms]
+(pass) private review verification image boundary > authoritative historical GIF previews preserve bytes through the missing-private fallback [0.26ms]
+(pass) private review verification image boundary > legacy GIF display uses the admin route without admitting GIF uploads or compensation [0.37ms]
+(pass) private review verification image boundary > oversize, unsupported format and provider diagnostics stay bounded and fixed [1.10ms]
+(pass) private review verification image boundary > canonical and legacy authoritative keys fall back to the pre-migration public bucket [0.11ms]
+(pass) private review verification image boundary > private success keeps authoritative bytes; legacy missing-object errors alone permit fallback [0.07ms]
+(pass) private review verification image boundary > authorization, missing bucket, transient and unknown failures never read stale public bytes [0.10ms]
+(pass) private review verification image boundary > thrown private transport failure propagates without a public fallback [0.09ms]
+(pass) private review verification image boundary > normalizes the authoritative same-origin historical URL before download [0.15ms]
+(pass) private review verification image boundary > resolved database failures are unavailable rather than authoritative absence [0.06ms]
+(pass) private review verification image boundary > only definitive object absence is 404; provider and credential failures are 503 [0.15ms]
+(pass) private review verification image boundary > authoritative row absence stays 404 while an empty successful transport stays 503 [0.04ms]
+
+tests-unit/review-photo-url-security.test.ts:
+(pass) review photo URL trust boundary > verification images resolve to the authenticated admin route, never a public or signed URL [0.07ms]
+(pass) review photo URL trust boundary > builds and resolves a canonical key bound to its owner and review [0.11ms]
+(pass) review photo URL trust boundary > rejects another owner, review, or purpose [0.01ms]
+(pass) review photo URL trust boundary > resolves same-origin public review-photo URLs back to the owned object [0.03ms]
+(pass) review photo URL trust boundary > keeps authoritative historical values exact for the edit final-list contract [0.09ms]
+(pass) review photo URL trust boundary > rejects absolute URLs, buckets, traversal, encoded separators, queries, and fragments [0.03ms]
+(pass) review photo URL trust boundary > rejects controls, malformed key shapes, and unsupported image extensions [0.04ms]
+(pass) review photo URL trust boundary > fails closed without owner binding and for invalid cache-buster values [0.02ms]
+(pass) review photo URL trust boundary > resolves the historical composer layout for the owning user only [0.05ms]
+(pass) review photo URL trust boundary > resolves the configured loopback origin instead of requiring https [0.03ms]
+(pass) review photo URL trust boundary > normalizes browser filenames into the canonical filename grammar [0.14ms]
+(pass) review photo URL trust boundary > rejects an arbitrary tracker origin even when the storage client generates that origin [0.02ms]
+(pass) review photo URL trust boundary > deduplicates cleanup keys and verifies removal through storage readback [0.20ms]
+(pass) review photo URL trust boundary > retains the exact canonical retry set when remove resolves an error or readback finds an object [0.05ms]
+
+ 28 pass
+ 0 fail
+ 162 expect() calls
+Ran 28 tests across 2 files. [111.00ms]
