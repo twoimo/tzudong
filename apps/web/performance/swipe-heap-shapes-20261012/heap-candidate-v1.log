@@ -1,0 +1,17 @@
+{"kind":"candidate","pass":0,"completedQueries":16}
+{"kind":"candidate","pass":0,"completedQueries":32}
+{"kind":"candidate","pass":0,"completedQueries":48}
+{"kind":"candidate","pass":0,"completedQueries":64}
+{"kind":"candidate","pass":0,"completedQueries":80}
+{"kind":"candidate","pass":0,"completedQueries":96}
+{"kind":"candidate","pass":0,"completedQueries":112}
+{"kind":"candidate","pass":0,"completedQueries":128}
+{"kind":"candidate","pass":1,"completedQueries":16}
+{"kind":"candidate","pass":1,"completedQueries":32}
+{"kind":"candidate","pass":1,"completedQueries":48}
+{"kind":"candidate","pass":1,"completedQueries":64}
+{"kind":"candidate","pass":1,"completedQueries":80}
+{"kind":"candidate","pass":1,"completedQueries":96}
+{"kind":"candidate","pass":1,"completedQueries":112}
+{"kind":"candidate","pass":1,"completedQueries":128}
+{"kind":"candidate","label":"heap-candidate-v1","passed":true,"cycles":256,"sdk":{"loaded":true,"remoteScript":true,"stub":false,"captured":true,"reportedVersion":null},"errors":{"page":0,"console":2,"consoleCategories":{"http401":0,"blockedClient":0,"provider":0,"other":1,"csp":1},"cspDirectives":{"connect-src":1},"cspResourceGroups":{"naver-family":1}}}

@@ -1,0 +1,13 @@
+{
+  "diagnosticOnly": true,
+  "afterPrimarySeriesComplete": true,
+  "samplesPerVariant": 1,
+  "actionsPerProcess": 256,
+  "sourceBefore": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "sourceAfter": "21a86dca974f9bbdeed52d19d2fde0e9cc1fcac6",
+  "rawSnapshotPersisted": false,
+  "snapshotMayTriggerGc": true,
+  "doesNotReplaceNaturalHeapGuard": true,
+  "sharedArraysNotExclusiveRetainedBytes": true,
+  "driverOriginSha256": "1fbb0b9429a45a36d32f0abafa2d8e19d61e9a4f0deec2615bbfad6c70401539"
+}

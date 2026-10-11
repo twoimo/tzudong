@@ -1,0 +1,86 @@
+{
+  "diagnosticOnly": true,
+  "files": {
+    "REPORT.md": {
+      "bytes": 2712,
+      "sha256": "0578c406b6b5b89d7550e928913fcc31bc20b1c694e592c3aba5f0a0783dc86f"
+    },
+    "browser-confirm-plan-v7.json": {
+      "bytes": 5312,
+      "sha256": "3c82f8b85290941ca79e1c63ae6b078e11da5c374e94e19814815ea2b74f15bd"
+    },
+    "build-receipts-v7.json": {
+      "bytes": 1539,
+      "sha256": "e7da6656676c84cfb538323ae48a228419ad51e80cb72d935461f21da78e66d0"
+    },
+    "diagnose-ui-v1.mjs": {
+      "bytes": 6836,
+      "sha256": "ab5d7da099cb50cd7b962a47753a9b1529c69ffb61c8dbac7b227202c0be8668"
+    },
+    "diagnostic-plan-v1.json": {
+      "bytes": 492,
+      "sha256": "3c94507443098e96563e809435ca42e8d6e6dd1f79bcbb49fca286b3ff4e7743"
+    },
+    "fixture-query-v7.mjs": {
+      "bytes": 5754,
+      "sha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5"
+    },
+    "heap-baseline-v1.log": {
+      "bytes": 1176,
+      "sha256": "221297ee9d566ecb210360ab7c838240b7f20bfca0d0024ecb06a49cd48c6a8e"
+    },
+    "heap-candidate-v1.log": {
+      "bytes": 1194,
+      "sha256": "b1505c2e8e18d35a680ac1f0fb9d47afa5bcfa32fb9f48c56171ef19e119a10f"
+    },
+    "heap-shape-summary-v1.mjs": {
+      "bytes": 3832,
+      "sha256": "403ab6a24c90be6ac64aac38d02000e46ad2268e2cc9c45cb000bc3a3c8379f1"
+    },
+    "real-sdk-runtime-v7.mjs": {
+      "bytes": 9123,
+      "sha256": "7ae9d1e598681af9b4679ec8b375572768749cc7fa1eee8dffa40d5cba498473"
+    },
+    "ui-heap-baseline-v1/pass-0-query-0.png": {
+      "bytes": 153926,
+      "sha256": "4a24cb6dca0f4f16016e6bfb99f91fce8531fbac3e3e07f8ca085bc24f23bd81"
+    },
+    "ui-heap-baseline-v1/pass-0-query-127.png": {
+      "bytes": 93423,
+      "sha256": "284e212c79669708f02ebfd707ae3289411d39041345dc4bb662bb4eb0840f0c"
+    },
+    "ui-heap-baseline-v1/pass-1-query-0.png": {
+      "bytes": 154753,
+      "sha256": "60e8b8442b53e29537d9f30b54b36ae8435bf18d82630c40f80d7fc4f8cb9d43"
+    },
+    "ui-heap-baseline-v1/pass-1-query-127.png": {
+      "bytes": 93532,
+      "sha256": "b8f0542ee806cd1aedcd4a7456ee62f45e1a0f549ae1be13412ae119c9e4901c"
+    },
+    "ui-heap-baseline-v1/raw.json": {
+      "bytes": 194638,
+      "sha256": "bc96813902a8d07356818c391b635af2e3136bd37a9b893dc6152d66641a5321"
+    },
+    "ui-heap-candidate-v1/pass-0-query-0.png": {
+      "bytes": 153649,
+      "sha256": "53ee3ac1b078b317e5cf989a22f55a003dbf8cf75c64c691a8bbca708ab7a430"
+    },
+    "ui-heap-candidate-v1/pass-0-query-127.png": {
+      "bytes": 93592,
+      "sha256": "c0180b9b4ed8d5cbe6905b0961ad8caf0360cb6cc7bc62ac3f6fa30cd28550ed"
+    },
+    "ui-heap-candidate-v1/pass-1-query-0.png": {
+      "bytes": 154604,
+      "sha256": "b292258dfa364fb7b610e982a43d338abfb17352d86ac2973a894b68a5fa2c32"
+    },
+    "ui-heap-candidate-v1/pass-1-query-127.png": {
+      "bytes": 93589,
+      "sha256": "2d53f8d8187f3f54ba060cdbed47d1e1199e8be9c3ac9e67c45919284a15a52f"
+    },
+    "ui-heap-candidate-v1/raw.json": {
+      "bytes": 194898,
+      "sha256": "99880a16d1c9e23d6337313cdc86a4ac73226285fe93e578c3a7c04934190622"
+    }
+  },
+  "schema": "tzudong-diagnostic-evidence-v1"
+}
