@@ -1,0 +1,15 @@
+{
+  "copiedFrom": "apps/web/performance/swipe-memory-diagnostic-20261011",
+  "files": {
+    "fixture-query-v7.mjs": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5",
+    "real-sdk-runtime-v7.mjs": "7ae9d1e598681af9b4679ec8b375572768749cc7fa1eee8dffa40d5cba498473",
+    "measure-ui-v7.mjs": "1fbb0b9429a45a36d32f0abafa2d8e19d61e9a4f0deec2615bbfad6c70401539",
+    "run-browser-series-v7.mjs": "ea2c3002308b154fb83f78df80d3813fe38b2f367209d4ef4ad596987a56b48b",
+    "browser-confirm-plan-v7.json": "3c82f8b85290941ca79e1c63ae6b078e11da5c374e94e19814815ea2b74f15bd",
+    "build-receipts-v7.json": "e7da6656676c84cfb538323ae48a228419ad51e80cb72d935461f21da78e66d0"
+  },
+  "thresholdsUnchanged": true,
+  "sourceDeliveryCandidateExcluded": true,
+  "performanceAdmission": 0,
+  "physicalFieldAdmission": 0
+}

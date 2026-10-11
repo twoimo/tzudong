@@ -1,0 +1,13 @@
+{
+  "originSha256": "88077152aced4992e56e9619c54c371d766f38f08e1d2d0f3d0c71a8042e4b29",
+  "scriptSha256": "b1b4ae28bf6b40ca0727762ff83953e3ebcb809eeba9b40e2f2bcc52b0d85a97",
+  "transform": [
+    "v6 file labels to v7",
+    "explicit guards preserve semantics under Python optimized mode"
+  ],
+  "bootstrapReplicates": 20000,
+  "bootstrapSeed": 20261009,
+  "statisticsUnchanged": true,
+  "guardUnchanged": true,
+  "notRunYet": true
+}

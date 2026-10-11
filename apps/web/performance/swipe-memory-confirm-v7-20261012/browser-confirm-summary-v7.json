@@ -1,0 +1,1651 @@
+{
+  "sourceBefore": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "sourceAfter": "21a86dca974f9bbdeed52d19d2fde0e9cc1fcac6",
+  "independentAAProcesses": 4,
+  "independentABPairs": 9,
+  "dependentActionsPerProcess": 256,
+  "matchedProcesses": 22,
+  "confidenceMethod": "paired-process bootstrap median difference and median relative change, 20000 replicates, fixed seed20261009",
+  "AANoiseScope": "two paired differences only; weak noise estimate, cannot waive guard",
+  "p95Scope": "empirical256-action within-session p95, compared as a per-process descriptive summary; no user/population p95 inference",
+  "metrics": [
+    {
+      "metric": "initial_heap_MB",
+      "beforeMedian": 12.301012,
+      "afterMedian": 12.420292,
+      "absoluteReduction": -0.11927999999999983,
+      "relativeReductionPercent": -0.9696763160624493,
+      "pairedMedianReduction": -0.1983599999999992,
+      "paired95CiReduction": [
+        -0.21022800000000075,
+        -0.07011599999999873
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -1.7267328684424574,
+        -0.5667065937956048
+      ],
+      "beforeRange": [
+        12.1749,
+        12.37254
+      ],
+      "afterRange": [
+        12.31286,
+        12.5349
+      ],
+      "beforeMAD": 0.044316000000000244,
+      "afterMAD": 0.025584000000000273,
+      "AApairedDifferences": [
+        0.12080400000000147,
+        0.028356000000000492
+      ],
+      "limitedAAabsoluteNoiseMax": 0.12080400000000147,
+      "fixedRegressionGuardPercent": 20,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "end_heap_MB",
+      "beforeMedian": 27.933232,
+      "afterMedian": 33.083332,
+      "absoluteReduction": -5.150099999999998,
+      "relativeReductionPercent": -18.437179056114946,
+      "pairedMedianReduction": -1.911360000000002,
+      "paired95CiReduction": [
+        -8.234268,
+        18.178283999999998
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -34.68919843682095,
+        35.433278802256154
+      ],
+      "beforeRange": [
+        23.604136,
+        51.302856
+      ],
+      "afterRange": [
+        23.72418,
+        35.141976
+      ],
+      "beforeMAD": 4.195964,
+      "afterMAD": 0.335563999999998,
+      "AApairedDifferences": [
+        -1.9634599999999978,
+        5.539700000000003
+      ],
+      "limitedAAabsoluteNoiseMax": 5.539700000000003,
+      "fixedRegressionGuardPercent": 20,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": false,
+      "pairsAboveGuard": 4,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "idle_heap_MB",
+      "beforeMedian": 29.025812,
+      "afterMedian": 34.229488,
+      "absoluteReduction": -5.203676000000005,
+      "relativeReductionPercent": -17.92775340789779,
+      "pairedMedianReduction": -6.726124000000002,
+      "paired95CiReduction": [
+        -8.215704000000002,
+        12.971835999999996
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -32.980146168007316,
+        27.411396590699304
+      ],
+      "beforeRange": [
+        24.779544,
+        49.615768
+      ],
+      "afterRange": [
+        24.902984,
+        36.310444
+      ],
+      "beforeMAD": 3.177524000000002,
+      "afterMAD": 0.3093720000000033,
+      "AApairedDifferences": [
+        -1.9650279999999967,
+        5.547908
+      ],
+      "limitedAAabsoluteNoiseMax": 5.547908,
+      "fixedRegressionGuardPercent": 20,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": false,
+      "pairsAboveGuard": 5,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "sampled_peak_heap_MB",
+      "beforeMedian": 51.290476,
+      "afterMedian": 48.66396,
+      "absoluteReduction": 2.626515999999995,
+      "relativeReductionPercent": 5.120864934066892,
+      "pairedMedianReduction": 1.8161720000000017,
+      "paired95CiReduction": [
+        0.4233520000000013,
+        4.572927999999997
+      ],
+      "paired95CiRelativeReductionPercent": [
+        0.8740773041175924,
+        8.156247493367644
+      ],
+      "beforeRange": [
+        46.138252,
+        57.460212
+      ],
+      "afterRange": [
+        44.6854,
+        52.887284
+      ],
+      "beforeMAD": 2.8563159999999996,
+      "afterMAD": 0.8601719999999986,
+      "AApairedDifferences": [
+        -7.233412000000001,
+        2.0832279999999983
+      ],
+      "limitedAAabsoluteNoiseMax": 7.233412000000001,
+      "fixedRegressionGuardPercent": 20,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "input_all_process_median_ms",
+      "beforeMedian": 160.39999985694885,
+      "afterMedian": 160.29999995231628,
+      "absoluteReduction": 0.09999990463256836,
+      "relativeReductionPercent": 0.062344080250469,
+      "pairedMedianReduction": -0.10000014305114746,
+      "paired95CiReduction": [
+        -5.6499998569488525,
+        13.200000286102295
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -3.3422063594049685,
+        7.608069318710804
+      ],
+      "beforeRange": [
+        159.40000009536743,
+        174.45000004768372
+      ],
+      "afterRange": [
+        159.95000004768372,
+        174.70000004768372
+      ],
+      "beforeMAD": 0.6500000953674316,
+      "afterMAD": 0.2999999523162842,
+      "AApairedDifferences": [
+        -1.5,
+        4.76837158203125e-07
+      ],
+      "limitedAAabsoluteNoiseMax": 1.5,
+      "fixedRegressionGuardPercent": 15,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "input_first_process_median_ms",
+      "beforeMedian": 176.74999976158142,
+      "afterMedian": 175.84999990463257,
+      "absoluteReduction": 0.8999998569488525,
+      "relativeReductionPercent": 0.5091936962731909,
+      "pairedMedianReduction": 1.2000000476837158,
+      "paired95CiReduction": [
+        -0.20000028610229492,
+        2.6499996185302734
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -0.1138953793911811,
+        1.5065375899291602
+      ],
+      "beforeRange": [
+        175.59999990463257,
+        190.90000009536743
+      ],
+      "afterRange": [
+        173.25000023841858,
+        191.90000009536743
+      ],
+      "beforeMAD": 0.8499999046325684,
+      "afterMAD": 0.5999996662139893,
+      "AApairedDifferences": [
+        -0.15000009536743164,
+        -9.449999809265137
+      ],
+      "limitedAAabsoluteNoiseMax": 9.449999809265137,
+      "fixedRegressionGuardPercent": 15,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "input_revisit_process_median_ms",
+      "beforeMedian": 155.44999980926514,
+      "afterMedian": 157.40000009536743,
+      "absoluteReduction": -1.950000286102295,
+      "relativeReductionPercent": -1.254422829523909,
+      "pairedMedianReduction": -2.1999998092651367,
+      "paired95CiReduction": [
+        -13.050000190734863,
+        2.5500001907348633
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -9.040526636201303,
+        1.608832927908431
+      ],
+      "beforeRange": [
+        142.25000023841858,
+        158.55000019073486
+      ],
+      "afterRange": [
+        143.85000014305115,
+        159.10000014305115
+      ],
+      "beforeMAD": 3.1000003814697266,
+      "afterMAD": 1.450000286102295,
+      "AApairedDifferences": [
+        -13.550000190734863,
+        -0.5999999046325684
+      ],
+      "limitedAAabsoluteNoiseMax": 13.550000190734863,
+      "fixedRegressionGuardPercent": 15,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "input_within_process_p95_ms_descriptive",
+      "beforeMedian": 228.799999833107,
+      "afterMedian": 228.07500004768372,
+      "absoluteReduction": 0.7249997854232788,
+      "relativeReductionPercent": 0.31687053581823144,
+      "pairedMedianReduction": 0.8750001192092896,
+      "paired95CiReduction": [
+        -14.325000047683716,
+        10.074999690055847
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -6.26092659883425,
+        4.252400420872768
+      ],
+      "beforeRange": [
+        226.37500023841858,
+        243.82499992847443
+      ],
+      "afterRange": [
+        225.7500001192093,
+        259.0000002384186
+      ],
+      "beforeMAD": 1.5749995708465576,
+      "afterMAD": 1.2249999046325684,
+      "AApairedDifferences": [
+        -16.299999952316284,
+        -11.725000143051147
+      ],
+      "limitedAAabsoluteNoiseMax": 16.299999952316284,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "long_task_count",
+      "beforeMedian": 236,
+      "afterMedian": 236,
+      "absoluteReduction": 0,
+      "relativeReductionPercent": 0.0,
+      "pairedMedianReduction": 0,
+      "paired95CiReduction": [
+        -6.0,
+        7.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -2.564102564102564,
+        2.928870292887029
+      ],
+      "beforeRange": [
+        228,
+        242
+      ],
+      "afterRange": [
+        229,
+        240
+      ],
+      "beforeMAD": 4,
+      "afterMAD": 4,
+      "AApairedDifferences": [
+        -5,
+        -7
+      ],
+      "limitedAAabsoluteNoiseMax": 7,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "long_task_total_ms",
+      "beforeMedian": 17691,
+      "afterMedian": 17521,
+      "absoluteReduction": 170,
+      "relativeReductionPercent": 0.9609405912610933,
+      "pairedMedianReduction": -163,
+      "paired95CiReduction": [
+        -837.0,
+        1269.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -4.822817631806396,
+        6.821480406386067
+      ],
+      "beforeRange": [
+        16791,
+        19169
+      ],
+      "afterRange": [
+        17064,
+        19438
+      ],
+      "beforeMAD": 724,
+      "afterMAD": 374,
+      "AApairedDifferences": [
+        -905,
+        -708
+      ],
+      "limitedAAabsoluteNoiseMax": 905,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "max_observed_frame_gap_ms",
+      "beforeMedian": 149.90000000000146,
+      "afterMedian": 133.40000000000146,
+      "absoluteReduction": 16.5,
+      "relativeReductionPercent": 11.007338225483549,
+      "pairedMedianReduction": 0,
+      "paired95CiReduction": [
+        -16.70000000000141,
+        33.20000000000255
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -14.310197086547905,
+        19.976004799039668
+      ],
+      "beforeRange": [
+        116.70000000000005,
+        166.70000000000073
+      ],
+      "afterRange": [
+        116.69999999999891,
+        150
+      ],
+      "beforeMAD": 16.599999999998545,
+      "afterMAD": 16.5,
+      "AApairedDifferences": [
+        16.799999999995634,
+        -16.69999999999709
+      ],
+      "limitedAAabsoluteNoiseMax": 16.799999999995634,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "restaurant_requests",
+      "beforeMedian": 2690,
+      "afterMedian": 2690,
+      "absoluteReduction": 0,
+      "relativeReductionPercent": 0.0,
+      "pairedMedianReduction": 0,
+      "paired95CiReduction": [
+        0.0,
+        0.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        0.0,
+        0.0
+      ],
+      "beforeRange": [
+        2690,
+        2690
+      ],
+      "afterRange": [
+        2690,
+        2690
+      ],
+      "beforeMAD": 0,
+      "afterMAD": 0,
+      "AApairedDifferences": [
+        0,
+        0
+      ],
+      "limitedAAabsoluteNoiseMax": 0,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "end_DOM_nodes",
+      "beforeMedian": 7692,
+      "afterMedian": 2424,
+      "absoluteReduction": 5268,
+      "relativeReductionPercent": 68.48673946957878,
+      "pairedMedianReduction": 2471,
+      "paired95CiReduction": [
+        877.0,
+        10032.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        11.402938499544922,
+        75.29303842625625
+      ],
+      "beforeRange": [
+        4266,
+        15152
+      ],
+      "afterRange": [
+        2394,
+        16086
+      ],
+      "beforeMAD": 3421,
+      "afterMAD": 30,
+      "AApairedDifferences": [
+        -878,
+        -5726
+      ],
+      "limitedAAabsoluteNoiseMax": 5726,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "end_JS_listeners",
+      "beforeMedian": 9764,
+      "afterMedian": 2864,
+      "absoluteReduction": 6900,
+      "relativeReductionPercent": 70.66775911511675,
+      "pairedMedianReduction": 2792,
+      "paired95CiReduction": [
+        -1390.0,
+        14568.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -94.42934782608695,
+        78.0905752753978
+      ],
+      "beforeRange": [
+        1472,
+        21591
+      ],
+      "afterRange": [
+        2858,
+        22856
+      ],
+      "beforeMAD": 4120,
+      "afterMAD": 6,
+      "AApairedDifferences": [
+        -1091,
+        -8267
+      ],
+      "limitedAAabsoluteNoiseMax": 8267,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    }
+  ],
+  "rawProcessValues": {
+    "aa-confirm-v7-p0-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "aa-confirm-v7-p0-a",
+        "pair": 0,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.182028,
+        "end_heap_MB": 35.048484,
+        "idle_heap_MB": 36.223368,
+        "sampled_peak_heap_MB": 46.06596,
+        "input_all_process_median_ms": 159.69999980926514,
+        "input_first_process_median_ms": 175.94999980926514,
+        "input_revisit_process_median_ms": 144.0,
+        "input_within_process_p95_ms_descriptive": 214.97500014305115,
+        "long_task_count": 228,
+        "long_task_total_ms": 16917,
+        "max_observed_frame_gap_ms": 150.09999999999854,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 5220,
+        "end_JS_listeners": 6809
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "aa-confirm-v7-p0-b": {
+      "run": {
+        "kind": "baseline",
+        "label": "aa-confirm-v7-p0-b",
+        "pair": 0,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.061224,
+        "end_heap_MB": 37.011944,
+        "idle_heap_MB": 38.188396,
+        "sampled_peak_heap_MB": 53.299372,
+        "input_all_process_median_ms": 161.19999980926514,
+        "input_first_process_median_ms": 176.09999990463257,
+        "input_revisit_process_median_ms": 157.55000019073486,
+        "input_within_process_p95_ms_descriptive": 231.27500009536743,
+        "long_task_count": 233,
+        "long_task_total_ms": 17822,
+        "max_observed_frame_gap_ms": 133.3000000000029,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 6098,
+        "end_JS_listeners": 7900
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 21,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 20
+        }
+      },
+      "durationSeconds": null
+    },
+    "aa-confirm-v7-p1-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "aa-confirm-v7-p1-a",
+        "pair": 1,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.131868,
+        "end_heap_MB": 34.988528,
+        "idle_heap_MB": 36.170684,
+        "sampled_peak_heap_MB": 51.28386,
+        "input_all_process_median_ms": 159.80000019073486,
+        "input_first_process_median_ms": 165.5,
+        "input_revisit_process_median_ms": 143.80000019073486,
+        "input_within_process_p95_ms_descriptive": 214.82499980926514,
+        "long_task_count": 223,
+        "long_task_total_ms": 16256,
+        "max_observed_frame_gap_ms": 116.70000000001164,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 5223,
+        "end_JS_listeners": 6809
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "aa-confirm-v7-p1-b": {
+      "run": {
+        "kind": "baseline",
+        "label": "aa-confirm-v7-p1-b",
+        "pair": 1,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.103512,
+        "end_heap_MB": 29.448828,
+        "idle_heap_MB": 30.622776,
+        "sampled_peak_heap_MB": 49.200632,
+        "input_all_process_median_ms": 159.7999997138977,
+        "input_first_process_median_ms": 174.94999980926514,
+        "input_revisit_process_median_ms": 144.40000009536743,
+        "input_within_process_p95_ms_descriptive": 226.54999995231628,
+        "long_task_count": 230,
+        "long_task_total_ms": 16964,
+        "max_observed_frame_gap_ms": 133.40000000000873,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 10949,
+        "end_JS_listeners": 15076
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p0-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-confirm-v7-p0-b",
+        "pair": 0,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.385128,
+        "end_heap_MB": 23.72418,
+        "idle_heap_MB": 24.902984,
+        "sampled_peak_heap_MB": 52.887284,
+        "input_all_process_median_ms": 174.70000004768372,
+        "input_first_process_median_ms": 177.40000009536743,
+        "input_revisit_process_median_ms": 159.10000014305115,
+        "input_within_process_p95_ms_descriptive": 242.5,
+        "long_task_count": 240,
+        "long_task_total_ms": 19332,
+        "max_observed_frame_gap_ms": 133.40000000000146,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 6814,
+        "end_JS_listeners": 7991
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p0-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-confirm-v7-p0-a",
+        "pair": 0,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.1749,
+        "end_heap_MB": 27.867604,
+        "idle_heap_MB": 29.025812,
+        "sampled_peak_heap_MB": 57.460212,
+        "input_all_process_median_ms": 169.05000019073486,
+        "input_first_process_median_ms": 178.74999976158142,
+        "input_revisit_process_median_ms": 158.2000002861023,
+        "input_within_process_p95_ms_descriptive": 243.82499992847443,
+        "long_task_count": 242,
+        "long_task_total_ms": 19169,
+        "max_observed_frame_gap_ms": 166.70000000000073,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 7691,
+        "end_JS_listeners": 9764
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p1-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-confirm-v7-p1-a",
+        "pair": 1,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.31384,
+        "end_heap_MB": 31.178148,
+        "idle_heap_MB": 32.203336,
+        "sampled_peak_heap_MB": 46.240772,
+        "input_all_process_median_ms": 173.50000023841858,
+        "input_first_process_median_ms": 177.60000014305115,
+        "input_revisit_process_median_ms": 158.55000019073486,
+        "input_within_process_p95_ms_descriptive": 243.39999973773956,
+        "long_task_count": 238,
+        "long_task_total_ms": 18603,
+        "max_observed_frame_gap_ms": 150,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 15152,
+        "end_JS_listeners": 21591
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 11,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 10
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p1-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-confirm-v7-p1-b",
+        "pair": 1,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.410964,
+        "end_heap_MB": 33.089508,
+        "idle_heap_MB": 34.235396,
+        "sampled_peak_heap_MB": 49.524132,
+        "input_all_process_median_ms": 160.29999995231628,
+        "input_first_process_median_ms": 176.40000009536743,
+        "input_revisit_process_median_ms": 143.85000014305115,
+        "input_within_process_p95_ms_descriptive": 228.07500004768372,
+        "long_task_count": 231,
+        "long_task_total_ms": 17334,
+        "max_observed_frame_gap_ms": 150,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 2394,
+        "end_JS_listeners": 2862
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p2-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-confirm-v7-p2-b",
+        "pair": 2,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.441304,
+        "end_heap_MB": 33.124572,
+        "idle_heap_MB": 34.229488,
+        "sampled_peak_heap_MB": 47.541792,
+        "input_all_process_median_ms": 160.5,
+        "input_first_process_median_ms": 176.25000023841858,
+        "input_revisit_process_median_ms": 157.95000004768372,
+        "input_within_process_p95_ms_descriptive": 243.1249998807907,
+        "long_task_count": 239,
+        "long_task_total_ms": 18192,
+        "max_observed_frame_gap_ms": 149.90000000000146,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 2400,
+        "end_JS_listeners": 2862
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p2-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-confirm-v7-p2-a",
+        "pair": 2,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.301012,
+        "end_heap_MB": 51.302856,
+        "idle_heap_MB": 26.95078,
+        "sampled_peak_heap_MB": 51.290476,
+        "input_all_process_median_ms": 160.39999985694885,
+        "input_first_process_median_ms": 176.30000019073486,
+        "input_revisit_process_median_ms": 155.44999980926514,
+        "input_within_process_p95_ms_descriptive": 228.799999833107,
+        "long_task_count": 232,
+        "long_task_total_ms": 17355,
+        "max_observed_frame_gap_ms": 133.3000000000029,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 4266,
+        "end_JS_listeners": 5644
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 2,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p3-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-confirm-v7-p3-a",
+        "pair": 3,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.345328,
+        "end_heap_MB": 26.35734,
+        "idle_heap_MB": 27.5346,
+        "sampled_peak_heap_MB": 51.49196,
+        "input_all_process_median_ms": 161.04999995231628,
+        "input_first_process_median_ms": 176.74999976158142,
+        "input_revisit_process_median_ms": 158.39999985694885,
+        "input_within_process_p95_ms_descriptive": 228.85000014305115,
+        "long_task_count": 242,
+        "long_task_total_ms": 18354,
+        "max_observed_frame_gap_ms": 150,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 4271,
+        "end_JS_listeners": 5650
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p3-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-confirm-v7-p3-b",
+        "pair": 3,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.31286,
+        "end_heap_MB": 33.083332,
+        "idle_heap_MB": 34.260724,
+        "sampled_peak_heap_MB": 49.675788,
+        "input_all_process_median_ms": 174.00000023841858,
+        "input_first_process_median_ms": 191.90000009536743,
+        "input_revisit_process_median_ms": 158.10000014305115,
+        "input_within_process_p95_ms_descriptive": 259.0000002384186,
+        "long_task_count": 240,
+        "long_task_total_ms": 19438,
+        "max_observed_frame_gap_ms": 150,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 2400,
+        "end_JS_listeners": 2858
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p4-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-confirm-v7-p4-b",
+        "pair": 4,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.420292,
+        "end_heap_MB": 31.971536,
+        "idle_heap_MB": 33.126764,
+        "sampled_peak_heap_MB": 49.4644,
+        "input_all_process_median_ms": 160.09999990463257,
+        "input_first_process_median_ms": 175.80000019073486,
+        "input_revisit_process_median_ms": 145.85000014305115,
+        "input_within_process_p95_ms_descriptive": 228.299999833107,
+        "long_task_count": 229,
+        "long_task_total_ms": 17147,
+        "max_observed_frame_gap_ms": 149.90000000000146,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 16086,
+        "end_JS_listeners": 22856
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 4,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 3
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p4-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-confirm-v7-p4-a",
+        "pair": 4,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.189964,
+        "end_heap_MB": 23.737268,
+        "idle_heap_MB": 24.91106,
+        "sampled_peak_heap_MB": 53.85712,
+        "input_all_process_median_ms": 160.09999990463257,
+        "input_first_process_median_ms": 175.59999990463257,
+        "input_revisit_process_median_ms": 143.40000009536743,
+        "input_within_process_p95_ms_descriptive": 226.37500023841858,
+        "long_task_count": 228,
+        "long_task_total_ms": 16791,
+        "max_observed_frame_gap_ms": 116.80000000000291,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 14262,
+        "end_JS_listeners": 2785
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p5-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-confirm-v7-p5-b",
+        "pair": 5,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.442656,
+        "end_heap_MB": 33.178152,
+        "idle_heap_MB": 34.350948,
+        "sampled_peak_heap_MB": 44.6854,
+        "input_all_process_median_ms": 160.15000009536743,
+        "input_first_process_median_ms": 175.84999990463257,
+        "input_revisit_process_median_ms": 157.40000009536743,
+        "input_within_process_p95_ms_descriptive": 226.85000014305115,
+        "long_task_count": 232,
+        "long_task_total_ms": 17384,
+        "max_observed_frame_gap_ms": 133.29999999999995,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 2424,
+        "end_JS_listeners": 2864
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p5-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-confirm-v7-p5-a",
+        "pair": 5,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.37254,
+        "end_heap_MB": 46.150652,
+        "idle_heap_MB": 47.322784,
+        "sampled_peak_heap_MB": 46.138252,
+        "input_all_process_median_ms": 174.45000004768372,
+        "input_first_process_median_ms": 190.90000009536743,
+        "input_revisit_process_median_ms": 144.34999990463257,
+        "input_within_process_p95_ms_descriptive": 236.924999833107,
+        "long_task_count": 239,
+        "long_task_total_ms": 18723,
+        "max_observed_frame_gap_ms": 150,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 9811,
+        "end_JS_listeners": 13072
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p6-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-confirm-v7-p6-a",
+        "pair": 6,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.284788,
+        "end_heap_MB": 27.933232,
+        "idle_heap_MB": 29.12526,
+        "sampled_peak_heap_MB": 50.228532,
+        "input_all_process_median_ms": 159.40000009536743,
+        "input_first_process_median_ms": 177.5,
+        "input_revisit_process_median_ms": 142.25000023841858,
+        "input_within_process_p95_ms_descriptive": 228.04999995231628,
+        "long_task_count": 229,
+        "long_task_total_ms": 16967,
+        "max_observed_frame_gap_ms": 149.90000000000146,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 7690,
+        "end_JS_listeners": 9768
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p6-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-confirm-v7-p6-b",
+        "pair": 6,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.492984,
+        "end_heap_MB": 35.141976,
+        "idle_heap_MB": 36.310444,
+        "sampled_peak_heap_MB": 48.66396,
+        "input_all_process_median_ms": 160.0,
+        "input_first_process_median_ms": 175.25000023841858,
+        "input_revisit_process_median_ms": 144.45000004768372,
+        "input_within_process_p95_ms_descriptive": 227.174999833107,
+        "long_task_count": 232,
+        "long_task_total_ms": 17064,
+        "max_observed_frame_gap_ms": 116.69999999999891,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 5219,
+        "end_JS_listeners": 6809
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p7-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-confirm-v7-p7-b",
+        "pair": 7,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.394708,
+        "end_heap_MB": 32.747768,
+        "idle_heap_MB": 33.920116,
+        "sampled_peak_heap_MB": 48.256852,
+        "input_all_process_median_ms": 159.95000004768372,
+        "input_first_process_median_ms": 174.89999985694885,
+        "input_revisit_process_median_ms": 155.94999980926514,
+        "input_within_process_p95_ms_descriptive": 225.7500001192093,
+        "long_task_count": 240,
+        "long_task_total_ms": 17879,
+        "max_observed_frame_gap_ms": 133.40000000000146,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 2400,
+        "end_JS_listeners": 2862
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 8,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 7
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p7-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-confirm-v7-p7-a",
+        "pair": 7,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.196348,
+        "end_heap_MB": 23.604136,
+        "idle_heap_MB": 24.779544,
+        "sampled_peak_heap_MB": 55.949644,
+        "input_all_process_median_ms": 160.25,
+        "input_first_process_median_ms": 175.90000009536743,
+        "input_revisit_process_median_ms": 158.5,
+        "input_within_process_p95_ms_descriptive": 227.40000009536743,
+        "long_task_count": 234,
+        "long_task_total_ms": 17491,
+        "max_observed_frame_gap_ms": 116.70000000000005,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 7692,
+        "end_JS_listeners": 1472
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p8-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-confirm-v7-p8-b",
+        "pair": 8,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.5349,
+        "end_heap_MB": 26.638656,
+        "idle_heap_MB": 27.824696,
+        "sampled_peak_heap_MB": 48.010808,
+        "input_all_process_median_ms": 160.60000014305115,
+        "input_first_process_median_ms": 173.25000023841858,
+        "input_revisit_process_median_ms": 158.54999995231628,
+        "input_within_process_p95_ms_descriptive": 227.09999990463257,
+        "long_task_count": 236,
+        "long_task_total_ms": 17521,
+        "max_observed_frame_gap_ms": 116.70000000000437,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 4269,
+        "end_JS_listeners": 5650
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-confirm-v7-p8-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-confirm-v7-p8-a",
+        "pair": 8,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.329364,
+        "end_heap_MB": 48.44654,
+        "idle_heap_MB": 49.615768,
+        "sampled_peak_heap_MB": 48.43416,
+        "input_all_process_median_ms": 160.0,
+        "input_first_process_median_ms": 175.89999985694885,
+        "input_revisit_process_median_ms": 144.75000023841858,
+        "input_within_process_p95_ms_descriptive": 227.22500026226044,
+        "long_task_count": 236,
+        "long_task_total_ms": 17691,
+        "max_observed_frame_gap_ms": 133.3000000000029,
+        "restaurant_requests": 2690,
+        "end_DOM_nodes": 14301,
+        "end_JS_listeners": 20218
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2690,
+        "otherFixture": 771,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    }
+  },
+  "canonicalPerformanceAdmission": 0,
+  "fieldAdmission": 0,
+  "goalComplete": false,
+  "primaryMedianGuardPass": true,
+  "primaryPairedCIWithinGuard": false
+}

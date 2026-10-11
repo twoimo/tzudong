@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "sameBytes": true,
+  "summarySha256": "fda2078f6b75c94775c89d3b241a9e00dcc16efeed57a384dad6f8c2e9eadc1e",
+  "runtime": "3.12.14",
+  "optimizedMode": true,
+  "rawProcesses": 22,
+  "primaryMedianGuardPass": true,
+  "primaryPairedCIWithinGuard": false,
+  "originalDataUnchanged": true
+}
