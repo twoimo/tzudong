@@ -45,6 +45,7 @@ export class GeminiStoryboardClient {
   private async readModels(signal?: AbortSignal) {
     const ids = [STORYBOARD_GEMINI_TEXT_MODEL, ...STORYBOARD_GEMINI_IMAGE_MODELS.map((entry) => entry.id)];
     const results = [];
+    let firstFailure: StoryboardProductionError | undefined;
     for (const id of ids) {
       signal?.throwIfAborted();
       try {
@@ -52,13 +53,14 @@ export class GeminiStoryboardClient {
         if (model.name?.replace(/^models\//, '') !== id) throw new StoryboardProductionError('model_identity_mismatch');
         results.push({ id, capabilities: [id === STORYBOARD_GEMINI_TEXT_MODEL ? 'chat' : 'image'],
           loaded: false, bytes_on_disk: 0, bytes_resident: 0, owned_by: 'gemini-api' as const });
-      } catch {
+      } catch (error) {
         signal?.throwIfAborted();
+        firstFailure ??= error instanceof StoryboardProductionError ? error : providerError(error);
         // An unavailable optional model must not hide verified alternatives.
         // Capability matching still excludes jobs requiring this missing model.
       }
     }
-    if (results.length === 0) throw new StoryboardProductionError('provider_failed');
+    if (results.length === 0) throw firstFailure ?? new StoryboardProductionError('provider_failed');
     return results;
   }
 

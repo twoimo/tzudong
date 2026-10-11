@@ -50,6 +50,7 @@ function fixture(value: ClaimedStoryboardJob | null = job()) {
   const calls: Array<Record<string, unknown>> = [];
   const generated: string[] = [];
   let drafts = 0;
+  let catalogReads = 0;
   const api: StoryboardWorkerApi = {
     async operation(payload) {
       calls.push(payload);
@@ -60,13 +61,13 @@ function fixture(value: ClaimedStoryboardJob | null = job()) {
     async image(lease, sceneNo) { calls.push({ action: 'image', ...lease, sceneNo }); },
   };
   const mlx: Pick<GeminiStoryboardClient, 'models' | 'draft' | 'image'> = {
-    async models() { return models; },
+    async models() { catalogReads++; return models; },
     async draft() { drafts++; return { draft: draft(), provenance: proof('text') }; },
     async image(_request, prompt) { generated.push(prompt); return { bytes: await fixturePixels, provenance: proof('image') }; },
   };
   // Lifecycle tests exercise claim/lease/provider behavior. Keep admission
   // deterministic here; memory admission has its own host-wide test suite.
-  return { api, mlx, calls, generated, draftCalls: () => drafts, admitMemory: () => true };
+  return { api, mlx, calls, generated, draftCalls: () => drafts, catalogCalls: () => catalogReads, admitMemory: () => true };
 }
 async function listen(server: Server) {
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -89,7 +90,7 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
       try { await delay(2); return await generate(...args); } finally { active--; }
     };
     expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('completed');
-    expect(peak).toBe(1); expect(f.draftCalls()).toBe(1);
+    expect(peak).toBe(1); expect(f.draftCalls()).toBe(1); expect(f.catalogCalls()).toBe(1);
     expect(f.calls.filter((call) => call.action !== 'heartbeat').map((call) => call.action))
       .toEqual(['claim', 'draft', 'image', 'image', 'image', 'image', 'image', 'finish']);
     expect(f.generated).toEqual(['scene 1', 'scene 2', 'scene 3', 'scene 4', 'scene 5']);
@@ -97,7 +98,7 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
   test('an empty queue does not invoke any generation', async () => {
     const f = fixture(null);
     expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('idle');
-    expect(f.draftCalls()).toBe(0); expect(f.generated).toEqual([]);
+    expect(f.draftCalls()).toBe(0); expect(f.generated).toEqual([]); expect(f.catalogCalls()).toBe(0);
   });
   test('targeted regeneration invokes only the requested scene and preserves the draft', async () => {
     const value = savedJob(); value.kind = 'scene'; value.sceneNo = 3;
@@ -122,6 +123,7 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
     const a = fixture(old);
     expect(await new OutboundStoryboardWorker(a).runOnce()).toBe('failed');
     expect(a.draftCalls()).toBe(0); expect(a.generated).toEqual([]);
+    expect(a.catalogCalls()).toBe(0);
     expect(old.document?.scenes).toHaveLength(5);
   });
   test('corrupt scene failure preserves other scenes and does not report completion', async () => {
@@ -143,11 +145,35 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
       expect(f.calls.at(-1)).toMatchObject({ action: 'finish', errorCode: code });
     }
   });
+  test('a claimed catalog authentication failure finishes the lease without generation or fallback', async () => {
+    const f = fixture();
+    f.mlx.models = async () => { throw new StoryboardProductionError('provider_auth_failed'); };
+    expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('failed');
+    expect(f.draftCalls()).toBe(0); expect(f.generated).toEqual([]);
+    expect(f.calls.at(-1)).toMatchObject({ action: 'finish', errorCode: 'provider_auth_failed' });
+  });
+  test('a claimed job whose selected model is absent finishes before paid generation', async () => {
+    const f = fixture();
+    f.mlx.models = async () => models.filter((model) => model.capabilities.includes('chat'));
+    expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('failed');
+    expect(f.draftCalls()).toBe(0); expect(f.generated).toEqual([]);
+    expect(f.calls.at(-1)).toMatchObject({ action: 'finish', errorCode: 'provider_failed' });
+  });
+  test('a saved document resumes with the selected image model even if text metadata is unavailable', async () => {
+    const value = savedJob(); value.kind = 'scene'; value.sceneNo = 3;
+    const f = fixture(value);
+    f.mlx.models = async () => models.filter((model) => model.id === 'gemini-3.1-flash-image');
+    expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('completed');
+    expect(f.draftCalls()).toBe(0); expect(f.generated).toEqual(['scene 3']);
+    expect(f.calls.at(-1)).toMatchObject({ action: 'finish' });
+  });
   test('heartbeat lease loss aborts model inference and never uploads or finishes', async () => {
     const f = fixture(); const call = f.api.operation;
     let beats = 0; let cancelled = false;
     f.api.operation = async (payload) => {
-      if (payload.action === 'heartbeat' && payload.jobId && ++beats > 1) return { ok: true, leaseValid: false };
+      // One paired heartbeat confirms the declared policy and one records the
+      // provider-verified catalog before the timed renewal interrupts inference.
+      if (payload.action === 'heartbeat' && payload.jobId && ++beats > 2) return { ok: true, leaseValid: false };
       return call(payload);
     };
     f.mlx.draft = async (_request, signal) => {
@@ -323,6 +349,7 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
     expect(events).toEqual(['memory_deferred']);
     expect(f.calls.filter((call) => call.action === 'heartbeat')).toEqual([]);
     expect(f.calls.filter((call) => call.action === 'claim')).toEqual([]);
+    expect(f.catalogCalls()).toBe(0);
     expect(f.draftCalls()).toBe(0);
     expect(f.generated).toEqual([]);
   });

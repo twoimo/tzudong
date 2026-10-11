@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "storyboard-queue-recovery-spy-config.v1",
+  "source": {
+    "head": "7343d92c77a0d4114db16871363c31b54b66ef82",
+    "sevenFileDiffSha256": "5a7e094c442603b632472b2f577974267b747b3de2f9fb41efa1094fb6a9f3f0",
+    "workerEntrypoint": "apps/web/scripts/storyboard-gemini-worker.ts"
+  },
+  "runtime": {
+    "node": "24.21.0",
+    "bun": "1.4.0",
+    "once": true,
+    "projectConcurrency": 1,
+    "transport": "literal-loopback-http-spies"
+  },
+  "providerPolicy": {
+    "providerId": "gemini-api",
+    "models": [
+      { "id": "gemini-3.8-flash", "capabilities": ["chat"] },
+      { "id": "gemini-3.1-flash-image", "capabilities": ["image"] },
+      { "id": "gemini-3-pro-image", "capabilities": ["image"] }
+    ],
+    "fallbackProviders": []
+  },
+  "fixtures": {
+    "credential": "ephemeral-synthetic-placeholder",
+    "credentialPersisted": false,
+    "actualHostMemoryScenarioUsesPreload": false,
+    "allOtherScenariosUseSufficientMemoryPreload": true,
+    "sceneCount": 5,
+    "failedScene": 3,
+    "existingAssetCount": 5,
+    "sampleCountPerCondition": 1
+  },
+  "externalOperations": {
+    "realProvider": 0,
+    "database": 0,
+    "storage": 0,
+    "payment": 0,
+    "deployment": 0,
+    "productionService": 0
+  }
+}

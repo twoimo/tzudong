@@ -15,6 +15,7 @@ import {
   authenticateStoryboardWorker, storyboardWorkerTokenHash, workerOperationSchema,
   type ProductionWorkerIdentity,
 } from '../lib/admin/storyboard/production-worker-auth';
+import { storyboardGeminiDeclaredModels } from '../lib/admin/storyboard/gemini-models';
 import { createStoryboardProductionApi, productionApiFailure, readStoryboardMultipart } from '../lib/admin/storyboard/production-api';
 
 // These are unit boundary doubles. The separate PostgreSQL suite exercises real persistence/locks.
@@ -139,8 +140,11 @@ describe('worker authentication and proof boundary', () => {
       .rejects.toThrow('persistence_unavailable');
   });
   test('requires paired heartbeat job and lease and forbids full document or diagnostic fields', () => {
-    expect(workerOperationSchema.safeParse({ action: 'heartbeat', models, jobId }).success).toBe(false);
-    expect(workerOperationSchema.safeParse({ action: 'heartbeat', models, jobId, leaseToken }).success).toBe(true);
+    const geminiModels = storyboardGeminiDeclaredModels();
+    expect(workerOperationSchema.safeParse({ action: 'heartbeat', models: geminiModels, jobId }).success).toBe(false);
+    expect(workerOperationSchema.safeParse({ action: 'heartbeat', models: geminiModels, jobId, leaseToken }).success).toBe(true);
+    expect(workerOperationSchema.safeParse({ action: 'heartbeat', models, jobId, leaseToken }).success).toBe(false);
+    expect(workerOperationSchema.safeParse({ action: 'heartbeat', models: [{ ...geminiModels[0], id: 'other-model' }] }).success).toBe(false);
     expect(workerOperationSchema.safeParse({ action: 'draft', jobId, leaseToken, document: project().document }).success).toBe(false);
     expect(workerOperationSchema.safeParse({ action: 'scene-error', jobId, leaseToken, sceneNo: 1, errorCode: 'raw provider response' }).success).toBe(false);
     expect(workerOperationSchema.safeParse({ action: 'claim', serviceRoleKey: 'not-accepted' }).success).toBe(false);

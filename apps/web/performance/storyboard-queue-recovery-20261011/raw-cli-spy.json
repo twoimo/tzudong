@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "storyboard-queue-recovery-normalized-raw-trace.v1",
+  "normalization": {
+    "randomFixtureIds": "omitted",
+    "temporaryPaths": "omitted",
+    "headers": "omitted",
+    "credentials": "omitted",
+    "requestPayloads": "omitted"
+  },
+  "modelOrder": ["gemini-3.8-flash", "gemini-3.1-flash-image", "gemini-3-pro-image"],
+  "before": [
+    { "scenario": "actual-host-memory-gate", "exitCode": 0, "events": ["worker_started", "memory_deferred"], "catalogGets": 3, "generationModels": [], "appActions": [], "finishCodes": [] },
+    { "scenario": "empty-queue", "exitCode": 0, "events": ["worker_started"], "catalogGets": 3, "generationModels": [], "appActions": ["heartbeat", "claim"], "finishCodes": [] },
+    { "scenario": "retired-provider", "exitCode": 1, "events": ["worker_started", "claimed", "failed"], "catalogGets": 3, "generationModels": [], "appActions": ["heartbeat", "claim", "heartbeat", "finish"], "finishCodes": ["provider_not_configured"] },
+    { "scenario": "retired-model", "exitCode": 1, "events": ["worker_started", "claimed", "failed"], "catalogGets": 3, "generationModels": [], "appActions": ["heartbeat", "claim", "heartbeat", "finish"], "finishCodes": ["provider_not_configured"] },
+    { "scenario": "generation-auth-failure", "exitCode": 1, "events": ["worker_started", "claimed", "text_started", "failed"], "catalogGets": 3, "generationModels": ["gemini-3.8-flash"], "appActions": ["heartbeat", "claim", "heartbeat", "finish"], "finishCodes": ["provider_auth_failed"], "uploads": [] },
+    { "scenario": "partial-resume", "exitCode": 0, "events": ["worker_started", "claimed", "image_started:3", "gemini_usage", "image_saved:3", "finished"], "catalogGets": 3, "generationModels": ["gemini-3.1-flash-image"], "appActions": ["heartbeat", "claim", "heartbeat", "finish"], "finishCodes": [null], "uploads": [3], "draftCheckpoints": 0, "fixtureDocumentUnchanged": true, "preservedAssetCount": 5 }
+  ],
+  "after": [
+    { "scenario": "actual-host-memory-gate", "exitCode": 0, "events": ["worker_started", "memory_deferred"], "catalogGets": 0, "generationModels": [], "appActions": [], "finishCodes": [] },
+    { "scenario": "empty-queue", "exitCode": 0, "events": ["worker_started"], "catalogGets": 0, "generationModels": [], "appActions": ["heartbeat", "claim"], "heartbeatModelIds": ["gemini-3.8-flash", "gemini-3.1-flash-image", "gemini-3-pro-image"], "finishCodes": [] },
+    { "scenario": "retired-provider", "exitCode": 1, "events": ["worker_started", "claimed", "failed"], "catalogGets": 0, "generationModels": [], "appActions": ["heartbeat", "claim", "heartbeat", "finish"], "finishCodes": ["provider_not_configured"] },
+    { "scenario": "retired-model", "exitCode": 1, "events": ["worker_started", "claimed", "failed"], "catalogGets": 0, "generationModels": [], "appActions": ["heartbeat", "claim", "heartbeat", "finish"], "finishCodes": ["provider_not_configured"] },
+    { "scenario": "catalog-auth-failure", "exitCode": 1, "events": ["worker_started", "claimed", "failed"], "catalogGets": 3, "generationModels": [], "appActions": ["heartbeat", "claim", "heartbeat", "finish"], "finishCodes": ["provider_auth_failed"], "uploads": [] },
+    { "scenario": "generation-auth-failure", "exitCode": 1, "events": ["worker_started", "claimed", "text_started", "failed"], "catalogGets": 3, "generationModels": ["gemini-3.8-flash"], "appActions": ["heartbeat", "claim", "heartbeat", "heartbeat", "finish"], "finishCodes": ["provider_auth_failed"], "uploads": [] },
+    { "scenario": "partial-resume", "exitCode": 0, "events": ["worker_started", "claimed", "image_started:3", "gemini_usage", "image_saved:3", "finished"], "catalogGets": 3, "generationModels": ["gemini-3.1-flash-image"], "appActions": ["heartbeat", "claim", "heartbeat", "heartbeat", "finish"], "finishCodes": [null], "uploads": [3], "draftCheckpoints": 0, "fixtureDocumentUnchanged": true, "preservedAssetCount": 5 }
+  ]
+}

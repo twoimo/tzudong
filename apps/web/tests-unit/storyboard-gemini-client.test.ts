@@ -105,6 +105,11 @@ describe('Gemini storyboard worker client', () => {
     const controller=new AbortController();fake.client.models.get=async()=>{controller.abort();throw new Error('synthetic');};
     await expect(new GeminiStoryboardClient({client:fake.client}).models(controller.signal)).rejects.toBeDefined();
   });
+  test('preserves an all-catalog authentication failure as an explicit provider error', async () => {
+    const fake = fakeClient(); fake.client.models.get = async () => { throw { status: 401, message: 'synthetic-private' }; };
+    await expect(new GeminiStoryboardClient({ client: fake.client }).models())
+      .rejects.toMatchObject({ code: 'provider_auth_failed', message: 'provider_auth_failed' });
+  });
   test('returns a completed result even when optional usage telemetry fails', async () => {
     const fake = fakeClient();
     const provider = new GeminiStoryboardClient({ client: fake.client, onUsage: () => { throw new Error('telemetry unavailable'); } });

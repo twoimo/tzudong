@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "storyboard-queue-recovery-summary.v1",
+  "measurement": {
+    "design": "paired-deterministic-loopback-spy",
+    "sampleCountPerCondition": 1,
+    "confidenceInterval": null,
+    "confidenceIntervalReason": "n=1 deterministic fixture; no statistical interval estimated"
+  },
+  "requestCountChanges": [
+    { "condition": "host_memory_rejection", "before": 3, "after": 0, "absoluteChange": -3, "relativeChangePercent": -100, "unit": "catalog_get" },
+    { "condition": "empty_queue", "before": 3, "after": 0, "absoluteChange": -3, "relativeChangePercent": -100, "unit": "catalog_get" },
+    { "condition": "retired_provider_claim", "before": 3, "after": 0, "absoluteChange": -3, "relativeChangePercent": -100, "unit": "catalog_get" },
+    { "condition": "retired_model_claim", "before": 3, "after": 0, "absoluteChange": -3, "relativeChangePercent": -100, "unit": "catalog_get" }
+  ],
+  "outcomes": {
+    "emptyQueueGenerationCalls": 0,
+    "retiredProviderGenerationCalls": 0,
+    "retiredModelGenerationCalls": 0,
+    "catalogAuthFailure": { "catalogGets": 3, "generationCalls": 0, "finishCode": "provider_auth_failed" },
+    "generationAuthFailure": { "generationCalls": 1, "generationModel": "gemini-3.8-flash", "alternateLlmCalls": 0, "uploads": 0, "finishCode": "provider_auth_failed" },
+    "partialResume": { "generationCalls": 1, "generationModel": "gemini-3.1-flash-image", "uploadedScenes": [3], "draftCheckpoints": 0, "fixtureDocumentUnchanged": true, "preservedAssets": 5, "totalExistingAssets": 5 }
+  },
+  "verification": {
+    "tests": { "passed": 98, "failed": 0, "expectations": 619, "files": 5 },
+    "eslint": { "errors": 0, "warnings": 0 },
+    "typescriptParity": { "native": "7.0.2", "compat": "6.0.2", "diagnostics": 0, "logicalInputs": 3129 }
+  },
+  "claimsExcluded": [
+    "token savings",
+    "billing savings",
+    "production latency improvement",
+    "hosted persistence",
+    "real provider availability"
+  ]
+}

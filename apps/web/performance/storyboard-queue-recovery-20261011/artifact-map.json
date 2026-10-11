@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "storyboard-queue-recovery-artifact-map.v1",
+  "sourceHead": "7343d92c77a0d4114db16871363c31b54b66ef82",
+  "sevenFileDiffSha256": "5a7e094c442603b632472b2f577974267b747b3de2f9fb41efa1094fb6a9f3f0",
+  "evidence": [
+    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/README.md", "sha256": "ecc8f4b60debe9ec15e0228a9f6cae107cf4da974511150f3a001da5397851c3" },
+    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/config.json", "sha256": "fe7017a64ef9838aeb84555f00c9314d36d349a28023f5f6c82c38c3085735ec" },
+    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/summary.json", "sha256": "7090d87be77b5ad69d08cbfe7487c4eaf20ff73283cf247c9ab6e2c7071f57d4" },
+    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/raw-cli-spy.json", "sha256": "44dd40c924ed864c2cabe244d805b205d7fa6da306a155552c41211cb6e6d683" }
+  ],
+  "changedFiles": [
+    { "path": "apps/web/lib/admin/storyboard/gemini-client.ts", "sha256": "6272b4f09ff0bcd760513f129d33606c3690217d8a4c1ce3384c9a8dfc47c654" },
+    { "path": "apps/web/lib/admin/storyboard/gemini-models.ts", "sha256": "560c65361a7131ac7dc5a64a8dfb244de3030cf51aa5e4f7e9811cca0057b7fc" },
+    { "path": "apps/web/lib/admin/storyboard/outbound-worker.ts", "sha256": "29db0793127005dc1987384d3b5cf2f9551768487c1ed82e14dab5223ed6649a" },
+    { "path": "apps/web/lib/admin/storyboard/production-worker-auth.ts", "sha256": "39fba20c1291eefaed35542027c0c56f985b65e961217e5ddfaa8d113c9885b2" },
+    { "path": "apps/web/tests-unit/storyboard-gemini-client.test.ts", "sha256": "89d73aa156fde0559cfe75ffd2ae6039f954465ee1765fe48d6b60c643e3b107" },
+    { "path": "apps/web/tests-unit/storyboard-outbound-worker.test.ts", "sha256": "5732bc4017325595e4d0f4dce2ad2b44ccf423c59ff7a30b8635c49a9bc06d09" },
+    { "path": "apps/web/tests-unit/storyboard-production-api.test.ts", "sha256": "f721fc6201292ac5638711095b734d99848bf149d8c82112a83f59d6ed65208d" }
+  ],
+  "unchangedAppliedSql": [
+    { "path": "backend/supabase/migrations/20261003000812_storyboard_gemini_only.sql", "sha256": "a8b26fae49470cab9f1f6e6471930c48b16ddf3b91f18f734bdf24b4f2930470" },
+    { "path": "backend/supabase/migrations/20261003205335_storyboard_uncertain_lease_recovery.sql", "sha256": "8ff385edd91aced61c6384c28cee78c2b00f6c7a573c0ac24d4d7a4e7ed4a7c0" },
+    { "path": "backend/supabase/migrations/20261004023841_storyboard_claim_capability_order.sql", "sha256": "ac20f93c7feb4febb91a3d4ba187e38feba55427da131e011d730505e3dad8a0" }
+  ]
+}

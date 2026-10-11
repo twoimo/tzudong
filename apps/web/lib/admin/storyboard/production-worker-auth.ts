@@ -4,6 +4,7 @@ import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import {
   StoryboardProductionError, storyboardDraftSchema, storyboardProvenanceSchema,
 } from './production-contract';
+import { isAllowedStoryboardGeminiWorkerModel } from './gemini-models';
 
 if (typeof window !== 'undefined') throw new Error('Storyboard worker authentication is server-only.');
 
@@ -18,6 +19,10 @@ export const productionModelSchema = z.object({
 }).strict();
 export const productionModelsSchema = z.array(productionModelSchema).max(64)
   .refine((models) => new Set(models.map((model) => model.id)).size === models.length);
+export const storyboardGeminiHeartbeatModelsSchema = productionModelsSchema.refine(
+  (models) => models.every(isAllowedStoryboardGeminiWorkerModel),
+  { message: 'invalid_storyboard_gemini_worker_models' },
+);
 export type ProductionModel = z.infer<typeof productionModelSchema>;
 
 export const workerFailureSchema = z.enum([
@@ -32,7 +37,7 @@ export type WorkerFailureCode = z.infer<typeof workerFailureSchema>;
 
 const leaseFields = { jobId: productionUuid, leaseToken: productionUuid };
 export const workerOperationSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('heartbeat'), models: productionModelsSchema,
+  z.object({ action: z.literal('heartbeat'), models: storyboardGeminiHeartbeatModelsSchema,
     jobId: productionUuid.optional(), leaseToken: productionUuid.optional() }).strict()
     .refine((value) => Boolean(value.jobId) === Boolean(value.leaseToken)),
   z.object({ action: z.literal('claim') }).strict(),
