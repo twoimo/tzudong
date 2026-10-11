@@ -1,0 +1,1 @@
+{"status":"failed-before-execution","reason":"One closing brace omitted in stdin fixture","diagnosticSourceChanged":false,"testsPassed":false,"resolution":"Save the bounded fixture as a file and rerun."}

@@ -1,0 +1,21 @@
+{
+  "timestampScope": "Captured during the current turn; SQL did not emit a timestamp. Fresh timestamped preflight is required before apply.",
+  "project": "aqlcofblfxdrjhhdmarw",
+  "readOnly": true,
+  "actor": "postgres",
+  "engine": "17.6",
+  "superuser": false,
+  "ledgerCount": 86,
+  "ledgerSha256": "d0fc564409bc116affa83732028e66b88ba7a8a71d4694469ea03185aca4b5ad",
+  "sessionActor": "postgres",
+  "manifestCount": 1963,
+  "g041BodySha256": "43f3ff2ed914944802555c4ffe3ff8ecece213e82288e2c1c47ae22efdf81585",
+  "adminBodySha256": "a18fad1f748d736371a9ab549a1ca483a5b2f321674fabe71b2411b7e58b3fc9",
+  "ownerMembership": true,
+  "membershipSha256": "d8fabeb9bda36d8ae578c12fbc4785a225d265b815a01a9e953f4b4312322d0d",
+  "privateFunctions": 108,
+  "ownerCleanupPresent": false,
+  "ownedVersionsPresent": [],
+  "privateBucketPresent": false,
+  "revisionSingletonCount": 1
+}

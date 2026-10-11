@@ -1,0 +1,23 @@
+{
+  "readOnly": true,
+  "project": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "sourceMain": "056a86600f412eb42df4304e3206841679012f3e",
+  "automaticGitRecords": [
+    {
+      "id": "dpl_ZF1VsKhzFHk7jbBU3YDkB4episwc",
+      "state": "CANCELED",
+      "sha": "056a86600f412eb42df4304e3206841679012f3e",
+      "target": "production"
+    }
+  ],
+  "sanitizedEventFlags": {
+    "approvedShaGuardMentioned": false,
+    "ignoredMessageMentioned": true,
+    "hasCompileEvidence": false
+  },
+  "manuallyRequestedDeployments": 0,
+  "servingDeployment": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5",
+  "servingSha": "1884f87e53c4567ead7c9a0fb394b09b91a70396",
+  "servingChanged": false,
+  "exactCancellationCauseConfirmed": false
+}

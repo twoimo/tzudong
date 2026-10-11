@@ -1,0 +1,63 @@
+{
+  "sourceCommit": "0492895698f8a39755c9d20ed0dcb528ad4d40a9",
+  "sources": [
+    {
+      "source": "backend/supabase/migrations/20261008192455_review_media_commit_cleanup.sql",
+      "bytes": 17278,
+      "sha256": "1b018884a0ba8bb25e6a9e31fa831e349bd4442118e5d4bf1699464e09e16c3c"
+    },
+    {
+      "source": "backend/supabase/migrations/20261008200719_review_verification_private.sql",
+      "bytes": 5281,
+      "sha256": "92b469ab0ed1a23bf91c1ab5a3f8e92d45cf0f4e06e5fa602d6a34ad0497a51b"
+    },
+    {
+      "source": "backend/supabase/migrations/20261008201635_review_media_catalog_integration.sql",
+      "bytes": 47177,
+      "sha256": "6e820eb535bc514e78f258110e36dff00537bcaefcffd8b354356107ca9c09fe"
+    },
+    {
+      "source": "backend/supabase/migrations/20261011072824_admin_review_media_completion.sql",
+      "bytes": 13429,
+      "sha256": "32626259ca77ea913f068ee804815ff439abbff1ce310da4525e4f0bb86d8338"
+    },
+    {
+      "source": "backend/supabase/migrations/20261011085342_review_legacy_shared_cleanup.sql",
+      "bytes": 7661,
+      "sha256": "623236ddbd87059b94c84486f9e14822dba0190d2448656259991bd1345a434f"
+    },
+    {
+      "source": "backend/supabase/migrations/20261011094346_admin_evaluation_revision_safeupdate.sql",
+      "bytes": 3666,
+      "sha256": "b7061015ea07192dccfcf0774d5548a9c2a584c7daa140d77fccd7c75cb8bf88"
+    },
+    {
+      "source": "backend/supabase/migrations/20261011100730_admin_record_expired_preview_readback.sql",
+      "bytes": 4163,
+      "sha256": "26c64074bb98e718ba96732ac2baeedb851afe6ff745e0ddb5ca075359892472"
+    },
+    {
+      "source": "backend/supabase/migrations/20261011103501_admin_verification_durable_staging.sql",
+      "bytes": 12008,
+      "sha256": "081c48e91172e4e98079b03aa210c0f7481d95a21945e5a288187263089e57db"
+    },
+    {
+      "source": "backend/supabase/migrations/20261011105114_review_media_storage_retirement_fence.sql",
+      "bytes": 11418,
+      "sha256": "79375138d7e82a3be2b85b219ff52147db13db9c93070569be40a61ab97c3d53"
+    },
+    {
+      "source": "backend/supabase/migrations/20261011110108_review_storage_caller_bound_admin_policy.sql",
+      "bytes": 8463,
+      "sha256": "45b2a0db333a1e24ac1f68b7693c7cfb98e10cd0ab366b98089c3679a6b5dfbc"
+    },
+    {
+      "source": "backend/supabase/migrations/20261011175912_review_owner_cleanup_completion.sql",
+      "bytes": 6694,
+      "sha256": "9164be35fc17e67c3f1aaf98aad13139a8fd469130bd1315879bff5dac63ba26"
+    }
+  ],
+  "sha256": "77b34753c68047d3b479484f156e44044d015c53b8e5d459da4b8d1d97f0d1d3",
+  "transform": "Only exact top-level transaction envelopes removed",
+  "operatingApplied": false
+}

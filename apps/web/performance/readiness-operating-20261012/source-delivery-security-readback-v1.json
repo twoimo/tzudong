@@ -1,0 +1,30 @@
+{
+  "recordedAtUtc": "2026-10-11T22:38:06.977042+00:00",
+  "sourceMain": "056a86600f412eb42df4304e3206841679012f3e",
+  "sourceData": "d076cfdb1eea7ebbf854f0e7aabe5328c797f92b",
+  "appFix": "b143ba4fc5747d4b26ddaea690861dcf82be3324",
+  "vulnerabilities": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "auditIncludesDevDependencies": 421,
+  "bracesInstalledIdentity": {
+    "name": "@tzudong/braces",
+    "version": "3.0.3-tzudong.1"
+  },
+  "localGuard": {
+    "maxDepth": 128,
+    "maxNodes": 50000,
+    "existingBoundaryTestsPassed": 3
+  },
+  "upstreamAdvisory": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+  "officialUpstreamPatchedVersionListed": false,
+  "auditNotASecurityCertification": true,
+  "sqlSourcesUnchanged": 11,
+  "bundleSha256": "77b34753c68047d3b479484f156e44044d015c53b8e5d459da4b8d1d97f0d1d3",
+  "operatingWrites": 0
+}

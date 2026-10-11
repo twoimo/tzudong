@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "recordedAtUtc": "2026-10-11T22:06:06.716877+00:00",
+  "head": "6df232d1599bdf7a477c379474f852fe8370daee",
+  "files": 240,
+  "remoteGitBlobIdsEqual": true,
+  "roots": [
+    "swipe-memory-confirm-v7-20261012",
+    "swipe-heap-shapes-20261012",
+    "legacy-verification-preview-20261012"
+  ],
+  "performanceCandidateAccepted": false,
+  "operatingWrites": 0
+}

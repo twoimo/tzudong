@@ -1,0 +1,11 @@
+{
+  "sourceSha": "b143ba4fc5747d4b26ddaea690861dcf82be3324",
+  "node": "24.21.0",
+  "next": "16.3.8",
+  "distDir": ".next-legacy-gif-review-v1",
+  "exit": 1,
+  "publicConfigOnly": true,
+  "serverKeyRead": false,
+  "operatingWrites": 0,
+  "packageLockSha256": "607175eda02d7746caf5593d34835cef317bf197ca6d5428fa1266cdb2aae5f4"
+}

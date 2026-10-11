@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/performance/readiness-operating-20261012/verify_atomic_11_v2.py", line 57, in <module>
+    main()
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/performance/readiness-operating-20261012/verify_atomic_11_v2.py", line 38, in main
+    m.run(apply, bundle.decode(), 'postgres')
+  File "/Users/twoimo/.codex/worktrees/swipe-cache-control-20261009/tzudong/apps/web/performance/readiness-delivery-20261011/verify_admin_media_forward_v1.py", line 48, in run
+    raise RuntimeError('ISOLATED_SQL_FAILED:' + ','.join(states))
+RuntimeError: ISOLATED_SQL_FAILED:42883

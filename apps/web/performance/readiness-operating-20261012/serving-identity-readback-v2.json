@@ -1,0 +1,15 @@
+{
+  "recordedAtUtc": "2026-10-11T22:54:43.637Z",
+  "readOnly": true,
+  "request": "GET www.tzudong.app/api/health",
+  "ok": true,
+  "service": "tzudong-web",
+  "releaseId": "5445fa71104b2408962c1c5d369babf3bb778838",
+  "gitSha": "1884f87e53c4567ead7c9a0fb394b09b91a70396",
+  "deploymentId": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "host": "www.tzudong.app",
+  "sourceMain": "056a86600f412eb42df4304e3206841679012f3e",
+  "newSourceServing": false,
+  "identityNotUserFlowProof": true
+}

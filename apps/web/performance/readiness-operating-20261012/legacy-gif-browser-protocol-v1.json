@@ -1,0 +1,21 @@
+{
+  "startedAtUtc": "2026-10-11T22:14:16.065Z",
+  "fixtureOnly": true,
+  "actualAdminAuthentication": false,
+  "actualAdminUi": false,
+  "physicalDevice": false,
+  "fieldAdmission": 0,
+  "operatingWrites": 0,
+  "status": "passed",
+  "browser": "154.0.8037.98",
+  "decoded": {
+    "complete": true,
+    "width": 1,
+    "height": 1
+  },
+  "authorizedStatus": 200,
+  "unauthorizedStatus": 401,
+  "bytesPreserved": true,
+  "moduleSha256": "d0a606012eeb790eb2cf33a6f0c3bd33477f9a2b3009464e2d178c15817cc3ef",
+  "endedAtUtc": "2026-10-11T22:14:16.841Z"
+}

@@ -1,0 +1,1 @@
+{"status":"denied","code":"42501","operation":"read-only preflight","reason":"g014_catalog_manifest_rows EXECUTE denied to postgres","hostedWrites":0,"resolution":"Use the already-readable immutable manifest relation for its count; preserve function grants."}

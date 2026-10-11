@@ -1,0 +1,672 @@
+▲ Next.js 16.3.8 (Turbopack)
+✓ Running next.config.mjs took 431ms
+- Experiments (use with caution):
+  · clientTraceMetadata
+  · optimizePackageImports
+  · staleTimes
+  ⨯ turbopackFileSystemCacheForDev
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 12.6s
+  Running next.config.js provided runAfterProductionCompile ...
+✓ Completed runAfterProductionCompile in 358ms
+  Running TypeScript ...
+
+  We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+  The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+  	- include was updated to add '.next-legacy-gif-review-v1/types/**/*.ts'
+  	- include was updated to add '.next-legacy-gif-review-v1/dev/types/**/*.ts'
+
+  Finished TypeScript in 25.8s ...
+  Collecting page data using 17 workers ...
+  Generating static pages using 17 workers (0/50) ...
+Error occurred prerendering page "/404". Read more: https://nextjs.org/docs/messages/prerender-error
+Error [PageNotFoundError]: Cannot find module for page: /_document
+    at ignore-listed frames {
+  code: 'ENOENT'
+}
+Error occurred prerendering page "/500". Read more: https://nextjs.org/docs/messages/prerender-error
+Error [PageNotFoundError]: Cannot find module for page: /_document
+    at ignore-listed frames {
+  code: 'ENOENT'
+}
+Export encountered an error on /_error: /404, exiting the build.
+⨯ Next.js build worker exited with code: 1 and signal: null
+Turbopack build encountered 21 warnings:
+./lib/admin/youtube-thumbnail-generator/retrieval.ts:599:12
+Warning: The file pattern ('/ROOT/' <dynamic> | '/ROOT' <dynamic> | '/ROOT/.' | '/ROOT.') matches 27825 files in [project]/
+  [90m597 |[0m   [36mreturn[0m [36mawait[0m [36mnew[0m [33mPromise[0m((resolveResult) => {
+  [90m598 |[0m     [36mconst[0m child = spawn(runnable.command, runnable.args, {
+[33m[1m>[0m [90m599 |[0m       cwd: resolve(process.cwd(), env[[33mTHUMBNAIL_RETRIEVAL_ROOT_ENV[0m] || [32m'.'[0m),
+  [90m    |[0m            [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m600 |[0m       env: { ...process.env, ...env, [33mTHUMBNAIL_RETRIEVAL_JSON[0m: input },
+  [90m601 |[0m       stdio: [[32m'pipe'[0m, [32m'pipe'[0m, [32m'ignore'[0m],
+  [90m602 |[0m     });
+
+Overly broad patterns can lead to build performance issues and over bundling.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/retrieval.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/retrieval.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/history.ts:120:47
+Warning: The file pattern ('/ROOT/' <dynamic> | '/ROOT' <dynamic>) matches 18550 files in [project]/
+  [90m118 |[0m
+  [90m119 |[0m [36mfunction[0m resolveMaybeRelativePath(value: string) {
+[33m[1m>[0m [90m120 |[0m   [36mreturn[0m isAbsolute(value) ? resolve(value) : resolve(process.cwd(), value);
+  [90m    |[0m                                               [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m121 |[0m }
+  [90m122 |[0m
+  [90m123 |[0m [36mexport[0m [36mfunction[0m resolveThumbnailHistoryRoot(
+
+Overly broad patterns can lead to build performance issues and over bundling.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/history.ts
+    ./app/api/admin/youtube-thumbnail-generator/history/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/history.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/retrieval.ts:335:26
+Warning: The file pattern ('/ROOT/' <dynamic> | '/ROOT' <dynamic>) matches 18550 files in [project]/
+  [90m333 |[0m     ? configuredValue.trim()
+  [90m334 |[0m     : [32m''[0m;
+[33m[1m>[0m [90m335 |[0m   [36mif[0m (configured) [36mreturn[0m resolve(process.cwd(), configured);
+  [90m    |[0m                          [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m336 |[0m
+  [90m337 |[0m   [36mconst[0m candidates = [
+  [90m338 |[0m     resolve(process.cwd(), [33mTHUMBNAIL_RETRIEVAL_DEFAULT_LOCAL_POOL[0m),
+
+Overly broad patterns can lead to build performance issues and over bundling.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/retrieval.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/retrieval.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./app/admin/page.tsx:108:40
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m106 |[0m   [36mfor[0m ([36mconst[0m candidate [36mof[0m [33mSTORYBOARD_INITIAL_RESULT_CANDIDATES[0m) {
+  [90m107 |[0m     [36mtry[0m {
+[33m[1m>[0m [90m108 |[0m       [36mconst[0m payload = [33mJSON[0m.parse([36mawait[0m readFile(candidate.filePath, [32m"utf8"[0m));
+  [90m    |[0m                                        [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m109 |[0m       [36mconst[0m parsedResult = extractStoryboardGenerationResult(payload);
+  [90m110 |[0m       [36mif[0m (!parsedResult) [36mcontinue[0m;
+  [90m111 |[0m       [36mconst[0m trustedResult = stripUntrustedStoryboardGeneratedImages(parsedResult);
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.readFile(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import trace:
+  App Route:
+    ./app/admin/page.tsx
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/backend-agent.ts:310:18
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m308 |[0m     [32m'print(json.dumps(missing))'[0m,
+  [90m309 |[0m   ].join([32m'\n'[0m);
+[33m[1m>[0m [90m310 |[0m   [36mconst[0m result = spawnSync(resolveThumbnailAgentPython(env), [[32m'-c'[0m, script], {
+  [90m    |[0m                  [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m311 |[0m     cwd: [33mBACKEND_AGENT_ROOT[0m,
+  [90m    |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m312 |[0m     encoding: [32m'utf8'[0m,
+  [90m    |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m313 |[0m     timeout: [35m5[0m_000,
+  [90m    |[0m [33m[1m^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m314 |[0m     env: {
+  [90m    |[0m [33m[1m^^^^^^^^^^[0m
+[33m[1m>[0m [90m315 |[0m       ...process.env,
+  [90m    |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m316 |[0m       ...env,
+  [90m    |[0m [33m[1m^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m317 |[0m       [33mPYTHONPATH[0m: [backendAgentPath([32m'src'[0m), env.[33mPYTHONPATH[0m ?? process.env.[33mPYTHONPATH[0m].fil...
+  [90m    |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m318 |[0m     },
+  [90m    |[0m [33m[1m^^^^^^[0m
+[33m[1m>[0m [90m319 |[0m   });
+  [90m    |[0m [33m[1m^^^^[0m
+  [90m320 |[0m   [36mif[0m (result.error || result.status !== [35m0[0m) [36mreturn[0m [33mREQUIRED_PYTHON_MODULES[0m;
+  [90m321 |[0m   [36mtry[0m {
+  [90m322 |[0m     [36mconst[0m parsed = [33mJSON[0m.parse(result.stdout.trim()) [36mas[0m unknown;
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: child_process.spawnSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/backend-agent.ts
+    ./app/api/admin/youtube-thumbnail-generator/chat/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/backend-agent.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/history.ts:120:47
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m118 |[0m
+  [90m119 |[0m [36mfunction[0m resolveMaybeRelativePath(value: string) {
+[33m[1m>[0m [90m120 |[0m   [36mreturn[0m isAbsolute(value) ? resolve(value) : resolve(process.cwd(), value);
+  [90m    |[0m                                               [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m121 |[0m }
+  [90m122 |[0m
+  [90m123 |[0m [36mexport[0m [36mfunction[0m resolveThumbnailHistoryRoot(
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: path.resolve(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/history.ts
+    ./app/api/admin/youtube-thumbnail-generator/history/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/history.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/providers.ts:436:20
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m434 |[0m   [36mfor[0m ([36mconst[0m c2patoolBin [36mof[0m candidateC2paToolBins(env)) {
+  [90m435 |[0m     [36mconst[0m toolCommand = resolveScriptCommand(c2patoolBin, [[32m'--crjson'[0m, outputPath], env);
+[33m[1m>[0m [90m436 |[0m     [36mconst[0m result = spawnSync(toolCommand.command, toolCommand.args, {
+  [90m    |[0m                    [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m437 |[0m       encoding: [32m'utf8'[0m,
+  [90m    |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m438 |[0m       maxBuffer: [33mLOCAL_CODEX_C2PATOOL_MAX_OUTPUT_BYTES[0m,
+  [90m    |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m439 |[0m       timeout: [33mNumber[0m(env.[33mTHUMBNAIL_LOCAL_CODEX_C2PATOOL_TIMEOUT_MS[0m ?? [33mLOCAL_CODEX_C2PATO...[0m
+  [90m    |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m440 |[0m       windowsHide: [36mtrue[0m,
+  [90m    |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m441 |[0m     });
+  [90m    |[0m [33m[1m^^^^^^[0m
+  [90m442 |[0m     [36mif[0m (result.error) {
+  [90m443 |[0m       lastFailure = result.error.message;
+  [90m444 |[0m       [36mif[0m ((result.error [36mas[0m [33mNodeJS[0m.[33mErrnoException[0m).code === [32m'ENOENT'[0m) [36mcontinue[0m;
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: child_process.spawnSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/providers.ts:209:40
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m207 |[0m [36mfunction[0m isLocalCodexCommandAvailable(env: [33mNodeJS[0m.[33mProcessEnv[0m) {
+  [90m208 |[0m   [36mconst[0m commandParts = resolveLocalCodexThumbnailCommandParts(env);
+[33m[1m>[0m [90m209 |[0m   [36mif[0m (!commandParts.configured) [36mreturn[0m existsSync(commandParts.scriptPath);
+  [90m    |[0m                                        [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m210 |[0m   [36mif[0m (commandParts.command.includes([32m'/'[0m) || commandParts.command.includes([32m'\\'[0m)) {
+  [90m211 |[0m     [36mreturn[0m existsSync(commandParts.command);
+  [90m212 |[0m   }
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.existsSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/providers.ts:211:12
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m209 |[0m   [36mif[0m (!commandParts.configured) [36mreturn[0m existsSync(commandParts.scriptPath);
+  [90m210 |[0m   [36mif[0m (commandParts.command.includes([32m'/'[0m) || commandParts.command.includes([32m'\\'[0m)) {
+[33m[1m>[0m [90m211 |[0m     [36mreturn[0m existsSync(commandParts.command);
+  [90m    |[0m            [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m212 |[0m   }
+  [90m213 |[0m   [36mreturn[0m [36mtrue[0m;
+  [90m214 |[0m }
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.existsSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/providers.ts:498:8
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m496 |[0m   [36mconst[0m durableRoot = getLocalCodexDurableOutputRoot(env);
+  [90m497 |[0m   [36mif[0m (!isPathInside(durableRoot, outputPath)) [36mreturn[0m [36mundefined[0m;
+[33m[1m>[0m [90m498 |[0m   [36mif[0m (!existsSync(durableRoot) || !existsSync(outputPath)) [36mreturn[0m [36mundefined[0m;
+  [90m    |[0m        [33m[1m^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m499 |[0m
+  [90m500 |[0m   [36mtry[0m {
+  [90m501 |[0m     [36mconst[0m realRoot = realpathSync(durableRoot);
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.existsSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/providers.ts:546:22
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m544 |[0m   [36mconst[0m outputPath = getDurableProofOutputPath(proof, env);
+  [90m545 |[0m   [36mif[0m (!outputPath) [36mreturn[0m [36mnull[0m;
+[33m[1m>[0m [90m546 |[0m   [36mif[0m (outputPath && !existsSync(outputPath)) [36mreturn[0m [36mnull[0m;
+  [90m    |[0m                      [33m[1m^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m547 |[0m   [36mif[0m (!hasStructuralExactGptImage2C2paProof(outputPath, env)) [36mreturn[0m [36mnull[0m;
+  [90m548 |[0m
+  [90m549 |[0m   [36mreturn[0m {
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.existsSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/providers.ts:948:23
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m946 |[0m   }
+  [90m947 |[0m
+[33m[1m>[0m [90m948 |[0m   [36mconst[0m bytes = [36mawait[0m readFile(proof.outputPath);
+  [90m    |[0m                       [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m949 |[0m   [36mconst[0m warnings = [
+  [90m950 |[0m     [32m'local_codex_provider: generated via local Codex OAuth built-in image_generation and ...[0m
+  [90m951 |[0m     [32m`exact_provenance: [0m${proof.requestToolType[32m}.[0m${proof.requestToolModel[32m} response=[0m${proo...
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.readFile(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/providers.ts:574:38
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m572 |[0m ...Proof(env: [33mNodeJS[0m.[33mProcessEnv[0m) {
+  [90m573 |[0m ...
+[33m[1m>[0m [90m574 |[0m ...ry([33mJSON[0m.parse(readFileSync(resolveLocalCodexProvenanceFile(env), [32m'utf8'[0m)), env);
+  [90m    |[0m                  [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m575 |[0m ...
+  [90m576 |[0m ...
+  [90m577 |[0m ...
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.readFileSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/providers.ts:501:22
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m499 |[0m
+  [90m500 |[0m   [36mtry[0m {
+[33m[1m>[0m [90m501 |[0m     [36mconst[0m realRoot = realpathSync(durableRoot);
+  [90m    |[0m                      [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m502 |[0m     [36mconst[0m realOutputPath = realpathSync(outputPath);
+  [90m503 |[0m     [36mif[0m (!isPathInside(realRoot, realOutputPath)) [36mreturn[0m [36mundefined[0m;
+  [90m504 |[0m     [36mconst[0m stats = statSync(realOutputPath);
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.realpathSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/providers.ts:943:33
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m941 |[0m   [36mconst[0m proof = validateLocalCodexCommandResult(result, outputPath, env);
+  [90m942 |[0m   [36mconst[0m proofElapsedMs = [33mDate[0m.now() - proofStartedAt;
+[33m[1m>[0m [90m943 |[0m   [36mconst[0m proofOutputStat = [36mawait[0m stat(proof.outputPath);
+  [90m    |[0m                                 [33m[1m^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m944 |[0m   [36mif[0m (!proofOutputStat.isFile() || proofOutputStat.size !== proof.bytes || proofOutputSta...
+  [90m945 |[0m     [36mthrow[0m [36mnew[0m [33mThumbnailGenerationError[0m([32m'provider_unavailable'[0m, [32m'로컬 Codex bridge가 유효...[0m
+  [90m946 |[0m   }
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.stat(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/providers.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/release-candidates.ts:397:13
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m395 |[0m     }
+  [90m396 |[0m     [36mtry[0m {
+[33m[1m>[0m [90m397 |[0m       [36mawait[0m stat(sourceImagePath);
+  [90m    |[0m             [33m[1m^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m398 |[0m       [36mconst[0m browserImagePath = options.mirrorCandidateImages === [36mfalse[0m
+  [90m399 |[0m         ? [36mawait[0m readExistingCandidateBrowserPath(rawCandidate, options, webRoot)
+  [90m400 |[0m         : [36mawait[0m mirrorCandidateForBrowser(rawCandidate, sourceImagePath, options, webRoot);
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.stat(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import trace:
+  App Route:
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/release-registry.ts:312:15
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m310 |[0m   [36mif[0m (options.webRoot) [36mreturn[0m resolve(options.webRoot);
+  [90m311 |[0m   [36mif[0m (options.repoRoot) [36mreturn[0m resolve(options.repoRoot, [32m'apps/web'[0m);
+[33m[1m>[0m [90m312 |[0m   [36mconst[0m cwd = resolve(process.cwd());
+  [90m    |[0m               [33m[1m^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m313 |[0m   [36mreturn[0m basename(cwd) === [32m'web'[0m ? cwd : resolve(cwd, [32m'apps/web'[0m);
+  [90m314 |[0m }
+  [90m315 |[0m
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: path.resolve(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/release-registry.ts
+    ./app/api/admin/youtube-thumbnail-generator/releases/current/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/release-registry.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/retrieval.ts:598:19
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m596 |[0m
+  [90m597 |[0m   [36mreturn[0m [36mawait[0m [36mnew[0m [33mPromise[0m((resolveResult) => {
+[33m[1m>[0m [90m598 |[0m     [36mconst[0m child = spawn(runnable.command, runnable.args, {
+  [90m    |[0m                   [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m599 |[0m       cwd: resolve(process.cwd(), env[[33mTHUMBNAIL_RETRIEVAL_ROOT_ENV[0m] || [32m'.'[0m),
+  [90m    |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m600 |[0m       env: { ...process.env, ...env, [33mTHUMBNAIL_RETRIEVAL_JSON[0m: input },
+  [90m    |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m601 |[0m       stdio: [[32m'pipe'[0m, [32m'pipe'[0m, [32m'ignore'[0m],
+  [90m    |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[33m[1m>[0m [90m602 |[0m     });
+  [90m    |[0m [33m[1m^^^^^^[0m
+  [90m603 |[0m     [36mlet[0m stdout = [32m''[0m;
+  [90m604 |[0m     [36mlet[0m settled = [36mfalse[0m;
+  [90m605 |[0m     [36mconst[0m timer = setTimeout(() => {
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: child_process.spawn(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/retrieval.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/retrieval.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/retrieval.ts:319:32
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m317 |[0m     [36mif[0m (!initialStat.isDirectory() || initialStat.isSymbolicLink()) [36mreturn[0m [36mnull[0m;
+  [90m318 |[0m
+[33m[1m>[0m [90m319 |[0m     [36mconst[0m resolvedRoot = [36mawait[0m realpath(root);
+  [90m    |[0m                                [33m[1m^^^^^^^^^^^^^^[0m
+  [90m320 |[0m     [36mconst[0m resolvedStat = [36mawait[0m lstat(resolvedRoot);
+  [90m321 |[0m     [36mreturn[0m resolvedStat.isDirectory() && hasSameFileIdentity(initialStat, resolvedStat)
+  [90m322 |[0m       ? resolvedRoot
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.realpath(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/retrieval.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/retrieval.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/retrieval.ts:335:26
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m333 |[0m     ? configuredValue.trim()
+  [90m334 |[0m     : [32m''[0m;
+[33m[1m>[0m [90m335 |[0m   [36mif[0m (configured) [36mreturn[0m resolve(process.cwd(), configured);
+  [90m    |[0m                          [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m336 |[0m
+  [90m337 |[0m   [36mconst[0m candidates = [
+  [90m338 |[0m     resolve(process.cwd(), [33mTHUMBNAIL_RETRIEVAL_DEFAULT_LOCAL_POOL[0m),
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: path.resolve(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/retrieval.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/retrieval.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+
+./lib/admin/youtube-thumbnail-generator/retrieval.ts:599:12
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m597 |[0m   [36mreturn[0m [36mawait[0m [36mnew[0m [33mPromise[0m((resolveResult) => {
+  [90m598 |[0m     [36mconst[0m child = spawn(runnable.command, runnable.args, {
+[33m[1m>[0m [90m599 |[0m       cwd: resolve(process.cwd(), env[[33mTHUMBNAIL_RETRIEVAL_ROOT_ENV[0m] || [32m'.'[0m),
+  [90m    |[0m            [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m600 |[0m       env: { ...process.env, ...env, [33mTHUMBNAIL_RETRIEVAL_JSON[0m: input },
+  [90m601 |[0m       stdio: [[32m'pipe'[0m, [32m'pipe'[0m, [32m'ignore'[0m],
+  [90m602 |[0m     });
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: path.resolve(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/retrieval.ts
+    ./app/api/admin/youtube-thumbnail-generator/route.ts
+
+  #2 [App Route]:
+    ./lib/admin/youtube-thumbnail-generator/retrieval.ts
+    ./lib/admin/youtube-thumbnail-generator/release-candidates.ts
+    ./app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts
+
+

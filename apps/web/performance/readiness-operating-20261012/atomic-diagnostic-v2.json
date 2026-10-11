@@ -1,0 +1,9 @@
+{
+  "exit": 3,
+  "fixedCodeContext": [
+    "ERROR:  ADMIN_REVISION_SOURCE_DRIFT",
+    "CONTEXT:  PL/pgSQL function inline_code_block line 17 at RAISE"
+  ],
+  "confirmedPreviousAtomicRollback": true,
+  "operatingWrites": 0
+}

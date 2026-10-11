@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "head": "74c81288147b0d35486d6972cfed5cf28c05dba5",
+  "files": 191,
+  "remoteGitBlobIdsEqual": true,
+  "localMapSha256": "82392f3e2896e2cef25423c479efe7f0a1cf738e704df509d70cd22e8594f41c",
+  "ignoredLogsInitiallyMissing": 8,
+  "correctiveCommitIncludedAllMappedLogs": true,
+  "sourceCandidateAdmitted": false
+}

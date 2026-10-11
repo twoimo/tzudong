@@ -1,0 +1,7 @@
+{
+  "normal": "passed",
+  "optimized": "passed",
+  "relocated": "passed",
+  "tamper": "rejected",
+  "frozenTreeUnchanged": true
+}

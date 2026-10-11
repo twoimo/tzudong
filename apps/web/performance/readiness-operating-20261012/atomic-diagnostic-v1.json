@@ -1,0 +1,8 @@
+{
+  "exit": 3,
+  "fixedCodeContext": [
+    "ERROR:  function \"public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)\" does not exist",
+    "CONTEXT:  PL/pgSQL function inline_code_block line 15 at assignment"
+  ],
+  "operatingWrites": 0
+}
