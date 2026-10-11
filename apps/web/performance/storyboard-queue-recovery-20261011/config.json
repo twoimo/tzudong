@@ -12,6 +12,17 @@
     "projectConcurrency": 1,
     "transport": "literal-loopback-http-spies"
   },
+  "measurement": {
+    "design": "paired-deterministic-exact-count",
+    "sampleCountPerCondition": 1,
+    "noiseBudget": {
+      "catalogGetAbsoluteTolerance": 0,
+      "generationCallAbsoluteTolerance": 0,
+      "relativeTolerancePercent": 0
+    },
+    "confidenceInterval": null,
+    "confidenceIntervalReason": "n=1 deterministic exact-count fixture"
+  },
   "providerPolicy": {
     "providerId": "gemini-api",
     "models": [

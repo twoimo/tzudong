@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "storyboard-queue-recovery-negative-verification.v1",
+  "method": "isolated temporary copies of the evidence directory; canonical trace never modified",
+  "canonicalRawTraceSha256Before": "44dd40c924ed864c2cabe244d805b205d7fa6da306a155552c41211cb6e6d683",
+  "canonicalRawTraceSha256After": "44dd40c924ed864c2cabe244d805b205d7fa6da306a155552c41211cb6e6d683",
+  "cases": [
+    {
+      "mutation": "remove the after empty-queue scenario",
+      "scoreExitCode": 1,
+      "validatorExitCode": 1,
+      "scoreAllPassed": false,
+      "validatorAllPassed": false,
+      "scoreFalseChecks": ["exactModelArrays", "exactRequestCounts", "exactScenarioInventory", "zeroAfterGenerationForRejectedWork"],
+      "validatorFalseChecks": ["exactAllowlist", "exactScenarioInventory", "rejectedWorkHasNoProviderCalls", "summaryMatchesRaw"]
+    },
+    {
+      "mutation": "append a duplicate after retired-model scenario",
+      "scoreExitCode": 1,
+      "validatorExitCode": 1,
+      "scoreAllPassed": false,
+      "validatorAllPassed": false,
+      "scoreFalseChecks": ["exactScenarioInventory"],
+      "validatorFalseChecks": ["exactScenarioInventory"]
+    },
+    {
+      "mutation": "change after actual-host-memory-gate catalogGets from 0 to 1",
+      "scoreExitCode": 1,
+      "validatorExitCode": 1,
+      "scoreAllPassed": false,
+      "validatorAllPassed": false,
+      "scoreFalseChecks": ["exactRequestCounts"],
+      "validatorFalseChecks": ["summaryMatchesRaw"]
+    }
+  ],
+  "temporaryCopiesRemoved": true,
+  "externalOperations": {
+    "realProvider": 0,
+    "database": 0,
+    "storage": 0,
+    "payment": 0,
+    "deployment": 0,
+    "productionService": 0
+  }
+}

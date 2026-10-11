@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "storyboard-queue-recovery-scorer-output.v1",
+  "statisticalScope": {
+    "sampleCountPerCondition": 1,
+    "confidenceInterval": null,
+    "noiseBudget": {
+      "catalogGetAbsoluteTolerance": 0,
+      "generationCallAbsoluteTolerance": 0,
+      "relativeTolerancePercent": 0
+    }
+  },
+  "scoredChanges": [
+    { "condition": "host_memory_rejection", "baseline": 3, "candidate": 0, "absoluteChange": -3, "relativeChangePercent": -100, "exact": true },
+    { "condition": "empty_queue", "baseline": 3, "candidate": 0, "absoluteChange": -3, "relativeChangePercent": -100, "exact": true },
+    { "condition": "retired_provider_claim", "baseline": 3, "candidate": 0, "absoluteChange": -3, "relativeChangePercent": -100, "exact": true },
+    { "condition": "retired_model_claim", "baseline": 3, "candidate": 0, "absoluteChange": -3, "relativeChangePercent": -100, "exact": true }
+  ],
+  "checks": {
+    "exactScenarioInventory": true,
+    "exactRequestCounts": true,
+    "zeroNoiseBudget": true,
+    "zeroAfterGenerationForRejectedWork": true,
+    "exactModelArrays": true,
+    "noAlternateLlmFallback": true,
+    "terminalAuthFailures": true,
+    "partialResumeOneScene": true
+  },
+  "allPassed": true
+}

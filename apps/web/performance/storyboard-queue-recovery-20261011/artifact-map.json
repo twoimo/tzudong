@@ -3,10 +3,15 @@
   "sourceHead": "7343d92c77a0d4114db16871363c31b54b66ef82",
   "sevenFileDiffSha256": "5a7e094c442603b632472b2f577974267b747b3de2f9fb41efa1094fb6a9f3f0",
   "evidence": [
-    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/README.md", "sha256": "ecc8f4b60debe9ec15e0228a9f6cae107cf4da974511150f3a001da5397851c3" },
-    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/config.json", "sha256": "fe7017a64ef9838aeb84555f00c9314d36d349a28023f5f6c82c38c3085735ec" },
-    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/summary.json", "sha256": "7090d87be77b5ad69d08cbfe7487c4eaf20ff73283cf247c9ab6e2c7071f57d4" },
-    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/raw-cli-spy.json", "sha256": "44dd40c924ed864c2cabe244d805b205d7fa6da306a155552c41211cb6e6d683" }
+    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/README.md", "sha256": "1f9e7e4348f3e691e3b327981a597c167fb98e542a86be97ad5b114fea731c03" },
+    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/config.json", "sha256": "eef6facffc2dd2a0ebed5e65b0382371499cb1528aeb82c33662ccf14faa45eb" },
+    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/summary.json", "sha256": "bfb0e0cfaf94f74417d34242c3263e1f283434af55a4980f6b1cce8edeee4514" },
+    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/raw-cli-spy.json", "sha256": "44dd40c924ed864c2cabe244d805b205d7fa6da306a155552c41211cb6e6d683" },
+    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/score.mjs", "sha256": "61b9ae04856025efaf743391c54d0a4008ff54337f3197b295bc48960dfe5b89" },
+    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/scorer-output.json", "sha256": "cc237ee90d573e9ef546240861423c65a33ca5352ed51a6d8e1bea59e6e28843" },
+    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/validate.mjs", "sha256": "07152e013e581750b8afe9a4f120c9a4f19e4559d09505e2801b959eeca0e916" },
+    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/validator-output.json", "sha256": "ab4e00a7e67ffb6ca4be9bb3b87f2e1e1fb977d4bb350101d47901a0dc89f427" },
+    { "path": "apps/web/performance/storyboard-queue-recovery-20261011/negative-verification.json", "sha256": "7eb9214fd335bf020823233428bcdf0e3c5e275978d85c230f75aac7837591f4" }
   ],
   "changedFiles": [
     { "path": "apps/web/lib/admin/storyboard/gemini-client.ts", "sha256": "6272b4f09ff0bcd760513f129d33606c3690217d8a4c1ce3384c9a8dfc47c654" },

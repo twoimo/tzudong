@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "storyboard-queue-recovery-validator-output.v1",
+  "checks": {
+    "artifactHashesExact": true,
+    "exactScenarioInventory": true,
+    "nOneDeclared": true,
+    "zeroNoiseBudget": true,
+    "scorerPassed": true,
+    "summaryMatchesScorer": true,
+    "summaryMatchesRaw": true,
+    "exactAllowlist": true,
+    "rejectedWorkHasNoProviderCalls": true,
+    "authFailuresAreTerminal": true,
+    "noFallback": true,
+    "partialResumeExact": true,
+    "externalOperationsZero": true
+  },
+  "mappedFileCount": 19,
+  "allPassed": true
+}

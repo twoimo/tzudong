@@ -15,7 +15,7 @@ The catalog-authentication fixture made three bounded allowlisted metadata reads
 
 The partial-resume fixture generated and uploaded only scene 3 with `gemini-3.1-flash-image`. It made zero draft checkpoints, retained the five-scene input hash, and preserved all 5 existing asset identifiers.
 
-Each row is one paired deterministic spy experiment (`n=1`), so no 95% confidence interval is estimated. These are request-count results, not token, latency, billing, or production-cost results.
+Each row is one paired deterministic spy experiment (`n=1`), so no 95% confidence interval is estimated. The noise budget is exactly **0 catalog/generation calls and 0% relative deviation**: any observed count that differs from the frozen trace fails validation. This zero tolerance is a deterministic request-count contract only; it is not a timing or real-performance noise analysis and does not constitute G003 performance admission. These are request-count results, not token, latency, billing, or production-cost results.
 
 ## Verification
 
@@ -24,5 +24,7 @@ Each row is one paired deterministic spy experiment (`n=1`), so no 95% confidenc
 - TypeScript 7.0.2 / 6.0.2 parity: 0 diagnostics across 3,129 logical inputs.
 - Real provider, database, Storage, payment, deployment, and production-service operations: 0.
 - Applied SQL files were not changed; no migration was added.
+- `scorer-output.json` and `validator-output.json` are reproducible with the adjacent `score.mjs` and `validate.mjs`; both report `allPassed: true` and exit nonzero on any failed check.
+- `negative-verification.json` records isolated temporary-copy mutations for a missing scenario, repeated scenario, and changed request count; both tools rejected all three and the canonical raw trace remained byte-exact.
 
 `raw-cli-spy.json` is a normalized raw trace. Random fixture lease/job IDs, temporary filesystem paths, headers, credentials, and request payloads are deliberately omitted. All HTTP traffic was served by literal-loopback spies. This evidence does not establish hosted queue state, deployment, real Gemini availability, billing, latency, or persistent database/Storage behavior.

@@ -3,6 +3,11 @@
   "measurement": {
     "design": "paired-deterministic-loopback-spy",
     "sampleCountPerCondition": 1,
+    "noiseBudget": {
+      "catalogGetAbsoluteTolerance": 0,
+      "generationCallAbsoluteTolerance": 0,
+      "relativeTolerancePercent": 0
+    },
     "confidenceInterval": null,
     "confidenceIntervalReason": "n=1 deterministic fixture; no statistical interval estimated"
   },
@@ -23,7 +28,9 @@
   "verification": {
     "tests": { "passed": 98, "failed": 0, "expectations": 619, "files": 5 },
     "eslint": { "errors": 0, "warnings": 0 },
-    "typescriptParity": { "native": "7.0.2", "compat": "6.0.2", "diagnostics": 0, "logicalInputs": 3129 }
+    "typescriptParity": { "native": "7.0.2", "compat": "6.0.2", "diagnostics": 0, "logicalInputs": 3129 },
+    "scorer": { "allPassed": true, "output": "scorer-output.json" },
+    "validator": { "allPassed": true, "output": "validator-output.json" }
   },
   "claimsExcluded": [
     "token savings",
