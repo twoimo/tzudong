@@ -1,0 +1,32 @@
+{
+  "status": "passed",
+  "revision": "285ba23b0eacb4a7069205b90e772b613daeadc6f34bbc18f0ad73afb3da6150",
+  "pageLimit": 1,
+  "pageNodeId": "261004-15ps-zgfwptkf",
+  "selectedNodeId": "261006-1i3c-k0l3q5eb",
+  "selectedOutsideReturnedPage": true,
+  "totals": {
+    "nodes": 30,
+    "edges": 88
+  },
+  "coverage": {
+    "analyzed": 0,
+    "eligible": 1071
+  },
+  "evidence": {
+    "bounded": {
+      "endSeconds": 84,
+      "startSeconds": 81,
+      "status": "unverified",
+      "url": "https://www.youtube.com/watch?v=QWtvZ6NfNJ8&t=81s",
+      "videoId": "QWtvZ6NfNJ8"
+    },
+    "wholeVideo": {
+      "endSeconds": null,
+      "startSeconds": 0,
+      "status": "unverified",
+      "url": "https://www.youtube.com/watch?v=3Z-ngM3DVi0",
+      "videoId": "3Z-ngM3DVi0"
+    }
+  }
+}

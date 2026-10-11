@@ -1,0 +1,72 @@
+{
+  "generatedAt": "2026-10-11T11:34:24Z",
+  "gitHead": "14ccd8775e52ab81143626515f850ee544907da9",
+  "sourceWorktree": "/Users/twoimo/.codex/worktrees/knowledge-evidence-20261011/tzudong",
+  "dependencyWorktree": "/Users/twoimo/.codex/worktrees/pipeline-continuity-20261009/tzudong",
+  "knowledgeGraph": {
+    "revision": "285ba23b0eacb4a7069205b90e772b613daeadc6f34bbc18f0ad73afb3da6150",
+    "totalNodes": 30,
+    "totalEdges": 88,
+    "coverage": {
+      "analyzedCount": 0,
+      "eligibleCount": 1071
+    }
+  },
+  "runtime": {
+    "node": "v24.21.0",
+    "bun": "1.4.0",
+    "next": "16.3.8",
+    "fixturePorts": [
+      20502,
+      20503,
+      20504
+    ]
+  },
+  "sources": {
+    "viewer": {
+      "path": "components/admin/AdminKnowledgeGraphPanel.tsx",
+      "bytes": 15612,
+      "sha256": "2b7404aa62cc9d0271520b9517e8f6dbdadf10fff4c044cc9db82ddd153b9887"
+    },
+    "formatter": {
+      "path": "lib/admin/knowledge-graph-evidence.ts",
+      "bytes": 1323,
+      "sha256": "2743bfd2bda230d6a71b618bfb430cf766c754bbf27cc9c773f14d0b0df54e14"
+    },
+    "formatterTest": {
+      "path": "tests-unit/admin-knowledge-graph-evidence.test.ts",
+      "bytes": 1343,
+      "sha256": "6e0819c4f5c73b12a5372c8d6afa739f46faa7e4e3b5ed629c0dc1c627c2950b"
+    },
+    "readerProbe": {
+      "path": "performance/knowledge-evidence-develop-20261011/reader-contract-check.mjs",
+      "bytes": 2431,
+      "sha256": "66b553b05c0d3a943e6b122205cc3ba6d7de77269f8d7f645f7eaf39b5946197"
+    },
+    "startScript": {
+      "path": "performance/knowledge-evidence-develop-20261011/start-loopback.sh",
+      "bytes": 3057,
+      "sha256": "09673a9dbca237c20e0c8f9658fb0897f2162d3e167beeed6dd6b9bdfcbdcfec"
+    },
+    "fixtureGateway": {
+      "path": "performance/knowledge-evidence-develop-20261011/fixture-gateway.mjs",
+      "bytes": 24360,
+      "sha256": "fc0d9e6ac4a32f8611b59c7add1dcbbf70df7903a51ad30db48a85db0e958212"
+    },
+    "fixtureBoundary": {
+      "path": "performance/knowledge-evidence-develop-20261011/loopback-transport.mjs",
+      "bytes": 3523,
+      "sha256": "5bafb4a79cc33ab4d38b471d2630f0d5345aa29017b3fb5f69ecff54a73ae2b5"
+    },
+    "manifest": {
+      "path": "data/knowledge-graph/tzudong.json",
+      "bytes": 1196,
+      "sha256": "9f23f634c05b17f682eb8639c0dba4019b28ddd9dc1eadbeff5f8ffd6c958c6d"
+    },
+    "projectRequestTodos": {
+      "path": "../../docs/operations/project-request-todos-20261009.md",
+      "bytes": 102741,
+      "sha256": "dbf37766b367c5de6baebadb16ba0b6af7e719992daa6e0ed74048c61054380f"
+    }
+  }
+}

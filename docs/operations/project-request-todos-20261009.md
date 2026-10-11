@@ -729,3 +729,14 @@ Five-stage 11개 private receipt와 forward prior-state receipt의 실제 canoni
 root page server23개/231assertions 통과, agent의 범위 수정 전 관련27개/723assertions 통과를 별도 보존한다. 새 호환 소스의 실제 Preview 조회 복구는 아직 확인 전이며 운영 SQL·Storage·catalog reload는0회다. 증빙: `continuity-recovery-20261009/double-missing-warning-fix-20261010/`.
 
 실제 Preview 재검증: develop `bb32e07fe9ea44186e003488428ca14a0ae6a32c`, `dpl_C2L2iemi6K7UayhrGoikKbvFeNo4` READY를 확인했다. 기존 Google 관리자 세션을 유지한 실제 reload에서 맛집 전체1,659건·삭제890건·표50행·수정 버튼36개·고정 조회 오류 부재를 확인했다. 최초 heading 대기는 timeout이었고 이후 새 상태에서 헤더와 표를 확인했으며 실패 대기도 기록했다. 이 결과는 실제 인증된 조회 복구이고 승인·저장·물리 삭제를 입증하지 않는다. source는 data/main 승격 전이며 SQL·Storage·catalog reload0회다. 증빙: `continuity-recovery-20261009/double-missing-live-preview-20261010.json`.
+
+## 2026-10-11 CI 및 지식 근거 표시 후속
+
+- [x] 사용자 승인을 받은 PR #3168의 GitGuardian 탐지 #38096602에만 `Skip: test cred`를 적용하고 현재 검사 #114451853454의 skipped 상태를 재조회했다. 전역 incident 종료와 다른 탐지 예외 처리는 확인하거나 수행하지 않았다.
+- [x] PR #3167을 보호 절차로 develop에 병합했다. merge SHA는 `14ccd8775e52ab81143626515f850ee544907da9`이며 data/main·운영 배포·실제 Gemini 복구 완료와 구분한다.
+- [ ] PR #3168의 CI 최적화를 운영에 채택한다. head `d8fc73f9dfcf154ec0aa1c59c428e124332a09d0`은 현재 성공24/건너뜀2/실패0이지만 clean compiler 실험의 A/A p95 차이28.28%가 사전5% 기준을 초과해 성능 admission은 false다. 기준 완화·유리한 재시도·병합은 하지 않았다.
+- [x] 지식 근거에 영상 ID·정확한 시작/종료 구간·전체 영상 의미를 표시한다. 관련32개 테스트/1,495 assertions, targeted ESLint와 native/compat parity 진단0을 확인했다.
+- [x] 같은 develop source 기반의 합성 loopback에서 Cua로 1440/1024/390px를 검증했다. 근거6개 표시와 전체 그래프3개 화면에서 exact ID/시간/URL, 30nodes/88edges, 문서 가로 넘침0을 확인했다. 관측 cursor 이후 runtime exception·외부 요청·쓰기 요청은0이었다. 초기 연결·locator 실패와 상세 선택1회 미반응은 별도 기록했으며 실제 관리자 인증·운영 DB·대규모 paging·전체 롱폼 검증으로 확대하지 않는다.
+- [ ] 지식 근거 변경의 보호 승격·배포와 실제 서비스 readback을 완료한다. 분석 완료0/1,071·미확인 근거 상태와 전체 목표의 열린 항목을 유지한다.
+
+지식 근거 증빙: `apps/web/performance/knowledge-evidence-develop-20261011/`. CI 상세 증빙과 6시간 읽기 전용 monitor는 PR #3168의 `docs/operations/github-ci-performance-20261010.md`, `docs/operations/github-ci-monitor-20261011.md`에 연결되며 미래 예약 실행 성공은 아직 확인 전이다. 이 후속에서 새 유료 호출·추가 충전·운영 SQL·Storage 삭제·운영 배포는0회다.

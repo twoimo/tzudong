@@ -1,0 +1,26 @@
+
+> web@1.2.4 typecheck:parity
+> node scripts/run-typecheck.mjs --compiler parity
+
+node:internal/modules/cjs/loader:1564
+  const err = new Error(message);
+              ^
+
+Error: Cannot find module '@typescript/old/package.json'
+Require stack:
+- /Users/twoimo/.codex/worktrees/knowledge-evidence-20261011/tzudong/apps/web/node_modules/typescript/package.json
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1564:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1118:27)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1169:12)
+    at require.resolve (node:internal/modules/helpers:175:31)
+    at file:///Users/twoimo/.codex/worktrees/knowledge-evidence-20261011/tzudong/apps/web/scripts/run-typecheck.mjs:16:53
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/twoimo/.codex/worktrees/knowledge-evidence-20261011/tzudong/apps/web/node_modules/typescript/package.json'
+  ]
+}
+
+Node.js v24.21.0

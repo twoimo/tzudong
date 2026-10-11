@@ -1,0 +1,7 @@
+{
+  "request": "GET http://127.0.0.1:20504/admin?module=knowledge-graph",
+  "status": 502,
+  "reason": "fixture gateway reached its 15 second upstream timeout while Next compiled the admin route for the first time",
+  "mutation": false,
+  "externalRequest": false
+}
