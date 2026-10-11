@@ -1,0 +1,272 @@
+{
+  "primaryMedianGuardPass": true,
+  "primaryPairedCIWithinGuard": false,
+  "metrics": [
+    {
+      "metric": "initial_heap_MB",
+      "beforeMedian": 12.301012,
+      "afterMedian": 12.420292,
+      "relativeReductionPercent": -0.9696763160624493,
+      "paired95CiReduction": [
+        -0.21022800000000075,
+        -0.07011599999999873
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -1.7267328684424574,
+        -0.5667065937956048
+      ],
+      "limitedAAabsoluteNoiseMax": 0.12080400000000147,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "end_heap_MB",
+      "beforeMedian": 27.933232,
+      "afterMedian": 33.083332,
+      "relativeReductionPercent": -18.437179056114946,
+      "paired95CiReduction": [
+        -8.234268,
+        18.178283999999998
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -34.68919843682095,
+        35.433278802256154
+      ],
+      "limitedAAabsoluteNoiseMax": 5.539700000000003,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": false,
+      "pairsAboveGuard": 4,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "idle_heap_MB",
+      "beforeMedian": 29.025812,
+      "afterMedian": 34.229488,
+      "relativeReductionPercent": -17.92775340789779,
+      "paired95CiReduction": [
+        -8.215704000000002,
+        12.971835999999996
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -32.980146168007316,
+        27.411396590699304
+      ],
+      "limitedAAabsoluteNoiseMax": 5.547908,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": false,
+      "pairsAboveGuard": 5,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "sampled_peak_heap_MB",
+      "beforeMedian": 51.290476,
+      "afterMedian": 48.66396,
+      "relativeReductionPercent": 5.120864934066892,
+      "paired95CiReduction": [
+        0.4233520000000013,
+        4.572927999999997
+      ],
+      "paired95CiRelativeReductionPercent": [
+        0.8740773041175924,
+        8.156247493367644
+      ],
+      "limitedAAabsoluteNoiseMax": 7.233412000000001,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "input_all_process_median_ms",
+      "beforeMedian": 160.39999985694885,
+      "afterMedian": 160.29999995231628,
+      "relativeReductionPercent": 0.062344080250469,
+      "paired95CiReduction": [
+        -5.6499998569488525,
+        13.200000286102295
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -3.3422063594049685,
+        7.608069318710804
+      ],
+      "limitedAAabsoluteNoiseMax": 1.5,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "input_first_process_median_ms",
+      "beforeMedian": 176.74999976158142,
+      "afterMedian": 175.84999990463257,
+      "relativeReductionPercent": 0.5091936962731909,
+      "paired95CiReduction": [
+        -0.20000028610229492,
+        2.6499996185302734
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -0.1138953793911811,
+        1.5065375899291602
+      ],
+      "limitedAAabsoluteNoiseMax": 9.449999809265137,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "input_revisit_process_median_ms",
+      "beforeMedian": 155.44999980926514,
+      "afterMedian": 157.40000009536743,
+      "relativeReductionPercent": -1.254422829523909,
+      "paired95CiReduction": [
+        -13.050000190734863,
+        2.5500001907348633
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -9.040526636201303,
+        1.608832927908431
+      ],
+      "limitedAAabsoluteNoiseMax": 13.550000190734863,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "input_within_process_p95_ms_descriptive",
+      "beforeMedian": 228.799999833107,
+      "afterMedian": 228.07500004768372,
+      "relativeReductionPercent": 0.31687053581823144,
+      "paired95CiReduction": [
+        -14.325000047683716,
+        10.074999690055847
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -6.26092659883425,
+        4.252400420872768
+      ],
+      "limitedAAabsoluteNoiseMax": 16.299999952316284,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "long_task_count",
+      "beforeMedian": 236,
+      "afterMedian": 236,
+      "relativeReductionPercent": 0.0,
+      "paired95CiReduction": [
+        -6.0,
+        7.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -2.564102564102564,
+        2.928870292887029
+      ],
+      "limitedAAabsoluteNoiseMax": 7,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "long_task_total_ms",
+      "beforeMedian": 17691,
+      "afterMedian": 17521,
+      "relativeReductionPercent": 0.9609405912610933,
+      "paired95CiReduction": [
+        -837.0,
+        1269.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -4.822817631806396,
+        6.821480406386067
+      ],
+      "limitedAAabsoluteNoiseMax": 905,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "max_observed_frame_gap_ms",
+      "beforeMedian": 149.90000000000146,
+      "afterMedian": 133.40000000000146,
+      "relativeReductionPercent": 11.007338225483549,
+      "paired95CiReduction": [
+        -16.70000000000141,
+        33.20000000000255
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -14.310197086547905,
+        19.976004799039668
+      ],
+      "limitedAAabsoluteNoiseMax": 16.799999999995634,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "restaurant_requests",
+      "beforeMedian": 2690,
+      "afterMedian": 2690,
+      "relativeReductionPercent": 0.0,
+      "paired95CiReduction": [
+        0.0,
+        0.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        0.0,
+        0.0
+      ],
+      "limitedAAabsoluteNoiseMax": 0,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "end_DOM_nodes",
+      "beforeMedian": 7692,
+      "afterMedian": 2424,
+      "relativeReductionPercent": 68.48673946957878,
+      "paired95CiReduction": [
+        877.0,
+        10032.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        11.402938499544922,
+        75.29303842625625
+      ],
+      "limitedAAabsoluteNoiseMax": 5726,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "end_JS_listeners",
+      "beforeMedian": 9764,
+      "afterMedian": 2864,
+      "relativeReductionPercent": 70.66775911511675,
+      "paired95CiReduction": [
+        -1390.0,
+        14568.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -94.42934782608695,
+        78.0905752753978
+      ],
+      "limitedAAabsoluteNoiseMax": 8267,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    }
+  ]
+}
