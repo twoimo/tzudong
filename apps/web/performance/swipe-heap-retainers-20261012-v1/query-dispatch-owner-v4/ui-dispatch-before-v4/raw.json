@@ -1,0 +1,1491 @@
+{
+  "kind": "before",
+  "sourceCommit": "056a86600f412eb42df4304e3206841679012f3e",
+  "buildId": "SPJSYk9nn-3AUO9mWgggY",
+  "startedAtUtc": "2026-10-12T04:28:08.583Z",
+  "environment": {
+    "cpuRate": 4,
+    "network": "unthrottled real remote SDK/tiles; synthetic REST735/Auth401",
+    "cache": "disabled and SW bypassed",
+    "viewport": "390x844/dpr1/touch emulation",
+    "productionBuild": true,
+    "forcedGC": false
+  },
+  "queries": 16,
+  "passes": 2,
+  "cycles": [
+    {
+      "pass": 0,
+      "query": 0,
+      "state": {
+        "observedAt": 1702.4000000953674,
+        "inputToObservedMs": 441.7000002861023,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 30,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.4960203,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 75,
+        "maxFrameGapMs": 149.89999999999986,
+        "longTaskCount": 2,
+        "longTaskMs": 255,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 17,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 1,
+      "state": {
+        "observedAt": 2170.199999809265,
+        "inputToObservedMs": 272.7999997138977,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 55,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.6070307,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 19,
+        "maxFrameGapMs": 100,
+        "longTaskCount": 1,
+        "longTaskMs": 134,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 32,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 2,
+      "state": {
+        "observedAt": 2504,
+        "inputToObservedMs": 177.30000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 84,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5980299,
+          "lng": 126.963
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 50,
+        "longTaskCount": 1,
+        "longTaskMs": 67,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 47,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 3,
+      "state": {
+        "observedAt": 2819.4000000953674,
+        "inputToObservedMs": 175.30000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 98,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.589029,
+          "lng": 126.966
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 16,
+        "maxFrameGapMs": 33.30000000000018,
+        "longTaskCount": 1,
+        "longTaskMs": 68,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 62,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 4,
+      "state": {
+        "observedAt": 3202.5,
+        "inputToObservedMs": 224.30000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 112,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5800282,
+          "lng": 126.969
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 18,
+        "maxFrameGapMs": 66.59999999999991,
+        "longTaskCount": 1,
+        "longTaskMs": 84,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 77,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 5,
+      "state": {
+        "observedAt": 3587,
+        "inputToObservedMs": 196.30000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5710273,
+          "lng": 126.972
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 19,
+        "maxFrameGapMs": 83.40000000000009,
+        "longTaskCount": 1,
+        "longTaskMs": 82,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 92,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 6,
+      "state": {
+        "observedAt": 3936.800000190735,
+        "inputToObservedMs": 192.90000009536743,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5620265,
+          "lng": 126.975
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 66.69999999999982,
+        "longTaskCount": 1,
+        "longTaskMs": 87,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 107,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 7,
+      "state": {
+        "observedAt": 4286.800000190735,
+        "inputToObservedMs": 192.90000009536743,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5530256,
+          "lng": 126.978
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 50,
+        "longTaskCount": 1,
+        "longTaskMs": 82,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 122,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 8,
+      "state": {
+        "observedAt": 4619.099999904633,
+        "inputToObservedMs": 175.19999980926514,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5440248,
+          "lng": 126.981
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 66.69999999999982,
+        "longTaskCount": 1,
+        "longTaskMs": 77,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 137,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 9,
+      "state": {
+        "observedAt": 4953.199999809265,
+        "inputToObservedMs": 174.89999961853027,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.535024,
+          "lng": 126.984
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 66.60000000000036,
+        "longTaskCount": 1,
+        "longTaskMs": 73,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 152,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 10,
+      "state": {
+        "observedAt": 5286.599999904633,
+        "inputToObservedMs": 175.5,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5260231,
+          "lng": 126.987
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 50.099999999999454,
+        "longTaskCount": 1,
+        "longTaskMs": 77,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 167,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 11,
+      "state": {
+        "observedAt": 5636.099999904633,
+        "inputToObservedMs": 193.09999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 117,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5170223,
+          "lng": 126.99
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 18,
+        "maxFrameGapMs": 66.69999999999982,
+        "longTaskCount": 1,
+        "longTaskMs": 80,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 182,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 12,
+      "state": {
+        "observedAt": 5952.199999809265,
+        "inputToObservedMs": 158.5,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 90,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5080214,
+          "lng": 126.993
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 50,
+        "longTaskCount": 1,
+        "longTaskMs": 59,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 197,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 13,
+      "state": {
+        "observedAt": 6253.5,
+        "inputToObservedMs": 144.5,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 63,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.4990206,
+          "lng": 126.996
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 33.400000000000546,
+        "longTaskCount": 0,
+        "longTaskMs": 0,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 212,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 14,
+      "state": {
+        "observedAt": 6652.5,
+        "inputToObservedMs": 242.69999980926514,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 90,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.610031,
+          "lng": 126.996
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 18,
+        "maxFrameGapMs": 116.70000000000073,
+        "longTaskCount": 1,
+        "longTaskMs": 121,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 227,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 15,
+      "state": {
+        "observedAt": 6953.199999809265,
+        "inputToObservedMs": 160.69999980926514,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 117,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.6010301,
+          "lng": 126.999
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 16,
+        "maxFrameGapMs": 33.400000000000546,
+        "longTaskCount": 1,
+        "longTaskMs": 59,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 242,
+      "restaurantRequestsSinceQueryStart": 15,
+      "heap": {
+        "usedSize": 31956744,
+        "totalSize": 56950784,
+        "embedderHeapUsedSize": 44413120,
+        "backingStorageSize": 3571264
+      },
+      "resources": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 15747
+        },
+        {
+          "name": "Nodes",
+          "value": 11132
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 31956744
+        }
+      ]
+    },
+    {
+      "pass": 1,
+      "query": 0,
+      "state": {
+        "observedAt": 7285.599999904633,
+        "inputToObservedMs": 176.5,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 30,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.4960203,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 15,
+        "maxFrameGapMs": 83.30000000000018,
+        "longTaskCount": 1,
+        "longTaskMs": 98,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 246,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 1,
+      "state": {
+        "observedAt": 7586.199999809265,
+        "inputToObservedMs": 160,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 55,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.6070307,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 14,
+        "maxFrameGapMs": 83.29999999999927,
+        "longTaskCount": 1,
+        "longTaskMs": 88,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 250,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 2,
+      "state": {
+        "observedAt": 7835.900000095367,
+        "inputToObservedMs": 126.09999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 84,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5980299,
+          "lng": 126.963
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 13,
+        "maxFrameGapMs": 50,
+        "longTaskCount": 1,
+        "longTaskMs": 57,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 254,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 3,
+      "state": {
+        "observedAt": 8103.5,
+        "inputToObservedMs": 143.30000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 98,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.589029,
+          "lng": 126.966
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 13,
+        "maxFrameGapMs": 50,
+        "longTaskCount": 1,
+        "longTaskMs": 59,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 258,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 4,
+      "state": {
+        "observedAt": 8385.699999809265,
+        "inputToObservedMs": 143.7999997138977,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 112,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5800282,
+          "lng": 126.969
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 15,
+        "maxFrameGapMs": 50,
+        "longTaskCount": 1,
+        "longTaskMs": 64,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 262,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 5,
+      "state": {
+        "observedAt": 8635.699999809265,
+        "inputToObservedMs": 142.5,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5710273,
+          "lng": 126.972
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 13,
+        "maxFrameGapMs": 50,
+        "longTaskCount": 1,
+        "longTaskMs": 64,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 266,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 6,
+      "state": {
+        "observedAt": 8902.599999904633,
+        "inputToObservedMs": 144.2999997138977,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5620265,
+          "lng": 126.975
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 14,
+        "maxFrameGapMs": 50.100000000000364,
+        "longTaskCount": 1,
+        "longTaskMs": 69,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 270,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 7,
+      "state": {
+        "observedAt": 9169.099999904633,
+        "inputToObservedMs": 143.59999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5530256,
+          "lng": 126.978
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 13,
+        "maxFrameGapMs": 66.70000000000073,
+        "longTaskCount": 1,
+        "longTaskMs": 72,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 274,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 8,
+      "state": {
+        "observedAt": 9422.099999904633,
+        "inputToObservedMs": 147.5,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5440248,
+          "lng": 126.981
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 13,
+        "maxFrameGapMs": 50,
+        "longTaskCount": 1,
+        "longTaskMs": 73,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 278,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 9,
+      "state": {
+        "observedAt": 9702.199999809265,
+        "inputToObservedMs": 142.09999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.535024,
+          "lng": 126.984
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 14,
+        "maxFrameGapMs": 50,
+        "longTaskCount": 1,
+        "longTaskMs": 74,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 282,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 10,
+      "state": {
+        "observedAt": 9985.5,
+        "inputToObservedMs": 158.5,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5260231,
+          "lng": 126.987
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 13,
+        "maxFrameGapMs": 49.899999999999636,
+        "longTaskCount": 1,
+        "longTaskMs": 77,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 286,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 11,
+      "state": {
+        "observedAt": 10252.699999809265,
+        "inputToObservedMs": 144.2999997138977,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 117,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5170223,
+          "lng": 126.99
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 13,
+        "maxFrameGapMs": 66.60000000000036,
+        "longTaskCount": 1,
+        "longTaskMs": 70,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 290,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 12,
+      "state": {
+        "observedAt": 10485.800000190735,
+        "inputToObservedMs": 110.80000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 90,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5080214,
+          "lng": 126.993
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 13,
+        "maxFrameGapMs": 33.399999999999636,
+        "longTaskCount": 1,
+        "longTaskMs": 50,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 294,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 13,
+      "state": {
+        "observedAt": 10736.099999904633,
+        "inputToObservedMs": 126.5,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 63,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.4990206,
+          "lng": 126.996
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 14,
+        "maxFrameGapMs": 33.399999999999636,
+        "longTaskCount": 0,
+        "longTaskMs": 0,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 298,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 14,
+      "state": {
+        "observedAt": 11086.099999904633,
+        "inputToObservedMs": 225,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 90,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.610031,
+          "lng": 126.996
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 14,
+        "maxFrameGapMs": 83.30000000000109,
+        "longTaskCount": 1,
+        "longTaskMs": 120,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 302,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 15,
+      "state": {
+        "observedAt": 11352.5,
+        "inputToObservedMs": 141.30000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 117,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.6010301,
+          "lng": 126.999
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 14,
+        "maxFrameGapMs": 33.399999999999636,
+        "longTaskCount": 1,
+        "longTaskMs": 64,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 306,
+      "restaurantRequestsSinceQueryStart": 4,
+      "heap": {
+        "usedSize": 37850172,
+        "totalSize": 69009408,
+        "embedderHeapUsedSize": 15544464,
+        "backingStorageSize": 3605971
+      },
+      "resources": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 4919
+        },
+        {
+          "name": "Nodes",
+          "value": 4362
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 37850172
+        }
+      ]
+    }
+  ],
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "physicalDevice": false,
+  "browserVersion": "154.0.8037.98",
+  "sdk": {
+    "loaded": true,
+    "remoteScript": true,
+    "stub": false,
+    "captured": true,
+    "reportedVersion": null
+  },
+  "sdkScript": {
+    "status": 200,
+    "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+  },
+  "initialRestaurantRequests": 2,
+  "initialHeap": {
+    "usedSize": 12420860,
+    "totalSize": 21037056,
+    "embedderHeapUsedSize": 5611440,
+    "backingStorageSize": 2122884
+  },
+  "endHeap": {
+    "usedSize": 37865648,
+    "totalSize": 69009408,
+    "embedderHeapUsedSize": 15544464,
+    "backingStorageSize": 3605971
+  },
+  "idleHeap": {
+    "usedSize": 38981184,
+    "totalSize": 69009408,
+    "embedderHeapUsedSize": 15544464,
+    "backingStorageSize": 3605971
+  },
+  "diagnosticHeap": {
+    "schemaVersion": 1,
+    "nodeCount": 407775,
+    "edgeCount": 1794800,
+    "weakEdges": 87632,
+    "conditionalEphemeronEdges": 5052,
+    "groups": {
+      "selectionKey": {
+        "objects": 21,
+        "ownBytes": 672,
+        "nonWeakEdgeRootPaths": 21,
+        "rootPathsWithConditionalEphemeron": 20,
+        "noNonWeakEdgeRootPath": 0,
+        "incoming": {
+          "orderedResult / property:searched": 20,
+          "other-node / internal": 1
+        },
+        "pathPatterns": [
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > property:other > closure > internal > closure > internal > other-object > context > other-object > element > other-object > property:other > other-object > property:other > closure > internal > other-object > context > WeakMap > internal > weakmap-table > ephemeron-value > Map > internal > array-backing > internal > orderedResult > property:searched > selectionKey",
+            "objects": 18
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > element > Array > element > other-object > element > closure > internal > other-node > internal > other-node > hidden > other-node > internal > other-node > hidden > other-node > internal > selectionKey",
+            "objects": 1
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > other-object > property:restaurants > Array > ephemeron-value > Map > internal > array-backing > internal > orderedResult > property:searched > selectionKey",
+            "objects": 1
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > closure > internal > other-object > context > Array > ephemeron-value > Map > internal > array-backing > internal > orderedResult > property:searched > selectionKey",
+            "objects": 1
+          }
+        ],
+        "unlistedPathPatternCount": 0
+      },
+      "listSnapshot": {
+        "objects": 0,
+        "ownBytes": 0,
+        "nonWeakEdgeRootPaths": 0,
+        "rootPathsWithConditionalEphemeron": 0,
+        "noNonWeakEdgeRootPath": 0,
+        "incoming": {},
+        "pathPatterns": [],
+        "unlistedPathPatternCount": 0
+      },
+      "orderedResult": {
+        "objects": 21,
+        "ownBytes": 420,
+        "nonWeakEdgeRootPaths": 21,
+        "rootPathsWithConditionalEphemeron": 20,
+        "noNonWeakEdgeRootPath": 0,
+        "incoming": {
+          "array-backing / internal": 20,
+          "other-node / internal": 1
+        },
+        "pathPatterns": [
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > property:other > closure > internal > closure > internal > other-object > context > other-object > element > other-object > property:other > other-object > property:other > closure > internal > other-object > context > WeakMap > internal > weakmap-table > ephemeron-value > Map > internal > array-backing > internal > orderedResult",
+            "objects": 18
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > element > Array > element > other-object > element > closure > internal > other-node > internal > other-node > hidden > other-node > internal > other-node > hidden > other-node > internal > orderedResult",
+            "objects": 1
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > other-object > property:restaurants > Array > ephemeron-value > Map > internal > array-backing > internal > orderedResult",
+            "objects": 1
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > closure > internal > other-object > context > Array > ephemeron-value > Map > internal > array-backing > internal > orderedResult",
+            "objects": 1
+          }
+        ],
+        "unlistedPathPatternCount": 0
+      },
+      "fallbackResult": {
+        "objects": 0,
+        "ownBytes": 0,
+        "nonWeakEdgeRootPaths": 0,
+        "rootPathsWithConditionalEphemeron": 0,
+        "noNonWeakEdgeRootPath": 0,
+        "incoming": {},
+        "pathPatterns": [],
+        "unlistedPathPatternCount": 0
+      },
+      "query": {
+        "objects": 89,
+        "ownBytes": 6724,
+        "nonWeakEdgeRootPaths": 89,
+        "rootPathsWithConditionalEphemeron": 0,
+        "noNonWeakEdgeRootPath": 0,
+        "incoming": {
+          "array-backing / internal": 88,
+          "other-object / context": 83,
+          "other-object / property:other": 79,
+          "other-node / internal": 1
+        },
+        "pathPatterns": [
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query",
+            "objects": 81
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > other-object > property:other > query",
+            "objects": 3
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > context > other-object > property:other > other-object > property:other > Map > internal > array-backing > internal > query",
+            "objects": 2
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > element > Array > element > other-object > element > closure > internal > other-node > internal > other-node > hidden > other-node > internal > other-node > hidden > other-node > internal > query",
+            "objects": 1
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > context > closure > internal > other-object > property:other > query",
+            "objects": 1
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber > property:other > other-object > property:other > other-object > property:other > other-object > property:other > query",
+            "objects": 1
+          }
+        ],
+        "unlistedPathPatternCount": 0
+      },
+      "query-state": {
+        "objects": 251,
+        "ownBytes": 19116,
+        "nonWeakEdgeRootPaths": 251,
+        "rootPathsWithConditionalEphemeron": 0,
+        "noNonWeakEdgeRootPath": 0,
+        "incoming": {
+          "other-node / internal": 2,
+          "query / property:other": 88,
+          "query / property:state": 88,
+          "other-node / hidden": 36,
+          "other-object / property:other": 148,
+          "array-backing / internal": 17,
+          "closure / shortcut": 16,
+          "other-object / property:state": 1
+        },
+        "pathPatterns": [
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:other > query-state",
+            "objects": 81
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:state > query-state",
+            "objects": 80
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:queryFn > closure > internal > other-object > context > closure > internal > other-object > context > other-node > hidden > query-state",
+            "objects": 15
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:queryFn > closure > internal > other-object > context > closure > internal > other-object > property:other > query-state",
+            "objects": 15
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:queryFn > closure > internal > other-object > context > other-node > hidden > query-state",
+            "objects": 15
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:queryFn > closure > internal > other-object > context > other-node > hidden > query-state > property:other > closure > internal > other-object > property:other > query-state",
+            "objects": 15
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > other-object > property:other > query-state",
+            "objects": 8
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > other-object > property:other > query > property:other > query-state",
+            "objects": 3
+          }
+        ],
+        "unlistedPathPatternCount": 13
+      },
+      "restaurant-row": {
+        "objects": 3048,
+        "ownBytes": 167504,
+        "nonWeakEdgeRootPaths": 3048,
+        "rootPathsWithConditionalEphemeron": 0,
+        "noNonWeakEdgeRootPath": 0,
+        "incoming": {
+          "Array / element": 9034,
+          "array-backing / internal": 11974,
+          "other-object / property:other": 106,
+          "query-state / property:data": 17,
+          "other-object / context": 383,
+          "other-object / property:restaurant": 4
+        },
+        "pathPatterns": [
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:state > query-state > property:data > Array > element > restaurant-row",
+            "objects": 754
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:state > query-state > property:data > Array > element > restaurant-row > property:other > Array > element > restaurant-row",
+            "objects": 754
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > property:other > closure > internal > closure > internal > other-object > context > other-object > element > other-object > property:other > other-object > property:other > closure > internal > other-object > context > Array > element > restaurant-row",
+            "objects": 618
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > property:other > closure > internal > closure > internal > other-object > context > other-object > element > other-object > property:other > other-object > property:other > closure > internal > other-object > context > Array > element > restaurant-row > property:other > Array > element > restaurant-row",
+            "objects": 618
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > other-object > property:restaurants > Array > element > restaurant-row",
+            "objects": 97
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > other-object > property:restaurants > Array > element > restaurant-row > property:other > Array > element > restaurant-row",
+            "objects": 97
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > context > Array > element > restaurant-row",
+            "objects": 20
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > context > Array > element > restaurant-row > property:other > Array > element > restaurant-row",
+            "objects": 20
+          }
+        ],
+        "unlistedPathPatternCount": 14
+      },
+      "detached-dom": {
+        "objects": 983,
+        "ownBytes": 134056,
+        "nonWeakEdgeRootPaths": 983,
+        "rootPathsWithConditionalEphemeron": 0,
+        "noNonWeakEdgeRootPath": 0,
+        "incoming": {
+          "other-object / property:other": 1749,
+          "other-object / context": 12,
+          "detached-dom / element": 4673,
+          "other-node / element": 3114,
+          "react-fiber / property:other": 421,
+          "array-backing / internal": 719,
+          "closure / shortcut": 303,
+          "other-object / internal": 978,
+          "dom-node / element": 365,
+          "other-node / internal": 1,
+          "detached-dom / weak": 4,
+          "other-node / weak": 99,
+          "Array / element": 5,
+          "other-node / hidden": 66
+        },
+        "pathPatterns": [
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom",
+            "objects": 141
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom",
+            "objects": 122
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom",
+            "objects": 120
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom",
+            "objects": 119
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom",
+            "objects": 118
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > other-object > property:other > other-node > hidden > closure > property:other > Array > element > other-object > property:other > other-object > property:other > other-object > property:other > other-object > property:other > other-object > property:other > detached-dom",
+            "objects": 60
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > other-object > property:other > other-node > hidden > closure > property:other > Array > element > other-object > property:other > other-object > property:other > other-object > property:other > other-object > property:other > other-object > property:other > detached-dom > element > detached-dom",
+            "objects": 60
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > element > detached-dom",
+            "objects": 32
+          }
+        ],
+        "unlistedPathPatternCount": 38
+      },
+      "dom-node": {
+        "objects": 335,
+        "ownBytes": 25864,
+        "nonWeakEdgeRootPaths": 335,
+        "rootPathsWithConditionalEphemeron": 0,
+        "noNonWeakEdgeRootPath": 0,
+        "incoming": {
+          "detached-dom / element": 315,
+          "dom-node / element": 49,
+          "other-object / internal": 8,
+          "other-object / context": 2,
+          "other-object / property:other": 4,
+          "other-node / element": 54,
+          "dom-node / weak": 4,
+          "other-node / weak": 2
+        },
+        "pathPatterns": [
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > element > dom-node",
+            "objects": 144
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > dom-node",
+            "objects": 38
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > dom-node",
+            "objects": 36
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > dom-node",
+            "objects": 34
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > dom-node",
+            "objects": 16
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > dom-node",
+            "objects": 9
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > element > detached-dom > element > dom-node",
+            "objects": 8
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > dom-node",
+            "objects": 8
+          }
+        ],
+        "unlistedPathPatternCount": 27
+      },
+      "event-listener": {
+        "objects": 1397,
+        "ownBytes": 33824,
+        "nonWeakEdgeRootPaths": 1397,
+        "rootPathsWithConditionalEphemeron": 0,
+        "noNonWeakEdgeRootPath": 0,
+        "incoming": {
+          "other-node / element": 1397
+        },
+        "pathPatterns": [
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+            "objects": 819
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+            "objects": 127
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > other-node > element > other-node > element > other-node > element > event-listener",
+            "objects": 116
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+            "objects": 113
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+            "objects": 41
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+            "objects": 37
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+            "objects": 33
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+            "objects": 31
+          }
+        ],
+        "unlistedPathPatternCount": 14
+      },
+      "react-fiber": {
+        "objects": 978,
+        "ownBytes": 101712,
+        "nonWeakEdgeRootPaths": 978,
+        "rootPathsWithConditionalEphemeron": 0,
+        "noNonWeakEdgeRootPath": 0,
+        "incoming": {
+          "react-fiber / property:other": 2787,
+          "closure / shortcut": 452,
+          "array-backing / internal": 452,
+          "detached-dom / property:other": 229,
+          "other-node / hidden": 229,
+          "other-object / context": 12,
+          "other-object / property:other": 8
+        },
+        "pathPatterns": [
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber",
+            "objects": 53
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber",
+            "objects": 52
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber",
+            "objects": 48
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber",
+            "objects": 44
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber",
+            "objects": 32
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:queryFn > closure > internal > other-object > context > closure > shortcut > react-fiber",
+            "objects": 31
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > element > detached-dom > property:other > react-fiber > property:other > react-fiber",
+            "objects": 28
+          },
+          {
+            "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber",
+            "objects": 28
+          }
+        ],
+        "unlistedPathPatternCount": 134
+      }
+    },
+    "callbackOwnership": {
+      "queryFn": {
+        "distinctCallbacks": 88,
+        "callbacksWithDirectContextDispatch": 51,
+        "distinctDirectFiberTargets": 33,
+        "directDispatchReferences": 383
+      },
+      "getNextPageParam": {
+        "distinctCallbacks": 16,
+        "callbacksWithDirectContextDispatch": 16,
+        "distinctDirectFiberTargets": 16,
+        "directDispatchReferences": 160
+      },
+      "select": {
+        "distinctCallbacks": 0,
+        "callbacksWithDirectContextDispatch": 0,
+        "distinctDirectFiberTargets": 0,
+        "directDispatchReferences": 0
+      },
+      "structuralSharing": {
+        "distinctCallbacks": 0,
+        "callbacksWithDirectContextDispatch": 0,
+        "distinctDirectFiberTargets": 0,
+        "directDispatchReferences": 0
+      },
+      "placeholderData": {
+        "distinctCallbacks": 1,
+        "callbacksWithDirectContextDispatch": 0,
+        "distinctDirectFiberTargets": 0,
+        "directDispatchReferences": 0
+      },
+      "retry": {
+        "distinctCallbacks": 0,
+        "callbacksWithDirectContextDispatch": 0,
+        "distinctDirectFiberTargets": 0,
+        "directDispatchReferences": 0
+      },
+      "retryDelay": {
+        "distinctCallbacks": 0,
+        "callbacksWithDirectContextDispatch": 0,
+        "distinctDirectFiberTargets": 0,
+        "directDispatchReferences": 0
+      },
+      "enabled": {
+        "distinctCallbacks": 0,
+        "callbacksWithDirectContextDispatch": 0,
+        "distinctDirectFiberTargets": 0,
+        "directDispatchReferences": 0
+      },
+      "initialData": {
+        "distinctCallbacks": 0,
+        "callbacksWithDirectContextDispatch": 0,
+        "distinctDirectFiberTargets": 0,
+        "directDispatchReferences": 0
+      }
+    },
+    "rawStringsPersisted": false,
+    "rawIdsPersisted": false,
+    "primaryGuardReplacement": false,
+    "scope": "Post-GC snapshot ownership paths. Conditional ephemerons are explicit. Not dominators, exclusive retained bytes, leak proof, or natural-heap performance samples."
+  },
+  "snapshotMayTriggerGc": true,
+  "primaryMeasurement": false,
+  "passed": true,
+  "errors": {
+    "page": 0,
+    "console": 2,
+    "consoleCategories": {
+      "http401": 0,
+      "blockedClient": 0,
+      "provider": 0,
+      "other": 1,
+      "csp": 1
+    },
+    "cspDirectives": {
+      "connect-src": 1
+    },
+    "cspResourceGroups": {
+      "naver-family": 1
+    }
+  },
+  "requests": {
+    "restaurant": 306,
+    "otherFixture": 35,
+    "failedAppAsset": 0,
+    "failedRemoteProvider": 1,
+    "remoteFailureKinds": {
+      "other-network-failure": 1
+    }
+  },
+  "endedAtUtc": "2026-10-12T04:28:29.538Z"
+}

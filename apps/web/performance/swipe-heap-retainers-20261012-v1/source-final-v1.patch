@@ -1,0 +1,1166 @@
+diff --git a/apps/web/components/restaurant/RestaurantDetailPanel.tsx b/apps/web/components/restaurant/RestaurantDetailPanel.tsx
+index 62131790..0f1b21ae 100644
+--- a/apps/web/components/restaurant/RestaurantDetailPanel.tsx
++++ b/apps/web/components/restaurant/RestaurantDetailPanel.tsx
+@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
+ import { Separator } from "@/components/ui/separator";
+ import { cn } from "@/lib/utils";
+ import { Restaurant } from "@/types/restaurant";
+-import type { Tables } from "@/integrations/supabase/types";
+ import { toast } from "@/lib/no-toast";
+ import {
+     X,
+@@ -39,11 +38,6 @@ import { ReviewCard } from "@/components/reviews/ReviewCard";
+ import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
+ import { useReviewLikesRealtime } from "@/hooks/use-review-likes-realtime";
+ import { openExternalUrl } from "@/lib/open-external-url";
+-import {
+-    collectDirectRestaurantReviewIds,
+-    getRestaurantReviewLookupName,
+-    selectRelatedRestaurantReviewIds,
+-} from "@/lib/restaurant-review-lookup";
+ import { collectRestaurantMergedMedia, collectTzuyangReviewEntries, type TzuyangReviewEntry } from "@/lib/restaurant-merged-media";
+ import { formatTzuyangReviewForDisplay } from "@/lib/tzuyang-review-display";
+ import { buildRestaurantDetailMediaCopy } from "@/lib/restaurant-detail-media-copy";
+@@ -54,10 +48,9 @@ import {
+ } from "@/lib/youtube-url";
+ import { YoutubeThumbnail } from "@/components/ui/youtube-thumbnail";
+ import { buildRestaurantMapDestinationUrls } from "@/lib/restaurant-outbound-url";
+-import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from "@/lib/public-profile-read";
+ 
+-type ReviewRow = Tables<'reviews'>;
+-type ReviewLikeRow = Pick<Tables<'review_likes'>, 'review_id'>;
++import { restaurantDetailQueries, type RestaurantDetailReview as Review } from "@/lib/restaurant-detail-query-functions";
++
+ type RestaurantWithVerifiedCount = Restaurant & { verified_review_count?: number };
+ 
+ 
+@@ -80,7 +73,6 @@ interface RestaurantDetailPanelProps {
+ }
+ 
+ const RESTAURANT_DETAIL_SWIPE_HINT_KEY = 'restaurant-detail-swipe-hint-seen-v1';
+-const RESTAURANT_DETAIL_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,is_verified,is_pinned,is_edited_by_admin,admin_note,like_count';
+ const RESTAURANT_DETAIL_REVIEW_STALE_MS = 60 * 1000;
+ const RESTAURANT_DETAIL_REVIEW_GC_MS = 5 * 60 * 1000;
+ type MapProviderLogoType = 'naver' | 'kakao' | 'google';
+@@ -159,28 +151,6 @@ function MapProviderLogo({ provider }: { provider: MapProviderLogoType }) {
+     );
+ }
+ 
+-interface Review {
+-    id: string;
+-    restaurantId: string;
+-    userId: string;
+-    restaurantName: string;
+-    restaurantCategories: string[];
+-    userName: string;
+-    visitedAt: string;
+-    submittedAt: string;
+-    content: string;
+-    isVerified: boolean;
+-    isPinned: boolean;
+-    isEditedByAdmin: boolean;
+-    admin_note: string | null;
+-    photos: { url: string; type: string }[];
+-    category: string;
+-    categories: string[];
+-    likeCount: number;
+-    isLikedByUser: boolean;
+-    userAvatarUrl?: string | null;
+-}
+-
+ function formatTzuyangReviewDate(value: string | null): string | null {
+     const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+     if (!match) return null;
+@@ -292,65 +262,7 @@ export function RestaurantDetailPanel({
+             && restaurant != null
+             && Object.prototype.hasOwnProperty.call(restaurant, "tzuyang_review")
+             && (collectedTzuyangReviews.length === 0 || collectedTzuyangReviews.length < youtubeLinks.length),
+-        queryFn: async () => {
+-            if (!restaurant) return [] as string[];
+-
+-            const links = [...new Set(youtubeLinks.flatMap((link) => {
+-                const canonical = buildCanonicalYouTubeWatchUrl(extractCanonicalYouTubeVideoId(link));
+-                return canonical && canonical !== link ? [link, canonical] : [link];
+-            }))];
+-            const reviews: string[] = [];
+-            const addReview = (value: string | null | undefined) => {
+-                const trimmed = value?.trim();
+-                if (trimmed && !reviews.includes(trimmed)) reviews.push(trimmed);
+-            };
+-
+-            const videoIds = [...new Set(links
+-                .map((link) => extractCanonicalYouTubeVideoId(link))
+-                .filter((videoId): videoId is string => Boolean(videoId)))];
+-            if (videoIds.length > 0) {
+-                const { data } = await supabase
+-                    .from('restaurants')
+-                    .select('tzuyang_review')
+-                    .or(videoIds.map((videoId) => `youtube_link.ilike.%${videoId}%`).join(','));
+-                data?.forEach((row) => addReview(row.tzuyang_review));
+-            } else if (links.length > 0) {
+-                const { data } = await supabase
+-                    .from('restaurants')
+-                    .select('tzuyang_review')
+-                    .in('youtube_link', links);
+-                data?.forEach((row) => addReview(row.tzuyang_review));
+-            }
+-
+-            const name = restaurant.approved_name || restaurant.name;
+-            const address = restaurant.jibun_address || restaurant.road_address;
+-            if (name && address && reviews.length < Math.max(links.length, 1)) {
+-                const addressColumn = restaurant.jibun_address ? 'jibun_address' : 'road_address';
+-                const { data } = await supabase
+-                    .from('restaurants')
+-                    .select('tzuyang_review')
+-                    .eq('approved_name', name)
+-                    .eq(addressColumn, address);
+-                data?.forEach((row) => addReview(row.tzuyang_review));
+-            }
+-
+-            if (reviews.length === 0 && name) {
+-                const { data } = await supabase
+-                    .from('restaurants')
+-                    .select('tzuyang_review')
+-                    .eq('approved_name', name)
+-                    .not('tzuyang_review', 'is', null)
+-                    .limit(8);
+-                const sameNameReviews: string[] = [];
+-                data?.forEach((row) => {
+-                    const trimmed = row.tzuyang_review?.trim();
+-                    if (trimmed && !sameNameReviews.includes(trimmed)) sameNameReviews.push(trimmed);
+-                });
+-                if (sameNameReviews.length === 1) addReview(sameNameReviews[0]);
+-            }
+-
+-            return reviews;
+-        },
++        queryFn: restaurantDetailQueries.siblings(restaurant, youtubeLinks),
+     });
+     const tzuyangReviewEntries = useMemo(() => {
+         const entries = collectTzuyangReviewEntries(restaurant);
+@@ -433,163 +345,9 @@ export function RestaurantDetailPanel({
+         isLoading: reviewsLoading
+     } = useInfiniteQuery({
+         queryKey: ['restaurant-reviews', restaurant?.id, user?.id],
+-        queryFn: async ({ pageParam = 0 }) => {
+-            try {
+-                if (!restaurant) return { reviews: [], nextCursor: null };
+-                const REVIEW_PAGE_SIZE = 15;
+-
+-                // 0. 모든 관련 레코드 ID 수집
+-                // 지도에는 approved 레코드만 올라오지만, 과거 리뷰가 같은 이름/주소의
+-                // deleted 중복 레코드에 남아 있을 수 있다. 리뷰 조회에서는 그 레코드까지
+-                // 포함해야 사용자가 작성한 기존 리뷰가 바텀시트에서 사라지지 않는다.
+-                let allIds = collectDirectRestaurantReviewIds(restaurant);
+-                const reviewLookupName = getRestaurantReviewLookupName(restaurant);
+-
+-                if (reviewLookupName) {
+-                    const candidateSelect = 'id, name:approved_name, approved_name, origin_name, naver_name, google_name, road_address, jibun_address';
+-                    const lookupNames = Array.from(new Set([
+-                        reviewLookupName,
+-                        restaurant.origin_name,
+-                        restaurant.naver_name,
+-                        restaurant.google_name,
+-                        ...(restaurant.mergedRestaurants || []).flatMap((mergedRestaurant) => [
+-                            mergedRestaurant.approved_name,
+-                            mergedRestaurant.name,
+-                            mergedRestaurant.origin_name,
+-                            mergedRestaurant.naver_name,
+-                            mergedRestaurant.google_name,
+-                        ]),
+-                    ].map((name) => name?.trim()).filter((name): name is string => Boolean(name))));
+-                    const lookupAddresses = Array.from(new Set([
+-                        restaurant.road_address,
+-                        restaurant.jibun_address,
+-                        ...(restaurant.mergedRestaurants || []).flatMap((mergedRestaurant) => [
+-                            mergedRestaurant.road_address,
+-                            mergedRestaurant.jibun_address,
+-                        ]),
+-                    ].filter((address): address is string => Boolean(address))));
+-
+-                    const relatedRestaurantResults = await Promise.all([
+-                        ...lookupNames.flatMap((name) => [
+-                            supabase
+-                                .from('restaurants')
+-                                .select(candidateSelect)
+-                                .eq('approved_name', name),
+-                            supabase
+-                                .from('restaurants')
+-                                .select(candidateSelect)
+-                                .eq('origin_name', name),
+-                            supabase
+-                                .from('restaurants')
+-                                .select(candidateSelect)
+-                                .eq('naver_name', name),
+-                            supabase
+-                                .from('restaurants')
+-                                .select(candidateSelect)
+-                                .eq('google_name', name),
+-                        ]),
+-                        ...lookupAddresses.map((address) =>
+-                            supabase
+-                                .from('restaurants')
+-                                .select(candidateSelect)
+-                                .eq('road_address', address)
+-                        ),
+-                        ...lookupAddresses.map((address) =>
+-                            supabase
+-                                .from('restaurants')
+-                                .select(candidateSelect)
+-                                .eq('jibun_address', address)
+-                        ),
+-                    ]);
+-
+-                    const relatedRestaurants = relatedRestaurantResults.flatMap((result) => result.data || []);
+-
+-                    allIds = selectRelatedRestaurantReviewIds(restaurant, relatedRestaurants as Restaurant[]);
+-                }
+-
+-                // 1. 해당 맛집의 승인된 리뷰 조회 (Paging)
+-                const { data: reviewsPageData, error: reviewsError } = await supabase
+-                    .from('reviews')
+-                    .select(RESTAURANT_DETAIL_REVIEW_SELECT)
+-                    .in('restaurant_id', allIds)
+-                    .eq('is_verified', true)
+-                    .order('is_pinned', { ascending: false })
+-                    .order('created_at', { ascending: false })
+-                    .range(pageParam, pageParam + (REVIEW_PAGE_SIZE - 1)); // 15개씩 조회
+-
+-                if (reviewsError) throw reviewsError;
+-                if (!reviewsPageData || reviewsPageData.length === 0) {
+-                    return { restaurantId: restaurant.id, reviews: [], nextCursor: null };
+-                }
+-                const allowedReviewRestaurantIds = new Set(allIds);
+-                const typedReviewsPageData = (reviewsPageData as ReviewRow[]).filter((review) =>
+-                    typeof review.restaurant_id === 'string' &&
+-                    allowedReviewRestaurantIds.has(review.restaurant_id)
+-                );
+-                if (typedReviewsPageData.length === 0) {
+-                    return { restaurantId: restaurant.id, reviews: [], nextCursor: null };
+-                }
+-
+-                // 2. 필요한 user_id 수집
+-                const userIds = [...new Set(typedReviewsPageData.map((review) => review.user_id))];
+-                const reviewIds = typedReviewsPageData.map((review) => review.id);
+-
+-                // 3. Profiles / 사용자 좋아요 여부를 병렬 조회
+-                const [profilesLookup, userLikesResult] = await Promise.all([
+-                    readPublicProfileSummariesLookup(supabase, userIds),
+-                    user
+-                        ? supabase
+-                            .from('review_likes')
+-                            .select('review_id')
+-                            .in('review_id', reviewIds)
+-                            .eq('user_id', user.id)
+-                        : Promise.resolve({ data: [] }),
+-                ]);
+-
+-                const userLikesMap = new Map(
+-                    ((userLikesResult.data || []) as ReviewLikeRow[]).map((like) => [like.review_id, true])
+-                );
+-
+-                // 7. 리뷰 데이터 매핑
+-                const reviews = typedReviewsPageData.map((review) => {
+-                    const userProfile = resolvePublicReviewerDisplay(
+-                        review.user_id,
+-                        profilesLookup.summaries,
+-                        profilesLookup.ok,
+-                    );
+-
+-                    return {
+-                        restaurantId: review.restaurant_id ?? restaurant.id,
+-                        id: review.id,
+-                        userId: review.user_id,
+-                        restaurantName: restaurant.name,
+-                        restaurantCategories: categories,
+-                        userName: userProfile.nickname,
+-                        userAvatarUrl: userProfile.avatarUrl ?? undefined,
+-                        visitedAt: review.visited_at,
+-                        submittedAt: review.created_at || '',
+-                        content: review.content,
+-                        isVerified: review.is_verified || false,
+-                        isPinned: review.is_pinned || false,
+-                        isEditedByAdmin: review.is_edited_by_admin || false,
+-                        admin_note: review.admin_note || null,
+-                        photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
+-                        category: (Array.isArray(review.categories) && review.categories.length > 0) ? review.categories[0] : '',
+-                        categories: Array.isArray(review.categories) ? review.categories : [],
+-                        likeCount: review.like_count || 0,
+-                        isLikedByUser: userLikesMap.get(review.id) || false,
+-                    };
+-                }) as Review[];
+-
+-                const nextCursor = reviewsPageData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
+-                return { restaurantId: restaurant.id, reviews, nextCursor };
+-            } catch (error) {
+-                console.error('❌ 리뷰 데이터 조회 중 오류:');
+-                return { restaurantId: restaurant?.id ?? null, reviews: [], nextCursor: null };
+-            }
+-        },
++        queryFn: restaurantDetailQueries.reviews(restaurant, categories, user ? { id: user.id } : null),
+         initialPageParam: 0,
+-        getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
++        getNextPageParam: restaurantDetailQueries.nextPage,
+         enabled: !!restaurant?.id && shouldLoadReviewData,
+         staleTime: RESTAURANT_DETAIL_REVIEW_STALE_MS,
+         gcTime: RESTAURANT_DETAIL_REVIEW_GC_MS,
+diff --git a/apps/web/components/search/RestaurantSearch.tsx b/apps/web/components/search/RestaurantSearch.tsx
+index fde702b9..9609fa9b 100644
+--- a/apps/web/components/search/RestaurantSearch.tsx
++++ b/apps/web/components/search/RestaurantSearch.tsx
+@@ -11,9 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
+ import { Restaurant, YoutubeMeta } from "@/types/restaurant";
+ import { mergeRestaurants } from "@/hooks/use-restaurants";
+ import {
+-  fetchPopularRestaurants,
+   getPopularRestaurantsQueryKey,
+-  KOREAN_RESTAURANT_REGIONS,
+   POPULAR_RESTAURANTS_QUERY_KEY,
+ } from "@/lib/popular-restaurants";
+ import {
+@@ -37,7 +35,7 @@ import type { FilterState } from "@/components/filters/filter-state";
+ import { useSearchHistory } from "@/hooks/use-search-history";
+ import { incrementSearchCount, shouldRefreshPopularAfterSearch } from "@/lib/search-count";
+ 
+-type SearchType = "name" | "youtube";
++import { restaurantSearchQueries, MIN_SEARCH_QUERY_LENGTH, RESTAURANT_SEARCH_SELECT, type RestaurantSearchType as SearchType } from "@/lib/restaurant-search-query-functions";
+ 
+ interface RestaurantSearchProps {
+   onRestaurantSelect: (restaurant: Restaurant) => void;
+@@ -62,30 +60,11 @@ interface RestaurantSearchProps {
+   edgeToEdgeInlineLayout?: boolean;
+ }
+ 
+-const MIN_SEARCH_QUERY_LENGTH = 2;
+-
+ const getSearchQueryFromUrl = () => {
+   if (typeof window === "undefined") return "";
+   return new URLSearchParams(window.location.search).get("q") || "";
+ };
+ 
+-const RESTAURANT_SEARCH_SELECT =
+-  "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, english_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at";
+-
+-type SearchRestaurantsByYoutubeTitleArgs = {
+-  search_query: string;
+-  max_results: number;
+-  include_all_status: boolean;
+-  korean_only: boolean;
+-};
+-
+-type YoutubeTitleRpcClient = {
+-  rpc: (
+-    fn: "search_restaurants_by_youtube_title",
+-    args: SearchRestaurantsByYoutubeTitleArgs,
+-  ) => Promise<{ data: unknown; error: unknown }>;
+-};
+-
+ const RestaurantSearch = ({
+   onRestaurantSelect,
+   onSearchExecute,
+@@ -171,19 +150,11 @@ const RestaurantSearch = ({
+   // 주간 인기 검색어 쿼리 (weekly_search_count 기준 상위 N개) - [OPTIMIZATION] 병합/필터링 로직 공유
+   const { data: popularRestaurants = [], isLoading: isPopularRestaurantsLoading } = useQuery({
+     queryKey: popularRestaurantsQueryKey,
+-    queryFn: async () => {
+-      try {
+-        return await fetchPopularRestaurants({
+-          limit: popularRestaurantLimit,
+-          fetchLimit: 20,
+-          selectedRegion,
+-          isKoreanOnly,
+-        });
+-      } catch (error) {
+-        console.error("주간 인기 검색어 조회 실패:");
+-        return [];
+-      }
+-    },
++    queryFn: restaurantSearchQueries.popular({
++      limit: popularRestaurantLimit,
++      selectedRegion,
++      isKoreanOnly,
++    }),
+     enabled: isFocused || isInlineView,
+     staleTime: 1000 * 60 * 10, // 10분간 캐시 (인기 검색어는 자주 변하지 않음)
+     gcTime: 1000 * 60 * 30, // 30분간 메모리 보존
+@@ -210,85 +181,12 @@ const RestaurantSearch = ({
+   // 맛집 검색 쿼리
+   const { data: restaurants = [], isLoading } = useQuery({
+     queryKey,
+-    queryFn: async () => {
+-      // [OPTIMIZATION] 최소 2자 이상부터 검색
+-      if (trimmedDebouncedSearchQuery.length < MIN_SEARCH_QUERY_LENGTH)
+-        return [];
+-
+-      const trimmedQuery = trimmedDebouncedSearchQuery;
+-
+-      let results: Restaurant[] = [];
+-
+-      try {
+-        if (searchType === "name") {
+-          // 맛집 이름(approved_name)으로 검색
+-          const categoriesToSearch =
+-            normalizedCategoryFilter.length > 0
+-              ? normalizedCategoryFilter
+-              : null;
+-
+-          let query = supabase
+-            .from("restaurants")
+-            .select(RESTAURANT_SEARCH_SELECT)
+-            .eq("status", "approved")
+-            .ilike("approved_name", `%${trimmedQuery}%`)
+-            .limit(50);
+-
+-          if (categoriesToSearch) {
+-            query = query.contains("categories", categoriesToSearch);
+-          }
+-
+-          const { data, error } = await query;
+-
+-          if (error) {
+-            console.warn("맛집 이름 검색 실패:");
+-            return [];
+-          }
+-
+-          results = (data || []) as Restaurant[];
+-
+-          // 한국 지역 필터링 (클라이언트 측 처리)
+-          if (isKoreanOnly) {
+-            results = results.filter((r) => {
+-              const addr = r.road_address || r.jibun_address || "";
+-              return KOREAN_RESTAURANT_REGIONS.some((region) => addr.includes(region));
+-            });
+-          }
+-        } else {
+-          // 유튜브 제목으로 검색
+-          const youtubeTitleRpcClient =
+-            supabase as unknown as YoutubeTitleRpcClient;
+-          const { data, error } = await youtubeTitleRpcClient.rpc(
+-            "search_restaurants_by_youtube_title",
+-            {
+-              search_query: trimmedQuery,
+-              max_results: 50,
+-              include_all_status: false, // 일반 사용자는 approved만 표시
+-              korean_only: isKoreanOnly, // 한국 지역만 필터링 (홈페이지용)
+-            },
+-          );
+-
+-          if (error) {
+-            console.warn("유튜브 제목 검색 실패:");
+-            return [];
+-          }
+-
+-          results = (data || []) as Restaurant[];
+-        }
+-
+-        // 지역 필터가 켜져 있어도 검색창 직접 검색은 전체 지역을 대상으로 한다.
+-        // 단, 홈의 국내/해외 모드 구분(isKoreanOnly)은 유지한다.
+-
+-        // 병합 로직 적용 (동일한 상호명 처리)
+-        const merged = mergeRestaurants(results);
+-
+-        // 최대 10개로 제한
+-        return merged.slice(0, 10);
+-      } catch (error) {
+-        console.error("검색 오류:");
+-        return [];
+-      }
+-    },
++    queryFn: restaurantSearchQueries.search({
++      trimmedDebouncedSearchQuery,
++      searchType,
++      normalizedCategoryFilter,
++      isKoreanOnly,
++    }),
+     enabled: trimmedDebouncedSearchQuery.length >= MIN_SEARCH_QUERY_LENGTH,
+     staleTime: 0, // 관리자 승인/수정 직후 기존 빈 검색 결과를 재사용하지 않음
+     gcTime: 1000 * 60 * 10, // 10분간 메모리 보존
+diff --git a/apps/web/lib/restaurant-detail-query-functions.ts b/apps/web/lib/restaurant-detail-query-functions.ts
+new file mode 100644
+index 00000000..285099d7
+--- /dev/null
++++ b/apps/web/lib/restaurant-detail-query-functions.ts
+@@ -0,0 +1,276 @@
++import type { Tables } from '@/integrations/supabase/types';
++import type { Restaurant } from '@/types/restaurant';
++import { supabase } from '@/integrations/supabase/client';
++import { collectDirectRestaurantReviewIds, getRestaurantReviewLookupName, selectRelatedRestaurantReviewIds } from '@/lib/restaurant-review-lookup';
++import { buildCanonicalYouTubeWatchUrl, extractCanonicalYouTubeVideoId } from '@/lib/youtube-url';
++import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from '@/lib/public-profile-read';
++
++type ReviewRow = Tables<'reviews'>;
++type ReviewLikeRow = Pick<Tables<'review_likes'>, 'review_id'>;
++const RESTAURANT_DETAIL_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,is_verified,is_pinned,is_edited_by_admin,admin_note,like_count';
++
++export interface RestaurantDetailReview {
++    id: string;
++    restaurantId: string;
++    userId: string;
++    restaurantName: string;
++    restaurantCategories: string[];
++    userName: string;
++    visitedAt: string;
++    submittedAt: string;
++    content: string;
++    isVerified: boolean;
++    isPinned: boolean;
++    isEditedByAdmin: boolean;
++    admin_note: string | null;
++    photos: { url: string; type: string }[];
++    category: string;
++    categories: string[];
++    likeCount: number;
++    isLikedByUser: boolean;
++    userAvatarUrl?: string | null;
++}
++
++export function getRestaurantReviewNextPageParam(lastPage: { nextCursor: number | null } | undefined) {
++    return lastPage?.nextCursor ?? undefined;
++}
++
++// Query caches outlive the panel. Create callbacks here so their lexical scope
++// owns only query input data and the client, never panel state or React setters.
++export function createSiblingTzuyangReviewQuery(
++    restaurant: Restaurant | null,
++    youtubeLinks: string[],
++    client: typeof supabase = supabase,
++) {
++    return async () => {
++        if (!restaurant) return [] as string[];
++
++        const links = [...new Set(youtubeLinks.flatMap((link) => {
++            const canonical = buildCanonicalYouTubeWatchUrl(extractCanonicalYouTubeVideoId(link));
++            return canonical && canonical !== link ? [link, canonical] : [link];
++        }))];
++        const reviews: string[] = [];
++        const addReview = (value: string | null | undefined) => {
++            const trimmed = value?.trim();
++            if (trimmed && !reviews.includes(trimmed)) reviews.push(trimmed);
++        };
++
++        const videoIds = [...new Set(links
++            .map((link) => extractCanonicalYouTubeVideoId(link))
++            .filter((videoId): videoId is string => Boolean(videoId)))];
++        if (videoIds.length > 0) {
++            const { data } = await client
++                .from('restaurants')
++                .select('tzuyang_review')
++                .or(videoIds.map((videoId) => `youtube_link.ilike.%${videoId}%`).join(','));
++            data?.forEach((row) => addReview(row.tzuyang_review));
++        } else if (links.length > 0) {
++            const { data } = await client
++                .from('restaurants')
++                .select('tzuyang_review')
++                .in('youtube_link', links);
++            data?.forEach((row) => addReview(row.tzuyang_review));
++        }
++
++        const name = restaurant.approved_name || restaurant.name;
++        const address = restaurant.jibun_address || restaurant.road_address;
++        if (name && address && reviews.length < Math.max(links.length, 1)) {
++            const addressColumn = restaurant.jibun_address ? 'jibun_address' : 'road_address';
++            const { data } = await client
++                .from('restaurants')
++                .select('tzuyang_review')
++                .eq('approved_name', name)
++                .eq(addressColumn, address);
++            data?.forEach((row) => addReview(row.tzuyang_review));
++        }
++
++        if (reviews.length === 0 && name) {
++            const { data } = await client
++                .from('restaurants')
++                .select('tzuyang_review')
++                .eq('approved_name', name)
++                .not('tzuyang_review', 'is', null)
++                .limit(8);
++            const sameNameReviews: string[] = [];
++            data?.forEach((row) => {
++                const trimmed = row.tzuyang_review?.trim();
++                if (trimmed && !sameNameReviews.includes(trimmed)) sameNameReviews.push(trimmed);
++            });
++            if (sameNameReviews.length === 1) addReview(sameNameReviews[0]);
++        }
++
++        return reviews;
++    };
++}
++
++export function createRestaurantReviewsQuery(
++    restaurant: Restaurant | null,
++    categories: string[],
++    user: { id: string } | null,
++    client: typeof supabase = supabase,
++) {
++    return async ({ pageParam = 0 }: { pageParam?: number }) => {
++        try {
++            if (!restaurant) return { reviews: [], nextCursor: null };
++            const REVIEW_PAGE_SIZE = 15;
++
++            // 0. 모든 관련 레코드 ID 수집
++            // 지도에는 approved 레코드만 올라오지만, 과거 리뷰가 같은 이름/주소의
++            // deleted 중복 레코드에 남아 있을 수 있다. 리뷰 조회에서는 그 레코드까지
++            // 포함해야 사용자가 작성한 기존 리뷰가 바텀시트에서 사라지지 않는다.
++            let allIds = collectDirectRestaurantReviewIds(restaurant);
++            const reviewLookupName = getRestaurantReviewLookupName(restaurant);
++
++            if (reviewLookupName) {
++                const candidateSelect = 'id, name:approved_name, approved_name, origin_name, naver_name, google_name, road_address, jibun_address';
++                const lookupNames = Array.from(new Set([
++                    reviewLookupName,
++                    restaurant.origin_name,
++                    restaurant.naver_name,
++                    restaurant.google_name,
++                    ...(restaurant.mergedRestaurants || []).flatMap((mergedRestaurant) => [
++                        mergedRestaurant.approved_name,
++                        mergedRestaurant.name,
++                        mergedRestaurant.origin_name,
++                        mergedRestaurant.naver_name,
++                        mergedRestaurant.google_name,
++                    ]),
++                ].map((name) => name?.trim()).filter((name): name is string => Boolean(name))));
++                const lookupAddresses = Array.from(new Set([
++                    restaurant.road_address,
++                    restaurant.jibun_address,
++                    ...(restaurant.mergedRestaurants || []).flatMap((mergedRestaurant) => [
++                        mergedRestaurant.road_address,
++                        mergedRestaurant.jibun_address,
++                    ]),
++                ].filter((address): address is string => Boolean(address))));
++
++                const relatedRestaurantResults = await Promise.all([
++                    ...lookupNames.flatMap((name) => [
++                        client
++                            .from('restaurants')
++                            .select(candidateSelect)
++                            .eq('approved_name', name),
++                        client
++                            .from('restaurants')
++                            .select(candidateSelect)
++                            .eq('origin_name', name),
++                        client
++                            .from('restaurants')
++                            .select(candidateSelect)
++                            .eq('naver_name', name),
++                        client
++                            .from('restaurants')
++                            .select(candidateSelect)
++                            .eq('google_name', name),
++                    ]),
++                    ...lookupAddresses.map((address) =>
++                        client
++                            .from('restaurants')
++                            .select(candidateSelect)
++                            .eq('road_address', address)
++                    ),
++                    ...lookupAddresses.map((address) =>
++                        client
++                            .from('restaurants')
++                            .select(candidateSelect)
++                            .eq('jibun_address', address)
++                    ),
++                ]);
++
++                const relatedRestaurants = relatedRestaurantResults.flatMap((result) => result.data || []);
++
++                allIds = selectRelatedRestaurantReviewIds(restaurant, relatedRestaurants as Restaurant[]);
++            }
++
++            // 1. 해당 맛집의 승인된 리뷰 조회 (Paging)
++            const { data: reviewsPageData, error: reviewsError } = await client
++                .from('reviews')
++                .select(RESTAURANT_DETAIL_REVIEW_SELECT)
++                .in('restaurant_id', allIds)
++                .eq('is_verified', true)
++                .order('is_pinned', { ascending: false })
++                .order('created_at', { ascending: false })
++                .range(pageParam, pageParam + (REVIEW_PAGE_SIZE - 1)); // 15개씩 조회
++
++            if (reviewsError) throw reviewsError;
++            if (!reviewsPageData || reviewsPageData.length === 0) {
++                return { restaurantId: restaurant.id, reviews: [], nextCursor: null };
++            }
++            const allowedReviewRestaurantIds = new Set(allIds);
++            const typedReviewsPageData = (reviewsPageData as ReviewRow[]).filter((review) =>
++                typeof review.restaurant_id === 'string' &&
++                allowedReviewRestaurantIds.has(review.restaurant_id)
++            );
++            if (typedReviewsPageData.length === 0) {
++                return { restaurantId: restaurant.id, reviews: [], nextCursor: null };
++            }
++
++            // 2. 필요한 user_id 수집
++            const userIds = [...new Set(typedReviewsPageData.map((review) => review.user_id))];
++            const reviewIds = typedReviewsPageData.map((review) => review.id);
++
++            // 3. Profiles / 사용자 좋아요 여부를 병렬 조회
++            const [profilesLookup, userLikesResult] = await Promise.all([
++                readPublicProfileSummariesLookup(client, userIds),
++                user
++                    ? client
++                        .from('review_likes')
++                        .select('review_id')
++                        .in('review_id', reviewIds)
++                        .eq('user_id', user.id)
++                    : Promise.resolve({ data: [] }),
++            ]);
++
++            const userLikesMap = new Map(
++                ((userLikesResult.data || []) as ReviewLikeRow[]).map((like) => [like.review_id, true])
++            );
++
++            // 7. 리뷰 데이터 매핑
++            const reviews = typedReviewsPageData.map((review) => {
++                const userProfile = resolvePublicReviewerDisplay(
++                    review.user_id,
++                    profilesLookup.summaries,
++                    profilesLookup.ok,
++                );
++
++                return {
++                    restaurantId: review.restaurant_id ?? restaurant.id,
++                    id: review.id,
++                    userId: review.user_id,
++                    restaurantName: restaurant.name,
++                    restaurantCategories: categories,
++                    userName: userProfile.nickname,
++                    userAvatarUrl: userProfile.avatarUrl ?? undefined,
++                    visitedAt: review.visited_at,
++                    submittedAt: review.created_at || '',
++                    content: review.content,
++                    isVerified: review.is_verified || false,
++                    isPinned: review.is_pinned || false,
++                    isEditedByAdmin: review.is_edited_by_admin || false,
++                    admin_note: review.admin_note || null,
++                    photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
++                    category: (Array.isArray(review.categories) && review.categories.length > 0) ? review.categories[0] : '',
++                    categories: Array.isArray(review.categories) ? review.categories : [],
++                    likeCount: review.like_count || 0,
++                    isLikedByUser: userLikesMap.get(review.id) || false,
++                };
++            }) as RestaurantDetailReview[];
++
++            const nextCursor = reviewsPageData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
++            return { restaurantId: restaurant.id, reviews, nextCursor };
++        } catch (error) {
++            console.error('❌ 리뷰 데이터 조회 중 오류:');
++            return { restaurantId: restaurant?.id ?? null, reviews: [], nextCursor: null };
++        }
++    };
++}
++
++// Keep the module factory lookup opaque to production inlining. Otherwise a
++// single-use factory becomes a render-local IIFE whose parent context retains
++// panel dispatchers even when the returned reader only uses its parameters.
++export const restaurantDetailQueries = Object.freeze({
++    reviews: createRestaurantReviewsQuery,
++    siblings: createSiblingTzuyangReviewQuery,
++    nextPage: getRestaurantReviewNextPageParam,
++});
+diff --git a/apps/web/lib/restaurant-search-query-functions.ts b/apps/web/lib/restaurant-search-query-functions.ts
+new file mode 100644
+index 00000000..e0481211
+--- /dev/null
++++ b/apps/web/lib/restaurant-search-query-functions.ts
+@@ -0,0 +1,136 @@
++import { supabase } from '@/integrations/supabase/client';
++import type { Restaurant } from '@/types/restaurant';
++import { mergeRestaurants } from '@/hooks/use-restaurants';
++import { fetchPopularRestaurants, KOREAN_RESTAURANT_REGIONS } from '@/lib/popular-restaurants';
++
++export type RestaurantSearchType = 'name' | 'youtube';
++export const MIN_SEARCH_QUERY_LENGTH = 2;
++
++export const RESTAURANT_SEARCH_SELECT =
++  "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, english_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at";
++
++type SearchRestaurantsByYoutubeTitleArgs = {
++  search_query: string;
++  max_results: number;
++  include_all_status: boolean;
++  korean_only: boolean;
++};
++
++type YoutubeTitleRpcClient = {
++  rpc: (
++    fn: "search_restaurants_by_youtube_title",
++    args: SearchRestaurantsByYoutubeTitleArgs,
++  ) => Promise<{ data: unknown; error: unknown }>;
++};
++
++// Cached readers own only filter data. UI callbacks and state stay in the view.
++export function createRestaurantSearchQuery(
++  { trimmedDebouncedSearchQuery, searchType, normalizedCategoryFilter, isKoreanOnly }: {
++    trimmedDebouncedSearchQuery: string;
++    searchType: RestaurantSearchType;
++    normalizedCategoryFilter: string[];
++    isKoreanOnly: boolean;
++  },
++  client: typeof supabase = supabase,
++) {
++  return async () => {
++      // [OPTIMIZATION] 최소 2자 이상부터 검색
++      if (trimmedDebouncedSearchQuery.length < MIN_SEARCH_QUERY_LENGTH)
++        return [];
++
++      const trimmedQuery = trimmedDebouncedSearchQuery;
++
++      let results: Restaurant[] = [];
++
++      try {
++        if (searchType === "name") {
++          // 맛집 이름(approved_name)으로 검색
++          const categoriesToSearch =
++            normalizedCategoryFilter.length > 0
++              ? normalizedCategoryFilter
++              : null;
++
++          let query = client
++            .from("restaurants")
++            .select(RESTAURANT_SEARCH_SELECT)
++            .eq("status", "approved")
++            .ilike("approved_name", `%${trimmedQuery}%`)
++            .limit(50);
++
++          if (categoriesToSearch) {
++            query = query.contains("categories", categoriesToSearch);
++          }
++
++          const { data, error } = await query;
++
++          if (error) {
++            console.warn("맛집 이름 검색 실패:");
++            return [];
++          }
++
++          results = (data || []) as Restaurant[];
++
++          // 한국 지역 필터링 (클라이언트 측 처리)
++          if (isKoreanOnly) {
++            results = results.filter((r) => {
++              const addr = r.road_address || r.jibun_address || "";
++              return KOREAN_RESTAURANT_REGIONS.some((region) => addr.includes(region));
++            });
++          }
++        } else {
++          // 유튜브 제목으로 검색
++          const youtubeTitleRpcClient =
++            client as unknown as YoutubeTitleRpcClient;
++          const { data, error } = await youtubeTitleRpcClient.rpc(
++            "search_restaurants_by_youtube_title",
++            {
++              search_query: trimmedQuery,
++              max_results: 50,
++              include_all_status: false, // 일반 사용자는 approved만 표시
++              korean_only: isKoreanOnly, // 한국 지역만 필터링 (홈페이지용)
++            },
++          );
++
++          if (error) {
++            console.warn("유튜브 제목 검색 실패:");
++            return [];
++          }
++
++          results = (data || []) as Restaurant[];
++        }
++
++        // 지역 필터가 켜져 있어도 검색창 직접 검색은 전체 지역을 대상으로 한다.
++        // 단, 홈의 국내/해외 모드 구분(isKoreanOnly)은 유지한다.
++
++        // 병합 로직 적용 (동일한 상호명 처리)
++        const merged = mergeRestaurants(results);
++
++        // 최대 10개로 제한
++        return merged.slice(0, 10);
++      } catch (error) {
++        console.error("검색 오류:");
++        return [];
++      }
++  };
++}
++
++export function createPopularRestaurantsQuery(
++  options: Pick<Parameters<typeof fetchPopularRestaurants>[0], 'limit' | 'selectedRegion' | 'isKoreanOnly'>,
++  fetcher: typeof fetchPopularRestaurants = fetchPopularRestaurants,
++) {
++  return async () => {
++    try {
++      return await fetcher({ ...options, fetchLimit: 20 });
++    } catch {
++      console.error("주간 인기 검색어 조회 실패:");
++      return [];
++    }
++  };
++}
++
++// This fixed lookup prevents minification from moving factories into render.
++// It stores fixed function references, not query history.
++export const restaurantSearchQueries = Object.freeze({
++  search: createRestaurantSearchQuery,
++  popular: createPopularRestaurantsQuery,
++});
+diff --git a/apps/web/tests-unit/public-profile-read.test.ts b/apps/web/tests-unit/public-profile-read.test.ts
+index b1f59280..6abbf892 100644
+--- a/apps/web/tests-unit/public-profile-read.test.ts
++++ b/apps/web/tests-unit/public-profile-read.test.ts
+@@ -515,7 +515,7 @@ describe("public profile caller convergence", () => {
+       "components/profile/ProfileModal.tsx",
+       "app/mypage/profile/page.tsx",
+       "hooks/useUserProfile.ts",
+-      "components/restaurant/RestaurantDetailPanel.tsx",
++      "lib/restaurant-detail-query-functions.ts",
+       "components/feed/FeedContent.tsx",
+       "app/stamp/page.tsx",
+       "components/map/NaverMapView.tsx",
+@@ -529,6 +529,11 @@ describe("public profile caller convergence", () => {
+       );
+     }
+ 
++    const detailPanel = source("components/restaurant/RestaurantDetailPanel.tsx");
++    expect(detailPanel).toContain('from "@/lib/restaurant-detail-query-functions"');
++    expect(detailPanel).toContain("queryFn: restaurantDetailQueries.reviews(restaurant, categories, user ? { id: user.id } : null)");
++    expect(detailPanel).not.toMatch(/\.from\(['"]profiles['"]\)\s*\.select\(/);
++
+     const leaderboardSource = source("hooks/useLeaderboard.ts");
+     expect(leaderboardSource).toContain("readCompletePublicProfileLeaderboard");
+     expect(leaderboardSource).not.toContain(".from('profiles')");
+diff --git a/apps/web/tests-unit/restaurant-detail-query-functions.test.ts b/apps/web/tests-unit/restaurant-detail-query-functions.test.ts
+new file mode 100644
+index 00000000..130814de
+--- /dev/null
++++ b/apps/web/tests-unit/restaurant-detail-query-functions.test.ts
+@@ -0,0 +1,92 @@
++import { describe, expect, test } from 'bun:test';
++import type { Restaurant } from '../types/restaurant';
++import { restaurantDetailQueries } from '../lib/restaurant-detail-query-functions';
++import type { supabase } from '../integrations/supabase/client';
++
++const restaurantId = '00000000-0000-4000-8000-000000000001';
++const userId = '00000000-0000-4000-8000-000000000002';
++const restaurant = { id: restaurantId, name: '실험 맛집', approved_name: '실험 맛집',
++    lat: 37.5, lng: 127, categories: ['한식'], road_address: '실험 주소' } as Restaurant;
++const review = { id: '00000000-0000-4000-8000-000000000003', restaurant_id: restaurantId,
++    user_id: userId, content: '합성 리뷰', visited_at: '2026-10-01', created_at: '2026-10-01',
++    food_photos: [], categories: ['한식'], is_verified: true, is_pinned: false,
++    is_edited_by_admin: false, admin_note: null, like_count: 2 };
++type Call = { table: string; ops: Array<[string, ...unknown[]]> };
++
++function fixtureClient(resolve: (call: Call) => { data: unknown; error?: unknown }) {
++    const calls: Call[] = [];
++    const client = {
++        from(table: string) {
++            const call: Call = { table, ops: [] };
++            calls.push(call);
++            const builder: Record<string, unknown> = {};
++            for (const op of ['select', 'eq', 'in', 'or', 'not', 'order', 'range', 'limit']) {
++                builder[op] = (...args: unknown[]) => { call.ops.push([op, ...args]); return builder; };
++            }
++            builder.then = (ok: (value: unknown) => unknown, no: (error: unknown) => unknown) =>
++                Promise.resolve(resolve(call)).then(ok, no);
++            return builder;
++        },
++        async rpc() { return { data: [{ user_id: userId, nickname: '합성 사용자', avatar_url: null }], error: null }; },
++    } as unknown as typeof supabase;
++    return { client, calls };
++}
++
++describe('module-owned detail read callbacks', () => {
++    test('null selection does no database or profile work', async () => {
++        const t = fixtureClient(() => { throw Error('unexpected read'); });
++        const result = await restaurantDetailQueries.reviews(null, [], null, t.client)({});
++        expect(result).toEqual({ reviews: [], nextCursor: null });
++        expect(await restaurantDetailQueries.siblings(null, [], t.client)()).toEqual([]);
++        expect(t.calls).toHaveLength(0);
++    });
++
++    test('keeps verified predicates, page bounds, foreign-restaurant rejection and anonymous likes boundary', async () => {
++        const t = fixtureClient(call => ({ data: call.table === 'reviews'
++            ? [review, { ...review, restaurant_id: 'foreign-restaurant' }] : [] }));
++        const result = await restaurantDetailQueries.reviews(restaurant, ['한식'], null, t.client)({ pageParam: 30 });
++        expect(result.restaurantId).toBe(restaurantId);
++        expect(result.reviews).toHaveLength(1);
++        expect(result.reviews[0]).toMatchObject({ restaurantId, userName: '합성 사용자', isLikedByUser: false });
++        const request = t.calls.find(call => call.table === 'reviews')!;
++        expect(request.ops).toContainEqual(['eq', 'is_verified', true]);
++        expect(request.ops).toContainEqual(['range', 30, 44]);
++        expect(request.ops.filter(op => op[0] === 'order')).toEqual([
++            ['order', 'is_pinned', { ascending: false }], ['order', 'created_at', { ascending: false }],
++        ]);
++        expect(t.calls.some(call => call.table === 'review_likes')).toBe(false);
++    });
++
++    test('retains next page cursor and viewer-bound like lookup', async () => {
++        const rows = Array.from({ length: 15 }, (_, i) => ({ ...review, id: `fixture-review-${i}` }));
++        const t = fixtureClient(call => ({ data: call.table === 'reviews' ? rows
++            : call.table === 'review_likes' ? [{ review_id: 'fixture-review-0' }] : [] }));
++        const result = await restaurantDetailQueries.reviews(restaurant, ['한식'], { id: userId }, t.client)({ pageParam: 15 });
++        expect(result.nextCursor).toBe(30);
++        expect(restaurantDetailQueries.nextPage(result)).toBe(30);
++        expect(result.reviews[0].isLikedByUser).toBe(true);
++        expect(result.reviews[1].isLikedByUser).toBe(false);
++        expect(t.calls.find(call => call.table === 'review_likes')?.ops).toContainEqual(['eq', 'user_id', userId]);
++    });
++
++    test('provider failure keeps bounded feedback without exposing the provider message', async () => {
++        const t = fixtureClient(call => ({ data: [], error: call.table === 'reviews' ? { message: 'PRIVATE_PROVIDER_ERROR' } : null }));
++        const messages: unknown[][] = [];
++        const original = console.error;
++        console.error = (...args) => { messages.push(args); };
++        try {
++            expect(await restaurantDetailQueries.reviews(restaurant, ['한식'], null, t.client)({})).toEqual({ restaurantId, reviews: [], nextCursor: null });
++            expect(JSON.stringify(messages)).not.toContain('PRIVATE_PROVIDER_ERROR');
++            expect(messages).toHaveLength(1);
++        } finally { console.error = original; }
++    });
++
++    test('sibling name fallback admits only one unambiguous review', async () => {
++        const make = (values: string[]) => fixtureClient(call => ({ data: call.ops.some(op => op[0] === 'not')
++            ? values.map(tzuyang_review => ({ tzuyang_review })) : [] }));
++        const one = make(['  합성 쯔양 리뷰  ', '합성 쯔양 리뷰']);
++        expect(await restaurantDetailQueries.siblings(restaurant, [], one.client)()).toEqual(['합성 쯔양 리뷰']);
++        const many = make(['다른 리뷰 A', '다른 리뷰 B']);
++        expect(await restaurantDetailQueries.siblings(restaurant, [], many.client)()).toEqual([]);
++    });
++});
+diff --git a/apps/web/tests-unit/restaurant-search-global-scope-source.test.ts b/apps/web/tests-unit/restaurant-search-global-scope-source.test.ts
+index a3d50df7..757896b6 100644
+--- a/apps/web/tests-unit/restaurant-search-global-scope-source.test.ts
++++ b/apps/web/tests-unit/restaurant-search-global-scope-source.test.ts
+@@ -8,12 +8,16 @@ const source = (relativePath: string) =>
+ describe('restaurant search global scope source contract', () => {
+   test('direct search ignores selected region while popular suggestions can remain regional', () => {
+     const searchSource = source('components/search/RestaurantSearch.tsx');
++    const searchReader = source('lib/restaurant-search-query-functions.ts');
+ 
+     expect(searchSource).toContain('selectedRegion,');
+     expect(searchSource).toContain('getPopularRestaurantsQueryKey({');
+     expect(searchSource).toContain('지역 필터는 인기 검색/목록 패널에만 적용하고, 직접 검색은 항상 전체 지역에서 찾는다.');
+-    expect(searchSource).toContain('지역 필터가 켜져 있어도 검색창 직접 검색은 전체 지역을 대상으로 한다.');
++    expect(searchReader).toContain('지역 필터가 켜져 있어도 검색창 직접 검색은 전체 지역을 대상으로 한다.');
++    expect(searchSource).toContain('queryFn: restaurantSearchQueries.search({');
++    expect(searchReader).not.toContain('address.includes(selectedRegion)');
+     expect(searchSource).not.toContain('address.includes(selectedRegion)');
+     expect(searchSource).not.toContain('// 지역 필터 적용 (선택된 지역/국가로 필터링)');
++    expect(searchReader).not.toContain('// 지역 필터 적용 (선택된 지역/국가로 필터링)');
+   });
+ });
+diff --git a/apps/web/tests-unit/restaurant-search-query-functions.test.ts b/apps/web/tests-unit/restaurant-search-query-functions.test.ts
+new file mode 100644
+index 00000000..488f09d9
+--- /dev/null
++++ b/apps/web/tests-unit/restaurant-search-query-functions.test.ts
+@@ -0,0 +1,72 @@
++import { describe, expect, test } from 'bun:test';
++import type { supabase } from '../integrations/supabase/client';
++import { restaurantSearchQueries } from '../lib/restaurant-search-query-functions';
++
++function fixtureClient(rows: unknown[] = [], providerError: unknown = null) {
++    const calls: Array<[string, ...unknown[]]> = [];
++    const chain: Record<string, unknown> = {};
++    for (const name of ['select', 'eq', 'ilike', 'limit', 'contains'])
++        chain[name] = (...args: unknown[]) => { calls.push([name, ...args]); return chain; };
++    chain.then = (ok: (value: unknown) => unknown, no: (error: unknown) => unknown) =>
++        Promise.resolve({ data: rows, error: providerError }).then(ok, no);
++    const client = {
++        from(table: string) { calls.push(['from', table]); return chain; },
++        async rpc(name: string, args: unknown) { calls.push(['rpc', name, args]); return { data: rows, error: providerError }; },
++    } as unknown as typeof supabase;
++    return { client, calls };
++}
++const options = { trimmedDebouncedSearchQuery: '실험', searchType: 'name' as const, normalizedCategoryFilter: [], isKoreanOnly: false };
++const row = (id: number, road_address: string) => ({ id: `fixture-${id}`, name: `실험 식당 ${id}`,
++    approved_name: `실험 식당 ${id}`, lat: 37 + id * 0.01, lng: 127, road_address,
++    categories: ['한식'], status: 'approved' });
++
++describe('module-owned search readers', () => {
++    test('short input makes no request', async () => {
++        const t = fixtureClient();
++        expect(await restaurantSearchQueries.search({ ...options, trimmedDebouncedSearchQuery: '실' }, t.client)()).toEqual([]);
++        expect(t.calls).toHaveLength(0);
++    });
++
++    test('name search preserves approved, category, limit and global geography predicates', async () => {
++        const t = fixtureClient([row(1, '서울특별시 실험로'), row(2, 'Tokyo fixture street')]);
++        const result = await restaurantSearchQueries.search({ ...options, normalizedCategoryFilter: ['한식'] }, t.client)();
++        expect(result).toHaveLength(2);
++        expect(t.calls).toContainEqual(['eq', 'status', 'approved']);
++        expect(t.calls).toContainEqual(['ilike', 'approved_name', '%실험%']);
++        expect(t.calls).toContainEqual(['contains', 'categories', ['한식']]);
++        expect(t.calls).toContainEqual(['limit', 50]);
++        expect(t.calls.filter(call => call[0] === 'eq')).toHaveLength(1);
++    });
++
++    test('domestic mode and ten-result display cap remain intact', async () => {
++        const t = fixtureClient([...Array.from({ length: 15 }, (_, i) => row(i, '서울특별시 실험로')), row(99, 'Tokyo fixture street')]);
++        const result = await restaurantSearchQueries.search({ ...options, isKoreanOnly: true }, t.client)();
++        expect(result).toHaveLength(10);
++        expect(result.every(item => item.road_address?.includes('서울'))).toBe(true);
++    });
++
++    test('YouTube search keeps exact public RPC and approved-only argument', async () => {
++        const t = fixtureClient([row(1, '서울특별시 실험로')]);
++        expect(await restaurantSearchQueries.search({ ...options, searchType: 'youtube', isKoreanOnly: true }, t.client)()).toHaveLength(1);
++        expect(t.calls).toEqual([['rpc', 'search_restaurants_by_youtube_title', {
++            search_query: '실험', max_results: 50, include_all_status: false, korean_only: true,
++        }]]);
++    });
++
++    test('provider failure keeps bounded feedback without its message', async () => {
++        const t = fixtureClient([], { message: 'PRIVATE_PROVIDER_ERROR' });
++        const messages: unknown[][] = [];const original = console.warn;
++        console.warn = (...args) => { messages.push(args); };
++        try {
++            expect(await restaurantSearchQueries.search(options, t.client)()).toEqual([]);
++            expect(JSON.stringify(messages)).not.toContain('PRIVATE_PROVIDER_ERROR');
++            expect(messages).toHaveLength(1);
++        } finally { console.warn = original; }
++    });
++
++    test('popular lookup preserves regional filters and fetch size', async () => {
++        const calls: unknown[] = [];
++        await restaurantSearchQueries.popular({ limit: 5, selectedRegion: '일본', isKoreanOnly: false }, async input => { calls.push(input); return []; })();
++        expect(calls).toEqual([{ limit: 5, selectedRegion: '일본', isKoreanOnly: false, fetchLimit: 20 }]);
++    });
++});
+diff --git a/apps/web/tests-unit/web-quality-performance-source.test.ts b/apps/web/tests-unit/web-quality-performance-source.test.ts
+index 8ff680a3..c59d85fe 100644
+--- a/apps/web/tests-unit/web-quality-performance-source.test.ts
++++ b/apps/web/tests-unit/web-quality-performance-source.test.ts
+@@ -1167,7 +1167,8 @@ describe("web quality performance source contracts", () => {
+     expect(popularRestaurantsSource).toContain("selectedRegion");
+     expect(popularRestaurantsSource).toContain("isKoreanOnly");
+     expect(popularRestaurantsSource).toContain("restaurants.splice(limit)");
+-    expect(restaurantSearchSource).toContain("fetchPopularRestaurants");
++    expect(restaurantSearchSource).toContain("queryFn: restaurantSearchQueries.popular({");
++    expect(source("lib/restaurant-search-query-functions.ts")).toContain("fetchPopularRestaurants");
+     expect(restaurantSearchSource).toContain("getPopularRestaurantsQueryKey");
+     expect(
+       desktopLeftPanelMapHomeSource.indexOf(
+@@ -4204,6 +4205,7 @@ describe("web quality performance source contracts", () => {
+     const detailSource = source(
+       "components/restaurant/RestaurantDetailPanel.tsx",
+     );
++    const detailReadSource = source("lib/restaurant-detail-query-functions.ts");
+     const stampSource = source("app/stamp/page.tsx");
+     const leaderboardSource = source("hooks/useLeaderboard.ts");
+     const userProfileSource = source("hooks/useUserProfile.ts");
+@@ -4219,7 +4221,7 @@ describe("web quality performance source contracts", () => {
+       ".from('reviews')\n                .select('*')",
+     );
+ 
+-    expect(detailSource).toContain("RESTAURANT_DETAIL_REVIEW_SELECT");
++    expect(detailReadSource).toContain("RESTAURANT_DETAIL_REVIEW_SELECT");
+     expect(detailSource).toContain(
+       "queryKey: ['restaurant-reviews', restaurant?.id, user?.id]",
+     );
+@@ -4236,7 +4238,8 @@ describe("web quality performance source contracts", () => {
+     expect(detailSource).toContain("if (viewMode !== 'reviews') return;");
+     expect(detailSource).not.toContain("refetchOnMount: 'always'");
+     expect(detailSource).not.toContain("staleTime: 0");
+-    expect(detailSource).toContain("likeCount: review.like_count || 0");
++    expect(detailReadSource).toContain("likeCount: review.like_count || 0");
++    expect(detailReadSource).not.toContain(".select('review_id, user_id')");
+     expect(detailSource).not.toContain(".select('review_id, user_id')");
+ 
+     expect(stampSource).toContain("STAMP_REVIEW_SELECT");

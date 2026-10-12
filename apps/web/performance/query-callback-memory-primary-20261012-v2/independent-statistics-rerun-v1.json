@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "sameBytes": true,
+  "summarySha256": "9b68f7cb61ea92c4c307c5a049b42f8a1f766a2d15be787ae8376ac3ad8f6e37",
+  "runtime": "3.12.14",
+  "optimizedMode": true,
+  "rawProcesses": 22,
+  "originalDataUnchanged": true,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0
+}

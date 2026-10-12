@@ -1,0 +1,13 @@
+{
+  "purpose": "Identify direct callback-context-bound state dispatch references independent of shortest-root-path ranking",
+  "inputSources": [
+    "056a86600f412eb42df4304e3206841679012f3e",
+    "071814f39a9e8da25e0c7acc7b480258f726e600"
+  ],
+  "runs": "one process each;16 searches+16 revisits",
+  "metricScope": "Query.options known callback -> lexical context -> bound dispatch -> Fiber shortcut; distinct ids kept only in RAM",
+  "notExclusiveRetainedBytes": true,
+  "notPrimaryMemoryGuard": true,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0
+}

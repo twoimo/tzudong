@@ -1,0 +1,63 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/restaurant-detail-query-functions.test.ts:
+(pass) module-owned detail read callbacks > null selection does no database or profile work [0.62ms]
+(pass) module-owned detail read callbacks > keeps verified predicates, page bounds, foreign-restaurant rejection and anonymous likes boundary [1.70ms]
+(pass) module-owned detail read callbacks > retains next page cursor and viewer-bound like lookup [0.23ms]
+(pass) module-owned detail read callbacks > provider failure keeps bounded feedback without exposing the provider message [0.35ms]
+(pass) module-owned detail read callbacks > sibling name fallback admits only one unambiguous review [0.28ms]
+
+tests-unit/restaurant-search-global-scope-source.test.ts:
+(pass) restaurant search global scope source contract > direct search ignores selected region while popular suggestions can remain regional [0.65ms]
+
+tests-unit/restaurant-search-query-functions.test.ts:
+(pass) module-owned search readers > short input makes no request [0.26ms]
+(pass) module-owned search readers > name search preserves approved, category, limit and global geography predicates [0.79ms]
+(pass) module-owned search readers > domestic mode and ten-result display cap remain intact [0.28ms]
+(pass) module-owned search readers > YouTube search keeps exact public RPC and approved-only argument [0.07ms]
+(pass) module-owned search readers > provider failure keeps bounded feedback without its message [0.14ms]
+(pass) module-owned search readers > popular lookup preserves regional filters and fetch size [0.22ms]
+
+tests-unit/web-quality-performance-source.test.ts:
+(pass) Tailwind v4 source contracts > parses exact source directives and compiles all production entries with retained utilities [508.67ms]
+(pass) route CSS boundary verifier fixtures > inventories shared and exclusive home, general, admin, and deferred assets [10.18ms]
+(pass) route CSS boundary verifier fixtures > rejects malformed, decoy, negated-media, and budget-bypass CSS [22.73ms]
+(pass) route CSS ceiling boundaries > enforces exact and one-over raw and transfer ceilings for every route [1620.07ms]
+(pass) web quality performance source contracts > map marker HTML keeps image markers with WebP delivery and PNG fallback [0.15ms]
+(pass) web quality performance source contracts > global map exposes bounded Google failure exploration fallback [0.24ms]
+(pass) web quality performance source contracts > map marker WebP assets are present and at least 75% smaller than PNG fallbacks [1.23ms]
+(pass) web quality performance source contracts > popup ad banners load immediately for first-screen exposure while distant media has no src [0.22ms]
+(pass) web quality performance source contracts > home filter count queries run before dropdown open so triggers do not show stale zero counts [0.12ms]
+(pass) web quality performance source contracts > home map runtime renders directly while supporting queries stay intent-gated [11.96ms]
+(pass) web quality performance source contracts > mobile toast dark tokens and G007 announcement width stay explicit [0.21ms]
+(pass) web quality performance source contracts > naver marker click centering avoids slow duplicate recenter loops [0.23ms]
+(pass) web quality performance source contracts > device location floating action does not show expanding circle animations [0.98ms]
+(pass) web quality performance source contracts > profile/stamp/map regressions stay fixed while preserving deferred map loading [1.48ms]
+(pass) web quality performance source contracts > review like heart keeps the previous feed-style mobile and desktop overlay layout [0.60ms]
+(pass) web quality performance source contracts > auth-gated review actions open UI prompts without uncaught LOGIN_REQUIRED throws [0.26ms]
+(pass) web quality performance source contracts > overlay and review icon buttons expose stable accessible names [0.98ms]
+(pass) web quality performance source contracts > desktop direct feature routes hand off to the home left panel and suppress popup blockers [1.14ms]
+(pass) web quality performance source contracts > direct utility routes render clear fallback states instead of blank or invalid panel configs [0.40ms]
+(pass) web quality performance source contracts > admin utility APIs stay behind admin auth and short URLs cannot become open redirects [0.48ms]
+(pass) web quality performance source contracts > feed direct route defers heavy modals and detail panels until interaction [1.07ms]
+(pass) web quality performance source contracts > /mypage avoids client-side redirect work and defers desktop-only sidebar cost [2.93ms]
+(pass) web quality performance source contracts > page-level loaders keep route fallbacks single-owner while map fallbacks stay embedded [8.25ms]
+(pass) web quality performance source contracts > route loading boundaries keep skeleton ownership single-pass [3.59ms]
+(pass) web quality performance source contracts > intent-loaded mobile modal shells do not render desktop dialog on the first client paint [1.21ms]
+(pass) web quality performance source contracts > auth user state lookups have Supabase index migration coverage [0.32ms]
+(pass) web quality performance source contracts > user-facing Supabase reads avoid wide fanout and redundant stamp fetches [0.73ms]
+(pass) web quality performance source contracts > admin review queue avoids fetching approved review history [0.25ms]
+(pass) web quality performance source contracts > Supabase reads use explicit response shapes instead of broad selects [39.08ms]
+(pass) web quality performance source contracts > global chrome assets stay small and cacheable without changing page UI [301.67ms]
+(pass) web quality performance source contracts > restaurant search controls keep accessible names and keyboard-safe rows [0.27ms]
+(pass) web quality performance source contracts > mobile leaderboard rows keep stats visible inside narrow viewports [0.06ms]
+(pass) web quality performance source contracts > direct mobile routes use a self-hosted Korean font before fallback stacks [0.10ms]
+
+tests-unit/restaurant-discovery-cache-source.test.ts:
+(pass) restaurant discovery cache invalidation contract > admin approval/update/delete invalidates every public map and search surface [0.24ms]
+(pass) restaurant discovery cache invalidation contract > desktop and mobile search refetches stale empty results instead of waiting for refresh [0.09ms]
+
+ 47 pass
+ 0 fail
+ 2432 expect() calls
+Ran 47 tests across 5 files. [2.87s]

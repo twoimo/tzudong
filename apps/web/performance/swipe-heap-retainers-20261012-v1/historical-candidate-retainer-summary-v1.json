@@ -1,0 +1,963 @@
+{
+  "diagnosticOnly": true,
+  "primaryGuardReplacement": false,
+  "fieldAdmission": 0,
+  "variants": {
+    "baseline": {
+      "sourceCommit": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+      "buildId": "M0P2hpS_9WmCOSTUM2fLx",
+      "passed": true,
+      "cycles": 256,
+      "sdkScript": {
+        "status": 200,
+        "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "restaurantRequestCount": 2690,
+      "groups": {
+        "selectionKey": {
+          "objects": 134,
+          "ownBytes": 4288,
+          "nonWeakEdgeRootPaths": 134,
+          "rootPathsWithConditionalEphemeron": 133,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "orderedResult / property:searched": 133,
+            "other-node / internal": 1
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > property:other > closure > internal > closure > internal > other-object > context > other-object > element > other-object > property:other > other-object > property:other > closure > internal > other-object > context > WeakMap > internal > weakmap-table > ephemeron-value > Map > internal > array-backing > internal > orderedResult > property:searched > selectionKey",
+              "objects": 131
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > element > Array > element > other-object > element > closure > internal > other-node > internal > other-node > hidden > other-node > internal > other-node > hidden > other-node > internal > selectionKey",
+              "objects": 1
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > other-object > property:restaurants > Array > ephemeron-value > Map > internal > array-backing > internal > orderedResult > property:searched > selectionKey",
+              "objects": 1
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > closure > internal > other-object > context > Array > ephemeron-value > Map > internal > array-backing > internal > orderedResult > property:searched > selectionKey",
+              "objects": 1
+            }
+          ],
+          "unlistedPathPatternCount": 0
+        },
+        "listSnapshot": {
+          "objects": 0,
+          "ownBytes": 0,
+          "nonWeakEdgeRootPaths": 0,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {},
+          "pathPatterns": [],
+          "unlistedPathPatternCount": 0
+        },
+        "orderedResult": {
+          "objects": 134,
+          "ownBytes": 2680,
+          "nonWeakEdgeRootPaths": 134,
+          "rootPathsWithConditionalEphemeron": 133,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "array-backing / internal": 133,
+            "other-node / internal": 1
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > property:other > closure > internal > closure > internal > other-object > context > other-object > element > other-object > property:other > other-object > property:other > closure > internal > other-object > context > WeakMap > internal > weakmap-table > ephemeron-value > Map > internal > array-backing > internal > orderedResult",
+              "objects": 131
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > element > Array > element > other-object > element > closure > internal > other-node > internal > other-node > hidden > other-node > internal > other-node > hidden > other-node > internal > orderedResult",
+              "objects": 1
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > other-object > property:restaurants > Array > ephemeron-value > Map > internal > array-backing > internal > orderedResult",
+              "objects": 1
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > closure > internal > other-object > context > Array > ephemeron-value > Map > internal > array-backing > internal > orderedResult",
+              "objects": 1
+            }
+          ],
+          "unlistedPathPatternCount": 0
+        },
+        "fallbackResult": {
+          "objects": 0,
+          "ownBytes": 0,
+          "nonWeakEdgeRootPaths": 0,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {},
+          "pathPatterns": [],
+          "unlistedPathPatternCount": 0
+        },
+        "query": {
+          "objects": 649,
+          "ownBytes": 49284,
+          "nonWeakEdgeRootPaths": 649,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "other-object / context": 643,
+            "other-object / property:other": 532,
+            "other-node / internal": 1,
+            "array-backing / internal": 648
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query",
+              "objects": 641
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > other-object > property:other > query",
+              "objects": 3
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > context > other-object > property:other > other-object > property:other > Map > internal > array-backing > internal > query",
+              "objects": 2
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > element > Array > element > other-object > element > closure > internal > other-node > internal > other-node > hidden > other-node > internal > other-node > hidden > other-node > internal > query",
+              "objects": 1
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > context > closure > internal > other-object > property:other > query",
+              "objects": 1
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber > property:other > other-object > property:other > other-object > property:other > other-object > property:other > query",
+              "objects": 1
+            }
+          ],
+          "unlistedPathPatternCount": 0
+        },
+        "query-state": {
+          "objects": 1826,
+          "ownBytes": 137276,
+          "nonWeakEdgeRootPaths": 1826,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "query / property:other": 648,
+            "query / property:state": 648,
+            "other-object / property:other": 850,
+            "array-backing / internal": 22,
+            "closure / shortcut": 21,
+            "other-node / hidden": 262,
+            "other-node / internal": 2,
+            "other-object / property:state": 1
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:other > query-state",
+              "objects": 639
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:state > query-state",
+              "objects": 638
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > context > closure > internal > other-object > context > other-node > hidden > query-state",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > context > closure > internal > other-object > property:other > query-state",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > context > other-node > hidden > query-state",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > context > other-node > hidden > query-state > property:other > closure > internal > other-object > property:other > query-state",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > other-object > property:other > query-state",
+              "objects": 12
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > other-object > property:other > query > property:other > query-state",
+              "objects": 3
+            }
+          ],
+          "unlistedPathPatternCount": 19
+        },
+        "restaurant-row": {
+          "objects": 3720,
+          "ownBytes": 261584,
+          "nonWeakEdgeRootPaths": 3720,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "other-object / context": 1964,
+            "Array / element": 34121,
+            "array-backing / internal": 38531,
+            "other-object / property:other": 666,
+            "other-object / property:restaurant": 6,
+            "query-state / property:data": 129
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:state > query-state > property:data > Array > element > restaurant-row",
+              "objects": 866
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:state > query-state > property:data > Array > element > restaurant-row > property:other > Array > element > restaurant-row",
+              "objects": 866
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > context > Array > element > restaurant-row",
+              "objects": 609
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > context > Array > element > restaurant-row > property:other > Array > element > restaurant-row",
+              "objects": 609
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > internal > other-object > context > restaurant-row",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > internal > other-object > context > restaurant-row > property:other > Array > element > restaurant-row",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:state > query-state > property:data > restaurant-row",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:state > query-state > property:data > restaurant-row > property:other > Array > element > restaurant-row",
+              "objects": 127
+            }
+          ],
+          "unlistedPathPatternCount": 14
+        },
+        "detached-dom": {
+          "objects": 937,
+          "ownBytes": 125136,
+          "nonWeakEdgeRootPaths": 937,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "other-object / property:other": 1874,
+            "other-node / element": 3046,
+            "other-node / internal": 1,
+            "detached-dom / element": 4533,
+            "other-object / internal": 932,
+            "array-backing / internal": 737,
+            "other-object / context": 11,
+            "react-fiber / property:other": 420,
+            "other-node / hidden": 75,
+            "Array / element": 5,
+            "other-node / weak": 90,
+            "detached-dom / weak": 4,
+            "dom-node / element": 407,
+            "closure / shortcut": 303
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom",
+              "objects": 95
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom",
+              "objects": 77
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom",
+              "objects": 75
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom",
+              "objects": 74
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom",
+              "objects": 74
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > other-object > property:other > other-node > hidden > closure > property:other > Array > element > other-object > property:other > other-object > property:other > other-object > property:other > other-object > property:other > other-object > property:other > detached-dom",
+              "objects": 69
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > other-object > property:other > other-node > hidden > closure > property:other > Array > element > other-object > property:other > other-object > property:other > other-object > property:other > other-object > property:other > other-object > property:other > detached-dom > element > detached-dom",
+              "objects": 69
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom",
+              "objects": 54
+            }
+          ],
+          "unlistedPathPatternCount": 40
+        },
+        "dom-node": {
+          "objects": 503,
+          "ownBytes": 39360,
+          "nonWeakEdgeRootPaths": 503,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "other-object / property:other": 4,
+            "dom-node / element": 417,
+            "detached-dom / element": 315,
+            "react-fiber / property:other": 34,
+            "other-node / element": 99,
+            "other-object / context": 2,
+            "other-object / internal": 8,
+            "dom-node / weak": 4,
+            "other-node / weak": 2
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > element > dom-node",
+              "objects": 144
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > dom-node",
+              "objects": 38
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > dom-node",
+              "objects": 36
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > dom-node",
+              "objects": 34
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > dom-node > element > dom-node",
+              "objects": 28
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > dom-node > element > dom-node",
+              "objects": 18
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > dom-node",
+              "objects": 16
+            },
+            {
+              "path": "truncated > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > dom-node > element > dom-node > element > dom-node > element > dom-node",
+              "objects": 12
+            }
+          ],
+          "unlistedPathPatternCount": 57
+        },
+        "event-listener": {
+          "objects": 1473,
+          "ownBytes": 35704,
+          "nonWeakEdgeRootPaths": 1473,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "other-node / element": 1473
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 504
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 378
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 126
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 113
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 72
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 53
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 41
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 37
+            }
+          ],
+          "unlistedPathPatternCount": 23
+        },
+        "react-fiber": {
+          "objects": 1325,
+          "ownBytes": 137800,
+          "nonWeakEdgeRootPaths": 1325,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "closure / shortcut": 2083,
+            "array-backing / internal": 2083,
+            "react-fiber / property:other": 3030,
+            "detached-dom / property:other": 229,
+            "other-node / hidden": 305,
+            "other-node / property:other": 42,
+            "other-object / context": 12,
+            "dom-node / property:other": 34,
+            "other-object / property:other": 8
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > context > closure > shortcut > react-fiber",
+              "objects": 255
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber",
+              "objects": 58
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber",
+              "objects": 55
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber",
+              "objects": 51
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber",
+              "objects": 43
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber",
+              "objects": 29
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > element > detached-dom > property:other > react-fiber > property:other > react-fiber",
+              "objects": 28
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber",
+              "objects": 25
+            }
+          ],
+          "unlistedPathPatternCount": 199
+        }
+      }
+    },
+    "candidate": {
+      "sourceCommit": "21a86dca974f9bbdeed52d19d2fde0e9cc1fcac6",
+      "buildId": "VAxACIHyaa4qpOmfHC4_c",
+      "passed": true,
+      "cycles": 256,
+      "sdkScript": {
+        "status": 200,
+        "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "restaurantRequestCount": 2690,
+      "groups": {
+        "selectionKey": {
+          "objects": 868,
+          "ownBytes": 27776,
+          "nonWeakEdgeRootPaths": 868,
+          "rootPathsWithConditionalEphemeron": 867,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "restaurant-row / ephemeron-value": 735,
+            "orderedResult / property:searched": 132,
+            "Array / element": 13995,
+            "array-backing / internal": 13995,
+            "weakmap-table / ephemeron-value": 735,
+            "other-node / internal": 1
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > property:other > closure > internal > closure > internal > other-object > context > other-object > element > other-object > property:other > other-object > property:other > closure > internal > other-object > context > Array > element > restaurant-row > ephemeron-value > selectionKey",
+              "objects": 609
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > property:other > closure > internal > closure > internal > other-object > context > other-object > element > other-object > property:other > other-object > property:other > closure > internal > other-object > context > WeakMap > internal > weakmap-table > ephemeron-value > Map > internal > array-backing > internal > orderedResult > property:searched > selectionKey",
+              "objects": 130
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > other-object > property:restaurants > Array > element > restaurant-row > ephemeron-value > selectionKey",
+              "objects": 106
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > context > Array > element > restaurant-row > ephemeron-value > selectionKey",
+              "objects": 20
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > element > Array > element > other-object > element > closure > internal > other-node > internal > other-node > hidden > other-node > internal > other-node > hidden > other-node > internal > selectionKey",
+              "objects": 1
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > other-object > property:restaurants > Array > ephemeron-value > Map > internal > array-backing > internal > orderedResult > property:searched > selectionKey",
+              "objects": 1
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > closure > internal > other-object > context > Array > ephemeron-value > Map > internal > array-backing > internal > orderedResult > property:searched > selectionKey",
+              "objects": 1
+            }
+          ],
+          "unlistedPathPatternCount": 0
+        },
+        "listSnapshot": {
+          "objects": 134,
+          "ownBytes": 3216,
+          "nonWeakEdgeRootPaths": 134,
+          "rootPathsWithConditionalEphemeron": 133,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "Array / ephemeron-value": 133,
+            "other-node / internal": 1,
+            "weakmap-table / ephemeron-value": 133
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > property:other > closure > internal > closure > internal > other-object > context > other-object > element > other-object > property:other > other-object > property:other > closure > internal > other-object > context > WeakMap > internal > weakmap-table > ephemeron-value > listSnapshot",
+              "objects": 130
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > closure > internal > other-object > context > Array > ephemeron-value > listSnapshot",
+              "objects": 2
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > element > Array > element > other-object > element > closure > internal > other-node > internal > other-node > hidden > other-node > internal > other-node > hidden > other-node > internal > listSnapshot",
+              "objects": 1
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > other-object > property:restaurants > Array > ephemeron-value > listSnapshot",
+              "objects": 1
+            }
+          ],
+          "unlistedPathPatternCount": 0
+        },
+        "orderedResult": {
+          "objects": 133,
+          "ownBytes": 2660,
+          "nonWeakEdgeRootPaths": 133,
+          "rootPathsWithConditionalEphemeron": 132,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "array-backing / internal": 132,
+            "other-node / internal": 1
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > property:other > closure > internal > closure > internal > other-object > context > other-object > element > other-object > property:other > other-object > property:other > closure > internal > other-object > context > WeakMap > internal > weakmap-table > ephemeron-value > Map > internal > array-backing > internal > orderedResult",
+              "objects": 130
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > element > Array > element > other-object > element > closure > internal > other-node > internal > other-node > hidden > other-node > internal > other-node > hidden > other-node > internal > orderedResult",
+              "objects": 1
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > other-object > property:restaurants > Array > ephemeron-value > Map > internal > array-backing > internal > orderedResult",
+              "objects": 1
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > internal > other-object > context > closure > internal > other-object > context > Array > ephemeron-value > Map > internal > array-backing > internal > orderedResult",
+              "objects": 1
+            }
+          ],
+          "unlistedPathPatternCount": 0
+        },
+        "fallbackResult": {
+          "objects": 0,
+          "ownBytes": 0,
+          "nonWeakEdgeRootPaths": 0,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {},
+          "pathPatterns": [],
+          "unlistedPathPatternCount": 0
+        },
+        "query": {
+          "objects": 649,
+          "ownBytes": 49284,
+          "nonWeakEdgeRootPaths": 649,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "other-object / property:other": 527,
+            "other-object / context": 643,
+            "array-backing / internal": 648,
+            "other-node / internal": 1
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query",
+              "objects": 641
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > other-object > property:other > query",
+              "objects": 3
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > context > other-object > property:other > other-object > property:other > Map > internal > array-backing > internal > query",
+              "objects": 2
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > element > Array > element > other-object > element > closure > internal > other-node > internal > other-node > hidden > other-node > internal > other-node > hidden > other-node > internal > query",
+              "objects": 1
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > other-object > property:other > closure > internal > other-object > context > closure > internal > other-object > property:other > query",
+              "objects": 1
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber > property:other > other-object > property:other > other-object > property:other > other-object > property:other > query",
+              "objects": 1
+            }
+          ],
+          "unlistedPathPatternCount": 0
+        },
+        "query-state": {
+          "objects": 1819,
+          "ownBytes": 136492,
+          "nonWeakEdgeRootPaths": 1819,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "other-object / property:other": 820,
+            "query / property:other": 648,
+            "query / property:state": 648,
+            "other-node / hidden": 260,
+            "closure / shortcut": 17,
+            "array-backing / internal": 18,
+            "other-object / property:state": 1,
+            "other-node / internal": 2
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:other > query-state",
+              "objects": 640
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:state > query-state",
+              "objects": 639
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > context > closure > internal > other-object > context > other-node > hidden > query-state",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > context > closure > internal > other-object > property:other > query-state",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > context > other-node > hidden > query-state",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > context > other-node > hidden > query-state > property:other > closure > internal > other-object > property:other > query-state",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > other-object > property:other > query-state",
+              "objects": 10
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > other-object > property:other > query > property:other > query-state",
+              "objects": 3
+            }
+          ],
+          "unlistedPathPatternCount": 13
+        },
+        "restaurant-row": {
+          "objects": 3720,
+          "ownBytes": 261584,
+          "nonWeakEdgeRootPaths": 3720,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "other-object / context": 1962,
+            "Array / element": 48058,
+            "array-backing / internal": 50998,
+            "other-object / property:other": 666,
+            "query-state / property:data": 129,
+            "other-object / property:restaurant": 4
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:state > query-state > property:data > Array > element > restaurant-row",
+              "objects": 866
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:state > query-state > property:data > Array > element > restaurant-row > property:other > Array > element > restaurant-row",
+              "objects": 866
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > property:other > closure > internal > closure > internal > other-object > context > other-object > element > other-object > property:other > other-object > property:other > closure > internal > other-object > context > Array > element > restaurant-row",
+              "objects": 609
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > Array > property:other > closure > internal > closure > internal > other-object > context > other-object > element > other-object > property:other > other-object > property:other > closure > internal > other-object > context > Array > element > restaurant-row > property:other > Array > element > restaurant-row",
+              "objects": 609
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > internal > other-object > context > restaurant-row",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > internal > other-object > context > restaurant-row > property:other > Array > element > restaurant-row",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:state > query-state > property:data > restaurant-row",
+              "objects": 127
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:state > query-state > property:data > restaurant-row > property:other > Array > element > restaurant-row",
+              "objects": 127
+            }
+          ],
+          "unlistedPathPatternCount": 14
+        },
+        "detached-dom": {
+          "objects": 882,
+          "ownBytes": 115816,
+          "nonWeakEdgeRootPaths": 882,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "other-object / property:other": 1874,
+            "detached-dom / element": 4322,
+            "other-node / element": 2875,
+            "other-object / context": 11,
+            "other-object / internal": 868,
+            "other-node / hidden": 75,
+            "array-backing / internal": 737,
+            "react-fiber / property:other": 429,
+            "dom-node / element": 365,
+            "other-node / internal": 1,
+            "detached-dom / weak": 4,
+            "Array / element": 5,
+            "other-node / weak": 89,
+            "closure / shortcut": 303
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom",
+              "objects": 86
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom",
+              "objects": 86
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom",
+              "objects": 85
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > other-object > property:other > other-node > hidden > closure > property:other > Array > element > other-object > property:other > other-object > property:other > other-object > property:other > other-object > property:other > other-object > property:other > detached-dom",
+              "objects": 69
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > other-object > property:other > other-node > hidden > closure > property:other > Array > element > other-object > property:other > other-object > property:other > other-object > property:other > other-object > property:other > other-object > property:other > detached-dom > element > detached-dom",
+              "objects": 69
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom",
+              "objects": 63
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom",
+              "objects": 45
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom",
+              "objects": 43
+            }
+          ],
+          "unlistedPathPatternCount": 43
+        },
+        "dom-node": {
+          "objects": 335,
+          "ownBytes": 25864,
+          "nonWeakEdgeRootPaths": 335,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "detached-dom / element": 315,
+            "dom-node / element": 49,
+            "other-object / internal": 8,
+            "other-object / context": 2,
+            "other-object / property:other": 4,
+            "other-node / element": 54,
+            "dom-node / weak": 4,
+            "other-node / weak": 2
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > element > dom-node",
+              "objects": 144
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > dom-node",
+              "objects": 38
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > dom-node",
+              "objects": 36
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > dom-node",
+              "objects": 34
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > dom-node",
+              "objects": 16
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > dom-node",
+              "objects": 9
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > detached-dom > element > detached-dom > element > dom-node",
+              "objects": 8
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > dom-node",
+              "objects": 8
+            }
+          ],
+          "unlistedPathPatternCount": 27
+        },
+        "event-listener": {
+          "objects": 1463,
+          "ownBytes": 35408,
+          "nonWeakEdgeRootPaths": 1463,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "other-node / element": 1463
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 602
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 280
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 126
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 113
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 85
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 41
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > other-node > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > detached-dom > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 40
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > detached-dom > element > other-node > element > other-node > element > other-node > element > other-node > element > event-listener",
+              "objects": 37
+            }
+          ],
+          "unlistedPathPatternCount": 16
+        },
+        "react-fiber": {
+          "objects": 1211,
+          "ownBytes": 125944,
+          "nonWeakEdgeRootPaths": 1211,
+          "rootPathsWithConditionalEphemeron": 0,
+          "noNonWeakEdgeRootPath": 0,
+          "incoming": {
+            "closure / shortcut": 2020,
+            "array-backing / internal": 2020,
+            "detached-dom / property:other": 238,
+            "other-object / context": 12,
+            "react-fiber / property:other": 2803,
+            "other-node / hidden": 238,
+            "other-object / property:other": 8
+          },
+          "pathPatterns": [
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > other-node > element > closure > internal > other-object > context > query > property:options > other-object > property:other > closure > internal > other-object > context > closure > shortcut > react-fiber",
+              "objects": 255
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber",
+              "objects": 53
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber",
+              "objects": 51
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber",
+              "objects": 49
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber",
+              "objects": 43
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber",
+              "objects": 32
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > element > detached-dom > property:other > react-fiber > property:other > react-fiber",
+              "objects": 29
+            },
+            {
+              "path": "gc-root > element > gc-root > element > gc-root > internal > other-node > internal > other-object > property:other > detached-dom > element > other-node > element > detached-dom > element > detached-dom > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber > property:other > react-fiber",
+              "objects": 28
+            }
+          ],
+          "unlistedPathPatternCount": 138
+        }
+      }
+    }
+  }
+}

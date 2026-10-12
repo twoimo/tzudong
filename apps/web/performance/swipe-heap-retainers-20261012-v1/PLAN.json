@@ -1,0 +1,25 @@
+{
+  "purpose": "GC root ownership paths for fixed cache/query shapes; diagnostic only",
+  "createdBeforeBuildAndMeasurement": true,
+  "sourceBefore": "da4c9be17e54733414cc7e1d2f8365d25bee4d87",
+  "sourceAfter": "21a86dca974f9bbdeed52d19d2fde0e9cc1fcac6",
+  "conditions": "Node24.21.0/npm11.6.2/Next16.3.6/Playwright1.63; current Chrome observed at run; CPU4/cacheoff/SW bypass; synthetic REST735/Auth401; remote Naver SDK/tiles unchanged",
+  "runOrder": [
+    "baseline",
+    "candidate"
+  ],
+  "independentProcessesPerVariant": 1,
+  "dependentActionsPerProcess": 256,
+  "snapshotTiming": "after256 actions and5s idle",
+  "snapshotCapBytes": 67108864,
+  "rawSnapshotPersistence": false,
+  "rawStringPersistence": false,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "physicalDevice": false,
+  "guardReplacement": false,
+  "ephemeronLimitation": "Internal conditional ephemeron-value edges are labeled; non-weak-edge reachability is not exclusive retained size or proof of GC reclamation.",
+  "baselineEvidenceCommit": "1046f7bd29e4afde0e44f3bd33833de14fd945ae",
+  "originalWorktreesMissing": true,
+  "recoveryWorktreeCommit": "1046f7bd29e4afde0e44f3bd33833de14fd945ae"
+}

@@ -1,0 +1,6 @@
+{
+  "finding": "Zero ownership counters conflict with preserved before shortest paths: lexical context classification required exact system / Context but actual path nodes were other-object.",
+  "notValidZeroOwnershipProof": true,
+  "replacement": "../query-dispatch-owner-v4",
+  "originalResultsPreserved": true
+}

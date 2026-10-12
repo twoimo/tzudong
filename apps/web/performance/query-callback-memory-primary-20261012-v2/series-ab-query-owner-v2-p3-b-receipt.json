@@ -1,0 +1,10 @@
+{
+  "phase": "AB",
+  "kind": "candidate",
+  "label": "ab-query-owner-v2-p3-b",
+  "pair": 3,
+  "variant": "B",
+  "exit": 0,
+  "matched": true,
+  "endedAtUtc": "2026-10-12T05:50:02.443Z"
+}

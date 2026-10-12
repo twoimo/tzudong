@@ -1,0 +1,16 @@
+{
+  "sourceBefore": "056a86600f412eb42df4304e3206841679012f3e",
+  "hypothesis": "Cached queryFn callbacks created within RestaurantDetailPanel retain component lexical contexts. Module-scope factories can limit ownership to input data.",
+  "changeScope": "callback ownership only; query keys, cache times, request predicates, pagination, authorization and rendering behavior preserved",
+  "diagnosticPlan": "before/after fresh Chrome process; each 128 first search+128 revisit; same CPU4/cacheoff/real SDK/synthetic REST735/Auth401; post-snapshot counts not primary guard",
+  "primaryGuardUnchanged": {
+    "heapRegressionPercent": 20,
+    "inputLatencyRegressionPercent": 15
+  },
+  "adoptionRequires": "functional equivalence plus fresh natural-heap paired repetitions; no admission from snapshot counts alone",
+  "physicalDevice": false,
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "preMeasurementBindingAtUtc": "2026-10-12T04:08:48.188451+00:00",
+  "sourceAfter": "071814f39a9e8da25e0c7acc7b480258f726e600"
+}

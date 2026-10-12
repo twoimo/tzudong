@@ -1,0 +1,8 @@
+{
+  "relocation": "passed",
+  "tamper": "rejected",
+  "optimizedMode": true,
+  "mapSha256": "5b6e202830b5a92229faa490f81be12d92fec47618942101ffd2a469affcfff6",
+  "frozenOriginalUnchanged": true,
+  "scope": "Evidence integrity only, performanceAccepted false"
+}

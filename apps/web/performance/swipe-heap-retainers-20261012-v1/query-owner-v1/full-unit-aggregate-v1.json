@@ -1,0 +1,9 @@
+{
+  "counts": {
+    "pass": 3457,
+    "skip": 11,
+    "fail": 0
+  },
+  "lanes": 21,
+  "actualScriptExit": 0
+}

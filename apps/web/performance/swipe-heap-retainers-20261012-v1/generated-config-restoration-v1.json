@@ -1,0 +1,20 @@
+[
+  {
+    "kind": "baseline",
+    "exclusiveGeneratedIncludes": [
+      ".next-retainers-baseline-v1/types/**/*.ts",
+      ".next-retainers-baseline-v1/dev/types/**/*.ts"
+    ],
+    "restoredSha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17",
+    "remainingTrackedDiff": []
+  },
+  {
+    "kind": "candidate",
+    "exclusiveGeneratedIncludes": [
+      ".next-retainers-candidate-v1/types/**/*.ts",
+      ".next-retainers-candidate-v1/dev/types/**/*.ts"
+    ],
+    "restoredSha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17",
+    "remainingTrackedDiff": []
+  }
+]

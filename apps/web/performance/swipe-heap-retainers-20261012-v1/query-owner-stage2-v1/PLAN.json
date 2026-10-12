@@ -1,0 +1,11 @@
+{
+  "sourceBefore": "071814f39a9e8da25e0c7acc7b480258f726e600",
+  "sourceAfter": "e362ed48ceab3bbb5a5cbdea47d6d9702a0d9078",
+  "isolatedChange": "Module-scope getNextPageParam callback. Existing queryFn factories retained.",
+  "beforeEvidence": "../query-owner-v1/ui-query-owner-after-v1/raw.json",
+  "afterPlan": "128 first searches+same128 revisits;1 fresh process;same production16.3.8/CPU4/cache off/SW bypass/real SDK and synthetic735/Auth401",
+  "diagnosticOnly": true,
+  "primaryMemoryGuardUnchanged": 20,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0
+}

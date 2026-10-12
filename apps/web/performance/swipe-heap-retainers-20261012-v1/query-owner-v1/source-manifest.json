@@ -1,0 +1,26 @@
+{
+  "base": "056a86600f412eb42df4304e3206841679012f3e",
+  "head": "071814f39a9e8da25e0c7acc7b480258f726e600",
+  "files": {
+    "apps/web/components/restaurant/RestaurantDetailPanel.tsx": {
+      "sha256": "856b9e630e3e9e17a6c5f1a9e2adfe30d5f97bb40e750dc484356388af937d65",
+      "bytes": 70600
+    },
+    "apps/web/lib/restaurant-detail-query-functions.ts": {
+      "sha256": "76d1ec6972cbfdeff5c0ca5a5235074b2abbe165ebf49aa863c5443953fbcaee",
+      "bytes": 12412
+    },
+    "apps/web/tests-unit/public-profile-read.test.ts": {
+      "sha256": "675a4a6cb4d8ecee32cc4ec29b4a262081ab0322f81269b7e921f81bf9a8bc4c",
+      "bytes": 20873
+    },
+    "apps/web/tests-unit/restaurant-detail-query-functions.test.ts": {
+      "sha256": "73cb103eddd59acf27d95a0beada25b384fcebe979dfd15d895f559e2fa31860",
+      "bytes": 5692
+    },
+    "apps/web/tests-unit/web-quality-performance-source.test.ts": {
+      "sha256": "cecdac7a12aef09ff8cd63845726a189ceed4802298c679b1e8c9647752aebad",
+      "bytes": 229214
+    }
+  }
+}

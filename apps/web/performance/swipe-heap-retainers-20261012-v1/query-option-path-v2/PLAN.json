@@ -1,0 +1,13 @@
+{
+  "purpose": "Identify public query option retaining panel context after the first hypothesis did not reduce fiber count",
+  "sourceBefore": "056a86600f412eb42df4304e3206841679012f3e",
+  "sourceAfter": "071814f39a9e8da25e0c7acc7b480258f726e600",
+  "queries": 16,
+  "passes": 2,
+  "independentDiagnosticProcesses": 2,
+  "newDisclosure": "Allowlisted public query option names only. No raw strings or ids.",
+  "noMemoryGuardReplacement": true,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "physicalDevice": false
+}

@@ -1,0 +1,14 @@
+{
+  "matchedProcesses": 22,
+  "primaryMedianGuardPass": true,
+  "primaryPairedCIWithinGuard": false,
+  "memoryCIWithin20PercentGuard": true,
+  "revisitLatencyCIWithin15PercentGuard": false,
+  "improvementProven": false,
+  "candidateAccepted": false,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "sourcePromoted": false,
+  "operatingDeployed": false,
+  "goalComplete": false
+}

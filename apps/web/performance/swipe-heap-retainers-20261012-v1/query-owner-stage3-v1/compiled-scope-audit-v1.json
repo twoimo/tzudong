@@ -1,0 +1,140 @@
+{
+  "distDir": ".next-query-owner-stage3-after-v1",
+  "rows": [
+    {
+      "file": ".next-query-owner-stage3-after-v1/static/chunks/507-9c5e7cdff214aea9.js",
+      "sha256": "b899682a9162b38931b3bb5f8aeed72cb0d237e667c6890ce019cf58e9d05775",
+      "family": "sibling-reviews",
+      "valueAstType": "ArrowFunctionExpression",
+      "calleeAstType": null,
+      "ancestorFunctionCount": 2,
+      "inlineFunctionFactory": false,
+      "opaqueFactoryMemberLookup": false
+    },
+    {
+      "file": ".next-query-owner-stage3-after-v1/static/chunks/5241.b85db89ba001517a.js",
+      "sha256": "1c83b3e8cc7a8b4e5390f792cd6ed0e4d4d260781197eb3a407b40443d068d29",
+      "family": "sibling-reviews",
+      "valueAstType": "ArrowFunctionExpression",
+      "calleeAstType": null,
+      "ancestorFunctionCount": 3,
+      "inlineFunctionFactory": false,
+      "opaqueFactoryMemberLookup": false
+    },
+    {
+      "file": ".next-query-owner-stage3-after-v1/static/chunks/8019.e1d57a4683fdbb45.js",
+      "sha256": "3f40d49a0c7d81a28a82ba6145f6eb7298452ba4cb36afb408553ae9bce43dc7",
+      "family": "sibling-reviews",
+      "valueAstType": "CallExpression",
+      "calleeAstType": "FunctionExpression",
+      "ancestorFunctionCount": 2,
+      "inlineFunctionFactory": true,
+      "opaqueFactoryMemberLookup": false
+    },
+    {
+      "file": ".next-query-owner-stage3-after-v1/static/chunks/8019.e1d57a4683fdbb45.js",
+      "sha256": "3f40d49a0c7d81a28a82ba6145f6eb7298452ba4cb36afb408553ae9bce43dc7",
+      "family": "detail-reviews",
+      "valueAstType": "CallExpression",
+      "calleeAstType": "FunctionExpression",
+      "ancestorFunctionCount": 2,
+      "inlineFunctionFactory": true,
+      "opaqueFactoryMemberLookup": false
+    },
+    {
+      "file": ".next-query-owner-stage3-after-v1/static/chunks/8461-0a52faebbbd47457.js",
+      "sha256": "323e445abed3a18b7c1a5bbc374eeabc09366bff62c5dee44b162bf0a292e1ab",
+      "family": "sibling-reviews",
+      "valueAstType": "ArrowFunctionExpression",
+      "calleeAstType": null,
+      "ancestorFunctionCount": 2,
+      "inlineFunctionFactory": false,
+      "opaqueFactoryMemberLookup": false
+    },
+    {
+      "file": ".next-query-owner-stage3-after-v1/static/chunks/8461-0a52faebbbd47457.js",
+      "sha256": "323e445abed3a18b7c1a5bbc374eeabc09366bff62c5dee44b162bf0a292e1ab",
+      "family": "sibling-reviews",
+      "valueAstType": "ArrowFunctionExpression",
+      "calleeAstType": null,
+      "ancestorFunctionCount": 2,
+      "inlineFunctionFactory": false,
+      "opaqueFactoryMemberLookup": false
+    },
+    {
+      "file": ".next-query-owner-stage3-after-v1/static/chunks/8972.89278eb9c9a330ce.js",
+      "sha256": "c53c7ed96fcaed86b4967bf0d3eb17d7d4343a776d3c1a19c63e7d6a969ba344",
+      "family": "popular-search",
+      "valueAstType": "CallExpression",
+      "calleeAstType": "FunctionExpression",
+      "ancestorFunctionCount": 2,
+      "inlineFunctionFactory": true,
+      "opaqueFactoryMemberLookup": false
+    },
+    {
+      "file": ".next-query-owner-stage3-after-v1/static/chunks/8972.89278eb9c9a330ce.js",
+      "sha256": "c53c7ed96fcaed86b4967bf0d3eb17d7d4343a776d3c1a19c63e7d6a969ba344",
+      "family": "direct-search",
+      "valueAstType": "CallExpression",
+      "calleeAstType": "FunctionExpression",
+      "ancestorFunctionCount": 2,
+      "inlineFunctionFactory": true,
+      "opaqueFactoryMemberLookup": false
+    },
+    {
+      "file": ".next-query-owner-stage3-after-v1/static/chunks/9854.73a376f3c1b5c748.js",
+      "sha256": "02816a4a3eaaefd5951e959e3bdd0ba2ea59171ce7305b5b2350c9319439c431",
+      "family": "sibling-reviews",
+      "valueAstType": "ArrowFunctionExpression",
+      "calleeAstType": null,
+      "ancestorFunctionCount": 3,
+      "inlineFunctionFactory": false,
+      "opaqueFactoryMemberLookup": false
+    },
+    {
+      "file": ".next-query-owner-stage3-after-v1/static/chunks/app/mypage/submissions/edit/page-b209f1fe92507f63.js",
+      "sha256": "aa8e2c42e0a479918f22447a76b4b6933bd5c887404237265d925da61a01dbf8",
+      "family": "sibling-reviews",
+      "valueAstType": "ArrowFunctionExpression",
+      "calleeAstType": null,
+      "ancestorFunctionCount": 2,
+      "inlineFunctionFactory": false,
+      "opaqueFactoryMemberLookup": false
+    },
+    {
+      "file": ".next-query-owner-stage3-after-v1/static/chunks/app/mypage/submissions/new/page-2a77ebad8e1c39ee.js",
+      "sha256": "937be893482cc32c8178a2fbdc0ddd06acb6d50f6b1dec48ee2a15d1d99af67c",
+      "family": "sibling-reviews",
+      "valueAstType": "ArrowFunctionExpression",
+      "calleeAstType": null,
+      "ancestorFunctionCount": 2,
+      "inlineFunctionFactory": false,
+      "opaqueFactoryMemberLookup": false
+    },
+    {
+      "file": ".next-query-owner-stage3-after-v1/static/chunks/app/stamp/page-a54eb9a2fb993de9.js",
+      "sha256": "3de4466eced0860d860d5332c112bfc0d6507dfec093e2caefd9d79da2ce7b57",
+      "family": "sibling-reviews",
+      "valueAstType": "ArrowFunctionExpression",
+      "calleeAstType": null,
+      "ancestorFunctionCount": 2,
+      "inlineFunctionFactory": false,
+      "opaqueFactoryMemberLookup": false
+    },
+    {
+      "file": ".next-query-owner-stage3-after-v1/static/chunks/app/stamp/page-a54eb9a2fb993de9.js",
+      "sha256": "3de4466eced0860d860d5332c112bfc0d6507dfec093e2caefd9d79da2ce7b57",
+      "family": "detail-reviews",
+      "valueAstType": "ArrowFunctionExpression",
+      "calleeAstType": null,
+      "ancestorFunctionCount": 2,
+      "inlineFunctionFactory": false,
+      "opaqueFactoryMemberLookup": false
+    }
+  ],
+  "inlineFactoryRows": 4,
+  "opaqueLookupRows": 0,
+  "rawCodePersisted": false,
+  "envOrLiteralValuesPersisted": false,
+  "scope": "All compiled chunks. Unloaded routes may also appear; actual browser owner paths are separate evidence."
+}

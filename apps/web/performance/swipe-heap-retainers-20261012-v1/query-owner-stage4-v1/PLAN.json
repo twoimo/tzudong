@@ -1,0 +1,11 @@
+{
+  "sourceBefore": "3e64c3cac87541291e7d19fe5d8c04673559a229",
+  "sourceAfter": "81d5aca4951e7cef5d67c1e910f31b3436597466",
+  "isolatedChange": "Opaque immutable factory registry prevents production minifier from recreating render-local IIFEs. No mutable cache or query policy change.",
+  "beforeEvidence": "../query-owner-stage3-v1/ui-query-owner-stage3-after-v1/raw.json",
+  "afterPlan": "128first+same128revisit;one fresh process;same production16.3.8/CPU4/cacheoff/remoteSDK/syntheticREST735/Auth401",
+  "diagnosticOnly": true,
+  "primaryMemoryGuardUnchanged": 20,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0
+}

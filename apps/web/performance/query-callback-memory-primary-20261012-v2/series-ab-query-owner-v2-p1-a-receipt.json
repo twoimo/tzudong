@@ -1,0 +1,10 @@
+{
+  "phase": "AB",
+  "kind": "baseline",
+  "label": "ab-query-owner-v2-p1-a",
+  "pair": 1,
+  "variant": "A",
+  "exit": 0,
+  "matched": true,
+  "endedAtUtc": "2026-10-12T05:42:05.148Z"
+}

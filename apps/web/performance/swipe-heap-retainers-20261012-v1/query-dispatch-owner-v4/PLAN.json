@@ -1,0 +1,13 @@
+{
+  "purpose": "Correct v3 context class-name assumption using actual closure internal context edge role",
+  "inputSources": [
+    "056a86600f412eb42df4304e3206841679012f3e",
+    "071814f39a9e8da25e0c7acc7b480258f726e600"
+  ],
+  "runs": "one process each;16 searches+16 revisits",
+  "v3InvalidForZeroOwnershipInference": true,
+  "noRawStringsOrIds": true,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "notPrimaryGuard": true
+}

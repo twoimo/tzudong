@@ -1,0 +1,3 @@
+{"kind":"before","pass":0,"completedQueries":16}
+{"kind":"before","pass":1,"completedQueries":16}
+{"kind":"before","label":"option-before-v2","passed":true,"cycles":32,"sdk":{"loaded":true,"remoteScript":true,"stub":false,"captured":true,"reportedVersion":null},"errors":{"page":0,"console":2,"consoleCategories":{"http401":0,"blockedClient":0,"provider":0,"other":1,"csp":1},"cspDirectives":{"connect-src":1},"cspResourceGroups":{"naver-family":1}}}

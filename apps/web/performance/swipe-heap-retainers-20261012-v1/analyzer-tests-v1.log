@@ -1,0 +1,12 @@
+✔ records fixed cache/query shapes and conditional ownership without raw values or ids (1.566541ms)
+✔ weak-only value is not reported as a root ownership path (0.95975ms)
+✔ schema and corrupt edge references fail closed (0.419292ms)
+✔ snapshot cap failure still removes listener and disables profiler (35.747042ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 127.378

@@ -1,0 +1,42 @@
+{
+  "base": "056a86600f412eb42df4304e3206841679012f3e",
+  "head": "81d5aca4951e7cef5d67c1e910f31b3436597466",
+  "files": {
+    "apps/web/components/restaurant/RestaurantDetailPanel.tsx": {
+      "sha256": "8c38c57ebe8911cce2acd1e2b6656d4ddb3c943d3b13653bb65aba8ac8536607",
+      "bytes": 70551
+    },
+    "apps/web/components/search/RestaurantSearch.tsx": {
+      "sha256": "a67577209eaaea4fa66b6ec80271bc04161b31ba83370ba151093f0ee7678131",
+      "bytes": 23229
+    },
+    "apps/web/lib/restaurant-detail-query-functions.ts": {
+      "sha256": "d8821ac4f12d244e1409c5ceef550bac853e93df693a4488bcac046f339c3211",
+      "bytes": 12996
+    },
+    "apps/web/lib/restaurant-search-query-functions.ts": {
+      "sha256": "71f2cec187a293ed3474fdf803394abdea4e63448720318980820322f3c94e57",
+      "bytes": 4687
+    },
+    "apps/web/tests-unit/public-profile-read.test.ts": {
+      "sha256": "3ba8fe92c853ba48f6f9878ece6ffc8b596a9bd6db0a05789f65c2eba0640d75",
+      "bytes": 20876
+    },
+    "apps/web/tests-unit/restaurant-detail-query-functions.test.ts": {
+      "sha256": "bcab83961cfa51dc928e992499f9369bc2238c27a270ba2360399e345a0e9de7",
+      "bytes": 5736
+    },
+    "apps/web/tests-unit/restaurant-search-global-scope-source.test.ts": {
+      "sha256": "07d39a82de3a06d711de71f633cead475ee8c4e943940060d8fde692abb54b24",
+      "bytes": 1435
+    },
+    "apps/web/tests-unit/restaurant-search-query-functions.test.ts": {
+      "sha256": "71b24d0c92534669637b9a4dab116ee07883192d3dccfc60914a444bc89b98c2",
+      "bytes": 4420
+    },
+    "apps/web/tests-unit/web-quality-performance-source.test.ts": {
+      "sha256": "7b4e798779686f0734c8d37c8dd8e8e8bec55b3a0192b5e5a6e2a262c64bda23",
+      "bytes": 229334
+    }
+  }
+}

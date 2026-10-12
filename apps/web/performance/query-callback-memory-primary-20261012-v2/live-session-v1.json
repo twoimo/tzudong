@@ -1,0 +1,11 @@
+{
+  "unifiedExecSessionId": 96539,
+  "observedAtUtc": "2026-10-12T05:33:01.855571+00:00",
+  "confirmedLiveNodePids": [
+    73333
+  ],
+  "script": "run-browser-series-v7.mjs",
+  "doNotRestartOnPollTimeout": true,
+  "fieldAdmission": 0,
+  "performanceAdmission": 0
+}

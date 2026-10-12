@@ -1,0 +1,9 @@
+{
+  "sourceBefore": "056a86600f412eb42df4304e3206841679012f3e",
+  "originalComponentSha256": "fe6375ed1165f80de054748d262d7111ec8efb88a38f795ea4aed62f28fa0a7a",
+  "updatedComponentSha256": "856b9e630e3e9e17a6c5f1a9e2adfe30d5f97bb40e750dc484356388af937d65",
+  "newModuleSha256": "76d1ec6972cbfdeff5c0ca5a5235074b2abbe165ebf49aa863c5443953fbcaee",
+  "siblingBodySha256Before": "bc8926094f00f97da290e9137d08da21ee8f9fe6ccfa2b3d67d6b5614ecb664d",
+  "reviewBodySha256Before": "8923ba369ee473ca111857a1a0166120f84109bdf853b56601d608c7bf7fa05b",
+  "changes": "Scope extraction; dedent, imported client name and Review type name only. User argument is owner id copy; keys and cache times unchanged."
+}

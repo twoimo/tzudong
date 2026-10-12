@@ -1,0 +1,15 @@
+diff --git a/apps/web/tsconfig.json b/apps/web/tsconfig.json
+index e57928e6..c4336be7 100644
+--- a/apps/web/tsconfig.json
++++ b/apps/web/tsconfig.json
+@@ -50,7 +50,9 @@
+     ".next-local-3000/types/**/*.ts",
+     ".next-local-3000/dev/types/**/*.ts",
+     ".next-local-18080/types/**/*.ts",
+-    ".next-local-18080/dev/types/**/*.ts"
++    ".next-local-18080/dev/types/**/*.ts",
++    ".next-query-owner-stage4-after-v1/types/**/*.ts",
++    ".next-query-owner-stage4-after-v1/dev/types/**/*.ts"
+   ],
+   "exclude": [
+     "node_modules",
