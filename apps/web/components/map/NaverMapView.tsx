@@ -210,6 +210,8 @@ import {
 import {
     buildNaverResizeObserverCleanup,
     buildNaverResizeObserverHandler,
+    shouldResizeNaverObservedMap,
+    type NaverObservedMapSize,
 } from "@/lib/naver-map-resize-observer-helpers";
 import { focusNaverMapOnRestaurant } from "@/lib/naver-map-focus-helpers";
 import {
@@ -1820,16 +1822,22 @@ const NaverMapView = memo(({
         });
     }, [isSidebarOpen, externalPanelOpen, isPanelCollapsed, isGridMode, effectivePanelOffset]);
 
+    const lastObservedMapSizeRef = useRef<NaverObservedMapSize | null>(null);
     // [개선] ResizeObserver를 사용하여 컨테이너 크기 변경 감지 및 부드러운 중심 유지
     useEffect(() => {
-        if (!mapRef.current || !mapInstanceRef.current || !isMapInitialized) return;
+        if (!mapRef.current || !mapInstanceRef.current || !isMapInitialized) {
+            lastObservedMapSizeRef.current = null;
+            return;
+        }
 
         const map = mapInstanceRef.current;
+        const target = mapRef.current;
         const { naver } = window;
+        let needsSdkResize = true;
 
         const handleResize = () => {
             // 1. 지도 리사이즈 트리거
-            naver.maps.Event.trigger(map, 'resize');
+            if (needsSdkResize) naver.maps.Event.trigger(map, 'resize');
 
             const { urlLat, urlLng, urlZoom } = parseNaverMapUrlState(window.location.search);
             if (
@@ -1897,12 +1905,25 @@ const NaverMapView = memo(({
         const { cancel, observerCallback } = buildNaverResizeObserverHandler({
             runAfterTransition: handleResize,
             triggerResize: () => {
-                naver.maps.Event.trigger(map, 'resize');
+                if (needsSdkResize) naver.maps.Event.trigger(map, 'resize');
             },
         });
-        const resizeObserver = new ResizeObserver(observerCallback);
+        const resizeObserver = new ResizeObserver((entries) => {
+            const observed = entries.find((entry) => entry.target === target);
+            if (observed) {
+                const size = { map, target, width: observed.contentRect.width, height: observed.contentRect.height };
+                needsSdkResize = shouldResizeNaverObservedMap(lastObservedMapSizeRef.current, size);
+                lastObservedMapSizeRef.current = size;
+            } else {
+                needsSdkResize = true;
+                lastObservedMapSizeRef.current = null;
+            }
+            // Selection/occlusion still gets the same post-transition centering.
+            // Only the SDK's repeated measurement of an unchanged size is skipped.
+            observerCallback();
+        });
 
-        resizeObserver.observe(mapRef.current);
+        resizeObserver.observe(target);
 
         return buildNaverResizeObserverCleanup({
             cancel,
