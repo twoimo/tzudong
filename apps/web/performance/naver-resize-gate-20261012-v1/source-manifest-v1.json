@@ -1,0 +1,9 @@
+{
+  "sourceCommit": "87b78e839206a56a255a1d408a410bf4b1829cc4",
+  "tree": "ff220465f850ed8d0b9289b93d3dde1db8841a4b",
+  "files": {
+    "apps/web/components/map/NaverMapView.tsx": "19cd2137a679827df11ba42ecc893a65e83e051644994f195cfb80402311acdf",
+    "apps/web/lib/naver-map-resize-observer-helpers.ts": "68e3ee94d33a297a9a912d02d1d55627acc4f1733896f537824edf5029adefe2",
+    "apps/web/tests-unit/naver-map-resize-observer-helpers.test.ts": "107029250237713bb3f8b56facea6d53e2e9d59de551e451ba20b221a2a31a85"
+  }
+}

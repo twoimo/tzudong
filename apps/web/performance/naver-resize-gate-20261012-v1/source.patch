@@ -1,0 +1,154 @@
+diff --git a/apps/web/components/map/NaverMapView.tsx b/apps/web/components/map/NaverMapView.tsx
+index c1dc8034..96f4c0c1 100644
+--- a/apps/web/components/map/NaverMapView.tsx
++++ b/apps/web/components/map/NaverMapView.tsx
+@@ -210,6 +210,8 @@ import {
+ import {
+     buildNaverResizeObserverCleanup,
+     buildNaverResizeObserverHandler,
++    shouldResizeNaverObservedMap,
++    type NaverObservedMapSize,
+ } from "@/lib/naver-map-resize-observer-helpers";
+ import { focusNaverMapOnRestaurant } from "@/lib/naver-map-focus-helpers";
+ import {
+@@ -1820,16 +1822,22 @@ const NaverMapView = memo(({
+         });
+     }, [isSidebarOpen, externalPanelOpen, isPanelCollapsed, isGridMode, effectivePanelOffset]);
+ 
++    const lastObservedMapSizeRef = useRef<NaverObservedMapSize | null>(null);
+     // [개선] ResizeObserver를 사용하여 컨테이너 크기 변경 감지 및 부드러운 중심 유지
+     useEffect(() => {
+-        if (!mapRef.current || !mapInstanceRef.current || !isMapInitialized) return;
++        if (!mapRef.current || !mapInstanceRef.current || !isMapInitialized) {
++            lastObservedMapSizeRef.current = null;
++            return;
++        }
+ 
+         const map = mapInstanceRef.current;
++        const target = mapRef.current;
+         const { naver } = window;
++        let needsSdkResize = true;
+ 
+         const handleResize = () => {
+             // 1. 지도 리사이즈 트리거
+-            naver.maps.Event.trigger(map, 'resize');
++            if (needsSdkResize) naver.maps.Event.trigger(map, 'resize');
+ 
+             const { urlLat, urlLng, urlZoom } = parseNaverMapUrlState(window.location.search);
+             if (
+@@ -1897,12 +1905,25 @@ const NaverMapView = memo(({
+         const { cancel, observerCallback } = buildNaverResizeObserverHandler({
+             runAfterTransition: handleResize,
+             triggerResize: () => {
+-                naver.maps.Event.trigger(map, 'resize');
++                if (needsSdkResize) naver.maps.Event.trigger(map, 'resize');
+             },
+         });
+-        const resizeObserver = new ResizeObserver(observerCallback);
++        const resizeObserver = new ResizeObserver((entries) => {
++            const observed = entries.find((entry) => entry.target === target);
++            if (observed) {
++                const size = { map, target, width: observed.contentRect.width, height: observed.contentRect.height };
++                needsSdkResize = shouldResizeNaverObservedMap(lastObservedMapSizeRef.current, size);
++                lastObservedMapSizeRef.current = size;
++            } else {
++                needsSdkResize = true;
++                lastObservedMapSizeRef.current = null;
++            }
++            // Selection/occlusion still gets the same post-transition centering.
++            // Only the SDK's repeated measurement of an unchanged size is skipped.
++            observerCallback();
++        });
+ 
+-        resizeObserver.observe(mapRef.current);
++        resizeObserver.observe(target);
+ 
+         return buildNaverResizeObserverCleanup({
+             cancel,
+diff --git a/apps/web/lib/naver-map-resize-observer-helpers.ts b/apps/web/lib/naver-map-resize-observer-helpers.ts
+index c0db2460..31b41aca 100644
+--- a/apps/web/lib/naver-map-resize-observer-helpers.ts
++++ b/apps/web/lib/naver-map-resize-observer-helpers.ts
+@@ -1,3 +1,24 @@
++export interface NaverObservedMapSize {
++    map: unknown;
++    target: Element;
++    width: number;
++    height: number;
++}
++
++/** New observer subscriptions report an initial size even if it is unchanged. */
++export function shouldResizeNaverObservedMap(
++    previous: NaverObservedMapSize | null,
++    current: NaverObservedMapSize,
++): boolean {
++    return !previous
++        || !Number.isFinite(current.width)
++        || !Number.isFinite(current.height)
++        || previous.map !== current.map
++        || previous.target !== current.target
++        || previous.width !== current.width
++        || previous.height !== current.height;
++}
++
+ export function buildNaverResizeObserverHandler<TMap>({
+     clearTimeoutFn = clearTimeout,
+     delayMs = 320,
+diff --git a/apps/web/tests-unit/naver-map-resize-observer-helpers.test.ts b/apps/web/tests-unit/naver-map-resize-observer-helpers.test.ts
+index e9609e11..274c2bc3 100644
+--- a/apps/web/tests-unit/naver-map-resize-observer-helpers.test.ts
++++ b/apps/web/tests-unit/naver-map-resize-observer-helpers.test.ts
+@@ -3,8 +3,53 @@ import { describe, expect, test } from 'bun:test';
+ import {
+     buildNaverResizeObserverCleanup,
+     buildNaverResizeObserverHandler,
++    shouldResizeNaverObservedMap,
+ } from '../lib/naver-map-resize-observer-helpers';
+ 
++describe('naver observed map size', () => {
++    const size = () => ({ map: {}, target: {} as Element, width: 390, height: 784 });
++
++    test('skips only repeated size reports of the same map and element', () => {
++        const current = size();
++        expect(shouldResizeNaverObservedMap(null, current)).toBe(true);
++        expect(shouldResizeNaverObservedMap(current, { ...current })).toBe(false);
++        expect(shouldResizeNaverObservedMap(current, { ...current, map: {} })).toBe(true);
++        expect(shouldResizeNaverObservedMap(current, { ...current, target: {} as Element })).toBe(true);
++    });
++
++    test('preserves actual resizing, subpixel changes and hide/reveal dimensions', () => {
++        const current = size();
++        for (const next of [{ width: 844 }, { height: 390 }, { width: 390.25 }, { width: 0, height: 0 }]) {
++            expect(shouldResizeNaverObservedMap(current, { ...current, ...next })).toBe(true);
++        }
++        expect(shouldResizeNaverObservedMap({ ...current, width: 0, height: 0 }, current)).toBe(true);
++    });
++
++    test('keeps unknown measurements on the existing resize path', () => {
++        const current = size();
++        expect(shouldResizeNaverObservedMap(current, { ...current, width: NaN })).toBe(true);
++        expect(shouldResizeNaverObservedMap(current, { ...current, height: Infinity })).toBe(true);
++    });
++
++    test('unchanged size still runs post-transition centering without SDK resize', () => {
++        const current = size();
++        const callbacks: Array<() => void> = [];
++        const calls: string[] = [];
++        const helper = buildNaverResizeObserverHandler({
++            runAfterTransition: () => calls.push('center'),
++            clearTimeoutFn: () => {},
++            requestAnimationFrameFn: (callback) => { callback(0); return 1; },
++            setTimeoutFn: ((callback: () => void) => { callbacks.push(callback); return 1; }) as typeof setTimeout,
++            triggerResize: () => { if (shouldResizeNaverObservedMap(current, { ...current })) calls.push('SDK resize'); },
++        });
++        helper.observerCallback();
++        expect(calls).toEqual([]);
++        callbacks[0]();
++        expect(calls).toEqual(['center']);
++        helper.cancel();
++    });
++});
++
+ describe('naver map resize observer helpers', () => {
+     test('triggers immediate resize and debounced post-transition work', () => {
+         const queue: Array<() => void> = [];

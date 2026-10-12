@@ -1,0 +1,12 @@
+{
+  "sourceCommit": "723e6cc572470eccfb5bf86ba9e62b2376df3a0f",
+  "base": "056a86600f412eb42df4304e3206841679012f3e",
+  "standaloneInlinePredecessor": "0b5cb0a20fefda86e3eb1712dc39c5af89c4c514",
+  "predecessorImprovementUnproven": true,
+  "scope": "5 source/test files, no query-callback candidate81d5 integration",
+  "relatedPass": 48,
+  "relatedFail": 0,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "deployed": false
+}

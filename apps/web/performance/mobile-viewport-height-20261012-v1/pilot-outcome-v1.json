@@ -1,0 +1,23 @@
+{
+  "processes": 2,
+  "dependentActionsPerProcess": 16,
+  "confidenceInterval": null,
+  "values": {
+    "before": {
+      "inputMedianMs": 178.599999666214,
+      "endHeapMB": 24.91584,
+      "idleHeapMB": 25.484044,
+      "longTaskTotalMs": 3107
+    },
+    "after": {
+      "inputMedianMs": 190.10000014305115,
+      "endHeapMB": 25.922312,
+      "idleHeapMB": 27.148508,
+      "longTaskTotalMs": 1547
+    }
+  },
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "improvementProven": false,
+  "candidateAccepted": false
+}

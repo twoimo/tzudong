@@ -1,0 +1,22 @@
+{
+  "values": {
+    "before": {
+      "inputMedianMs": 211.14999985694885,
+      "endHeapMB": 30.281564,
+      "idleHeapMB": 31.507256,
+      "longTaskMs": 1808
+    },
+    "after": {
+      "inputMedianMs": 193.69999980926514,
+      "endHeapMB": 30.511052,
+      "idleHeapMB": 31.427464,
+      "longTaskMs": 1727
+    }
+  },
+  "independentProcessesEach": 1,
+  "dependentActionsPerProcess": 16,
+  "confidenceInterval": null,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "candidateAccepted": false
+}

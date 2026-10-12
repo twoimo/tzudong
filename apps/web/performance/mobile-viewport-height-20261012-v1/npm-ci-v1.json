@@ -1,0 +1,10 @@
+{
+  "sourceCommit": "723e6cc572470eccfb5bf86ba9e62b2376df3a0f",
+  "node": "24.21.0",
+  "npm": "11.6.2",
+  "exit": 0,
+  "lockSha256": "607175eda02d7746caf5593d34835cef317bf197ca6d5428fa1266cdb2aae5f4",
+  "lockUnchanged": true,
+  "sharedSymlinkPreserved": true,
+  "ignoreScripts": false
+}

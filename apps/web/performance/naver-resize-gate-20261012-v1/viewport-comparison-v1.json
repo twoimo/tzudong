@@ -1,0 +1,97 @@
+{
+  "rows": [
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "zoomMatches": true,
+      "centerDelta": {
+        "lat": 0.0,
+        "lng": 0.0
+      },
+      "selectedPointDeltaPx": {
+        "x": 0,
+        "y": 0.0
+      }
+    },
+    {
+      "viewport": [
+        390,
+        540
+      ],
+      "zoomMatches": true,
+      "centerDelta": {
+        "lat": 0.0,
+        "lng": 0.0
+      },
+      "selectedPointDeltaPx": {
+        "x": 0,
+        "y": 0.0
+      }
+    },
+    {
+      "viewport": [
+        844,
+        390
+      ],
+      "zoomMatches": true,
+      "centerDelta": {
+        "lat": 0.0,
+        "lng": 0.0
+      },
+      "selectedPointDeltaPx": {
+        "x": 0,
+        "y": 0.0
+      }
+    },
+    {
+      "viewport": [
+        768,
+        1024
+      ],
+      "zoomMatches": true,
+      "centerDelta": {
+        "lat": 0.0,
+        "lng": 0.0
+      },
+      "selectedPointDeltaPx": {
+        "x": 0,
+        "y": 0.0
+      }
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "zoomMatches": true,
+      "centerDelta": {
+        "lat": 0.0,
+        "lng": 0.0
+      },
+      "selectedPointDeltaPx": {
+        "x": 0,
+        "y": 0.0
+      }
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "zoomMatches": true,
+      "centerDelta": {
+        "lat": 0.0,
+        "lng": 0.0
+      },
+      "selectedPointDeltaPx": {
+        "x": 0,
+        "y": 0.0
+      }
+    }
+  ],
+  "beforePass": true,
+  "afterPass": true,
+  "scope": "6 emulated viewport states, same synthetic selected restaurant; physical keyboard/addressbar unverified"
+}

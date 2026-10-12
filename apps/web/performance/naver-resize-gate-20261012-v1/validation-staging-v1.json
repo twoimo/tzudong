@@ -1,0 +1,17 @@
+{
+  "source": "87b78e839206a56a255a1d408a410bf4b1829cc4",
+  "base": "056a86600f412eb42df4304e3206841679012f3e",
+  "relatedUnitPass": 47,
+  "fail": 0,
+  "lintExit": 0,
+  "nativeCompatDiagnostics": 0,
+  "expectCalls": 2388,
+  "sourceFiles": 3,
+  "queryCallback81d5Included": false,
+  "geometryCache723eIncluded": false,
+  "unchangedTransitionDelayMs": 320,
+  "preservesPostTransitionCentering": true,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "deployed": false
+}

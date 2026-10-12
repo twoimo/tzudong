@@ -1,0 +1,10 @@
+{
+  "sourceCommit": "056a86600f412eb42df4304e3206841679012f3e",
+  "node": "24.21.0",
+  "npm": "11.6.2",
+  "exit": 0,
+  "lockSha256": "607175eda02d7746caf5593d34835cef317bf197ca6d5428fa1266cdb2aae5f4",
+  "lockUnchanged": true,
+  "newOwnedTree": true,
+  "ignoreScripts": false
+}

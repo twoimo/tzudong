@@ -1,0 +1,15 @@
+{
+  "mode": "lint",
+  "sourceCommit": "723e6cc572470eccfb5bf86ba9e62b2376df3a0f",
+  "startedAtUtc": "2026-10-12T11:11:27.954Z",
+  "endedAtUtc": "2026-10-12T11:11:30.816Z",
+  "node": "24.21.0",
+  "exit": 0,
+  "counts": {
+    "pass": 0,
+    "skip": 0,
+    "fail": 0
+  },
+  "logRedacted": true,
+  "perChunkOutputLimit": 32768
+}

@@ -1,0 +1,219 @@
+{
+  "kind": "baseline",
+  "sourceCommit": "056a86600f412eb42df4304e3206841679012f3e",
+  "buildId": "SPJSYk9nn-3AUO9mWgggY",
+  "cases": [
+    {
+      "width": 390,
+      "height": 844,
+      "state": {
+        "mapCreates": 1,
+        "zoom": 15,
+        "center": {
+          "lat": 37.4960203,
+          "lng": 126.96
+        },
+        "sdkSize": {
+          "width": 390,
+          "height": 844
+        },
+        "domSize": {
+          "width": 390,
+          "height": 844
+        },
+        "selectedMarkerPresent": true,
+        "selectedPoint": {
+          "x": 195,
+          "y": -52057.999476234894
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "overflow": 0
+      }
+    },
+    {
+      "width": 390,
+      "height": 540,
+      "state": {
+        "mapCreates": 1,
+        "zoom": 15,
+        "center": {
+          "lat": 37.498608,
+          "lng": 126.96
+        },
+        "sdkSize": {
+          "width": 390,
+          "height": 540
+        },
+        "domSize": {
+          "width": 390,
+          "height": 540
+        },
+        "selectedMarkerPresent": true,
+        "selectedPoint": {
+          "x": 195,
+          "y": -52209.999476234894
+        },
+        "viewport": {
+          "width": 390,
+          "height": 540
+        },
+        "overflow": 0
+      }
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "state": {
+        "mapCreates": 1,
+        "zoom": 15,
+        "center": {
+          "lat": 37.4998848,
+          "lng": 126.96
+        },
+        "sdkSize": {
+          "width": 844,
+          "height": 390
+        },
+        "domSize": {
+          "width": 844,
+          "height": 390
+        },
+        "selectedMarkerPresent": true,
+        "selectedPoint": {
+          "x": 422,
+          "y": -52284.999476234894
+        },
+        "viewport": {
+          "width": 844,
+          "height": 390
+        },
+        "overflow": 0
+      }
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "state": {
+        "mapCreates": 1,
+        "zoom": 15,
+        "center": {
+          "lat": 37.4944881,
+          "lng": 126.96
+        },
+        "sdkSize": {
+          "width": 768,
+          "height": 1024
+        },
+        "domSize": {
+          "width": 768,
+          "height": 1024
+        },
+        "selectedMarkerPresent": true,
+        "selectedPoint": {
+          "x": 384,
+          "y": -51967.999476234894
+        },
+        "viewport": {
+          "width": 768,
+          "height": 1024
+        },
+        "overflow": 0
+      }
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "state": {
+        "mapCreates": 1,
+        "zoom": 15,
+        "center": {
+          "lat": 37.503,
+          "lng": 126.96
+        },
+        "sdkSize": {
+          "width": 1048,
+          "height": 900
+        },
+        "domSize": {
+          "width": 1048,
+          "height": 900
+        },
+        "selectedMarkerPresent": true,
+        "selectedPoint": {
+          "x": 524,
+          "y": -52029.999476234894
+        },
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "overflow": 0
+      }
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "state": {
+        "mapCreates": 1,
+        "zoom": 15,
+        "center": {
+          "lat": 37.4960203,
+          "lng": 126.96
+        },
+        "sdkSize": {
+          "width": 390,
+          "height": 844
+        },
+        "domSize": {
+          "width": 390,
+          "height": 844
+        },
+        "selectedMarkerPresent": true,
+        "selectedPoint": {
+          "x": 195,
+          "y": -52057.999476234894
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "overflow": 0
+      }
+    }
+  ],
+  "physicalDevice": false,
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "existingPostTransitionWaitMs": 350,
+  "keyboardAndAddressBarPhysical": false,
+  "passed": true,
+  "errors": {
+    "page": 0,
+    "console": 2,
+    "consoleCategories": {
+      "http401": 0,
+      "blockedClient": 0,
+      "provider": 0,
+      "other": 1,
+      "csp": 1
+    },
+    "cspDirectives": {
+      "connect-src": 1
+    },
+    "cspResourceGroups": {
+      "naver-family": 1
+    }
+  },
+  "requests": {
+    "restaurant": 17,
+    "otherFixture": 5,
+    "failedAppAsset": 0,
+    "failedRemoteProvider": 1,
+    "remoteFailureKinds": {
+      "other-network-failure": 1
+    }
+  }
+}

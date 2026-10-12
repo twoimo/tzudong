@@ -1,0 +1,14 @@
+{
+  "createdAtUtc": "2026-10-12T11:29:00.245836+00:00",
+  "sourceBefore": "056a86600f412eb42df4304e3206841679012f3e",
+  "sourceAfter": "723e6cc572470eccfb5bf86ba9e62b2376df3a0f",
+  "sdkScriptSha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1",
+  "fixtureSha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5",
+  "scope": "Two process diagnostic pilot;8first+8revisit each; not primary128 comparison, no confidence/admission claim",
+  "guardUnchanged": {
+    "heapRegressionPercent": 20,
+    "inputLatencyRegressionPercent": 15
+  },
+  "performanceAdmission": 0,
+  "fieldAdmission": 0
+}
