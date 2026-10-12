@@ -1,0 +1,13 @@
+# 재현
+
+Before056a86600f412eb42df4304e3206841679012f3e와After87b78e839206a56a255a1d408a410bf4b1829cc4를별도체크아웃하고Node24.21.0/npm11.6.2/Next16.3.8/Chrome154.0.8037.98/Playwright1.63.0을유지한다. 각소스의독립npm ci와canonicalWebpack build·실제CSSgate를수행하고BUILD_ID/lock/helper/source해시를새build receipt에기록한다. 기존영수증을새빌드의영수증으로재사용하지않는다. 공개설정값/키/서버설정은증거에복사하지않는다.
+
+새evidence root에서현재driver·fixture·plan의동일256동작을사용한다. localhost3000이점유됐으면타작업을종료하지않는다. 원격NaverSDK/타일은변경하지않고CSP도유지한다. CPU4/cacheoff/SWbypass/390×844/dpr1이고REST735/Auth401은합성이다. fixtureSHA346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5와SDKsha802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1이달라지면다른조건의계획부터만들고기존표본에섞지않는다.
+
+AA4+AB9쌍의사전고정교차순서로run-browser-series-v7.mjs를pinnedNode에서실행한다. 자체build/test/profiler/forcedGC를primary창에사용하지않는다. rawSource/SDK/동등성실패시중단하며timeout만으로재시작하지않는다. 기존출력은덮어쓰지않는다. 20%heap/15%input guard와포함제외규칙을유지한다.
+
+통계는원본전체를새임시폴더에복사하되summary출력을그복사본에서만제외하고Python3.12.14로aggregate-browser-v7.py를실행한다. optimized모드도byte-identical이며정확한SHA는bcaffb2cf5a48cffb7067e37d7a0e07a1e6d6b6529f1adf352a891f2be89aa2d다.9쌍을쌍단위로bootstrap(seed20261009/20000)하고256동작을독립사용자로풀링하지않는다. p95는실행내기술값이다. 클릭관찰시간은typing→검색완료전체시간/fieldINP가아니다.
+
+canonical-zero-v1/basis.json에실제scorer/validator인수가있다. 새복사본에서기존scored/sidecar/validate map을제외하고actualartifactroot와맵해시를바인딩한다. heapmetric은현재budget에없으며items0/admitted0/releaseBlockedtrue다. guard실패와오류관측은형식pass로면제되지않는다.
+
+원자료·실패·pilot·diagnostic은변경하지않고이tree를frozen으로보존한다. 별도pin은docs/evidence/resize-gate-memory-primary-20261012-v1.md에있다.독립verifier는backend/bin/verify_resize_gate_memory_primary_20261012.py이며다른위치의동일tree는--root로검사한다.새진단은별도root를사용한다.

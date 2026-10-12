@@ -1,0 +1,12 @@
+{
+  "checkedAtUtc": "2026-10-12T12:23:55.267398+00:00",
+  "unifiedExecSessionId": 93017,
+  "sourceBefore": "056a86600f412eb42df4304e3206841679012f3e",
+  "sourceAfter": "87b78e839206a56a255a1d408a410bf4b1829cc4",
+  "plan": "browser-confirm-plan-v7.json",
+  "plannedProcesses": 22,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "physicalDevice": false,
+  "guidance": "Poll same93017 handle. Timeout not terminal. Do not restart; inspect exact process/final receipt. No ownbuild/tests/profilers or candidate source changes duringtimed window."
+}

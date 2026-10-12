@@ -1,0 +1,229 @@
+{
+  "startedAtUtc": "2026-10-12T12:22:50.241Z",
+  "phases": [
+    {
+      "phase": "AA",
+      "kind": "baseline",
+      "label": "aa-resize-gate-v1-p0-a",
+      "pair": 0,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:24:28.269Z"
+    },
+    {
+      "phase": "AA",
+      "kind": "baseline",
+      "label": "aa-resize-gate-v1-p0-b",
+      "pair": 0,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:26:04.792Z"
+    },
+    {
+      "phase": "AA",
+      "kind": "baseline",
+      "label": "aa-resize-gate-v1-p1-a",
+      "pair": 1,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:27:38.899Z"
+    },
+    {
+      "phase": "AA",
+      "kind": "baseline",
+      "label": "aa-resize-gate-v1-p1-b",
+      "pair": 1,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:29:07.553Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-resize-gate-v1-p0-b",
+      "pair": 0,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:30:32.103Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-resize-gate-v1-p0-a",
+      "pair": 0,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:31:58.641Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-resize-gate-v1-p1-a",
+      "pair": 1,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:33:35.628Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-resize-gate-v1-p1-b",
+      "pair": 1,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:35:07.024Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-resize-gate-v1-p2-b",
+      "pair": 2,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:36:33.711Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-resize-gate-v1-p2-a",
+      "pair": 2,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:37:59.935Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-resize-gate-v1-p3-a",
+      "pair": 3,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:39:26.509Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-resize-gate-v1-p3-b",
+      "pair": 3,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:40:52.816Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-resize-gate-v1-p4-b",
+      "pair": 4,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:42:22.285Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-resize-gate-v1-p4-a",
+      "pair": 4,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:43:46.978Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-resize-gate-v1-p5-b",
+      "pair": 5,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:45:15.168Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-resize-gate-v1-p5-a",
+      "pair": 5,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:46:38.127Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-resize-gate-v1-p6-a",
+      "pair": 6,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:48:05.596Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-resize-gate-v1-p6-b",
+      "pair": 6,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:49:37.792Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-resize-gate-v1-p7-b",
+      "pair": 7,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:51:05.411Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-resize-gate-v1-p7-a",
+      "pair": 7,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:52:31.094Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "candidate",
+      "label": "ab-resize-gate-v1-p8-b",
+      "pair": 8,
+      "variant": "B",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:54:00.418Z"
+    },
+    {
+      "phase": "AB",
+      "kind": "baseline",
+      "label": "ab-resize-gate-v1-p8-a",
+      "pair": 8,
+      "variant": "A",
+      "exit": 0,
+      "matched": true,
+      "endedAtUtc": "2026-10-12T12:55:24.331Z"
+    }
+  ],
+  "plan": "browser-confirm-plan-v7.json",
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "endedAtUtc": "2026-10-12T12:55:24.331Z"
+}

@@ -1,0 +1,1656 @@
+{
+  "sourceBefore": "056a86600f412eb42df4304e3206841679012f3e",
+  "sourceAfter": "87b78e839206a56a255a1d408a410bf4b1829cc4",
+  "independentAAProcesses": 4,
+  "independentABPairs": 9,
+  "dependentActionsPerProcess": 256,
+  "matchedProcesses": 22,
+  "confidenceMethod": "paired-process bootstrap median difference and median relative change, 20000 replicates, fixed seed20261009",
+  "AANoiseScope": "two paired differences only; weak noise estimate, cannot waive guard",
+  "p95Scope": "empirical256-action within-session p95, compared as a per-process descriptive summary; no user/population p95 inference",
+  "metrics": [
+    {
+      "metric": "initial_heap_MB",
+      "beforeMedian": 12.509356,
+      "afterMedian": 12.564668,
+      "absoluteReduction": -0.05531199999999892,
+      "relativeReductionPercent": -0.44216504830463627,
+      "pairedMedianReduction": -0.06552399999999992,
+      "paired95CiReduction": [
+        -0.18239999999999945,
+        -0.017447999999999908
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -1.4730742380959567,
+        -0.13906210548061473
+      ],
+      "beforeRange": [
+        11.829596,
+        12.567412
+      ],
+      "afterRange": [
+        12.349276,
+        12.594264
+      ],
+      "beforeMAD": 0.01827600000000018,
+      "afterMAD": 0.022208000000000894,
+      "AApairedDifferences": [
+        -0.49934799999999946,
+        0.1687920000000016
+      ],
+      "limitedAAabsoluteNoiseMax": 0.49934799999999946,
+      "fixedRegressionGuardPercent": 20,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "end_heap_MB",
+      "beforeMedian": 36.724928,
+      "afterMedian": 32.9781,
+      "absoluteReduction": 3.7468280000000007,
+      "relativeReductionPercent": 10.202410744004728,
+      "pairedMedianReduction": 7.353739999999998,
+      "paired95CiReduction": [
+        -0.15843199999999769,
+        18.382616
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -0.4627581239415456,
+        35.79119886101276
+      ],
+      "beforeRange": [
+        23.7296,
+        51.408776
+      ],
+      "afterRange": [
+        23.823664,
+        34.394892
+      ],
+      "beforeMAD": 5.547523999999999,
+      "afterMAD": 1.416792000000001,
+      "AApairedDifferences": [
+        -10.882100000000001,
+        1.1701320000000024
+      ],
+      "limitedAAabsoluteNoiseMax": 10.882100000000001,
+      "fixedRegressionGuardPercent": 20,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 1,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "idle_heap_MB",
+      "beforeMedian": 30.861592,
+      "afterMedian": 33.853112,
+      "absoluteReduction": -2.9915200000000013,
+      "relativeReductionPercent": -9.693343104270191,
+      "pairedMedianReduction": 0.1690719999999999,
+      "paired95CiReduction": [
+        -5.477024,
+        7.701183999999998
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -22.009211600302574,
+        17.952416904977493
+      ],
+      "beforeRange": [
+        23.664048,
+        42.897756
+      ],
+      "afterRange": [
+        24.685932,
+        35.25508
+      ],
+      "beforeMAD": 5.976448000000001,
+      "afterMAD": 1.4019679999999966,
+      "AApairedDifferences": [
+        -10.896636,
+        1.1262879999999953
+      ],
+      "limitedAAabsoluteNoiseMax": 10.896636,
+      "fixedRegressionGuardPercent": 20,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": false,
+      "pairsAboveGuard": 2,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "sampled_peak_heap_MB",
+      "beforeMedian": 49.278776,
+      "afterMedian": 49.978712,
+      "absoluteReduction": -0.699936000000001,
+      "relativeReductionPercent": -1.4203599537456064,
+      "pairedMedianReduction": -0.6909959999999984,
+      "paired95CiReduction": [
+        -2.1637800000000027,
+        1.7445400000000006
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -4.521912523777987,
+        3.540144747101674
+      ],
+      "beforeRange": [
+        47.850992,
+        55.683884
+      ],
+      "afterRange": [
+        44.44836,
+        55.594228
+      ],
+      "beforeMAD": 1.0827480000000023,
+      "afterMAD": 0.3178440000000009,
+      "AApairedDifferences": [
+        2.4532120000000006,
+        3.896727999999996
+      ],
+      "limitedAAabsoluteNoiseMax": 3.896727999999996,
+      "fixedRegressionGuardPercent": 20,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "input_all_process_median_ms",
+      "beforeMedian": 159.95000004768372,
+      "afterMedian": 160.30000019073486,
+      "absoluteReduction": -0.35000014305114746,
+      "relativeReductionPercent": -0.2188184701136647,
+      "pairedMedianReduction": -1.5499999523162842,
+      "paired95CiReduction": [
+        -3.450000047683716,
+        0.5499999523162842
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -2.1780303318223386,
+        0.34332081958246985
+      ],
+      "beforeRange": [
+        157.85000014305115,
+        161.04999995231628
+      ],
+      "afterRange": [
+        159.0,
+        170.84999990463257
+      ],
+      "beforeMAD": 0.2499997615814209,
+      "afterMAD": 0.8000001907348633,
+      "AApairedDifferences": [
+        13.499999761581421,
+        14.849999904632568
+      ],
+      "limitedAAabsoluteNoiseMax": 14.849999904632568,
+      "fixedRegressionGuardPercent": 15,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "input_first_process_median_ms",
+      "beforeMedian": 175.54999995231628,
+      "afterMedian": 176.29999995231628,
+      "absoluteReduction": -0.75,
+      "relativeReductionPercent": -0.42722870988534234,
+      "pairedMedianReduction": -0.2500002384185791,
+      "paired95CiReduction": [
+        -3.299999952316284,
+        1.250000238418579
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -1.9075144233042105,
+        0.7108329611938152
+      ],
+      "beforeRange": [
+        161.35000014305115,
+        206.14999985694885
+      ],
+      "afterRange": [
+        174.60000014305115,
+        178.19999980926514
+      ],
+      "beforeMAD": 0.7500002384185791,
+      "afterMAD": 0.4999997615814209,
+      "AApairedDifferences": [
+        14.650000095367432,
+        15.550000190734863
+      ],
+      "limitedAAabsoluteNoiseMax": 15.550000190734863,
+      "fixedRegressionGuardPercent": 15,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "input_revisit_process_median_ms",
+      "beforeMedian": 143.59999990463257,
+      "afterMedian": 144.2999997138977,
+      "absoluteReduction": -0.6999998092651367,
+      "relativeReductionPercent": -0.48746504855850953,
+      "pairedMedianReduction": -0.7499997615814209,
+      "paired95CiReduction": [
+        -15.65000033378601,
+        0.5
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -10.9517147484699,
+        0.34746351610050935
+      ],
+      "beforeRange": [
+        142.65000009536743,
+        143.95000004768372
+      ],
+      "afterRange": [
+        143.34999990463257,
+        159.5
+      ],
+      "beforeMAD": 0.35000014305114746,
+      "afterMAD": 0.9499998092651367,
+      "AApairedDifferences": [
+        14.799999952316284,
+        13.599999904632568
+      ],
+      "limitedAAabsoluteNoiseMax": 14.799999952316284,
+      "fixedRegressionGuardPercent": 15,
+      "descriptiveMedianGuardPass": true,
+      "pairedRelative95CiWithinGuard": true,
+      "pairsAboveGuard": 0,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "input_within_process_p95_ms_descriptive",
+      "beforeMedian": 227.1249998807907,
+      "afterMedian": 230.09999978542328,
+      "absoluteReduction": -2.9749999046325684,
+      "relativeReductionPercent": -1.3098513621107466,
+      "pairedMedianReduction": -1.2750004529953003,
+      "paired95CiReduction": [
+        -11.125,
+        4.350000262260437
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -4.994948924842146,
+        1.9110380044828852
+      ],
+      "beforeRange": [
+        211.6250001192093,
+        261.97499990463257
+      ],
+      "afterRange": [
+        223.27499997615814,
+        243.89999973773956
+      ],
+      "beforeMAD": 1.2249996662139893,
+      "afterMAD": 4.574999809265137,
+      "AApairedDifferences": [
+        16.950000047683716,
+        30.674999594688416
+      ],
+      "limitedAAabsoluteNoiseMax": 30.674999594688416,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "long_task_count",
+      "beforeMedian": 229,
+      "afterMedian": 234,
+      "absoluteReduction": -5,
+      "relativeReductionPercent": -2.1834061135371177,
+      "pairedMedianReduction": -3,
+      "paired95CiReduction": [
+        -10.0,
+        6.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -4.464285714285714,
+        2.564102564102564
+      ],
+      "beforeRange": [
+        221,
+        238
+      ],
+      "afterRange": [
+        223,
+        241
+      ],
+      "beforeMAD": 3,
+      "afterMAD": 3,
+      "AApairedDifferences": [
+        6,
+        5
+      ],
+      "limitedAAabsoluteNoiseMax": 6,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "long_task_total_ms",
+      "beforeMedian": 17139,
+      "afterMedian": 17670,
+      "absoluteReduction": -531,
+      "relativeReductionPercent": -3.0981970943462276,
+      "pairedMedianReduction": -105,
+      "paired95CiReduction": [
+        -1781.0,
+        338.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -10.777609682299547,
+        1.972110391504755
+      ],
+      "beforeRange": [
+        15991,
+        19536
+      ],
+      "afterRange": [
+        16769,
+        19237
+      ],
+      "beforeMAD": 455,
+      "afterMAD": 636,
+      "AApairedDifferences": [
+        1900,
+        2181
+      ],
+      "limitedAAabsoluteNoiseMax": 2181,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "max_observed_frame_gap_ms",
+      "beforeMedian": 133.39999999999986,
+      "afterMedian": 133.40000000000146,
+      "absoluteReduction": -1.5916157281026244e-12,
+      "relativeReductionPercent": -1.1931152384577406e-12,
+      "pairedMedianReduction": -1.8189894035458565e-12,
+      "paired95CiReduction": [
+        -49.89999999999873,
+        16.699999999999818
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -37.4062968515731,
+        12.453113278320945
+      ],
+      "beforeRange": [
+        116.59999999999854,
+        250
+      ],
+      "afterRange": [
+        116.70000000000073,
+        183.29999999999995
+      ],
+      "beforeMAD": 16.500000000000227,
+      "afterMAD": 0.10000000000218279,
+      "AApairedDifferences": [
+        -0.09999999999899956,
+        50.00000000000023
+      ],
+      "limitedAAabsoluteNoiseMax": 50.00000000000023,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "restaurant_requests",
+      "beforeMedian": 2434,
+      "afterMedian": 2434,
+      "absoluteReduction": 0,
+      "relativeReductionPercent": 0.0,
+      "pairedMedianReduction": 0,
+      "paired95CiReduction": [
+        0.0,
+        0.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        0.0,
+        0.0
+      ],
+      "beforeRange": [
+        2434,
+        2434
+      ],
+      "afterRange": [
+        2434,
+        2434
+      ],
+      "beforeMAD": 0,
+      "afterMAD": 0,
+      "AApairedDifferences": [
+        0,
+        0
+      ],
+      "limitedAAabsoluteNoiseMax": 0,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "end_DOM_nodes",
+      "beforeMedian": 9820,
+      "afterMedian": 5231,
+      "absoluteReduction": 4589,
+      "relativeReductionPercent": 46.73116089613035,
+      "pairedMedianReduction": 2458,
+      "paired95CiReduction": [
+        -2821.0,
+        14548.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -79.92990654205607,
+        73.55275797563073
+      ],
+      "beforeRange": [
+        2410,
+        19779
+      ],
+      "afterRange": [
+        2410,
+        12706
+      ],
+      "beforeMAD": 5540,
+      "afterMAD": 2795,
+      "AApairedDifferences": [
+        -10895,
+        2909
+      ],
+      "limitedAAabsoluteNoiseMax": 10895,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    },
+    {
+      "metric": "end_JS_listeners",
+      "beforeMedian": 7910,
+      "afterMedian": 6807,
+      "absoluteReduction": 1103,
+      "relativeReductionPercent": 13.944374209860936,
+      "pairedMedianReduction": 5044,
+      "paired95CiReduction": [
+        -4114.0,
+        20945.0
+      ],
+      "paired95CiRelativeReductionPercent": [
+        -135.17431826026925,
+        77.01532620271334
+      ],
+      "beforeRange": [
+        1474,
+        28241
+      ],
+      "afterRange": [
+        2866,
+        15085
+      ],
+      "beforeMAD": 6436,
+      "afterMAD": 2963,
+      "AApairedDifferences": [
+        -15914,
+        3955
+      ],
+      "limitedAAabsoluteNoiseMax": 15914,
+      "fixedRegressionGuardPercent": null,
+      "descriptiveMedianGuardPass": null,
+      "pairedRelative95CiWithinGuard": null,
+      "pairsAboveGuard": null,
+      "judgment": "improvement not proven"
+    }
+  ],
+  "rawProcessValues": {
+    "aa-resize-gate-v1-p0-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "aa-resize-gate-v1-p0-a",
+        "pair": 0,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.524784,
+        "end_heap_MB": 36.558644,
+        "idle_heap_MB": 37.683196,
+        "sampled_peak_heap_MB": 49.881576,
+        "input_all_process_median_ms": 188.25,
+        "input_first_process_median_ms": 192.70000004768372,
+        "input_revisit_process_median_ms": 174.65000009536743,
+        "input_within_process_p95_ms_descriptive": 270.27500009536743,
+        "long_task_count": 247,
+        "long_task_total_ms": 21478,
+        "max_observed_frame_gap_ms": 166.70000000000073,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 6111,
+        "end_JS_listeners": 7902
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 18,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 17
+        }
+      },
+      "durationSeconds": null
+    },
+    "aa-resize-gate-v1-p0-b": {
+      "run": {
+        "kind": "baseline",
+        "label": "aa-resize-gate-v1-p0-b",
+        "pair": 0,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 13.024132,
+        "end_heap_MB": 47.440744,
+        "idle_heap_MB": 48.579832,
+        "sampled_peak_heap_MB": 47.428364,
+        "input_all_process_median_ms": 174.75000023841858,
+        "input_first_process_median_ms": 178.04999995231628,
+        "input_revisit_process_median_ms": 159.85000014305115,
+        "input_within_process_p95_ms_descriptive": 253.32500004768372,
+        "long_task_count": 241,
+        "long_task_total_ms": 19578,
+        "max_observed_frame_gap_ms": 166.79999999999973,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 17006,
+        "end_JS_listeners": 23816
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "aa-resize-gate-v1-p1-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "aa-resize-gate-v1-p1-a",
+        "pair": 1,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.475364,
+        "end_heap_MB": 34.362828,
+        "idle_heap_MB": 35.50116,
+        "sampled_peak_heap_MB": 54.599388,
+        "input_all_process_median_ms": 175.34999990463257,
+        "input_first_process_median_ms": 192.40000009536743,
+        "input_revisit_process_median_ms": 158.95000004768372,
+        "input_within_process_p95_ms_descriptive": 271.44999980926514,
+        "long_task_count": 240,
+        "long_task_total_ms": 20147,
+        "max_observed_frame_gap_ms": 183.30000000000018,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 5319,
+        "end_JS_listeners": 6815
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 10,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 9
+        }
+      },
+      "durationSeconds": null
+    },
+    "aa-resize-gate-v1-p1-b": {
+      "run": {
+        "kind": "baseline",
+        "label": "aa-resize-gate-v1-p1-b",
+        "pair": 1,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.306572,
+        "end_heap_MB": 33.192696,
+        "idle_heap_MB": 34.374872,
+        "sampled_peak_heap_MB": 50.70266,
+        "input_all_process_median_ms": 160.5,
+        "input_first_process_median_ms": 176.84999990463257,
+        "input_revisit_process_median_ms": 145.35000014305115,
+        "input_within_process_p95_ms_descriptive": 240.77500021457672,
+        "long_task_count": 235,
+        "long_task_total_ms": 17966,
+        "max_observed_frame_gap_ms": 133.29999999999995,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 2410,
+        "end_JS_listeners": 2860
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p0-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-resize-gate-v1-p0-b",
+        "pair": 0,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.564668,
+        "end_heap_MB": 34.33282,
+        "idle_heap_MB": 35.196572,
+        "sampled_peak_heap_MB": 49.907912,
+        "input_all_process_median_ms": 159.0,
+        "input_first_process_median_ms": 176.29999995231628,
+        "input_revisit_process_median_ms": 143.34999990463257,
+        "input_within_process_p95_ms_descriptive": 226.55000007152557,
+        "long_task_count": 228,
+        "long_task_total_ms": 16769,
+        "max_observed_frame_gap_ms": 116.70000000000073,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 5231,
+        "end_JS_listeners": 6807
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 10,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 9
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p0-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-resize-gate-v1-p0-a",
+        "pair": 0,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.382268,
+        "end_heap_MB": 41.732044,
+        "idle_heap_MB": 42.897756,
+        "sampled_peak_heap_MB": 49.092696,
+        "input_all_process_median_ms": 160.0,
+        "input_first_process_median_ms": 173.0,
+        "input_revisit_process_median_ms": 143.90000009536743,
+        "input_within_process_p95_ms_descriptive": 228.62500035762787,
+        "long_task_count": 227,
+        "long_task_total_ms": 17054,
+        "max_observed_frame_gap_ms": 133.3000000000029,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 19779,
+        "end_JS_listeners": 28241
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 3,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 2
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p1-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-resize-gate-v1-p1-a",
+        "pair": 1,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.527632,
+        "end_heap_MB": 36.724928,
+        "idle_heap_MB": 37.82228,
+        "sampled_peak_heap_MB": 49.287716,
+        "input_all_process_median_ms": 161.04999995231628,
+        "input_first_process_median_ms": 206.14999985694885,
+        "input_revisit_process_median_ms": 142.65000009536743,
+        "input_within_process_p95_ms_descriptive": 261.97499990463257,
+        "long_task_count": 238,
+        "long_task_total_ms": 19536,
+        "max_observed_frame_gap_ms": 250,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 6199,
+        "end_JS_listeners": 7910
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p1-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-resize-gate-v1-p1-b",
+        "pair": 1,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.572904,
+        "end_heap_MB": 33.094084,
+        "idle_heap_MB": 33.95548,
+        "sampled_peak_heap_MB": 49.978712,
+        "input_all_process_median_ms": 170.84999990463257,
+        "input_first_process_median_ms": 178.19999980926514,
+        "input_revisit_process_median_ms": 158.5,
+        "input_within_process_p95_ms_descriptive": 243.89999973773956,
+        "long_task_count": 241,
+        "long_task_total_ms": 19237,
+        "max_observed_frame_gap_ms": 150,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 2410,
+        "end_JS_listeners": 2866
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 2,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p2-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-resize-gate-v1-p2-b",
+        "pair": 2,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.349276,
+        "end_heap_MB": 34.394892,
+        "idle_heap_MB": 35.25508,
+        "sampled_peak_heap_MB": 50.296556,
+        "input_all_process_median_ms": 160.30000019073486,
+        "input_first_process_median_ms": 176.65000009536743,
+        "input_revisit_process_median_ms": 143.40000009536743,
+        "input_within_process_p95_ms_descriptive": 227.92500019073486,
+        "long_task_count": 231,
+        "long_task_total_ms": 17414,
+        "max_observed_frame_gap_ms": 183.29999999999927,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 5231,
+        "end_JS_listeners": 6813
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p2-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-resize-gate-v1-p2-a",
+        "pair": 2,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.567412,
+        "end_heap_MB": 34.23646,
+        "idle_heap_MB": 35.424152,
+        "sampled_peak_heap_MB": 48.196028,
+        "input_all_process_median_ms": 160.09999990463257,
+        "input_first_process_median_ms": 176.39999985694885,
+        "input_revisit_process_median_ms": 143.90000009536743,
+        "input_within_process_p95_ms_descriptive": 226.64999973773956,
+        "long_task_count": 231,
+        "long_task_total_ms": 17309,
+        "max_observed_frame_gap_ms": 133.40000000000055,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 2410,
+        "end_JS_listeners": 2897
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p3-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-resize-gate-v1-p3-a",
+        "pair": 3,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.523684,
+        "end_heap_MB": 51.408776,
+        "idle_heap_MB": 26.96654,
+        "sampled_peak_heap_MB": 52.059904,
+        "input_all_process_median_ms": 160.19999980926514,
+        "input_first_process_median_ms": 176.30000019073486,
+        "input_revisit_process_median_ms": 143.59999990463257,
+        "input_within_process_p95_ms_descriptive": 227.62500023841858,
+        "long_task_count": 234,
+        "long_task_total_ms": 17594,
+        "max_observed_frame_gap_ms": 150,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 4280,
+        "end_JS_listeners": 5652
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p3-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-resize-gate-v1-p3-b",
+        "pair": 3,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.589208,
+        "end_heap_MB": 27.95496,
+        "idle_heap_MB": 28.868456,
+        "sampled_peak_heap_MB": 55.594228,
+        "input_all_process_median_ms": 159.64999985694885,
+        "input_first_process_median_ms": 175.04999995231628,
+        "input_revisit_process_median_ms": 144.2999997138977,
+        "input_within_process_p95_ms_descriptive": 223.27499997615814,
+        "long_task_count": 228,
+        "long_task_total_ms": 16831,
+        "max_observed_frame_gap_ms": 133.30000000000018,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 7701,
+        "end_JS_listeners": 9766
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p4-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-resize-gate-v1-p4-b",
+        "pair": 4,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.56436,
+        "end_heap_MB": 33.176824,
+        "idle_heap_MB": 34.035368,
+        "sampled_peak_heap_MB": 44.44836,
+        "input_all_process_median_ms": 161.85000014305115,
+        "input_first_process_median_ms": 175.80000019073486,
+        "input_revisit_process_median_ms": 158.0,
+        "input_within_process_p95_ms_descriptive": 233.85000014305115,
+        "long_task_count": 236,
+        "long_task_total_ms": 18306,
+        "max_observed_frame_gap_ms": 133.40000000000146,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 2436,
+        "end_JS_listeners": 2869
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p4-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-resize-gate-v1-p4-a",
+        "pair": 4,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.546912,
+        "end_heap_MB": 40.755596,
+        "idle_heap_MB": 41.908608,
+        "sampled_peak_heap_MB": 55.683884,
+        "input_all_process_median_ms": 158.40000009536743,
+        "input_first_process_median_ms": 175.39999985694885,
+        "input_revisit_process_median_ms": 143.09999990463257,
+        "input_within_process_p95_ms_descriptive": 222.72500014305115,
+        "long_task_count": 226,
+        "long_task_total_ms": 16525,
+        "max_observed_frame_gap_ms": 133.39999999999964,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 17006,
+        "end_JS_listeners": 23814
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p5-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-resize-gate-v1-p5-b",
+        "pair": 5,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.559208,
+        "end_heap_MB": 23.823664,
+        "idle_heap_MB": 24.685932,
+        "sampled_peak_heap_MB": 47.534236,
+        "input_all_process_median_ms": 159.59999990463257,
+        "input_first_process_median_ms": 176.5,
+        "input_revisit_process_median_ms": 143.5,
+        "input_within_process_p95_ms_descriptive": 239.875,
+        "long_task_count": 235,
+        "long_task_total_ms": 17670,
+        "max_observed_frame_gap_ms": 133.29999999999998,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 12706,
+        "end_JS_listeners": 4964
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 17,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 16
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p5-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-resize-gate-v1-p5-a",
+        "pair": 5,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.509356,
+        "end_heap_MB": 31.177404,
+        "idle_heap_MB": 23.664048,
+        "sampled_peak_heap_MB": 49.278776,
+        "input_all_process_median_ms": 157.85000014305115,
+        "input_first_process_median_ms": 161.35000014305115,
+        "input_revisit_process_median_ms": 142.75000023841858,
+        "input_within_process_p95_ms_descriptive": 211.6250001192093,
+        "long_task_count": 221,
+        "long_task_total_ms": 15991,
+        "max_observed_frame_gap_ms": 116.59999999999854,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 15164,
+        "end_JS_listeners": 21597
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p6-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-resize-gate-v1-p6-a",
+        "pair": 6,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.508196,
+        "end_heap_MB": 51.360716,
+        "idle_heap_MB": 26.9206,
+        "sampled_peak_heap_MB": 51.348404,
+        "input_all_process_median_ms": 159.94999980926514,
+        "input_first_process_median_ms": 175.5,
+        "input_revisit_process_median_ms": 143.89999985694885,
+        "input_within_process_p95_ms_descriptive": 227.89999973773956,
+        "long_task_count": 229,
+        "long_task_total_ms": 17237,
+        "max_observed_frame_gap_ms": 133.39999999999986,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 4280,
+        "end_JS_listeners": 5648
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p6-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-resize-gate-v1-p6-b",
+        "pair": 6,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.594264,
+        "end_heap_MB": 32.9781,
+        "idle_heap_MB": 33.853112,
+        "sampled_peak_heap_MB": 50.17806,
+        "input_all_process_median_ms": 161.49999976158142,
+        "input_first_process_median_ms": 174.89999985694885,
+        "input_revisit_process_median_ms": 159.5,
+        "input_within_process_p95_ms_descriptive": 236.22500002384186,
+        "long_task_count": 234,
+        "long_task_total_ms": 18057,
+        "max_observed_frame_gap_ms": 133.40000000000873,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 2410,
+        "end_JS_listeners": 2866
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 11,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 10
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p7-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-resize-gate-v1-p7-b",
+        "pair": 7,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.586876,
+        "end_heap_MB": 29.48686,
+        "idle_heap_MB": 30.362168,
+        "sampled_peak_heap_MB": 49.322508,
+        "input_all_process_median_ms": 159.5,
+        "input_first_process_median_ms": 174.60000014305115,
+        "input_revisit_process_median_ms": 143.74999976158142,
+        "input_within_process_p95_ms_descriptive": 225.52499997615814,
+        "long_task_count": 223,
+        "long_task_total_ms": 16801,
+        "max_observed_frame_gap_ms": 183.29999999999995,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 10976,
+        "end_JS_listeners": 15085
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p7-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-resize-gate-v1-p7-a",
+        "pair": 7,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.504692,
+        "end_heap_MB": 23.7296,
+        "idle_heap_MB": 24.885144,
+        "sampled_peak_heap_MB": 49.236516,
+        "input_all_process_median_ms": 159.95000004768372,
+        "input_first_process_median_ms": 175.84999990463257,
+        "input_revisit_process_median_ms": 143.95000004768372,
+        "input_within_process_p95_ms_descriptive": 227.1249998807907,
+        "long_task_count": 230,
+        "long_task_total_ms": 17139,
+        "max_observed_frame_gap_ms": 116.70000000000073,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 9820,
+        "end_JS_listeners": 1474
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 8,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 7
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p8-b": {
+      "run": {
+        "kind": "candidate",
+        "label": "ab-resize-gate-v1-p8-b",
+        "pair": 8,
+        "variant": "B"
+      },
+      "metrics": {
+        "initial_heap_MB": 12.516984,
+        "end_heap_MB": 27.766976,
+        "idle_heap_MB": 28.632784,
+        "sampled_peak_heap_MB": 50.014772,
+        "input_all_process_median_ms": 160.74999976158142,
+        "input_first_process_median_ms": 176.40000009536743,
+        "input_revisit_process_median_ms": 158.54999995231628,
+        "input_within_process_p95_ms_descriptive": 230.09999978542328,
+        "long_task_count": 234,
+        "long_task_total_ms": 18014,
+        "max_observed_frame_gap_ms": 133.29999999999927,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 7701,
+        "end_JS_listeners": 9770
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 3,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 2
+        }
+      },
+      "durationSeconds": null
+    },
+    "ab-resize-gate-v1-p8-a": {
+      "run": {
+        "kind": "baseline",
+        "label": "ab-resize-gate-v1-p8-a",
+        "pair": 8,
+        "variant": "A"
+      },
+      "metrics": {
+        "initial_heap_MB": 11.829596,
+        "end_heap_MB": 29.612408,
+        "idle_heap_MB": 30.861592,
+        "sampled_peak_heap_MB": 47.850992,
+        "input_all_process_median_ms": 159.09999990463257,
+        "input_first_process_median_ms": 175.54999995231628,
+        "input_revisit_process_median_ms": 142.89999961853027,
+        "input_within_process_p95_ms_descriptive": 225.90000021457672,
+        "long_task_count": 224,
+        "long_task_total_ms": 16162,
+        "max_observed_frame_gap_ms": 149.9000000000001,
+        "restaurant_requests": 2434,
+        "end_DOM_nodes": 10958,
+        "end_JS_listeners": 15082
+      },
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2434,
+        "otherFixture": 259,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 8,
+        "remoteFailureKinds": {
+          "other-network-failure": 1,
+          "net::ERR_ABORTED": 7
+        }
+      },
+      "durationSeconds": null
+    }
+  },
+  "canonicalPerformanceAdmission": 0,
+  "fieldAdmission": 0,
+  "goalComplete": false,
+  "primaryMedianGuardPass": true,
+  "primaryPairedCIWithinGuard": false
+}

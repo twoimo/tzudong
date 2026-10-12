@@ -1,0 +1,12 @@
+{
+  "matchedProcesses": 22,
+  "primaryMedianGuardPass": true,
+  "primaryPairedCIWithinGuard": false,
+  "idleHeapCIWithin20PercentGuard": false,
+  "improvementProven": false,
+  "candidateAccepted": false,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "deployed": false,
+  "goalComplete": false
+}

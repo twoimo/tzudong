@@ -1,0 +1,18 @@
+{
+  "fieldComparisonAdmission": 0,
+  "files": {
+    "REPORT-v1.md": {
+      "bytes": 1976,
+      "sha256": "e105159c3c6112a17072e513f4b95a9ac906c41063dc586934b652c991da58f0"
+    },
+    "read-only-v1.mjs": {
+      "bytes": 2608,
+      "sha256": "ea5d104bb931fb8b9cb292e7f4045b079433ca5237c6eb7d38cb3dae71a3b4db"
+    },
+    "summary-v1.json": {
+      "bytes": 690,
+      "sha256": "54ccb7032f3998cd27f86c786e66116a4bda0b5a893b0647faccd98766890a81"
+    }
+  },
+  "schemaVersion": "field-readback-artifacts.v1"
+}

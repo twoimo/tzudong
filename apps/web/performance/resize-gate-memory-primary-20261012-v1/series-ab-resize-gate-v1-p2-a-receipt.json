@@ -1,0 +1,10 @@
+{
+  "phase": "AB",
+  "kind": "baseline",
+  "label": "ab-resize-gate-v1-p2-a",
+  "pair": 2,
+  "variant": "A",
+  "exit": 0,
+  "matched": true,
+  "endedAtUtc": "2026-10-12T12:37:59.935Z"
+}

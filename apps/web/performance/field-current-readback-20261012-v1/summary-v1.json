@@ -1,0 +1,27 @@
+{
+  "release": "1884f87e53c4567ead7c9a0fb394b09b91a70396",
+  "checkedAtUtc": "2026-10-12T12:46:07.489Z",
+  "readOnly": true,
+  "credentialsPersisted": false,
+  "fieldComparisonAdmission": 0,
+  "distinctUsersKnown": false,
+  "eligibleDenominatorKnown": false,
+  "browserCohortsKnown": false,
+  "tabletCohortKnown": false,
+  "status": "passed",
+  "histogramRows": 17,
+  "metricInstances": {
+    "CLS": 6,
+    "INP": 6,
+    "LCP": 10
+  },
+  "deviceMetricInstances": {
+    "mobile": 19,
+    "desktop": 3
+  },
+  "observedDays": [
+    "2026-10-12"
+  ],
+  "metricSamplesAreNotIndependentUsers": true,
+  "sourceScope": "Existing v1 aggregate records, not new prospective browser/device protocol"
+}
