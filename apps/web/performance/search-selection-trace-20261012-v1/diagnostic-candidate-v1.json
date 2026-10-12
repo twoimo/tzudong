@@ -1,0 +1,695 @@
+{
+  "kind": "candidate",
+  "sourceCommit": "81d5aca4951e7cef5d67c1e910f31b3436597466",
+  "buildId": "ZtFOfbea7z7ELcNeBC7wL",
+  "startedAtUtc": "2026-10-12T10:48:52.818Z",
+  "diagnosticOnly": true,
+  "profilerMayAlterTiming": true,
+  "physicalDevice": false,
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "environment": {
+    "cpuRate": 4,
+    "cache": "disabled; SW bypass",
+    "viewport": "390x844/dpr1",
+    "data": "syntheticREST735/Auth401; actual remoteSDK/tiles"
+  },
+  "cycles": [
+    {
+      "pass": 0,
+      "query": 0,
+      "label": "diagnostic-p0-q0",
+      "requests": 15,
+      "state": {
+        "observedAt": 2227.9000000953674,
+        "inputToObservedMs": 528.2000002861023,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 30,
+        "mapCreates": 1,
+        "methods": {
+          "setIcon": {
+            "count": 30,
+            "durationMs": 15.299999237060547
+          },
+          "setPosition": {
+            "count": 30,
+            "durationMs": 0.09999990463256836
+          },
+          "setZIndex": {
+            "count": 30,
+            "durationMs": 0
+          },
+          "setMap": {
+            "count": 31,
+            "durationMs": 8.5
+          }
+        },
+        "markerCreates": 31,
+        "tasks": [
+          {
+            "time": 1695.3000001907349,
+            "duration": 175
+          }
+        ]
+      }
+    },
+    {
+      "pass": 0,
+      "query": 1,
+      "label": "diagnostic-p0-q1",
+      "requests": 15,
+      "state": {
+        "observedAt": 2842.699999809265,
+        "inputToObservedMs": 356.59999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 55,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 85,
+            "durationMs": 28.1000018119812
+          },
+          "setPosition": {
+            "count": 55,
+            "durationMs": 0.5
+          },
+          "setIcon": {
+            "count": 56,
+            "durationMs": 36.70000171661377
+          },
+          "setZIndex": {
+            "count": 55,
+            "durationMs": 1.3999996185302734
+          }
+        },
+        "markerCreates": 85,
+        "tasks": [
+          {
+            "time": 2482.5999999046326,
+            "duration": 181
+          }
+        ]
+      }
+    },
+    {
+      "pass": 0,
+      "query": 2,
+      "label": "diagnostic-p0-q2",
+      "requests": 15,
+      "state": {
+        "observedAt": 3227.800000190735,
+        "inputToObservedMs": 211.80000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 84,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 29,
+            "durationMs": 6.600000381469727
+          },
+          "setPosition": {
+            "count": 29,
+            "durationMs": 0.3000001907348633
+          },
+          "setIcon": {
+            "count": 33,
+            "durationMs": 19.699999809265137
+          },
+          "setZIndex": {
+            "count": 2,
+            "durationMs": 0
+          }
+        },
+        "markerCreates": 85,
+        "tasks": [
+          {
+            "time": 3012.0999999046326,
+            "duration": 85
+          }
+        ]
+      }
+    },
+    {
+      "pass": 0,
+      "query": 3,
+      "label": "diagnostic-p0-q3",
+      "requests": 15,
+      "state": {
+        "observedAt": 3612.5,
+        "inputToObservedMs": 213.80000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 98,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 50,
+            "durationMs": 16.500000476837158
+          },
+          "setPosition": {
+            "count": 32,
+            "durationMs": 0.09999990463256836
+          },
+          "setIcon": {
+            "count": 36,
+            "durationMs": 12.999999523162842
+          },
+          "setZIndex": {
+            "count": 33,
+            "durationMs": 0.10000038146972656
+          }
+        },
+        "markerCreates": 116,
+        "tasks": [
+          {
+            "time": 3394.800000190735,
+            "duration": 84
+          }
+        ]
+      }
+    },
+    {
+      "pass": 0,
+      "query": 4,
+      "label": "diagnostic-p0-q4",
+      "requests": 15,
+      "state": {
+        "observedAt": 4042.9000000953674,
+        "inputToObservedMs": 241.2000002861023,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 112,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 56,
+            "durationMs": 21.899999618530273
+          },
+          "setPosition": {
+            "count": 35,
+            "durationMs": 0.5999999046325684
+          },
+          "setIcon": {
+            "count": 39,
+            "durationMs": 21.40000009536743
+          },
+          "setZIndex": {
+            "count": 19,
+            "durationMs": 0.09999990463256836
+          }
+        },
+        "markerCreates": 133,
+        "tasks": [
+          {
+            "time": 3797.5,
+            "duration": 104
+          }
+        ]
+      }
+    },
+    {
+      "pass": 0,
+      "query": 5,
+      "label": "diagnostic-p0-q5",
+      "requests": 15,
+      "state": {
+        "observedAt": 4492.699999809265,
+        "inputToObservedMs": 252.69999980926514,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 126,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 62,
+            "durationMs": 23.199999809265137
+          },
+          "setPosition": {
+            "count": 38,
+            "durationMs": 0
+          },
+          "setIcon": {
+            "count": 42,
+            "durationMs": 27.100000858306885
+          },
+          "setZIndex": {
+            "count": 19,
+            "durationMs": 0
+          }
+        },
+        "markerCreates": 150,
+        "tasks": [
+          {
+            "time": 4234.5,
+            "duration": 112
+          }
+        ]
+      }
+    },
+    {
+      "pass": 0,
+      "query": 6,
+      "label": "diagnostic-p0-q6",
+      "requests": 15,
+      "state": {
+        "observedAt": 4943.199999809265,
+        "inputToObservedMs": 257.59999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 126,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 76,
+            "durationMs": 31.09999990463257
+          },
+          "setPosition": {
+            "count": 38,
+            "durationMs": 0.9000005722045898
+          },
+          "setIcon": {
+            "count": 42,
+            "durationMs": 23.099998950958252
+          },
+          "setZIndex": {
+            "count": 16,
+            "durationMs": 0.09999990463256836
+          }
+        },
+        "markerCreates": 164,
+        "tasks": [
+          {
+            "time": 4680.5,
+            "duration": 119
+          }
+        ]
+      }
+    },
+    {
+      "pass": 0,
+      "query": 7,
+      "label": "diagnostic-p0-q7",
+      "requests": 15,
+      "state": {
+        "observedAt": 5376.199999809265,
+        "inputToObservedMs": 259.8999996185303,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 126,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 76,
+            "durationMs": 27.199999809265137
+          },
+          "setPosition": {
+            "count": 38,
+            "durationMs": 0.09999990463256836
+          },
+          "setIcon": {
+            "count": 42,
+            "durationMs": 23.80000114440918
+          },
+          "setZIndex": {
+            "count": 2,
+            "durationMs": 0
+          }
+        },
+        "markerCreates": 164,
+        "tasks": [
+          {
+            "time": 5112.400000095367,
+            "duration": 113
+          }
+        ]
+      }
+    },
+    {
+      "pass": 1,
+      "query": 0,
+      "label": "diagnostic-p1-q0",
+      "requests": 4,
+      "state": {
+        "observedAt": 5957.400000095367,
+        "inputToObservedMs": 284,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 30,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 156,
+            "durationMs": 61.799999713897705
+          },
+          "setPosition": {
+            "count": 30,
+            "durationMs": 0.6999998092651367
+          },
+          "setIcon": {
+            "count": 31,
+            "durationMs": 14.900001049041748
+          },
+          "setZIndex": {
+            "count": 1,
+            "durationMs": 0
+          }
+        },
+        "markerCreates": 164,
+        "tasks": [
+          {
+            "time": 5667.199999809265,
+            "duration": 163
+          }
+        ]
+      }
+    },
+    {
+      "pass": 1,
+      "query": 1,
+      "label": "diagnostic-p1-q1",
+      "requests": 4,
+      "state": {
+        "observedAt": 6341.099999904633,
+        "inputToObservedMs": 242.90000009536743,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 55,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 85,
+            "durationMs": 17.20000171661377
+          },
+          "setPosition": {
+            "count": 55,
+            "durationMs": 0.9999995231628418
+          },
+          "setIcon": {
+            "count": 56,
+            "durationMs": 22.399999141693115
+          },
+          "setZIndex": {
+            "count": 1,
+            "durationMs": 0.10000038146972656
+          }
+        },
+        "markerCreates": 164,
+        "tasks": [
+          {
+            "time": 6094.599999904633,
+            "duration": 130
+          }
+        ]
+      }
+    },
+    {
+      "pass": 1,
+      "query": 2,
+      "label": "diagnostic-p1-q2",
+      "requests": 4,
+      "state": {
+        "observedAt": 6640.900000095367,
+        "inputToObservedMs": 158.2000002861023,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 84,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 29,
+            "durationMs": 5.399999141693115
+          },
+          "setPosition": {
+            "count": 29,
+            "durationMs": 1
+          },
+          "setIcon": {
+            "count": 33,
+            "durationMs": 13.80000114440918
+          },
+          "setZIndex": {
+            "count": 2,
+            "durationMs": 0.09999990463256836
+          }
+        },
+        "markerCreates": 164,
+        "tasks": [
+          {
+            "time": 6478.400000095367,
+            "duration": 79
+          }
+        ]
+      }
+    },
+    {
+      "pass": 1,
+      "query": 3,
+      "label": "diagnostic-p1-q3",
+      "requests": 4,
+      "state": {
+        "observedAt": 6957.300000190735,
+        "inputToObservedMs": 173,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 98,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 50,
+            "durationMs": 13.299999713897705
+          },
+          "setPosition": {
+            "count": 32,
+            "durationMs": 0.3000001907348633
+          },
+          "setIcon": {
+            "count": 36,
+            "durationMs": 17.000000476837158
+          },
+          "setZIndex": {
+            "count": 2,
+            "durationMs": 0
+          }
+        },
+        "markerCreates": 164,
+        "tasks": [
+          {
+            "time": 6780.099999904633,
+            "duration": 86
+          }
+        ]
+      }
+    },
+    {
+      "pass": 1,
+      "query": 4,
+      "label": "diagnostic-p1-q4",
+      "requests": 4,
+      "state": {
+        "observedAt": 7291.199999809265,
+        "inputToObservedMs": 192.39999961853027,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 112,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 56,
+            "durationMs": 15.200000286102295
+          },
+          "setPosition": {
+            "count": 35,
+            "durationMs": 0.10000038146972656
+          },
+          "setIcon": {
+            "count": 39,
+            "durationMs": 19.099998950958252
+          },
+          "setZIndex": {
+            "count": 2,
+            "durationMs": 0.40000009536743164
+          }
+        },
+        "markerCreates": 164,
+        "tasks": [
+          {
+            "time": 7095.400000095367,
+            "duration": 96
+          }
+        ]
+      }
+    },
+    {
+      "pass": 1,
+      "query": 5,
+      "label": "diagnostic-p1-q5",
+      "requests": 4,
+      "state": {
+        "observedAt": 7641.599999904633,
+        "inputToObservedMs": 188.69999980926514,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 126,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 62,
+            "durationMs": 24.59999990463257
+          },
+          "setPosition": {
+            "count": 38,
+            "durationMs": 0.3000011444091797
+          },
+          "setIcon": {
+            "count": 42,
+            "durationMs": 18.099998474121094
+          },
+          "setZIndex": {
+            "count": 2,
+            "durationMs": 0
+          }
+        },
+        "markerCreates": 164,
+        "tasks": [
+          {
+            "time": 7447.800000190735,
+            "duration": 100
+          }
+        ]
+      }
+    },
+    {
+      "pass": 1,
+      "query": 6,
+      "label": "diagnostic-p1-q6",
+      "requests": 4,
+      "state": {
+        "observedAt": 7991.599999904633,
+        "inputToObservedMs": 190.2999997138977,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 126,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 76,
+            "durationMs": 25.999999523162842
+          },
+          "setPosition": {
+            "count": 35,
+            "durationMs": 0.09999990463256836
+          },
+          "setIcon": {
+            "count": 39,
+            "durationMs": 19.900001049041748
+          },
+          "setZIndex": {
+            "count": 2,
+            "durationMs": 0
+          }
+        },
+        "markerCreates": 164,
+        "tasks": [
+          {
+            "time": 7797.199999809265,
+            "duration": 103
+          }
+        ]
+      }
+    },
+    {
+      "pass": 1,
+      "query": 7,
+      "label": "diagnostic-p1-q7",
+      "requests": 4,
+      "state": {
+        "observedAt": 8358,
+        "inputToObservedMs": 222.19999980926514,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "duplicateMarkers": 0,
+        "markerCount": 126,
+        "mapCreates": 1,
+        "methods": {
+          "setMap": {
+            "count": 76,
+            "durationMs": 30
+          },
+          "setPosition": {
+            "count": 38,
+            "durationMs": 0.7999997138977051
+          },
+          "setIcon": {
+            "count": 42,
+            "durationMs": 20.800000190734863
+          },
+          "setZIndex": {
+            "count": 2,
+            "durationMs": 0
+          }
+        },
+        "markerCreates": 164,
+        "tasks": [
+          {
+            "time": 8129.699999809265,
+            "duration": 121
+          }
+        ]
+      }
+    }
+  ],
+  "rawTraceArgumentsPersisted": false,
+  "rawProfileUrlsPersisted": false,
+  "browserVersion": "154.0.8037.98",
+  "sdkScript": {
+    "status": 200,
+    "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+  },
+  "passed": false,
+  "failure": "bounded_diagnostic_flow_unavailable",
+  "errors": {
+    "page": 0,
+    "console": 2,
+    "consoleCategories": {
+      "http401": 0,
+      "blockedClient": 0,
+      "provider": 0,
+      "other": 1,
+      "csp": 1
+    },
+    "cspDirectives": {
+      "connect-src": 1
+    },
+    "cspResourceGroups": {
+      "naver-family": 1
+    }
+  },
+  "requests": {
+    "restaurant": 154,
+    "otherFixture": 19,
+    "failedAppAsset": 0,
+    "failedRemoteProvider": 1,
+    "remoteFailureKinds": {
+      "other-network-failure": 1
+    }
+  },
+  "endedAtUtc": "2026-10-12T10:49:05.200Z"
+}

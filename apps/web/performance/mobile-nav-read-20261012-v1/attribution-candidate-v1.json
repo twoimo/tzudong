@@ -1,0 +1,666 @@
+{
+  "kind": "candidate",
+  "sourceCommit": "0b5cb0a20fefda86e3eb1712dc39c5af89c4c514",
+  "callers": [
+    {
+      "functionName": "getPropertyValue",
+      "chain": [
+        {
+          "group": "application",
+          "asset": "1680-23bbb625848cfe36.js",
+          "functionName": "A",
+          "line": 0,
+          "column": 10047
+        },
+        {
+          "group": "application",
+          "asset": "6827.f4a8e70346459c0e.js",
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 6631
+        },
+        {
+          "group": "application",
+          "asset": "6827.f4a8e70346459c0e.js",
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 9058
+        },
+        {
+          "group": "application",
+          "asset": "59c1a02d-5ad7f5f48258f955.js",
+          "functionName": "iE",
+          "line": 0,
+          "column": 93085
+        },
+        {
+          "group": "application",
+          "asset": "59c1a02d-5ad7f5f48258f955.js",
+          "functionName": "ue",
+          "line": 0,
+          "column": 103259
+        }
+      ],
+      "sampledSelfUs": 6239
+    },
+    {
+      "functionName": "querySelectorAll",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "query",
+          "line": 5718,
+          "column": 20
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "(anonymous)",
+          "line": 5716,
+          "column": 112
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "_cached",
+          "line": 5499,
+          "column": 9
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "_queryCSS",
+          "line": 5715,
+          "column": 11
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "queryAll",
+          "line": 7154,
+          "column": 21
+        }
+      ],
+      "sampledSelfUs": 6171
+    },
+    {
+      "functionName": "querySelectorAll",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "query",
+          "line": 5718,
+          "column": 20
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "(anonymous)",
+          "line": 5716,
+          "column": 112
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "_cached",
+          "line": 5499,
+          "column": 9
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "_queryCSS",
+          "line": 5715,
+          "column": 11
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "queryAll",
+          "line": 7132,
+          "column": 16
+        }
+      ],
+      "sampledSelfUs": 5851
+    },
+    {
+      "functionName": "querySelectorAll",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 0
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "evaluate",
+          "line": 304,
+          "column": 10
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 1
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "(root)",
+          "line": -1,
+          "column": -1
+        }
+      ],
+      "sampledSelfUs": 3380
+    },
+    {
+      "functionName": "getPropertyValue",
+      "chain": [
+        {
+          "group": "application",
+          "asset": "1680-23bbb625848cfe36.js",
+          "functionName": "E",
+          "line": 0,
+          "column": 9816
+        },
+        {
+          "group": "application",
+          "asset": "1680-23bbb625848cfe36.js",
+          "functionName": "A",
+          "line": 0,
+          "column": 10047
+        },
+        {
+          "group": "application",
+          "asset": "6827.f4a8e70346459c0e.js",
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 6631
+        },
+        {
+          "group": "application",
+          "asset": "6827.f4a8e70346459c0e.js",
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 9058
+        },
+        {
+          "group": "application",
+          "asset": "59c1a02d-5ad7f5f48258f955.js",
+          "functionName": "iE",
+          "line": 0,
+          "column": 93085
+        }
+      ],
+      "sampledSelfUs": 3373
+    },
+    {
+      "functionName": "querySelectorAll",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 0
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "(root)",
+          "line": -1,
+          "column": -1
+        }
+      ],
+      "sampledSelfUs": 2806
+    },
+    {
+      "functionName": "getComputedStyle",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "getElementComputedStyle",
+          "line": 3132,
+          "column": 32
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "computeBox",
+          "line": 3164,
+          "column": 19
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "isElementVisible",
+          "line": 3183,
+          "column": 25
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "elementState",
+          "line": 7370,
+          "column": 14
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "checkElementStates",
+          "line": 7289,
+          "column": 26
+        }
+      ],
+      "sampledSelfUs": 1573
+    },
+    {
+      "functionName": "getComputedStyle",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "getElementComputedStyle",
+          "line": 3132,
+          "column": 32
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "belongsToDisplayNoneOrAriaHiddenOrNonSlotted",
+          "line": 3564,
+          "column": 53
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "belongsToDisplayNoneOrAriaHiddenOrNonSlotted",
+          "line": 3564,
+          "column": 53
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "belongsToDisplayNoneOrAriaHiddenOrNonSlotted",
+          "line": 3564,
+          "column": 53
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "isElementHiddenForAria",
+          "line": 3545,
+          "column": 31
+        }
+      ],
+      "sampledSelfUs": 1246
+    },
+    {
+      "functionName": "getComputedStyle",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "getElementComputedStyle",
+          "line": 3132,
+          "column": 32
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "isElementHiddenForAria",
+          "line": 3545,
+          "column": 31
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "match",
+          "line": 5372,
+          "column": 16
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "query",
+          "line": 5412,
+          "column": 16
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "queryRole",
+          "line": 5370,
+          "column": 18
+        }
+      ],
+      "sampledSelfUs": 1226
+    },
+    {
+      "functionName": "getComputedStyle",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "getElementComputedStyle",
+          "line": 3132,
+          "column": 32
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "getCSSContent",
+          "line": 3617,
+          "column": 22
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "innerAccumulatedElementText",
+          "line": 4038,
+          "column": 36
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "getTextAlternativeInternal",
+          "line": 3806,
+          "column": 35
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "visit",
+          "line": 4041,
+          "column": 16
+        }
+      ],
+      "sampledSelfUs": 1042
+    },
+    {
+      "functionName": "getPropertyValue",
+      "chain": [
+        {
+          "group": "application",
+          "asset": "1680-23bbb625848cfe36.js",
+          "functionName": "m",
+          "line": 0,
+          "column": 9522
+        },
+        {
+          "group": "application",
+          "asset": "217.5e4ee85919ef96bf.js",
+          "functionName": "(anonymous)",
+          "line": 46,
+          "column": 14913
+        },
+        {
+          "group": "application",
+          "asset": "217.5e4ee85919ef96bf.js",
+          "functionName": "(anonymous)",
+          "line": 46,
+          "column": 17531
+        },
+        {
+          "group": "application",
+          "asset": "59c1a02d-5ad7f5f48258f955.js",
+          "functionName": "iE",
+          "line": 0,
+          "column": 93085
+        },
+        {
+          "group": "application",
+          "asset": "59c1a02d-5ad7f5f48258f955.js",
+          "functionName": "ub",
+          "line": 0,
+          "column": 117199
+        }
+      ],
+      "sampledSelfUs": 1011
+    },
+    {
+      "functionName": "querySelectorAll",
+      "chain": [
+        {
+          "group": "application",
+          "asset": "1680-23bbb625848cfe36.js",
+          "functionName": "E",
+          "line": 0,
+          "column": 1160
+        },
+        {
+          "group": "application",
+          "asset": "1680-23bbb625848cfe36.js",
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 1783
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "(root)",
+          "line": -1,
+          "column": -1
+        }
+      ],
+      "sampledSelfUs": 783
+    }
+  ],
+  "applicationRows": [
+    {
+      "frame": {
+        "group": "application",
+        "asset": "217.5e4ee85919ef96bf.js",
+        "functionName": "(anonymous)",
+        "line": 46,
+        "column": 14913,
+        "sampledSelfUs": 225300,
+        "samples": 172
+      },
+      "fileSha256": "1c9e8064c2e9fcb588dabd3cd7ecdb5759568e104d56d21e8341cb6eaf66da87",
+      "functionBytes": 445,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "217.5e4ee85919ef96bf.js",
+        "functionName": "tl",
+        "line": 0,
+        "column": 31981,
+        "sampledSelfUs": 165345,
+        "samples": 126
+      },
+      "fileSha256": "1c9e8064c2e9fcb588dabd3cd7ecdb5759568e104d56d21e8341cb6eaf66da87",
+      "functionBytes": 151,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "9828.c6f339305054da4c.js",
+        "functionName": "r",
+        "line": 0,
+        "column": 11348,
+        "sampledSelfUs": 47852,
+        "samples": 46
+      },
+      "fileSha256": "bcfb5ab756a84d402fac3bf93fad6bdc6471edb8abe76ae44f35b0a17b4f6774",
+      "functionBytes": 53,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "1680-23bbb625848cfe36.js",
+        "functionName": "(anonymous)",
+        "line": 0,
+        "column": 14407,
+        "sampledSelfUs": 30311,
+        "samples": 24
+      },
+      "fileSha256": "684b332c040615b705d7e7bb1d7086523f5cc856f0a9008e0ad768f57a8a8ca2",
+      "functionBytes": 335,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "webpack-ab1d87afc13fd63f.js",
+        "functionName": "o",
+        "line": 0,
+        "column": 61,
+        "sampledSelfUs": 29116,
+        "samples": 21
+      },
+      "fileSha256": "456f22d1e770348cd517525f3671ac1da6673e903d66faa0357f14f2d2d227ba",
+      "functionBytes": 169,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "217.5e4ee85919ef96bf.js",
+        "functionName": "(anonymous)",
+        "line": 0,
+        "column": 21819,
+        "sampledSelfUs": 27041,
+        "samples": 23
+      },
+      "fileSha256": "1c9e8064c2e9fcb588dabd3cd7ecdb5759568e104d56d21e8341cb6eaf66da87",
+      "functionBytes": 887,
+      "matchedStaticFlags": [
+        "querySelectorAll",
+        "data-testid"
+      ],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "217.5e4ee85919ef96bf.js",
+        "functionName": "(anonymous)",
+        "line": 46,
+        "column": 43536,
+        "sampledSelfUs": 26075,
+        "samples": 20
+      },
+      "fileSha256": "1c9e8064c2e9fcb588dabd3cd7ecdb5759568e104d56d21e8341cb6eaf66da87",
+      "functionBytes": 127,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "59c1a02d-5ad7f5f48258f955.js",
+        "functionName": "ax",
+        "line": 0,
+        "column": 53644,
+        "sampledSelfUs": 21881,
+        "samples": 20
+      },
+      "fileSha256": "71b9a461897a1c0dd8d6e71458d5784eaa1229074a8e445863b58b75a15ad242",
+      "functionBytes": 184,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "217.5e4ee85919ef96bf.js",
+        "functionName": "(anonymous)",
+        "line": 46,
+        "column": 27987,
+        "sampledSelfUs": 21605,
+        "samples": 14
+      },
+      "fileSha256": "1c9e8064c2e9fcb588dabd3cd7ecdb5759568e104d56d21e8341cb6eaf66da87",
+      "functionBytes": 536,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "4422-7f247aee4c1d5ab8.js",
+        "functionName": "(anonymous)",
+        "line": 0,
+        "column": 5016,
+        "sampledSelfUs": 19194,
+        "samples": 20
+      },
+      "fileSha256": "1ce4f93c48cff9601f03b16e84ee455003b56fd64668de257ee247a57b17baf3",
+      "functionBytes": 1105,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "59c1a02d-5ad7f5f48258f955.js",
+        "functionName": "ih",
+        "line": 0,
+        "column": 83648,
+        "sampledSelfUs": 16819,
+        "samples": 15
+      },
+      "fileSha256": "71b9a461897a1c0dd8d6e71458d5784eaa1229074a8e445863b58b75a15ad242",
+      "functionBytes": 7886,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "217.5e4ee85919ef96bf.js",
+        "functionName": "(anonymous)",
+        "line": 46,
+        "column": 699,
+        "sampledSelfUs": 15410,
+        "samples": 13
+      },
+      "fileSha256": "1c9e8064c2e9fcb588dabd3cd7ecdb5759568e104d56d21e8341cb6eaf66da87",
+      "functionBytes": 64129,
+      "matchedStaticFlags": [
+        "getBoundingClientRect",
+        "mergedRestaurants",
+        "setMap",
+        "setIcon",
+        "getIcon",
+        "cluster_id"
+      ],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "9828.c6f339305054da4c.js",
+        "functionName": "(anonymous)",
+        "line": 0,
+        "column": 5233,
+        "sampledSelfUs": 14976,
+        "samples": 12
+      },
+      "fileSha256": "bcfb5ab756a84d402fac3bf93fad6bdc6471edb8abe76ae44f35b0a17b4f6774",
+      "functionBytes": 29879,
+      "matchedStaticFlags": [
+        "querySelectorAll"
+      ],
+      "rawCodePersisted": false
+    }
+  ],
+  "rawCodePersisted": false
+}

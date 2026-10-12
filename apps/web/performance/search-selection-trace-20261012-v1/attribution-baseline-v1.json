@@ -1,0 +1,540 @@
+{
+  "kind": "baseline",
+  "sourceCommit": "056a86600f412eb42df4304e3206841679012f3e",
+  "callers": [
+    {
+      "functionName": "getPropertyValue",
+      "chain": [
+        {
+          "group": "application",
+          "asset": "9963.3828e5ba8b832285.js",
+          "functionName": "(anonymous)",
+          "line": 46,
+          "column": 14912
+        },
+        {
+          "group": "application",
+          "asset": "9963.3828e5ba8b832285.js",
+          "functionName": "(anonymous)",
+          "line": 46,
+          "column": 17669
+        },
+        {
+          "group": "application",
+          "asset": "4bd1b696-8a4ab4fdf0ae305a.js",
+          "functionName": "iE",
+          "line": 0,
+          "column": 93085
+        },
+        {
+          "group": "application",
+          "asset": "4bd1b696-8a4ab4fdf0ae305a.js",
+          "functionName": "ub",
+          "line": 0,
+          "column": 117199
+        },
+        {
+          "group": "application",
+          "asset": "4bd1b696-8a4ab4fdf0ae305a.js",
+          "functionName": "uy",
+          "line": 0,
+          "column": 116947
+        }
+      ],
+      "sampledSelfUs": 181598
+    },
+    {
+      "functionName": "getPropertyValue",
+      "chain": [
+        {
+          "group": "application",
+          "asset": "7681-bfa66958205b4aec.js",
+          "functionName": "E",
+          "line": 0,
+          "column": 6335
+        },
+        {
+          "group": "application",
+          "asset": "3237.7f63b91c6b6a7e86.js",
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 7007
+        },
+        {
+          "group": "application",
+          "asset": "3237.7f63b91c6b6a7e86.js",
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 9434
+        },
+        {
+          "group": "application",
+          "asset": "4bd1b696-8a4ab4fdf0ae305a.js",
+          "functionName": "iE",
+          "line": 0,
+          "column": 93085
+        },
+        {
+          "group": "application",
+          "asset": "4bd1b696-8a4ab4fdf0ae305a.js",
+          "functionName": "ue",
+          "line": 0,
+          "column": 103259
+        }
+      ],
+      "sampledSelfUs": 5882
+    },
+    {
+      "functionName": "querySelectorAll",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "query",
+          "line": 5718,
+          "column": 20
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "(anonymous)",
+          "line": 5716,
+          "column": 112
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "_cached",
+          "line": 5499,
+          "column": 9
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "_queryCSS",
+          "line": 5715,
+          "column": 11
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "queryAll",
+          "line": 7154,
+          "column": 21
+        }
+      ],
+      "sampledSelfUs": 3862
+    },
+    {
+      "functionName": "getPropertyValue",
+      "chain": [
+        {
+          "group": "application",
+          "asset": "7681-bfa66958205b4aec.js",
+          "functionName": "m",
+          "line": 0,
+          "column": 6067
+        },
+        {
+          "group": "application",
+          "asset": "7681-bfa66958205b4aec.js",
+          "functionName": "E",
+          "line": 0,
+          "column": 6335
+        },
+        {
+          "group": "application",
+          "asset": "3237.7f63b91c6b6a7e86.js",
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 7007
+        },
+        {
+          "group": "application",
+          "asset": "3237.7f63b91c6b6a7e86.js",
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 9434
+        },
+        {
+          "group": "application",
+          "asset": "4bd1b696-8a4ab4fdf0ae305a.js",
+          "functionName": "iE",
+          "line": 0,
+          "column": 93085
+        }
+      ],
+      "sampledSelfUs": 3481
+    },
+    {
+      "functionName": "querySelectorAll",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "query",
+          "line": 5412,
+          "column": 16
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "queryRole",
+          "line": 5370,
+          "column": 18
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "queryAll",
+          "line": 5428,
+          "column": 14
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "_queryEngineAll",
+          "line": 7057,
+          "column": 17
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "querySelectorAll",
+          "line": 7009,
+          "column": 18
+        }
+      ],
+      "sampledSelfUs": 3255
+    },
+    {
+      "functionName": "querySelectorAll",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "query",
+          "line": 5718,
+          "column": 20
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "(anonymous)",
+          "line": 5716,
+          "column": 112
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "_cached",
+          "line": 5499,
+          "column": 9
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "_queryCSS",
+          "line": 5715,
+          "column": 11
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "queryAll",
+          "line": 7132,
+          "column": 16
+        }
+      ],
+      "sampledSelfUs": 2991
+    },
+    {
+      "functionName": "querySelectorAll",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 0
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "(root)",
+          "line": -1,
+          "column": -1
+        }
+      ],
+      "sampledSelfUs": 1406
+    },
+    {
+      "functionName": "getComputedStyle",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "getElementComputedStyle",
+          "line": 3132,
+          "column": 32
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "isElementHiddenForAria",
+          "line": 3545,
+          "column": 31
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "match",
+          "line": 5372,
+          "column": 16
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "query",
+          "line": 5412,
+          "column": 16
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "queryRole",
+          "line": 5370,
+          "column": 18
+        }
+      ],
+      "sampledSelfUs": 926
+    },
+    {
+      "functionName": "getComputedStyle",
+      "chain": [
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "getElementComputedStyle",
+          "line": 3132,
+          "column": 32
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "belongsToDisplayNoneOrAriaHiddenOrNonSlotted",
+          "line": 3564,
+          "column": 53
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "belongsToDisplayNoneOrAriaHiddenOrNonSlotted",
+          "line": 3564,
+          "column": 53
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "isElementHiddenForAria",
+          "line": 3545,
+          "column": 31
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "match",
+          "line": 5372,
+          "column": 16
+        }
+      ],
+      "sampledSelfUs": 913
+    },
+    {
+      "functionName": "querySelectorAll",
+      "chain": [
+        {
+          "group": "application",
+          "asset": "7681-bfa66958205b4aec.js",
+          "functionName": "E",
+          "line": 0,
+          "column": 2755
+        },
+        {
+          "group": "application",
+          "asset": "7681-bfa66958205b4aec.js",
+          "functionName": "(anonymous)",
+          "line": 0,
+          "column": 3378
+        },
+        {
+          "group": "builtin",
+          "asset": null,
+          "functionName": "(root)",
+          "line": -1,
+          "column": -1
+        }
+      ],
+      "sampledSelfUs": 689
+    }
+  ],
+  "applicationRows": [
+    {
+      "frame": {
+        "group": "application",
+        "asset": "9963.3828e5ba8b832285.js",
+        "functionName": "to",
+        "line": 0,
+        "column": 23100,
+        "sampledSelfUs": 149880,
+        "samples": 121
+      },
+      "fileSha256": "2ad67876174fdc082b461722ad873b01296dfc814f05665e5be6ec2dee563853",
+      "functionBytes": 151,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "2700.4dc6d8a94c3f828f.js",
+        "functionName": "r",
+        "line": 0,
+        "column": 15713,
+        "sampledSelfUs": 40714,
+        "samples": 44
+      },
+      "fileSha256": "7d42f6a383eb17d685f718e190fdffc63a85fb71f887fec0a5129a5138dc03e8",
+      "functionBytes": 53,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "9963.3828e5ba8b832285.js",
+        "functionName": "(anonymous)",
+        "line": 0,
+        "column": 12941,
+        "sampledSelfUs": 34308,
+        "samples": 28
+      },
+      "fileSha256": "2ad67876174fdc082b461722ad873b01296dfc814f05665e5be6ec2dee563853",
+      "functionBytes": 887,
+      "matchedStaticFlags": [
+        "querySelectorAll",
+        "data-testid"
+      ],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "4bd1b696-8a4ab4fdf0ae305a.js",
+        "functionName": "ax",
+        "line": 0,
+        "column": 53644,
+        "sampledSelfUs": 27976,
+        "samples": 26
+      },
+      "fileSha256": "5cf2fcfae6b221476479e25b2883f9052b18a7eb97bd3d069f3cc44112852610",
+      "functionBytes": 184,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "7681-bfa66958205b4aec.js",
+        "functionName": "(anonymous)",
+        "line": 0,
+        "column": 14669,
+        "sampledSelfUs": 27402,
+        "samples": 22
+      },
+      "fileSha256": "0175f1303cb3ce0a0b213b62025ed471cb22d1b5f489c633d49be395ebfe1539",
+      "functionBytes": 335,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "9963.3828e5ba8b832285.js",
+        "functionName": "(anonymous)",
+        "line": 46,
+        "column": 43674,
+        "sampledSelfUs": 23760,
+        "samples": 20
+      },
+      "fileSha256": "2ad67876174fdc082b461722ad873b01296dfc814f05665e5be6ec2dee563853",
+      "functionBytes": 127,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "webpack-e3f09c869d88ab06.js",
+        "functionName": "o",
+        "line": 0,
+        "column": 61,
+        "sampledSelfUs": 23098,
+        "samples": 21
+      },
+      "fileSha256": "2c6b67f4f85d47b75979c5b29498dd2a12e3f17cabdb329e809251690f86eae1",
+      "functionBytes": 169,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "9963.3828e5ba8b832285.js",
+        "functionName": "(anonymous)",
+        "line": 46,
+        "column": 14912,
+        "sampledSelfUs": 22091,
+        "samples": 18
+      },
+      "fileSha256": "2ad67876174fdc082b461722ad873b01296dfc814f05665e5be6ec2dee563853",
+      "functionBytes": 584,
+      "matchedStaticFlags": [
+        "getPropertyValue",
+        "getComputedStyle"
+      ],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "7146-101751fc3bc4e147.js",
+        "functionName": "(anonymous)",
+        "line": 0,
+        "column": 28877,
+        "sampledSelfUs": 20184,
+        "samples": 20
+      },
+      "fileSha256": "bbeaba2746650083a1ed14ac1a658dafc72f468ec67bb5e03c4f1bb9d449a201",
+      "functionBytes": 1105,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    },
+    {
+      "frame": {
+        "group": "application",
+        "asset": "9963.3828e5ba8b832285.js",
+        "functionName": "(anonymous)",
+        "line": 46,
+        "column": 28125,
+        "sampledSelfUs": 17392,
+        "samples": 13
+      },
+      "fileSha256": "2ad67876174fdc082b461722ad873b01296dfc814f05665e5be6ec2dee563853",
+      "functionBytes": 536,
+      "matchedStaticFlags": [],
+      "rawCodePersisted": false
+    }
+  ],
+  "rawCodePersisted": false
+}

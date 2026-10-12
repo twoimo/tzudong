@@ -1,0 +1,95 @@
+{
+  "fieldAdmission": 0,
+  "files": {
+    "REPORT-v1.md": {
+      "bytes": 1967,
+      "sha256": "5226a39482fd38898afb890cb25104999d85460ad7cb2e3aa79ea5db0c8db972"
+    },
+    "attribute-profile-v1.mjs": {
+      "bytes": 3687,
+      "sha256": "acf10f28aae42ec1f53bf2a4433cd9dc4fa70f410c3ed027f264e9b2d5c26f17"
+    },
+    "attribution-baseline-v1.json": {
+      "bytes": 13451,
+      "sha256": "1a75ccd4086aa72edd7f3bb6c5b292257bb1b43605be0a24ee9153e92152d737"
+    },
+    "attribution-candidate-v1.json": {
+      "bytes": 15878,
+      "sha256": "d274ec4f6acadf5bb576464c8aa0aad2c473d347e4a58d1ec09b89aac03139c1"
+    },
+    "build-receipts-v7.json": {
+      "bytes": 3560,
+      "sha256": "c3d979a1c1ade8e277a6ae3adbe2e44ad150ed3d942400e6673aa2d23a0dc412"
+    },
+    "diagnostic-baseline-v4.json": {
+      "bytes": 26030,
+      "sha256": "6624ad7fb314aa5198237894b15fb9816663cbcc04a3c76b4f5503f0c749bcbd"
+    },
+    "diagnostic-candidate-v1.json": {
+      "bytes": 16713,
+      "sha256": "6afd324397fd2de193eb6c906ecb550095faa245cf5c44766f12ecd6a88fd31d"
+    },
+    "diagnostic-candidate-v2.json": {
+      "bytes": 16828,
+      "sha256": "827696cdb12825950be35063de121cc854bc60ac1c618bb72bdb469d1c1e8a02"
+    },
+    "diagnostic-candidate-v3.json": {
+      "bytes": 26001,
+      "sha256": "bde4b7a281e883fa57f9ef15cc73be49b4b435141791084e2b6713ad1ef08445"
+    },
+    "diagnostic-candidate-v4.json": {
+      "bytes": 26104,
+      "sha256": "d4246cd366be088a59163f7b0ae6458f7aaad0b499e23875d5585bb14cd46288"
+    },
+    "fixture-query-v7.mjs": {
+      "bytes": 5754,
+      "sha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5"
+    },
+    "profile-baseline-sanitized-v4.json": {
+      "bytes": 812312,
+      "sha256": "fced9140ef5b2ae56341f7d5cd0b308374406314af49e7a16aec7fa39b692ccc"
+    },
+    "profile-candidate-sanitized-v3.json": {
+      "bytes": 802513,
+      "sha256": "864c00c23c83e395eafdb41498b01d2f17331cd2d6cd3fdf6d57c334b1eae243"
+    },
+    "profile-candidate-sanitized-v4.json": {
+      "bytes": 885855,
+      "sha256": "18f07eb2980d12cbccb43647f897121c1d7d2b1b1f5f5747196b15bf651f9685"
+    },
+    "profile-flow-v1.mjs": {
+      "bytes": 9953,
+      "sha256": "ef2100969001f49d7ba99bce768474269e86ad63e9fbab7fc7be22d0c9523086"
+    },
+    "profile-flow-v2.mjs": {
+      "bytes": 10496,
+      "sha256": "0c469a524eac61d5588435190a8a63be4c0eea96af914f5ab0841818ac7c6e55"
+    },
+    "profile-flow-v3.mjs": {
+      "bytes": 10490,
+      "sha256": "f83f4744c11d68ae09cd4bde5b0756c2999d4b8c67317c8b58e0687e9a317b7b"
+    },
+    "profile-flow-v4.mjs": {
+      "bytes": 10491,
+      "sha256": "6886c23d783cba6458253915eae8113a0653abbf3ccd907e7cdb5b26161903c6"
+    },
+    "real-sdk-runtime-v7.mjs": {
+      "bytes": 9343,
+      "sha256": "91cb4c029e49481387f6e47036bfd199eb0cf356e320873409748730e99b780e"
+    },
+    "trace-baseline-sanitized-v4.json": {
+      "bytes": 1484542,
+      "sha256": "60ca3c4023278186dfa47819b224323eac96d58874775d1fb2e5cdba9438d2d1"
+    },
+    "trace-candidate-sanitized-v3.json": {
+      "bytes": 1478299,
+      "sha256": "44aec20556619c93c9ae98b72799abf0894164fc038d7e524ee1baac142d6bb9"
+    },
+    "trace-candidate-sanitized-v4.json": {
+      "bytes": 1530047,
+      "sha256": "ed751e0992be59949473d580dbefe6db5fb9db1a3af9fea3bce1137e83fed9f9"
+    }
+  },
+  "performanceAdmission": 0,
+  "schemaVersion": "diagnostic-artifacts.v1"
+}

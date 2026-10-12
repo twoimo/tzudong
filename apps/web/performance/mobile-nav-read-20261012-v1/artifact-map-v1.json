@@ -1,0 +1,95 @@
+{
+  "fieldAdmission": 0,
+  "files": {
+    "REPORT-v1.md": {
+      "bytes": 1826,
+      "sha256": "bcf23e7b02793e9c3c4b7b1176ab82d2499a27dbb85dd87b95aafbdadd222439"
+    },
+    "attribute-profile-v1.mjs": {
+      "bytes": 3687,
+      "sha256": "acf10f28aae42ec1f53bf2a4433cd9dc4fa70f410c3ed027f264e9b2d5c26f17"
+    },
+    "attribution-candidate-v1.json": {
+      "bytes": 16632,
+      "sha256": "26afb6cba44852762010c81058c887f60fb14ba730ff6f628368dda2af8a2e44"
+    },
+    "build-after-v1.json": {
+      "bytes": 1661,
+      "sha256": "d76e527b2f26f834418455de5570c9a3fb967ebafdf19a67d88999bf604497b3"
+    },
+    "build-after-v1.log": {
+      "bytes": 1173,
+      "sha256": "4c59c90b9b814e1e5cda438d7f69062265eb97877b27bfb019f21e9dc5a49d51"
+    },
+    "build-nav-v1.mjs": {
+      "bytes": 4138,
+      "sha256": "1f62f05e95f3486882ba01729ea29bd59a517148982f247a0b9acea308eec0a5"
+    },
+    "build-receipts-v7.json": {
+      "bytes": 3546,
+      "sha256": "2fca9cfa350f34afae883ec4c0eca9fea7fd2e721648e8f3cd0e75572ecfb346"
+    },
+    "diagnostic-candidate-v4.json": {
+      "bytes": 26355,
+      "sha256": "f10a7dec31678e2b410fad192ea54ce3736a510431f8b7057b280f80b867f004"
+    },
+    "diagnostic-candidate-v5.json": {
+      "bytes": 30089,
+      "sha256": "a19361b09a7dedfd46875dfa448e18e632b1fac18a4985e3f2bc2ecca43b8c85"
+    },
+    "fixture-query-v7.mjs": {
+      "bytes": 5754,
+      "sha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5"
+    },
+    "generated-tsconfig-v1.patch": {
+      "bytes": 520,
+      "sha256": "4f8c3010e4444172c949b60b2cebd8204b181323b0b48946e04beb0ebb76c96c"
+    },
+    "geometry-outcome-v1.json": {
+      "bytes": 368,
+      "sha256": "2386fd045338ce2f47dfeed170a4a96bd0b2205696017903822eb99c11394e33"
+    },
+    "measure-ui-v7.mjs": {
+      "bytes": 6640,
+      "sha256": "1d398c9b456beefcfc85da6cf398f00450ad99d191370cd42771da056fb7b979"
+    },
+    "profile-candidate-sanitized-v4.json": {
+      "bytes": 908421,
+      "sha256": "3ac4b1ef70c4fac9cad56ce31dce485e2ab0a0d87e6cd2165268f49bbc31d9f2"
+    },
+    "profile-candidate-sanitized-v5.json": {
+      "bytes": 917570,
+      "sha256": "8edef0004bb3ae051403ef52a26d8847412efda74a8df3a703941f91022fded6"
+    },
+    "profile-flow-v4.mjs": {
+      "bytes": 10491,
+      "sha256": "6886c23d783cba6458253915eae8113a0653abbf3ccd907e7cdb5b26161903c6"
+    },
+    "profile-flow-v5.mjs": {
+      "bytes": 11644,
+      "sha256": "0b77b470b61b8a3b633545d71f5b806cefbe1cc9f7fba46442e9d42cd166adc0"
+    },
+    "real-sdk-runtime-v7.mjs": {
+      "bytes": 9343,
+      "sha256": "91cb4c029e49481387f6e47036bfd199eb0cf356e320873409748730e99b780e"
+    },
+    "trace-candidate-sanitized-v4.json": {
+      "bytes": 1492549,
+      "sha256": "bfe86831031b00b0a994dbbffae5c75a4254033d1e98b3a0db6b4ae3942cb490"
+    },
+    "trace-candidate-sanitized-v5.json": {
+      "bytes": 1492180,
+      "sha256": "87bad0235b63c0d87ffc5a8d02dd1d439e2f1d255b9ccbd694c784109372c9c3"
+    },
+    "tsconfig-before-build-v1.json": {
+      "bytes": 1260,
+      "sha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+    },
+    "validation-local-v1.json": {
+      "bytes": 548,
+      "sha256": "8abf18deedd83eac1bd44ebc2a986365a2dbed78d1b35a3e523083fb61aa3905"
+    }
+  },
+  "performanceAdmission": 0,
+  "schemaVersion": "diagnostic-artifacts.v1"
+}

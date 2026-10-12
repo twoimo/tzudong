@@ -1,0 +1,19 @@
+{
+  "diagnosticOnly": true,
+  "metrics": {
+    "inlineNavHeight": {
+      "count": 50,
+      "durationMs": 0.09999990463256836
+    },
+    "computedNavHeight": {
+      "count": 0,
+      "durationMs": 0
+    },
+    "visualViewportHeight": {
+      "count": 218,
+      "durationMs": 324.19999980926514
+    }
+  },
+  "performanceAdmission": 0,
+  "improvementProven": false
+}

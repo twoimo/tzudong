@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "remoteHead": "a599e479a3cded952d633230060b79fadea5496a",
+  "remoteBranch": "codex/memory-retainers-20261012",
+  "verifiedMappedFiles": 371,
+  "maps": {
+    "apps/web/performance/swipe-heap-retainers-20261012-v1": "ccfc13096504406f1a1803b5440d47b1efb844069502c19fbe55fdf95fabc12c",
+    "apps/web/performance/query-callback-memory-primary-20261012-v2": "5b6e202830b5a92229faa490f81be12d92fec47618942101ffd2a469affcfff6"
+  },
+  "scope": "Remote advertised content-addressed Git commit tree; local git show SHA256 byte checks for every retained blob",
+  "goalComplete": false
+}

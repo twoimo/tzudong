@@ -1,0 +1,21 @@
+{
+  "sourceCommit": "0b5cb0a20fefda86e3eb1712dc39c5af89c4c514",
+  "baseCommit": "056a86600f412eb42df4304e3206841679012f3e",
+  "changedFiles": 3,
+  "relatedTests": {
+    "pass": 44,
+    "fail": 0,
+    "expectCalls": 2383,
+    "toolChunk": "13ec55"
+  },
+  "lintExit": 0,
+  "nativeCompatParity": {
+    "diagnostics": 0,
+    "logicalInputs": 3142,
+    "logicalInputNamesSha256": "17f772755664d5c7b8863ebcd130c497c438f943c4cd890f0088977256d9d2a0",
+    "toolChunk": "beb952"
+  },
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "deployed": false
+}
