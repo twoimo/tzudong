@@ -223,8 +223,18 @@ describe('privacy incident workflow contract', () => {
   test('Korean operator UI distinguishes drafts, decisions, deadline, and unverified external receipts', () => {
     const page = source('app/admin/privacy-incidents/page.tsx');
     const adminOverview = source('components/admin/AdminConsoleOverview.tsx');
+    const adminLayout = source('app/admin/layout.tsx');
+    const adminUi = source('styles/admin-ui.css');
 
-    expect(page).toContain('개인정보 사고 담당 관리자 전용');
+    expect(page).toContain("import { AdminPageHeader } from '@/components/admin/AdminPageHeader';");
+    expect(page).toContain('title="개인정보 사고 대응"');
+    expect(page).toContain('titleId="admin-privacy-incidents-title"');
+    expect(page).toContain('data-admin-module-header-module="privacy-incidents"');
+    expect(page).toContain('aria-label="개인정보 사고 목록 새로고침"');
+    expect(page).toContain('data-privacy-incident-operator-boundary="true"');
+    expect(page).not.toContain('<header className="space-y-2">');
+    expect(page).toContain('summary={`${incidents.length}건');
+    expect(page).not.toContain('개인정보 사고 담당 관리자 전용');
     expect(page).toContain('운영자 결정 입력');
     expect(page).toContain('마감은 이 시각 + 72시간으로만 계산됩니다. 탐지 시각은 사용하지 않습니다.');
     expect(page).toContain('통지 초안은 외부 제출이 아닙니다.');
@@ -239,6 +249,8 @@ describe('privacy incident workflow contract', () => {
     expect(page).toContain('data-privacy-incident-detection-intake="true"');
     expect(page).toContain('data-privacy-incident-detection-readback="true"');
     expect(page).toContain('idempotencyKey: preview.idempotencyKey');
+    expect(adminLayout).toContain("import '../../styles/admin-ui.css';");
+    expect(adminUi).toContain('.admin-page-header-actions :is(button, select, input, a[data-slot="button"]) { min-width: 2.75rem; min-height: 2.75rem; }');
     expect(adminOverview).toContain('href="/admin/privacy-incidents"');
     expect(adminOverview).toContain('data-admin-privacy-incidents-link="true"');
     expect(adminOverview).toContain('자동 신고나 수리 완료를 주장하지 않습니다.');

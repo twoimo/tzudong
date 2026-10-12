@@ -1,0 +1,731 @@
+{
+  "schema": "tzudong-source-route-census/v1",
+  "kind": "source-and-historical-evidence-inventory-only",
+  "baseHead": "5f17b5f7dfca60f4b75886052dcb6433e97acba0",
+  "sourceManifestSha256": "ba136f003c324aed5b90d2cf2d1853b12d536d7ae116948641d8070769f65777",
+  "counts": {
+    "publicOrAccountPages": 21,
+    "publicShareHandlers": 1,
+    "adminPhysicalPages": 5,
+    "totalSurfaces": 27,
+    "historicalPublicMatrixRows": 22,
+    "currentAdminSyntheticModules": 15
+  },
+  "assertions": {
+    "expectedCurrentCounts": true,
+    "historicalPublicMatrixCoversCurrentPublicPatterns": true,
+    "historicalPublicOperatingVerificationCount": 0
+  },
+  "evidenceInputs": [
+    {
+      "path": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+      "sha256": "1eea21e0ea60458cefd697868b3a28ce86a2f4c2d118db779ac2eb622a40f9af"
+    },
+    {
+      "path": "performance/public-cms-followthrough-20261009/capture-results.json",
+      "sha256": "6fdc802cc2fe56511f891e1d83b383207fd23fc2a6d3617d1caf5576c8fb9c1f"
+    },
+    {
+      "path": "performance/goal-delivery-20261012/final-source-bound-render.json",
+      "sha256": "abe371ba9711bab732aef5452ca8ecaa3cf10d3c76cae8366ca66081b90a02e2"
+    }
+  ],
+  "limitations": [
+    "No route was requested, rendered, authenticated, or mutated by this source census.",
+    "Historical evidence labels retain their original source and environment scope.",
+    "A route source file or historical matrix row does not prove runtime, OAuth, DB, save, approval, or production behavior.",
+    "Dynamic inputs are reused only when recorded in the historical capture; absent inputs remain an empty list."
+  ],
+  "routes": [
+    {
+      "routePattern": "/",
+      "category": "public-or-account-page",
+      "sourcePath": "app/page.tsx",
+      "sha256": "70dcd82d4c001cfa35c5691424d15ed4993451414c6249e84d4153dc4f3be32a",
+      "bytes": 1678,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "홈 지도 차단 상태",
+        "screenshots": {
+          "desktop": "screenshots/16-desktop.png",
+          "tablet": "screenshots/16-tablet.png",
+          "mobile": "screenshots/16-mobile.png"
+        },
+        "representativeInputs": [
+          "/"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/admin",
+      "category": "admin-page",
+      "sourcePath": "app/admin/page.tsx",
+      "sha256": "765f9964b40fe4adaea536e358550271fe651b41869d11a408b873e78c8cf235",
+      "bytes": 4377,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/goal-delivery-20261012/final-source-bound-render.json",
+        "scope": "synthetic /admin sidebar module geometry and navigation only",
+        "representedModule": null,
+        "missing": [
+          "OAuth",
+          "operating DB",
+          "save or apply",
+          "standalone admin subpaths"
+        ]
+      }
+    },
+    {
+      "routePattern": "/admin/banners",
+      "category": "admin-page",
+      "sourcePath": "app/admin/banners/page.tsx",
+      "sha256": "19ca267845183b104eda2676bdd1f05419d73df8b643f799b35dca14079f81c5",
+      "bytes": 56235,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/goal-delivery-20261012/final-source-bound-render.json",
+        "scope": "embedded canonical module only; standalone URL was not rendered",
+        "representedModule": "banners",
+        "missing": [
+          "standalone route render",
+          "OAuth",
+          "operating DB",
+          "save or apply"
+        ]
+      }
+    },
+    {
+      "routePattern": "/admin/evaluations",
+      "category": "admin-page",
+      "sourcePath": "app/admin/evaluations/page.tsx",
+      "sha256": "0b266ec596cfd1e8dee4cb26fc69185e799b37ebd8bdc2936b090a0cec06ab31",
+      "bytes": 110684,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/goal-delivery-20261012/final-source-bound-render.json",
+        "scope": "embedded canonical module only; standalone URL was not rendered",
+        "representedModule": "restaurants",
+        "missing": [
+          "standalone route render",
+          "OAuth",
+          "operating DB",
+          "save or apply"
+        ]
+      }
+    },
+    {
+      "routePattern": "/admin/privacy-incidents",
+      "category": "admin-page",
+      "sourcePath": "app/admin/privacy-incidents/page.tsx",
+      "sha256": "a06c2a03e85268f55f85a362d924ef8306d94376205f48fddc3f71797add1050",
+      "bytes": 50001,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": null,
+        "scope": "no current source-bound render evidence",
+        "representedModule": null,
+        "missing": [
+          "standalone route render",
+          "OAuth",
+          "operating DB",
+          "save or apply"
+        ]
+      }
+    },
+    {
+      "routePattern": "/admin/submissions",
+      "category": "admin-page",
+      "sourcePath": "app/admin/submissions/page.tsx",
+      "sha256": "161b7b90bf162636cf0579e18ad8765d81d3fd908af308b76c6b99dcc0c9e926",
+      "bytes": 400,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/goal-delivery-20261012/final-source-bound-render.json",
+        "scope": "source redirect plus synthetic canonical target only",
+        "representedModule": "submissions",
+        "missing": [
+          "standalone redirect HTTP and auth readback"
+        ]
+      }
+    },
+    {
+      "routePattern": "/auth/required",
+      "category": "public-or-account-page",
+      "sourcePath": "app/auth/required/page.tsx",
+      "sha256": "e12adcee4eb7a61eb7f4e556a12d475f0bfac8c43c0a17f6b4aeeb9530e5afeb",
+      "bytes": 3055,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "익명 접근 안내",
+        "screenshots": {
+          "desktop": "screenshots/01-desktop.png",
+          "tablet": "screenshots/01-tablet.png",
+          "mobile": "screenshots/01-mobile.png"
+        },
+        "representativeInputs": [
+          "/auth/required"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/auth/reset-password",
+      "category": "public-or-account-page",
+      "sourcePath": "app/auth/reset-password/page.tsx",
+      "sha256": "f7dc338b877d08949d62eaae05dcda86c5b561f154065da4fb6e81d4b8dcb238",
+      "bytes": 12881,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "복구 권한 없는 상태 안내",
+        "screenshots": {
+          "desktop": "screenshots/02-desktop.png",
+          "tablet": "screenshots/02-tablet.png",
+          "mobile": "screenshots/02-mobile.png"
+        },
+        "representativeInputs": [
+          "/auth/reset-password"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/data-deletion",
+      "category": "public-or-account-page",
+      "sourcePath": "app/data-deletion/page.tsx",
+      "sha256": "819f32b5b4a39f03e788cdb000c666a13a847524b5827ca95cf4f1c29a039e09",
+      "bytes": 7488,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "공개 안내·스크롤·링크 검증",
+        "screenshots": {
+          "desktop": "screenshots/03-desktop.png",
+          "tablet": "screenshots/03-tablet.png",
+          "mobile": "screenshots/03-mobile.png"
+        },
+        "representativeInputs": [
+          "/data-deletion"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/feed",
+      "category": "public-or-account-page",
+      "sourcePath": "app/feed/page.tsx",
+      "sha256": "d2d2522fa69ce53ec605243492b173213619362964ad6fd6d01d75739a75ba0e",
+      "bytes": 6729,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "합성 읽기 실패 상태",
+        "screenshots": {
+          "desktop": "stable-4-desktop.png",
+          "tablet": "stable-4-tablet.png",
+          "mobile": "stable-4-mobile.png"
+        },
+        "representativeInputs": [
+          "/feed"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/global-map",
+      "category": "public-or-account-page",
+      "sourcePath": "app/global-map/page.tsx",
+      "sha256": "56ee531f6f1c27ebed8b2a44a9c383b88a121a589b149255b7f85c228997791a",
+      "bytes": 56357,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "외부 지도 차단 상태",
+        "screenshots": {
+          "desktop": "screenshots/05-desktop.png",
+          "tablet": "screenshots/05-tablet.png",
+          "mobile": "screenshots/05-mobile.png"
+        },
+        "representativeInputs": [
+          "/global-map"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/home-frame",
+      "category": "public-or-account-page",
+      "sourcePath": "app/home-frame/page.tsx",
+      "sha256": "1137f5f83a54653656f9875575ab0dbdd3f5e742c7d15714026d4cdd0f58ac58",
+      "bytes": 246,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "홈 지도 차단 상태",
+        "screenshots": {
+          "desktop": "screenshots/06-desktop.png",
+          "tablet": "screenshots/06-tablet.png",
+          "mobile": "screenshots/06-mobile.png"
+        },
+        "representativeInputs": [
+          "/home-frame"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/insights",
+      "category": "public-or-account-page",
+      "sourcePath": "app/insights/page.tsx",
+      "sha256": "204a7ad2faf23750ac60e76b9381660fa3afadd9de928047e650e7fc9c1d2bef",
+      "bytes": 123,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "익명 사용자는 홈으로 이동",
+        "screenshots": {
+          "desktop": "screenshots/07-desktop.png",
+          "tablet": "screenshots/07-tablet.png",
+          "mobile": "screenshots/07-mobile.png"
+        },
+        "representativeInputs": [
+          "/insights"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/leaderboard",
+      "category": "public-or-account-page",
+      "sourcePath": "app/leaderboard/page.tsx",
+      "sha256": "2fbe9ad3014c237627c886769a3af483458432bc91ff23cb8ff02cdb9a06fcdf",
+      "bytes": 9193,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "합성 기간 읽기·오류·회복 검증",
+        "screenshots": {
+          "desktop": "stable-8-desktop.png",
+          "tablet": "stable-8-tablet.png",
+          "mobile": "stable-8-mobile.png"
+        },
+        "representativeInputs": [
+          "/leaderboard"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/mypage",
+      "category": "public-or-account-page",
+      "sourcePath": "app/mypage/page.tsx",
+      "sha256": "c9a6b9937abf4935c95518dffbbad91dc794d7f30d8c1ca4c7f82d20f434bd6e",
+      "bytes": 121,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "익명 로그인 가드",
+        "screenshots": {
+          "desktop": "screenshots/10-desktop.png",
+          "tablet": "screenshots/10-tablet.png",
+          "mobile": "screenshots/10-mobile.png"
+        },
+        "representativeInputs": [
+          "/mypage"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/mypage/bookmarks",
+      "category": "public-or-account-page",
+      "sourcePath": "app/mypage/bookmarks/page.tsx",
+      "sha256": "5c937b6bfaeb0b24f98d8d1091079f75226f930b0395cda5af82a7eb3b100c82",
+      "bytes": 9060,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "익명 로그인 가드",
+        "screenshots": {
+          "desktop": "screenshots/09-desktop.png",
+          "tablet": "screenshots/09-tablet.png",
+          "mobile": "screenshots/09-mobile.png"
+        },
+        "representativeInputs": [
+          "/mypage/bookmarks"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/mypage/profile",
+      "category": "public-or-account-page",
+      "sourcePath": "app/mypage/profile/page.tsx",
+      "sha256": "5c1def4852bc9307dab2626727ca3ebd24f4a8430d5a3f63b1220cbaeb912446",
+      "bytes": 70125,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "익명 로그인 가드",
+        "screenshots": {
+          "desktop": "screenshots/11-desktop.png",
+          "tablet": "screenshots/11-tablet.png",
+          "mobile": "screenshots/11-mobile.png"
+        },
+        "representativeInputs": [
+          "/mypage/profile"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/mypage/reviews",
+      "category": "public-or-account-page",
+      "sourcePath": "app/mypage/reviews/page.tsx",
+      "sha256": "0fb94f49f5e5387b75c4fb94eca7c3ef476a935b109418daf073d9b2be5e1b61",
+      "bytes": 29529,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "익명 로그인 가드",
+        "screenshots": {
+          "desktop": "screenshots/12-desktop.png",
+          "tablet": "screenshots/12-tablet.png",
+          "mobile": "screenshots/12-mobile.png"
+        },
+        "representativeInputs": [
+          "/mypage/reviews"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/mypage/submissions/edit",
+      "category": "public-or-account-page",
+      "sourcePath": "app/mypage/submissions/edit/page.tsx",
+      "sha256": "da8ccb8c2d81a7e22ff71c4cea1e073ac17caeb777987b58f33c7a9741e64efb",
+      "bytes": 23602,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "익명 로그인 가드",
+        "screenshots": {
+          "desktop": "screenshots/13-desktop.png",
+          "tablet": "screenshots/13-tablet.png",
+          "mobile": "screenshots/13-mobile.png"
+        },
+        "representativeInputs": [
+          "/mypage/submissions/edit"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/mypage/submissions/new",
+      "category": "public-or-account-page",
+      "sourcePath": "app/mypage/submissions/new/page.tsx",
+      "sha256": "e2b850e6c790c54a631854e19289c6059ad86cd3784d9e1c7f0530bdfd55db46",
+      "bytes": 20624,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "익명 로그인 가드",
+        "screenshots": {
+          "desktop": "screenshots/14-desktop.png",
+          "tablet": "screenshots/14-tablet.png",
+          "mobile": "screenshots/14-mobile.png"
+        },
+        "representativeInputs": [
+          "/mypage/submissions/new"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/mypage/submissions/recommend",
+      "category": "public-or-account-page",
+      "sourcePath": "app/mypage/submissions/recommend/page.tsx",
+      "sha256": "f3dc2a2e32e0c60a2bdbbb38f0ef6daea189b238e80589d070ade440ac7c8a6f",
+      "bytes": 15984,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "익명 로그인 가드",
+        "screenshots": {
+          "desktop": "screenshots/15-desktop.png",
+          "tablet": "screenshots/15-tablet.png",
+          "mobile": "screenshots/15-mobile.png"
+        },
+        "representativeInputs": [
+          "/mypage/submissions/recommend"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/privacy",
+      "category": "public-or-account-page",
+      "sourcePath": "app/privacy/page.tsx",
+      "sha256": "4d5297eca1b9558ec30d1a2bbe5a2005c090df6648a2096f8d96edf8c4853e25",
+      "bytes": 2090,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "공개 문서·스크롤·링크 검증",
+        "screenshots": {
+          "desktop": "screenshots/18-desktop.png",
+          "tablet": "screenshots/18-tablet.png",
+          "mobile": "screenshots/18-mobile.png"
+        },
+        "representativeInputs": [
+          "/privacy"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/privacy/onboarding",
+      "category": "public-or-account-page",
+      "sourcePath": "app/privacy/onboarding/page.tsx",
+      "sha256": "3d6f188b4b91c97c77c3cfacf36f0d431063add01a805404fcdefac7f83e228a",
+      "bytes": 219,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "안내 오표현 수정·미완료 폼",
+        "screenshots": {
+          "desktop": "stable-17-desktop.png",
+          "tablet": "stable-17-tablet.png",
+          "mobile": "stable-17-mobile.png"
+        },
+        "representativeInputs": [
+          "/privacy/onboarding"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/s/[code]",
+      "category": "public-share-handler",
+      "sourcePath": "app/s/[code]/route.ts",
+      "sha256": "88ca0aab9e39d6452e5f597c005866e83d05df940c92796b10cdf0ad8f12b008",
+      "bytes": 2166,
+      "dynamicParameters": [
+        "code"
+      ],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "무효 링크 fallback; TypeError 남음",
+        "screenshots": {
+          "desktop": "screenshots/19-desktop.png",
+          "tablet": "screenshots/19-tablet.png",
+          "mobile": "screenshots/19-mobile.png"
+        },
+        "representativeInputs": [
+          "/s/audit-invalid-code"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/stamp",
+      "category": "public-or-account-page",
+      "sourcePath": "app/stamp/page.tsx",
+      "sha256": "4418cc36774792e55e9ab910579f5665320f64ee77b169568e2083181c791da9",
+      "bytes": 75527,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "합성 읽기·검색 오류/회복 검증",
+        "screenshots": {
+          "desktop": "stable-20-desktop.png",
+          "tablet": "stable-20-tablet.png",
+          "mobile": "stable-20-mobile.png"
+        },
+        "representativeInputs": [
+          "/stamp"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/submissions",
+      "category": "public-or-account-page",
+      "sourcePath": "app/submissions/page.tsx",
+      "sha256": "678f9d858c02e7bea4cc7574bd9ed456880e647c278f860b525c4f23220617da",
+      "bytes": 120,
+      "dynamicParameters": [],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "마이페이지 경유 로그인 가드",
+        "screenshots": {
+          "desktop": "screenshots/21-desktop.png",
+          "tablet": "screenshots/21-tablet.png",
+          "mobile": "screenshots/21-mobile.png"
+        },
+        "representativeInputs": [
+          "/submissions"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    },
+    {
+      "routePattern": "/user/[userId]",
+      "category": "public-or-account-page",
+      "sourcePath": "app/user/[userId]/page.tsx",
+      "sha256": "4216cc7020deda0db1d12fcfc20960481234c2ed3599cb4f51b5ca2a84b4ca66",
+      "bytes": 361,
+      "dynamicParameters": [
+        "userId"
+      ],
+      "evidence": {
+        "evidencePath": "performance/public-cms-followthrough-20261009/accepted-route-matrix.json",
+        "evidenceFound": true,
+        "scope": "historical anonymous or synthetic three-width matrix",
+        "operatingAuthenticatedDataVerified": false,
+        "recordedState": "합성 프로필 조회 실패 상태",
+        "screenshots": {
+          "desktop": "stable-22-desktop.png",
+          "tablet": "stable-22-tablet.png",
+          "mobile": "stable-22-mobile.png"
+        },
+        "representativeInputs": [
+          "/user/00000000-0000-4000-8000-000000000009"
+        ],
+        "missing": [
+          "current-source render binding",
+          "operating data"
+        ]
+      }
+    }
+  ]
+}

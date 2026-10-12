@@ -1,0 +1,62 @@
+{
+  "schema": "tzudong-privacy-incidents-http-readback/v2",
+  "scope": "loopback synthetic fixture; GET-only readback; no browser geometry claim",
+  "start": {
+    "status": 200,
+    "url": "http://127.0.0.1:18952/__fixture/start",
+    "bytes": 1001,
+    "sha256": "62dbb0b9abe1683e766b73605274362b03f496c1fdd70247a2e6d6f09f9e4c9f"
+  },
+  "startHasVisibleButton": true,
+  "session": {
+    "status": 200,
+    "url": "http://127.0.0.1:18952/admin/privacy-incidents",
+    "bytes": 24297,
+    "sha256": "3f33e68df482dd86b8d650226cd6863a8e47f9d023eb89b8245698203cbfb579"
+  },
+  "sessionBodyBytes": 24297,
+  "cookies": [
+    {
+      "name": "sb-127-auth-token",
+      "domain": "127.0.0.1",
+      "path": "/"
+    }
+  ],
+  "page": {
+    "status": 200,
+    "url": "http://127.0.0.1:18952/admin/privacy-incidents",
+    "bytes": 24297,
+    "sha256": "cdc4636dbd16474588f6de79e6e8adf73c89af7989f4995148bf296116b41b0d"
+  },
+  "pageHasTitle": true,
+  "pageHasLegacySummary": false,
+  "api": {
+    "status": 200,
+    "url": "http://127.0.0.1:18952/api/admin/privacy-incidents",
+    "bytes": 2193,
+    "sha256": "63a9e48e13a9eaafad5e093274b7f5154330226ef6cf9ceed345f522e034e2c2"
+  },
+  "apiIncidentCount": 3,
+  "apiDeadlineRiskCount": 2,
+  "listeners": {
+    "18950": {
+      "listening": true,
+      "lines": [
+        "node    36728 twoimo   12u  IPv4 0x49b77f2046a2f21a      0t0  TCP 127.0.0.1:18950 (LISTEN)"
+      ]
+    },
+    "18951": {
+      "listening": true,
+      "lines": [
+        "node    36729 twoimo   14u  IPv4 0xbf188d4aa0e0cbc5      0t0  TCP 127.0.0.1:18951 (LISTEN)"
+      ]
+    },
+    "18952": {
+      "listening": true,
+      "lines": [
+        "node    36729 twoimo   15u  IPv4 0x2f874d2d7300f690      0t0  TCP 127.0.0.1:18952 (LISTEN)"
+      ]
+    }
+  },
+  "apiDeadlineRiskDefinition": "deadlineStatus in {overdue, due_soon}"
+}

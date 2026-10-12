@@ -1,0 +1,226 @@
+{
+  "schema": "tzudong-privacy-cua-layout/v2",
+  "buildId": "RhKCeg5si0XfJQHmHouY3",
+  "pageSourceSha256": "572ac666db2f7f66a852557bacab63b64851056838ef11efa7dbd60a2db057a2",
+  "environment": "Chrome extension CUA, isolated production fixture",
+  "fixture": {
+    "incidentCount": 3,
+    "deadlineRiskCount": 2
+  },
+  "measurements": [
+    {
+      "clippedHeaderElements": 0,
+      "documentOverflowPx": 0,
+      "enabledButtonsBelow44": 1,
+      "h1Count": 1,
+      "header": {
+        "clientWidth": 1440,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 57,
+        "lineHeight": "24px",
+        "scrollWidth": 1440,
+        "text": "개인정보 사고 대응\n3건 · 기한 위험 2건\n새로고침",
+        "width": 1440,
+        "x": 0,
+        "y": 0
+      },
+      "refresh": {
+        "clientWidth": 85,
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "height": 32,
+        "lineHeight": "16px",
+        "scrollWidth": 85,
+        "text": "새로고침",
+        "width": 87.484375,
+        "x": 1340.515625,
+        "y": 12
+      },
+      "summary": {
+        "clientWidth": 1172,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 16,
+        "lineHeight": "16px",
+        "scrollWidth": 1172,
+        "text": "3건 · 기한 위험 2건",
+        "width": 1172.265625,
+        "x": 160.25,
+        "y": 20
+      },
+      "title": {
+        "clientWidth": 116,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "height": 24,
+        "lineHeight": "24px",
+        "scrollWidth": 116,
+        "text": "개인정보 사고 대응",
+        "width": 116.25,
+        "x": 36,
+        "y": 16
+      },
+      "viewport": {
+        "height": 954,
+        "width": 1440
+      }
+    },
+    {
+      "clippedHeaderElements": 0,
+      "documentOverflowPx": 0,
+      "enabledButtonsBelow44": 1,
+      "h1Count": 1,
+      "header": {
+        "clientWidth": 1024,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 57,
+        "lineHeight": "24px",
+        "scrollWidth": 1024,
+        "text": "개인정보 사고 대응\n3건 · 기한 위험 2건\n새로고침",
+        "width": 1024,
+        "x": 0,
+        "y": 0
+      },
+      "refresh": {
+        "clientWidth": 85,
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "height": 32,
+        "lineHeight": "16px",
+        "scrollWidth": 85,
+        "text": "새로고침",
+        "width": 87.484375,
+        "x": 924.515625,
+        "y": 12
+      },
+      "summary": {
+        "clientWidth": 756,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 16,
+        "lineHeight": "16px",
+        "scrollWidth": 756,
+        "text": "3건 · 기한 위험 2건",
+        "width": 756.265625,
+        "x": 160.25,
+        "y": 20
+      },
+      "title": {
+        "clientWidth": 116,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "height": 24,
+        "lineHeight": "24px",
+        "scrollWidth": 116,
+        "text": "개인정보 사고 대응",
+        "width": 116.25,
+        "x": 36,
+        "y": 16
+      },
+      "viewport": {
+        "height": 954,
+        "width": 1024
+      }
+    },
+    {
+      "clippedHeaderElements": 0,
+      "documentOverflowPx": 0,
+      "enabledButtonsBelow44": 0,
+      "h1Count": 1,
+      "header": {
+        "clientWidth": 390,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 113,
+        "lineHeight": "24px",
+        "scrollWidth": 390,
+        "text": "개인정보 사고 대응\n3건 · 기한 위험 2건\n새로고침",
+        "width": 390,
+        "x": 0,
+        "y": 0
+      },
+      "refresh": {
+        "clientWidth": 85,
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "height": 44,
+        "lineHeight": "16px",
+        "scrollWidth": 85,
+        "text": "새로고침",
+        "width": 87.484375,
+        "x": 12,
+        "y": 60
+      },
+      "summary": {
+        "clientWidth": 218,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 16,
+        "lineHeight": "16px",
+        "scrollWidth": 218,
+        "text": "3건 · 기한 위험 2건",
+        "width": 217.75,
+        "x": 160.25,
+        "y": 22
+      },
+      "title": {
+        "clientWidth": 116,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "height": 24,
+        "lineHeight": "24px",
+        "scrollWidth": 116,
+        "text": "개인정보 사고 대응",
+        "width": 116.25,
+        "x": 36,
+        "y": 18
+      },
+      "viewport": {
+        "height": 954,
+        "width": 390
+      }
+    }
+  ],
+  "keyboardRefresh": {
+    "focus": {
+      "focusVisible": true,
+      "label": "개인정보 사고 목록 새로고침"
+    },
+    "network": [
+      {
+        "event": "request",
+        "method": "GET",
+        "origin": "http://127.0.0.1:18952",
+        "path": "/api/admin/privacy-incidents"
+      },
+      {
+        "event": "response",
+        "origin": "http://127.0.0.1:18952",
+        "path": "/api/admin/privacy-incidents",
+        "status": 200
+      }
+    ],
+    "hasMore": false,
+    "truncated": false
+  },
+  "consoleErrorCount": 0,
+  "consoleWarningCount": 0,
+  "observedRefreshWrites": 0,
+  "observedRefreshExternalRequests": 0,
+  "operatingAuthenticatedDataVerified": false,
+  "sampleBasis": "One deterministic fixture observation per viewport; no latency or statistical effect claim",
+  "comparison": {
+    "mobileClippedHeaderElements": {
+      "before": 1,
+      "after": 0,
+      "absoluteDifference": -1
+    },
+    "summaryScrollOverflowPx": {
+      "before": 30,
+      "after": 0,
+      "absoluteDifference": -30
+    }
+  }
+}

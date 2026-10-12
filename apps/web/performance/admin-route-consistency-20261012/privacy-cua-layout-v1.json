@@ -1,0 +1,246 @@
+{
+  "schema": "tzudong-privacy-cua-layout/v1",
+  "buildId": "u8JceLpzbDBeZYdF9j5nJ",
+  "environment": "Chrome extension CUA, isolated production fixture",
+  "fixture": {
+    "incidentCount": 3,
+    "deadlineRiskCount": 2
+  },
+  "diagnosticPreOverride": {
+    "clippedHeaderElements": 0,
+    "documentOverflowPx": 0,
+    "enabledButtonsBelow44": 1,
+    "h1Count": 1,
+    "header": {
+      "clientWidth": 1346,
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "height": 57,
+      "lineHeight": "24px",
+      "scrollWidth": 1346,
+      "text": "개인정보 사고 대응\n개인정보 사고 담당 관리자 전용 · 3건 · 기한 위험 2건\n새로고침",
+      "width": 1346,
+      "x": 0,
+      "y": 0
+    },
+    "refresh": {
+      "clientWidth": 85,
+      "fontSize": "12px",
+      "fontWeight": "500",
+      "height": 32,
+      "lineHeight": "16px",
+      "scrollWidth": 85,
+      "text": "새로고침",
+      "width": 87.484375,
+      "x": 1246.515625,
+      "y": 12
+    },
+    "summary": {
+      "clientWidth": 1078,
+      "fontSize": "12px",
+      "fontWeight": "400",
+      "height": 16,
+      "lineHeight": "16px",
+      "scrollWidth": 1078,
+      "text": "개인정보 사고 담당 관리자 전용 · 3건 · 기한 위험 2건",
+      "width": 1078.265625,
+      "x": 160.25,
+      "y": 20
+    },
+    "title": {
+      "clientWidth": 116,
+      "fontSize": "16px",
+      "fontWeight": "600",
+      "height": 24,
+      "lineHeight": "24px",
+      "scrollWidth": 116,
+      "text": "개인정보 사고 대응",
+      "width": 116.25,
+      "x": 36,
+      "y": 16
+    },
+    "viewport": {
+      "height": 805,
+      "width": 1346
+    }
+  },
+  "measurements": [
+    {
+      "clippedHeaderElements": 0,
+      "documentOverflowPx": 0,
+      "enabledButtonsBelow44": 1,
+      "h1Count": 1,
+      "header": {
+        "clientWidth": 1440,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 57,
+        "lineHeight": "24px",
+        "scrollWidth": 1440,
+        "text": "개인정보 사고 대응\n개인정보 사고 담당 관리자 전용 · 3건 · 기한 위험 2건\n새로고침",
+        "width": 1440,
+        "x": 0,
+        "y": 0
+      },
+      "refresh": {
+        "clientWidth": 85,
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "height": 32,
+        "lineHeight": "16px",
+        "scrollWidth": 85,
+        "text": "새로고침",
+        "width": 87.484375,
+        "x": 1340.515625,
+        "y": 12
+      },
+      "summary": {
+        "clientWidth": 1172,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 16,
+        "lineHeight": "16px",
+        "scrollWidth": 1172,
+        "text": "개인정보 사고 담당 관리자 전용 · 3건 · 기한 위험 2건",
+        "width": 1172.265625,
+        "x": 160.25,
+        "y": 20
+      },
+      "title": {
+        "clientWidth": 116,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "height": 24,
+        "lineHeight": "24px",
+        "scrollWidth": 116,
+        "text": "개인정보 사고 대응",
+        "width": 116.25,
+        "x": 36,
+        "y": 16
+      },
+      "viewport": {
+        "height": 954,
+        "width": 1440
+      }
+    },
+    {
+      "clippedHeaderElements": 0,
+      "documentOverflowPx": 0,
+      "enabledButtonsBelow44": 1,
+      "h1Count": 1,
+      "header": {
+        "clientWidth": 1024,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 57,
+        "lineHeight": "24px",
+        "scrollWidth": 1024,
+        "text": "개인정보 사고 대응\n개인정보 사고 담당 관리자 전용 · 3건 · 기한 위험 2건\n새로고침",
+        "width": 1024,
+        "x": 0,
+        "y": 0
+      },
+      "refresh": {
+        "clientWidth": 85,
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "height": 32,
+        "lineHeight": "16px",
+        "scrollWidth": 85,
+        "text": "새로고침",
+        "width": 87.484375,
+        "x": 924.515625,
+        "y": 12
+      },
+      "summary": {
+        "clientWidth": 756,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 16,
+        "lineHeight": "16px",
+        "scrollWidth": 756,
+        "text": "개인정보 사고 담당 관리자 전용 · 3건 · 기한 위험 2건",
+        "width": 756.265625,
+        "x": 160.25,
+        "y": 20
+      },
+      "title": {
+        "clientWidth": 116,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "height": 24,
+        "lineHeight": "24px",
+        "scrollWidth": 116,
+        "text": "개인정보 사고 대응",
+        "width": 116.25,
+        "x": 36,
+        "y": 16
+      },
+      "viewport": {
+        "height": 954,
+        "width": 1024
+      }
+    },
+    {
+      "clippedHeaderElements": 1,
+      "documentOverflowPx": 0,
+      "enabledButtonsBelow44": 0,
+      "h1Count": 1,
+      "header": {
+        "clientWidth": 390,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "height": 113,
+        "lineHeight": "24px",
+        "scrollWidth": 390,
+        "text": "개인정보 사고 대응\n개인정보 사고 담당 관리자 전용 · 3건 · 기한 위험 2건\n새로고침",
+        "width": 390,
+        "x": 0,
+        "y": 0
+      },
+      "refresh": {
+        "clientWidth": 85,
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "height": 44,
+        "lineHeight": "16px",
+        "scrollWidth": 85,
+        "text": "새로고침",
+        "width": 87.484375,
+        "x": 12,
+        "y": 60
+      },
+      "summary": {
+        "clientWidth": 218,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "height": 16,
+        "lineHeight": "16px",
+        "scrollWidth": 248,
+        "text": "개인정보 사고 담당 관리자 전용 · 3건 · 기한 위험 2건",
+        "width": 217.75,
+        "x": 160.25,
+        "y": 22
+      },
+      "title": {
+        "clientWidth": 116,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "height": 24,
+        "lineHeight": "24px",
+        "scrollWidth": 116,
+        "text": "개인정보 사고 대응",
+        "width": 116.25,
+        "x": 36,
+        "y": 18
+      },
+      "viewport": {
+        "height": 954,
+        "width": 390
+      }
+    }
+  ],
+  "mobileSummaryClipped": true,
+  "operatingAuthenticatedDataVerified": false,
+  "writeActions": 0
+}

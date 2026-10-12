@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { RefreshCw, ShieldAlert } from 'lucide-react';
+
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 type IncidentStatus =
   | 'detected'
@@ -573,6 +576,10 @@ export default function PrivacyIncidentsPage() {
     () => actions.filter((action) => action.incidentId === selectedIncident?.id),
     [actions, selectedIncident?.id],
   );
+  const deadlineRiskCount = useMemo(
+    () => incidents.filter((incident) => incident.deadlineStatus === 'overdue' || incident.deadlineStatus === 'due_soon').length,
+    [incidents],
+  );
 
   const transitionInput = useMemo((): Record<string, unknown> | null => {
     if (!nextStatus) return null;
@@ -800,19 +807,36 @@ export default function PrivacyIncidentsPage() {
   };
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-8" data-privacy-incident-workflow="true">
-      <header className="space-y-2">
-        <p className="text-sm font-medium text-amber-700">개인정보 사고 담당 관리자 전용</p>
-        <h1 className="text-2xl font-bold">개인정보 사고 대응</h1>
-        <p className="max-w-4xl text-sm text-muted-foreground">
-          이 화면은 사실관계와 운영자 결정을 기록하는 도구입니다. 신고 대상, 법적 적용, 외부 수리·승인은 사람이 결정합니다.
-          외부 제출은 자동으로 수행되지 않습니다.
+    <main className="min-h-screen bg-muted/20" data-privacy-incident-workflow="true">
+      <AdminPageHeader
+        title="개인정보 사고 대응"
+        titleId="admin-privacy-incidents-title"
+        icon={ShieldAlert}
+        summary={`${incidents.length}건${deadlineRiskCount > 0 ? ` · 기한 위험 ${deadlineRiskCount}건` : ''}`}
+        actions={(
+          <button
+            type="button"
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-muted disabled:opacity-50"
+            onClick={() => void load()}
+            disabled={loading}
+            aria-label="개인정보 사고 목록 새로고침"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />
+            새로고침
+          </button>
+        )}
+        data-admin-module-header="compact"
+        data-admin-module-header-module="privacy-incidents"
+      />
+
+      <div className="mx-auto max-w-7xl space-y-3 p-3 md:p-5">
+        <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950" data-privacy-incident-operator-boundary="true">
+          사실관계와 운영자 결정을 기록합니다. 신고 대상·법적 적용·외부 수리·승인은 사람이 결정하며 외부 제출은 자동으로 수행되지 않습니다.
         </p>
-      </header>
 
-      {message ? <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm">{message}</p> : null}
+        {message ? <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm">{message}</p> : null}
 
-      <section className="space-y-4 rounded-lg border p-4" aria-label="사고 탐지 등록" data-privacy-incident-detection-intake="true">
+        <section className="space-y-4 rounded-lg border bg-card p-4" aria-label="사고 탐지 등록" data-privacy-incident-detection-intake="true">
         <div>
           <h2 className="font-semibold">사고 탐지 등록</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -848,12 +872,11 @@ export default function PrivacyIncidentsPage() {
             <p>읽기검증: {detectionReceipt.readback.passed ? '통과' : '실패'}</p>
           </div>
         ) : null}
-      </section>
+        </section>
 
-      <section className="rounded-lg border p-4" aria-label="사고 목록">
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <section className="rounded-lg border bg-card p-4" aria-label="사고 목록">
+        <div className="mb-3 flex items-center gap-3">
           <h2 className="font-semibold">사고 목록</h2>
-          <button type="button" className="rounded border px-3 py-1 text-sm" onClick={() => void load()} disabled={loading}>새로고침</button>
         </div>
         {incidents.length === 0 ? (
           <p className="text-sm text-muted-foreground">표시할 사고가 없습니다. 위 탐지 등록으로 첫 사고를 기록한 뒤 상태 전환을 진행하세요.</p>
@@ -876,11 +899,11 @@ export default function PrivacyIncidentsPage() {
             ))}
           </div>
         )}
-      </section>
+        </section>
 
-      {selectedIncident ? (
+        {selectedIncident ? (
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
-          <div className="space-y-5 rounded-lg border p-4">
+          <div className="space-y-5 rounded-lg border bg-card p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h2 className="font-semibold">현재 상태: {STATUS_LABEL[selectedIncident.status]}</h2>
@@ -991,7 +1014,7 @@ export default function PrivacyIncidentsPage() {
             ) : null}
           </div>
 
-          <aside className="space-y-4 rounded-lg border p-4">
+          <aside className="space-y-4 rounded-lg border bg-card p-4">
             <div>
               <h2 className="font-semibold">통지 상태</h2>
               <div className="mt-2 space-y-2">
@@ -1019,7 +1042,8 @@ export default function PrivacyIncidentsPage() {
             </div>
           </aside>
         </section>
-      ) : null}
+        ) : null}
+      </div>
     </main>
   );
 }

@@ -1,0 +1,25 @@
+{
+  "schema": "tzudong-privacy-incidents-loopback/v2",
+  "buildId": "RhKCeg5si0XfJQHmHouY3",
+  "distDir": ".next-privacy-incidents-v2-20261012",
+  "launcherPid": 36717,
+  "nextPid": 36728,
+  "gatewayPid": 36729,
+  "origins": {
+    "next": "http://127.0.0.1:18950",
+    "supabase": "http://127.0.0.1:18951",
+    "gateway": "http://127.0.0.1:18952",
+    "visibleStart": "http://127.0.0.1:18952/__fixture/start"
+  },
+  "source": {
+    "fixtureServerSha256": "3b9684c3dda38715b788c564fbaed8f0e002edbf9a46821a65b574bb602d8e09",
+    "launcherSha256": "4974d2c55e1dd6b0270c525e61ce07c29ae5db5bc307d870ccf0fa6f5f5dc4d7",
+    "buildReceiptSha256": "cecaa6934e6e35caae03d78aa7bbfeec580b4e362af6dea7a72a400a675819ea"
+  },
+  "boundaries": {
+    "loopbackOnly": true,
+    "syntheticDataOnly": true,
+    "browserMutationMethodsAllowed": false,
+    "hostedCredentialsAdmitted": false
+  }
+}

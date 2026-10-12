@@ -1,0 +1,243 @@
+{
+  "schema": "tzudong-admin-route-consistency-artifact-map/v1",
+  "baseHead": "5f17b5f7dfca60f4b75886052dcb6433e97acba0",
+  "scope": "Detached SHA-256 inventory for preserved v1 evidence and v2 mobile-summary correction evidence. Hash binding is not deployment or operating OAuth/DB proof.",
+  "artifactRoot": "apps/web/performance/admin-route-consistency-20261012",
+  "artifactCount": 35,
+  "artifactBytes": 1042180,
+  "sourceBindings": [
+    {
+      "path": "apps/web/app/admin/privacy-incidents/page.tsx",
+      "bytes": 49954,
+      "sha256": "572ac666db2f7f66a852557bacab63b64851056838ef11efa7dbd60a2db057a2"
+    },
+    {
+      "path": "apps/web/tests-unit/privacy-incident-workflow.test.ts",
+      "bytes": 21831,
+      "sha256": "a65145340405b233bc81ab541ac85dd8ac59f4c79681d9e7fd2e7028b9d2b99f"
+    },
+    {
+      "path": "apps/web/scripts/audit-route-census.mjs",
+      "bytes": 9041,
+      "sha256": "e9e38fdabdd98acc2f98082b55bac0214113921bb994d3273db0976b0a5f79c2"
+    },
+    {
+      "path": "apps/web/tests-unit/route-census.test.ts",
+      "bytes": 2354,
+      "sha256": "0a506927cdd7d0fa7cbf752b96bb913c758e23c24c65edfb3510725c1b42517b"
+    },
+    {
+      "path": "apps/web/app/admin/layout.tsx",
+      "bytes": 475,
+      "sha256": "b9263c7a9583237bdc78662718e2f48c7607e78dce245c1f4d4363612b8006b1"
+    },
+    {
+      "path": "apps/web/components/admin/AdminPageHeader.tsx",
+      "bytes": 1497,
+      "sha256": "ac2621a32fbed7b801798675683a439b8900621ef86e6116034d71a1cfb40a73"
+    },
+    {
+      "path": "apps/web/styles/admin-ui.css",
+      "bytes": 13382,
+      "sha256": "b0741acb28a35b16f4bcab415b5549bf30924c19efba86a8048ced2456d4c307"
+    },
+    {
+      "path": "apps/web/package-lock.json",
+      "bytes": 503170,
+      "sha256": "607175eda02d7746caf5593d34835cef317bf197ca6d5428fa1266cdb2aae5f4"
+    },
+    {
+      "path": "apps/web/tsconfig.json",
+      "bytes": 1260,
+      "sha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+    }
+  ],
+  "consistencyChecks": {
+    "currentPageSha256": "572ac666db2f7f66a852557bacab63b64851056838ef11efa7dbd60a2db057a2",
+    "buildBeforePageSha256": "572ac666db2f7f66a852557bacab63b64851056838ef11efa7dbd60a2db057a2",
+    "buildAfterPageSha256": "572ac666db2f7f66a852557bacab63b64851056838ef11efa7dbd60a2db057a2",
+    "censusPageSha256": "572ac666db2f7f66a852557bacab63b64851056838ef11efa7dbd60a2db057a2",
+    "buildManifestBeforeSha256": "3d0e46c18d443201912bb267f3588e4be3b32775935b617b8dff2cbd2ad5f811",
+    "buildManifestAfterSha256": "3d0e46c18d443201912bb267f3588e4be3b32775935b617b8dff2cbd2ad5f811",
+    "buildManifestUnchanged": true,
+    "buildSourceCount": 421,
+    "allPageBindingsMatch": true
+  },
+  "artifacts": [
+    {
+      "path": "README.md",
+      "bytes": 6568,
+      "sha256": "6827fa639d7dd9e9b5f45339ac78eec19effa8fa814cdee12374ae4b01e9d1ab"
+    },
+    {
+      "path": "build-privacy-fixture.mjs",
+      "bytes": 7828,
+      "sha256": "551f0ce6acfc477e7d5bb7c3fb4f1ab0248ce7cb93345a6945321d7df1295ef3"
+    },
+    {
+      "path": "fixture-server.mjs",
+      "bytes": 9789,
+      "sha256": "05b24997c5716d19171b0049462775be00d3f0b5db34b3c7b3260bfb8ec58a2c"
+    },
+    {
+      "path": "privacy-build-output.log",
+      "bytes": 1204,
+      "sha256": "49ffded9997c5df7fbac0aaf0be5a4aeb777e49693322036be5460097ec2dbc6"
+    },
+    {
+      "path": "privacy-build-receipt.json",
+      "bytes": 2217,
+      "sha256": "b8355ff194cff412a77d82adde1f82d4e118053b1f5bd0c88d3c7456a117c3b5"
+    },
+    {
+      "path": "privacy-build-source-after.json",
+      "bytes": 71605,
+      "sha256": "18692ebb96307467d0ed8c98d5e6c0aac23857d44c7f3d056e6769f6d73c343a"
+    },
+    {
+      "path": "privacy-build-source-before.json",
+      "bytes": 71642,
+      "sha256": "114511cb1a74a773f0d772ee456a7f985d111f0e2fcee66fb0486fb9cc28f6ef"
+    },
+    {
+      "path": "privacy-cua-1024.png",
+      "bytes": 101338,
+      "sha256": "58b332b8cf24517d629731d20fc47527183751cf20820ca8ac9a08d0faebeba0"
+    },
+    {
+      "path": "privacy-cua-1440.png",
+      "bytes": 113468,
+      "sha256": "767d30f5f19939b4e4964475cbc9c80d088d0e975be1e90ddf13b94f92e36500"
+    },
+    {
+      "path": "privacy-cua-390.png",
+      "bytes": 53155,
+      "sha256": "1cd87a2b64ae436705d0f50851a935347a38c9d6c5df34d637c7e37627178d48"
+    },
+    {
+      "path": "privacy-cua-layout-v1.json",
+      "bytes": 6361,
+      "sha256": "e3ff5df6c4133973fff29d36c0f3e160edb6f8644e609c824b8cdb30181a2f0d"
+    },
+    {
+      "path": "privacy-cua-pre-override-1346.png",
+      "bytes": 85656,
+      "sha256": "07b14285bf87b3bc0066625938ab4d0fbfe473d959b41f81a6723cb5a62933ca"
+    },
+    {
+      "path": "privacy-http-readback.json",
+      "bytes": 741,
+      "sha256": "0c72879eaf9a7867e471484394c93e2bfbc6a4d17866281b315bf618c3810d0e"
+    },
+    {
+      "path": "privacy-runtime-start.json",
+      "bytes": 872,
+      "sha256": "f870099ce309924d80a2313e2ba9dc0a6c6f710876515dba0827b7ea257c9438"
+    },
+    {
+      "path": "privacy-runtime-stop.json",
+      "bytes": 53,
+      "sha256": "6e9e2c42d8b4a7787c9190d75c72f362c9e610379892556d9832b9d965281495"
+    },
+    {
+      "path": "privacy-runtime.log",
+      "bytes": 358,
+      "sha256": "5c024ae5b7d55700450f2528e2a99254c8e46894c4d517c58e109851de430fd3"
+    },
+    {
+      "path": "route-census.json",
+      "bytes": 26442,
+      "sha256": "73f6125b9ce41058e59c67bc9b100c729b5973f32ad3fb25effcd2d30ff2f3e1"
+    },
+    {
+      "path": "start-loopback.mjs",
+      "bytes": 6122,
+      "sha256": "fc01cd12a7c6a78936012a2254a52e947f9ab35645c0e866a65988e6de0f0ae8"
+    },
+    {
+      "path": "v2/README.md",
+      "bytes": 6151,
+      "sha256": "cc8615331e5b04df4d731f74855ca11d114cd00a51eef56b802b15bfc1013ca3"
+    },
+    {
+      "path": "v2/build-privacy-fixture.mjs",
+      "bytes": 7840,
+      "sha256": "de562bd5d53bbd06140fab0cfe48615221c36a9dbcda047aa8f71893aa60d870"
+    },
+    {
+      "path": "v2/fixture-server.mjs",
+      "bytes": 9792,
+      "sha256": "3b9684c3dda38715b788c564fbaed8f0e002edbf9a46821a65b574bb602d8e09"
+    },
+    {
+      "path": "v2/privacy-build-output.log",
+      "bytes": 1207,
+      "sha256": "bb222ca1365bfbe6ce41a7fcfc13d5ab79555fc37c2c4feca0364f14d77c8018"
+    },
+    {
+      "path": "v2/privacy-build-receipt.json",
+      "bytes": 2220,
+      "sha256": "cecaa6934e6e35caae03d78aa7bbfeec580b4e362af6dea7a72a400a675819ea"
+    },
+    {
+      "path": "v2/privacy-build-source-after.json",
+      "bytes": 71605,
+      "sha256": "34beef8f744eb0301ba856064ea27e193adbdb2b7ea474bc740a51e0dd20e310"
+    },
+    {
+      "path": "v2/privacy-build-source-before.json",
+      "bytes": 71642,
+      "sha256": "baeda1e8453c214bd0da59c906d92b4c5db1750845e9bf3b6219e54e9551f626"
+    },
+    {
+      "path": "v2/privacy-cua-1024.png",
+      "bytes": 99941,
+      "sha256": "babc3aa44071311dc4c71f6952a008d81d0715d6b698316e72759c239e5b9d2d"
+    },
+    {
+      "path": "v2/privacy-cua-1440.png",
+      "bytes": 112156,
+      "sha256": "806d9e8260144d24e08e300e58d9b36abcb18cf733032b8d7f6c3d576965bb68"
+    },
+    {
+      "path": "v2/privacy-cua-390.png",
+      "bytes": 52341,
+      "sha256": "a2d6c73ca3990ec04aacea29ef8e0be41fdd46bc0f11360b5ec60d079d78f426"
+    },
+    {
+      "path": "v2/privacy-cua-layout.json",
+      "bytes": 5679,
+      "sha256": "aeee8de6e7898e036dea39208a14d59677cd35221441649e473bd993b2fddc13"
+    },
+    {
+      "path": "v2/privacy-http-readback.json",
+      "bytes": 1836,
+      "sha256": "4e2bb7569cf6db52d1c56277891046e5cb28058135fb15f094f5980253d05c50"
+    },
+    {
+      "path": "v2/privacy-runtime-start.json",
+      "bytes": 875,
+      "sha256": "2ca009aa49ccf9d56a1f8b00a3a47d9ab8630089ccfa7a667cc159620e1f8082"
+    },
+    {
+      "path": "v2/privacy-runtime-stop.json",
+      "bytes": 570,
+      "sha256": "52f8257701d46a803f1def2ca05e66e85e873735da91f0744f19ad7afe32c673"
+    },
+    {
+      "path": "v2/privacy-runtime.log",
+      "bytes": 330,
+      "sha256": "461ab57e6df8b36b0d28596c42223d7c70d44fbf244c0ac7c16c41f416172213"
+    },
+    {
+      "path": "v2/route-census.json",
+      "bytes": 26442,
+      "sha256": "f5e769330d887b58aa5ff3d207aa732a091891807127b3555000520d21a6ffe1"
+    },
+    {
+      "path": "v2/start-loopback.mjs",
+      "bytes": 6134,
+      "sha256": "4974d2c55e1dd6b0270c525e61ce07c29ae5db5bc307d870ccf0fa6f5f5dc4d7"
+    }
+  ]
+}

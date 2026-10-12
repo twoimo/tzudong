@@ -1,0 +1,34 @@
+{
+  "schema": "tzudong-privacy-incidents-loopback-stop/v2",
+  "launcherExitCode": 0,
+  "ownedProcesses": {
+    "36717": {
+      "alive": false,
+      "ps": ""
+    },
+    "36728": {
+      "alive": false,
+      "ps": ""
+    },
+    "36729": {
+      "alive": false,
+      "ps": ""
+    }
+  },
+  "ports": {
+    "18950": {
+      "listening": false,
+      "output": ""
+    },
+    "18951": {
+      "listening": false,
+      "output": ""
+    },
+    "18952": {
+      "listening": false,
+      "output": ""
+    }
+  },
+  "dependencyLinkExists": false,
+  "dependencyLinkPath": null
+}

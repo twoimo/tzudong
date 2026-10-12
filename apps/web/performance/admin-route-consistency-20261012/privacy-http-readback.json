@@ -1,0 +1,23 @@
+{
+  "schema": "tzudong-privacy-incidents-http-readback/v1",
+  "buildId": "u8JceLpzbDBeZYdF9j5nJ",
+  "visibleStart": {
+    "url": "http://127.0.0.1:18942/__fixture/start",
+    "status": 200
+  },
+  "sessionRedirect": {
+    "finalUrl": "http://127.0.0.1:18942/admin/privacy-incidents",
+    "status": 200,
+    "responseBytes": 24344,
+    "containsExpectedTitle": true
+  },
+  "fixtureApi": {
+    "ok": true,
+    "incidentCount": 3,
+    "deadlineRiskCount": 2
+  },
+  "limitations": [
+    "This is a loopback HTTP and source-title readback, not browser rendering or computed geometry evidence.",
+    "The session, incidents, notices, and actions are synthetic and do not prove OAuth, hosted database, save, approval, or production behavior."
+  ]
+}

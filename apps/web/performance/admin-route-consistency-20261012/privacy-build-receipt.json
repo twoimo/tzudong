@@ -1,0 +1,69 @@
+{
+  "schema": "tzudong-privacy-incidents-local-build/v1",
+  "status": 0,
+  "signal": null,
+  "node": "24.21.0",
+  "next": "16.3.8",
+  "distDir": ".next-privacy-incidents-20261012",
+  "buildId": "u8JceLpzbDBeZYdF9j5nJ",
+  "sourceManifestSha256": "d59da70a7447927d85765ee01b1caac1fdb0a39b1a5c443901a4733831366138",
+  "sourceFileCount": 421,
+  "sourceUnchanged": true,
+  "tsconfigRestored": true,
+  "dependencyLockSha256": "607175eda02d7746caf5593d34835cef317bf197ca6d5428fa1266cdb2aae5f4",
+  "dependenciesPath": "/Users/twoimo/.codex/worktrees/goal-delivery-20261012/tzudong/apps/web/node_modules",
+  "dependencyLinkRemoved": true,
+  "artifacts": [
+    {
+      "path": "BUILD_ID",
+      "sha256": "fcf12aa0c1931fb084aca2726d58fa3691fa6b62367bae30797e64c377c9276c"
+    },
+    {
+      "path": "build-manifest.json",
+      "sha256": "b666d0b7dad2c094d92bc9dba45525f213f6243941ced42ee6e2317a8a56fe5b"
+    },
+    {
+      "path": "routes-manifest.json",
+      "sha256": "c93e69872da09259c12857d04c45b6968628661c5785ff91142511483b288f3e"
+    },
+    {
+      "path": "required-server-files.json",
+      "sha256": "c49bcb4f37aa53ca4e61e456a4efcb848ec0157fd4eecd4b6a3254ceb465a05c"
+    }
+  ],
+  "css": {
+    "homeBytes": 195887,
+    "generalAppBytes": 369843,
+    "adminBytes": 383693,
+    "deferredBytes": 195887,
+    "homeTransferBytes": 46701,
+    "generalAppTransferBytes": 68540,
+    "adminTransferBytes": 71726,
+    "deferredTransferBytes": 46701,
+    "sharedAssetPaths": [
+      "static/css/1240feada28706b0.css",
+      "static/css/21152eadce53cbfb.css",
+      "static/css/2c51162548402e22.css",
+      "static/css/56dbb6b80320ef6e.css",
+      "static/css/9082e756fe962baa.css"
+    ],
+    "exclusiveAssetPaths": {
+      "home": [],
+      "generalApp": [],
+      "admin": [
+        "static/css/c0d42224543a4a09.css",
+        "static/css/f54a2be7094b25e4.css"
+      ],
+      "deferred": []
+    }
+  },
+  "environment": {
+    "inheritedAllowlistOnly": true,
+    "repositoryEnvFilesAdmitted": false,
+    "hostedCredentialsAdmitted": false,
+    "syntheticLoopbackOnly": true
+  },
+  "limitations": [
+    "Local production bundle only; no browser render, OAuth, hosted database, provider, deployment, or production evidence."
+  ]
+}
