@@ -1,0 +1,3 @@
+# Query ownership diagnosis
+
+One fresh Chrome process, baseline056a, production HTTPS/CPU4/REST735,128queries×2. Uses the unchanged fixture and SDK pin. Captures only bounded aggregate query family/count/active/inactive/array-item/gcTime summaries by reading the local test React host fiber; no raw query keys, user search, query data or IDs. Unsupported introspection reports unavailable, not zero. Fiber traversal capped128. Every16queries and initial/idle. Diagnostic reflection overhead is unmeasured; do not compare latency/memory to the earlier uninstrumented natural A/A as an improvement. No source/deployment/DB writes, forcedGC, field admission or physical-device claim. Existing results are preserved and this root/output is new.

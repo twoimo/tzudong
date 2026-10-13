@@ -1,0 +1,9 @@
+{
+  "sourceBefore": "056a86600f412eb42df4304e3206841679012f3e",
+  "sourceAfter": "0437dd27dd3bfaecd9b7d296743ec8b98c7bf57b",
+  "sdkScriptSha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1",
+  "fixtureSha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5",
+  "scope": "Diagnostic 16 actions and natural pilot 8 searches x2, independent processes; no primary performance admission",
+  "performanceAdmission": 0,
+  "fieldAdmission": 0
+}

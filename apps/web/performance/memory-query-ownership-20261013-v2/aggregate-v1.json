@@ -1,0 +1,194 @@
+{
+  "sourceCommit": "056a86600f412eb42df4304e3206841679012f3e",
+  "independentExecutions": 1,
+  "dependentActions": 256,
+  "initial": {
+    "available": true,
+    "queries": 5,
+    "groups": {
+      "restaurants": {
+        "queries": 2,
+        "active": 1,
+        "inactive": 1,
+        "dataArrayItems": 1470,
+        "pageArrayItems": 0,
+        "gcMs": [
+          600000
+        ]
+      },
+      "other": {
+        "queries": 3,
+        "active": 3,
+        "inactive": 0,
+        "dataArrayItems": 0,
+        "pageArrayItems": 0,
+        "gcMs": [
+          1800000,
+          900000
+        ]
+      }
+    },
+    "rawKeysOrDataPersisted": false
+  },
+  "idle": {
+    "available": true,
+    "queries": 648,
+    "groups": {
+      "restaurants": {
+        "queries": 2,
+        "active": 1,
+        "inactive": 1,
+        "dataArrayItems": 1470,
+        "pageArrayItems": 0,
+        "gcMs": [
+          600000
+        ]
+      },
+      "other": {
+        "queries": 261,
+        "active": 6,
+        "inactive": 255,
+        "dataArrayItems": 5,
+        "pageArrayItems": 0,
+        "gcMs": [
+          1800000,
+          900000,
+          600000
+        ]
+      },
+      "restaurant-search": {
+        "queries": 129,
+        "active": 0,
+        "inactive": 129,
+        "dataArrayItems": 128,
+        "pageArrayItems": 0,
+        "gcMs": [
+          600000
+        ]
+      },
+      "restaurant-tzuyang-review-siblings": {
+        "queries": 128,
+        "active": 1,
+        "inactive": 127,
+        "dataArrayItems": 0,
+        "pageArrayItems": 0,
+        "gcMs": [
+          1800000
+        ]
+      },
+      "restaurant-reviews": {
+        "queries": 128,
+        "active": 1,
+        "inactive": 127,
+        "dataArrayItems": 0,
+        "pageArrayItems": 0,
+        "gcMs": [
+          300000
+        ]
+      }
+    },
+    "rawKeysOrDataPersisted": false
+  },
+  "inactiveAtIdle": 639,
+  "checkpointCounts": [
+    {
+      "pass": 0,
+      "query": 15,
+      "total": 88,
+      "inactive": 79
+    },
+    {
+      "pass": 0,
+      "query": 31,
+      "total": 168,
+      "inactive": 159
+    },
+    {
+      "pass": 0,
+      "query": 47,
+      "total": 248,
+      "inactive": 239
+    },
+    {
+      "pass": 0,
+      "query": 63,
+      "total": 328,
+      "inactive": 319
+    },
+    {
+      "pass": 0,
+      "query": 79,
+      "total": 408,
+      "inactive": 399
+    },
+    {
+      "pass": 0,
+      "query": 95,
+      "total": 488,
+      "inactive": 479
+    },
+    {
+      "pass": 0,
+      "query": 111,
+      "total": 568,
+      "inactive": 559
+    },
+    {
+      "pass": 0,
+      "query": 127,
+      "total": 648,
+      "inactive": 639
+    },
+    {
+      "pass": 1,
+      "query": 15,
+      "total": 648,
+      "inactive": 639
+    },
+    {
+      "pass": 1,
+      "query": 31,
+      "total": 648,
+      "inactive": 639
+    },
+    {
+      "pass": 1,
+      "query": 47,
+      "total": 648,
+      "inactive": 639
+    },
+    {
+      "pass": 1,
+      "query": 63,
+      "total": 648,
+      "inactive": 639
+    },
+    {
+      "pass": 1,
+      "query": 79,
+      "total": 648,
+      "inactive": 639
+    },
+    {
+      "pass": 1,
+      "query": 95,
+      "total": 648,
+      "inactive": 639
+    },
+    {
+      "pass": 1,
+      "query": 111,
+      "total": 648,
+      "inactive": 639
+    },
+    {
+      "pass": 1,
+      "query": 127,
+      "total": 648,
+      "inactive": 639
+    }
+  ],
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "reflectiveDiagnosticNotComparableToNaturalAA": true
+}
