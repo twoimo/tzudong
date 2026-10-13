@@ -1,0 +1,6 @@
+{
+  "exit": 1,
+  "baselineHook": "056a86600f412eb42df4304e3206841679012f3e",
+  "observedAtUtc": "2026-10-13T05:19:39.097332+00:00",
+  "fixture": "controlled browser protocol; no real SDK"
+}

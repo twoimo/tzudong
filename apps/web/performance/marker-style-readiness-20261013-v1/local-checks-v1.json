@@ -1,0 +1,21 @@
+{
+  "sourceCommit": "bdb90215289864c19d91f06e836de2480414c7c2",
+  "rootCssAndLayoutTests": {
+    "pass": 9,
+    "fail": 0,
+    "assertions": 57,
+    "source": "unified exec16171 output"
+  },
+  "lint": {
+    "exit": 0,
+    "file": "app/layout.tsx",
+    "source": "unified exec99730"
+  },
+  "generatedTsconfigIncludesRestored": [
+    ".next-marker-style-after-v1/types/**/*.ts",
+    ".next-marker-style-after-v1/dev/types/**/*.ts"
+  ],
+  "fullUnit": "not rerun for this CSS-only candidate; prior marker-ID suite is separate evidence",
+  "buildId": "dcfhHb7NjNKAeBukxGbFu",
+  "cssActualDirectoryValidated": true
+}

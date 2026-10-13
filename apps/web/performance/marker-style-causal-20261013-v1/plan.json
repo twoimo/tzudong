@@ -1,0 +1,30 @@
+{
+  "order": [
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline",
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline",
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline"
+  ],
+  "cases": 12,
+  "endpoint": "deferred application reaches the SDK script request within 10 seconds; app asset failures before SDK",
+  "remoteSDK": "intentionally blocked at interception; no real SDK result claimed",
+  "rootCssCandidate": "bdb90215289864c19d91f06e836de2480414c7c2",
+  "baseline": "056a86600f412eb42df4304e3206841679012f3e",
+  "viewport": [
+    390,
+    844
+  ],
+  "cpuRate": 4,
+  "cache": "off",
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "retry": "none; all outcomes retained"
+}

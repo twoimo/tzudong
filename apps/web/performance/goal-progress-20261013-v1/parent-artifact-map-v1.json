@@ -1,0 +1,40 @@
+{
+  "files": {
+    "TODOS-v2.md": {
+      "bytes": 4127,
+      "sha256": "13fd420c5036274ef1165efb262153c16bb8f3514f035b5280a97c5ad6533a34"
+    },
+    "TODOS.md": {
+      "bytes": 4025,
+      "sha256": "0a30a2848b86f71df6167f210ea93f64445a6b2ec9395f92123700b2c519c58c"
+    },
+    "deployment-detail-v1.json": {
+      "bytes": 410,
+      "sha256": "a5c400228a6f699f21833dd30733482e3e42ec019401fcdd871053a906003dea"
+    },
+    "operating-source-fallback-check-v1.json": {
+      "bytes": 224,
+      "sha256": "5c23ff5ac7ece24818b735d6e80b9ce8001ba37b75afc9eb4c6816b3a3b6e334"
+    },
+    "probe-public-browser-v1.mjs": {
+      "bytes": 2333,
+      "sha256": "0f512a2405b606889c786b9256b573d4dcdd08832f2b043108994da6a826ece4"
+    },
+    "public-browser-v1.json": {
+      "bytes": 780,
+      "sha256": "e57bb3039026833d08c30acd33ffcf687cd6ef0ce8209d221c253260dea7838f"
+    },
+    "sdk-integration-tests-v2.json": {
+      "bytes": 433,
+      "sha256": "1cecc933edf84133c91261c3084cd13b3cb2c97d106b83d9457bf65998c7c490"
+    },
+    "serving-readback-v1.json": {
+      "bytes": 789,
+      "sha256": "60882670bcfcc4274ac386fefdbc75123b282b07770b080657de3d5422a50099"
+    }
+  },
+  "frozen": true,
+  "performanceAdmission": 0,
+  "root": "apps/web/performance/goal-progress-20261013-v1",
+  "version": 1
+}

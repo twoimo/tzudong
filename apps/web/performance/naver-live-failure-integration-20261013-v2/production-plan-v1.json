@@ -1,0 +1,33 @@
+{
+  "sourceCommit": "073a9de51da22f7aeddd3b4c18ae299afef9540b",
+  "buildId": "lPjUtdGBHtHn1row_r6zq",
+  "cases": [
+    {
+      "width": 390,
+      "height": 844,
+      "failure": "network"
+    },
+    {
+      "width": 820,
+      "height": 1180,
+      "failure": "network"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "failure": "network"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "failure": "missing-api"
+    }
+  ],
+  "controlledFirstFailure": true,
+  "retry": "exactly one explicit retry per case, real remote SDK afterward; no automatic reruns",
+  "realSdkPinnedSha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1",
+  "data": "synthetic735/Auth401",
+  "physicalDevice": false,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0
+}

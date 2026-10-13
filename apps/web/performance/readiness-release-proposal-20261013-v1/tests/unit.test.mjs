@@ -1,0 +1,25 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,cpSync,readFileSync,writeFileSync,rmSync} from 'node:fs';
+import {sha,loadRelease,executeRelease} from '../candidate/apps/web/scripts/readiness-release.mjs';
+import {protectedContext} from '../candidate/apps/web/scripts/apply-readiness-release.mjs';
+const packet=new URL('../',import.meta.url).pathname;
+const root=packet+'candidate';
+const pin=JSON.parse(readFileSync(packet+'reports/manifest-pin.json')).sha256;
+const c=loadRelease(root,pin);
+const copy=()=>{const t=mkdtempSync(packet+'tests/tamper-');cpSync(root,t,{recursive:true});return t;};
+const code=(fn,c)=>assert.throws(fn,e=>e.code===c);
+test('manifest tamper cannot be repinned by content',()=>{const t=copy();try{const p=t+'/.github/supabase-readiness-release-manifest.v1.json';writeFileSync(p,readFileSync(p)+' ');code(()=>loadRelease(t,pin),'READINESS_MANIFEST_DIGEST_MISMATCH');}finally{rmSync(t,{recursive:true});}});
+test('reviewed bundle byte tamper fails even with unchanged manifest',()=>{const t=copy();try{const p=t+'/'+c.manifest.bundle.path;writeFileSync(p,readFileSync(p)+'-- changed');code(()=>loadRelease(t,pin),'READINESS_BUNDLE_DIGEST_MISMATCH');}finally{rmSync(t,{recursive:true});}});
+test('original source byte tamper fails',()=>{const t=copy();try{const p=t+'/'+c.manifest.sources[0].path;writeFileSync(p,readFileSync(p)+' ');code(()=>loadRelease(t,pin),'READINESS_SOURCE_SIZE_MISMATCH');}finally{rmSync(t,{recursive:true});}});
+test('existing generic manifest pin is immutable',()=>{const t=copy();try{const p=t+'/.github/supabase-migration-release-manifest.v1.json';writeFileSync(p,readFileSync(p)+' ');code(()=>loadRelease(t,pin),'READINESS_GENERIC_MANIFEST_DRIFT');}finally{rmSync(t,{recursive:true});}});
+test('canonical vector parser dependency tamper is blocked',()=>{const t=copy();try{const p=t+'/backend/supabase/scripts/g037_supabase_statement_vector.mjs';writeFileSync(p,readFileSync(p)+' ');code(()=>loadRelease(t,pin),'READINESS_DEPENDENCY_DRIFT');}finally{rmSync(t,{recursive:true});}});
+test('lost acknowledgement and unavailable reconciliation never resend',()=>{let n=0;code(()=>executeRelease('fixture',c,{runPsqlImpl:()=>{n++;if(n===1)return '{"state":"prior"}';throw new Error('PRIVATE DIAGNOSTIC');}}),'READINESS_RECONCILIATION_UNKNOWN');assert.equal(n,3);});
+test('lost acknowledgement with conflicting reconciliation never resend',()=>{let n=0;code(()=>executeRelease('fixture',c,{runPsqlImpl:()=>{n++;if(n===1)return '{"state":"prior"}';if(n===2)throw new Error('PRIVATE DIAGNOSTIC');return '{"state":"conflict"}';}}),'READINESS_RECONCILIATION_CONFLICT');assert.equal(n,3);});
+test('unavailable preflight never opens write transport',()=>{let n=0;code(()=>executeRelease('fixture',c,{runPsqlImpl:()=>{n++;throw new Error('SECRET');}}),'READINESS_PREFLIGHT_UNAVAILABLE');assert.equal(n,1);});
+const env={GITHUB_ACTIONS:'true',GITHUB_EVENT_NAME:'workflow_dispatch',GITHUB_REPOSITORY:'twoimo/tzudong',GITHUB_REF:'refs/heads/main',GITHUB_REF_NAME:'main',GITHUB_SHA:'a'.repeat(40),READINESS_VALIDATED_SHA:'a'.repeat(40),G037_WRITE_FREEZE:'active'};
+const git=(_exe,args)=>args[0]==='rev-parse'?{status:0,stdout:'a'.repeat(40)+'\n'}:{status:1,stdout:''};
+test('protected caller accepts only exact main detached context',()=>{assert.doesNotThrow(()=>protectedContext(env,git));for(const k of ['GITHUB_ACTIONS','GITHUB_EVENT_NAME','GITHUB_REPOSITORY','GITHUB_REF','GITHUB_REF_NAME','GITHUB_SHA','READINESS_VALIDATED_SHA','G037_WRITE_FREEZE']) code(()=>protectedContext({...env,[k]:'wrong'},git),'READINESS_PROTECTED_CONTEXT_REQUIRED');code(()=>protectedContext(env,()=>({status:0,stdout:'main'})),'READINESS_DETACHED_SHA_REQUIRED');});
+test('transaction-free payload preserves exact admitted envelope bytes',()=>{const raw=readFileSync(root+'/'+c.manifest.bundle.path);assert.equal(sha(raw),c.manifest.bundle.sha256);assert.equal(c.execution,'\n'+raw.toString('utf8').slice(7,-8)+'\n');assert.equal(c.plans.length,11);assert.ok(c.sql.includes('LOCK TABLE supabase_migrations.schema_migrations IN EXCLUSIVE MODE'));assert.equal(c.reconciliation.includes('READ ONLY'),true);});
+
+test('racing caller observes final state under lock and reports already applied',()=>{let n=0;const result=executeRelease('fixture',c,{runPsqlImpl:()=>{n++;return n===1?'{"state":"prior"}':n===2?'{"state":"final","outcome":"already_applied"}':'{"state":"final"}';}});assert.deepEqual(result,{outcome:'already_applied',writeAttempts:1});assert.equal(n,3);});

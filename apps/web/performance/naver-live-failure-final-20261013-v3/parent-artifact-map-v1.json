@@ -1,0 +1,92 @@
+{
+  "files": {
+    "REPORT-v1.md": {
+      "bytes": 2895,
+      "sha256": "da15427ee88e504e1fffeb1de364539f00a8c7a45a06ee4757705c0c255519d0"
+    },
+    "build-receipts-v8.json": {
+      "bytes": 3747,
+      "sha256": "2f3856e1309bd43cada57ab3efa385157211a52b7da39877e02ed1c78a797257"
+    },
+    "current-source-binding-v1.json": {
+      "bytes": 499,
+      "sha256": "5d56ce49609428785207c571f136a2a5c59e05b499ba5049a15883c3ebec937c"
+    },
+    "current-source-binding-v2.json": {
+      "bytes": 568,
+      "sha256": "84cfbc27c3720b0b7e371a2f183a26aa66d4f51ef26681e2ab253ecfc206d86d"
+    },
+    "fixture-query-v7.mjs": {
+      "bytes": 5754,
+      "sha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5"
+    },
+    "production-plan-v1.json": {
+      "bytes": 788,
+      "sha256": "ebd1ba27382ebd0e8d44fedb9c375a4e37e88d7f2d75b2cf8950ea3062f29f56"
+    },
+    "production-recovery-https-v2.mjs": {
+      "bytes": 4900,
+      "sha256": "445e567f8b55b34cfa5730c8638970fbbba537a664da18635f64b9bed04df378"
+    },
+    "production-recovery-https-v2/case-0-error.png": {
+      "bytes": 37083,
+      "sha256": "351965daed2c79849c37aa77f388b74e9092535ef079fa160e4a49658264f1b8"
+    },
+    "production-recovery-https-v2/case-0-recovered.png": {
+      "bytes": 237497,
+      "sha256": "987a95c95e0a29721a3c24a37895ed808f049ab5fcb07343efa1abd05aa56db7"
+    },
+    "production-recovery-https-v2/case-0.json": {
+      "bytes": 25330,
+      "sha256": "1543bebf86c953faf824374dcfe170c7ae1234fbc86937def981bd38803ba613"
+    },
+    "production-recovery-https-v2/case-1-error.png": {
+      "bytes": 43852,
+      "sha256": "b18a723a5ab6bb18285a4167245cca6cc433b55dd695955c5e72f7a9189b4033"
+    },
+    "production-recovery-https-v2/case-1-recovered.png": {
+      "bytes": 365899,
+      "sha256": "75fc77a5df19dfa4326bd92069ddd1757074186a428f414edbfa1cc938ea4b36"
+    },
+    "production-recovery-https-v2/case-1.json": {
+      "bytes": 25123,
+      "sha256": "3594f0f1e14736c86630873c2e4b93275381ed651256e34396acca1be014dbf2"
+    },
+    "production-recovery-https-v2/case-2-error.png": {
+      "bytes": 120547,
+      "sha256": "ca3969866fd651bc568f914536b342c3e9051e81adbbbfbb284b95a8014ec282"
+    },
+    "production-recovery-https-v2/case-2-recovered.png": {
+      "bytes": 440381,
+      "sha256": "6a93538c10c58c2b4461ad8996d1893d9449b2ce76ca1914481543e096bf5126"
+    },
+    "production-recovery-https-v2/case-2.json": {
+      "bytes": 30683,
+      "sha256": "fbf76ca381d7f1d703f173d3178335d3a423a82f4681cd5a2c35f30e75621a14"
+    },
+    "production-recovery-https-v2/case-3-error.png": {
+      "bytes": 37083,
+      "sha256": "351965daed2c79849c37aa77f388b74e9092535ef079fa160e4a49658264f1b8"
+    },
+    "production-recovery-https-v2/case-3-recovered.png": {
+      "bytes": 237510,
+      "sha256": "912b600a8aa86181e90d34d079bb36c5ae3133a232e21bcc1b0d5d78dd6344b1"
+    },
+    "production-recovery-https-v2/case-3.json": {
+      "bytes": 24598,
+      "sha256": "99e3a8afe2a85197820f300171f0ade40f095155c26a174da99b05cb3e4f2467"
+    },
+    "production-recovery-https-v2/summary.json": {
+      "bytes": 123464,
+      "sha256": "6dfeb001a32d8929127c38ef30d6cb0e5c76b484c81c95db9880be9960d0b933"
+    },
+    "real-sdk-runtime-https-v18.mjs": {
+      "bytes": 16122,
+      "sha256": "67c14491d2f3ec52b935d4e2e8427d8545c1c40b90a4b06d920194fd435581e5"
+    }
+  },
+  "frozen": true,
+  "performanceAdmission": 0,
+  "root": "apps/web/performance/naver-live-failure-final-20261013-v3",
+  "version": 1
+}

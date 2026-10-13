@@ -1,0 +1,13 @@
+{
+  "checkedAtUtc": "2026-10-13T04:38:34.898714+00:00",
+  "sourceCommit": "0437dd27dd3bfaecd9b7d296743ec8b98c7bf57b",
+  "baselineCommit": "056a86600f412eb42df4304e3206841679012f3e",
+  "priorBuildIdReported": "6hn0Q9y_ZdIRS0zNorTDb",
+  "priorBuildBytesCurrentlyAvailable": false,
+  "oldEvidenceCommit": "03cd3c8c93041b0835f55943f76ff058c4620a88",
+  "trackedRecoveryFromGit": true,
+  "previousUntrackedReportAvailable": false,
+  "frozenEvidenceModified": false,
+  "productionMutation": false,
+  "phoneUsed": false
+}

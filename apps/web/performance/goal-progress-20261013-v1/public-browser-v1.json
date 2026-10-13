@@ -1,0 +1,32 @@
+{
+  "startedAtUtc": "2026-10-13T05:20:09.191Z",
+  "readOnly": true,
+  "productionMutation": false,
+  "physicalDevice": false,
+  "fieldAdmission": 0,
+  "browserVersion": "155.0.8059.40",
+  "documentStatus": 200,
+  "documentServer": "cloudflare",
+  "observed": {
+    "hasMain": true,
+    "challenge": false,
+    "forbidden": false,
+    "mapScript": false,
+    "stub": false
+  },
+  "map": {
+    "sdk": true,
+    "markers": 16,
+    "visibleLoadFailure": false,
+    "stub": false
+  },
+  "healthStatus": 200,
+  "health": {
+    "ok": true,
+    "gitSha": "1884f87e53c4567ead7c9a0fb394b09b91a70396",
+    "deploymentId": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5",
+    "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "host": "www.tzudong.app"
+  },
+  "endedAtUtc": "2026-10-13T05:20:23.935Z"
+}

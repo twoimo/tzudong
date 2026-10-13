@@ -1,0 +1,19 @@
+{
+  "baseline": {
+    "runs": 6,
+    "reachedSdk": 6,
+    "linkRejectionRuns": 6,
+    "pageErrorRuns": 6,
+    "pageErrors": 6
+  },
+  "candidate": {
+    "runs": 6,
+    "reachedSdk": 5,
+    "linkRejectionRuns": 0,
+    "pageErrorRuns": 0,
+    "pageErrors": 0
+  },
+  "performanceAdmission": 0,
+  "realSDK": false,
+  "interpretation": "Observed CSS LINK rejections six of six before and zero of six after; one after process did not reach SDK. This demonstrates only the bounded CSS failure path and does not certify startup/performance across environments."
+}

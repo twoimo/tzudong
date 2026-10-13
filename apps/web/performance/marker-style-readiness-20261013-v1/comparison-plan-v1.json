@@ -1,0 +1,28 @@
+{
+  "before": "056a86600f412eb42df4304e3206841679012f3e",
+  "after": "bdb90215289864c19d91f06e836de2480414c7c2",
+  "runs": [
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline",
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline"
+  ],
+  "queriesPerRun": 1,
+  "passes": 1,
+  "primary": "initialization and search completion; LINK resource rejection and canceled CSS requests",
+  "admission": 0,
+  "thresholdsUnchanged": {
+    "heapGuardPercent": 20,
+    "latencyGuardPercent": 15
+  },
+  "retry": "none; preserve all independent run outcomes",
+  "securityHeaders": "unchanged",
+  "provider": "actual remote SDK and tiles",
+  "restFixture": 735,
+  "physicalDevice": false,
+  "buildAdditionalMarkerCssBytesTheoretical": 624
+}

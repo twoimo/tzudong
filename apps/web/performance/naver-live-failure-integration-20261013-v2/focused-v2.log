@@ -1,0 +1,38 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/root-layout-local-runtime-contract.test.ts:
+(pass) root layout local runtime and CSP nonce contract > binds the native parser viewport bootstrap to the proxy request nonce [0.13ms]
+(pass) root layout local runtime and CSP nonce contract > keeps the local workspace banner outside the app tree [0.02ms]
+(pass) root layout local runtime and CSP nonce contract > does not reserve viewport height for the removed local workspace banner [0.05ms]
+(pass) root layout local runtime and CSP nonce contract > inlines only the hash-pinned source-controlled viewport bootstrap [0.34ms]
+(pass) root layout local runtime and CSP nonce contract > keeps hosted hints in production but suppresses them in strict local runtime [0.16ms]
+(pass) root layout local runtime and CSP nonce contract > rejects malformed and non-http Supabase preconnect targets [0.06ms]
+
+tests-unit/naver-map-provider-mode.test.ts:
+(pass) Naver map provider mode > uses the deterministic stub for ordinary local and Playwright runtimes [0.06ms]
+(pass) Naver map provider mode > pins the checked-in stub path when local mode wins over hostile inherited input [0.03ms]
+(pass) Naver map provider mode > rewrites blocked style hosts only on admitted loopback hostnames [0.13ms]
+
+tests-unit/naver-loader-failure-browser.test.ts:
+(pass) live SDK success becomes ready without requesting the local stub [721.40ms]
+(pass) live network-error remains a visible error and never becomes a simulated map [585.85ms]
+(pass) explicit retry recovers after network-error without a page reload [453.96ms]
+(pass) live missing-api remains a visible error and never becomes a simulated map [552.28ms]
+(pass) explicit retry recovers after missing-api without a page reload [418.96ms]
+(pass) concurrent consumers share a failure and one explicit recovery request [297.92ms]
+(pass) explicit local offline mode still uses its deterministic stub [258.16ms]
+
+tests-unit/root-css-layer-guard.test.ts:
+(pass) root CSS cascade layer guard > declares the Tailwind layer order up front [566.87ms]
+(pass) root CSS cascade layer guard > keeps the element font reset inside @layer base so utilities can win [588.85ms]
+(pass) root CSS cascade layer guard > still detects unlayered rules, so the layer assertion cannot pass vacuously [554.81ms]
+
+tests-unit/naver-live-provider-smoke-source.test.ts:
+(pass) Naver live-provider Playwright smoke source contract > couples the dedicated spec to the explicit live server mode [2.01ms]
+(pass) Naver live-provider Playwright smoke source contract > documents the explicit command without embedding a Client ID [0.23ms]
+(pass) Naver live-provider Playwright smoke source contract > fails closed before Playwright when the explicit Client ID is absent [18.81ms]
+
+ 22 pass
+ 0 fail
+ 100 expect() calls
+Ran 22 tests across 5 files. [10.55s]

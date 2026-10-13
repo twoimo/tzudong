@@ -1,0 +1,12 @@
+{
+  "observedAtUtc": "2026-10-13T09:59:13.324094+00:00",
+  "head": "b94996e3d1982d04671b2d4bc7fe62e561f2fdc5",
+  "command": "bun test tests-unit/naver-loader-failure-browser.test.ts tests-unit/review-media-operating-admission.test.ts",
+  "runtime": "Bun1.4.0",
+  "exit": 0,
+  "pass": 18,
+  "fail": 0,
+  "expectCalls": 74,
+  "durationS": 6.0,
+  "evidenceType": "observed tool result summary; local integration, not operating proof"
+}

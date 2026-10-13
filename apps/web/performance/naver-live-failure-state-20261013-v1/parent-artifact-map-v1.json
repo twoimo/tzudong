@@ -1,0 +1,120 @@
+{
+  "files": {
+    "browser-after-observed-v1.json": {
+      "bytes": 283,
+      "sha256": "d85c4dc3b278ddbdcb040e9341d30bfa0cf7158f63fd2bf842ff2d0777269225"
+    },
+    "browser-baseline-exit-v1.json": {
+      "bytes": 190,
+      "sha256": "09be103a6e8e5a4cd98cc41f5c5f5f66a1ae8fda69cffbad86e263863c9f13eb"
+    },
+    "browser-baseline-v1.log": {
+      "bytes": 11982,
+      "sha256": "e45c861ebeaebda0470997c060a28b976dddcedef43d9a38f5823ee5eac85c38"
+    },
+    "build-after-v1.json": {
+      "bytes": 1760,
+      "sha256": "6e254a24b413698fb01a800b217a556232ae7b83be1f9a1162c816a8a81f7156"
+    },
+    "build-after-v1.log": {
+      "bytes": 1199,
+      "sha256": "cf15fc4ed8585578a0553ee64fba14abe3bd90210938235724861cc5cd0b4063"
+    },
+    "build-owned-v1.mjs": {
+      "bytes": 4412,
+      "sha256": "bc8122fcd0103023909dc704aa99bc0cf8ac0d86ca9573be31181f0d6546a2a0"
+    },
+    "build-receipts-v8.json": {
+      "bytes": 3747,
+      "sha256": "2f3856e1309bd43cada57ab3efa385157211a52b7da39877e02ed1c78a797257"
+    },
+    "check-local-v1.mjs": {
+      "bytes": 2847,
+      "sha256": "ecf421ce2d5452f74013b40921c668a3c65b82fa6ce2736d36dfd9c1253bab5b"
+    },
+    "fixture-query-v7.mjs": {
+      "bytes": 5754,
+      "sha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5"
+    },
+    "parity-v1.json": {
+      "bytes": 327,
+      "sha256": "9a43a77cc03c58d6706702a4766604e17a3f2865d1f36a35e3a9c9f55dfd9e0f"
+    },
+    "parity-v1.log": {
+      "bytes": 510,
+      "sha256": "5df8a9e298d5da7da139978bbb43a6d5da35b1509daa624231d2784e2541e6e7"
+    },
+    "production-plan-v1.json": {
+      "bytes": 788,
+      "sha256": "ebd1ba27382ebd0e8d44fedb9c375a4e37e88d7f2d75b2cf8950ea3062f29f56"
+    },
+    "production-recovery-v1.mjs": {
+      "bytes": 4387,
+      "sha256": "24af7202201d13a0acd571cf4832b0b7cbc9f7da869f540c4bb26e0409d89511"
+    },
+    "production-recovery-v1/case-0.json": {
+      "bytes": 22901,
+      "sha256": "ff37b2af0d06b7236584ae4e3040f5e89d65cc52dd0ec0098e73dc4e143974d7"
+    },
+    "production-recovery-v1/case-1.json": {
+      "bytes": 22912,
+      "sha256": "019a86e2f43b7f60951bbee2ab9add94e39c902c69a0970368c23e67b1acb83b"
+    },
+    "production-recovery-v1/case-2-error.png": {
+      "bytes": 120537,
+      "sha256": "5a4339a15966c172f8874db9cc8525bf4511cef366e23ccef26f6b86edc87300"
+    },
+    "production-recovery-v1/case-2-recovered.png": {
+      "bytes": 440427,
+      "sha256": "0fbd84a8633eb56c5c2fdd9d84cdaa452cba228f6554781f0961f95bc280f11e"
+    },
+    "production-recovery-v1/case-2.json": {
+      "bytes": 30659,
+      "sha256": "b750d799b41273680e6bdb79867831458263df29e034354ba791cc109cd196fd"
+    },
+    "production-recovery-v1/case-3-error.png": {
+      "bytes": 37048,
+      "sha256": "eb39782d9f1a597ba5db927360158e1f4f00b4e0760b5a3b2f439265391e1c10"
+    },
+    "production-recovery-v1/case-3-recovered.png": {
+      "bytes": 238290,
+      "sha256": "5a46c36771fa506807cefa7041f876a8bae52d8dc0b3afefe3e9ac19198fdc8c"
+    },
+    "production-recovery-v1/case-3.json": {
+      "bytes": 24305,
+      "sha256": "574296e8de5c0e9987ccc9271430efc4ca3d57d9f4b4cef7ce816b02ff6868c7"
+    },
+    "production-recovery-v1/summary.json": {
+      "bytes": 117181,
+      "sha256": "214c52462810e444e688897c2718f8978a2af358c369f6c86aeebf1d8ca76e0a"
+    },
+    "real-sdk-runtime-v12.mjs": {
+      "bytes": 15079,
+      "sha256": "66a0c839b1529a6b3ed10d4ce9f1e75ab5bc2b612f0e1e720d9cd39fa39643be"
+    },
+    "source.patch": {
+      "bytes": 13354,
+      "sha256": "3b068b18a7f28d9bfb21769e717162570b0c468fcc1ca631bc0cb05c7a9f6a7d"
+    },
+    "tsconfig-before-build.json": {
+      "bytes": 1260,
+      "sha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+    },
+    "tsconfig-build-generated.patch": {
+      "bytes": 526,
+      "sha256": "0c70c15f5c590a505025e2f1adaa332a0f4ce8e158825d20586528a621e0c981"
+    },
+    "unit-v1.json": {
+      "bytes": 329,
+      "sha256": "140d88b9eed64e6e0a860445ab373a24cc5d81a58742059cc55b29b17f298ba7"
+    },
+    "unit-v1.log": {
+      "bytes": 446286,
+      "sha256": "2537c154d443694c6eb068fc6e2e5ca25b408fe13ec8579b656bcdcd9e62e835"
+    }
+  },
+  "frozen": true,
+  "performanceAdmission": 0,
+  "root": "apps/web/performance/naver-live-failure-state-20261013-v1",
+  "version": 1
+}

@@ -1,0 +1,960 @@
+{
+  "i": 3,
+  "kind": "baseline",
+  "source": "056a86600f412eb42df4304e3206841679012f3e",
+  "buildId": "bCb62_hmbOJndVfvPKnhI",
+  "startedAtUtc": "2026-10-13T05:35:28.285Z",
+  "remoteSdkRequests": 1,
+  "realSDK": false,
+  "browserVersion": "155.0.8059.40",
+  "reachedSdk": true,
+  "boundedErrorEvents": [
+    {
+      "at": 1027.9000000953674,
+      "event": "unhandledrejection",
+      "shape": {
+        "type": "object",
+        "constructor": "Event",
+        "eventType": "error",
+        "isNull": false,
+        "messageLength": null,
+        "emptyMessage": false,
+        "targetTag": "LINK",
+        "targetRel": "stylesheet",
+        "targetConnected": true,
+        "targetHasSheet": true,
+        "localTargetAsset": "/_next/static/css/a6fc645b5cccf57e.css",
+        "targetSourceGroup": "local-app-asset",
+        "status": null,
+        "readyState": null
+      }
+    }
+  ],
+  "errors": {
+    "page": 1,
+    "console": 1,
+    "consoleCategories": {
+      "http401": 0,
+      "blockedClient": 0,
+      "provider": 0,
+      "other": 1
+    }
+  },
+  "diagnostics": {
+    "failed": [
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "localAsset": null,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "stylesheet",
+        "appAsset": true,
+        "localAsset": "/_next/static/css/a6fc645b5cccf57e.css",
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "stylesheet",
+        "appAsset": true,
+        "localAsset": "/_next/static/css/a6fc645b5cccf57e.css",
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "localAsset": null,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "localAsset": null,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "localAsset": null,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "localAsset": null,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "naver-family",
+        "protocol": "https:",
+        "type": "script",
+        "appAsset": false,
+        "localAsset": null,
+        "code": "net::ERR_FAILED"
+      }
+    ],
+    "assetResponses": {
+      "http::200:font": 2,
+      "http::200:stylesheet": 4,
+      "http::200:script": 40
+    },
+    "console": [
+      {
+        "at": 1791869730979,
+        "networkCodes": [
+          "net::ERR_FAILED"
+        ],
+        "reactCode": null,
+        "chunkFailure": false,
+        "csp": false,
+        "messageLength": 40,
+        "fixedCode": null,
+        "chunkNumbers": [],
+        "localAssetMatches": []
+      }
+    ],
+    "networkFailures": [
+      {
+        "path": "/_next/static/css/a6fc645b5cccf57e.css",
+        "at": 2370874.862392,
+        "id": "70934.187",
+        "type": "Stylesheet",
+        "canceled": true,
+        "blockedReason": null,
+        "cors": null,
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/_next/static/css/a6fc645b5cccf57e.css",
+        "at": 2370874.866227,
+        "id": "70934.192",
+        "type": "Stylesheet",
+        "canceled": true,
+        "blockedReason": null,
+        "cors": null,
+        "error": "net::ERR_ABORTED"
+      }
+    ],
+    "assetTimeline": [
+      {
+        "event": "start",
+        "id": "70934.2",
+        "path": "/_next/static/media/c08f1ce88fa584d1-s.p.woff2",
+        "at": 2370873.897043,
+        "type": "Font",
+        "initiator": "other"
+      },
+      {
+        "event": "start",
+        "id": "70934.3",
+        "path": "/_next/static/css/2c51162548402e22.css",
+        "at": 2370873.908849,
+        "type": "Stylesheet",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.4",
+        "path": "/_next/static/css/21152eadce53cbfb.css",
+        "at": 2370873.909643,
+        "type": "Stylesheet",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.5",
+        "path": "/_next/static/css/56dbb6b80320ef6e.css",
+        "at": 2370873.909731,
+        "type": "Stylesheet",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.6",
+        "path": "/_next/static/css/1240feada28706b0.css",
+        "at": 2370873.909759,
+        "type": "Stylesheet",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.7",
+        "path": "/_next/static/chunks/webpack-1b4b09bf854a3efd.js",
+        "at": 2370873.910305,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.8",
+        "path": "/_next/static/chunks/5d015edf-0529e01258c7fed6.js",
+        "at": 2370873.910394,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.9",
+        "path": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+        "at": 2370873.910415,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.10",
+        "path": "/_next/static/chunks/5059-7b1615e884984724.js",
+        "at": 2370873.910434,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.11",
+        "path": "/_next/static/chunks/main-app-fabc4ffc15f20a02.js",
+        "at": 2370873.910452,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.12",
+        "path": "/_next/static/chunks/7146-101751fc3bc4e147.js",
+        "at": 2370873.910472,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.13",
+        "path": "/_next/static/chunks/1935-4882db6e635e667d.js",
+        "at": 2370873.910488,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.14",
+        "path": "/_next/static/chunks/9433-96afc0c37db1b400.js",
+        "at": 2370873.910505,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.15",
+        "path": "/_next/static/chunks/6094-d5259cc9c79ff208.js",
+        "at": 2370873.91052,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.16",
+        "path": "/_next/static/chunks/6183-2ac61f36d483fbf8.js",
+        "at": 2370873.910534,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.17",
+        "path": "/_next/static/chunks/324-f625422f47d14a49.js",
+        "at": 2370873.910556,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.18",
+        "path": "/_next/static/chunks/7681-bfa66958205b4aec.js",
+        "at": 2370873.911208,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.19",
+        "path": "/_next/static/chunks/2403-aacf6aa5f0057cf5.js",
+        "at": 2370873.911228,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.20",
+        "path": "/_next/static/chunks/app/page-40acc77cec460dae.js",
+        "at": 2370873.911255,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.21",
+        "path": "/_next/static/chunks/app/global-error-fb8f4d773d8514a2.js",
+        "at": 2370873.91127,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "start",
+        "id": "70934.22",
+        "path": "/_next/static/chunks/app/error-c0790d13222ca57b.js",
+        "at": 2370873.911285,
+        "type": "Script",
+        "initiator": "parser"
+      },
+      {
+        "event": "response",
+        "id": "70934.2",
+        "at": 2370873.927108,
+        "status": 200,
+        "mime": "font/woff2"
+      },
+      {
+        "event": "response",
+        "id": "70934.4",
+        "at": 2370873.928132,
+        "status": 200,
+        "mime": "text/css"
+      },
+      {
+        "event": "response",
+        "id": "70934.6",
+        "at": 2370873.929928,
+        "status": 200,
+        "mime": "text/css"
+      },
+      {
+        "event": "response",
+        "id": "70934.5",
+        "at": 2370873.931324,
+        "status": 200,
+        "mime": "text/css"
+      },
+      {
+        "event": "response",
+        "id": "70934.3",
+        "at": 2370873.932417,
+        "status": 200,
+        "mime": "text/css"
+      },
+      {
+        "event": "start",
+        "id": "70934.45",
+        "path": "/_next/static/media/d46971f0b84cb876-s.woff2",
+        "at": 2370873.956609,
+        "type": "Font",
+        "initiator": "parser"
+      },
+      {
+        "event": "response",
+        "id": "70934.7",
+        "at": 2370874.000336,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.8",
+        "at": 2370874.000499,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.11",
+        "at": 2370874.000582,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.13",
+        "at": 2370874.001961,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.14",
+        "at": 2370874.002839,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.12",
+        "at": 2370874.003371,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.15",
+        "at": 2370874.003913,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.16",
+        "at": 2370874.004323,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.17",
+        "at": 2370874.004457,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.18",
+        "at": 2370874.005197,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.20",
+        "at": 2370874.005903,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.21",
+        "at": 2370874.005973,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.9",
+        "at": 2370874.006047,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.22",
+        "at": 2370874.006897,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.19",
+        "at": 2370874.007411,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.10",
+        "at": 2370874.007829,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.45",
+        "at": 2370874.011338,
+        "status": 200,
+        "mime": "font/woff2"
+      },
+      {
+        "event": "start",
+        "id": "70934.173",
+        "path": "/_next/static/chunks/7815.4b90189d2098f437.js",
+        "at": 2370874.273887,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.174",
+        "path": "/_next/static/chunks/3237.7f63b91c6b6a7e86.js",
+        "at": 2370874.276828,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.175",
+        "path": "/_next/static/chunks/8891.b7f528b36c1c6909.js",
+        "at": 2370874.28082,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "response",
+        "id": "70934.173",
+        "at": 2370874.321142,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.175",
+        "at": 2370874.32182,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.174",
+        "at": 2370874.321905,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "start",
+        "id": "70934.176",
+        "path": "/_next/static/chunks/755-1f177fb1265f8238.js",
+        "at": 2370874.341557,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.177",
+        "path": "/_next/static/chunks/7387.f6acdc3759c7e9e3.js",
+        "at": 2370874.342342,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.178",
+        "path": "/_next/static/chunks/9731-24238b3b872bce43.js",
+        "at": 2370874.343288,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.179",
+        "path": "/_next/static/chunks/6149-a13ecbac57b23259.js",
+        "at": 2370874.34338,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.180",
+        "path": "/_next/static/chunks/507-9c5e7cdff214aea9.js",
+        "at": 2370874.343465,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.181",
+        "path": "/_next/static/chunks/758.f9668e39a7787602.js",
+        "at": 2370874.344275,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.182",
+        "path": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+        "at": 2370874.344712,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "response",
+        "id": "70934.176",
+        "at": 2370874.357131,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.177",
+        "at": 2370874.358133,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.178",
+        "at": 2370874.358722,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.179",
+        "at": 2370874.358869,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.180",
+        "at": 2370874.358931,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.181",
+        "at": 2370874.359617,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.182",
+        "at": 2370874.361429,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "start",
+        "id": "70934.187",
+        "path": "/_next/static/css/a6fc645b5cccf57e.css",
+        "at": 2370874.391859,
+        "type": "Stylesheet",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.192",
+        "path": "/_next/static/css/a6fc645b5cccf57e.css",
+        "at": 2370874.864893,
+        "type": "Stylesheet",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.194",
+        "path": "/_next/static/chunks/4084-57eb1a28e86f953e.js",
+        "at": 2370874.899132,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.195",
+        "path": "/_next/static/chunks/5772-9042c8b7f91d5ffb.js",
+        "at": 2370874.901387,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.196",
+        "path": "/_next/static/chunks/3813-6768f3acabcd6f15.js",
+        "at": 2370874.902627,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.197",
+        "path": "/_next/static/chunks/9349-6c3cf6692c162c00.js",
+        "at": 2370874.905683,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.198",
+        "path": "/_next/static/chunks/822-d22d4346d5a6a9ac.js",
+        "at": 2370874.906713,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.199",
+        "path": "/_next/static/chunks/5959-aa1b69d8ec7fd9f8.js",
+        "at": 2370874.909465,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.200",
+        "path": "/_next/static/chunks/9127.74ef8c1b17cfc633.js",
+        "at": 2370874.91146,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.201",
+        "path": "/_next/static/chunks/9949-70a13d68f20197f3.js",
+        "at": 2370874.91358,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.202",
+        "path": "/_next/static/chunks/6063-6ad4f72e0df35b7f.js",
+        "at": 2370874.915313,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.203",
+        "path": "/_next/static/chunks/2700.4dc6d8a94c3f828f.js",
+        "at": 2370874.917773,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "response",
+        "id": "70934.195",
+        "at": 2370874.93215,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.194",
+        "at": 2370874.939577,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.197",
+        "at": 2370874.94216,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.196",
+        "at": 2370874.942943,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.199",
+        "at": 2370874.943784,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.198",
+        "at": 2370874.944511,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.200",
+        "at": 2370874.944602,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.201",
+        "at": 2370874.944693,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.202",
+        "at": 2370874.945923,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.203",
+        "at": 2370874.949045,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "start",
+        "id": "70934.209",
+        "path": "/_next/static/chunks/1781.5a2bb3bfb14c5860.js",
+        "at": 2370875.111841,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "response",
+        "id": "70934.209",
+        "at": 2370875.121911,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "start",
+        "id": "70934.210",
+        "path": "/_next/static/chunks/44530001-2f4e96388e27a973.js",
+        "at": 2370875.153096,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.211",
+        "path": "/_next/static/chunks/864-2d8ba5888f5a5e7a.js",
+        "at": 2370875.1537,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "start",
+        "id": "70934.212",
+        "path": "/_next/static/chunks/6590.76d1314878366258.js",
+        "at": 2370875.154436,
+        "type": "Script",
+        "initiator": "script"
+      },
+      {
+        "event": "response",
+        "id": "70934.212",
+        "at": 2370875.180661,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.210",
+        "at": 2370875.181656,
+        "status": 200,
+        "mime": "application/javascript"
+      },
+      {
+        "event": "response",
+        "id": "70934.211",
+        "at": 2370875.18175,
+        "status": 200,
+        "mime": "application/javascript"
+      }
+    ],
+    "navigations": [
+      {
+        "at": 1791869729924,
+        "origin": "http://localhost:3000"
+      },
+      {
+        "at": 1791869730238,
+        "origin": "http://localhost:3000"
+      }
+    ],
+    "documentNavigationCount": 1,
+    "fixtureQueries": [
+      {
+        "at": 1791869730950,
+        "method": "GET",
+        "keys": [
+          "lat",
+          "lat",
+          "lng",
+          "lng",
+          "order",
+          "select",
+          "status"
+        ],
+        "operators": [
+          [
+            "status",
+            "eq"
+          ],
+          [
+            "lat",
+            "gte"
+          ],
+          [
+            "lat",
+            "lte"
+          ],
+          [
+            "lng",
+            "gte"
+          ],
+          [
+            "lng",
+            "lte"
+          ]
+        ],
+        "selectedColumns": [
+          "id",
+          "name:approved_name",
+          "lat",
+          "lng",
+          "road_address",
+          "jibun_address",
+          "categories",
+          "review_count",
+          "youtube_link",
+          "source_type"
+        ],
+        "limit": null
+      },
+      {
+        "at": 1791869731083,
+        "method": "GET",
+        "keys": [
+          "order",
+          "select",
+          "status"
+        ],
+        "operators": [
+          [
+            "status",
+            "eq"
+          ]
+        ],
+        "selectedColumns": [
+          "id",
+          "name:approved_name",
+          "lat",
+          "lng",
+          "road_address",
+          "jibun_address",
+          "categories",
+          "review_count",
+          "youtube_link",
+          "source_type"
+        ],
+        "limit": null
+      }
+    ]
+  },
+  "requests": {
+    "restaurant": 2,
+    "otherFixture": 0,
+    "failedAppAsset": 2,
+    "failedRemoteProvider": 1,
+    "remoteFailureKinds": {
+      "net::ERR_FAILED": 1
+    }
+  },
+  "endedAtUtc": "2026-10-13T05:35:31.726Z"
+}

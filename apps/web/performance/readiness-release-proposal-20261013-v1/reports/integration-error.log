@@ -1,0 +1,15 @@
+node:fs:483
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '/Users/twoimo/.codex/worktrees/swipe-memory-recovery-20261012/tzudong/apps/web/user-readiness-20261009/full-clone-user-role-probe-v2.sql'
+    at readFileSync (node:fs:483:20)
+    at file:///Users/twoimo/.codex/worktrees/swipe-memory-recovery-20261012/tzudong/apps/web/performance/readiness-release-proposal-20261013-v1/tests/integration.mjs:73:15
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/twoimo/.codex/worktrees/swipe-memory-recovery-20261012/tzudong/apps/web/user-readiness-20261009/full-clone-user-role-probe-v2.sql'
+}
+
+Node.js v24.21.0

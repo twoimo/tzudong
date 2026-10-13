@@ -1,0 +1,26 @@
+{
+  "type": "frozen-evidence-whitespace-classification",
+  "sourceStyleChecksUnaffected": true,
+  "diffCheckExit": 2,
+  "files": [
+    "apps/web/performance/marker-id-pool-reuse-20261013-v1/build-after-v1.log",
+    "apps/web/performance/marker-id-pool-reuse-20261013-v1/build-before-v1.log",
+    "apps/web/performance/marker-id-pool-reuse-20261013-v1/focused-v1.log",
+    "apps/web/performance/marker-id-pool-reuse-20261013-v1/npm-ci-after-v1.log",
+    "apps/web/performance/marker-id-pool-reuse-20261013-v1/npm-ci-before-v1.log",
+    "apps/web/performance/marker-id-pool-reuse-20261013-v1/parity-v1.log",
+    "apps/web/performance/marker-id-pool-reuse-20261013-v1/unit-v1.log",
+    "apps/web/performance/marker-style-readiness-20261013-v1/build-after-v1.log",
+    "apps/web/performance/marker-style-readiness-20261013-v1/source.patch",
+    "apps/web/performance/naver-live-failure-integration-20261013-v2/build-after-v1.log",
+    "apps/web/performance/naver-live-failure-integration-20261013-v2/source.patch",
+    "apps/web/performance/naver-live-failure-state-20261013-v1/browser-baseline-v1.log",
+    "apps/web/performance/naver-live-failure-state-20261013-v1/build-after-v1.log",
+    "apps/web/performance/naver-live-failure-state-20261013-v1/parity-v1.log",
+    "apps/web/performance/naver-live-failure-state-20261013-v1/source.patch",
+    "apps/web/performance/naver-live-failure-state-20261013-v1/unit-v1.log",
+    "apps/web/performance/readiness-release-proposal-20261013-v1/source.patch",
+    "apps/web/performance/readiness-release-proposal-20261013-v1/workflow.patch"
+  ],
+  "reason": "Original sanitized flat logs and retained patches carry whitespace. Do not alter raw bytes to pass formatting. Maps and byte verifiers passed."
+}

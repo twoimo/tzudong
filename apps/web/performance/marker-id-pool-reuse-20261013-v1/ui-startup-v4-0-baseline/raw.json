@@ -1,0 +1,269 @@
+{
+  "kind": "baseline",
+  "sourceCommit": "056a86600f412eb42df4304e3206841679012f3e",
+  "buildId": "bCb62_hmbOJndVfvPKnhI",
+  "startedAtUtc": "2026-10-13T05:04:19.226Z",
+  "environment": {
+    "cpuRate": 4,
+    "network": "unthrottled real remote SDK/tiles; synthetic REST735/Auth401",
+    "cache": "disabled and SW bypassed",
+    "viewport": "390x844/dpr1/touch emulation",
+    "productionBuild": true,
+    "forcedGC": false
+  },
+  "queries": 1,
+  "passes": 1,
+  "cycles": [],
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "physicalDevice": false,
+  "pilotOnly": true,
+  "browserVersion": "155.0.8059.40",
+  "sdk": {
+    "loaded": true,
+    "remoteScript": true,
+    "stub": false,
+    "captured": true,
+    "reportedVersion": null
+  },
+  "sdkScript": {
+    "status": 200,
+    "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+  },
+  "initialRestaurantRequests": 1,
+  "initialHeap": {
+    "usedSize": 9656328,
+    "totalSize": 16056320,
+    "embedderHeapUsedSize": 5184328,
+    "backingStorageSize": 1586526
+  },
+  "passed": false,
+  "failure": "bounded_browser_flow_invariant_unavailable",
+  "failureStage": "user-flow",
+  "failureKind": "timeout",
+  "diagnostics": {
+    "failed": [
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "stylesheet",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "stylesheet",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "other-remote",
+        "protocol": "https:",
+        "type": "fetch",
+        "appAsset": false,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "script",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "script",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "script",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "script",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "script",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "script",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "script",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "script",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "script",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "script",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "naver-family",
+        "protocol": "https:",
+        "type": "xhr",
+        "appAsset": false,
+        "code": "other"
+      }
+    ],
+    "assetResponses": {
+      "http::200:font": 2,
+      "http::200:stylesheet": 4,
+      "http::200:script": 30
+    },
+    "console": [
+      {
+        "at": 1791867869192,
+        "networkCodes": [],
+        "reactCode": null,
+        "chunkFailure": false,
+        "csp": false,
+        "messageLength": 23
+      },
+      {
+        "at": 1791867869337,
+        "networkCodes": [],
+        "reactCode": null,
+        "chunkFailure": false,
+        "csp": true,
+        "messageLength": 343
+      }
+    ]
+  },
+  "boundedErrorEvents": [
+    {
+      "at": 1931.5999999046326,
+      "event": "unhandledrejection",
+      "shape": {
+        "type": "object",
+        "constructor": "Event",
+        "eventType": "error",
+        "isNull": false,
+        "messageLength": null,
+        "emptyMessage": false,
+        "targetTag": "LINK",
+        "targetSourceGroup": "local-app-asset",
+        "status": null,
+        "readyState": null
+      }
+    },
+    {
+      "at": 2158.4000000953674,
+      "event": "csp",
+      "directive": "connect-src",
+      "host": "naver-family"
+    }
+  ],
+  "finalDom": {
+    "ready": "complete",
+    "scripts": 16,
+    "markerCount": 0,
+    "clusterCount": 1
+  },
+  "errors": {
+    "page": 1,
+    "console": 2,
+    "consoleCategories": {
+      "http401": 0,
+      "blockedClient": 0,
+      "provider": 0,
+      "other": 1,
+      "csp": 1
+    },
+    "cspDirectives": {
+      "connect-src": 1
+    },
+    "cspResourceGroups": {
+      "naver-family": 1
+    }
+  },
+  "requests": {
+    "restaurant": 2,
+    "otherFixture": 1,
+    "failedAppAsset": 12,
+    "failedRemoteProvider": 1,
+    "remoteFailureKinds": {
+      "other-network-failure": 1
+    }
+  },
+  "errorClassification": [
+    {
+      "category": "other",
+      "errorClass": "other",
+      "stackGroups": []
+    }
+  ],
+  "rawErrorsPersisted": false,
+  "endedAtUtc": "2026-10-13T05:05:01.144Z"
+}

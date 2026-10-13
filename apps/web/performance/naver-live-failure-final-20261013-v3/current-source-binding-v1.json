@@ -1,0 +1,13 @@
+{
+  "currentCommit": "80063fe840c9c8589b440f5a8b288d144d032e2c",
+  "currentTree": "73344ba5513c6528d2bf6bb6aece9e64fc6f180b",
+  "testedBuildSource": "6dc0c6a2a8a77f80162ea1dc74e6a2ee87f837f1",
+  "testedBuildSourceTree": "73344ba5513c6528d2bf6bb6aece9e64fc6f180b",
+  "sameTrackedSource": true,
+  "currentCommitBuildNotClaimed": true,
+  "cssPrototypeReverted": true,
+  "cssPrototypeHTTPSBaselineHadPageErrors": 0,
+  "primaryPerformanceAdmission": 0,
+  "fieldAdmission": 0,
+  "physicalDevice": false
+}

@@ -1,0 +1,214 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/naver-loader-failure-browser.test.ts:
+(pass) live SDK success becomes ready without requesting the local stub [771.68ms]
+8583 | 
+8584 | // packages/utils/stackTrace.ts
+8585 | function captureRawStack() {
+8586 |   const stackTraceLimit = Error.stackTraceLimit;
+8587 |   Error.stackTraceLimit = 50;
+8588 |   const error = new Error();
+                           ^
+error: expect(locator).toHaveText(expected) failed
+
+Locator:  getByTestId('state-0')
+Expected: "error"
+Received: "ready"
+Timeout:  1500ms
+
+Call log:
+  - Expect "toHaveText" getByTestId('state-0') with timeout 1500ms
+  - waiting for getByTestId('state-0')
+    16 × locator resolved to <output data-testid="state-0">ready</output>
+       - unexpected value "ready"
+
+ matcherResult: {
+  name: "toHaveText",
+  expected: "error",
+  message: "expect(locator).toHaveText(expected) failed\n\nLocator:  getByTestId('state-0')\nExpected: \"error\"\nReceived: \"ready\"\nTimeout:  1500ms\n\nCall log:\n  - Expect \"toHaveText\" getByTestId('state-0') with timeout 1500ms\n  - waiting for getByTestId('state-0')\n    16 × locator resolved to <output data-testid=\"state-0\">ready</output>\n       - unexpected value \"ready\"\n",
+  pass: false,
+  actual: "ready",
+  log: [ "  - Expect \"toHaveText\" getByTestId('state-0') with timeout 1500ms", "  - waiting for getByTestId('state-0')",
+    "    16 × locator resolved to <output data-testid=\"state-0\">ready</output>", "       - unexpected value \"ready\""
+  ],
+  timeout: 1500,
+  ariaSnapshot: "- status: ready",
+},
+
+      at captureRawStack (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/node_modules/playwright-core/lib/coreBundle.js:8588:21)
+      at callMatcherAsStep (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/node_modules/playwright/lib/matchers/expect.js:13310:57)
+      at /Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/tests-unit/naver-loader-failure-browser.test.ts:93:43
+      at run (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/tests-unit/naver-loader-failure-browser.test.ts:82:11)
+      at processTicksAndRejections (native:7:39)
+(fail) live network-error remains a visible error and never becomes a simulated map [1757.28ms]
+8583 | 
+8584 | // packages/utils/stackTrace.ts
+8585 | function captureRawStack() {
+8586 |   const stackTraceLimit = Error.stackTraceLimit;
+8587 |   Error.stackTraceLimit = 50;
+8588 |   const error = new Error();
+                           ^
+error: expect(locator).toHaveText(expected) failed
+
+Locator:  getByTestId('state-0')
+Expected: "error"
+Received: "ready"
+Timeout:  1500ms
+
+Call log:
+  - Expect "toHaveText" getByTestId('state-0') with timeout 1500ms
+  - waiting for getByTestId('state-0')
+    16 × locator resolved to <output data-testid="state-0">ready</output>
+       - unexpected value "ready"
+
+ matcherResult: {
+  name: "toHaveText",
+  expected: "error",
+  message: "expect(locator).toHaveText(expected) failed\n\nLocator:  getByTestId('state-0')\nExpected: \"error\"\nReceived: \"ready\"\nTimeout:  1500ms\n\nCall log:\n  - Expect \"toHaveText\" getByTestId('state-0') with timeout 1500ms\n  - waiting for getByTestId('state-0')\n    16 × locator resolved to <output data-testid=\"state-0\">ready</output>\n       - unexpected value \"ready\"\n",
+  pass: false,
+  actual: "ready",
+  log: [ "  - Expect \"toHaveText\" getByTestId('state-0') with timeout 1500ms", "  - waiting for getByTestId('state-0')",
+    "    16 × locator resolved to <output data-testid=\"state-0\">ready</output>", "       - unexpected value \"ready\""
+  ],
+  timeout: 1500,
+  ariaSnapshot: "- status: ready",
+},
+
+      at captureRawStack (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/node_modules/playwright-core/lib/coreBundle.js:8588:21)
+      at callMatcherAsStep (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/node_modules/playwright/lib/matchers/expect.js:13310:57)
+      at /Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/tests-unit/naver-loader-failure-browser.test.ts:101:43
+      at run (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/tests-unit/naver-loader-failure-browser.test.ts:82:11)
+      at processTicksAndRejections (native:7:39)
+(fail) explicit retry recovers after network-error without a page reload [1772.58ms]
+8583 | 
+8584 | // packages/utils/stackTrace.ts
+8585 | function captureRawStack() {
+8586 |   const stackTraceLimit = Error.stackTraceLimit;
+8587 |   Error.stackTraceLimit = 50;
+8588 |   const error = new Error();
+                           ^
+error: expect(locator).toHaveText(expected) failed
+
+Locator:  getByTestId('state-0')
+Expected: "error"
+Received: "ready"
+Timeout:  1500ms
+
+Call log:
+  - Expect "toHaveText" getByTestId('state-0') with timeout 1500ms
+  - waiting for getByTestId('state-0')
+    - locator resolved to <output data-testid="state-0">loading</output>
+    - unexpected value "loading"
+    15 × locator resolved to <output data-testid="state-0">ready</output>
+       - unexpected value "ready"
+
+ matcherResult: {
+  name: "toHaveText",
+  expected: "error",
+  message: "expect(locator).toHaveText(expected) failed\n\nLocator:  getByTestId('state-0')\nExpected: \"error\"\nReceived: \"ready\"\nTimeout:  1500ms\n\nCall log:\n  - Expect \"toHaveText\" getByTestId('state-0') with timeout 1500ms\n  - waiting for getByTestId('state-0')\n    - locator resolved to <output data-testid=\"state-0\">loading</output>\n    - unexpected value \"loading\"\n    15 × locator resolved to <output data-testid=\"state-0\">ready</output>\n       - unexpected value \"ready\"\n",
+  pass: false,
+  actual: "ready",
+  log: [ "  - Expect \"toHaveText\" getByTestId('state-0') with timeout 1500ms", "  - waiting for getByTestId('state-0')",
+    "    - locator resolved to <output data-testid=\"state-0\">loading</output>", "    - unexpected value \"loading\"",
+    "    15 × locator resolved to <output data-testid=\"state-0\">ready</output>", "       - unexpected value \"ready\""
+  ],
+  timeout: 1500,
+  ariaSnapshot: "- status: ready",
+},
+
+      at captureRawStack (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/node_modules/playwright-core/lib/coreBundle.js:8588:21)
+      at callMatcherAsStep (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/node_modules/playwright/lib/matchers/expect.js:13310:57)
+      at /Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/tests-unit/naver-loader-failure-browser.test.ts:93:43
+      at run (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/tests-unit/naver-loader-failure-browser.test.ts:82:11)
+      at processTicksAndRejections (native:7:39)
+(fail) live missing-api remains a visible error and never becomes a simulated map [1755.45ms]
+8583 | 
+8584 | // packages/utils/stackTrace.ts
+8585 | function captureRawStack() {
+8586 |   const stackTraceLimit = Error.stackTraceLimit;
+8587 |   Error.stackTraceLimit = 50;
+8588 |   const error = new Error();
+                           ^
+error: expect(locator).toHaveText(expected) failed
+
+Locator:  getByTestId('state-0')
+Expected: "error"
+Received: "ready"
+Timeout:  1500ms
+
+Call log:
+  - Expect "toHaveText" getByTestId('state-0') with timeout 1500ms
+  - waiting for getByTestId('state-0')
+    - locator resolved to <output data-testid="state-0">loading</output>
+    - unexpected value "loading"
+    15 × locator resolved to <output data-testid="state-0">ready</output>
+       - unexpected value "ready"
+
+ matcherResult: {
+  name: "toHaveText",
+  expected: "error",
+  message: "expect(locator).toHaveText(expected) failed\n\nLocator:  getByTestId('state-0')\nExpected: \"error\"\nReceived: \"ready\"\nTimeout:  1500ms\n\nCall log:\n  - Expect \"toHaveText\" getByTestId('state-0') with timeout 1500ms\n  - waiting for getByTestId('state-0')\n    - locator resolved to <output data-testid=\"state-0\">loading</output>\n    - unexpected value \"loading\"\n    15 × locator resolved to <output data-testid=\"state-0\">ready</output>\n       - unexpected value \"ready\"\n",
+  pass: false,
+  actual: "ready",
+  log: [ "  - Expect \"toHaveText\" getByTestId('state-0') with timeout 1500ms", "  - waiting for getByTestId('state-0')",
+    "    - locator resolved to <output data-testid=\"state-0\">loading</output>", "    - unexpected value \"loading\"",
+    "    15 × locator resolved to <output data-testid=\"state-0\">ready</output>", "       - unexpected value \"ready\""
+  ],
+  timeout: 1500,
+  ariaSnapshot: "- status: ready",
+},
+
+      at captureRawStack (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/node_modules/playwright-core/lib/coreBundle.js:8588:21)
+      at callMatcherAsStep (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/node_modules/playwright/lib/matchers/expect.js:13310:57)
+      at /Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/tests-unit/naver-loader-failure-browser.test.ts:101:43
+      at run (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/tests-unit/naver-loader-failure-browser.test.ts:82:11)
+      at processTicksAndRejections (native:7:39)
+(fail) explicit retry recovers after missing-api without a page reload [1732.72ms]
+8583 | 
+8584 | // packages/utils/stackTrace.ts
+8585 | function captureRawStack() {
+8586 |   const stackTraceLimit = Error.stackTraceLimit;
+8587 |   Error.stackTraceLimit = 50;
+8588 |   const error = new Error();
+                           ^
+error: expect(locator).toHaveText(expected) failed
+
+Locator:  getByTestId('state-0')
+Expected: "error"
+Received: "ready"
+Timeout:  1500ms
+
+Call log:
+  - Expect "toHaveText" getByTestId('state-0') with timeout 1500ms
+  - waiting for getByTestId('state-0')
+    - locator resolved to <output data-testid="state-0">loading</output>
+    - unexpected value "loading"
+    15 × locator resolved to <output data-testid="state-0">ready</output>
+       - unexpected value "ready"
+
+ matcherResult: {
+  name: "toHaveText",
+  expected: "error",
+  message: "expect(locator).toHaveText(expected) failed\n\nLocator:  getByTestId('state-0')\nExpected: \"error\"\nReceived: \"ready\"\nTimeout:  1500ms\n\nCall log:\n  - Expect \"toHaveText\" getByTestId('state-0') with timeout 1500ms\n  - waiting for getByTestId('state-0')\n    - locator resolved to <output data-testid=\"state-0\">loading</output>\n    - unexpected value \"loading\"\n    15 × locator resolved to <output data-testid=\"state-0\">ready</output>\n       - unexpected value \"ready\"\n",
+  pass: false,
+  actual: "ready",
+  log: [ "  - Expect \"toHaveText\" getByTestId('state-0') with timeout 1500ms", "  - waiting for getByTestId('state-0')",
+    "    - locator resolved to <output data-testid=\"state-0\">loading</output>", "    - unexpected value \"loading\"",
+    "    15 × locator resolved to <output data-testid=\"state-0\">ready</output>", "       - unexpected value \"ready\""
+  ],
+  timeout: 1500,
+  ariaSnapshot: "- status: ready",
+},
+
+      at captureRawStack (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/node_modules/playwright-core/lib/coreBundle.js:8588:21)
+      at callMatcherAsStep (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/node_modules/playwright/lib/matchers/expect.js:13310:57)
+      at /Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/tests-unit/naver-loader-failure-browser.test.ts:109:41
+      at run (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/tests-unit/naver-loader-failure-browser.test.ts:82:11)
+      at processTicksAndRejections (native:7:39)
+(fail) concurrent consumers share a failure and one explicit recovery request [1727.22ms]
+(pass) explicit local offline mode still uses its deterministic stub [285.49ms]
+
+ 2 pass
+ 5 fail
+ 2 expect() calls
+Ran 7 tests across 1 file. [14.73s]

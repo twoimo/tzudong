@@ -1,0 +1,84 @@
+{
+  "files": {
+    "aggregate-v1.json": {
+      "bytes": 555,
+      "sha256": "89b188b73b95c7170e9e1df26e283cb2b99d6fd521980243916c24c9fdf9ccd5"
+    },
+    "build-receipts-v8.json": {
+      "bytes": 3789,
+      "sha256": "73fee5faf098cb3dc400760876113d3037861bf691b3c634ab63c839472cadbf"
+    },
+    "fixture-query-v7.mjs": {
+      "bytes": 5754,
+      "sha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5"
+    },
+    "plan.json": {
+      "bytes": 725,
+      "sha256": "6834e39f03ac6db9a7c86ae5dcf90f2b7757d71b8978d8e22e12c1aad90afd1c"
+    },
+    "real-sdk-runtime-v12.mjs": {
+      "bytes": 15079,
+      "sha256": "66a0c839b1529a6b3ed10d4ce9f1e75ab5bc2b612f0e1e720d9cd39fa39643be"
+    },
+    "run-0-baseline.json": {
+      "bytes": 23876,
+      "sha256": "16da87cb149dce88d3f0ecf301d74c04fb253702c5216990bdb3d3ed273b833a"
+    },
+    "run-1-candidate.json": {
+      "bytes": 22908,
+      "sha256": "591b866d225b4a569a941f6e8f4ef2626c704edf2092dee274c514ad63d2561d"
+    },
+    "run-10-candidate.json": {
+      "bytes": 22910,
+      "sha256": "f49c1d1d606da23c941e7371c3a7540f9b5caaa217c7c5647bd9d7c582f3269d"
+    },
+    "run-11-baseline.json": {
+      "bytes": 24882,
+      "sha256": "829c45a6a2f44d32d4163e1f3240a0b81415c925e7f2e51da3719b65ebfc52cc"
+    },
+    "run-2-candidate.json": {
+      "bytes": 22909,
+      "sha256": "b69cf961b88260045470a79f63ccf17dba5dc6b4e86d43c17a04336c938d44a6"
+    },
+    "run-3-baseline.json": {
+      "bytes": 23877,
+      "sha256": "814bf79e5d1a8ed51b2aab372e69745a74b2d889f51918c504d9205e38324af8"
+    },
+    "run-4-baseline.json": {
+      "bytes": 23885,
+      "sha256": "02ab6476154b8b2029b6ab6321048d64ff96ab8ce5372fb1ae69cee715e57730"
+    },
+    "run-5-candidate.json": {
+      "bytes": 23761,
+      "sha256": "392ed3a5189bbe958690cb80bcb27a152d6da5156f25ffc49082a4bf2a97a19b"
+    },
+    "run-6-candidate.json": {
+      "bytes": 22907,
+      "sha256": "b820f172ac2b3d8985227c4b15defb8225d904d163743a102ca62ec9a9148647"
+    },
+    "run-7-baseline.json": {
+      "bytes": 24878,
+      "sha256": "f79d37c3d07ef20f5b85c2a40e08c9f2a0a1c4cd27c92d79053397257fb71566"
+    },
+    "run-8-baseline.json": {
+      "bytes": 23869,
+      "sha256": "55d652a690ee38db471d7eefffd2cabf6645e1b59b18d8ed63a4e330db48c6f0"
+    },
+    "run-9-candidate.json": {
+      "bytes": 22903,
+      "sha256": "aa1b9bb1d3773fd78e62ad453cef8702cc56d41c23852ff609af5e9208bdb983"
+    },
+    "run.mjs": {
+      "bytes": 1986,
+      "sha256": "d8fa45fbc24a0ad94022267ed3036ee5fb61260db5fcd9d3e213b443ba550fa3"
+    },
+    "summary.json": {
+      "bytes": 327833,
+      "sha256": "fc05e4901b6a4b2294175a4dfd6ae3f232e37dc42f5003c13b244c40674dcf6c"
+    }
+  },
+  "frozen": true,
+  "performanceAdmission": 0,
+  "root": "apps/web/performance/marker-style-causal-20261013-v1",
+  "version": 1
+}

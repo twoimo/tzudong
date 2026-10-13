@@ -1,0 +1,121 @@
+{
+  "candidate": "bdb90215289864c19d91f06e836de2480414c7c2",
+  "accepted": false,
+  "performanceAdmission": 0,
+  "runs": [
+    {
+      "label": "ui-style-ab-v1-0-baseline",
+      "kind": "baseline",
+      "passed": false,
+      "cycles": 0,
+      "stub": true,
+      "failureStage": "sdk-observation",
+      "sdkScript": {
+        "status": null,
+        "sha256": null
+      },
+      "pageErrors": 0,
+      "consoleErrors": 1
+    },
+    {
+      "label": "ui-style-ab-v1-1-candidate",
+      "kind": "candidate",
+      "passed": false,
+      "cycles": 0,
+      "stub": null,
+      "failureStage": "initial-cluster",
+      "sdkScript": {
+        "status": null,
+        "sha256": null
+      },
+      "pageErrors": 0,
+      "consoleErrors": 1
+    },
+    {
+      "label": "ui-style-ab-v1-2-candidate",
+      "kind": "candidate",
+      "passed": false,
+      "cycles": 0,
+      "stub": true,
+      "failureStage": "sdk-observation",
+      "sdkScript": {
+        "status": null,
+        "sha256": null
+      },
+      "pageErrors": 0,
+      "consoleErrors": 1
+    },
+    {
+      "label": "ui-style-ab-v1-3-baseline",
+      "kind": "baseline",
+      "passed": true,
+      "cycles": 1,
+      "stub": false,
+      "failureStage": null,
+      "sdkScript": {
+        "status": 200,
+        "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+      },
+      "pageErrors": 0,
+      "consoleErrors": 1
+    },
+    {
+      "label": "ui-style-ab-v1-4-baseline",
+      "kind": "baseline",
+      "passed": false,
+      "cycles": 0,
+      "stub": true,
+      "failureStage": "sdk-observation",
+      "sdkScript": {
+        "status": null,
+        "sha256": null
+      },
+      "pageErrors": 0,
+      "consoleErrors": 1
+    },
+    {
+      "label": "ui-style-ab-v1-5-candidate",
+      "kind": "candidate",
+      "passed": false,
+      "cycles": 0,
+      "stub": true,
+      "failureStage": "sdk-observation",
+      "sdkScript": {
+        "status": null,
+        "sha256": null
+      },
+      "pageErrors": 0,
+      "consoleErrors": 1
+    },
+    {
+      "label": "ui-style-ab-v1-6-candidate",
+      "kind": "candidate",
+      "passed": false,
+      "cycles": 0,
+      "stub": true,
+      "failureStage": "sdk-observation",
+      "sdkScript": {
+        "status": null,
+        "sha256": null
+      },
+      "pageErrors": 0,
+      "consoleErrors": 2
+    },
+    {
+      "label": "ui-style-ab-v1-7-baseline",
+      "kind": "baseline",
+      "passed": true,
+      "cycles": 1,
+      "stub": false,
+      "failureStage": null,
+      "sdkScript": {
+        "status": 200,
+        "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+      },
+      "pageErrors": 1,
+      "consoleErrors": 1
+    }
+  ],
+  "reason": "Live provider failures and automatic stub fallback confound CSS interpretation; no valid real-SDK success in candidate sample. Do not infer that CSS preparation fixed startup or memory.",
+  "operatingChanges": false
+}

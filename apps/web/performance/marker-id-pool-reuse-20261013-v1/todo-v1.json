@@ -1,0 +1,64 @@
+{
+  "createdAtUtc": "2026-10-13T04:58:33.774730+00:00",
+  "fullGoalRetained": true,
+  "phoneUseAllowed": false,
+  "items": [
+    {
+      "id": "P0-memory",
+      "status": "in_progress",
+      "next": "finish reversed pilot, then retain/reject candidate using matched evidence",
+      "completion": "memory and latency confidence guard met; warm/cold/revisit coverage; measured practical improvement or explicit not-proven result"
+    },
+    {
+      "id": "P0-sdk-errors",
+      "status": "in_progress",
+      "next": "classify pageerror without recording raw provider payload",
+      "completion": "actual SDK response/source, lifecycle, errors and recovery accounted for"
+    },
+    {
+      "id": "P0-flicker",
+      "status": "pending",
+      "next": "frame-based nav/marker/panel comparison",
+      "completion": "counts, duration, coverage, sampling detection limit recorded"
+    },
+    {
+      "id": "P1-regression-matrix",
+      "status": "partial",
+      "next": "desktop/tablet/mobile, slow CPU/network, cache and large/empty result checks",
+      "completion": "behavior and data equivalence, state/AX retained"
+    },
+    {
+      "id": "P1-user-features",
+      "status": "needs_current_readback",
+      "next": "ranking, headers, review timestamp formatting and transitions state audit",
+      "completion": "affected current source and rendered paths verified"
+    },
+    {
+      "id": "P1-delivery",
+      "status": "pending",
+      "next": "only admitted source through protected develop/data/main and operating readback",
+      "completion": "required checks, exact deployment and rollback evidence"
+    },
+    {
+      "id": "P1-field",
+      "status": "incomplete",
+      "next": "prospective v2 cohort/denominator/privacy plan and collection implementation",
+      "completion": "real samples meet predeclared comparison criteria; no synthetic cohort"
+    },
+    {
+      "id": "P1-evidence",
+      "status": "in_progress",
+      "next": "freeze new packet and verify hashes/remote persistence",
+      "completion": "reproducible raw data, scripts, scoring, independent verification and final table"
+    }
+  ],
+  "tests": {
+    "fullUnitPass": 3455,
+    "skip": 11,
+    "fail": 0,
+    "lint": true,
+    "typeParity": true,
+    "productionBuildBeforeAfter": true
+  },
+  "goalComplete": false
+}

@@ -1,0 +1,9 @@
+{
+  "observedAtUtc": "2026-10-13T09:45:40.785114+00:00",
+  "newDevelopSource": "683f8975069ebd6d366112e6a1816959e751eb19",
+  "proposalIntegrated": false,
+  "proposalOperatingWrites": 0,
+  "existingCanonicalPath": "apps/web/scripts/review-media-sql-successor.mjs",
+  "decision": "Do not introduce duplicate production executor; retain sidecar as local comparative evidence. Existing successor additionally requires fresh 12-stage rehearsal, source/rollback receipts and 7 writer fences.",
+  "next": "Complete protected SDK delivery, collect authoritative admission adapters for the existing successor, then exact-source CI/rehearsal/apply/readback. No fixed local fixture prior is admitted as hosted evidence."
+}

@@ -1,0 +1,1015 @@
+{
+  "context": "colima-tzudong-catalog-20261007",
+  "container": "tzudong-ranking-clone-20261008",
+  "prefix": "rrel_f4b21042f1b8",
+  "base": "rrel_f4b21042f1b8_base",
+  "reference": "rrel_f4b21042f1b8_reference",
+  "prior": {
+    "actor": "postgres",
+    "bucket": null,
+    "engine": "17.6",
+    "functions": [
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "anon": false,
+        "owner": "postgres",
+        "service": true,
+        "signature": "admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)",
+        "bodySha256": "a18fad1f748d736371a9ab549a1ca483a5b2f321674fabe71b2411b7e58b3fc9",
+        "authenticated": false,
+        "definitionSha256": "36e16e3ffab2bcdf60d2dc2133369607c14ce36cc42fdf97488ee1472051d36a"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "anon": false,
+        "owner": "postgres",
+        "service": false,
+        "signature": "has_role(uuid,app_role)",
+        "bodySha256": "686dca3e384a7040866c63be89dc34179d3b948b687439e404ec4f1cb1a78b63",
+        "authenticated": false,
+        "definitionSha256": "1a52b7a915ce3e836191b26721085c0464cc1ac99bede6011993aef710572f76"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "anon": false,
+        "owner": "postgres",
+        "service": false,
+        "signature": "is_user_admin(uuid)",
+        "bodySha256": "9f2486a15c285f90ce383bee7daab323f4dce789278f214e85d50b4128c7c44c",
+        "authenticated": false,
+        "definitionSha256": "88d4558038471058f407820d1318c656b3c9fef6f4b1580434ea263bcfe842cb"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "anon": false,
+        "owner": "postgres",
+        "service": false,
+        "signature": "pipeline_control.bump_admin_evaluation_revision()",
+        "bodySha256": "ed16226885c03b05cb459381cc5ef7c8352506f7ea1f88ae526a6511e4cc1b20",
+        "authenticated": false,
+        "definitionSha256": "3a90aca421296aec37ad7920677fdd5cadff0ea606c90364eaa17c3d0d5c8eeb"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "privacy_retention.g014_catalog_protected_relations()",
+        "bodySha256": "43bf370fe74864708e9efbc6559d899a6afa5b353e6cbc930306e31c9ecdc499",
+        "authenticated": false,
+        "definitionSha256": "23fb09e85dafaae9bd89efc0a7a9ef57ccdc98ee286a4bed632af6ebf8785a75"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "privacy_retention.g041_current_claim_user_id()",
+        "bodySha256": "43f3ff2ed914944802555c4ffe3ff8ecece213e82288e2c1c47ae22efdf81585",
+        "authenticated": false,
+        "definitionSha256": "82526a1619876af0b93f61dad5286565ffcf340fd9894d79a65881ddb45824d2"
+      }
+    ],
+    "relations": [
+      {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,anon=r/postgres,authenticated=arwd/postgres,privacy_workflow_owner=rd/postgres}",
+        "rls": true,
+        "name": "reviews",
+        "owner": "postgres",
+        "columns": [
+          [
+            "id",
+            "uuid",
+            true,
+            "gen_random_uuid()",
+            null
+          ],
+          [
+            "user_id",
+            "uuid",
+            true,
+            null,
+            null
+          ],
+          [
+            "restaurant_id",
+            "uuid",
+            true,
+            null,
+            null
+          ],
+          [
+            "title",
+            "text",
+            true,
+            null,
+            null
+          ],
+          [
+            "content",
+            "text",
+            true,
+            null,
+            null
+          ],
+          [
+            "visited_at",
+            "timestamp with time zone",
+            true,
+            null,
+            null
+          ],
+          [
+            "verification_photo",
+            "text",
+            true,
+            null,
+            null
+          ],
+          [
+            "food_photos",
+            "text[]",
+            false,
+            "ARRAY[]::text[]",
+            null
+          ],
+          [
+            "categories",
+            "text[]",
+            false,
+            "ARRAY[]::text[]",
+            null
+          ],
+          [
+            "is_verified",
+            "boolean",
+            true,
+            "false",
+            null
+          ],
+          [
+            "admin_note",
+            "text",
+            false,
+            null,
+            null
+          ],
+          [
+            "is_pinned",
+            "boolean",
+            true,
+            "false",
+            null
+          ],
+          [
+            "is_edited_by_admin",
+            "boolean",
+            true,
+            "false",
+            null
+          ],
+          [
+            "edited_by_admin_id",
+            "uuid",
+            false,
+            null,
+            null
+          ],
+          [
+            "edited_at",
+            "timestamp with time zone",
+            false,
+            null,
+            null
+          ],
+          [
+            "created_at",
+            "timestamp with time zone",
+            true,
+            "now()",
+            null
+          ],
+          [
+            "updated_at",
+            "timestamp with time zone",
+            true,
+            "now()",
+            null
+          ],
+          [
+            "receipt_hash",
+            "text",
+            false,
+            null,
+            null
+          ],
+          [
+            "receipt_data",
+            "jsonb",
+            false,
+            null,
+            null
+          ],
+          [
+            "is_duplicate",
+            "boolean",
+            false,
+            "false",
+            null
+          ],
+          [
+            "ocr_processed_at",
+            "timestamp with time zone",
+            false,
+            null,
+            null
+          ],
+          [
+            "like_count",
+            "integer",
+            true,
+            "0",
+            null
+          ]
+        ],
+        "forceRls": true
+      },
+      {
+        "acl": "{supabase_storage_admin=a*r*w*d*D*x*t*m*/supabase_storage_admin,anon=arwdDxtm/supabase_storage_admin,authenticated=arwdDxtm/supabase_storage_admin,service_role=arwdDxtm/supabase_storage_admin,postgres=a*r*w*d*D*x*t*m*/supabase_storage_admin,privacy_workflow_owner=r/supabase_storage_admin}",
+        "rls": true,
+        "name": "storage.objects",
+        "owner": "supabase_storage_admin",
+        "columns": [
+          [
+            "id",
+            "uuid",
+            true,
+            "gen_random_uuid()",
+            null
+          ],
+          [
+            "bucket_id",
+            "text",
+            false,
+            null,
+            null
+          ],
+          [
+            "name",
+            "text",
+            false,
+            null,
+            null
+          ],
+          [
+            "owner",
+            "uuid",
+            false,
+            null,
+            null
+          ],
+          [
+            "created_at",
+            "timestamp with time zone",
+            false,
+            "now()",
+            null
+          ],
+          [
+            "updated_at",
+            "timestamp with time zone",
+            false,
+            "now()",
+            null
+          ],
+          [
+            "last_accessed_at",
+            "timestamp with time zone",
+            false,
+            "now()",
+            null
+          ],
+          [
+            "metadata",
+            "jsonb",
+            false,
+            null,
+            null
+          ],
+          [
+            "path_tokens",
+            "text[]",
+            false,
+            "string_to_array(name, '/'::text)",
+            null
+          ],
+          [
+            "version",
+            "text",
+            false,
+            null,
+            null
+          ],
+          [
+            "owner_id",
+            "text",
+            false,
+            null,
+            null
+          ],
+          [
+            "user_metadata",
+            "jsonb",
+            false,
+            null,
+            null
+          ],
+          [
+            "archived_at",
+            "timestamp with time zone",
+            false,
+            null,
+            null
+          ],
+          [
+            "is_delete_marker",
+            "boolean",
+            true,
+            "false",
+            null
+          ],
+          [
+            "is_versioned",
+            "boolean",
+            true,
+            "false",
+            null
+          ]
+        ],
+        "forceRls": false
+      }
+    ],
+    "superuser": false,
+    "sessionActor": "postgres",
+    "ownerBoundary": {
+      "inherit": false,
+      "authUsage": false,
+      "bypassRls": false,
+      "superuser": false,
+      "authCreate": false,
+      "createRole": false
+    },
+    "privateSchema": null,
+    "g041BodySha256": "43f3ff2ed914944802555c4ffe3ff8ecece213e82288e2c1c47ae22efdf81585",
+    "policiesSha256": "1ae716840af80044bb3b918140333e9e88e7034c15bfcc70c87c1ee652c2cb23",
+    "triggersSha256": "bc609ad14a9fd75973db4283f6b7958e9e0dbe5a55d0c201b4ea8963816ef587",
+    "adminBodySha256": "a18fad1f748d736371a9ab549a1ca483a5b2f321674fabe71b2411b7e58b3fc9",
+    "allowlistSha256": "246fb27e983b8afadd65cd30dd21c22e1c3c14792298b6e016af9601f8ac1fe9",
+    "membershipSha256": "0ee61e74794074dc59801ad78118b91371ed1e4efb63c1d7c1cc76b25af30ef0",
+    "privateFunctions": 108,
+    "constraintsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "privateManifestSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "immutableManifestCount": 1963,
+    "revisionSingletonCount": 1,
+    "immutableManifestSha256": "22b7ff5709d772cc1cd3273c479d7eee6108bffe51a8515f33c481b32209e3b4"
+  },
+  "final": {
+    "actor": "postgres",
+    "bucket": {
+      "public": false,
+      "fileSizeLimit": 5242880,
+      "allowedMimeTypes": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/avif"
+      ]
+    },
+    "engine": "17.6",
+    "functions": [
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "anon": false,
+        "owner": "postgres",
+        "service": true,
+        "signature": "admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)",
+        "bodySha256": "50b5900a7b6ca43062d6373dbba75378d714312c9ef02c6939997389f6833ba0",
+        "authenticated": false,
+        "definitionSha256": "e43bc165afa39e27775cf7538a179e5c0eb48fdcde542447015f55022b4db03d"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner,service_role=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": true,
+        "signature": "admin_review_verification_cleanup(uuid,text,text[])",
+        "bodySha256": "468c12ee6c3463876cbccb394fcba8f870459a1f6cf3d945d97307f8551f094b",
+        "authenticated": false,
+        "definitionSha256": "87b13208f517918d2059d493033a37fbb1cd413440ced58e81549985e931e456"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner,authenticated=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "finish_review_media_cleanup()",
+        "bodySha256": "a6b4211b2d8486d482f0758ce249eec157249e1a5176be286b76af7e7a775ee9",
+        "authenticated": true,
+        "definitionSha256": "d3e4a70348ba9c80b82df062b6d5c688f1bf0ecb5612df33cab6273e2b0255df"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "anon": false,
+        "owner": "postgres",
+        "service": false,
+        "signature": "has_role(uuid,app_role)",
+        "bodySha256": "686dca3e384a7040866c63be89dc34179d3b948b687439e404ec4f1cb1a78b63",
+        "authenticated": false,
+        "definitionSha256": "1a52b7a915ce3e836191b26721085c0464cc1ac99bede6011993aef710572f76"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "anon": false,
+        "owner": "postgres",
+        "service": false,
+        "signature": "is_user_admin(uuid)",
+        "bodySha256": "9f2486a15c285f90ce383bee7daab323f4dce789278f214e85d50b4128c7c44c",
+        "authenticated": false,
+        "definitionSha256": "88d4558038471058f407820d1318c656b3c9fef6f4b1580434ea263bcfe842cb"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner,authenticated=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "mutate_review_with_media(uuid,uuid,text,timestamp with time zone,text,text[],text[])",
+        "bodySha256": "d5d6646a4294c0e7bd0cd75ea47a996c9c57bac6c32a39ac53fbb7a8b1e7e323",
+        "authenticated": true,
+        "definitionSha256": "fff66734d0471c25b6f17d338d368817682d12d1b0065f5b93fd94b4ef429701"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner,authenticated=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "pending_review_media_cleanup()",
+        "bodySha256": "5a92c8f282c895eabaa77f8cf3f452fb659bac33bd519ed8cf439dc1f2905c7b",
+        "authenticated": true,
+        "definitionSha256": "b94d0857dda5b855f12f5a684bc1cbb21a3ef1bd039b3a2d6812e674ff4afa02"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "anon": false,
+        "owner": "postgres",
+        "service": false,
+        "signature": "pipeline_control.bump_admin_evaluation_revision()",
+        "bodySha256": "4a3bf9e7cc7d91fb1a2a5195d01f40de728539daad1a0a8132a7c10404dc7936",
+        "authenticated": false,
+        "definitionSha256": "e3da08e31125dff7ab2fdb3e437479881e2bdb90fc8377a7209fa1cb21991f29"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "privacy_retention.g014_catalog_protected_relations()",
+        "bodySha256": "20acd5742d891cf8a33b265a3a1298c65dd9646402c58391cd17829951cf92f2",
+        "authenticated": false,
+        "definitionSha256": "e8a03aee4e8ec6f8e741bba3962d153b3c82259dfa4982973f2af679cd74f61e"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "privacy_retention.g041_current_claim_user_id()",
+        "bodySha256": "43f3ff2ed914944802555c4ffe3ff8ecece213e82288e2c1c47ae22efdf81585",
+        "authenticated": false,
+        "definitionSha256": "82526a1619876af0b93f61dad5286565ffcf340fd9894d79a65881ddb45824d2"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner,authenticated=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "queue_review_upload_cleanup(uuid,text[])",
+        "bodySha256": "89c3b573891f598cac5df6ce9a3217639092801a7439ec0404f338f2097114a8",
+        "authenticated": true,
+        "definitionSha256": "fce206eb66e24e9ea7045a09e6850ca1e7363d5ae2b3b30e0a6dcec33d5a1527"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner,authenticated=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "read_review_media_commit(uuid,uuid,text)",
+        "bodySha256": "2f14abfc04864f369467f5ac5f0603defa149b8023d7e6b04e2bb8535f8a268e",
+        "authenticated": true,
+        "definitionSha256": "ce4e025485d4fc3d09017a91e6a7ed78dadf276c70757ce4ee40fe8f933b9b6b"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner,authenticated=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "review_media_delete_allowed(text)",
+        "bodySha256": "a75dbd787dd388b0761bee11c82a56d5f410688e4cfd953181bce4d613062ae7",
+        "authenticated": true,
+        "definitionSha256": "793cd4e93d7e616e292bf76382fbd7821ef0935903addfaa3223b4030fd4f386"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "review_media_private.canonical(text,uuid,uuid,text)",
+        "bodySha256": "87d8397c36cf4c7b986f75cbc2788979333a76be2cc26dc5522cd362f62414a9",
+        "authenticated": false,
+        "definitionSha256": "d199a6c68db23b15878fb4e0b9ad278a8c1ffc1f12fa746578b27c548374c32c"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "review_media_private.enqueue_removed()",
+        "bodySha256": "cbf6a87e453e8c2e14d67acd73a92e399fbba4b4f24ac27966806e13ef1fd905",
+        "authenticated": false,
+        "definitionSha256": "c1542bbda298b3b6d5729c534f43a1da06acff0fafa1c4129eaaf28b64ec5581"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "review_media_private.guard_references()",
+        "bodySha256": "94113c8ae1231e8eae5a698f35a1370a38367e42c79cc87ac62db76c32e735b1",
+        "authenticated": false,
+        "definitionSha256": "846b60847d5f06210220fc4e6b03c537d63ab72a16382720706e5b2255a1d04d"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "review_media_private.lock_changes()",
+        "bodySha256": "381d89aa6bbf5a59c2ee0fef2a7392ef705147252b324527201b8b6f74376250",
+        "authenticated": false,
+        "definitionSha256": "937ba703bcc1cc8f5d54b4d56952beb2c8aa1d1326682eddea84954f9c90b1f7"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "review_media_private.owned_legacy(text,uuid,text)",
+        "bodySha256": "a2d55f09f03fcaeedd77461198511673da7342a6a4873d37227f9cf612090980",
+        "authenticated": false,
+        "definitionSha256": "1719baa14cd5e427cacd69a3ac3686b10985ac506ce4703af4619b340d17fc5b"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "review_media_private.reference_key(text)",
+        "bodySha256": "a8910cb09bfd959951045e8b0b8233b1e2a8bdc45073abeebdfc26b552b1dae7",
+        "authenticated": false,
+        "definitionSha256": "354b5702ce327b812a9d865dd30aff483e18ecf8563d960e45423c820c1e483f"
+      },
+      {
+        "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}",
+        "anon": false,
+        "owner": "privacy_workflow_owner",
+        "service": false,
+        "signature": "review_media_private.referenced(text)",
+        "bodySha256": "cc295115d85a3a11b380e1378e2ee91b0d9f7f587c68839653f54ed826c398ce",
+        "authenticated": false,
+        "definitionSha256": "12a04f9922d4945873cc6a1f012407ecc81bbf82e99b9f141463a79b54d0c812"
+      }
+    ],
+    "relations": [
+      {
+        "acl": "{postgres=arwdDxtm/postgres,privacy_workflow_owner=arw/postgres}",
+        "rls": true,
+        "name": "review_media_private.cleanup",
+        "owner": "postgres",
+        "columns": [
+          [
+            "path",
+            "text",
+            true,
+            null,
+            null
+          ],
+          [
+            "owner_id",
+            "uuid",
+            true,
+            null,
+            null
+          ],
+          [
+            "review_id",
+            "uuid",
+            true,
+            null,
+            null
+          ],
+          [
+            "purpose",
+            "text",
+            true,
+            null,
+            null
+          ],
+          [
+            "retired",
+            "boolean",
+            true,
+            "false",
+            null
+          ],
+          [
+            "complete",
+            "boolean",
+            true,
+            "false",
+            null
+          ]
+        ],
+        "forceRls": true
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres,privacy_workflow_owner=ar/postgres}",
+        "rls": true,
+        "name": "review_media_private.commits",
+        "owner": "postgres",
+        "columns": [
+          [
+            "operation_id",
+            "uuid",
+            true,
+            null,
+            null
+          ],
+          [
+            "owner_id",
+            "uuid",
+            true,
+            null,
+            null
+          ],
+          [
+            "review_id",
+            "uuid",
+            true,
+            null,
+            null
+          ],
+          [
+            "kind",
+            "text",
+            true,
+            null,
+            null
+          ],
+          [
+            "request_hash",
+            "text",
+            true,
+            null,
+            null
+          ]
+        ],
+        "forceRls": true
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,anon=r/postgres,authenticated=arwd/postgres,privacy_workflow_owner=rd/postgres}",
+        "rls": true,
+        "name": "reviews",
+        "owner": "postgres",
+        "columns": [
+          [
+            "id",
+            "uuid",
+            true,
+            "gen_random_uuid()",
+            null
+          ],
+          [
+            "user_id",
+            "uuid",
+            true,
+            null,
+            null
+          ],
+          [
+            "restaurant_id",
+            "uuid",
+            true,
+            null,
+            null
+          ],
+          [
+            "title",
+            "text",
+            true,
+            null,
+            null
+          ],
+          [
+            "content",
+            "text",
+            true,
+            null,
+            "{privacy_workflow_owner=w/postgres}"
+          ],
+          [
+            "visited_at",
+            "timestamp with time zone",
+            true,
+            null,
+            null
+          ],
+          [
+            "verification_photo",
+            "text",
+            true,
+            null,
+            null
+          ],
+          [
+            "food_photos",
+            "text[]",
+            false,
+            "ARRAY[]::text[]",
+            "{privacy_workflow_owner=w/postgres}"
+          ],
+          [
+            "categories",
+            "text[]",
+            false,
+            "ARRAY[]::text[]",
+            "{privacy_workflow_owner=w/postgres}"
+          ],
+          [
+            "is_verified",
+            "boolean",
+            true,
+            "false",
+            "{privacy_workflow_owner=w/postgres}"
+          ],
+          [
+            "admin_note",
+            "text",
+            false,
+            null,
+            "{privacy_workflow_owner=w/postgres}"
+          ],
+          [
+            "is_pinned",
+            "boolean",
+            true,
+            "false",
+            null
+          ],
+          [
+            "is_edited_by_admin",
+            "boolean",
+            true,
+            "false",
+            null
+          ],
+          [
+            "edited_by_admin_id",
+            "uuid",
+            false,
+            null,
+            null
+          ],
+          [
+            "edited_at",
+            "timestamp with time zone",
+            false,
+            null,
+            null
+          ],
+          [
+            "created_at",
+            "timestamp with time zone",
+            true,
+            "now()",
+            null
+          ],
+          [
+            "updated_at",
+            "timestamp with time zone",
+            true,
+            "now()",
+            "{privacy_workflow_owner=w/postgres}"
+          ],
+          [
+            "receipt_hash",
+            "text",
+            false,
+            null,
+            null
+          ],
+          [
+            "receipt_data",
+            "jsonb",
+            false,
+            null,
+            null
+          ],
+          [
+            "is_duplicate",
+            "boolean",
+            false,
+            "false",
+            null
+          ],
+          [
+            "ocr_processed_at",
+            "timestamp with time zone",
+            false,
+            null,
+            null
+          ],
+          [
+            "like_count",
+            "integer",
+            true,
+            "0",
+            null
+          ]
+        ],
+        "forceRls": true
+      },
+      {
+        "acl": "{supabase_storage_admin=a*r*w*d*D*x*t*m*/supabase_storage_admin,anon=arwdDxtm/supabase_storage_admin,authenticated=arwdDxtm/supabase_storage_admin,service_role=arwdDxtm/supabase_storage_admin,postgres=a*r*w*d*D*x*t*m*/supabase_storage_admin,privacy_workflow_owner=r/supabase_storage_admin}",
+        "rls": true,
+        "name": "storage.objects",
+        "owner": "supabase_storage_admin",
+        "columns": [
+          [
+            "id",
+            "uuid",
+            true,
+            "gen_random_uuid()",
+            null
+          ],
+          [
+            "bucket_id",
+            "text",
+            false,
+            null,
+            null
+          ],
+          [
+            "name",
+            "text",
+            false,
+            null,
+            null
+          ],
+          [
+            "owner",
+            "uuid",
+            false,
+            null,
+            null
+          ],
+          [
+            "created_at",
+            "timestamp with time zone",
+            false,
+            "now()",
+            null
+          ],
+          [
+            "updated_at",
+            "timestamp with time zone",
+            false,
+            "now()",
+            null
+          ],
+          [
+            "last_accessed_at",
+            "timestamp with time zone",
+            false,
+            "now()",
+            null
+          ],
+          [
+            "metadata",
+            "jsonb",
+            false,
+            null,
+            null
+          ],
+          [
+            "path_tokens",
+            "text[]",
+            false,
+            "string_to_array(name, '/'::text)",
+            null
+          ],
+          [
+            "version",
+            "text",
+            false,
+            null,
+            null
+          ],
+          [
+            "owner_id",
+            "text",
+            false,
+            null,
+            null
+          ],
+          [
+            "user_metadata",
+            "jsonb",
+            false,
+            null,
+            null
+          ],
+          [
+            "archived_at",
+            "timestamp with time zone",
+            false,
+            null,
+            null
+          ],
+          [
+            "is_delete_marker",
+            "boolean",
+            true,
+            "false",
+            null
+          ],
+          [
+            "is_versioned",
+            "boolean",
+            true,
+            "false",
+            null
+          ]
+        ],
+        "forceRls": false
+      }
+    ],
+    "superuser": false,
+    "sessionActor": "postgres",
+    "ownerBoundary": {
+      "inherit": false,
+      "authUsage": false,
+      "bypassRls": false,
+      "superuser": false,
+      "authCreate": false,
+      "createRole": false
+    },
+    "privateSchema": {
+      "acl": "{postgres=UC/postgres,privacy_workflow_owner=U/postgres}",
+      "anon": false,
+      "owner": "postgres",
+      "service": false,
+      "authenticated": false
+    },
+    "g041BodySha256": "43f3ff2ed914944802555c4ffe3ff8ecece213e82288e2c1c47ae22efdf81585",
+    "policiesSha256": "18d9886a2ddf365bcf839add22dcf8840774b4b2dd6658664d346ec307fd5b53",
+    "triggersSha256": "4b7549c55e2c4baf9788b12919584474e2661da5ebe7ee6b4109ba1bf1e67333",
+    "adminBodySha256": "50b5900a7b6ca43062d6373dbba75378d714312c9ef02c6939997389f6833ba0",
+    "allowlistSha256": "1f627d239845689e9c12a4b1133faa3e1b6dbfc31e3d8902c4a8dbc748993074",
+    "membershipSha256": "0ee61e74794074dc59801ad78118b91371ed1e4efb63c1d7c1cc76b25af30ef0",
+    "privateFunctions": 108,
+    "constraintsSha256": "4ce70b63201e6d6c083e31313e2015829bc8dae4303c980262846de7fde3c337",
+    "privateManifestSha256": "a383eeaa006a7a00a800c67714d740a40e21d674debbc84dbc5ced277a1e64ee",
+    "immutableManifestCount": 1963,
+    "revisionSingletonCount": 1,
+    "immutableManifestSha256": "22b7ff5709d772cc1cd3273c479d7eee6108bffe51a8515f33c481b32209e3b4"
+  },
+  "ledger": {
+    "prefixCount": 0,
+    "prefixSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "originalTemplateFingerprint": {
+    "data": [
+      0,
+      0,
+      false
+    ],
+    "members": "f8a54adbc187f6341ec23c8fa8f2115b",
+    "manifest": "5161af691dd836638aafa24c98af62df",
+    "policies": "0c355b0c667c847b4340978c5b6e41f5",
+    "functions": "17e192c20d381bdcd70f77d949edddef",
+    "relations": "6955d5afae0b26e5d70933a94910ec8d",
+    "defaultACL": "b39a6aa2273f39b73602ebccebb5923e",
+    "constraints": "1f58cb9e5904c930a7086c1bc500145b"
+  },
+  "foundationUnits": 6,
+  "localOnly": true
+}

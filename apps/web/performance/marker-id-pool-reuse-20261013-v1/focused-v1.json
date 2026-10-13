@@ -1,0 +1,15 @@
+{
+  "mode": "focused",
+  "sourceCommit": "0437dd27dd3bfaecd9b7d296743ec8b98c7bf57b",
+  "startedAtUtc": "2026-10-13T04:40:19.509Z",
+  "endedAtUtc": "2026-10-13T04:40:19.632Z",
+  "node": "24.21.0",
+  "exit": 0,
+  "counts": {
+    "pass": 32,
+    "skip": 0,
+    "fail": 0
+  },
+  "logRedacted": true,
+  "perChunkOutputLimit": 32768
+}

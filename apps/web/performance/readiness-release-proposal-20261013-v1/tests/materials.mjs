@@ -1,0 +1,10 @@
+import {readFileSync,writeFileSync} from 'node:fs';
+import {migrationEnvelope} from '../candidate/apps/web/scripts/supabase-migration-transaction.mjs';
+import {readOriginalStatementVector} from '../candidate/apps/web/scripts/apply-supabase-migration.mjs';
+import {sha,snapshotSql} from '../candidate/apps/web/scripts/readiness-release.mjs';
+const root=new URL('../candidate/',import.meta.url);
+const binding=JSON.parse(readFileSync(new URL('../original/apps/web/performance/readiness-operating-20261012/atomic-readiness-binding-v1.json',import.meta.url)));
+const plans=binding.sources.map(s=>{const raw=readFileSync(new URL(s.source,root));return migrationEnvelope(raw,{path:s.source,sha256:s.sha256},readOriginalStatementVector({path:s.source,sha256:s.sha256},raw));});
+writeFileSync(new URL('../reports/materials.json',import.meta.url),JSON.stringify(plans));
+writeFileSync(new URL('../reports/snapshot.sql',import.meta.url),`SET search_path=pg_catalog,public;\n${snapshotSql()};\n`);
+console.log(JSON.stringify({plans:plans.length,vectorsMatchCanonical:true,vectorDigests:plans.map(p=>({version:p.version,sha256:p.vectorSha256}))}));

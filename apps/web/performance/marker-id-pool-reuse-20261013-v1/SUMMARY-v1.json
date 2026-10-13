@@ -1,0 +1,66 @@
+{
+  "candidate": "0437dd27dd3bfaecd9b7d296743ec8b98c7bf57b",
+  "accepted": false,
+  "performanceAdmission": 0,
+  "primaryStudyStarted": false,
+  "reason": "Only one complete exploratory A/B pair; reverse candidate failed before a user action; profiler shows five fewer setters but no proven end-to-end benefit. Preserve O(1) baseline rather than adopting O(P) search based on this evidence.",
+  "rawSummary": [
+    {
+      "label": "natural-before-v1",
+      "kind": "baseline",
+      "passed": true,
+      "cycles": 16,
+      "clickMedianMs": 192.60000014305115,
+      "endHeapMB": 26.088944,
+      "idleHeapMB": 27.282392,
+      "pageErrors": 1,
+      "consoleErrors": 1
+    },
+    {
+      "label": "natural-after-v1",
+      "kind": "candidate",
+      "passed": true,
+      "cycles": 16,
+      "clickMedianMs": 169.04999995231628,
+      "endHeapMB": 25.74734,
+      "idleHeapMB": 26.979192,
+      "pageErrors": 1,
+      "consoleErrors": 1
+    },
+    {
+      "label": "natural-after-v2",
+      "kind": "candidate",
+      "passed": false,
+      "cycles": 0,
+      "clickMedianMs": null,
+      "endHeapMB": null,
+      "idleHeapMB": null,
+      "pageErrors": 0,
+      "consoleErrors": 2
+    },
+    {
+      "label": "natural-before-v2",
+      "kind": "baseline",
+      "passed": true,
+      "cycles": 16,
+      "clickMedianMs": 177.20000004768372,
+      "endHeapMB": 24.43854,
+      "idleHeapMB": 25.71702,
+      "pageErrors": 1,
+      "consoleErrors": 1
+    }
+  ],
+  "missingValuesAreZero": false,
+  "sdkSetIconCounts": {
+    "before": 638,
+    "after": 633,
+    "diagnosticProcessesPerVariant": 1,
+    "actionsPerProcess": 16
+  },
+  "limits": [
+    "Chrome155 does not form a matched comparison with old Chrome154 studies",
+    "page/console errors retained",
+    "not physical-device or field evidence",
+    "CSP and failed CSS diagnostics are not performance success"
+  ]
+}

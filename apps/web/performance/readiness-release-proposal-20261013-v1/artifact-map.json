@@ -1,0 +1,489 @@
+{
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 6945,
+      "sha256": "93a6d48a3e05e111dfa54a189b61fb8a83885362643ba6adcfaac2532905bdd7"
+    },
+    {
+      "path": "RESULT.json",
+      "bytes": 815,
+      "sha256": "8ad87ceb8950338626d72b22eeb841b0074fdcd44b8ca0c9b4dd1793645e77f6"
+    },
+    {
+      "path": "candidate/.github/supabase-migration-release-manifest.v1.json",
+      "bytes": 15426,
+      "sha256": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d"
+    },
+    {
+      "path": "candidate/.github/supabase-readiness-release-manifest.v1.json",
+      "bytes": 33790,
+      "sha256": "03c7804306c6faac12ec92a52c20c8f9a6cfd4adf324af0f3dd9284c39675490"
+    },
+    {
+      "path": "candidate/.github/workflows/supabase-migration-apply.yml",
+      "bytes": 11995,
+      "sha256": "3a7363d039ced5a51638a4b3c003da8466eb85bed71f2d75fda8a65a99ff58d6"
+    },
+    {
+      "path": "candidate/apps/web/scripts/apply-readiness-release.mjs",
+      "bytes": 3194,
+      "sha256": "429d8801c899f7c3af2dced6c35b5efd807c5c225015a837c5c57002ef8fcf5b"
+    },
+    {
+      "path": "candidate/apps/web/scripts/apply-supabase-migration.mjs",
+      "bytes": 22201,
+      "sha256": "02c404e0be3e81b7c8d4d7766ff29e750b1797f5ad49b5f496168170e21192d4"
+    },
+    {
+      "path": "candidate/apps/web/scripts/privacy-safe-cli-log.mjs",
+      "bytes": 7375,
+      "sha256": "23acce06424335d2d3597c236d7e5d30731b04d9f75fa75cff7a93bff0cc6e97"
+    },
+    {
+      "path": "candidate/apps/web/scripts/readiness-release.mjs",
+      "bytes": 17386,
+      "sha256": "42947f96a8f9c3611efc8011d4b2ae17f380e70937f781613b6e078375d36423"
+    },
+    {
+      "path": "candidate/apps/web/scripts/supabase-migration-transaction.mjs",
+      "bytes": 15819,
+      "sha256": "c67bdff4c63b1bf1b4a157863b3eb5253b5973a8fb54b7fd49351270787bed26"
+    },
+    {
+      "path": "candidate/backend/supabase/migrations/20261008192455_review_media_commit_cleanup.sql",
+      "bytes": 17278,
+      "sha256": "1b018884a0ba8bb25e6a9e31fa831e349bd4442118e5d4bf1699464e09e16c3c"
+    },
+    {
+      "path": "candidate/backend/supabase/migrations/20261008200719_review_verification_private.sql",
+      "bytes": 5281,
+      "sha256": "92b469ab0ed1a23bf91c1ab5a3f8e92d45cf0f4e06e5fa602d6a34ad0497a51b"
+    },
+    {
+      "path": "candidate/backend/supabase/migrations/20261008201635_review_media_catalog_integration.sql",
+      "bytes": 47177,
+      "sha256": "6e820eb535bc514e78f258110e36dff00537bcaefcffd8b354356107ca9c09fe"
+    },
+    {
+      "path": "candidate/backend/supabase/migrations/20261011072824_admin_review_media_completion.sql",
+      "bytes": 13429,
+      "sha256": "32626259ca77ea913f068ee804815ff439abbff1ce310da4525e4f0bb86d8338"
+    },
+    {
+      "path": "candidate/backend/supabase/migrations/20261011085342_review_legacy_shared_cleanup.sql",
+      "bytes": 7661,
+      "sha256": "623236ddbd87059b94c84486f9e14822dba0190d2448656259991bd1345a434f"
+    },
+    {
+      "path": "candidate/backend/supabase/migrations/20261011094346_admin_evaluation_revision_safeupdate.sql",
+      "bytes": 3666,
+      "sha256": "b7061015ea07192dccfcf0774d5548a9c2a584c7daa140d77fccd7c75cb8bf88"
+    },
+    {
+      "path": "candidate/backend/supabase/migrations/20261011100730_admin_record_expired_preview_readback.sql",
+      "bytes": 4163,
+      "sha256": "26c64074bb98e718ba96732ac2baeedb851afe6ff745e0ddb5ca075359892472"
+    },
+    {
+      "path": "candidate/backend/supabase/migrations/20261011103501_admin_verification_durable_staging.sql",
+      "bytes": 12008,
+      "sha256": "081c48e91172e4e98079b03aa210c0f7481d95a21945e5a288187263089e57db"
+    },
+    {
+      "path": "candidate/backend/supabase/migrations/20261011105114_review_media_storage_retirement_fence.sql",
+      "bytes": 11418,
+      "sha256": "79375138d7e82a3be2b85b219ff52147db13db9c93070569be40a61ab97c3d53"
+    },
+    {
+      "path": "candidate/backend/supabase/migrations/20261011110108_review_storage_caller_bound_admin_policy.sql",
+      "bytes": 8463,
+      "sha256": "45b2a0db333a1e24ac1f68b7693c7cfb98e10cd0ab366b98089c3679a6b5dfbc"
+    },
+    {
+      "path": "candidate/backend/supabase/migrations/20261011175912_review_owner_cleanup_completion.sql",
+      "bytes": 6694,
+      "sha256": "9164be35fc17e67c3f1aaf98aad13139a8fd469130bd1315879bff5dac63ba26"
+    },
+    {
+      "path": "candidate/backend/supabase/release-bundles/readiness11-v1.sql",
+      "bytes": 137908,
+      "sha256": "77b34753c68047d3b479484f156e44044d015c53b8e5d459da4b8d1d97f0d1d3"
+    },
+    {
+      "path": "candidate/backend/supabase/scripts/g037_supabase_statement_vector.mjs",
+      "bytes": 7626,
+      "sha256": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd"
+    },
+    {
+      "path": "original/.github/supabase-migration-release-manifest.v1.json",
+      "bytes": 15426,
+      "sha256": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d"
+    },
+    {
+      "path": "original/.github/workflows/supabase-migration-apply.yml",
+      "bytes": 7313,
+      "sha256": "2a3b9da3bb069c726539c9d00cc2b7a63dfcc004782c7be2cc6c30bdd8caa9aa"
+    },
+    {
+      "path": "original/AGENTS.md",
+      "bytes": 4744,
+      "sha256": "1ce5afeefaa386378ab265ea9f963528100126de22a2ba53d49193b396c1ceee"
+    },
+    {
+      "path": "original/apps/web/performance/readiness-delivery-20261011/verify_admin_media_forward_v1.py",
+      "bytes": 11457,
+      "sha256": "ddfee54c0518194415744f0742f094374bcdc81e37514db2793a496b7cbda78c"
+    },
+    {
+      "path": "original/apps/web/performance/readiness-operating-20261012/atomic-11-pg17-v4.json",
+      "bytes": 680,
+      "sha256": "510daa31ee14f28484edf76381c9988b5784ed4e291c41d66581722df83d07fa"
+    },
+    {
+      "path": "original/apps/web/performance/readiness-operating-20261012/atomic-readiness-binding-v1.json",
+      "bytes": 2649,
+      "sha256": "c6d412540d847f2c883f4ef38fbeec3df58fb151dc58c4969febfea43c3a44d4"
+    },
+    {
+      "path": "original/apps/web/performance/readiness-operating-20261012/atomic-readiness-v1.sql",
+      "bytes": 137908,
+      "sha256": "77b34753c68047d3b479484f156e44044d015c53b8e5d459da4b8d1d97f0d1d3"
+    },
+    {
+      "path": "original/apps/web/performance/readiness-operating-20261012/fixture-foundation-binding-v1.json",
+      "bytes": 1486,
+      "sha256": "4a1d427a5645508a7a76f669b8745499d0adc0e51cb628740428005f49b5773e"
+    },
+    {
+      "path": "original/apps/web/performance/readiness-operating-20261012/hosted-preflight-readback-v1.json",
+      "bytes": 875,
+      "sha256": "389e7108c34d1c706465c2201b2a1fefdeb91c48a990fbf4b8f5c08642a01298"
+    },
+    {
+      "path": "original/apps/web/performance/readiness-operating-20261012/hosted-preflight-v1.sql",
+      "bytes": 1998,
+      "sha256": "6622f8458f05360e9c65d40e4539587c18ee5fa0f7cc22d83b5fcc40d5feb199"
+    },
+    {
+      "path": "original/apps/web/performance/readiness-operating-20261012/verify_atomic_11_v4.py",
+      "bytes": 4599,
+      "sha256": "9169acccf1f931b2c071ead247b77b09247ffdafaada73ff6d83b8efc1fe59f8"
+    },
+    {
+      "path": "original/apps/web/performance/user-readiness-20261009/full-clone-user-role-probe-v2.sql",
+      "bytes": 2623,
+      "sha256": "b270dc889b91a403869210b42bf6928c0ba54973e4842ccd1332c34910ff3f4d"
+    },
+    {
+      "path": "original/apps/web/scripts/apply-supabase-migration.mjs",
+      "bytes": 22201,
+      "sha256": "02c404e0be3e81b7c8d4d7766ff29e750b1797f5ad49b5f496168170e21192d4"
+    },
+    {
+      "path": "original/apps/web/scripts/privacy-safe-cli-log.mjs",
+      "bytes": 7375,
+      "sha256": "23acce06424335d2d3597c236d7e5d30731b04d9f75fa75cff7a93bff0cc6e97"
+    },
+    {
+      "path": "original/apps/web/scripts/supabase-migration-transaction.mjs",
+      "bytes": 15819,
+      "sha256": "c67bdff4c63b1bf1b4a157863b3eb5253b5973a8fb54b7fd49351270787bed26"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "bytes": 60166,
+      "sha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261004192657_admin_evaluation_raw_warning_groups.sql",
+      "bytes": 13706,
+      "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+      "bytes": 5957,
+      "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261008192455_review_media_commit_cleanup.sql",
+      "bytes": 17278,
+      "sha256": "1b018884a0ba8bb25e6a9e31fa831e349bd4442118e5d4bf1699464e09e16c3c"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261008200719_review_verification_private.sql",
+      "bytes": 5281,
+      "sha256": "92b469ab0ed1a23bf91c1ab5a3f8e92d45cf0f4e06e5fa602d6a34ad0497a51b"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261008201635_review_media_catalog_integration.sql",
+      "bytes": 47177,
+      "sha256": "6e820eb535bc514e78f258110e36dff00537bcaefcffd8b354356107ca9c09fe"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql",
+      "bytes": 7769,
+      "sha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261009091342_admin_record_private_verification_cleanup.sql",
+      "bytes": 13185,
+      "sha256": "b596b200e52c6813a4cfa1b0a2818625f067864549e8854f3497afdcdab706da"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",
+      "bytes": 40392,
+      "sha256": "2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261011072824_admin_review_media_completion.sql",
+      "bytes": 13429,
+      "sha256": "32626259ca77ea913f068ee804815ff439abbff1ce310da4525e4f0bb86d8338"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261011085342_review_legacy_shared_cleanup.sql",
+      "bytes": 7661,
+      "sha256": "623236ddbd87059b94c84486f9e14822dba0190d2448656259991bd1345a434f"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261011094346_admin_evaluation_revision_safeupdate.sql",
+      "bytes": 3666,
+      "sha256": "b7061015ea07192dccfcf0774d5548a9c2a584c7daa140d77fccd7c75cb8bf88"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261011100730_admin_record_expired_preview_readback.sql",
+      "bytes": 4163,
+      "sha256": "26c64074bb98e718ba96732ac2baeedb851afe6ff745e0ddb5ca075359892472"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261011103501_admin_verification_durable_staging.sql",
+      "bytes": 12008,
+      "sha256": "081c48e91172e4e98079b03aa210c0f7481d95a21945e5a288187263089e57db"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261011105114_review_media_storage_retirement_fence.sql",
+      "bytes": 11418,
+      "sha256": "79375138d7e82a3be2b85b219ff52147db13db9c93070569be40a61ab97c3d53"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261011110108_review_storage_caller_bound_admin_policy.sql",
+      "bytes": 8463,
+      "sha256": "45b2a0db333a1e24ac1f68b7693c7cfb98e10cd0ab366b98089c3679a6b5dfbc"
+    },
+    {
+      "path": "original/backend/supabase/migrations/20261011175912_review_owner_cleanup_completion.sql",
+      "bytes": 6694,
+      "sha256": "9164be35fc17e67c3f1aaf98aad13139a8fd469130bd1315879bff5dac63ba26"
+    },
+    {
+      "path": "original/backend/supabase/scripts/g037_supabase_statement_vector.mjs",
+      "bytes": 7626,
+      "sha256": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd"
+    },
+    {
+      "path": "original/docs/agents/privacy.md",
+      "bytes": 2955,
+      "sha256": "87a3ee1af8b3cd28acaff8cfb0214c9a3d985824459e10c3635b270e2eaaab4c"
+    },
+    {
+      "path": "original/docs/agents/release.md",
+      "bytes": 2329,
+      "sha256": "d485f844d7457300e082eb27961e533c03cb95d1f0ac1aad5ec27f3104647fb9"
+    },
+    {
+      "path": "original/docs/agents/verification.md",
+      "bytes": 4080,
+      "sha256": "cdb7cdfa6e621f8cac3ee848d0e2e9a303350c35a739eea16c74da71284cae1f"
+    },
+    {
+      "path": "patch-check/.github/supabase-readiness-release-manifest.v1.json",
+      "bytes": 33790,
+      "sha256": "03c7804306c6faac12ec92a52c20c8f9a6cfd4adf324af0f3dd9284c39675490"
+    },
+    {
+      "path": "patch-check/.github/workflows/supabase-migration-apply.yml",
+      "bytes": 11995,
+      "sha256": "3a7363d039ced5a51638a4b3c003da8466eb85bed71f2d75fda8a65a99ff58d6"
+    },
+    {
+      "path": "patch-check/apps/web/scripts/apply-readiness-release.mjs",
+      "bytes": 3194,
+      "sha256": "429d8801c899f7c3af2dced6c35b5efd807c5c225015a837c5c57002ef8fcf5b"
+    },
+    {
+      "path": "patch-check/apps/web/scripts/readiness-release.mjs",
+      "bytes": 17386,
+      "sha256": "42947f96a8f9c3611efc8011d4b2ae17f380e70937f781613b6e078375d36423"
+    },
+    {
+      "path": "patch-check/backend/supabase/release-bundles/readiness11-v1.sql",
+      "bytes": 137908,
+      "sha256": "77b34753c68047d3b479484f156e44044d015c53b8e5d459da4b8d1d97f0d1d3"
+    },
+    {
+      "path": "reports/dry-run.json",
+      "bytes": 274,
+      "sha256": "d3f5972962d8220c13a1456057a3937859b501b2fa8b9e97e9311f1d014f2470"
+    },
+    {
+      "path": "reports/fixture.json",
+      "bytes": 29363,
+      "sha256": "dafc46cf93a5d7e7e8bc2cf5cb995b726338b5defd26a1887221f763e1a62827"
+    },
+    {
+      "path": "reports/integration-error-v2.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "reports/integration-error-v3.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "reports/integration-error.log",
+      "bytes": 799,
+      "sha256": "6e75e771263b8213664619f00e4eb4ee1a35b904525379ae06bc2cf55090e3bf"
+    },
+    {
+      "path": "reports/integration-progress-v2.jsonl",
+      "bytes": 654,
+      "sha256": "cba8966f2d413e92a97de036ee1404dc69474120085fa921e8e85da7878de0d9"
+    },
+    {
+      "path": "reports/integration-progress-v3.jsonl",
+      "bytes": 726,
+      "sha256": "9150b0fa83407dc7b48b38a95f537bb058389533f75517032b8fbefe0ed38bfb"
+    },
+    {
+      "path": "reports/integration-progress.jsonl",
+      "bytes": 598,
+      "sha256": "ad7da6c1bdb6006019bda51cb42d3525aad38d27cced227fde35d39e72f5e058"
+    },
+    {
+      "path": "reports/integration.json",
+      "bytes": 1873,
+      "sha256": "4434601c28d284a34fa6bcdcd622e81fbe6718da43456ced45a1de4dcc312bf0"
+    },
+    {
+      "path": "reports/local-cleanup.json",
+      "bytes": 1097,
+      "sha256": "9239206a76da39841d75d2fe96cd79ce98f4f3fd7344f98372e2f5c3518d4158"
+    },
+    {
+      "path": "reports/manifest-pin.json",
+      "bytes": 101,
+      "sha256": "3bf5453e58d6eedff56705bdfd94af8b1e260caa7e478fea3cf78c24fc5b9afd"
+    },
+    {
+      "path": "reports/material-validation.json",
+      "bytes": 1215,
+      "sha256": "b1621f14fa3db7655ba35026803eeae862bf1a4e9107515d6d9827dc59ba7a04"
+    },
+    {
+      "path": "reports/materials.json",
+      "bytes": 280955,
+      "sha256": "ffc9fa339e483558a32bd3658c8a7e9b759a8ce6d239be817ad852ca038eac45"
+    },
+    {
+      "path": "reports/package.json",
+      "bytes": 1632,
+      "sha256": "f7ec534e53063744ffca24a52306fcfef68c895ea23975819745d5a849e7cc41"
+    },
+    {
+      "path": "reports/snapshot.sql",
+      "bytes": 5942,
+      "sha256": "bb2ceefdfa605b6e50744d15d3091ffecdafddc90fd04a0f021fe7edec51c007"
+    },
+    {
+      "path": "reports/unit-final.tap",
+      "bytes": 922,
+      "sha256": "d37d6a6aa8f621fa5e76c8e065ebc3e125fa85365a31bdc24fc60fd6ac0b4656"
+    },
+    {
+      "path": "reports/unit-race.tap",
+      "bytes": 206,
+      "sha256": "84661796125c6f914c915dde19cfefd51053bb417104c953d1d76e72cb118240"
+    },
+    {
+      "path": "reports/unit.tap",
+      "bytes": 834,
+      "sha256": "0e8859306b1b9817a229fbac9f417774ce4acdfaf5c305d3b5160beb2b21c8cc"
+    },
+    {
+      "path": "reports/workflow-original-parsed.json",
+      "bytes": 6462,
+      "sha256": "f5529789503e1bc66af0158e8f02d8b0f00f8c17d4eb30c389b9361c1f70996c"
+    },
+    {
+      "path": "reports/workflow-parsed.json",
+      "bytes": 10605,
+      "sha256": "af3ad0a8a03dc6128153dffbe6edc77eb6bb2ba6f9ff444f83ff0051ec791566"
+    },
+    {
+      "path": "reports/workflow.json",
+      "bytes": 338,
+      "sha256": "9d586e5cf99b9721303d015956dfb32d45061a4aa462c22b0c16d4348834223d"
+    },
+    {
+      "path": "source-hashes.json",
+      "bytes": 7407,
+      "sha256": "009b33e031cf85fc176d2ed6c7f74c447d397bbfc9dda97b748f85c67dacf7ae"
+    },
+    {
+      "path": "source.patch",
+      "bytes": 201943,
+      "sha256": "204468fef277ebaa57ec8091ac8d58a5fb6894db45962b5ac8733bdde19f4564"
+    },
+    {
+      "path": "tests/build_manifest.py",
+      "bytes": 2289,
+      "sha256": "085a533c1575e7388818a5e8d24c7b7f948c300d3d23e30129aa9aa2eba77f10"
+    },
+    {
+      "path": "tests/build_workflow.py",
+      "bytes": 5279,
+      "sha256": "8c0efff9853ce01ca294f189e3fb37af077a25fb09d42d21af0ecaf6b1ca757a"
+    },
+    {
+      "path": "tests/dry_run.mjs",
+      "bytes": 435,
+      "sha256": "e8a6c26f3b6b68f0c316aaa1e897a8f8c6263391dd655082b4d8656482d20cb7"
+    },
+    {
+      "path": "tests/integration.mjs",
+      "bytes": 9720,
+      "sha256": "7402c483645e88b5a35143c0c7ffe7a78e9f943ef6b53b52a33ad1a20f13944b"
+    },
+    {
+      "path": "tests/materials.mjs",
+      "bytes": 1137,
+      "sha256": "a17db08305d0967c263359a300914639a86df5718f72572c8a6a30916f3ae3cf"
+    },
+    {
+      "path": "tests/package.py",
+      "bytes": 2445,
+      "sha256": "2c1697424ad7fa108d4ab6b01959e8932476f97fa516553c3e7f79912be69736"
+    },
+    {
+      "path": "tests/prepare_fixture.py",
+      "bytes": 4202,
+      "sha256": "37f9e152da9ca40668679ee32d45dc3db4fa024335f086398833c0cb54ee40c3"
+    },
+    {
+      "path": "tests/unit.test.mjs",
+      "bytes": 4529,
+      "sha256": "6cb5557ee95915ea9f54a36865debfad38f361cedd6d907b33e5ba256b9c9324"
+    },
+    {
+      "path": "tests/workflow.test.mjs",
+      "bytes": 3359,
+      "sha256": "a346bf748f0023b9384f3463cd4c761a70fc6c8b499f227e1d666c1bf1679a40"
+    },
+    {
+      "path": "workflow.patch",
+      "bytes": 5696,
+      "sha256": "3676cb5025d13ba0ade1e6594cabcd90b2eff7e661032dd359b67fb78bd0e007"
+    }
+  ]
+}

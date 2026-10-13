@@ -1,0 +1,22 @@
+[
+  {
+    "kind": "baseline",
+    "label": "startup-v4-0-baseline",
+    "exitCode": 1
+  },
+  {
+    "kind": "candidate",
+    "label": "startup-v4-1-candidate",
+    "exitCode": 1
+  },
+  {
+    "kind": "candidate",
+    "label": "startup-v4-2-candidate",
+    "exitCode": 0
+  },
+  {
+    "kind": "baseline",
+    "label": "startup-v4-3-baseline",
+    "exitCode": 0
+  }
+]

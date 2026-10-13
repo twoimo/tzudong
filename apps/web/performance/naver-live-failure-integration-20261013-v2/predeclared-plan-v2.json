@@ -1,0 +1,36 @@
+{
+  "sourceCommit": "073a9de51da22f7aeddd3b4c18ae299afef9540b",
+  "cases": [
+    {
+      "width": 390,
+      "height": 844,
+      "failure": "network"
+    },
+    {
+      "width": 820,
+      "height": 1180,
+      "failure": "network"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "failure": "network"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "failure": "missing-api"
+    }
+  ],
+  "sameMatrixAsPrior": true,
+  "reason": "integrates separately observed CSS LINK failure fix with live SDK failure/retry; old four-case failures preserved",
+  "fullUnitPriorHead": "6dc0c6a2a8a77f80162ea1dc74e6a2ee87f837f1",
+  "fullUnitAtPriorHead": {
+    "pass": 3459,
+    "skip": 11,
+    "fail": 0
+  },
+  "productionAdmission": 0,
+  "physicalDevice": false,
+  "fieldAdmission": 0
+}

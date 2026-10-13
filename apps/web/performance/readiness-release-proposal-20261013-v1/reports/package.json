@@ -1,0 +1,44 @@
+{
+  "status": "passed",
+  "sourceHead": "03cd3c8c93041b0835f55943f76ff058c4620a88",
+  "originalFilesUnchanged": 36,
+  "changedPaths": [
+    ".github/workflows/supabase-migration-apply.yml",
+    ".github/supabase-readiness-release-manifest.v1.json",
+    "apps/web/scripts/readiness-release.mjs",
+    "apps/web/scripts/apply-readiness-release.mjs",
+    "backend/supabase/release-bundles/readiness11-v1.sql"
+  ],
+  "canonicalMigrationsAdded": 0,
+  "fixtureFoundationUnitsInPayload": 0,
+  "patchApplyAndByteReadback": true,
+  "sourcePatchSha256": "204468fef277ebaa57ec8091ac8d58a5fb6894db45962b5ac8733bdde19f4564",
+  "workflowPatchSha256": "3676cb5025d13ba0ade1e6594cabcd90b2eff7e661032dd359b67fb78bd0e007",
+  "files": [
+    {
+      "path": ".github/workflows/supabase-migration-apply.yml",
+      "bytes": 11995,
+      "sha256": "3a7363d039ced5a51638a4b3c003da8466eb85bed71f2d75fda8a65a99ff58d6"
+    },
+    {
+      "path": ".github/supabase-readiness-release-manifest.v1.json",
+      "bytes": 33790,
+      "sha256": "03c7804306c6faac12ec92a52c20c8f9a6cfd4adf324af0f3dd9284c39675490"
+    },
+    {
+      "path": "apps/web/scripts/readiness-release.mjs",
+      "bytes": 17386,
+      "sha256": "42947f96a8f9c3611efc8011d4b2ae17f380e70937f781613b6e078375d36423"
+    },
+    {
+      "path": "apps/web/scripts/apply-readiness-release.mjs",
+      "bytes": 3194,
+      "sha256": "429d8801c899f7c3af2dced6c35b5efd807c5c225015a837c5c57002ef8fcf5b"
+    },
+    {
+      "path": "backend/supabase/release-bundles/readiness11-v1.sql",
+      "bytes": 137908,
+      "sha256": "77b34753c68047d3b479484f156e44044d015c53b8e5d459da4b8d1d97f0d1d3"
+    }
+  ]
+}

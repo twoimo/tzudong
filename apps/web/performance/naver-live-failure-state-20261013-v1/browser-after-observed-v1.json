@@ -1,0 +1,11 @@
+{
+  "sourceCommit": "6dc0c6a2a8a77f80162ea1dc74e6a2ee87f837f1",
+  "pass": 7,
+  "fail": 0,
+  "source": "unified exec38094",
+  "browser": "Chrome155.0.8059.40",
+  "actualHookAndReact": true,
+  "realSDK": false,
+  "controlledNetworkFailure": true,
+  "localOfflineModePreserved": true
+}

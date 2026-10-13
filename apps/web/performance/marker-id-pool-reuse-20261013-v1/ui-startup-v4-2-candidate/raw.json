@@ -1,0 +1,246 @@
+{
+  "kind": "candidate",
+  "sourceCommit": "0437dd27dd3bfaecd9b7d296743ec8b98c7bf57b",
+  "buildId": "OeHAhHBkEo53NHb6HGyho",
+  "startedAtUtc": "2026-10-13T05:05:49.276Z",
+  "environment": {
+    "cpuRate": 4,
+    "network": "unthrottled real remote SDK/tiles; synthetic REST735/Auth401",
+    "cache": "disabled and SW bypassed",
+    "viewport": "390x844/dpr1/touch emulation",
+    "productionBuild": true,
+    "forcedGC": false
+  },
+  "queries": 1,
+  "passes": 1,
+  "cycles": [
+    {
+      "pass": 0,
+      "query": 0,
+      "state": {
+        "observedAt": 2520.7999997138977,
+        "inputToObservedMs": 573.5999999046326,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 30,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.4960203,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 97,
+        "maxFrameGapMs": 233.30000000000018,
+        "longTaskCount": 5,
+        "longTaskMs": 566,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 17,
+      "restaurantRequestsSinceQueryStart": 15,
+      "heap": {
+        "usedSize": 18999756,
+        "totalSize": 24182784,
+        "embedderHeapUsedSize": 12509400,
+        "backingStorageSize": 3403740
+      },
+      "resources": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 1468
+        },
+        {
+          "name": "Nodes",
+          "value": 1375
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 19025372
+        }
+      ]
+    }
+  ],
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "physicalDevice": false,
+  "pilotOnly": true,
+  "browserVersion": "155.0.8059.40",
+  "sdk": {
+    "loaded": true,
+    "remoteScript": true,
+    "stub": false,
+    "captured": true,
+    "reportedVersion": null
+  },
+  "sdkScript": {
+    "status": 200,
+    "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+  },
+  "initialRestaurantRequests": 2,
+  "initialHeap": {
+    "usedSize": 12300348,
+    "totalSize": 20512768,
+    "embedderHeapUsedSize": 5527992,
+    "backingStorageSize": 2033751
+  },
+  "endHeap": {
+    "usedSize": 19106236,
+    "totalSize": 24182784,
+    "embedderHeapUsedSize": 12509400,
+    "backingStorageSize": 3403980
+  },
+  "idleHeap": {
+    "usedSize": 20280272,
+    "totalSize": 25755648,
+    "embedderHeapUsedSize": 12550168,
+    "backingStorageSize": 3404370
+  },
+  "passed": true,
+  "diagnostics": {
+    "failed": [
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "stylesheet",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "stylesheet",
+        "appAsset": true,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "owned-loopback",
+        "protocol": "http:",
+        "type": "fetch",
+        "appAsset": false,
+        "code": "net::ERR_ABORTED"
+      },
+      {
+        "group": "naver-family",
+        "protocol": "https:",
+        "type": "xhr",
+        "appAsset": false,
+        "code": "other"
+      }
+    ],
+    "assetResponses": {
+      "http::200:stylesheet": 5,
+      "http::200:font": 2,
+      "http::200:script": 59,
+      "http::200:image": 1
+    },
+    "console": [
+      {
+        "at": 1791867953293,
+        "networkCodes": [],
+        "reactCode": null,
+        "chunkFailure": false,
+        "csp": true,
+        "messageLength": 343
+      }
+    ]
+  },
+  "boundedErrorEvents": [
+    {
+      "at": 955.6999998092651,
+      "event": "unhandledrejection",
+      "shape": {
+        "type": "object",
+        "constructor": "Event",
+        "eventType": "error",
+        "isNull": false,
+        "messageLength": null,
+        "emptyMessage": false,
+        "targetTag": "LINK",
+        "targetSourceGroup": "local-app-asset",
+        "status": null,
+        "readyState": null
+      }
+    },
+    {
+      "at": 1326.5999999046326,
+      "event": "csp",
+      "directive": "connect-src",
+      "host": "naver-family"
+    }
+  ],
+  "finalDom": {
+    "ready": "complete",
+    "scripts": 22,
+    "markerCount": 30,
+    "clusterCount": 0
+  },
+  "errors": {
+    "page": 1,
+    "console": 1,
+    "consoleCategories": {
+      "http401": 0,
+      "blockedClient": 0,
+      "provider": 0,
+      "other": 0,
+      "csp": 1
+    },
+    "cspDirectives": {
+      "connect-src": 1
+    },
+    "cspResourceGroups": {
+      "naver-family": 1
+    }
+  },
+  "requests": {
+    "restaurant": 17,
+    "otherFixture": 5,
+    "failedAppAsset": 2,
+    "failedRemoteProvider": 1,
+    "remoteFailureKinds": {
+      "other-network-failure": 1
+    }
+  },
+  "errorClassification": [
+    {
+      "category": "other",
+      "errorClass": "other",
+      "stackGroups": []
+    }
+  ],
+  "rawErrorsPersisted": false,
+  "endedAtUtc": "2026-10-13T05:06:00.984Z"
+}

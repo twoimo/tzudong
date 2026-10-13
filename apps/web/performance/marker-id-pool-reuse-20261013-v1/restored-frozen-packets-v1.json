@@ -1,0 +1,14 @@
+[
+  {
+    "packet": "resize-gate-memory-primary-20261012-v1",
+    "mappedFilesVerified": 163,
+    "mapSha256": "1e7daaa57ab42d1acb63ea40c9b709abe9fc704d322bd2cadbbb5df854b7a491",
+    "allHashesMatch": true
+  },
+  {
+    "packet": "query-callback-memory-primary-20261012-v2",
+    "mappedFilesVerified": 164,
+    "mapSha256": "5b6e202830b5a92229faa490f81be12d92fec47618942101ffd2a469affcfff6",
+    "allHashesMatch": true
+  }
+]

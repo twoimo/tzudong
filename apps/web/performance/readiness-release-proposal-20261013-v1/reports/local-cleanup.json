@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "originalTemplateUnchanged": true,
+  "removedOwnedTestDatabases": [
+    "rrel_f4b21042f1b8_success",
+    "rrel_f4b21042f1b8_partial",
+    "rrel_f4b21042f1b8_prior_drift",
+    "rrel_f4b21042f1b8_rollback",
+    "rrel_f4b21042f1b8_lost_commit",
+    "rrel_f4b21042f1b8_final_drift",
+    "rrel_f4b21042f1b8_locked",
+    "rrel_f4b21042f1b8_dbhjaa_success",
+    "rrel_f4b21042f1b8_dbhjaa_partial",
+    "rrel_f4b21042f1b8_dbhjaa_prior_drift",
+    "rrel_f4b21042f1b8_dbhjaa_rollback",
+    "rrel_f4b21042f1b8_dbhjaa_lost_commit",
+    "rrel_f4b21042f1b8_dbhjaa_final_drift",
+    "rrel_f4b21042f1b8_dbhjaa_locked",
+    "rrel_f4b21042f1b8_jfechj_success",
+    "rrel_f4b21042f1b8_jfechj_partial",
+    "rrel_f4b21042f1b8_jfechj_prior_drift",
+    "rrel_f4b21042f1b8_jfechj_rollback",
+    "rrel_f4b21042f1b8_jfechj_lost_commit",
+    "rrel_f4b21042f1b8_jfechj_final_drift",
+    "rrel_f4b21042f1b8_jfechj_pipeline_drift",
+    "rrel_f4b21042f1b8_jfechj_locked"
+  ],
+  "retainedReferenceDatabases": [
+    "rrel_f4b21042f1b8_base",
+    "rrel_f4b21042f1b8_reference"
+  ],
+  "hostedWrites": 0
+}

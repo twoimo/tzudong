@@ -1,0 +1,18 @@
+✔ manifest tamper cannot be repinned by content (22.80875ms)
+✔ reviewed bundle byte tamper fails even with unchanged manifest (839.362125ms)
+✔ original source byte tamper fails (18.30725ms)
+✔ existing generic manifest pin is immutable (22.598416ms)
+✔ canonical vector parser dependency tamper is blocked (23.713041ms)
+✔ lost acknowledgement and unavailable reconciliation never resend (0.429333ms)
+✔ lost acknowledgement with conflicting reconciliation never resend (0.26125ms)
+✔ unavailable preflight never opens write transport (0.354208ms)
+✔ protected caller accepts only exact main detached context (0.558833ms)
+✔ transaction-free payload preserves exact admitted envelope bytes (0.818708ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1831.346333

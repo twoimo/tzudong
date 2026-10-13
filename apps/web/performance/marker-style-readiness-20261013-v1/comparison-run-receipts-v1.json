@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "baseline",
+    "label": "style-ab-v1-0-baseline",
+    "exitCode": 1
+  },
+  {
+    "kind": "candidate",
+    "label": "style-ab-v1-1-candidate",
+    "exitCode": 1
+  },
+  {
+    "kind": "candidate",
+    "label": "style-ab-v1-2-candidate",
+    "exitCode": 1
+  },
+  {
+    "kind": "baseline",
+    "label": "style-ab-v1-3-baseline",
+    "exitCode": 0
+  },
+  {
+    "kind": "baseline",
+    "label": "style-ab-v1-4-baseline",
+    "exitCode": 1
+  },
+  {
+    "kind": "candidate",
+    "label": "style-ab-v1-5-candidate",
+    "exitCode": 1
+  },
+  {
+    "kind": "candidate",
+    "label": "style-ab-v1-6-candidate",
+    "exitCode": 1
+  },
+  {
+    "kind": "baseline",
+    "label": "style-ab-v1-7-baseline",
+    "exitCode": 0
+  }
+]

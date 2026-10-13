@@ -1,0 +1,13 @@
+{
+  "privateTempFixtureRemoved": true,
+  "sourcePin": "docs/evidence/naver-live-failure-final-20261013-v3-parent-v1.json",
+  "verifiedCases": {
+    "changed_bytes": true,
+    "changed_pin": true,
+    "extra_file": true,
+    "missing_file": true,
+    "relocated": true,
+    "restored": true,
+    "symlink": true
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "status": "passed",
+  "engine": "17.6",
+  "actor": "postgres",
+  "units": 11,
+  "bundleSha256": "77b34753c68047d3b479484f156e44044d015c53b8e5d459da4b8d1d97f0d1d3",
+  "scriptSha256": "9169acccf1f931b2c071ead247b77b09247ffdafaada73ff6d83b8efc1fe59f8",
+  "ownerProbes": [
+    {
+      "ownerRPCsPassed": 7,
+      "privateSchemaDenied": true
+    },
+    {
+      "anonRPCDenied": true,
+      "privateSchemaDenied": true
+    }
+  ],
+  "signatures": {
+    "finishHash": "a6b4211b2d8486d482f0758ce249eec157249e1a5176be286b76af7e7a775ee9",
+    "privateBucket": true,
+    "serviceAdminOnly": true
+  },
+  "rollbackExact": true,
+  "originalTemplateUnchanged": true,
+  "operatingWrites": 0
+}

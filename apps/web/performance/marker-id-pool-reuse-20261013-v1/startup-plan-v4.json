@@ -1,0 +1,1 @@
+{"scope":"diagnostic only; no performance admission","runs":["baseline","candidate","candidate","baseline"],"queries":1,"passes":1,"stopAfter":4,"reason":"bound startup asset failures and Event rejection target without raw provider data; preserve all failures; no security changes"}

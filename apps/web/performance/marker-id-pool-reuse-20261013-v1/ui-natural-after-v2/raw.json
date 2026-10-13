@@ -1,0 +1,44 @@
+{
+  "kind": "candidate",
+  "sourceCommit": "0437dd27dd3bfaecd9b7d296743ec8b98c7bf57b",
+  "buildId": "OeHAhHBkEo53NHb6HGyho",
+  "startedAtUtc": "2026-10-13T04:56:46.245Z",
+  "environment": {
+    "cpuRate": 4,
+    "network": "unthrottled real remote SDK/tiles; synthetic REST735/Auth401",
+    "cache": "disabled and SW bypassed",
+    "viewport": "390x844/dpr1/touch emulation",
+    "productionBuild": true,
+    "forcedGC": false
+  },
+  "queries": 8,
+  "passes": 2,
+  "cycles": [],
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "physicalDevice": false,
+  "pilotOnly": true,
+  "browserVersion": "155.0.8059.40",
+  "passed": false,
+  "failure": "bounded_browser_flow_invariant_unavailable",
+  "errors": {
+    "page": 0,
+    "console": 2,
+    "consoleCategories": {
+      "http401": 0,
+      "blockedClient": 0,
+      "provider": 0,
+      "other": 2
+    }
+  },
+  "requests": {
+    "restaurant": 0,
+    "otherFixture": 0,
+    "failedAppAsset": 12,
+    "failedRemoteProvider": 0,
+    "remoteFailureKinds": {}
+  },
+  "errorClassification": [],
+  "rawErrorsPersisted": false,
+  "endedAtUtc": "2026-10-13T04:57:38.358Z"
+}

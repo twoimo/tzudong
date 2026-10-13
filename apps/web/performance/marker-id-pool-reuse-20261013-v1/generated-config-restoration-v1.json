@@ -1,0 +1,5 @@
+{
+  "beforeAndAfterConfigExactToPreBuild": true,
+  "onlyNamedBuildIncludesRemoved": true,
+  "noResetStashClean": true
+}

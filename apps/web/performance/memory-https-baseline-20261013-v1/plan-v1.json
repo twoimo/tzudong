@@ -1,0 +1,33 @@
+{
+  "createdAtUtc": "2026-10-13T09:43:15.925970+00:00",
+  "status": "predeclared_before_execution",
+  "scope": "baseline diagnosis, no candidate acceptance or improvement claim",
+  "sourceBefore": "056a86600f412eb42df4304e3206841679012f3e",
+  "independentExecutions": [
+    "baseline-aa-1",
+    "baseline-aa-2"
+  ],
+  "perExecution": {
+    "distinctQueries": 128,
+    "passes": 2,
+    "dependentActions": 256,
+    "idleMs": 5000,
+    "cache": "app warm revisit; HTTP cache disabled; SW bypassed",
+    "cpuRate": 4,
+    "network": "unthrottled real SDK and tiles; synthetic REST735/Auth401",
+    "viewport": "390x844 DPR1 touch emulation",
+    "forcedGC": false,
+    "tls": "owned localhost SPKI-only exception; remote TLS preserved"
+  },
+  "fixedFutureGuards": {
+    "heapRelativeLimit": 0.2,
+    "latencyRelativeLimit": 0.15,
+    "relaxationAllowed": false
+  },
+  "fieldAdmission": 0,
+  "physicalDevice": false,
+  "performanceAdmission": 0,
+  "noParallelBrowserProcesses": true,
+  "expectedSdkSha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1",
+  "scriptSha256": "822111c1837937c120e9afe7a433c4fa5ad1b9e7cf7c4aba156aa2406dd700e3"
+}

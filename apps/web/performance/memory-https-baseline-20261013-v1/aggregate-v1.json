@@ -1,0 +1,151 @@
+{
+  "independentNaturalExecutions": 2,
+  "dependentActionsPerExecution": 256,
+  "primaryBeforeAfterComparison": false,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "forcedGCNotUsedForGuard": true,
+  "rows": [
+    {
+      "execution": 1,
+      "sourceCommit": "056a86600f412eb42df4304e3206841679012f3e",
+      "dependentActions": 256,
+      "latencyP50Ms": 190.94999980926514,
+      "latencyP95WithinExecutionMs": 278.99999964237213,
+      "endHeapMB": 31.72164,
+      "idleHeapMB": 32.7895,
+      "maxPeriodicCheckpointHeapMB": 53.289132,
+      "endDomCounters": {
+        "documents": 2,
+        "nodes": 17015,
+        "jsEventListeners": 23782
+      },
+      "idleDomCounters": {
+        "documents": 2,
+        "nodes": 17015,
+        "jsEventListeners": 23782
+      },
+      "restaurantRequests": 2434,
+      "errors": {
+        "page": 0,
+        "console": 1,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 0,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "remoteFailures": 2,
+      "remoteFailureKinds": {
+        "other-network-failure": 1,
+        "net::ERR_ABORTED": 1
+      },
+      "rawSha256": "a9019c7646618b7b0247a87c01d5e37062fa32ffd45599dbb836bbacf71f21db"
+    },
+    {
+      "execution": 2,
+      "sourceCommit": "056a86600f412eb42df4304e3206841679012f3e",
+      "dependentActions": 256,
+      "latencyP50Ms": 176.90000009536743,
+      "latencyP95WithinExecutionMs": 269.8250000476837,
+      "endHeapMB": 42.076104,
+      "idleHeapMB": 43.255552,
+      "maxPeriodicCheckpointHeapMB": 45.413712,
+      "endDomCounters": {
+        "documents": 2,
+        "nodes": 3347,
+        "jsEventListeners": 4268
+      },
+      "idleDomCounters": {
+        "documents": 2,
+        "nodes": 3356,
+        "jsEventListeners": 4268
+      },
+      "restaurantRequests": 2434,
+      "errors": {
+        "page": 0,
+        "console": 1,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 0,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "remoteFailures": 9,
+      "remoteFailureKinds": {
+        "other-network-failure": 1,
+        "net::ERR_ABORTED": 8
+      },
+      "rawSha256": "63d08ef8b1fb3c7d1928c50197f4d0d21671e1ce149bf0657b04facfd41d6a3e"
+    }
+  ],
+  "aaDifference": {
+    "endHeapMB": 10.354464,
+    "endHeapPercent": 32.64164147881383,
+    "idleHeapMB": 10.466052000000005,
+    "idleHeapPercent": 31.918913066682954
+  },
+  "confidenceInterval": "not inferred from two processes; dependent actions are not independent browser runs",
+  "diagnosticGC": {
+    "independentExecutions": 1,
+    "before": {
+      "usedSize": 34271980,
+      "totalSize": 101138432,
+      "embedderHeapUsedSize": 15995456,
+      "backingStorageSize": 3795742
+    },
+    "after": {
+      "usedSize": 22331752,
+      "totalSize": 23543808,
+      "embedderHeapUsedSize": 11084688,
+      "backingStorageSize": 3749826
+    },
+    "lifecycleBefore": {
+      "created": 164,
+      "tracked": 164,
+      "untracked": 0,
+      "liveTracked": 164,
+      "attachedTracked": 126,
+      "connectedDomNodes": 1183
+    },
+    "lifecycleAfter": {
+      "created": 164,
+      "tracked": 164,
+      "untracked": 0,
+      "liveTracked": 164,
+      "attachedTracked": 126,
+      "connectedDomNodes": 1183
+    },
+    "domBefore": {
+      "documents": 2,
+      "nodes": 2497,
+      "jsEventListeners": 2880
+    },
+    "domAfter": {
+      "documents": 2,
+      "nodes": 1558,
+      "jsEventListeners": 1483
+    },
+    "remoteFailures": 16,
+    "remoteFailureKinds": {
+      "other-network-failure": 1,
+      "net::ERR_ABORTED": 15
+    }
+  }
+}

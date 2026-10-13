@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "root": "apps/web/performance/marker-style-readiness-20261013-v1",
+  "performanceAdmission": 0,
+  "frozen": true,
+  "files": {
+    "REPORT.md": {
+      "sha256": "3e37584387b934decac94596639ecf57fd90101cc7ec6c46dea135b597fb8013",
+      "bytes": 1819
+    },
+    "SUMMARY-v1.json": {
+      "sha256": "fddb1c132250c97bdd257705a796d6b3200ee3604682bcf97f0455e0f9913b16",
+      "bytes": 2950
+    },
+    "browser-confirm-plan-v8.json": {
+      "sha256": "d08c1a3e3dc5acd30e2781ebefeab492c9f97669cfd81524b9942f2801b7b925",
+      "bytes": 568
+    },
+    "build-after-v1.json": {
+      "sha256": "49c0ab365bf949b50e8a791dfb710f5c84169751cea1ed292a0e0cd8ee8df8b6",
+      "bytes": 1800
+    },
+    "build-after-v1.log": {
+      "sha256": "929d0e8f6310ea2c63ffc00960ab7a1cbe4c48f52aa1e09c014354d9f2079505",
+      "bytes": 1178
+    },
+    "build-owned-v1.mjs": {
+      "sha256": "0daeda061552b9e8fa81be1eb0754f603690512900f9c452f397253edeca2296",
+      "bytes": 4411
+    },
+    "build-receipts-v8.json": {
+      "sha256": "73fee5faf098cb3dc400760876113d3037861bf691b3c634ab63c839472cadbf",
+      "bytes": 3789
+    },
+    "comparison-plan-v1.json": {
+      "sha256": "038c6f455d8cdf270b62c70f0eb0f54edf1a82bed39d1a9a37592124c536b2f2",
+      "bytes": 748
+    },
+    "comparison-run-receipts-v1.json": {
+      "sha256": "064711dba158aff5622689b454b1d5233a2eaf7c1c53c84fa1b0519073f441f8",
+      "bytes": 731
+    },
+    "fixture-query-v7.mjs": {
+      "sha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5",
+      "bytes": 5754
+    },
+    "local-checks-v1.json": {
+      "sha256": "8236d0cf7c338b927b6da15204c525bed65c92c3b38e65be5a24a55ac281a9f8",
+      "bytes": 611
+    },
+    "measure-ui-error-pilot-v6.mjs": {
+      "sha256": "6bb0b28b7435da1486c89666d810d475822ee64a70ac14808adc065de1f6d493",
+      "bytes": 8661
+    },
+    "real-sdk-runtime-v12.mjs": {
+      "sha256": "66a0c839b1529a6b3ed10d4ce9f1e75ab5bc2b612f0e1e720d9cd39fa39643be",
+      "bytes": 15079
+    },
+    "source.patch": {
+      "sha256": "9cdcfa21095383865eee3a24674f77dd2ce7d84e30e1ab924d4c781009918834",
+      "bytes": 652
+    },
+    "tsconfig-before-build.json": {
+      "sha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17",
+      "bytes": 1260
+    },
+    "tsconfig-build-generated.patch": {
+      "sha256": "db97605be7ba9636714199f14171d5fac833be889ca66c5f77a1b782d88cf861",
+      "bytes": 524
+    },
+    "ui-style-ab-v1-0-baseline/raw.json": {
+      "sha256": "8c8b86b8f933328d7dad5646778607bb3ca8190cdbc5fec6d8e5bb379ef2097c",
+      "bytes": 25431
+    },
+    "ui-style-ab-v1-1-candidate/raw.json": {
+      "sha256": "c7b52523dfbc98fb931729e36d2c1b7639d67f29b99c5abab3b469d297b08ef3",
+      "bytes": 26048
+    },
+    "ui-style-ab-v1-2-candidate/raw.json": {
+      "sha256": "330a0aaf28323f3f444ae24bac6253e96882b2e46cc76a02575c2772a0512547",
+      "bytes": 25430
+    },
+    "ui-style-ab-v1-3-baseline/pass-0-query-0.png": {
+      "sha256": "1e8225244647e4d2085f8d63b9d4bad146ece1ab1e5d3b3c832801a5b5bae77e",
+      "bytes": 154621
+    },
+    "ui-style-ab-v1-3-baseline/raw.json": {
+      "sha256": "a2bf9fceff32e8eede9a8dd52aa46d6a48c5e7a4ba6b2c57adc95d3d0e11563b",
+      "bytes": 46070
+    },
+    "ui-style-ab-v1-4-baseline/raw.json": {
+      "sha256": "f8858be49b85d972843783f2bf03abb90c46a4b46b5c5d1eb73758854a2d3f0e",
+      "bytes": 25429
+    },
+    "ui-style-ab-v1-5-candidate/raw.json": {
+      "sha256": "2f9bce3154701d3ad0d4187ef8eace38bae156a48d85f2400f5f9edb9367ad6c",
+      "bytes": 25432
+    },
+    "ui-style-ab-v1-6-candidate/raw.json": {
+      "sha256": "9c3439c9186eea772b8b603ee0507e59cfccd63cec08a3dddfbd42d43df87d67",
+      "bytes": 25729
+    },
+    "ui-style-ab-v1-7-baseline/pass-0-query-0.png": {
+      "sha256": "a0535b1df74c34a37ae54cee2c7431f19267c697bfe4af6c20d375caa6bcc3fe",
+      "bytes": 154600
+    },
+    "ui-style-ab-v1-7-baseline/raw.json": {
+      "sha256": "ada3e4a087ec4228bd92e234f64f2bf1be526af9ef7defa537f7006b991d6587",
+      "bytes": 47098
+    }
+  }
+}

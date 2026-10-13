@@ -1,0 +1,1250 @@
+{
+  "sourceCommit": "073a9de51da22f7aeddd3b4c18ae299afef9540b",
+  "buildId": "lPjUtdGBHtHn1row_r6zq",
+  "startedAtUtc": "2026-10-13T07:01:57.853Z",
+  "cases": [
+    {
+      "width": 820,
+      "height": 1180,
+      "failure": "network",
+      "index": 1,
+      "startedAtUtc": "2026-10-13T07:01:59.579Z",
+      "attempts": 2,
+      "stubRequests": 0,
+      "browserVersion": "155.0.8059.40",
+      "sdkRequests": [
+        {
+          "host": "oapi.map.naver.com",
+          "protocol": "https:",
+          "isMapsPath": true,
+          "queryKeys": [
+            "ncpKeyId"
+          ],
+          "queryContainsSlash": false
+        },
+        {
+          "host": "oapi.map.naver.com",
+          "protocol": "https:",
+          "isMapsPath": true,
+          "queryKeys": [
+            "ncpKeyId"
+          ],
+          "queryContainsSlash": false
+        },
+        {
+          "host": "oapi.map.naver.com",
+          "protocol": "https:",
+          "isMapsPath": false,
+          "queryKeys": [
+            "ncpKeyId",
+            "url",
+            "time",
+            "callback"
+          ],
+          "queryContainsSlash": false
+        },
+        {
+          "host": "nrbe.pstatic.net",
+          "protocol": "https:",
+          "isMapsPath": false,
+          "queryKeys": [
+            "fmt",
+            "callback"
+          ],
+          "queryContainsSlash": false
+        },
+        {
+          "host": "nrbe.pstatic.net",
+          "protocol": "https:",
+          "isMapsPath": false,
+          "queryKeys": [
+            "fmt",
+            "callback"
+          ],
+          "queryContainsSlash": false
+        },
+        {
+          "host": "nrbe.pstatic.net",
+          "protocol": "https:",
+          "isMapsPath": false,
+          "queryKeys": [
+            "fmt",
+            "callback"
+          ],
+          "queryContainsSlash": false
+        }
+      ],
+      "errorVisible": true,
+      "automaticRetriesObserved": 0,
+      "sdkScript": {
+        "status": 200,
+        "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+      },
+      "sdk": {
+        "loaded": true,
+        "stub": false,
+        "mapCreates": 1,
+        "captured": true
+      },
+      "recovered": true,
+      "passed": true,
+      "errors": {
+        "page": 0,
+        "console": 2,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 1,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "requests": {
+        "restaurant": 2,
+        "otherFixture": 1,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 2,
+        "remoteFailureKinds": {
+          "net::ERR_FAILED": 1,
+          "other-network-failure": 1
+        }
+      },
+      "diagnostics": {
+        "failed": [
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "type": "fetch",
+            "appAsset": false,
+            "localAsset": null,
+            "code": "net::ERR_ABORTED"
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "type": "fetch",
+            "appAsset": false,
+            "localAsset": null,
+            "code": "net::ERR_ABORTED"
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "type": "fetch",
+            "appAsset": false,
+            "localAsset": null,
+            "code": "net::ERR_ABORTED"
+          },
+          {
+            "group": "naver-family",
+            "protocol": "https:",
+            "type": "script",
+            "appAsset": false,
+            "localAsset": null,
+            "code": "net::ERR_FAILED"
+          },
+          {
+            "group": "naver-family",
+            "protocol": "https:",
+            "type": "xhr",
+            "appAsset": false,
+            "localAsset": null,
+            "code": "other"
+          }
+        ],
+        "assetResponses": {
+          "https::200:font": 2,
+          "https::200:stylesheet": 6,
+          "https::200:script": 46
+        },
+        "console": [
+          {
+            "at": 1791874926793,
+            "networkCodes": [
+              "net::ERR_FAILED"
+            ],
+            "reactCode": null,
+            "chunkFailure": false,
+            "csp": false,
+            "messageLength": 40,
+            "fixedCode": null,
+            "chunkNumbers": [],
+            "localAssetMatches": []
+          },
+          {
+            "at": 1791874927634,
+            "networkCodes": [],
+            "reactCode": null,
+            "chunkFailure": false,
+            "csp": true,
+            "messageLength": 343,
+            "fixedCode": null,
+            "chunkNumbers": [],
+            "localAssetMatches": []
+          }
+        ],
+        "networkFailures": [],
+        "assetTimeline": [
+          {
+            "event": "start",
+            "id": "20794.2",
+            "path": "/_next/static/media/c08f1ce88fa584d1-s.p.woff2",
+            "at": 2376069.921491,
+            "type": "Font",
+            "initiator": "other"
+          },
+          {
+            "event": "start",
+            "id": "20794.3",
+            "path": "/_next/static/css/2c51162548402e22.css",
+            "at": 2376069.935248,
+            "type": "Stylesheet",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.4",
+            "path": "/_next/static/css/21152eadce53cbfb.css",
+            "at": 2376069.935359,
+            "type": "Stylesheet",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.5",
+            "path": "/_next/static/css/a6fc645b5cccf57e.css",
+            "at": 2376069.935412,
+            "type": "Stylesheet",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.6",
+            "path": "/_next/static/css/56dbb6b80320ef6e.css",
+            "at": 2376069.935443,
+            "type": "Stylesheet",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.7",
+            "path": "/_next/static/css/1240feada28706b0.css",
+            "at": 2376069.936428,
+            "type": "Stylesheet",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.8",
+            "path": "/_next/static/chunks/webpack-9ae7cac29d54e9c2.js",
+            "at": 2376069.936508,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.9",
+            "path": "/_next/static/chunks/5d015edf-0529e01258c7fed6.js",
+            "at": 2376069.937034,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.10",
+            "path": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+            "at": 2376069.937313,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.11",
+            "path": "/_next/static/chunks/5059-7b1615e884984724.js",
+            "at": 2376069.937441,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.12",
+            "path": "/_next/static/chunks/main-app-6fb64f7dede0e36e.js",
+            "at": 2376069.937457,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.13",
+            "path": "/_next/static/chunks/7146-101751fc3bc4e147.js",
+            "at": 2376069.937471,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.14",
+            "path": "/_next/static/chunks/1935-4882db6e635e667d.js",
+            "at": 2376069.937484,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.15",
+            "path": "/_next/static/chunks/9433-96afc0c37db1b400.js",
+            "at": 2376069.937497,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.16",
+            "path": "/_next/static/chunks/6094-d5259cc9c79ff208.js",
+            "at": 2376069.937509,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.17",
+            "path": "/_next/static/chunks/6183-2ac61f36d483fbf8.js",
+            "at": 2376069.937533,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.18",
+            "path": "/_next/static/chunks/324-f625422f47d14a49.js",
+            "at": 2376069.937551,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.19",
+            "path": "/_next/static/chunks/7681-bfa66958205b4aec.js",
+            "at": 2376069.937564,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.20",
+            "path": "/_next/static/chunks/5359-83985ecd039922c9.js",
+            "at": 2376069.938104,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.21",
+            "path": "/_next/static/chunks/app/page-74b4bd97d9cace5d.js",
+            "at": 2376069.938271,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.22",
+            "path": "/_next/static/chunks/app/global-error-5a1a2865f3461d95.js",
+            "at": 2376069.938291,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "start",
+            "id": "20794.23",
+            "path": "/_next/static/chunks/app/error-272bd9a9f582f7bf.js",
+            "at": 2376069.93831,
+            "type": "Script",
+            "initiator": "parser"
+          },
+          {
+            "event": "response",
+            "id": "20794.2",
+            "at": 2376069.955754,
+            "status": 200,
+            "mime": "font/woff2"
+          },
+          {
+            "event": "response",
+            "id": "20794.7",
+            "at": 2376069.960036,
+            "status": 200,
+            "mime": "text/css"
+          },
+          {
+            "event": "response",
+            "id": "20794.4",
+            "at": 2376069.961157,
+            "status": 200,
+            "mime": "text/css"
+          },
+          {
+            "event": "response",
+            "id": "20794.5",
+            "at": 2376069.96266,
+            "status": 200,
+            "mime": "text/css"
+          },
+          {
+            "event": "response",
+            "id": "20794.6",
+            "at": 2376069.96436,
+            "status": 200,
+            "mime": "text/css"
+          },
+          {
+            "event": "response",
+            "id": "20794.3",
+            "at": 2376069.969086,
+            "status": 200,
+            "mime": "text/css"
+          },
+          {
+            "event": "response",
+            "id": "20794.8",
+            "at": 2376069.972404,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "start",
+            "id": "20794.47",
+            "path": "/_next/static/media/d46971f0b84cb876-s.woff2",
+            "at": 2376069.987695,
+            "type": "Font",
+            "initiator": "parser"
+          },
+          {
+            "event": "response",
+            "id": "20794.9",
+            "at": 2376070.021676,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.12",
+            "at": 2376070.024101,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.14",
+            "at": 2376070.02432,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.13",
+            "at": 2376070.024388,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.10",
+            "at": 2376070.024442,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.15",
+            "at": 2376070.025724,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.16",
+            "at": 2376070.026909,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.17",
+            "at": 2376070.0275,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.18",
+            "at": 2376070.028372,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.19",
+            "at": 2376070.028792,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.21",
+            "at": 2376070.028874,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.11",
+            "at": 2376070.028935,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.22",
+            "at": 2376070.029972,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.20",
+            "at": 2376070.030176,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.23",
+            "at": 2376070.030239,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.47",
+            "at": 2376070.033645,
+            "status": 200,
+            "mime": "font/woff2"
+          },
+          {
+            "event": "start",
+            "id": "20794.175",
+            "path": "/_next/static/chunks/7815.4b90189d2098f437.js",
+            "at": 2376070.32565,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.176",
+            "path": "/_next/static/chunks/3237.7f63b91c6b6a7e86.js",
+            "at": 2376070.32933,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.177",
+            "path": "/_next/static/chunks/8891.b7f528b36c1c6909.js",
+            "at": 2376070.330499,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "response",
+            "id": "20794.175",
+            "at": 2376070.37577,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.177",
+            "at": 2376070.375891,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.176",
+            "at": 2376070.375958,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "start",
+            "id": "20794.178",
+            "path": "/_next/static/chunks/755-1f177fb1265f8238.js",
+            "at": 2376070.388834,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.179",
+            "path": "/_next/static/chunks/7387.f6acdc3759c7e9e3.js",
+            "at": 2376070.389827,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.180",
+            "path": "/_next/static/chunks/9731-24238b3b872bce43.js",
+            "at": 2376070.390931,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.181",
+            "path": "/_next/static/chunks/6149-a13ecbac57b23259.js",
+            "at": 2376070.391471,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.182",
+            "path": "/_next/static/chunks/507-9c5e7cdff214aea9.js",
+            "at": 2376070.391905,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.183",
+            "path": "/_next/static/chunks/758.3a82adf1c49a01b5.js",
+            "at": 2376070.391977,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.184",
+            "path": "/_next/static/chunks/9963.ce6c82a681d143b6.js",
+            "at": 2376070.392599,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "response",
+            "id": "20794.178",
+            "at": 2376070.406057,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.179",
+            "at": 2376070.406169,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.180",
+            "at": 2376070.406918,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.181",
+            "at": 2376070.407443,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.182",
+            "at": 2376070.408283,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.183",
+            "at": 2376070.408496,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.184",
+            "at": 2376070.408573,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "start",
+            "id": "20794.193",
+            "path": "/_next/static/chunks/6835-311fcc5b19bc7ccb.js",
+            "at": 2376070.48012,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.194",
+            "path": "/_next/static/chunks/1008-fa8fe8ee1e8c5bce.js",
+            "at": 2376070.480235,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.195",
+            "path": "/_next/static/chunks/4109-29f2dade4a8230fd.js",
+            "at": 2376070.480989,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.196",
+            "path": "/_next/static/chunks/1196-7bce626903d73bcc.js",
+            "at": 2376070.481045,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.197",
+            "path": "/_next/static/chunks/app/leaderboard/layout-7fd80080a1d1c309.js",
+            "at": 2376070.481498,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.198",
+            "path": "/_next/static/css/5ba1ac4f099bb44e.css",
+            "at": 2376070.482234,
+            "type": "Stylesheet",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.200",
+            "path": "/_next/static/chunks/app/stamp/layout-7fd80080a1d1c309.js",
+            "at": 2376070.487794,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "response",
+            "id": "20794.193",
+            "at": 2376070.492321,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.194",
+            "at": 2376070.492425,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.197",
+            "at": 2376070.493694,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.195",
+            "at": 2376070.493755,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.196",
+            "at": 2376070.493807,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.198",
+            "at": 2376070.494634,
+            "status": 200,
+            "mime": "text/css"
+          },
+          {
+            "event": "response",
+            "id": "20794.200",
+            "at": 2376070.500777,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "start",
+            "id": "20794.202",
+            "path": "/_next/static/chunks/4084-57eb1a28e86f953e.js",
+            "at": 2376070.668486,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.203",
+            "path": "/_next/static/chunks/5772-9042c8b7f91d5ffb.js",
+            "at": 2376070.671071,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.204",
+            "path": "/_next/static/chunks/3813-6768f3acabcd6f15.js",
+            "at": 2376070.67322,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.205",
+            "path": "/_next/static/chunks/9349-6c3cf6692c162c00.js",
+            "at": 2376070.674827,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.206",
+            "path": "/_next/static/chunks/822-d22d4346d5a6a9ac.js",
+            "at": 2376070.675745,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.207",
+            "path": "/_next/static/chunks/5959-aa1b69d8ec7fd9f8.js",
+            "at": 2376070.677118,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.208",
+            "path": "/_next/static/chunks/9127.74ef8c1b17cfc633.js",
+            "at": 2376070.679198,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.209",
+            "path": "/_next/static/chunks/9949-70a13d68f20197f3.js",
+            "at": 2376070.681274,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.210",
+            "path": "/_next/static/chunks/6063-6ad4f72e0df35b7f.js",
+            "at": 2376070.682232,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.211",
+            "path": "/_next/static/chunks/2700.4dc6d8a94c3f828f.js",
+            "at": 2376070.684315,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "response",
+            "id": "20794.202",
+            "at": 2376070.710511,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.203",
+            "at": 2376070.71062,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.205",
+            "at": 2376070.711235,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.207",
+            "at": 2376070.711361,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.206",
+            "at": 2376070.711414,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.204",
+            "at": 2376070.712316,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.208",
+            "at": 2376070.720428,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.209",
+            "at": 2376070.721887,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.210",
+            "at": 2376070.721972,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.211",
+            "at": 2376070.72333,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "start",
+            "id": "20794.217",
+            "path": "/_next/static/chunks/1781.5a2bb3bfb14c5860.js",
+            "at": 2376071.528994,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "response",
+            "id": "20794.217",
+            "at": 2376071.565309,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "start",
+            "id": "20794.224",
+            "path": "/_next/static/chunks/44530001-2f4e96388e27a973.js",
+            "at": 2376071.594304,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.225",
+            "path": "/_next/static/chunks/864-2d8ba5888f5a5e7a.js",
+            "at": 2376071.594448,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "start",
+            "id": "20794.226",
+            "path": "/_next/static/chunks/6590.76d1314878366258.js",
+            "at": 2376071.595349,
+            "type": "Script",
+            "initiator": "script"
+          },
+          {
+            "event": "response",
+            "id": "20794.226",
+            "at": 2376071.642641,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.224",
+            "at": 2376071.643093,
+            "status": 200,
+            "mime": "application/javascript"
+          },
+          {
+            "event": "response",
+            "id": "20794.225",
+            "at": 2376071.643152,
+            "status": 200,
+            "mime": "application/javascript"
+          }
+        ],
+        "navigations": [
+          {
+            "at": 1791874925998,
+            "origin": "https://localhost:3000"
+          },
+          {
+            "at": 1791874926343,
+            "origin": "https://localhost:3000"
+          }
+        ],
+        "documentNavigationCount": 1,
+        "fixtureQueries": [
+          {
+            "at": 1791874926768,
+            "method": "GET",
+            "keys": [
+              "lat",
+              "lat",
+              "lng",
+              "lng",
+              "order",
+              "select",
+              "status"
+            ],
+            "operators": [
+              [
+                "status",
+                "eq"
+              ],
+              [
+                "lat",
+                "gte"
+              ],
+              [
+                "lat",
+                "lte"
+              ],
+              [
+                "lng",
+                "gte"
+              ],
+              [
+                "lng",
+                "lte"
+              ]
+            ],
+            "selectedColumns": [
+              "id",
+              "name:approved_name",
+              "lat",
+              "lng",
+              "road_address",
+              "jibun_address",
+              "categories",
+              "review_count",
+              "youtube_link",
+              "source_type"
+            ],
+            "limit": null
+          },
+          {
+            "at": 1791874926873,
+            "method": "GET",
+            "keys": [
+              "order",
+              "select",
+              "status"
+            ],
+            "operators": [
+              [
+                "status",
+                "eq"
+              ]
+            ],
+            "selectedColumns": [
+              "id",
+              "name:approved_name",
+              "lat",
+              "lng",
+              "road_address",
+              "jibun_address",
+              "categories",
+              "review_count",
+              "youtube_link",
+              "source_type"
+            ],
+            "limit": null
+          }
+        ]
+      },
+      "boundedErrorEvents": [
+        {
+          "at": 1723.5999999046326,
+          "event": "csp",
+          "directive": "connect-src",
+          "host": "naver-family"
+        }
+      ],
+      "boundedConsoleErrors": [],
+      "boundedCreatedErrors": [],
+      "resourceErrors": [],
+      "initialDom": {
+        "reactErrorKinds": [],
+        "scriptSources": [
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "inline": true
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "group": "sdk",
+            "protocol": "https:",
+            "isSdk": true,
+            "localStub": false,
+            "parameterKeys": [
+              "ncpKeyId"
+            ]
+          },
+          {
+            "inline": true
+          },
+          {
+            "group": "owned-loopback",
+            "protocol": "https:",
+            "isSdk": false,
+            "localStub": false,
+            "parameterKeys": []
+          },
+          {
+            "inline": true
+          },
+          {
+            "inline": true
+          }
+        ],
+        "hasNaver": true,
+        "hasMap": true,
+        "hasLatLng": true,
+        "mapCreates": 1,
+        "errorNotice": false,
+        "retryButtons": 0,
+        "markerCount": 0
+      },
+      "endedAtUtc": "2026-10-13T07:02:08.032Z"
+    }
+  ],
+  "physicalDevice": false,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "localTLS": {
+    "selectiveSpkiException": true,
+    "remoteTlsValidationUnchanged": true,
+    "globalTrustChanged": false
+  },
+  "endedAtUtc": "2026-10-13T07:02:09.720Z",
+  "passed": false
+}

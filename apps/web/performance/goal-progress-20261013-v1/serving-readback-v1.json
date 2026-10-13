@@ -1,0 +1,32 @@
+{
+  "observedAtUtc": "2026-10-13T05:13:30.336Z",
+  "project": {
+    "id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "name": "tzudong",
+    "nodeVersion": "24.x",
+    "ssoProtection": {
+      "enabled": true,
+      "deploymentType": "all_except_custom_domains"
+    }
+  },
+  "alias": {
+    "name": "www.tzudong.app",
+    "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "deploymentId": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5"
+  },
+  "deployment": {
+    "gitSha": null
+  },
+  "publicHttpProbe": {
+    "status": 403,
+    "client": "Python urllib unauthenticated",
+    "cause": "not yet classified"
+  },
+  "sourceMain": "056a86600f412eb42df4304e3206841679012f3e",
+  "pr3197": {
+    "state": "OPEN",
+    "draft": true,
+    "head": "87b78e839206a56a255a1d408a410bf4b1829cc4"
+  },
+  "mutations": 0
+}

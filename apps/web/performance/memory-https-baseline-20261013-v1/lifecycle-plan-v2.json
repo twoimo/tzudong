@@ -1,0 +1,12 @@
+{
+  "createdAtUtc": "2026-10-13T09:49:04.838526+00:00",
+  "status": "predeclared_before_execution",
+  "label": "baseline-lifecycle-1",
+  "independentExecutions": 1,
+  "dependentActions": 256,
+  "forcedGCOnlyAfterNaturalEndAndIdle": true,
+  "weakMarkerRefBound": 2048,
+  "onOverflow": "report untracked; no complete marker census claim",
+  "purpose": "distinguish allocation backlog from retained live markers; no primary memory guard or performance admission",
+  "scriptSha256": "df7c62867c9f040d685151d0cd939b7faded6b89b14d04471a1ec03eefe79428"
+}

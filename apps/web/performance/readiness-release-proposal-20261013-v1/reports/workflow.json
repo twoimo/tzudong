@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "genericApplyUnchanged": true,
+  "genericManifestPinUnchanged": true,
+  "concurrencyUnchanged": true,
+  "g016TerminalPathsPreserved": 2,
+  "negativeReadinessGateCases": 13,
+  "shellSyntaxChecks": 9,
+  "yamlParser": "Ruby Psych; Actions expression matrix executed in node:vm",
+  "githubActionsExecution": false
+}
