@@ -1,0 +1,116 @@
+{
+  "files": {
+    "REPORT-v1.md": {
+      "bytes": 2691,
+      "sha256": "7a7e21d7187f23a32bcc3cf7ad0c8184ca176e773bf9ce04b8c7fafe1838b7e1"
+    },
+    "build-after-v1.json": {
+      "bytes": 1772,
+      "sha256": "33b98c9f5099126fbe6057b231518964c93b037a34ae777a1c410c5133f44f08"
+    },
+    "build-after-v1.log": {
+      "bytes": 1527,
+      "sha256": "f4c166ea66fcd3403a1fad2d18117572ab0bb2bc37bd70074273d4f86f2e4865"
+    },
+    "build-owned-v6.mjs": {
+      "bytes": 4424,
+      "sha256": "213b83a883e400f1e8d14922498e16c92f32eb65a3547bd98bb62f52dbdfc0db"
+    },
+    "build-receipts-v8.json": {
+      "bytes": 3759,
+      "sha256": "ef11a7699912423c4659aa096553b841ecf58ef4414d33f872f3b971a3ca0b27"
+    },
+    "fixture-query-v7.mjs": {
+      "bytes": 5754,
+      "sha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5"
+    },
+    "generated-config-restoration-v1.json": {
+      "bytes": 272,
+      "sha256": "d26f088d9c3b74893e5e15c668b4d6047c02a71b133c9e244abe477ba845ac33"
+    },
+    "local-validation-v1.json": {
+      "bytes": 912,
+      "sha256": "4408d813b38a711814c9c5cea9a9475b94fe66fee81e54605366a61ce8011bf5"
+    },
+    "original-next-env.d.ts": {
+      "bytes": 410,
+      "sha256": "de736282a52aca8152e7b0ad53c8ab63ed8c16f79deb82f9f5109ac24738d4ca"
+    },
+    "original-tsconfig.json": {
+      "bytes": 1260,
+      "sha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+    },
+    "production-plan-v6.json": {
+      "bytes": 873,
+      "sha256": "b8d0a93ee7f507b37bfc12f73016b8ba6f23066ba7425ab7982f4fe622fe2b5b"
+    },
+    "production-recovery-https-v6.mjs": {
+      "bytes": 4900,
+      "sha256": "760c76e17991de458fe2d5c2d86f970c2b62aeac6a02f1c9b6350a983bc09755"
+    },
+    "production-recovery-https-v6/case-0-error.png": {
+      "bytes": 37083,
+      "sha256": "351965daed2c79849c37aa77f388b74e9092535ef079fa160e4a49658264f1b8"
+    },
+    "production-recovery-https-v6/case-0-recovered.png": {
+      "bytes": 237497,
+      "sha256": "987a95c95e0a29721a3c24a37895ed808f049ab5fcb07343efa1abd05aa56db7"
+    },
+    "production-recovery-https-v6/case-0.json": {
+      "bytes": 25914,
+      "sha256": "bd7427d6187ae43be823716d145a6ab02bcbe461f66942f6351cc142a804196d"
+    },
+    "production-recovery-https-v6/case-1-error.png": {
+      "bytes": 43856,
+      "sha256": "d40d82b94358563193299538ba6bd4c96ba349b0da592f30693b517f9ca80c89"
+    },
+    "production-recovery-https-v6/case-1-recovered.png": {
+      "bytes": 365764,
+      "sha256": "48ac2e944111e4047ea5ee01982e17727d668ae9b515e31ac33d7a08e8f11e8d"
+    },
+    "production-recovery-https-v6/case-1.json": {
+      "bytes": 25322,
+      "sha256": "aa1e60e0121d68eb23d2b166e19c1371b8700521c86cb21dcd1a8ac1e222d10d"
+    },
+    "production-recovery-https-v6/case-2-error.png": {
+      "bytes": 120547,
+      "sha256": "ca3969866fd651bc568f914536b342c3e9051e81adbbbfbb284b95a8014ec282"
+    },
+    "production-recovery-https-v6/case-2-recovered.png": {
+      "bytes": 440343,
+      "sha256": "5834c706f6aebb49c0d32d3a88ef60b015a4ab3144b3f4a3a767c29edfe22c3f"
+    },
+    "production-recovery-https-v6/case-2.json": {
+      "bytes": 30672,
+      "sha256": "935bc701e735b3d73c616edf30c345ff2e1a7e7f13759a5f911b95fd319c3606"
+    },
+    "production-recovery-https-v6/case-3-error.png": {
+      "bytes": 37083,
+      "sha256": "351965daed2c79849c37aa77f388b74e9092535ef079fa160e4a49658264f1b8"
+    },
+    "production-recovery-https-v6/case-3-recovered.png": {
+      "bytes": 237497,
+      "sha256": "987a95c95e0a29721a3c24a37895ed808f049ab5fcb07343efa1abd05aa56db7"
+    },
+    "production-recovery-https-v6/case-3.json": {
+      "bytes": 24797,
+      "sha256": "60de87b7e5794c700274a308d86805e1ff2af018346e5ffced084cc5642ff3d4"
+    },
+    "production-recovery-https-v6/summary.json": {
+      "bytes": 124595,
+      "sha256": "a3b700965531b6c434bed9c0a466a168c6f4992df84b3cfea9da67937cbe895b"
+    },
+    "real-sdk-runtime-https-v18.mjs": {
+      "bytes": 16122,
+      "sha256": "67c14491d2f3ec52b935d4e2e8427d8545c1c40b90a4b06d920194fd435581e5"
+    },
+    "source.patch": {
+      "bytes": 8099,
+      "sha256": "8e9295bd267a4003ed800dfdae18aab200750d0c4e026a5a710b4aeeae4aadf7"
+    }
+  },
+  "frozen": true,
+  "performanceAdmission": 0,
+  "root": "apps/web/performance/naver-configured-provider-followup-20261013-v6",
+  "version": 1
+}

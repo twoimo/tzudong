@@ -1,0 +1,34 @@
+{
+  "sourceHead": "9fba35f92b9b0f517d1f726461f38bc4a91e49e6",
+  "observedAtUtc": "2026-10-13T11:03:22.544616+00:00",
+  "baselineHead": "7a9b19b19416ce098f2f1a6fa5d36c8674b409b0",
+  "configuredBefore": {
+    "pass": 0,
+    "fail": 2,
+    "observed": "Both failures left second consumer error after one retry; requests2/stub0 per case"
+  },
+  "configuredAfter": {
+    "pass": 2,
+    "fail": 0,
+    "filteredOut": 13,
+    "requests": 2,
+    "stub": 0
+  },
+  "relatedRun": {
+    "pass": 59,
+    "fail": 0,
+    "browserScenarios": 15,
+    "adminSourceContracts": 44,
+    "durationS": 8.36,
+    "expectCalls": 4603
+  },
+  "lintExit": 0,
+  "parity": {
+    "diagnostics": 0,
+    "logicalInputs": 3148,
+    "nonLibraryContentSha256": "b6b5d8c4475f80766ff61521c78cc9a11c552d7551e37ceb86bf6965427e0dda"
+  },
+  "deploymentPerformed": false,
+  "configuredRealRemoteSdk": false,
+  "controlledCustomHost": "sdk.fixture.test"
+}

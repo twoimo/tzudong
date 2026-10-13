@@ -1,0 +1,8 @@
+{
+  "generatedSha256": "6c8b8480dcf341dd8ee4f93623f4f7228ebe2f68c39b10f07886b259568557e9",
+  "restored": true,
+  "allowedAddedIncludes": [
+    ".next-naver-configured-provider-after-v6/types/**/*.ts",
+    ".next-naver-configured-provider-after-v6/dev/types/**/*.ts"
+  ]
+}
