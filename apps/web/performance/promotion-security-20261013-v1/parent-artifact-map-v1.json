@@ -1,0 +1,20 @@
+{
+  "files": {
+    "REPORT-v1.md": {
+      "bytes": 1394,
+      "sha256": "ba1612d16c9aad04acfd363927561492fcfb83d4a45a73e6e2c519ecc2459e93"
+    },
+    "receipt-v1.json": {
+      "bytes": 1574,
+      "sha256": "4a8501ff455e6d8dcfdae8bb414ddbca45723c27c4af722ecbfd14774bc92513"
+    },
+    "source.patch": {
+      "bytes": 10003,
+      "sha256": "3016ce5d0b42838537ac84d4cebb0b9f43dec55b4450370ad049e638904f9c5f"
+    }
+  },
+  "frozen": true,
+  "performanceAdmission": 0,
+  "root": "apps/web/performance/promotion-security-20261013-v1",
+  "version": 1
+}

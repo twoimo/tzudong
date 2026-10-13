@@ -1,0 +1,67 @@
+{
+  "independentExecutions": 1,
+  "dependentActions": 256,
+  "snapshot": {
+    "available": true,
+    "rawBytes": 49473347,
+    "rawPersisted": false,
+    "primaryGuardUse": false,
+    "snapshotMayTriggerGC": true,
+    "graphNodes": 492881,
+    "graphEdges": 2378833,
+    "identifiedQueries": 649,
+    "baselineStrongReachableJsBytes": 20171516,
+    "groups": [
+      {
+        "family": "other",
+        "queryObjects": 262,
+        "shallowSelfBytes": 19872,
+        "counterfactualUnreachableJsBytes": 117120,
+        "counterfactualUnreachableNodes": 5717
+      },
+      {
+        "family": "restaurant-tzuyang-review-siblings",
+        "queryObjects": 128,
+        "shallowSelfBytes": 9728,
+        "counterfactualUnreachableJsBytes": 34804,
+        "counterfactualUnreachableNodes": 1668
+      },
+      {
+        "family": "restaurant-reviews",
+        "queryObjects": 128,
+        "shallowSelfBytes": 9728,
+        "counterfactualUnreachableJsBytes": 32736,
+        "counterfactualUnreachableNodes": 1530
+      },
+      {
+        "family": "restaurant-search",
+        "queryObjects": 129,
+        "shallowSelfBytes": 9804,
+        "counterfactualUnreachableJsBytes": 410288,
+        "counterfactualUnreachableNodes": 11715
+      },
+      {
+        "family": "restaurants",
+        "queryObjects": 2,
+        "shallowSelfBytes": 152,
+        "counterfactualUnreachableJsBytes": 800,
+        "counterfactualUnreachableNodes": 27
+      },
+      {
+        "family": "all",
+        "queryObjects": 649,
+        "shallowSelfBytes": 49284,
+        "counterfactualUnreachableJsBytes": 1822324,
+        "counterfactualUnreachableNodes": 53642
+      }
+    ],
+    "semantics": "Counterfactual strong-edge reachability only; weak/ephemeron/dominator/actual-eviction effects unproven. Do not add overlapping family results."
+  },
+  "cacheCountBeforeSnapshot": 648,
+  "identifiedCountDifference": 1,
+  "actualRetainedBytesOrEvictionMeasured": false,
+  "improvementClaimed": false,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "rawSnapshotPersisted": false
+}

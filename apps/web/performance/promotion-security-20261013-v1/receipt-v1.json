@@ -1,0 +1,45 @@
+{
+  "observedAtUtc": "2026-10-13T12:45:06.690062+00:00",
+  "sourceHead": "3bca78263ef086f71ba0b38eec35eb212768e4ea",
+  "sdkDevelopMerge": "7d11134938d79010073bf69c4970c9144a5308c5",
+  "promotionPr": "https://github.com/twoimo/tzudong/pull/3199",
+  "securityPr": "https://github.com/twoimo/tzudong/pull/3200",
+  "originalScanner": {
+    "checkId": 115269630647,
+    "conclusion": "failure",
+    "detector": "Generic Database Assignment",
+    "findingCount": 1,
+    "path": "apps/web/tests-unit/review-media-sql-successor.test.ts",
+    "passwordPresent": false,
+    "rawFindingStored": false
+  },
+  "fixtureUriByteEqual": true,
+  "localTests": {
+    "successorAndAdmissionPass": 54,
+    "fail": 0,
+    "retainedProofVerifierPass": 14,
+    "retainedProofVerifierFail": 0,
+    "changedLintExit": 0
+  },
+  "beforeCi": {
+    "run": 38392489754,
+    "unitPass": 3300,
+    "skip": 21,
+    "fail": 1,
+    "code": "LOCAL_REHEARSAL_ARTIFACT_SHA256_MISMATCH",
+    "reason": "Changed fixture test hash was still bound by the current artifact map"
+  },
+  "oldMapSha256": "5df2ade9cb3618b774eb4d3796df06ade6ba069409de49d0bdd542b34b6ec4ba",
+  "currentMapSha256": "d8ad511edf7d3832aa432e499b27f33e2c9ad423530ffdff06dea42869eaff85",
+  "oldProofAndSqlDriverUnchanged": true,
+  "postgresReplayRerun": false,
+  "hostedWrites": 0,
+  "deploymentPerformed": false,
+  "appAttachmentReadbackConfirmed": false,
+  "appAttachmentAttempts": [
+    "3199 pending call terminated; uncertain outcome",
+    "3200 call25s pending; uncertain outcome"
+  ],
+  "performanceAdmission": 0,
+  "goalComplete": false
+}

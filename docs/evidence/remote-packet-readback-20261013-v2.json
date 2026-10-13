@@ -1,0 +1,88 @@
+{
+  "allVerified": true,
+  "branch": "codex/goal-evidence-20261013-v1",
+  "isolatedReadback": true,
+  "observedAtUtc": "2026-10-13T11:17:37.977858+00:00",
+  "packets": [
+    {
+      "files": 81,
+      "mapSha256": "4d27059b5a12fbd08746d4f139fec4602e60c46382b141cac68f4e2dea9df665",
+      "pin": "naver-live-failure-integration-20261013-v2-parent-v1.json",
+      "verified": true
+    },
+    {
+      "files": 42,
+      "mapSha256": "87f170830f7d170b2076842228429aea0e6365f4db755b999a42de8a2ed7ce73",
+      "pin": "memory-https-baseline-20261013-v1-parent-v1.json",
+      "verified": true
+    },
+    {
+      "files": 13,
+      "mapSha256": "f318fac1631bc126aea597f14ee6bde389268236ace2f5bd5850c4120dcadced",
+      "pin": "memory-query-ownership-20261013-v2-parent-v1.json",
+      "verified": true
+    },
+    {
+      "files": 99,
+      "mapSha256": "b0d17d8e33299cf2265d71f155a548b67707e2c60279e1ab942360bbc5a7983f",
+      "pin": "readiness-release-proposal-20261013-v1-parent-v1.json",
+      "verified": true
+    },
+    {
+      "files": 27,
+      "mapSha256": "97ea986ee43dedbf1824f191ddcfd6e590bd3a51fb6b07298c7920adf8c9d5ad",
+      "pin": "naver-configured-provider-followup-20261013-v6-parent-v1.json",
+      "verified": true
+    },
+    {
+      "files": 26,
+      "mapSha256": "83538d24ac8370b5ae748b1bec6edb69a956209830bbeeb599b64624755ceaed",
+      "pin": "marker-style-readiness-20261013-v1.json",
+      "verified": true
+    },
+    {
+      "files": 28,
+      "mapSha256": "9e3f3ab05719adccfd34594d18843ce76f62a21ab16ede58137ba9cb2c14d79a",
+      "pin": "naver-live-failure-state-20261013-v1-parent-v1.json",
+      "verified": true
+    },
+    {
+      "files": 19,
+      "mapSha256": "3e754cd6f060c9dfb34e81bdaa6befde6682a41997c837858f005439e4e1e5b3",
+      "pin": "marker-style-causal-20261013-v1-parent-v1.json",
+      "verified": true
+    },
+    {
+      "files": 87,
+      "mapSha256": "a8f234a8bbfc105bb220a18e8e4c8de35ebdcc3f71f9714f75aa1ebed1d7b94e",
+      "pin": "marker-id-pool-reuse-20261013-v1.json",
+      "verified": true
+    },
+    {
+      "files": 32,
+      "mapSha256": "f47625f3ad7de1c4d1d45352657f6799890b5313fa7684f9e8daba5615b3bc51",
+      "pin": "naver-shared-retry-followup-20261013-v5-parent-v1.json",
+      "verified": true
+    },
+    {
+      "files": 9,
+      "mapSha256": "bd32163813dab89366c0f80f6b8d5f8b89ae7c65ad5b7d0ad3e26e04fc1ee70d",
+      "pin": "naver-shared-retry-followup-20261013-v4-parent-v1.json",
+      "verified": true
+    },
+    {
+      "files": 8,
+      "mapSha256": "eb7f164d0b0440d07581a43c9ce314a1ee7e518d4471bc91b2becc9c9dc9d127",
+      "pin": "goal-progress-20261013-v1-parent-v1.json",
+      "verified": true
+    },
+    {
+      "files": 21,
+      "mapSha256": "25be4a8fdc5736660379a91c69d309fe3017c22fdf62b1c14dc24f2d49e30352",
+      "pin": "naver-live-failure-final-20261013-v3-parent-v1.json",
+      "verified": true
+    }
+  ],
+  "remoteCommit": "94a5b01f0fcb8e35af45303845332cf9a068097d",
+  "verifiedMappedFiles": 492
+}

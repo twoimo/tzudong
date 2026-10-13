@@ -1,0 +1,60 @@
+{
+  "files": {
+    "PLAN-v1.md": {
+      "bytes": 843,
+      "sha256": "f1789bfd57cc0bb8da7fce55f9f4825a45af81ad9acbd103a74ee1810f81f68d"
+    },
+    "REPORT-v1.md": {
+      "bytes": 1869,
+      "sha256": "2e86659e438fd1e12b1981026375c9c1d8b6ce03e513eef9dd92bc94a1470671"
+    },
+    "aggregate-v1.json": {
+      "bytes": 859,
+      "sha256": "d8eaadf96ace1eb6a56b2aa841770ee90f5793eb618d90c02933f84fc3fb75d9"
+    },
+    "browser-confirm-plan-v8.json": {
+      "bytes": 479,
+      "sha256": "1545e2ed23068592d5c0f9d343f49a35eb53b494d52c5306dc2f6a85be657bfc"
+    },
+    "build-receipts-v8.json": {
+      "bytes": 3747,
+      "sha256": "2f3856e1309bd43cada57ab3efa385157211a52b7da39877e02ed1c78a797257"
+    },
+    "fixture-query-v7.mjs": {
+      "bytes": 5754,
+      "sha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5"
+    },
+    "measure-query-closure-v3.mjs": {
+      "bytes": 12711,
+      "sha256": "fafb2bee6d6934226c21aef8c59d186dd7bd0854157a71df6a04417bf7a7d41c"
+    },
+    "real-sdk-runtime-https-v18.mjs": {
+      "bytes": 16122,
+      "sha256": "67c14491d2f3ec52b935d4e2e8427d8545c1c40b90a4b06d920194fd435581e5"
+    },
+    "ui-query-closure-1/pass-0-query-0.png": {
+      "bytes": 154644,
+      "sha256": "d3cd61dbd426f81a24a82804f916a858250fe2a3602f71eb1f16fd8a18d68b20"
+    },
+    "ui-query-closure-1/pass-0-query-127.png": {
+      "bytes": 94600,
+      "sha256": "944a17e3a077cbf5b04f917ea92d2197d03dc53e177f2d2dd2a65f2a09a8ca16"
+    },
+    "ui-query-closure-1/pass-1-query-0.png": {
+      "bytes": 156121,
+      "sha256": "9a9c628950dfd5d37f4e5755f8a4d3b0f005e1b5c5c72121ae3983cf81684fce"
+    },
+    "ui-query-closure-1/pass-1-query-127.png": {
+      "bytes": 94618,
+      "sha256": "02895296f767ad03c033ee955fccddd24e329725c1f8502604a809ba91b9454d"
+    },
+    "ui-query-closure-1/raw.json": {
+      "bytes": 255786,
+      "sha256": "f27688169514b4938fcf3db10fbf317f40e175b70e0a1d895b4731ab7c8b0d1b"
+    }
+  },
+  "frozen": true,
+  "performanceAdmission": 0,
+  "root": "apps/web/performance/memory-query-closure-20261013-v3",
+  "version": 1
+}

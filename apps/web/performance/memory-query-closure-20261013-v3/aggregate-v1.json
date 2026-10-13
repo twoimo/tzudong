@@ -1,0 +1,39 @@
+{
+  "independentExecutions": 1,
+  "dependentActions": 256,
+  "families": {
+    "restaurant-reviews": {
+      "available": true,
+      "scopeSlotCounts": [
+        10,
+        57
+      ],
+      "observedArrayVariables": 0,
+      "observedDirectDomVariables": 0
+    },
+    "restaurant-tzuyang-review-siblings": {
+      "available": true,
+      "scopeSlotCounts": [
+        10,
+        57
+      ],
+      "observedArrayVariables": 0,
+      "observedDirectDomVariables": 0
+    },
+    "restaurant-search": {
+      "available": true,
+      "scopeSlotCounts": [
+        11,
+        26
+      ],
+      "observedArrayVariables": 0,
+      "observedDirectDomVariables": 0
+    }
+  },
+  "inactiveQueriesObserved": 639,
+  "retainedBytesMeasured": false,
+  "deepReachabilityMeasured": false,
+  "rawValuesPersisted": false,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0
+}

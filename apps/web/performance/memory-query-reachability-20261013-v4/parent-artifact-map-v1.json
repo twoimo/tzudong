@@ -1,0 +1,68 @@
+{
+  "files": {
+    "PLAN-v1.md": {
+      "bytes": 837,
+      "sha256": "c546f89167b0c2e4f27eabacbced606dcdfa63152d6086b00da64aac6c95399c"
+    },
+    "REPORT-v1.md": {
+      "bytes": 2120,
+      "sha256": "99723c2c929b6c5144f970ecc793599239142c3d7653067badaa20bc0f62ad7b"
+    },
+    "aggregate-v1.json": {
+      "bytes": 2061,
+      "sha256": "e39601430d503a9fdd0b4f223d82728b5e1193457b2a54e7c66d3b9a8e0d4618"
+    },
+    "browser-confirm-plan-v8.json": {
+      "bytes": 479,
+      "sha256": "1545e2ed23068592d5c0f9d343f49a35eb53b494d52c5306dc2f6a85be657bfc"
+    },
+    "build-receipts-v8.json": {
+      "bytes": 3747,
+      "sha256": "2f3856e1309bd43cada57ab3efa385157211a52b7da39877e02ed1c78a797257"
+    },
+    "fixture-query-v7.mjs": {
+      "bytes": 5754,
+      "sha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5"
+    },
+    "measure-query-reachability-v4.mjs": {
+      "bytes": 10734,
+      "sha256": "b8efc5c681ba3a30d5979b5e1fd38bb2b40a485340a055a9c4cb76f4f329ca18"
+    },
+    "query-reachability-v1.mjs": {
+      "bytes": 4010,
+      "sha256": "8f858b9b6f599a08c66a53ac1d12f87f7094f5475763eb709f9cc36b63bf296b"
+    },
+    "query-reachability.test.mjs": {
+      "bytes": 2297,
+      "sha256": "14c721727d62b71e60bfc2566b1c803b33c809610f290cd7ff13bc4618d943b6"
+    },
+    "real-sdk-runtime-https-v18.mjs": {
+      "bytes": 16122,
+      "sha256": "67c14491d2f3ec52b935d4e2e8427d8545c1c40b90a4b06d920194fd435581e5"
+    },
+    "ui-query-reachability-1/pass-0-query-0.png": {
+      "bytes": 154840,
+      "sha256": "1e8555cddace5b3aee075c4f9948e281f5a9664310ae9d2a8a82172f56791a20"
+    },
+    "ui-query-reachability-1/pass-0-query-127.png": {
+      "bytes": 94668,
+      "sha256": "453f4d6f85a9e7d738a082863023cadbdf5eff890f8f0d5bf887a19b27ffdd47"
+    },
+    "ui-query-reachability-1/pass-1-query-0.png": {
+      "bytes": 155935,
+      "sha256": "354824bcb046d8e1a109fd914da5c000141e5a3f5084876a716a0d8f09e79c34"
+    },
+    "ui-query-reachability-1/pass-1-query-127.png": {
+      "bytes": 94609,
+      "sha256": "ad82fda2768c3c973166ffb10e46e1ffdc045e61076a3e0fc1c90ff0ae9173bf"
+    },
+    "ui-query-reachability-1/raw.json": {
+      "bytes": 221661,
+      "sha256": "1c4116b1b35e6d55d11887e7eea5124585e303be76f8f2bb5f18930cc1061bbd"
+    }
+  },
+  "frozen": true,
+  "performanceAdmission": 0,
+  "root": "apps/web/performance/memory-query-reachability-20261013-v4",
+  "version": 1
+}
