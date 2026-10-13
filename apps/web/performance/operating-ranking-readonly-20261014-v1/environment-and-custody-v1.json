@@ -1,0 +1,24 @@
+{
+  "observedAtUTC": "2026-10-13T21:33:32.745238+00:00",
+  "node": "24.21.0",
+  "command": "/opt/homebrew/opt/node@24/bin/node apps/web/performance/operating-ranking-readonly-20261014-v1/read-ranking-v2.mjs",
+  "syntaxCheckExitCode": 0,
+  "sourceSha256": "f6373ffd3352a88f584157a70d02080a0ace91b616bbd6ecd1cb532754827a21",
+  "scriptSha256": "d32dbe187ad80669c52815fadc3821abd55c7bb33352a0ca4a918d7e1e0f0bf9",
+  "roleClassificationFirstAttempt": {
+    "passed": false,
+    "code": "ANONYMOUS_ROLE_UNCONFIRMED",
+    "reason": "JWT-only check cannot parse an opaque publishable key; it did not establish an HTTP or role denial."
+  },
+  "roleClassificationCurrent": {
+    "publicKeyCheckedBeforeRead": true,
+    "keyKind": "publishable",
+    "userJWTOrCookiesSent": false,
+    "serviceSecretSent": false
+  },
+  "rawRowsPersisted": false,
+  "credentialValuesEmitted": false,
+  "operatingWrites": 0,
+  "fieldAdmission": 0,
+  "performanceAdmission": 0
+}

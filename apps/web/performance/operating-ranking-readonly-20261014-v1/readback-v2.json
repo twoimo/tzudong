@@ -1,0 +1,43 @@
+{
+  "credentialKind": "publishable",
+  "publicKeyCheckedBeforeRead": true,
+  "observedAtUTC": "2026-10-13T21:06:20.881Z",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "sourceSha256": "f6373ffd3352a88f584157a70d02080a0ace91b616bbd6ecd1cb532754827a21",
+  "role": "anonymous",
+  "reads": [
+    {
+      "period": "all",
+      "rpc": "read_public_profile_leaderboard_page",
+      "httpStatus": 200
+    },
+    {
+      "period": "monthly",
+      "rpc": "read_public_profile_leaderboard_page",
+      "httpStatus": 200
+    }
+  ],
+  "checks": [
+    {
+      "period": "all",
+      "passed": true,
+      "rows": 19,
+      "calls": 1,
+      "scope": "bounded public ranking response grammar, pagination, ordering and duplicates"
+    },
+    {
+      "period": "monthly",
+      "passed": true,
+      "rows": 19,
+      "calls": 1,
+      "scope": "bounded public ranking response grammar, pagination, ordering and duplicates"
+    }
+  ],
+  "privateRowsPersisted": false,
+  "credentialsPersisted": false,
+  "operatingWrites": 0,
+  "browserRenderingEvidence": false,
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "allPassed": true
+}

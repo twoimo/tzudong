@@ -1,0 +1,58 @@
+{
+  "observedAtUTC": "2026-10-13T21:33:32.581Z",
+  "main": "3d7919d6ea396b21bd185fb2a96ae9677e34824c",
+  "production": {
+    "id": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5",
+    "state": "READY",
+    "url": "tzudong-dbx25vroz-twoimos-projects.vercel.app",
+    "target": "production",
+    "sha": "1884f87e53c4567ead7c9a0fb394b09b91a70396",
+    "ref": "main"
+  },
+  "candidateDeployments": [
+    {
+      "id": "dpl_Dwa73EEakkXbHumpEKKJXtogv6Vd",
+      "url": "tzudong-jatqc0bsh-twoimos-projects.vercel.app",
+      "state": "CANCELED",
+      "sha": "3d7919d6ea396b21bd185fb2a96ae9677e34824c"
+    }
+  ],
+  "guard": {
+    "key": "TZUDONG_APPROVED_PRODUCTION_SHA",
+    "target": [
+      "production"
+    ],
+    "type": "sensitive",
+    "present": true,
+    "valueRead": false,
+    "changed": false
+  },
+  "sourceTree": "c6fb5c706b9847234e4fa0781364ee4d314fc724",
+  "prs": [
+    {
+      "number": 3202,
+      "merge": "ac559e13620c3a320bd18fefa7d2ba395e5695e7"
+    },
+    {
+      "number": 3204,
+      "merge": "eecea96eab46ab123077340fd21adc0b89948164",
+      "sourceTreeUnchanged": true
+    },
+    {
+      "number": 3203,
+      "merge": "8fbf12a4d8f0620dbce5af94e6020095439f1558",
+      "sourceTreeUnchanged": true
+    },
+    {
+      "number": 3201,
+      "merge": "3d7919d6ea396b21bd185fb2a96ae9677e34824c",
+      "sourceTreeUnchanged": true
+    }
+  ],
+  "operatingSqlWrites": 0,
+  "storageWrites": 0,
+  "productionGuardWrites": 0,
+  "newProductionLive": false,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0
+}

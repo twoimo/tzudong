@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "root": "apps/web/performance/operating-ranking-readonly-20261014-v1",
+  "files": {
+    "REPORT-v1.md": {
+      "bytes": 1978,
+      "sha256": "8f8ff3e7987cce0426036dd10ff65ac52eb4995b0fb1e7653de2a4b8d095a4a2"
+    },
+    "environment-and-custody-v1.json": {
+      "bytes": 947,
+      "sha256": "b257c90482cbbcb7f410df129f9391fc3aa836d52ed3a7fb6887c63ea3a50ee6"
+    },
+    "read-ranking-v1.mjs": {
+      "bytes": 2651,
+      "sha256": "bcfca74401a45e159a1034375ed49187a1c78fd5a07409ddf77631acaf285dbc"
+    },
+    "read-ranking-v2.mjs": {
+      "bytes": 2768,
+      "sha256": "d32dbe187ad80669c52815fadc3821abd55c7bb33352a0ca4a918d7e1e0f0bf9"
+    },
+    "readback-v1.json": {
+      "bytes": 1044,
+      "sha256": "eb0be70053eb23eecd8bbec80b0bbc69eb28102ec775e9a1cf1f313e811a7a2d"
+    },
+    "readback-v2.json": {
+      "bytes": 1117,
+      "sha256": "b041625dbdc5d976384985d487025da2ab2cb5c0bb74de8773246521e0ab9405"
+    }
+  }
+}
