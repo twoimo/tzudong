@@ -1,0 +1,22 @@
+{
+  "recordedAtUTC": "2026-10-13T20:26:35.619331+00:00",
+  "kind": "diagnostic-only-request-shapes",
+  "actions": 16,
+  "independentProcesses": 1,
+  "queries": 8,
+  "passes": 2,
+  "dataRows": 735,
+  "rest": "synthetic with strict grammar",
+  "sdk": "real remote Naver SDK and tiles",
+  "cpuRate": 4,
+  "viewport": "390x844/DPR1/touch emulation",
+  "cache": "off; service worker bypass",
+  "forcedGC": false,
+  "primaryGuardUse": false,
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "purpose": "Separate request methods and selected-column/operator shapes before attributing 2434 requests to duplicate application work. No query text, IDs, headers or bodies are saved.",
+  "harnessSha256": "6508dfc10464c3001b24d1dd0e20c07b29ff9623a0209833e2dbe730cee6ecf6",
+  "runtimeDependency": "apps/web/performance/swipe-snapshot-comparison-20261013-v1/real-sdk-runtime-https-v18.mjs",
+  "runtimeDependencySha256": "67c14491d2f3ec52b935d4e2e8427d8545c1c40b90a4b06d920194fd435581e5"
+}

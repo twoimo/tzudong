@@ -1,0 +1,29 @@
+{
+  "project": {
+    "id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "name": "tzudong",
+    "accountId": "team_OUj64KeLxJI3PkEbOaFZnorA",
+    "gitLink": null
+  },
+  "production": {
+    "id": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5",
+    "projectName": "tzudong",
+    "target": "production",
+    "state": "READY",
+    "url": "tzudong-dbx25vroz-twoimos-projects.vercel.app",
+    "metaSha": "1884f87e53c4567ead7c9a0fb394b09b91a70396",
+    "metaRef": "main",
+    "alias": [
+      "www.tzudong.app",
+      "internal.tzudong.app",
+      "tzudong.app",
+      "tzudong-twoimos-projects.vercel.app",
+      "tzudong-git-main-twoimos-projects.vercel.app"
+    ]
+  },
+  "readOnly": true,
+  "sourcePromotedThisTurn": false,
+  "operatingWrites": 0,
+  "performanceEvidence": false,
+  "observedAtUTC": "2026-10-13T20:41:32.712Z"
+}

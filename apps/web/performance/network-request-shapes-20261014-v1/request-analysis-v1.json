@@ -1,0 +1,642 @@
+{
+  "sourceCommit": "9fba35f92b9b0f517d1f726461f38bc4a91e49e6",
+  "reviewHead": "33cda47d32857ec60b9843074a526b77b634c23e",
+  "sourceHashes": [
+    {
+      "path": "apps/web/components/restaurant/RestaurantDetailPanel.tsx",
+      "sha256": "fe6375ed1165f80de054748d262d7111ec8efb88a38f795ea4aed62f28fa0a7a",
+      "equalAtBuildAndReviewHead": true
+    },
+    {
+      "path": "apps/web/components/search/RestaurantSearch.tsx",
+      "sha256": "3d3980d19fae0e91f10898faa62999ea18d432490d2669104576872265285254",
+      "equalAtBuildAndReviewHead": true
+    },
+    {
+      "path": "apps/web/lib/restaurant-review-lookup.ts",
+      "sha256": "f977285eb172b766108028b8bd9e6a2e82bca5b4be23c4ad3d92e4d5f0ee6b00",
+      "equalAtBuildAndReviewHead": true
+    },
+    {
+      "path": "apps/web/hooks/use-restaurant-detail.tsx",
+      "sha256": "db847505a69c6aec7ee7011ed2b7ba5f366f8a0e2e535dc3bc6c2ea3e2618d07",
+      "equalAtBuildAndReviewHead": true
+    }
+  ],
+  "rawSha256": "bebecadcf6a2bf7644281a8871e2fea8ee1486050c84384ba74c0211d3a2109f",
+  "actions": 16,
+  "independentProcesses": 1,
+  "methods": {
+    "OPTIONS": 154,
+    "GET": 154
+  },
+  "legacyRestaurantCounter": 154,
+  "shapes": [
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "lat",
+          "gte"
+        ],
+        [
+          "lat",
+          "lte"
+        ],
+        [
+          "lng",
+          "gte"
+        ],
+        [
+          "lng",
+          "lte"
+        ],
+        [
+          "status",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "id"
+      ],
+      "count": 1
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "lat",
+          "gte"
+        ],
+        [
+          "lat",
+          "lte"
+        ],
+        [
+          "lng",
+          "gte"
+        ],
+        [
+          "lng",
+          "lte"
+        ],
+        [
+          "status",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "id"
+      ],
+      "count": 1
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "status",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "id"
+      ],
+      "count": 2
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "status",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "id"
+      ],
+      "count": 2
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "approved_name",
+          "ilike"
+        ],
+        [
+          "status",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "categories",
+        "created_at",
+        "english_address",
+        "id",
+        "jibun_address",
+        "lat",
+        "lng",
+        "name:approved_name",
+        "phone",
+        "review_count",
+        "road_address",
+        "status",
+        "tzuyang_review",
+        "youtube_link",
+        "youtube_meta"
+      ],
+      "count": 31
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "approved_name",
+          "ilike"
+        ],
+        [
+          "status",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "categories",
+        "created_at",
+        "english_address",
+        "id",
+        "jibun_address",
+        "lat",
+        "lng",
+        "name:approved_name",
+        "phone",
+        "review_count",
+        "road_address",
+        "status",
+        "tzuyang_review",
+        "youtube_link",
+        "youtube_meta"
+      ],
+      "count": 31
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "id",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "id"
+      ],
+      "count": 16
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "id",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "id"
+      ],
+      "count": 16
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "approved_name",
+          "eq"
+        ],
+        [
+          "status",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "id"
+      ],
+      "count": 16
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "approved_name",
+          "eq"
+        ],
+        [
+          "status",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "id"
+      ],
+      "count": 16
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "id",
+          "in"
+        ]
+      ],
+      "selectedColumns": [
+        "id"
+      ],
+      "count": 8
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "id",
+          "in"
+        ]
+      ],
+      "selectedColumns": [
+        "id"
+      ],
+      "count": 8
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "id",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "approved_name",
+          "eq"
+        ],
+        [
+          "road_address",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "tzuyang_review"
+      ],
+      "count": 8
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "approved_name",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "google_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "naver_name",
+        "origin_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "origin_name",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "google_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "naver_name",
+        "origin_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "naver_name",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "google_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "naver_name",
+        "origin_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "google_name",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "google_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "naver_name",
+        "origin_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "id",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "approved_name",
+          "eq"
+        ],
+        [
+          "road_address",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "tzuyang_review"
+      ],
+      "count": 8
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "approved_name",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "google_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "naver_name",
+        "origin_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "origin_name",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "google_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "naver_name",
+        "origin_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "naver_name",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "google_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "naver_name",
+        "origin_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "google_name",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "google_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "naver_name",
+        "origin_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "road_address",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "google_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "naver_name",
+        "origin_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "jibun_address",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "google_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "naver_name",
+        "origin_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "road_address",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "google_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "naver_name",
+        "origin_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "jibun_address",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "google_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "naver_name",
+        "origin_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "approved_name",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "approved_name",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "approved_name",
+        "id",
+        "jibun_address",
+        "name:approved_name",
+        "road_address"
+      ],
+      "count": 8
+    },
+    {
+      "method": "GET",
+      "predicates": [
+        [
+          "approved_name",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "tzuyang_review"
+      ],
+      "count": 8
+    },
+    {
+      "method": "OPTIONS",
+      "predicates": [
+        [
+          "approved_name",
+          "eq"
+        ]
+      ],
+      "selectedColumns": [
+        "tzuyang_review"
+      ],
+      "count": 8
+    }
+  ],
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "physicalDevice": false,
+  "operatingEvidence": false
+}

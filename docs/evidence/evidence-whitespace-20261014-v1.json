@@ -1,0 +1,9 @@
+{
+  "commit": "479eab6795d8c607d75a587d0cc7006c0e1767fa",
+  "observedAtUTC": "2026-10-13T20:23:51.130420+00:00",
+  "diffCheckExitCode": 2,
+  "warningLines": 38,
+  "frozenRawOrSourceBytesNormalized": false,
+  "performanceAdmission": 0,
+  "reason": "Whitespace warnings in preserved evidence are retained, not edited to change the evidence."
+}

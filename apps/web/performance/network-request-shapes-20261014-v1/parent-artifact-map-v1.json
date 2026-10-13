@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "root": "apps/web/performance/network-request-shapes-20261014-v1",
+  "files": {
+    "PLAN-v1.json": {
+      "bytes": 979,
+      "sha256": "11c3296b1e310cf473e2bf9cd7b20d34e73d888153876193a5573b72ea091825"
+    },
+    "REPORT-v1.md": {
+      "bytes": 2559,
+      "sha256": "631a4ba59c808d0b6c75d49c4aaaf08c0b06bc4722da17f4e2cd625ff5a47023"
+    },
+    "browser-confirm-plan-v8.json": {
+      "bytes": 466,
+      "sha256": "cc4fdda7724e62f0dcae89651508baf281808154b12d8bec0ca10abe280d8b99"
+    },
+    "build-receipts-v8.json": {
+      "bytes": 3398,
+      "sha256": "807593f06a752a7ac6a8b4107cc385dbe50171762fdb43d9d213fe6dea6b5976"
+    },
+    "fixture-query-v7.mjs": {
+      "bytes": 5754,
+      "sha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5"
+    },
+    "measure-request-shapes-v1.mjs": {
+      "bytes": 9670,
+      "sha256": "6508dfc10464c3001b24d1dd0e20c07b29ff9623a0209833e2dbe730cee6ecf6"
+    },
+    "request-analysis-v1.json": {
+      "bytes": 11487,
+      "sha256": "27678d6177ac0f11dbd3ae51cf652964fae247e5361ec42ff37ba2e212bd643b"
+    },
+    "ui-diag-1/pass-0-query-0.png": {
+      "bytes": 154623,
+      "sha256": "75af243c9109c6b2d87c64d1b5752b5dbadb0b56cd652feaffeb08313c9e64eb"
+    },
+    "ui-diag-1/pass-0-query-7.png": {
+      "bytes": 182646,
+      "sha256": "02a9674e6ac6fe52db62a5e6628b054c9362347c0bacbac5b34694cf8c4c48b4"
+    },
+    "ui-diag-1/pass-1-query-0.png": {
+      "bytes": 156670,
+      "sha256": "a498d8e9a1de2ff8e87955b495d0529a745b8830c4fdd8bdcd30f2ce2b0e0b8d"
+    },
+    "ui-diag-1/pass-1-query-7.png": {
+      "bytes": 181026,
+      "sha256": "f3c2f7507671d165fef04081a02f74c420fb2c8250fd2a2264a541450630bf91"
+    },
+    "ui-diag-1/raw.json": {
+      "bytes": 52221,
+      "sha256": "bebecadcf6a2bf7644281a8871e2fea8ee1486050c84384ba74c0211d3a2109f"
+    }
+  }
+}
