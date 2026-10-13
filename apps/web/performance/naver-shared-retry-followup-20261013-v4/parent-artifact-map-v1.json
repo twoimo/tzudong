@@ -1,0 +1,44 @@
+{
+  "files": {
+    "REPORT-v1.md": {
+      "bytes": 481,
+      "sha256": "2ba0b10d2f8e37c4138668b3fb4b5c187f843a42f8f66a1df3a1935c65c6a2d1"
+    },
+    "build-after-v1.json": {
+      "bytes": 1765,
+      "sha256": "b29fbb3aa6181bb0708466c41a5c453a73699fdbe842641e2c3bfd8d693d9a23"
+    },
+    "build-after-v1.log": {
+      "bytes": 1188,
+      "sha256": "51be281471559b43af6375778613926939d897115e8a04010e7d643f2344193e"
+    },
+    "build-owned-v4.mjs": {
+      "bytes": 4417,
+      "sha256": "25c35f326265871f8b6dd8576394e1a77489965e30531fe6534a793ef8e930b1"
+    },
+    "generated-config-restoration-v1.json": {
+      "bytes": 346,
+      "sha256": "429f939f366cda05008a340c93f82ad2c87cfa550ea174498b8d0eb5a46f6dfa"
+    },
+    "local-validation-v1.json": {
+      "bytes": 1066,
+      "sha256": "68ffe1364037002ca97560e0b2f7850c4cd3bd8b480b3b96655d410b8dc21336"
+    },
+    "original-next-env.d.ts": {
+      "bytes": 422,
+      "sha256": "e2936afa05d7b718d65e941d6eaf983dd6a38eb363571b49ecbe3dbb8c32111b"
+    },
+    "original-tsconfig.json": {
+      "bytes": 1260,
+      "sha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+    },
+    "source.patch": {
+      "bytes": 12649,
+      "sha256": "725c2a3d64d808c7eef289f3e6753449386eb9b8629f57e844664836d41f16ab"
+    }
+  },
+  "frozen": true,
+  "performanceAdmission": 0,
+  "root": "apps/web/performance/naver-shared-retry-followup-20261013-v4",
+  "version": 1
+}

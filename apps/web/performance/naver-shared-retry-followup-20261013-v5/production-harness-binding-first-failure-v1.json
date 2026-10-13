@@ -1,0 +1,5 @@
+{
+  "exit": 1,
+  "browserLaunches": 0,
+  "cause": "Copied immutable prior build-ID admission was not rebound; explicit guard correctly rejected a new build. New v3 binds current receipt and build ID; no bypass or old result reuse."
+}

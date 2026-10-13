@@ -1,0 +1,36 @@
+{
+  "sourceHead": "7a9b19b19416ce098f2f1a6fa5d36c8674b409b0",
+  "observedAtUtc": "2026-10-13T10:22:29.254544+00:00",
+  "relatedBunRun": {
+    "pass": 57,
+    "fail": 0,
+    "browserScenarios": 13,
+    "adminSourceContracts": 44,
+    "expectCalls": 4599,
+    "durationS": 7.41
+  },
+  "beforeLazyTests": {
+    "pass": 11,
+    "fail": 2,
+    "errors": 1,
+    "classification": "Lazy queue test observation timed out under prior source, then Bun killed the browser causing collateral failure. Not two independently proven product failures and not production evidence."
+  },
+  "latestBrowserMode": "controlled Chrome protocol; synthetic SDK + controlled idle callbacks",
+  "realSdkAdmission": 0,
+  "lintExit": 0,
+  "parity": {
+    "diagnostics": 0,
+    "logicalInputs": 3148,
+    "logicalInputNamesSha256": "96a4df4d248244812be13fe121751bf1b71e4cc992ae0033bc6cc03d4bb898b3",
+    "nonLibraryContentSha256": "8ce8f6337807ac6fa9e75f53bc01dd174725984616a5e81ee413664b83c2b9b3"
+  },
+  "deploymentPerformed": false,
+  "sourceChanges": [
+    "Shared provider success/error synchronization",
+    "Admin retry control",
+    "Settled callback cleanup",
+    "Unmount subscription cleanup",
+    "Deferred-load deduplication/recheck",
+    "Cancel idle/timer on unmount or shared completion"
+  ]
+}

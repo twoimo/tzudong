@@ -1,0 +1,8 @@
+{
+  "generatedSha256": "1c1c6ba3d4671ba05596100c3822089daecceaec2505d9cc36a828504b283142",
+  "restored": true,
+  "allowedAddedIncludes": [
+    ".next-naver-shared-retry-after-v5/types/**/*.ts",
+    ".next-naver-shared-retry-after-v5/dev/types/**/*.ts"
+  ]
+}

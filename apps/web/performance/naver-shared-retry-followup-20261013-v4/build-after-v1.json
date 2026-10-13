@@ -1,0 +1,52 @@
+{
+  "kind": "after",
+  "root": "/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web",
+  "sourceCommit": "ffc8efa6f3cf504c9459ef22ec82b055c7b0ab54",
+  "distDir": ".next-naver-shared-retry-after-v4",
+  "node": "24.21.0",
+  "npm": "11.6.2",
+  "next": "16.3.8",
+  "compileExit": 0,
+  "canonicalWebpackCompile": true,
+  "wholeExistingEnvFileParsedInRam": true,
+  "publicSettingsForwarded": [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_NAVER_CLIENT_ID",
+    "NEXT_PUBLIC_SITE_URL"
+  ],
+  "serverSettingsForwarded": false,
+  "envValuesPersisted": false,
+  "buildId": "mQ5Q7oEzkvcQRAILMOUtX",
+  "css": {
+    "homeBytes": 195887,
+    "generalAppBytes": 369820,
+    "adminBytes": 382583,
+    "deferredBytes": 195887,
+    "homeTransferBytes": 46701,
+    "generalAppTransferBytes": 68527,
+    "adminTransferBytes": 71549,
+    "deferredTransferBytes": 46701,
+    "sharedAssetPaths": [
+      "static/css/1240feada28706b0.css",
+      "static/css/21152eadce53cbfb.css",
+      "static/css/2c51162548402e22.css",
+      "static/css/56dbb6b80320ef6e.css",
+      "static/css/5ba1ac4f099bb44e.css"
+    ],
+    "exclusiveAssetPaths": {
+      "home": [],
+      "generalApp": [],
+      "admin": [
+        "static/css/cee4ff2d86da1d55.css",
+        "static/css/f54a2be7094b25e4.css"
+      ],
+      "deferred": []
+    }
+  },
+  "cssActualDirectoryValidated": true,
+  "lockSha256": "607175eda02d7746caf5593d34835cef317bf197ca6d5428fa1266cdb2aae5f4",
+  "markerPoolSourceSha256": "31125a1f08c73f2425182fd5b8f7a609e21654b895da89fad24a888734399ed2",
+  "helperSourceSha256": "d8a184e8945dbeabd98218143ac52830bb21b38800dfed937f6cd57893f233d4",
+  "pageManifestSha256": "93356b6fe9665eae9bc8537cb25aa000efaa44ed903439f03ca4ee30f6a4466e"
+}

@@ -1,0 +1,6 @@
+{
+  "failedGuardExecutions": 2,
+  "browserLaunchesInBoth": 0,
+  "priorCorrectionIncorrect": true,
+  "cause": "Build ID is in the plan JSON, not a literal in the runner. New plan-v2 + runner-v4 binds exact current head and build; assertion retained unchanged."
+}

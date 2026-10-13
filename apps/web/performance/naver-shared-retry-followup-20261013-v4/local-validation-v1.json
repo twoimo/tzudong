@@ -1,0 +1,42 @@
+{
+  "sourceHead": "ffc8efa6f3cf504c9459ef22ec82b055c7b0ab54",
+  "sourceParent": "b94996e3d1982d04671b2d4bc7fe62e561f2fdc5",
+  "observedAtUtc": "2026-10-13T10:13:21.541561+00:00",
+  "beforeSingleClick": {
+    "pass": 6,
+    "fail": 1,
+    "failure": "Second consumer remained error after only first retry clicked"
+  },
+  "initialCleanupTest": {
+    "pass": 10,
+    "fail": 1,
+    "failure": "Test evaluate string quoting error; no product failure"
+  },
+  "latestBrowser": {
+    "pass": 11,
+    "fail": 0,
+    "independentScenarios": 11,
+    "expectCalls": 17,
+    "browser": "Chrome155.0.8059.40",
+    "syntheticSdk": true,
+    "realSdk": false
+  },
+  "adminSourceContracts": {
+    "pass": 44,
+    "fail": 0,
+    "unchangedSinceRun": true
+  },
+  "lint": {
+    "exit": 0,
+    "changedFiles": 4
+  },
+  "parity": {
+    "status": "passed",
+    "native": "7.0.2",
+    "compat": "6.0.2",
+    "diagnostics": 0,
+    "logicalInputs": 3148,
+    "nonLibraryContentSha256": "c8cb4452aae188667a59d4b738be328c4e8865fc3aecba35e57a0ef910d6637a"
+  },
+  "deploymentPerformed": false
+}
