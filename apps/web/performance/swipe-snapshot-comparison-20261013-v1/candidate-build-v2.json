@@ -1,0 +1,34 @@
+{
+  "sourceCommit": "ca7674c530ec2559f9e632b38c8e542369a189b4",
+  "distDir": ".next-swipe-snapshot-after-v2",
+  "node": "24.21.0",
+  "next": "16.3.8",
+  "startedAtUtc": "2026-10-13T13:38:07.100Z",
+  "envValuesPersisted": false,
+  "serverSettingsForwarded": false,
+  "build": {
+    "exit": 0,
+    "wallMs": 72944.635416,
+    "outputBytes": 5834,
+    "rawOutputSha256": "1b7487c3d2ce989593f35a919e67175f1b33381decbd3317203bb5e5170ed177",
+    "rawOutputPersisted": false,
+    "compiled": true,
+    "compiledSeconds": 33.1
+  },
+  "cssGate": {
+    "exit": 0,
+    "wallMs": 236.81458400000702,
+    "outputBytes": 119,
+    "rawOutputSha256": "d050d9334b090cc0dfc7ee2627fe058ea3af7bfb4c3a80d4728f4f25798ef0de",
+    "rawOutputPersisted": false,
+    "compiled": false,
+    "compiledSeconds": null
+  },
+  "generatedConfigOnlyChangesRestored": true,
+  "lockSha256": "607175eda02d7746caf5593d34835cef317bf197ca6d5428fa1266cdb2aae5f4",
+  "helperSourceSha256": "d8a184e8945dbeabd98218143ac52830bb21b38800dfed937f6cd57893f233d4",
+  "snapshotComponentSha256": "2e3de6ea04ea5555ce94b3d706fb0685613c5313642d894962b82e3d3e2e5b4a",
+  "snapshotComparatorSha256": "07498f309a930e84bc796f3302403a74d57c9f20e2e762bf02621e6d9c71f06c",
+  "buildId": "IgLOaeoc5VNTG7JDW5iND",
+  "endedAtUtc": "2026-10-13T13:39:20.291Z"
+}

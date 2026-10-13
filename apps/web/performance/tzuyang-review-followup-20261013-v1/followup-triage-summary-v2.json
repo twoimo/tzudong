@@ -1,0 +1,569 @@
+{
+  "metadata": {
+    "assessmentTimestamp": "2026-10-13T13:22:00Z",
+    "evaluatorModel": "google-antigravity/gemini-3.8-flash",
+    "evaluatorThinkingLevel": "high",
+    "version": "v2",
+    "readOnlySourceWorktree": "/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong",
+    "sourceArtifacts": [
+      "apps/web/performance/tzuyang-review-census-20261009/REPORT-complete-v7.md",
+      "apps/web/performance/tzuyang-review-source-20261011/REPORT-v2.md",
+      "apps/web/performance/tzuyang-review-minimal-20261011/REPORT-v1.md"
+    ]
+  },
+  "denominators": {
+    "censusTotalRecords": 1659,
+    "censusNonEmptyReviews": 1437,
+    "censusEmptyReviews": 222,
+    "censusModelOk": 1046,
+    "censusModelFix": 205,
+    "censusModelNeedsSource": 408,
+    "approvedRecords": 763,
+    "approvedTzuyangRecords": 751,
+    "approvedTzuyangNonEmptyReviews": 729,
+    "deletedRecords": 890,
+    "heldRecords": 6,
+    "sourceSecondPassCandidates": 161,
+    "sourceSecondPassJobs": 137,
+    "sourceAdmittedResponses": 134,
+    "sourceAdmittedRecords": 156,
+    "sourceRejectedResponses": 3,
+    "sourceRejectedRecords": 5,
+    "sourceProposalsTotal": 78,
+    "preservedAdminEdits": 47,
+    "needsContextHeld": 8,
+    "minimalDraftsTotal": 23,
+    "contentTriageEligible": 19,
+    "sourceIntegrityViolation": 3,
+    "editorialAdvisoryHeld": 1,
+    "applyReadyTotal": 0
+  },
+  "defectiveDraftsDeepDive": [
+    {
+      "key": "r0999",
+      "kind": "editorial",
+      "triageStatus": "SOURCE_INTEGRITY_VIOLATION",
+      "category": "HARD_SOURCE_ERROR",
+      "primaryCode": "TS_MARKER_MULTISET_MISMATCH",
+      "beforeSha256": "3c869c0a5b5c36eb6553f06f134a9133af19de3f8737108844c755d25f7e81ca",
+      "afterSha256": "9412cf474bcd99487618327da2ace58c03eff555a2f810e5de925009ad191815",
+      "lengthDeltaCharacters": -15,
+      "replacements": [
+        [
+          "{ts:598-ts:615}",
+          ""
+        ]
+      ],
+      "hardErrors": [
+        {
+          "code": "TS_MARKER_MULTISET_MISMATCH",
+          "message": "Timestamp marker multiset altered in underlying source data",
+          "details": {
+            "removed": {
+              "{ts:598-ts:615}": 1
+            },
+            "added": {}
+          }
+        }
+      ],
+      "advisoryHints": [],
+      "analysis": "Source video timestamp marker was deleted from stored text. Per apps/web/lib/tzuyang-review-display.ts, internal video timestamp references belong to the source data layer and must only be stripped at display/reading time by the UI formatter. Stripping it from the DB destroys video timestamp traceability."
+    },
+    {
+      "key": "r1138",
+      "kind": "editorial",
+      "triageStatus": "SOURCE_INTEGRITY_VIOLATION",
+      "category": "HARD_SOURCE_ERROR",
+      "primaryCode": "PARTICLE_SPACING_COLLISION",
+      "beforeSha256": "008e9527223d01162e877769708a36a4654fbabdc47d3d90eb71bf136f0936c2",
+      "afterSha256": "07c88f39ea9f5c8019b0b80498b88d44c48d12e391e26f98ac57d46e66f527f9",
+      "lengthDeltaCharacters": 0,
+      "replacements": [
+        [
+          "店家",
+          "가게"
+        ]
+      ],
+      "hardErrors": [
+        {
+          "code": "PARTICLE_SPACING_COLLISION",
+          "message": "Unspaced particle-noun collision '은가게'",
+          "details": {
+            "matched": "은가게"
+          }
+        }
+      ],
+      "advisoryHints": [],
+      "analysis": "Direct string substitution of '店家' with '가게' without accounting for preceding Korean topic marker '은' created unspaced '은가게만의' defect. Must be corrected to '은 가게만의' prior to any future consideration."
+    },
+    {
+      "key": "r1294",
+      "kind": "source_correction",
+      "triageStatus": "SOURCE_INTEGRITY_VIOLATION",
+      "category": "HARD_SOURCE_ERROR",
+      "primaryCode": "STANDALONE_REFERENT_COLLISION",
+      "beforeSha256": "a0e7b3997111c47835261804332db3c8e9a8d10473c527c38bbe3b45b11f88a6",
+      "afterSha256": "421878306e4f8cea74f54cd903bb7fe3a16fff4e69f29e04c9586d560c5a3bfa",
+      "lengthDeltaCharacters": 27,
+      "replacements": [
+        [
+          "유튜버 쯔양의 10년 단골집으로, 24시간 영업하며 가성비가 매우 좋은 분식집입니다.",
+          "쯔양이 고등학생 때 자주 찾다가 10년 만에 재방문한 분식집입니다. 영상에서는 24시간 영업하며 가성비가 좋은 곳으로 소개되었습니다."
+        ]
+      ],
+      "hardErrors": [
+        {
+          "code": "STANDALONE_REFERENT_COLLISION",
+          "message": "Standalone '유튜버' referent coexists with '쯔양' in single review",
+          "details": {
+            "standaloneOccurrences": [
+              "유튜버가 추천하는 "
+            ]
+          }
+        }
+      ],
+      "advisoryHints": [],
+      "analysis": "First sentence replaced '유튜버 쯔양의' with '쯔양이', but third sentence retained standalone '유튜버가 추천하는', creating conflicting narrator identities within a single record."
+    },
+    {
+      "key": "r1300",
+      "kind": "source_correction",
+      "triageStatus": "EDITORIAL_ADVISORY_HELD",
+      "category": "EDITORIAL_ADVISORY",
+      "primaryCode": "UNPROMPTED_ADVISORY_EXPANSION",
+      "beforeSha256": "a223759d2ac52192a276baaa31805d43473c50407d90e16c793fd4b22a2e724f",
+      "afterSha256": "6ffd98bb144c51479309ed8cdfbb44d16eb56f10d5450dba63ad3b779c8d4a80",
+      "lengthDeltaCharacters": 81,
+      "replacements": [
+        [
+          "모든 메뉴가 '역대급'이라는 극찬을 받았습니다.",
+          "모든 메뉴가 '역대급'이라는 극찬을 받았습니다. 다만 쯔양은 한국에서 온 손님이라면 소금을 덜 짜게 해달라고 요청하면 좋겠다고 덧붙였으며, 치즈케이크는 매우 맛있지만 매우 달다고 평가했습니다."
+        ]
+      ],
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "UNPROMPTED_ADVISORY_EXPANSION",
+          "message": "Appends unprompted instructional advice/caveat (delta=+81 chars)",
+          "details": {
+            "deltaCharacters": 81
+          }
+        }
+      ],
+      "analysis": "Appends unsolicited instructional advice ('다만 쯔양은 한국에서 온 손님이라면 소금을 덜 짜게 해달라고 요청하면 좋겠다고 덧붙였으며...') and secondary dessert critique (+81 chars), exceeding minimal error correction scope."
+    }
+  ],
+  "triageBreakdown": {
+    "contentTriageEligible": [
+      "r0409",
+      "r0503",
+      "r0571",
+      "r0607",
+      "r0697",
+      "r0813",
+      "r0870",
+      "r0881",
+      "r1029",
+      "r1123",
+      "r1135",
+      "r1169",
+      "r1274",
+      "r1338",
+      "r1363",
+      "r1394",
+      "r1448",
+      "r1611",
+      "r1631"
+    ],
+    "sourceIntegrityViolation": [
+      "r0999",
+      "r1138",
+      "r1294"
+    ],
+    "editorialAdvisoryHeld": [
+      "r1300"
+    ]
+  },
+  "allDraftsTriage": [
+    {
+      "key": "r0409",
+      "kind": "editorial",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "90e939b63001e2a6c8aae930588f2b1d6ca81c2dcfa01d9d158a7474268d5f0b",
+      "afterSha256": "cecd79738c382c94d7d4d61f6d3a1c8863fd4f62e86d7709c2c2ad2808f36f99",
+      "lengthDeltaCharacters": 19
+    },
+    {
+      "key": "r0503",
+      "kind": "editorial",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "ad3bb5660fc4b7b9e73b5360b86cdbc34bea0d2410e7205f56944654f9f7df9b",
+      "afterSha256": "7fa5775d12d17535c87ec61a00a2405b1ba090b44a76da25a75bbb8bf9cae9d7",
+      "lengthDeltaCharacters": 13
+    },
+    {
+      "key": "r0571",
+      "kind": "editorial",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "e1383d0cd43bc13bf7a1c702c3f36b335a0ff4d33483d6522f02aa45e5ee5914",
+      "afterSha256": "dd4db696d3edc8f9ee385832a6818415c18789b0ea0f1c3c2c880d0583f68bc3",
+      "lengthDeltaCharacters": 6
+    },
+    {
+      "key": "r0607",
+      "kind": "source_correction",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [],
+      "beforeSha256": "67e465a5f84c1e9269a357670d7061ece4ca73ac5f5c7033ed38547984b4d272",
+      "afterSha256": "d2c2d3f2f48be0b2877d34d40c23e48b9ce09cb105a02ba19d976c3cc4ec6251",
+      "lengthDeltaCharacters": -15
+    },
+    {
+      "key": "r0697",
+      "kind": "editorial",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "681f3c1278f538be23eb821da0addfc50a057533f9a1052e9e1eb1e9d241a2a9",
+      "afterSha256": "c5d11a199717af39e26f413e57c7f12b461c5f84f5fa6c0691c4adbcd449ce90",
+      "lengthDeltaCharacters": 6
+    },
+    {
+      "key": "r0813",
+      "kind": "editorial",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "402a9d374156cf0e919144e863854a13254bcb3b0ef21db5e78adc806ff2a4b4",
+      "afterSha256": "5f2c1e34f0ef10c7cf4508c7080abdddc852aa7424ca3e0ae3cdf53234b6dca2",
+      "lengthDeltaCharacters": 17
+    },
+    {
+      "key": "r0870",
+      "kind": "editorial",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "1b851175789cae638a06f0260a611a1bdd4fbea736b33992f5150c89889d3d16",
+      "afterSha256": "68cebe8b03264a95d6d7cf7469b8ebbd4b94377a2fa455064756d9548b7e00d9",
+      "lengthDeltaCharacters": 15
+    },
+    {
+      "key": "r0881",
+      "kind": "editorial",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "45d5ef12b50fe9d5fb50a2133f55c10746d8307bc3e849511997aea72ac92201",
+      "afterSha256": "2b3d309dc7cd6cc861fd73a21712fc778f7fb0339717fe2417b27ca21e465ee8",
+      "lengthDeltaCharacters": 8
+    },
+    {
+      "key": "r0999",
+      "kind": "editorial",
+      "triageStatus": "SOURCE_INTEGRITY_VIOLATION",
+      "applyReady": false,
+      "hardErrors": [
+        {
+          "code": "TS_MARKER_MULTISET_MISMATCH",
+          "message": "Timestamp marker multiset altered in underlying source data",
+          "details": {
+            "removed": {
+              "{ts:598-ts:615}": 1
+            },
+            "added": {}
+          }
+        }
+      ],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "3c869c0a5b5c36eb6553f06f134a9133af19de3f8737108844c755d25f7e81ca",
+      "afterSha256": "9412cf474bcd99487618327da2ace58c03eff555a2f810e5de925009ad191815",
+      "lengthDeltaCharacters": -15
+    },
+    {
+      "key": "r1029",
+      "kind": "editorial",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "2fb6361b5a97b9df4f96014ba0ac766db37c150c5f18e9c98fd6bd66b1d3f9cc",
+      "afterSha256": "678b4f73ac73163d42f5bfed34e5a6319fbb4cb1d8c4fb2a8d3fb1039fa015df",
+      "lengthDeltaCharacters": -7
+    },
+    {
+      "key": "r1123",
+      "kind": "source_correction",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [],
+      "beforeSha256": "905234e0b0f4d81f69da8aafdd1933ab99907fadf7a81d8f70fc901f93c1a471",
+      "afterSha256": "2c2558b43c9352b2e8046534d08ca8c5d4946c065307389484c2e89a9336ed9b",
+      "lengthDeltaCharacters": 13
+    },
+    {
+      "key": "r1135",
+      "kind": "source_correction",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [],
+      "beforeSha256": "5c8af27d9845ba0ecbbb223e241c847bf0ef1a6064b7bbd14dbaaf400557f0c6",
+      "afterSha256": "a0ba5beb9e49727480a76c660ed49430e51ff17498cee9d5b9cba63213e9823e",
+      "lengthDeltaCharacters": -11
+    },
+    {
+      "key": "r1138",
+      "kind": "editorial",
+      "triageStatus": "SOURCE_INTEGRITY_VIOLATION",
+      "applyReady": false,
+      "hardErrors": [
+        {
+          "code": "PARTICLE_SPACING_COLLISION",
+          "message": "Unspaced particle-noun collision '은가게'",
+          "details": {
+            "matched": "은가게"
+          }
+        }
+      ],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "008e9527223d01162e877769708a36a4654fbabdc47d3d90eb71bf136f0936c2",
+      "afterSha256": "07c88f39ea9f5c8019b0b80498b88d44c48d12e391e26f98ac57d46e66f527f9",
+      "lengthDeltaCharacters": 0
+    },
+    {
+      "key": "r1169",
+      "kind": "editorial",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "1ec81a7d61a7fd5f4cd035269fd3917455ef3eb8850f40069dfb95bdb3c8a420",
+      "afterSha256": "294e22e3d72f0bbb26780d9f269751c162b96964a7c68eb202355a34e47b2ca6",
+      "lengthDeltaCharacters": 16
+    },
+    {
+      "key": "r1274",
+      "kind": "editorial",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "206e3c7646893e5f4d3bf18556d4576cf0ebe46ef5a08c41a77508af229bfd66",
+      "afterSha256": "d5c6d56d86b53a8664d892c373272146af78506f44c5eb1c6290ec77aef29ecc",
+      "lengthDeltaCharacters": 20
+    },
+    {
+      "key": "r1294",
+      "kind": "source_correction",
+      "triageStatus": "SOURCE_INTEGRITY_VIOLATION",
+      "applyReady": false,
+      "hardErrors": [
+        {
+          "code": "STANDALONE_REFERENT_COLLISION",
+          "message": "Standalone '유튜버' referent coexists with '쯔양' in single review",
+          "details": {
+            "standaloneOccurrences": [
+              "유튜버가 추천하는 히든"
+            ]
+          }
+        }
+      ],
+      "advisoryHints": [],
+      "beforeSha256": "a0e7b3997111c47835261804332db3c8e9a8d10473c527c38bbe3b45b11f88a6",
+      "afterSha256": "421878306e4f8cea74f54cd903bb7fe3a16fff4e69f29e04c9586d560c5a3bfa",
+      "lengthDeltaCharacters": 27
+    },
+    {
+      "key": "r1300",
+      "kind": "source_correction",
+      "triageStatus": "EDITORIAL_ADVISORY_HELD",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "UNPROMPTED_ADVISORY_EXPANSION",
+          "message": "Appends unprompted instructional advice/caveat (delta=+81 chars)",
+          "details": {
+            "deltaCharacters": 81
+          }
+        }
+      ],
+      "beforeSha256": "a223759d2ac52192a276baaa31805d43473c50407d90e16c793fd4b22a2e724f",
+      "afterSha256": "6ffd98bb144c51479309ed8cdfbb44d16eb56f10d5450dba63ad3b779c8d4a80",
+      "lengthDeltaCharacters": 81
+    },
+    {
+      "key": "r1338",
+      "kind": "source_correction",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [],
+      "beforeSha256": "d53aea8c4e320851a25deb7dcb59435c07d7314097a2db18deb34e457b7cb940",
+      "afterSha256": "2908bfba2ce9bd8f09eb155288265c195a4071bef33327ea819cff45a0d3f5d3",
+      "lengthDeltaCharacters": 18
+    },
+    {
+      "key": "r1363",
+      "kind": "editorial",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "e94e9ddbf3c000869ee3549fadeb95a9ac9af614690ca2f887bfbe270f22ca0a",
+      "afterSha256": "d2be4a807323af5b589302de2d002e0c695011e553c8b91a824f22a14ec00b03",
+      "lengthDeltaCharacters": 6
+    },
+    {
+      "key": "r1394",
+      "kind": "editorial",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "172d7e7325ad96c716808324996c53bb6516360946eb5154bb161af3bbaea49c",
+      "afterSha256": "88c259c1fe8022f15b00edb05cd9f052c9bbce7a7602ec03c0f6ca8f52f8df6d",
+      "lengthDeltaCharacters": 6
+    },
+    {
+      "key": "r1448",
+      "kind": "source_correction",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [],
+      "beforeSha256": "5eae0ce59f122d0774023d3e1baba20be1532d9fd5f172f1c5b4323312119319",
+      "afterSha256": "8bf22b2ad8de44609e39b9097bcbc2bcef6c38d6c37e4d67254e7bdfc8f5d3e6",
+      "lengthDeltaCharacters": 40
+    },
+    {
+      "key": "r1611",
+      "kind": "source_correction",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [],
+      "beforeSha256": "70de16bd013b53cedc22ea4221fd6dcb6f29dd3103a6262d8c553771d326ecd4",
+      "afterSha256": "37a2cc7fa39ed89a9bf7901f6fa09e326fd4bdcf51a16025c7593247da1f2f1c",
+      "lengthDeltaCharacters": -5
+    },
+    {
+      "key": "r1631",
+      "kind": "editorial",
+      "triageStatus": "CONTENT_TRIAGE_ELIGIBLE",
+      "applyReady": false,
+      "hardErrors": [],
+      "advisoryHints": [
+        {
+          "code": "HONORIFIC_NORMALIZATION",
+          "message": "Standardized endings to polite declarative form (~습니다)",
+          "details": {}
+        }
+      ],
+      "beforeSha256": "70ce09b1a22b16194a29a0263402a8ccabe761e2ce9c2f5d4fe351d6069a1f8e",
+      "afterSha256": "658d9baec9c016b2508f5aecc132a15c723306c741240499481f15c9cda5b530",
+      "lengthDeltaCharacters": 17
+    }
+  ]
+}

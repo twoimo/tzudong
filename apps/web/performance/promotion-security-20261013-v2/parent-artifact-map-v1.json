@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "root": "apps/web/performance/promotion-security-20261013-v2",
+  "files": {
+    "check-success-receipt-v2.json": {
+      "bytes": 574,
+      "sha256": "9bd47db93cf7ff50f742d7092985abd9b7c36101e044aeccc13096c56c391e10"
+    },
+    "classification-receipt-v1.json": {
+      "bytes": 1677,
+      "sha256": "04a593d2945c8e93f324e947168dd9a01fcf96c6f4bbb479a285c6908f02bb72"
+    },
+    "github-check-rerequest.jpg": {
+      "bytes": 85583,
+      "sha256": "87299fb9061b7c98c62439595872c599ed20b6433e3693fd5a08e674d91453e4"
+    },
+    "github-check-success.jpg": {
+      "bytes": 74208,
+      "sha256": "0ab61e1ba2ef1476f519aa5a28bfb8931b4b18ec0f9ea5b48328152e3be71a38"
+    },
+    "incident-38128430-test-credential.jpg": {
+      "bytes": 92993,
+      "sha256": "fcd149b67a70cfa1a7a052d760452a283fd37a261b9f4ac60f985318462c8b2d"
+    },
+    "incident-38152938-test-credential.jpg": {
+      "bytes": 111178,
+      "sha256": "2d4ea9b2bfdd53a35a7050c25cf442cc95cadd2bae2dfb5860d3025e0ff9f24a"
+    }
+  }
+}

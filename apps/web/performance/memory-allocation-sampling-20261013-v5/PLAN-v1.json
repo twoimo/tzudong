@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "createdBeforeRun": true,
+  "source": "056a86600f412eb42df4304e3206841679012f3e",
+  "flow": {
+    "distinctSearches": 128,
+    "passes": 2,
+    "dependentActionsPerExecution": 256,
+    "independentExecutions": 1,
+    "fixtureRows": 735
+  },
+  "conditions": {
+    "productionNext": "16.3.8",
+    "node": "24.21.0",
+    "cpuRate": 4,
+    "network": "unthrottled actual remote SDK/tiles, strict synthetic REST735/Auth401",
+    "cache": "disabled; service worker bypassed",
+    "viewport": "390x844/dpr1 desktop Chrome touch emulation"
+  },
+  "sampling": {
+    "intervalBytes": 32768,
+    "stackDepth": 64,
+    "collectedMajor": false,
+    "collectedMinor": false,
+    "starts": "after initial cluster735 display",
+    "checkpoints": "every64 selections and idle5s",
+    "rawProfilePersisted": false,
+    "knownOverhead": "unmeasured; diagnostic only"
+  },
+  "guard": {
+    "primaryComparisonAllowed": false,
+    "memoryRegressionFixed": false,
+    "existingHeapPercent": 20,
+    "existingLatencyPercent": 15
+  },
+  "expectedDiagnostic": "largest live allocation call stacks and nearest public script ancestor; not owner, exact retained bytes or microbenchmark gain",
+  "exclusions": [
+    "physical Android",
+    "Samsung Internet",
+    "field",
+    "production deployment",
+    "process/GPU memory",
+    "raw private response/heap values"
+  ],
+  "protocolSource": "https://raw.githubusercontent.com/ChromeDevTools/devtools-protocol/master/json/js_protocol.json",
+  "protocolSha256": "3716f86e2228f9414ffff43551249bc6a5783388c3fbdba5226f14e6941774f1",
+  "scriptSha256": "3303d80b25ec95cb803f0b7feadfe4655e2e7a9495a65d502a4b464402c724dc"
+}

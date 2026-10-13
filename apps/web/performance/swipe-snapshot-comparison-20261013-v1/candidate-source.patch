@@ -1,0 +1,299 @@
+diff --git a/apps/web/components/home/home-map-container.tsx b/apps/web/components/home/home-map-container.tsx
+index 6ff027f7..914b2fae 100644
+--- a/apps/web/components/home/home-map-container.tsx
++++ b/apps/web/components/home/home-map-container.tsx
+@@ -26,6 +26,13 @@ import {
+     dedupeHomeMapRestaurants,
+     isSameRestaurantForSwipe,
+ } from '@/lib/home-map-swipe-restaurants';
++import {
++    captureHomeMapRestaurantIds,
++    matchesHomeMapRestaurantIds,
++    captureHomeMapContextualSnapshot,
++    matchesHomeMapContextualSnapshot,
++    type HomeMapContextualSnapshot,
++} from '@/lib/home-map-snapshot-comparison';
+ import type { DeviceMapLocation } from '@/lib/device-location-map';
+ import type { HomeMapLayoutMode, HomeMapPanelSide } from '@/lib/home-map-user-preferences';
+ 
+@@ -116,30 +123,6 @@ const QUICK_GESTURE_EXTRA_DISTANCE_PX = 2;
+ const DRAG_RENDER_EPSILON_PERCENT = 0.08;
+ const SHEET_HEIGHT_CSS_VAR = '--home-sheet-height-px';
+ 
+-const swipeableRestaurantsSignatureCache = new WeakMap<Restaurant[], string>();
+-
+-const buildSwipeableRestaurantsSignature = (restaurants: Restaurant[]) => {
+-    const cached = swipeableRestaurantsSignatureCache.get(restaurants);
+-    if (cached !== undefined) return cached;
+-    const signature = restaurants.map((restaurant) => restaurant.id).join('|');
+-    swipeableRestaurantsSignatureCache.set(restaurants, signature);
+-    return signature;
+-};
+-
+-const buildContextualRestaurantsSignature = (payload: HomeMapContextualRestaurantsPayload | null) => {
+-    if (!payload) return 'null';
+-
+-    return [
+-        payload.mode,
+-        payload.renderMode,
+-        payload.zoom ?? 'null',
+-        payload.isEligible ? 'eligible' : 'ineligible',
+-        payload.ineligibilityReason ?? 'none',
+-        payload.totalVisibleCount,
+-        payload.restaurants.length > 0 ? buildSwipeableRestaurantsSignature(payload.restaurants) : '',
+-    ].join('::');
+-};
+-
+ const RESTAURANT_CONTENT_SCROLL_SELECTOR = "[data-restaurant-detail-swipe-area='content']";
+ 
+ // [CSR] 지도 렌더링 및 그리드/단일 모드 처리 - 브라우저 전용 지도 라이브러리 사용
+@@ -220,11 +203,11 @@ function HomeMapContainerComponent({
+     const lastSwipeableFallbackRestaurantsRef = useRef<Restaurant[]>([]);
+     const swipeableRestaurantsRafRef = useRef(0);
+     const pendingContextualRestaurantsPayloadRef = useRef<HomeMapContextualRestaurantsPayload | null>(null);
+-    const lastSwipeableRestaurantsSignatureByModeRef = useRef({
+-        domestic: '',
+-        overseas: '',
++    const lastSwipeableRestaurantIdsByModeRef = useRef<Record<'domestic' | 'overseas', readonly string[]>>({
++        domestic: [],
++        overseas: [],
+     });
+-    const lastContextualRestaurantsPayloadSignatureRef = useRef<string | null>(null);
++    const lastContextualRestaurantsSnapshotRef = useRef<HomeMapContextualSnapshot | null | undefined>(undefined);
+     const contextualRestaurantsRafRef = useRef(0);
+     const lastMarkerClickAtRef = useRef(0);
+     const lastMapInteractionCollapseAtRef = useRef(0);
+@@ -873,15 +856,14 @@ function HomeMapContainerComponent({
+     const handleSwipeableRestaurantsChange = useCallback((restaurants: Restaurant[]) => {
+         const filteredRestaurants = getRestaurantListByMode(restaurants);
+         const uniqueRestaurants = dedupeHomeMapRestaurants(filteredRestaurants);
+-        const nextSignature = buildSwipeableRestaurantsSignature(uniqueRestaurants);
+         const targetMode = mapMode;
+-        const lastSignature = lastSwipeableRestaurantsSignatureByModeRef.current[targetMode];
++        const lastIds = lastSwipeableRestaurantIdsByModeRef.current[targetMode];
+ 
+         if (uniqueRestaurants.length > 1) {
+             lastSwipeableFallbackRestaurantsRef.current = uniqueRestaurants;
+         }
+ 
+-        if (lastSignature === nextSignature && swipeableRestaurantsRafRef.current === 0) {
++        if (matchesHomeMapRestaurantIds(lastIds, uniqueRestaurants) && swipeableRestaurantsRafRef.current === 0) {
+             return;
+         }
+ 
+@@ -895,16 +877,15 @@ function HomeMapContainerComponent({
+             swipeableRestaurantsRafRef.current = 0;
+ 
+             const nextRestaurants = pendingSwipeableRestaurantsRef.current;
+-            const committedSignature = buildSwipeableRestaurantsSignature(nextRestaurants);
+-            const previousSignature = lastSwipeableRestaurantsSignatureByModeRef.current[targetMode];
++            const previousIds = lastSwipeableRestaurantIdsByModeRef.current[targetMode];
+ 
+-            if (previousSignature === committedSignature) {
++            if (matchesHomeMapRestaurantIds(previousIds, nextRestaurants)) {
+                 return;
+             }
+ 
+-            lastSwipeableRestaurantsSignatureByModeRef.current = {
+-                ...lastSwipeableRestaurantsSignatureByModeRef.current,
+-                [targetMode]: committedSignature,
++            lastSwipeableRestaurantIdsByModeRef.current = {
++                ...lastSwipeableRestaurantIdsByModeRef.current,
++                [targetMode]: captureHomeMapRestaurantIds(nextRestaurants),
+             };
+ 
+             if (!nextRestaurants.length) {
+@@ -938,13 +919,12 @@ function HomeMapContainerComponent({
+             contextualRestaurantsRafRef.current = 0;
+         }
+ 
+-        const nextSignature = buildContextualRestaurantsSignature(payload);
+-        if (lastContextualRestaurantsPayloadSignatureRef.current === nextSignature) {
++        if (matchesHomeMapContextualSnapshot(lastContextualRestaurantsSnapshotRef.current, payload)) {
+             return;
+         }
+ 
+         pendingContextualRestaurantsPayloadRef.current = payload;
+-        lastContextualRestaurantsPayloadSignatureRef.current = nextSignature;
++        lastContextualRestaurantsSnapshotRef.current = captureHomeMapContextualSnapshot(payload);
+         onContextualRestaurantsChange?.(payload);
+     }, [onContextualRestaurantsChange]);
+     const handleContextualRestaurantsChange = useCallback((payload: HomeMapContextualRestaurantsPayload) => {
+@@ -971,8 +951,7 @@ function HomeMapContainerComponent({
+             totalVisibleCount: uniqueRestaurants.length,
+         };
+ 
+-        const nextSignature = buildContextualRestaurantsSignature(nextPayload);
+-        if (lastContextualRestaurantsPayloadSignatureRef.current === nextSignature && contextualRestaurantsRafRef.current === 0) {
++        if (matchesHomeMapContextualSnapshot(lastContextualRestaurantsSnapshotRef.current, nextPayload) && contextualRestaurantsRafRef.current === 0) {
+             return;
+         }
+ 
+@@ -985,13 +964,11 @@ function HomeMapContainerComponent({
+         contextualRestaurantsRafRef.current = requestAnimationFrame(() => {
+             contextualRestaurantsRafRef.current = 0;
+             const pendingPayload = pendingContextualRestaurantsPayloadRef.current;
+-            const pendingSignature = buildContextualRestaurantsSignature(pendingPayload);
+-
+-            if (lastContextualRestaurantsPayloadSignatureRef.current === pendingSignature) {
++            if (matchesHomeMapContextualSnapshot(lastContextualRestaurantsSnapshotRef.current, pendingPayload)) {
+                 return;
+             }
+ 
+-            lastContextualRestaurantsPayloadSignatureRef.current = pendingSignature;
++            lastContextualRestaurantsSnapshotRef.current = captureHomeMapContextualSnapshot(pendingPayload);
+             onContextualRestaurantsChange?.(pendingPayload);
+         });
+     }, [clearContextualRestaurants, getRestaurantListByMode, isMapFullscreen, mapMode, onContextualRestaurantsChange]);
+diff --git a/apps/web/lib/home-map-snapshot-comparison.ts b/apps/web/lib/home-map-snapshot-comparison.ts
+new file mode 100644
+index 00000000..a5ee5c44
+--- /dev/null
++++ b/apps/web/lib/home-map-snapshot-comparison.ts
+@@ -0,0 +1,53 @@
++import type { HomeMapContextualRestaurantsPayload } from './home-map-contextual-restaurants';
++
++type RestaurantId = { id: string };
++
++/** Copy only committed IDs, without retaining restaurant records or joined strings. */
++export function captureHomeMapRestaurantIds(restaurants: readonly RestaurantId[]): readonly string[] {
++    return restaurants.map((restaurant) => restaurant.id);
++}
++
++export function matchesHomeMapRestaurantIds(
++    committedIds: readonly string[],
++    restaurants: readonly RestaurantId[],
++): boolean {
++    if (committedIds.length !== restaurants.length) return false;
++    for (let index = 0; index < committedIds.length; index += 1) {
++        if (committedIds[index] !== restaurants[index].id) return false;
++    }
++    return true;
++}
++
++export type HomeMapContextualSnapshot = Omit<HomeMapContextualRestaurantsPayload, 'restaurants'> & {
++    restaurantIds: readonly string[];
++};
++
++export function captureHomeMapContextualSnapshot(
++    payload: HomeMapContextualRestaurantsPayload | null,
++): HomeMapContextualSnapshot | null {
++    if (!payload) return null;
++    return {
++        mode: payload.mode,
++        renderMode: payload.renderMode,
++        zoom: payload.zoom,
++        isEligible: payload.isEligible,
++        ineligibilityReason: payload.ineligibilityReason,
++        totalVisibleCount: payload.totalVisibleCount,
++        restaurantIds: captureHomeMapRestaurantIds(payload.restaurants),
++    };
++}
++
++export function matchesHomeMapContextualSnapshot(
++    snapshot: HomeMapContextualSnapshot | null | undefined,
++    payload: HomeMapContextualRestaurantsPayload | null,
++): boolean {
++    if (snapshot === undefined) return false;
++    if (!snapshot || !payload) return snapshot === payload;
++    return snapshot.mode === payload.mode
++        && snapshot.renderMode === payload.renderMode
++        && (snapshot.zoom ?? null) === (payload.zoom ?? null)
++        && snapshot.isEligible === payload.isEligible
++        && snapshot.ineligibilityReason === payload.ineligibilityReason
++        && snapshot.totalVisibleCount === payload.totalVisibleCount
++        && matchesHomeMapRestaurantIds(snapshot.restaurantIds, payload.restaurants);
++}
+diff --git a/apps/web/tests-unit/home-map-contextual-restaurants-source.test.ts b/apps/web/tests-unit/home-map-contextual-restaurants-source.test.ts
+index 23a8fe7f..704abfb2 100644
+--- a/apps/web/tests-unit/home-map-contextual-restaurants-source.test.ts
++++ b/apps/web/tests-unit/home-map-contextual-restaurants-source.test.ts
+@@ -139,10 +139,10 @@ describe('home map contextual visible-marker restaurants', () => {
+     expect(swipeRestaurantSource).toContain('keptByName.get(restaurant.name)?.some((existing) => hasSameSwipeCoordinates(existing, restaurant))');
+     expect(swipeRestaurantSource).not.toContain('uniqueRestaurants.some((existing) => isSameRestaurantForSwipe(existing, restaurant))');
+     expect(containerSource).toContain('onContextualRestaurantsChange={handleContextualRestaurantsChange}');
+-    expect(containerSource).toContain('buildSwipeableRestaurantsSignature(uniqueRestaurants)');
+-    expect(containerSource).toContain('lastSwipeableRestaurantsSignatureByModeRef.current[targetMode]');
+-    expect(containerSource).toContain('buildContextualRestaurantsSignature(nextPayload)');
+-    expect(containerSource).toContain('lastContextualRestaurantsPayloadSignatureRef.current === nextSignature');
++    expect(containerSource).toContain('matchesHomeMapRestaurantIds(lastIds, uniqueRestaurants)');
++    expect(containerSource).toContain('lastSwipeableRestaurantIdsByModeRef.current[targetMode]');
++    expect(containerSource).toContain('matchesHomeMapContextualSnapshot(lastContextualRestaurantsSnapshotRef.current, nextPayload)');
++    expect(containerSource).toContain('captureHomeMapContextualSnapshot(pendingPayload)');
+ 
+     expect(controlPanelSource).toContain('contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;');
+     expect(controlPanelSource).toContain('isMapFullscreen?: boolean;');
+diff --git a/apps/web/tests-unit/home-map-snapshot-comparison.test.ts b/apps/web/tests-unit/home-map-snapshot-comparison.test.ts
+new file mode 100644
+index 00000000..55d98632
+--- /dev/null
++++ b/apps/web/tests-unit/home-map-snapshot-comparison.test.ts
+@@ -0,0 +1,68 @@
++import { describe, expect, test } from 'bun:test';
++import type { Restaurant } from '@/types/restaurant';
++import type { HomeMapContextualRestaurantsPayload } from '@/lib/home-map-contextual-restaurants';
++import {
++    captureHomeMapRestaurantIds,
++    matchesHomeMapRestaurantIds,
++    captureHomeMapContextualSnapshot,
++    matchesHomeMapContextualSnapshot,
++} from '@/lib/home-map-snapshot-comparison';
++
++const rows = (ids: string[]) => ids.map((id) => ({ id } as Restaurant));
++const id = (index: number) => `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`;
++const payload = (): HomeMapContextualRestaurantsPayload => ({
++    mode: 'domestic', renderMode: 'individual', zoom: 15, isEligible: true,
++    totalVisibleCount: 2, restaurants: rows([id(1), id(2)]),
++});
++
++describe('home map committed snapshot comparison', () => {
++    test('matches the previous ordered ID equality for independent equivalent and changed lists', () => {
++        for (let size = 0; size <= 32; size += 1) {
++            const original = Array.from({ length: size }, (_, index) => id(index));
++            const candidates = [original.slice(), original.slice().reverse(), [...original, id(99)], original.slice(1)];
++            const snapshot = captureHomeMapRestaurantIds(rows(original));
++            for (const candidate of candidates) {
++                expect(matchesHomeMapRestaurantIds(snapshot, rows(candidate)))
++                    .toBe(original.join('|') === candidate.join('|'));
++            }
++        }
++    });
++
++    test('does not suppress an ID change made after commit through a reused array', () => {
++        const current = rows([id(1), id(2)]), committed = captureHomeMapRestaurantIds(current);
++        current[0].id = id(3);
++        expect(matchesHomeMapRestaurantIds(committed, current)).toBe(false);
++        expect(committed).toEqual([id(1), id(2)]);
++    });
++
++    test('retains existing ID-only semantics across refreshed restaurant metadata', () => {
++        const original = payload(), snapshot = captureHomeMapContextualSnapshot(original);
++        const fresh = { ...original, restaurants: original.restaurants.map((row) => ({ ...row, name: '새 이름' })) };
++        expect(matchesHomeMapContextualSnapshot(snapshot, fresh)).toBe(true);
++    });
++
++    test('publishes every map eligibility, mode, zoom, count, reason and order change', () => {
++        const original = payload(), snapshot = captureHomeMapContextualSnapshot(original);
++        const changes: Partial<HomeMapContextualRestaurantsPayload>[] = [
++            { mode: 'overseas' }, { renderMode: 'supercluster' }, { zoom: null },
++            { isEligible: false }, { ineligibilityReason: 'empty' }, { totalVisibleCount: 3 },
++            { restaurants: original.restaurants.slice().reverse() }, { restaurants: [] },
++        ];
++        for (const change of changes) expect(matchesHomeMapContextualSnapshot(snapshot, { ...original, ...change })).toBe(false);
++    });
++
++    test('keeps the initial publication distinct from a committed null and permits later recovery', () => {
++        expect(matchesHomeMapContextualSnapshot(undefined, null)).toBe(false);
++        expect(matchesHomeMapContextualSnapshot(null, null)).toBe(true);
++        expect(matchesHomeMapContextualSnapshot(null, payload())).toBe(false);
++        expect(matchesHomeMapContextualSnapshot(captureHomeMapContextualSnapshot(payload()), null)).toBe(false);
++    });
++
++    test('captures only the required scalar context and immutable ID values', () => {
++        const original = payload(), snapshot = captureHomeMapContextualSnapshot(original)!;
++        expect('restaurants' in snapshot).toBe(false);
++        original.restaurants.push({ id: id(3) } as Restaurant);
++        expect(snapshot.restaurantIds).toEqual([id(1), id(2)]);
++        expect(matchesHomeMapContextualSnapshot(snapshot, original)).toBe(false);
++    });
++});

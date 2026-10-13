@@ -1,0 +1,17 @@
+{
+  "createdBeforeRun": true,
+  "flowActions": 256,
+  "distinctQueries": 128,
+  "passes": 2,
+  "independentExecutions": 1,
+  "samplingIntervalBytes": 32768,
+  "comparisonAllowed": false,
+  "purpose": "Reproduce complete run with final sample-reference integrity diagnostics; do not change analyzer admission",
+  "scriptSha256": "4b3a560eb656c67c6443f434b53299e203df49cc8ed20963748068aff0e3148d",
+  "previousEvidence": [
+    "ui-live-alloc-1/raw.json",
+    "ui-debug-final-1/raw.json",
+    "ui-debug-final-schema-1/raw.json"
+  ],
+  "originalFailedExecutionsRetained": true
+}

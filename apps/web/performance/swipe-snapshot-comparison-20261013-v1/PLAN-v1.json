@@ -1,0 +1,73 @@
+{
+  "createdBeforeMeasurements": true,
+  "createdAtUtc": "2026-10-13T13:29:49.489801+00:00",
+  "beforeSource": "9fba35f92b9b0f517d1f726461f38bc4a91e49e6",
+  "candidateParent": "4ba9c6d2f54b6e0c8458b2518977665f606eb4ff",
+  "parentDifference": [
+    "apps/web/performance/review-db-rehearsal-20261012/SHA256SUMS",
+    "apps/web/performance/review-db-rehearsal-20261012/SHA256SUMS-7d111349-historical",
+    "apps/web/performance/review-db-rehearsal-20261012/SHA256SUMS-7d111349-historical.sha256",
+    "apps/web/performance/review-db-rehearsal-20261012/SHA256SUMS.sha256",
+    "apps/web/performance/review-db-rehearsal-20261012/fixture-url-unit-verification-20261013.json",
+    "apps/web/tests-unit/review-media-sql-successor.test.ts"
+  ],
+  "runtimeInputDifferenceEmpty": true,
+  "flow": {
+    "fixtureRows": 735,
+    "distinctQueries": 128,
+    "passes": 2,
+    "dependentActionsPerProcess": 256,
+    "A_A_independentProcesses": 4,
+    "AB_pairs": 9,
+    "AB_independentProcesses": 18,
+    "order": "seeded crossover; seed=20261013; serialized one browser process"
+  },
+  "conditions": {
+    "productionBuild": true,
+    "node": "24.21.0",
+    "next": "16.3.8",
+    "chrome": "155.0.8059.40",
+    "viewport": "390x844/dpr1/touch emulation",
+    "cpuRate": 4,
+    "network": "unthrottled actual remote SDK/tiles; synthetic REST735/Auth401",
+    "cache": "disabled; SW bypassed",
+    "forcedGC": false,
+    "profiler": false
+  },
+  "guard": {
+    "endHeapRegressionPercent": 20,
+    "idleHeapRegressionPercent": 20,
+    "inputLatencyRegressionPercent": 15,
+    "originalBudgetsUnchanged": true,
+    "admissionRequires": "functional equality and bootstrap95 upper paired-ratio regression within guards; confidence interval spanning zero means improvement unproven"
+  },
+  "pilot": {
+    "independentProcesses": 2,
+    "queriesPerProcess": 8,
+    "passes": 2,
+    "admissionAllowed": false
+  },
+  "claimPlan": {
+    "absoluteMemoryBytes": "before-after",
+    "relativeDecreasePercent": "(before-after)/before*100",
+    "runUnit": "independent browser process; actions within a process are dependent",
+    "p95": "within-process descriptive only;9 independent AB pairs insufficient for reliable population p95",
+    "uncertainty": "paired bootstrap95 interval from9 complete pairs;AA4 noise diagnostic; failed runs retained and no replacement cherry-picking",
+    "practicalMemoryThresholdBytes": 1000000,
+    "overlappingGains": "do not sum",
+    "eligibleImprovement": "positive95 absolute-decrease lower bound and at least1MB median absolute reduction; any guard violation remains unadmitted"
+  },
+  "mechanism": "compare ordered ID pointers without joined UUID strings;capture only two committed mode vectors plus one contextual vector;do not retain whole restaurant rows",
+  "theory": {
+    "old": "O(n*L) fresh join plusO(n)temporary pointers;O(1)cache hits;WeakMap values retained while keys live",
+    "new": "O(n)comparison,O(1)temporary allocation;O(n)ID pointer vector on changed commit;bounded by two committed mode lists and one contextual list",
+    "tradeoff": "unchanged-array comparisons nowO(n),so preserve15%latency guard;theoretical allocation savings are not measured UI savings"
+  },
+  "exclusions": [
+    "physical Android/Samsung Internet",
+    "field",
+    "operating deployment",
+    "GPU/process memory"
+  ],
+  "admitted": false
+}

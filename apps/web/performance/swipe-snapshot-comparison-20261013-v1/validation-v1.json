@@ -1,0 +1,20 @@
+{
+  "sourceCommit": "ca7674c530ec2559f9e632b38c8e542369a189b4",
+  "relatedUnits": {
+    "pass": 33,
+    "fail": 0,
+    "files": 4,
+    "expectCalls": 357
+  },
+  "changedLintExit": 0,
+  "diffCheckExit": 0,
+  "typescriptParity": {
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 3149,
+    "logicalInputNamesSha256": "ae6bb61785cd2652a3bb437f703460d2e555f7e0a25f314fc81303811b80db2c",
+    "nonLibraryContentSha256": "5cf79dd60683be704ed0af65285ab0900a62d7b310e5548a025c7bb8de4a7ba9"
+  },
+  "deployed": false,
+  "performanceAdmitted": false
+}

@@ -1,0 +1,42 @@
+{
+  "observedAtUtc": "2026-10-13T13:56:52.351593+00:00",
+  "incidents": [
+    {
+      "commit": "f4739a77822ce218595db67ebe0664eb10922688",
+      "incident": 38128430,
+      "sourceSha256": "561a293de070aadd6cf8730db062ac54d865e35db0140fe6d12b720accdead91",
+      "passwordAssignmentPresent": true,
+      "testCredentialLiteralPresent": true,
+      "injectedTransportCalls": 4,
+      "fetchCalls": 0,
+      "actualCredentialEnvironmentReads": false,
+      "stateObserved": "Ignored",
+      "reasonObserved": "Test credential",
+      "privacyModeConfirmed": true
+    },
+    {
+      "commit": "4d4ecf608a7922df5a68beaf3e1ea2dcc250a3b7",
+      "incident": 38152938,
+      "sourceSha256": "099e0b728cbfde7f1b292ec5c90e1ab14af54bdf9e87d07ef44ead9bb885883e",
+      "passwordAssignmentPresent": false,
+      "testCredentialLiteralPresent": false,
+      "injectedTransportCalls": 20,
+      "fetchCalls": 0,
+      "actualCredentialEnvironmentReads": false,
+      "stateObserved": "Ignored",
+      "reasonObserved": "Test credential",
+      "privacyModeConfirmed": true
+    }
+  ],
+  "classificationWrites": 2,
+  "globalScannerOrBranchProtectionChanges": 0,
+  "checkSkipButtonUsed": false,
+  "historyRewritten": false,
+  "rerequest": {
+    "checkId": 115306216193,
+    "cliStatus": 404,
+    "succeeded": false,
+    "interpretation": "existing OAuth CLI cannot rerequest this external app check;checkconclusion unchanged at fresh readback"
+  },
+  "correction": "Previous summary incorrectly said historical f473 had no password. It has an explicit fixture-only literal. Current source has no password. Historical screenshot confirms the deleted test assignment appears in the4d4 patch."
+}

@@ -1,0 +1,616 @@
+{
+  "kind": "baseline",
+  "sourceCommit": "9fba35f92b9b0f517d1f726461f38bc4a91e49e6",
+  "buildId": "p1-IJ-04eZu5YFbWfLGje",
+  "startedAtUtc": "2026-10-13T13:56:00.280Z",
+  "environment": {
+    "cpuRate": 4,
+    "network": "unthrottled real remote SDK/tiles; synthetic REST735/Auth401",
+    "cache": "disabled and SW bypassed",
+    "viewport": "390x844/dpr1/touch emulation",
+    "productionBuild": true,
+    "forcedGC": false
+  },
+  "queries": 8,
+  "passes": 2,
+  "cycles": [
+    {
+      "pass": 0,
+      "query": 0,
+      "state": {
+        "observedAt": 1704,
+        "inputToObservedMs": 428.09999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 30,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.4960203,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 76,
+        "maxFrameGapMs": 133.29999999999995,
+        "longTaskCount": 2,
+        "longTaskMs": 225,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 17,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 1,
+      "state": {
+        "observedAt": 2153.4000000953674,
+        "inputToObservedMs": 240.2000002861023,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 55,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.6070307,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 19,
+        "maxFrameGapMs": 99.89999999999986,
+        "longTaskCount": 1,
+        "longTaskMs": 109,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 32,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 2,
+      "state": {
+        "observedAt": 2469.199999809265,
+        "inputToObservedMs": 176.7999997138977,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 84,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5980299,
+          "lng": 126.963
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 50,
+        "longTaskCount": 1,
+        "longTaskMs": 63,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 47,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 3,
+      "state": {
+        "observedAt": 2785.300000190735,
+        "inputToObservedMs": 172.40000009536743,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 98,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.589029,
+          "lng": 126.966
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 16,
+        "maxFrameGapMs": 50,
+        "longTaskCount": 1,
+        "longTaskMs": 67,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 62,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 4,
+      "state": {
+        "observedAt": 3137.5999999046326,
+        "inputToObservedMs": 193.7999997138977,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 112,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5800282,
+          "lng": 126.969
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 66.59999999999991,
+        "longTaskCount": 1,
+        "longTaskMs": 83,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 77,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 5,
+      "state": {
+        "observedAt": 3504.5999999046326,
+        "inputToObservedMs": 184,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5710273,
+          "lng": 126.972
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 18,
+        "maxFrameGapMs": 66.80000000000018,
+        "longTaskCount": 1,
+        "longTaskMs": 77,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 92,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 6,
+      "state": {
+        "observedAt": 3852.0999999046326,
+        "inputToObservedMs": 193.69999980926514,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5620265,
+          "lng": 126.975
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 16,
+        "maxFrameGapMs": 83.30000000000018,
+        "longTaskCount": 1,
+        "longTaskMs": 80,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 107,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 7,
+      "state": {
+        "observedAt": 4187.099999904633,
+        "inputToObservedMs": 177.59999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5530256,
+          "lng": 126.978
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 66.69999999999982,
+        "longTaskCount": 1,
+        "longTaskMs": 79,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 122,
+      "restaurantRequestsSinceQueryStart": 15,
+      "heap": {
+        "usedSize": 31560412,
+        "totalSize": 55115776,
+        "embedderHeapUsedSize": 17122400,
+        "backingStorageSize": 3279565
+      },
+      "resources": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 4956
+        },
+        {
+          "name": "Nodes",
+          "value": 3914
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 31577732
+        }
+      ]
+    },
+    {
+      "pass": 1,
+      "query": 0,
+      "state": {
+        "observedAt": 4535,
+        "inputToObservedMs": 190.80000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 30,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.4960203,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 16,
+        "maxFrameGapMs": 100,
+        "longTaskCount": 1,
+        "longTaskMs": 106,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 126,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 1,
+      "state": {
+        "observedAt": 4870.5,
+        "inputToObservedMs": 178.59999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 55,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.6070307,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 15,
+        "maxFrameGapMs": 83.30000000000018,
+        "longTaskCount": 1,
+        "longTaskMs": 96,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 130,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 2,
+      "state": {
+        "observedAt": 5121.199999809265,
+        "inputToObservedMs": 129.59999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 84,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5980299,
+          "lng": 126.963
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 13,
+        "maxFrameGapMs": 33.399999999999636,
+        "longTaskCount": 1,
+        "longTaskMs": 58,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 134,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 3,
+      "state": {
+        "observedAt": 5385.900000095367,
+        "inputToObservedMs": 141.5,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 98,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.589029,
+          "lng": 126.966
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 14,
+        "maxFrameGapMs": 33.5,
+        "longTaskCount": 1,
+        "longTaskMs": 65,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 138,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 4,
+      "state": {
+        "observedAt": 5653.300000190735,
+        "inputToObservedMs": 143.30000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 112,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5800282,
+          "lng": 126.969
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 13,
+        "maxFrameGapMs": 33.399999999999636,
+        "longTaskCount": 1,
+        "longTaskMs": 69,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 142,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 5,
+      "state": {
+        "observedAt": 5919.400000095367,
+        "inputToObservedMs": 143.90000009536743,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5710273,
+          "lng": 126.972
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 13,
+        "maxFrameGapMs": 50,
+        "longTaskCount": 1,
+        "longTaskMs": 72,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 146,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 6,
+      "state": {
+        "observedAt": 6201.900000095367,
+        "inputToObservedMs": 157.09999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5620265,
+          "lng": 126.975
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 14,
+        "maxFrameGapMs": 50.100000000000364,
+        "longTaskCount": 1,
+        "longTaskMs": 81,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 150,
+      "restaurantRequestsSinceQueryStart": 4
+    },
+    {
+      "pass": 1,
+      "query": 7,
+      "state": {
+        "observedAt": 6484.900000095367,
+        "inputToObservedMs": 156.59999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5530256,
+          "lng": 126.978
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 14,
+        "maxFrameGapMs": 66.69999999999982,
+        "longTaskCount": 1,
+        "longTaskMs": 80,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 154,
+      "restaurantRequestsSinceQueryStart": 4,
+      "heap": {
+        "usedSize": 22635348,
+        "totalSize": 56688640,
+        "embedderHeapUsedSize": 41429656,
+        "backingStorageSize": 3514230
+      },
+      "resources": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 15888
+        },
+        {
+          "name": "Nodes",
+          "value": 11308
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 22635348
+        }
+      ]
+    }
+  ],
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "physicalDevice": false,
+  "pilotOnly": true,
+  "diagnosticOnly": true,
+  "measurementProtocol": "https128x2-snapshot-comparison-v1",
+  "independentExecutionLabel": "pilot-before-1",
+  "browserVersion": "155.0.8059.40",
+  "sdk": {
+    "loaded": true,
+    "remoteScript": true,
+    "stub": false,
+    "captured": true,
+    "reportedVersion": null
+  },
+  "sdkScript": {
+    "status": 200,
+    "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+  },
+  "initialRestaurantRequests": 2,
+  "initialHeap": {
+    "usedSize": 12536492,
+    "totalSize": 20774912,
+    "embedderHeapUsedSize": 5650496,
+    "backingStorageSize": 2117584
+  },
+  "initialResources": [
+    {
+      "name": "Documents",
+      "value": 2
+    },
+    {
+      "name": "JSEventListeners",
+      "value": 688
+    },
+    {
+      "name": "Nodes",
+      "value": 507
+    },
+    {
+      "name": "JSHeapUsedSize",
+      "value": 12536492
+    }
+  ],
+  "initialDomCounters": {
+    "documents": 2,
+    "nodes": 507,
+    "jsEventListeners": 688
+  },
+  "endHeap": {
+    "usedSize": 22658744,
+    "totalSize": 56688640,
+    "embedderHeapUsedSize": 41429656,
+    "backingStorageSize": 3514230
+  },
+  "endDomCounters": {
+    "documents": 2,
+    "nodes": 11308,
+    "jsEventListeners": 15888
+  },
+  "idleHeap": {
+    "usedSize": 23986448,
+    "totalSize": 56950784,
+    "embedderHeapUsedSize": 41321576,
+    "backingStorageSize": 3514568
+  },
+  "idleDomCounters": {
+    "documents": 2,
+    "nodes": 11317,
+    "jsEventListeners": 15888
+  },
+  "idleResources": [
+    {
+      "name": "Documents",
+      "value": 2
+    },
+    {
+      "name": "JSEventListeners",
+      "value": 15888
+    },
+    {
+      "name": "Nodes",
+      "value": 11317
+    },
+    {
+      "name": "JSHeapUsedSize",
+      "value": 23986448
+    }
+  ],
+  "passed": true,
+  "errors": {
+    "page": 0,
+    "console": 1,
+    "consoleCategories": {
+      "http401": 0,
+      "blockedClient": 0,
+      "provider": 0,
+      "other": 0,
+      "csp": 1
+    },
+    "cspDirectives": {
+      "connect-src": 1
+    },
+    "cspResourceGroups": {
+      "naver-family": 1
+    }
+  },
+  "requests": {
+    "restaurant": 154,
+    "otherFixture": 19,
+    "failedAppAsset": 0,
+    "failedRemoteProvider": 2,
+    "remoteFailureKinds": {
+      "other-network-failure": 1,
+      "net::ERR_ABORTED": 1
+    }
+  },
+  "endedAtUtc": "2026-10-13T13:56:14.703Z"
+}

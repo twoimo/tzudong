@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "root": "apps/web/performance/memory-allocation-sampling-20261013-v5",
+  "files": {
+    "PLAN-debug-v6.json": {
+      "bytes": 360,
+      "sha256": "b8cc26ec708eb2b9aee9ab18820e2e6bcb76a7d31e1485ec658ccc6ae690418a"
+    },
+    "PLAN-debug-v7.json": {
+      "bytes": 308,
+      "sha256": "71df3dc976e98b4bf961eab14f913736fb974d83e3159d889d48d6155cd1f758"
+    },
+    "PLAN-full-v7.json": {
+      "bytes": 574,
+      "sha256": "b3fd0d0040a922fcc6e8dea0f291f7c39d55f358b4f50c838f86772dad0a4c9c"
+    },
+    "PLAN-v1.json": {
+      "bytes": 1656,
+      "sha256": "ec63ecacd32e37a9cdf0d47d49cb8bc394f53d01cd646fa4f16c03cf1bf8418c"
+    },
+    "REPORT-v1.md": {
+      "bytes": 2321,
+      "sha256": "a8d91cd084e07309d449b68d576166e16cfad104186d1f0157d838007cd1cdc5"
+    },
+    "allocation-summary-v1.mjs": {
+      "bytes": 2906,
+      "sha256": "ba78e34d495df065e70426c556f0bc24780054e7ce4d60014d48b927af18288e"
+    },
+    "allocation-summary.test.mjs": {
+      "bytes": 2209,
+      "sha256": "0c47efb899df2a5ff27f61bf67e3aae435a8f496edbb614707d40d3abbc50510"
+    },
+    "browser-confirm-plan-v8.json": {
+      "bytes": 479,
+      "sha256": "1545e2ed23068592d5c0f9d343f49a35eb53b494d52c5306dc2f6a85be657bfc"
+    },
+    "build-receipts-v8.json": {
+      "bytes": 3747,
+      "sha256": "2f3856e1309bd43cada57ab3efa385157211a52b7da39877e02ed1c78a797257"
+    },
+    "fixture-query-v7.mjs": {
+      "bytes": 5754,
+      "sha256": "346c9c865201a48b590c439a4e06306bfada92f91c73f9a83293a991a51058b5"
+    },
+    "measure-allocation-sampling-v5.mjs": {
+      "bytes": 8914,
+      "sha256": "3303d80b25ec95cb803f0b7feadfe4655e2e7a9495a65d502a4b464402c724dc"
+    },
+    "measure-allocation-sampling-v6.mjs": {
+      "bytes": 9070,
+      "sha256": "f530616a194b4991942ce3c773c1f64c7d34a0bbc8628a4458aa946c30d83b1e"
+    },
+    "measure-allocation-sampling-v7.mjs": {
+      "bytes": 9592,
+      "sha256": "4b3a560eb656c67c6443f434b53299e203df49cc8ed20963748068aff0e3148d"
+    },
+    "real-sdk-runtime-https-v18.mjs": {
+      "bytes": 16122,
+      "sha256": "67c14491d2f3ec52b935d4e2e8427d8545c1c40b90a4b06d920194fd435581e5"
+    },
+    "ui-debug-final-1/pass-0-query-0.png": {
+      "bytes": 154882,
+      "sha256": "7f48dc0c50896a020e6a816494dcc0cf99149cd69846c0c96e577eda45bfe5c6"
+    },
+    "ui-debug-final-1/pass-0-query-7.png": {
+      "bytes": 182596,
+      "sha256": "02325517cc8289b0dfed3c8272fdf8526b0e1f83e71ecdcd9b0da550851cff07"
+    },
+    "ui-debug-final-1/raw.json": {
+      "bytes": 9457,
+      "sha256": "6734137c171710f40163517475449f7022c2880050d4fb719768056d5edfa6f3"
+    },
+    "ui-debug-final-schema-1/pass-0-query-0.png": {
+      "bytes": 154938,
+      "sha256": "65b3ffab4ae12e01b9edd8a56575261927ffb1b8714206d51ad46b24154f0f37"
+    },
+    "ui-debug-final-schema-1/pass-0-query-7.png": {
+      "bytes": 182596,
+      "sha256": "02325517cc8289b0dfed3c8272fdf8526b0e1f83e71ecdcd9b0da550851cff07"
+    },
+    "ui-debug-final-schema-1/raw.json": {
+      "bytes": 81298,
+      "sha256": "28284580b974828fbe4bc712e707ef6ff13b52cc8fd843d52c67d6777c805e36"
+    },
+    "ui-live-alloc-1/pass-0-query-0.png": {
+      "bytes": 154595,
+      "sha256": "a8f360a44945397bd312bfe3905ce3123da2664c8ae9e4c97284bb5dea043dcb"
+    },
+    "ui-live-alloc-1/pass-0-query-127.png": {
+      "bytes": 94668,
+      "sha256": "453f4d6f85a9e7d738a082863023cadbdf5eff890f8f0d5bf887a19b27ffdd47"
+    },
+    "ui-live-alloc-1/pass-1-query-0.png": {
+      "bytes": 155888,
+      "sha256": "6de72a9dc8fadf746e0852f520b555d1865d0f7d67666069e2c6fcccd69b2f88"
+    },
+    "ui-live-alloc-1/pass-1-query-127.png": {
+      "bytes": 94510,
+      "sha256": "d3b183d45ed34df101f76f0a9469c1bfcb12ae255d97c7656614837e84f03913"
+    },
+    "ui-live-alloc-1/raw.json": {
+      "bytes": 490663,
+      "sha256": "3a58b3d5bddbdd9edfed9d5171182497d9d3d26d1f2b753c7028c1c39d96288b"
+    },
+    "ui-live-alloc-schema-2/pass-0-query-0.png": {
+      "bytes": 154615,
+      "sha256": "91c10840600f2949e4bd30336762be8a3707abe368c875f859bdf5aea0d4e6ff"
+    },
+    "ui-live-alloc-schema-2/raw.json": {
+      "bytes": 50555,
+      "sha256": "bb5b87d5d7ec01baf38c4ee4c950b00ba8e30ca4464b5cf93df73db4ec1a9425"
+    }
+  }
+}

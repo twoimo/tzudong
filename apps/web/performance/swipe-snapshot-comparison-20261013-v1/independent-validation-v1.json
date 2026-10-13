@@ -1,0 +1,26 @@
+{
+  "statisticsSha256": "4eed85ce10106bd8d7f1f573d5c27f9cbc1202fbfc71ab0793ecb4dd5b0d5531",
+  "rawExecutions": 22,
+  "dependentActions": 5632,
+  "bootstrapRepeatsPerMetric": 20000,
+  "allReconstructed": true,
+  "metrics": [
+    {
+      "metric": "endHeapBytes",
+      "reconstructed": true,
+      "guardPass": false
+    },
+    {
+      "metric": "idleHeapBytes",
+      "reconstructed": true,
+      "guardPass": false
+    },
+    {
+      "metric": "selectionLatencyMedianMs",
+      "reconstructed": true,
+      "guardPass": true
+    }
+  ],
+  "performanceAdmission": 0,
+  "rawDiagnosticOnlyFlagsPreserved": true
+}

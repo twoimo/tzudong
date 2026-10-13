@@ -1,0 +1,27 @@
+{
+  "sourceCommit": "ca7674c530ec2559f9e632b38c8e542369a189b4",
+  "distDir": ".next-swipe-snapshot-after-v2",
+  "node": "24.21.0",
+  "next": "16.3.8",
+  "startedAtUtc": "2026-10-13T13:38:07.100Z",
+  "envValuesPersisted": false,
+  "serverSettingsForwarded": false,
+  "build": {
+    "exit": 0,
+    "wallMs": 72944.635416,
+    "outputBytes": 5834,
+    "rawOutputSha256": "1b7487c3d2ce989593f35a919e67175f1b33381decbd3317203bb5e5170ed177",
+    "rawOutputPersisted": false,
+    "compiled": true,
+    "compiledSeconds": 33.1
+  },
+  "cssGate": {
+    "exit": 0,
+    "wallMs": 236.81458400000702,
+    "outputBytes": 119,
+    "rawOutputSha256": "d050d9334b090cc0dfc7ee2627fe058ea3af7bfb4c3a80d4728f4f25798ef0de",
+    "rawOutputPersisted": false,
+    "compiled": false,
+    "compiledSeconds": null
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "observedAtUtc": "2026-10-13T13:38:07.026409+00:00",
+  "processExit": 1,
+  "failureCode": "UNEXPECTED_GENERATED_ENV_CHANGE",
+  "cause": "guard recognized generated routes import but omitted generated root-params import",
+  "sourceCodeFailureProven": false,
+  "buildCommandExitNotRetained": true,
+  "cssGateExitNotRetained": true,
+  "distPreserved": ".next-swipe-snapshot-after-v1",
+  "observedBuildId": "TLq3c4satXNZT0JGg6oGz",
+  "onlyGeneratedConfigChangeVerifiedAndRestored": true,
+  "performanceAdmission": 0
+}

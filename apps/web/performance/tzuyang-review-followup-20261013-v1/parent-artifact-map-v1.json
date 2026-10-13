@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "root": "apps/web/performance/tzuyang-review-followup-20261013-v1",
+  "files": {
+    "REPORT-followup-v1.md": {
+      "bytes": 10655,
+      "sha256": "9cadd1aef3c57670eb9be36b7073c373b7251b7f166c7b477e9d7ec4b7395935"
+    },
+    "REPORT-followup-v2.md": {
+      "bytes": 7016,
+      "sha256": "ecbb392bbf4597b991fe3d095bd6d375d1ee34a127481d70fe6dc9b59c8d5eb6"
+    },
+    "followup-admission-summary-v1.json": {
+      "bytes": 10755,
+      "sha256": "9ba8ddf7e090ec6ac6563cba5696abb680bf604de2ca16eb79b5a9ff0944f394"
+    },
+    "followup-triage-summary-v2.json": {
+      "bytes": 19996,
+      "sha256": "97fc30d7a7417d6970f4424e2645461ba9d6c6d45f7381383277b2cb0d011a1c"
+    },
+    "minimal-plan-correction-v2.json": {
+      "bytes": 9969,
+      "sha256": "c4cb8ebc718f3943ba5454a995915e98766b83fc0d6e7cd75fd577620c3ea2be"
+    },
+    "prepare_minimal_v2.py": {
+      "bytes": 5827,
+      "sha256": "b186dbb358b92209d7b803d77e6c01e786e849c83af527725e3570de3cf35a9b"
+    },
+    "review_admission_check.py": {
+      "bytes": 3261,
+      "sha256": "305181fb22ae4e0f505002889bff2bb6f29d86c25191ded00f82e8997d2d5af6"
+    },
+    "review_content_triage_v2.py": {
+      "bytes": 5938,
+      "sha256": "eaf0a64a9da7ad5a9033a15f5240544a08913094aa0635a1768278cbcec2e577"
+    },
+    "test_prepare_minimal_v2.py": {
+      "bytes": 1947,
+      "sha256": "3ced3b175305d1b50d1418b93d3bb8a04fa49fb682a2f3c9c46b2637907b6370"
+    },
+    "test_review_admission.py": {
+      "bytes": 4073,
+      "sha256": "df086d439edea2e8d2789695b79e0c1eb02b0fb936592cb6682d072519565462"
+    },
+    "test_review_content_triage_v2.py": {
+      "bytes": 5157,
+      "sha256": "7839e4b8a69d709415deebde9dd2a854f9fdff91fd2507e287147b697cff04b1"
+    }
+  }
+}

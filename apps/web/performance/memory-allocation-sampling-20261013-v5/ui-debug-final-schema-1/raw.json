@@ -1,0 +1,2592 @@
+{
+  "kind": "baseline",
+  "sourceCommit": "056a86600f412eb42df4304e3206841679012f3e",
+  "buildId": "bCb62_hmbOJndVfvPKnhI",
+  "startedAtUtc": "2026-10-13T13:16:10.819Z",
+  "environment": {
+    "cpuRate": 4,
+    "network": "unthrottled real remote SDK/tiles; synthetic REST735/Auth401",
+    "cache": "disabled and SW bypassed",
+    "viewport": "390x844/dpr1/touch emulation",
+    "productionBuild": true,
+    "forcedGC": false
+  },
+  "queries": 8,
+  "passes": 1,
+  "cycles": [
+    {
+      "pass": 0,
+      "query": 0,
+      "state": {
+        "observedAt": 1831.9000000953674,
+        "inputToObservedMs": 456.5,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 30,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.4960203,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 76,
+        "maxFrameGapMs": 166.5999999999999,
+        "longTaskCount": 2,
+        "longTaskMs": 256,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 17,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 1,
+      "state": {
+        "observedAt": 2283.4000000953674,
+        "inputToObservedMs": 260.80000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 55,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.6070307,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 19,
+        "maxFrameGapMs": 116.59999999999991,
+        "longTaskCount": 1,
+        "longTaskMs": 126,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 32,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 2,
+      "state": {
+        "observedAt": 2617.199999809265,
+        "inputToObservedMs": 175.09999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 84,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5980299,
+          "lng": 126.963
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 33.40000000000009,
+        "longTaskCount": 1,
+        "longTaskMs": 70,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 47,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 3,
+      "state": {
+        "observedAt": 2950.300000190735,
+        "inputToObservedMs": 177.5,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 98,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.589029,
+          "lng": 126.966
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 66.69999999999982,
+        "longTaskCount": 1,
+        "longTaskMs": 78,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 62,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 4,
+      "state": {
+        "observedAt": 3316.5,
+        "inputToObservedMs": 208.59999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 112,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5800282,
+          "lng": 126.969
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 83.40000000000009,
+        "longTaskCount": 1,
+        "longTaskMs": 98,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 77,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 5,
+      "state": {
+        "observedAt": 3666.300000190735,
+        "inputToObservedMs": 193.40000009536743,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5710273,
+          "lng": 126.972
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 17,
+        "maxFrameGapMs": 66.79999999999973,
+        "longTaskCount": 1,
+        "longTaskMs": 91,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 92,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 6,
+      "state": {
+        "observedAt": 4082.800000190735,
+        "inputToObservedMs": 223.80000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5620265,
+          "lng": 126.975
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 20,
+        "maxFrameGapMs": 83.40000000000009,
+        "longTaskCount": 1,
+        "longTaskMs": 99,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 107,
+      "restaurantRequestsSinceQueryStart": 15
+    },
+    {
+      "pass": 0,
+      "query": 7,
+      "state": {
+        "observedAt": 4466.599999904633,
+        "inputToObservedMs": 208.2999997138977,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 126,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5530256,
+          "lng": 126.978
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 18,
+        "maxFrameGapMs": 83.39999999999964,
+        "longTaskCount": 1,
+        "longTaskMs": 100,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 122,
+      "restaurantRequestsSinceQueryStart": 15,
+      "heap": {
+        "usedSize": 22789216,
+        "totalSize": 46465024,
+        "embedderHeapUsedSize": 14160728,
+        "backingStorageSize": 3262235
+      },
+      "resources": [
+        {
+          "name": "Documents",
+          "value": 2
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 4165
+        },
+        {
+          "name": "Nodes",
+          "value": 3898
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 22794092
+        }
+      ]
+    }
+  ],
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "physicalDevice": false,
+  "pilotOnly": true,
+  "diagnosticOnly": true,
+  "measurementProtocol": "allocation-sampling-final-schema-v7",
+  "sampling": {
+    "intervalBytes": 32768,
+    "stackDepth": 64,
+    "includeCollectedMajor": false,
+    "includeCollectedMinor": false,
+    "rawPersisted": false,
+    "primaryGuardUse": false,
+    "checkpoints": [
+      {
+        "phase": "idle-5s",
+        "diagnosticWallMs": 21.83391600000141,
+        "estimatedLiveBytes": 4172692,
+        "allocationTreeNodes": 707,
+        "sampleCount": 121,
+        "byNearestScriptAncestor": {
+          "app-chunk": 2486900,
+          "naver-sdk": 1417396,
+          "naver-other": 0,
+          "other-script": 0,
+          "native-or-unknown": 268396
+        },
+        "topAllocationStacks": [
+          {
+            "selfEstimatedLiveBytes": 217584,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 43674
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "join",
+                "line": -1,
+                "column": -1
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 200704,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "releaseExcept",
+                "line": 0,
+                "column": 14319
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "releaseMultiple",
+                "line": 0,
+                "column": 14179
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "release",
+                "line": 0,
+                "column": 13927
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "setMap",
+                "line": 13,
+                "column": 2438
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "_unbindMap",
+                "line": 13,
+                "column": 1732
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "unbind",
+                "line": 6,
+                "column": 24563
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 131832,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "forEach",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 49911
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "acquire",
+                "line": 0,
+                "column": 12243
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 0,
+                "column": 12941
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "includes",
+                "line": -1,
+                "column": -1
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 114812,
+            "stack": [
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/5059-7b1615e884984724.js",
+                "function": "x",
+                "line": 0,
+                "column": 66224
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "sG",
+                "line": 0,
+                "column": 150652
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "so",
+                "line": 0,
+                "column": 123300
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "sv",
+                "line": 0,
+                "column": 128808
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "unnamed",
+                "line": 0,
+                "column": 129147
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ih",
+                "line": 0,
+                "column": 83648
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "o4",
+                "line": 0,
+                "column": 74221
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ax",
+                "line": 0,
+                "column": 53644
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 101076,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "forEach",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 49911
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "acquire",
+                "line": 0,
+                "column": 12243
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "setMap",
+                "line": 13,
+                "column": 2438
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "_bindMap",
+                "line": 13,
+                "column": 455
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "bindTo",
+                "line": 6,
+                "column": 24219
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "bindTo",
+                "line": 6,
+                "column": 24219
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "addListener",
+                "line": 6,
+                "column": 21198
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 98924,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "forEach",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 49911
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "acquire",
+                "line": 0,
+                "column": 12243
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "setMap",
+                "line": 13,
+                "column": 2438
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "_bindMap",
+                "line": 13,
+                "column": 455
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "bindTo",
+                "line": 6,
+                "column": 24219
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "bindTo",
+                "line": 6,
+                "column": 24219
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 98480,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uC",
+                "line": 0,
+                "column": 120974
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uN",
+                "line": 0,
+                "column": 120785
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uC",
+                "line": 0,
+                "column": 120974
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uN",
+                "line": 0,
+                "column": 120785
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uC",
+                "line": 0,
+                "column": 120974
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uN",
+                "line": 0,
+                "column": 120785
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uC",
+                "line": 0,
+                "column": 120974
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uN",
+                "line": 0,
+                "column": 120785
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uz",
+                "line": 0,
+                "column": 121551
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "e",
+                "line": 0,
+                "column": 121921
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "e",
+                "line": 0,
+                "column": 121921
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "e",
+                "line": 0,
+                "column": 121921
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 98340,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "forEach",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 49911
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "acquire",
+                "line": 0,
+                "column": 12243
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "setMap",
+                "line": 13,
+                "column": 2438
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "_bindMap",
+                "line": 13,
+                "column": 455
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "bindTo",
+                "line": 6,
+                "column": 24219
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "bindTo",
+                "line": 6,
+                "column": 24219
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "unnamed",
+                "line": 5,
+                "column": 13702
+              },
+              {
+                "group": "naver-sdk",
+                "asset": null,
+                "function": "bind",
+                "line": -1,
+                "column": -1
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 70804,
+            "stack": [
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/5059-7b1615e884984724.js",
+                "function": "x",
+                "line": 0,
+                "column": 66224
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "sG",
+                "line": 0,
+                "column": 150652
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "so",
+                "line": 0,
+                "column": 123300
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "sv",
+                "line": 0,
+                "column": 128808
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "unnamed",
+                "line": 0,
+                "column": 129147
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ih",
+                "line": 0,
+                "column": 83648
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "o4",
+                "line": 0,
+                "column": 74221
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ax",
+                "line": 0,
+                "column": 53644
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/5452-c651f1f4d7708da1.js",
+                "function": "Z",
+                "line": 0,
+                "column": 14616
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 68488,
+            "stack": [
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 66064,
+            "stack": [
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/webpack-1b4b09bf854a3efd.js",
+                "function": "o",
+                "line": 0,
+                "column": 61
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/5839.c588554caa3db406.js",
+                "function": "unnamed",
+                "line": 0,
+                "column": 39814
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/webpack-1b4b09bf854a3efd.js",
+                "function": "o",
+                "line": 0,
+                "column": 61
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 65816,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "forEach",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 49911
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "acquire",
+                "line": 0,
+                "column": 12243
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 65668,
+            "stack": [
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/webpack-1b4b09bf854a3efd.js",
+                "function": "o",
+                "line": 0,
+                "column": 61
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/5839.c588554caa3db406.js",
+                "function": "unnamed",
+                "line": 0,
+                "column": 39814
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/webpack-1b4b09bf854a3efd.js",
+                "function": "o",
+                "line": 0,
+                "column": 61
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/1258.6f96de8c45cf04fb.js",
+                "function": "unnamed",
+                "line": 0,
+                "column": 7228
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/webpack-1b4b09bf854a3efd.js",
+                "function": "o",
+                "line": 0,
+                "column": 61
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/5452-c651f1f4d7708da1.js",
+                "function": "unnamed",
+                "line": 0,
+                "column": 11719
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/webpack-1b4b09bf854a3efd.js",
+                "function": "o",
+                "line": 0,
+                "column": 61
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9864-572c82d6f0cc743c.js",
+                "function": "unnamed",
+                "line": 0,
+                "column": 83
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 65572,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "forEach",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 49911
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "acquire",
+                "line": 0,
+                "column": 12243
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "x.Marker",
+                "line": 13,
+                "column": 14544
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "setOptions",
+                "line": 13,
+                "column": 14959
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "setMap",
+                "line": 13,
+                "column": 2438
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "_bindMap",
+                "line": 13,
+                "column": 455
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "bindTo",
+                "line": 6,
+                "column": 24219
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "bindTo",
+                "line": 6,
+                "column": 24219
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "addListener",
+                "line": 6,
+                "column": 21198
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 65568,
+            "stack": [
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32203
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "e",
+                "line": 46,
+                "column": 31349
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/758.f9668e39a7787602.js",
+                "function": "d",
+                "line": 0,
+                "column": 5891
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/7387.f6acdc3759c7e9e3.js",
+                "function": "getClusters",
+                "line": 0,
+                "column": 5101
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/7387.f6acdc3759c7e9e3.js",
+                "function": "_featureJSON",
+                "line": 0,
+                "column": 8681
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 65568,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "forEach",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 49911
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/758.f9668e39a7787602.js",
+                "function": "u",
+                "line": 0,
+                "column": 11716
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 65568,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "forEach",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 49911
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "acquire",
+                "line": 0,
+                "column": 12243
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "x.Marker",
+                "line": 13,
+                "column": 14544
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "setOptions",
+                "line": 13,
+                "column": 14959
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "setMap",
+                "line": 13,
+                "column": 2438
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "onAdd",
+                "line": 13,
+                "column": 16676
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "_addListener",
+                "line": 13,
+                "column": 22291
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "_getListener",
+                "line": 13,
+                "column": 22811
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 65568,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 49911
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "acquire",
+                "line": 0,
+                "column": 12243
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "setIcon",
+                "line": 13,
+                "column": 15968
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "set",
+                "line": 6,
+                "column": 23689
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "__notifyChanged",
+                "line": 13,
+                "column": 328
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "_icon_changed",
+                "line": 13,
+                "column": 18159
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "update",
+                "line": 13,
+                "column": 8431
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "_icon_loaded",
+                "line": 13,
+                "column": 18780
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "updateShape",
+                "line": 13,
+                "column": 19856
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "_setEventTarget",
+                "line": 13,
+                "column": 21150
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "_addListener",
+                "line": 13,
+                "column": 22291
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "_getListener",
+                "line": 13,
+                "column": 22811
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 65568,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "forEach",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 49911
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "e8",
+                "line": 46,
+                "column": 45589
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "e2",
+                "line": 0,
+                "column": 21946
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 45677
+              },
+              {
+                "group": "naver-sdk",
+                "asset": "/openapi/v3/maps.js",
+                "function": "x.LatLng",
+                "line": 5,
+                "column": 31200
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 65568,
+            "stack": [
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 36040,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "releaseExcept",
+                "line": 0,
+                "column": 14319
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "releaseMultiple",
+                "line": 0,
+                "column": 14179
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "release",
+                "line": 0,
+                "column": 13927
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "delete",
+                "line": -1,
+                "column": -1
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 35976,
+            "stack": [
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/5059-7b1615e884984724.js",
+                "function": "x",
+                "line": 0,
+                "column": 66224
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "sG",
+                "line": 0,
+                "column": 150652
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "so",
+                "line": 0,
+                "column": 123300
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "sv",
+                "line": 0,
+                "column": 128808
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "unnamed",
+                "line": 0,
+                "column": 129147
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ih",
+                "line": 0,
+                "column": 83648
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "oX",
+                "line": 0,
+                "column": 72513
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "o4",
+                "line": 0,
+                "column": 74221
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ax",
+                "line": 0,
+                "column": 53644
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9483.1b20f56af4b043c0.js",
+                "function": "unnamed",
+                "line": 0,
+                "column": 5193
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 35940,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "forEach",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 49911
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/758.f9668e39a7787602.js",
+                "function": "u",
+                "line": 0,
+                "column": 11716
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/758.f9668e39a7787602.js",
+                "function": "x.content.g",
+                "line": 0,
+                "column": 12864
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "set",
+                "line": -1,
+                "column": -1
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 35640,
+            "stack": [
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": 0,
+                "column": 0
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 34728,
+            "stack": [
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/5059-7b1615e884984724.js",
+                "function": "x",
+                "line": 0,
+                "column": 66224
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "sG",
+                "line": 0,
+                "column": 150652
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "so",
+                "line": 0,
+                "column": 123300
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "sv",
+                "line": 0,
+                "column": 128808
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "unnamed",
+                "line": 0,
+                "column": 129147
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ih",
+                "line": 0,
+                "column": 83648
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "o4",
+                "line": 0,
+                "column": 74221
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ax",
+                "line": 0,
+                "column": 53644
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/1258.6f96de8c45cf04fb.js",
+                "function": "en",
+                "line": 0,
+                "column": 14400
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 33800,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 34705
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "Set",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "add",
+                "line": -1,
+                "column": -1
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 33800,
+            "stack": [
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "uy",
+                "line": 0,
+                "column": 116947
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ub",
+                "line": 0,
+                "column": 117199
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "iE",
+                "line": 0,
+                "column": 93085
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 32549
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/9963.3828e5ba8b832285.js",
+                "function": "unnamed",
+                "line": 46,
+                "column": 36082
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "add",
+                "line": -1,
+                "column": -1
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 33596,
+            "stack": [
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/5059-7b1615e884984724.js",
+                "function": "x",
+                "line": 0,
+                "column": 66224
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "sG",
+                "line": 0,
+                "column": 150652
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "so",
+                "line": 0,
+                "column": 123300
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "sv",
+                "line": 0,
+                "column": 128808
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "unnamed",
+                "line": 0,
+                "column": 129147
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ih",
+                "line": 0,
+                "column": 83648
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "o4",
+                "line": 0,
+                "column": 74221
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "ax",
+                "line": 0,
+                "column": 53644
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js",
+                "function": "aC",
+                "line": 0,
+                "column": 54001
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/5059-7b1615e884984724.js",
+                "function": "C",
+                "line": 13,
+                "column": 27060
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 33232,
+            "stack": [
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/7815.4b90189d2098f437.js",
+                "function": "unnamed",
+                "line": 0,
+                "column": 2282
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/3516.0d3321bafa00c5a0.js",
+                "function": "s",
+                "line": 0,
+                "column": 2809
+              }
+            ]
+          },
+          {
+            "selfEstimatedLiveBytes": 33184,
+            "stack": [
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "native-or-unknown",
+                "asset": null,
+                "function": "unnamed",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/1258.6f96de8c45cf04fb.js",
+                "function": "queryFn",
+                "line": 0,
+                "column": 18888
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/864-2d8ba5888f5a5e7a.js",
+                "function": "in",
+                "line": 3,
+                "column": 5516
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "map",
+                "line": -1,
+                "column": -1
+              },
+              {
+                "group": "app-chunk",
+                "asset": "/_next/static/chunks/864-2d8ba5888f5a5e7a.js",
+                "function": "unnamed",
+                "line": 3,
+                "column": 5555
+              },
+              {
+                "group": "app-chunk",
+                "asset": null,
+                "function": "test",
+                "line": -1,
+                "column": -1
+              }
+            ]
+          }
+        ],
+        "rawProfilePersisted": false,
+        "primaryGuardUse": false,
+        "semantics": "Sampling estimates live allocations after profiling began. Script-ancestor attribution is not ownership or retained size; samples and profiler overhead prevent primary performance comparisons."
+      }
+    ]
+  },
+  "independentExecutionLabel": "debug-final-schema-1",
+  "browserVersion": "155.0.8059.40",
+  "sdk": {
+    "loaded": true,
+    "remoteScript": true,
+    "stub": false,
+    "captured": true,
+    "reportedVersion": null
+  },
+  "sdkScript": {
+    "status": 200,
+    "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+  },
+  "initialRestaurantRequests": 2,
+  "initialHeap": {
+    "usedSize": 12564464,
+    "totalSize": 21037056,
+    "embedderHeapUsedSize": 5778632,
+    "backingStorageSize": 2117307
+  },
+  "initialResources": [
+    {
+      "name": "Documents",
+      "value": 2
+    },
+    {
+      "name": "JSEventListeners",
+      "value": 688
+    },
+    {
+      "name": "Nodes",
+      "value": 507
+    },
+    {
+      "name": "JSHeapUsedSize",
+      "value": 12564464
+    }
+  ],
+  "initialDomCounters": {
+    "documents": 2,
+    "nodes": 507,
+    "jsEventListeners": 688
+  },
+  "endHeap": {
+    "usedSize": 22821432,
+    "totalSize": 46465024,
+    "embedderHeapUsedSize": 14160728,
+    "backingStorageSize": 3262588
+  },
+  "endDomCounters": {
+    "documents": 2,
+    "nodes": 3898,
+    "jsEventListeners": 4165
+  },
+  "idleHeap": {
+    "usedSize": 24232512,
+    "totalSize": 46465024,
+    "embedderHeapUsedSize": 14392312,
+    "backingStorageSize": 3263292
+  },
+  "idleDomCounters": {
+    "documents": 2,
+    "nodes": 3907,
+    "jsEventListeners": 4165
+  },
+  "idleResources": [
+    {
+      "name": "Documents",
+      "value": 2
+    },
+    {
+      "name": "JSEventListeners",
+      "value": 4165
+    },
+    {
+      "name": "Nodes",
+      "value": 3907
+    },
+    {
+      "name": "JSHeapUsedSize",
+      "value": 24232512
+    }
+  ],
+  "stopSamplingSchema": {
+    "treeNodes": 707,
+    "samples": 121,
+    "orphanSamples": 0,
+    "invalidSizes": 0,
+    "orphanEstimatedSampleBytes": 0,
+    "rawPersisted": false
+  },
+  "passed": true,
+  "errors": {
+    "page": 0,
+    "console": 1,
+    "consoleCategories": {
+      "http401": 0,
+      "blockedClient": 0,
+      "provider": 0,
+      "other": 0,
+      "csp": 1
+    },
+    "cspDirectives": {
+      "connect-src": 1
+    },
+    "cspResourceGroups": {
+      "naver-family": 1
+    }
+  },
+  "requests": {
+    "restaurant": 122,
+    "otherFixture": 19,
+    "failedAppAsset": 0,
+    "failedRemoteProvider": 1,
+    "remoteFailureKinds": {
+      "other-network-failure": 1
+    }
+  },
+  "endedAtUtc": "2026-10-13T13:16:22.898Z"
+}

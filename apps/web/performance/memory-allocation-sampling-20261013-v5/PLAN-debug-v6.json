@@ -1,0 +1,9 @@
+{
+  "createdBeforeRun": true,
+  "flowActions": 8,
+  "independentExecutions": 1,
+  "comparisonAllowed": false,
+  "purpose": "Identify exact bounded analyzer failure, preserving failed256 execution",
+  "scriptSha256": "f530616a194b4991942ce3c773c1f64c7d34a0bbc8628a4458aa946c30d83b1e",
+  "priorPrepareFailure": "incorrect_relative_workdir; no browser started"
+}

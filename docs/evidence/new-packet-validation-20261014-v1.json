@@ -1,0 +1,34 @@
+{
+  "observedAtUTC": "2026-10-13T20:22:37.794608+00:00",
+  "verified": true,
+  "verifierSha256": "5edf8da3eb807be3a60f07fb7aa4bd34767c58327b5d75351ace6ee8a97050ef",
+  "packets": [
+    {
+      "pin": "docs/evidence/memory-allocation-sampling-20261013-v5-parent-v1.json",
+      "verified": true,
+      "files": 27,
+      "mapSha256": "beb48543a90de76f54111af95c9d2c5c32fcfc11ed827691328e645c4e688a88"
+    },
+    {
+      "pin": "docs/evidence/tzuyang-review-followup-20261013-v1-parent-v1.json",
+      "verified": true,
+      "files": 11,
+      "mapSha256": "7007b9fd4853fac88fb3c3e78167df02fcd79b0f8e052fa2a7d7127c65d933d7"
+    },
+    {
+      "pin": "docs/evidence/promotion-security-20261013-v2-parent-v1.json",
+      "verified": true,
+      "files": 6,
+      "mapSha256": "6961a573d699d24bb71785c7c9b058fb63265067af43bcb578521c5e1d2a94fd"
+    },
+    {
+      "pin": "docs/evidence/swipe-snapshot-comparison-20261013-v1-parent-v1.json",
+      "verified": true,
+      "files": 143,
+      "mapSha256": "ef32064b9cc87a982cf36add735f93f1333bfe183a041f4bc7ff8cba4a213d19"
+    }
+  ],
+  "mappedFiles": 187,
+  "performanceAdmission": 0,
+  "operatingEvidence": false
+}
