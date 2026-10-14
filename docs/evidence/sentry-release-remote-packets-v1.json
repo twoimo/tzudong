@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "remoteCommit": "14603618d7d1744607a1bc479ad5eba8a35599a1",
+  "packets": [
+    "sentry-preview-20261015-v1",
+    "sentry-preview-release-20261015-v1",
+    "sentry-release-binding-20261015-v1",
+    "sentry-ci-invalid-samples-20261015-v1"
+  ],
+  "blobsVerified": 43,
+  "bytes": 4706705,
+  "allSha256Equal": true
+}
