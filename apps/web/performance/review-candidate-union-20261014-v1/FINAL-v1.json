@@ -1,0 +1,23 @@
+{
+  "requestReductionMeasured": true,
+  "requestRelativeDecreasePercent": 26.294165981922763,
+  "memoryImprovementProven": false,
+  "latencyImprovementProven": false,
+  "endHeapGuardSupported": false,
+  "candidateAdmitted": false,
+  "sourcePromotionForCandidate": false,
+  "deploymentForCandidate": false,
+  "fieldAdmission": 0,
+  "phoneUsed": false,
+  "fullGoalComplete": false,
+  "allPrimaryGuardsSupported": false,
+  "primaryIndependentProcesses": 22,
+  "withinProcessActions": 256,
+  "primaryDependentActions": 5632,
+  "independentStatisticsValidation": true,
+  "liveDatabaseEqualitySamples": 6,
+  "fallbackBreakpointChecks": 3,
+  "diagnosticProcesses": 2,
+  "nextBottleneckEvidence": "same164markers/9354setIcon/16904setMap in both diagnostic processes",
+  "retainedPathProof": false
+}

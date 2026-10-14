@@ -1,0 +1,99 @@
+{
+  "startedAtUTC": "2026-10-14T04:39:08.232Z",
+  "planSha256": "2558dd92c5302a558a35a4e93d478c1eef4ef2168142ab060168f27e868e2407",
+  "sourceSha256": "1f0c3c9ca90d05e881e8b069bddf153d4a7c580f670ebbff32010a274578ef40",
+  "credentialKind": "publishable",
+  "role": "anonymous",
+  "actualDatabase": true,
+  "samples": [
+    {
+      "case": "public-restaurant-1",
+      "repeat": 0,
+      "filterEncodedBytes": 691,
+      "predicateCount": 6,
+      "equalCandidateIdSet": true,
+      "exactCount": 1,
+      "uniqueIds": 1,
+      "legacyRequests": 6,
+      "unionRequests": 1,
+      "legacyElapsedMs": 498.75183300000003,
+      "unionElapsedMs": 263.1850830000001
+    },
+    {
+      "case": "public-restaurant-1",
+      "repeat": 1,
+      "filterEncodedBytes": 691,
+      "predicateCount": 6,
+      "equalCandidateIdSet": true,
+      "exactCount": 1,
+      "uniqueIds": 1,
+      "legacyRequests": 6,
+      "unionRequests": 1,
+      "legacyElapsedMs": 253.89595800000006,
+      "unionElapsedMs": 106.3313340000002
+    },
+    {
+      "case": "public-restaurant-2",
+      "repeat": 0,
+      "filterEncodedBytes": 767,
+      "predicateCount": 6,
+      "equalCandidateIdSet": true,
+      "exactCount": 6,
+      "uniqueIds": 6,
+      "legacyRequests": 6,
+      "unionRequests": 1,
+      "legacyElapsedMs": 261.33854199999996,
+      "unionElapsedMs": 98.24995800000033
+    },
+    {
+      "case": "public-restaurant-2",
+      "repeat": 1,
+      "filterEncodedBytes": 767,
+      "predicateCount": 6,
+      "equalCandidateIdSet": true,
+      "exactCount": 6,
+      "uniqueIds": 6,
+      "legacyRequests": 6,
+      "unionRequests": 1,
+      "legacyElapsedMs": 251.6248330000003,
+      "unionElapsedMs": 95.66045800000029
+    },
+    {
+      "case": "reserved-literal-empty",
+      "repeat": 0,
+      "filterEncodedBytes": 449,
+      "predicateCount": 6,
+      "equalCandidateIdSet": true,
+      "exactCount": 0,
+      "uniqueIds": 0,
+      "legacyRequests": 6,
+      "unionRequests": 1,
+      "legacyElapsedMs": 250.7220830000001,
+      "unionElapsedMs": 93.92958399999998
+    },
+    {
+      "case": "reserved-literal-empty",
+      "repeat": 1,
+      "filterEncodedBytes": 449,
+      "predicateCount": 6,
+      "equalCandidateIdSet": true,
+      "exactCount": 0,
+      "uniqueIds": 0,
+      "legacyRequests": 6,
+      "unionRequests": 1,
+      "legacyElapsedMs": 254.96512499999972,
+      "unionElapsedMs": 94.33237499999996
+    }
+  ],
+  "responseDataPersisted": false,
+  "credentialsPersisted": false,
+  "operatingWrites": 0,
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "passed": true,
+  "requests": 43,
+  "statuses": {
+    "200": 43
+  },
+  "completedAtUTC": "2026-10-14T04:39:11.936Z"
+}

@@ -1,0 +1,739 @@
+{
+  "planSha256": "46097392766180a65a006237c1121a2c0d598aa2764491551686b319974a8bfa",
+  "independentProcesses": 22,
+  "ABPairs": 9,
+  "AAProcesses": 4,
+  "dependentActions": 5632,
+  "functionalAssertionsPassed": true,
+  "metrics": [
+    {
+      "metric": "endHeapBytes",
+      "nPairs": 9,
+      "beforeMedian": 45287732,
+      "afterMedian": 40978328,
+      "absoluteDecrease": 4309404,
+      "relativeImprovementPercent": 9.515610099441501,
+      "absoluteDecrease95CI": [
+        -19583720,
+        13984896
+      ],
+      "relativeImprovement95CI": [
+        -77.20595598219884,
+        28.91941058804466
+      ],
+      "medianPairedRegressionPercent": -8.33877042021005,
+      "pairedRegression95CI": [
+        -29.523121312617683,
+        77.20595598219886
+      ],
+      "fixedRegressionGuardPercent": 20,
+      "guardPass": false,
+      "pairsExceedingGuard": 2,
+      "positiveImprovementProven": false,
+      "practicalMemoryThresholdMet": true,
+      "judgement": "regression guard unproven or violated",
+      "AA": {
+        "nIndependentProcesses": 4,
+        "median": 30886130,
+        "minimum": 25408888,
+        "maximum": 45130016,
+        "MAD": 5394324,
+        "rangeRelativeToMedianPercent": 63.851081375361694
+      },
+      "pairs": [
+        {
+          "before": 45287732,
+          "after": 41511292
+        },
+        {
+          "before": 25323972,
+          "after": 45397740
+        },
+        {
+          "before": 25376572,
+          "after": 28847596
+        },
+        {
+          "before": 48772404,
+          "after": 34373268
+        },
+        {
+          "before": 25365556,
+          "after": 44949276
+        },
+        {
+          "before": 48165848,
+          "after": 25465132
+        },
+        {
+          "before": 45273964,
+          "after": 35649832
+        },
+        {
+          "before": 48358164,
+          "after": 40978328
+        },
+        {
+          "before": 45390232,
+          "after": 49407776
+        }
+      ]
+    },
+    {
+      "metric": "idleHeapBytes",
+      "nPairs": 9,
+      "beforeMedian": 46327272,
+      "afterMedian": 35453992,
+      "absoluteDecrease": 10873280,
+      "relativeImprovementPercent": 23.47058121617867,
+      "absoluteDecrease95CI": [
+        -10311892,
+        22675508
+      ],
+      "relativeImprovement95CI": [
+        -38.98268639491508,
+        46.112761936989514
+      ],
+      "medianPairedRegressionPercent": -8.133705779179056,
+      "pairedRegression95CI": [
+        -46.11276193698952,
+        12.95260953107935
+      ],
+      "fixedRegressionGuardPercent": 20,
+      "guardPass": true,
+      "pairsExceedingGuard": 1,
+      "positiveImprovementProven": false,
+      "practicalMemoryThresholdMet": true,
+      "judgement": "improvement unproven",
+      "AA": {
+        "nIndependentProcesses": 4,
+        "median": 31914832,
+        "minimum": 26459932,
+        "maximum": 46174224,
+        "MAD": 5389674,
+        "rangeRelativeToMedianPercent": 61.77156752697304
+      },
+      "pairs": [
+        {
+          "before": 46327272,
+          "after": 42559148
+        },
+        {
+          "before": 26367816,
+          "after": 46435716
+        },
+        {
+          "before": 26452492,
+          "after": 29878780
+        },
+        {
+          "before": 49825316,
+          "after": 35453992
+        },
+        {
+          "before": 26409968,
+          "after": 25231744
+        },
+        {
+          "before": 49174040,
+          "after": 26498532
+        },
+        {
+          "before": 46315012,
+          "after": 36764384
+        },
+        {
+          "before": 49426872,
+          "after": 25131404
+        },
+        {
+          "before": 46436304,
+          "after": 50422972
+        }
+      ]
+    },
+    {
+      "metric": "selectionLatencyMedianMs",
+      "nPairs": 9,
+      "beforeMedian": 176.04999995231628,
+      "afterMedian": 175.54999995231628,
+      "absoluteDecrease": 0.5,
+      "relativeImprovementPercent": 0.28401022444500235,
+      "absoluteDecrease95CI": [
+        -6.350000381469727,
+        13
+      ],
+      "relativeImprovement95CI": [
+        -3.34650876914278,
+        7.514450867052023
+      ],
+      "medianPairedRegressionPercent": -0.28401022444499713,
+      "pairedRegression95CI": [
+        -7.514450867052025,
+        3.3465087691427753
+      ],
+      "fixedRegressionGuardPercent": 15,
+      "guardPass": true,
+      "pairsExceedingGuard": 0,
+      "positiveImprovementProven": false,
+      "practicalMemoryThresholdMet": null,
+      "judgement": "improvement unproven",
+      "AA": {
+        "nIndependentProcesses": 4,
+        "median": 170.02500009536743,
+        "minimum": 161.60000014305115,
+        "maximum": 191,
+        "MAD": 6.449999928474426,
+        "rangeRelativeToMedianPercent": 17.291574674582165
+      },
+      "pairs": [
+        {
+          "before": 174.7000002861023,
+          "after": 184.85000014305115
+        },
+        {
+          "before": 176.69999980926514,
+          "after": 176.45000004768372
+        },
+        {
+          "before": 176.04999995231628,
+          "after": 175.54999995231628
+        },
+        {
+          "before": 189.74999976158142,
+          "after": 196.10000014305115
+        },
+        {
+          "before": 179.90000009536743,
+          "after": 176.80000019073486
+        },
+        {
+          "before": 188.00000023841858,
+          "after": 175.29999995231628
+        },
+        {
+          "before": 159.04999995231628,
+          "after": 161.79999995231628
+        },
+        {
+          "before": 159.89999985694885,
+          "after": 146.45000004768372
+        },
+        {
+          "before": 173,
+          "after": 160
+        }
+      ]
+    },
+    {
+      "metric": "reviewVisibleMedianMs",
+      "nPairs": 9,
+      "beforeMedian": 259.2500002384186,
+      "afterMedian": 245.09999990463257,
+      "absoluteDecrease": 14.15000033378601,
+      "relativeImprovementPercent": 5.458052197019479,
+      "absoluteDecrease95CI": [
+        -15.199999809265137,
+        16.649999856948853
+      ],
+      "relativeImprovement95CI": [
+        -6.568863484933645,
+        6.8167860212687215
+      ],
+      "medianPairedRegressionPercent": -0.5036128125373907,
+      "pairedRegression95CI": [
+        -6.816786021268717,
+        6.680285960655996
+      ],
+      "fixedRegressionGuardPercent": null,
+      "guardPass": null,
+      "pairsExceedingGuard": null,
+      "positiveImprovementProven": false,
+      "practicalMemoryThresholdMet": null,
+      "judgement": "improvement unproven",
+      "AA": {
+        "nIndependentProcesses": 4,
+        "median": 244.0000001192093,
+        "minimum": 243.09999990463257,
+        "maximum": 275.75,
+        "MAD": 0.5750000476837158,
+        "rangeRelativeToMedianPercent": 13.381147573531091
+      },
+      "pairs": [
+        {
+          "before": 244.75000023841858,
+          "after": 261.10000014305115
+        },
+        {
+          "before": 259.75,
+          "after": 245.40000009536743
+        },
+        {
+          "before": 259.2500002384186,
+          "after": 245.09999990463257
+        },
+        {
+          "before": 275.5,
+          "after": 278.39999985694885
+        },
+        {
+          "before": 260.9500000476837,
+          "after": 259.9500000476837
+        },
+        {
+          "before": 270.4500000476837,
+          "after": 244.59999990463257
+        },
+        {
+          "before": 227.75,
+          "after": 243.349999666214
+        },
+        {
+          "before": 228.34999990463257,
+          "after": 227.20000004768372
+        },
+        {
+          "before": 244.25,
+          "after": 227.60000014305115
+        }
+      ]
+    },
+    {
+      "metric": "restaurantRequests",
+      "nPairs": 9,
+      "beforeMedian": 2434,
+      "afterMedian": 1794,
+      "absoluteDecrease": 640,
+      "relativeImprovementPercent": 26.294165981922763,
+      "absoluteDecrease95CI": [
+        640,
+        640
+      ],
+      "relativeImprovement95CI": [
+        26.294165981922763,
+        26.294165981922763
+      ],
+      "medianPairedRegressionPercent": -26.294165981922756,
+      "pairedRegression95CI": [
+        -26.294165981922756,
+        -26.294165981922756
+      ],
+      "fixedRegressionGuardPercent": null,
+      "guardPass": null,
+      "pairsExceedingGuard": null,
+      "positiveImprovementProven": true,
+      "practicalMemoryThresholdMet": null,
+      "judgement": "measured local metric difference",
+      "AA": {
+        "nIndependentProcesses": 4,
+        "median": 2434,
+        "minimum": 2434,
+        "maximum": 2434,
+        "MAD": 0,
+        "rangeRelativeToMedianPercent": 0
+      },
+      "pairs": [
+        {
+          "before": 2434,
+          "after": 1794
+        },
+        {
+          "before": 2434,
+          "after": 1794
+        },
+        {
+          "before": 2434,
+          "after": 1794
+        },
+        {
+          "before": 2434,
+          "after": 1794
+        },
+        {
+          "before": 2434,
+          "after": 1794
+        },
+        {
+          "before": 2434,
+          "after": 1794
+        },
+        {
+          "before": 2434,
+          "after": 1794
+        },
+        {
+          "before": 2434,
+          "after": 1794
+        },
+        {
+          "before": 2434,
+          "after": 1794
+        }
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "kind": "baseline",
+      "label": "aa-1",
+      "independentProcess": 1,
+      "phase": "AA",
+      "rawSha256": "7389482ad502e56655afa5b723f9649c7d891ec65116f13d290d2a95ea5e3cb0",
+      "endHeapBytes": 36197536,
+      "idleHeapBytes": 37239280,
+      "reviewVisibleMedianMs": 243.75000023841858,
+      "restaurantRequests": 2434,
+      "selectionLatencyMedianMs": 165.55000019073486,
+      "selectionLatencyWithinRunP95Ms": 240.09999990463257,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "baseline",
+      "label": "aa-2",
+      "independentProcess": 2,
+      "phase": "AA",
+      "rawSha256": "ea175c23f9f94bb4b2631cce90e2765980cc07c293b09d57c88dc681ebc6fe9d",
+      "endHeapBytes": 25574724,
+      "idleHeapBytes": 26590384,
+      "reviewVisibleMedianMs": 275.75,
+      "restaurantRequests": 2434,
+      "selectionLatencyMedianMs": 191,
+      "selectionLatencyWithinRunP95Ms": 262.5,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "baseline",
+      "label": "aa-3",
+      "independentProcess": 3,
+      "phase": "AA",
+      "rawSha256": "a379a0e107f7ac7d7c8054f3cd4d494b1e5572575eddaeda305084535fcebd78",
+      "endHeapBytes": 25408888,
+      "idleHeapBytes": 26459932,
+      "reviewVisibleMedianMs": 243.09999990463257,
+      "restaurantRequests": 2434,
+      "selectionLatencyMedianMs": 161.60000014305115,
+      "selectionLatencyWithinRunP95Ms": 237.09999990463257,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "baseline",
+      "label": "aa-4",
+      "independentProcess": 4,
+      "phase": "AA",
+      "rawSha256": "dd0e73d12feb1203411d49ee815efb7fcf3e3e1be90175a0cf812c7bfb90b551",
+      "endHeapBytes": 45130016,
+      "idleHeapBytes": 46174224,
+      "reviewVisibleMedianMs": 244.25,
+      "restaurantRequests": 2434,
+      "selectionLatencyMedianMs": 174.5,
+      "selectionLatencyWithinRunP95Ms": 232.59999990463257,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-1-baseline",
+      "pair": 1,
+      "phase": "AB",
+      "independentProcess": 5,
+      "rawSha256": "fe6044f64fcee990d94b73c73d2abd84f167c39c79e5e72563716101ea9e7da7",
+      "endHeapBytes": 45287732,
+      "idleHeapBytes": 46327272,
+      "reviewVisibleMedianMs": 244.75000023841858,
+      "restaurantRequests": 2434,
+      "selectionLatencyMedianMs": 174.7000002861023,
+      "selectionLatencyWithinRunP95Ms": 252.80000019073486,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-1-candidate",
+      "pair": 1,
+      "phase": "AB",
+      "independentProcess": 6,
+      "rawSha256": "6af376accca68bf95c9fc5e577eb5829bf5de8de982c81eb98129f5771dcf8e0",
+      "endHeapBytes": 41511292,
+      "idleHeapBytes": 42559148,
+      "reviewVisibleMedianMs": 261.10000014305115,
+      "restaurantRequests": 1794,
+      "selectionLatencyMedianMs": 184.85000014305115,
+      "selectionLatencyWithinRunP95Ms": 291.30000019073486,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-2-candidate",
+      "pair": 2,
+      "phase": "AB",
+      "independentProcess": 7,
+      "rawSha256": "4dc05ab44980ba0a1e00209a07d718559b3688916fad7972d322fe03181543cb",
+      "endHeapBytes": 45397740,
+      "idleHeapBytes": 46435716,
+      "reviewVisibleMedianMs": 245.40000009536743,
+      "restaurantRequests": 1794,
+      "selectionLatencyMedianMs": 176.45000004768372,
+      "selectionLatencyWithinRunP95Ms": 259.40000009536743,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-2-baseline",
+      "pair": 2,
+      "phase": "AB",
+      "independentProcess": 8,
+      "rawSha256": "a1810f4b3d8e6141906ed412bcfc002bb71bc50eab3fe26f5cf88a3fc81bb440",
+      "endHeapBytes": 25323972,
+      "idleHeapBytes": 26367816,
+      "reviewVisibleMedianMs": 259.75,
+      "restaurantRequests": 2434,
+      "selectionLatencyMedianMs": 176.69999980926514,
+      "selectionLatencyWithinRunP95Ms": 259.69999980926514,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-3-candidate",
+      "pair": 3,
+      "phase": "AB",
+      "independentProcess": 9,
+      "rawSha256": "2c1fa8fd114a2545cc3b96c778211056226405fc2f3e0ce29c7c9481d199eba3",
+      "endHeapBytes": 28847596,
+      "idleHeapBytes": 29878780,
+      "reviewVisibleMedianMs": 245.09999990463257,
+      "restaurantRequests": 1794,
+      "selectionLatencyMedianMs": 175.54999995231628,
+      "selectionLatencyWithinRunP95Ms": 245.5,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-3-baseline",
+      "pair": 3,
+      "phase": "AB",
+      "independentProcess": 10,
+      "rawSha256": "f82c6cc02d73aa4eefde04bfc6d4ea1c35372e663bb0d433dfe1f5dc633e3ca0",
+      "endHeapBytes": 25376572,
+      "idleHeapBytes": 26452492,
+      "reviewVisibleMedianMs": 259.2500002384186,
+      "restaurantRequests": 2434,
+      "selectionLatencyMedianMs": 176.04999995231628,
+      "selectionLatencyWithinRunP95Ms": 276.19999980926514,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-4-candidate",
+      "pair": 4,
+      "phase": "AB",
+      "independentProcess": 11,
+      "rawSha256": "01845d5c609f367d3182111744a33fe591cc77844e7c6f405c27bc1487ac441a",
+      "endHeapBytes": 34373268,
+      "idleHeapBytes": 35453992,
+      "reviewVisibleMedianMs": 278.39999985694885,
+      "restaurantRequests": 1794,
+      "selectionLatencyMedianMs": 196.10000014305115,
+      "selectionLatencyWithinRunP95Ms": 301.90000009536743,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-4-baseline",
+      "pair": 4,
+      "phase": "AB",
+      "independentProcess": 12,
+      "rawSha256": "4c126a9e27b87180370ed7c0e1e04dd270d7a6d4cee07596e13d517d50c6b0c7",
+      "endHeapBytes": 48772404,
+      "idleHeapBytes": 49825316,
+      "reviewVisibleMedianMs": 275.5,
+      "restaurantRequests": 2434,
+      "selectionLatencyMedianMs": 189.74999976158142,
+      "selectionLatencyWithinRunP95Ms": 278.80000019073486,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-5-candidate",
+      "pair": 5,
+      "phase": "AB",
+      "independentProcess": 13,
+      "rawSha256": "4447185a297465e57a8f4f9cfd7531c77cb37d86dad2ccb0ea5c998ef22b4ba1",
+      "endHeapBytes": 44949276,
+      "idleHeapBytes": 25231744,
+      "reviewVisibleMedianMs": 259.9500000476837,
+      "restaurantRequests": 1794,
+      "selectionLatencyMedianMs": 176.80000019073486,
+      "selectionLatencyWithinRunP95Ms": 275.90000009536743,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-5-baseline",
+      "pair": 5,
+      "phase": "AB",
+      "independentProcess": 14,
+      "rawSha256": "80be3ed012a81032735973588f22a2a334dadc6a8235b3f4d4006df1bf8c8b9a",
+      "endHeapBytes": 25365556,
+      "idleHeapBytes": 26409968,
+      "reviewVisibleMedianMs": 260.9500000476837,
+      "restaurantRequests": 2434,
+      "selectionLatencyMedianMs": 179.90000009536743,
+      "selectionLatencyWithinRunP95Ms": 259.7999997138977,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-6-candidate",
+      "pair": 6,
+      "phase": "AB",
+      "independentProcess": 15,
+      "rawSha256": "db66443949f28c28c483dc2bb7b881f538e6a082a7d63c6e8886d81392b16917",
+      "endHeapBytes": 25465132,
+      "idleHeapBytes": 26498532,
+      "reviewVisibleMedianMs": 244.59999990463257,
+      "restaurantRequests": 1794,
+      "selectionLatencyMedianMs": 175.29999995231628,
+      "selectionLatencyWithinRunP95Ms": 254.2000002861023,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-6-baseline",
+      "pair": 6,
+      "phase": "AB",
+      "independentProcess": 16,
+      "rawSha256": "97c26d34ede2b47b038af45a1fa3ea791d32dc150ddb152ad28e59affa3bf899",
+      "endHeapBytes": 48165848,
+      "idleHeapBytes": 49174040,
+      "reviewVisibleMedianMs": 270.4500000476837,
+      "restaurantRequests": 2434,
+      "selectionLatencyMedianMs": 188.00000023841858,
+      "selectionLatencyWithinRunP95Ms": 289.90000009536743,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-7-candidate",
+      "pair": 7,
+      "phase": "AB",
+      "independentProcess": 17,
+      "rawSha256": "c9d3409f369126fa0c4e0fc6171d395e96c3fcd6fa24da693b39d76d07e661fb",
+      "endHeapBytes": 35649832,
+      "idleHeapBytes": 36764384,
+      "reviewVisibleMedianMs": 243.349999666214,
+      "restaurantRequests": 1794,
+      "selectionLatencyMedianMs": 161.79999995231628,
+      "selectionLatencyWithinRunP95Ms": 231.5,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-7-baseline",
+      "pair": 7,
+      "phase": "AB",
+      "independentProcess": 18,
+      "rawSha256": "71aa3a74c3b4938ae694ed76992d2adbc95099c7500e48121b3c636bbbcc134e",
+      "endHeapBytes": 45273964,
+      "idleHeapBytes": 46315012,
+      "reviewVisibleMedianMs": 227.75,
+      "restaurantRequests": 2434,
+      "selectionLatencyMedianMs": 159.04999995231628,
+      "selectionLatencyWithinRunP95Ms": 242.40000009536743,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-8-candidate",
+      "pair": 8,
+      "phase": "AB",
+      "independentProcess": 19,
+      "rawSha256": "38f99796019f9799479d3d358fadf996eafd428f73d32e412566122d2532d462",
+      "endHeapBytes": 40978328,
+      "idleHeapBytes": 25131404,
+      "reviewVisibleMedianMs": 227.20000004768372,
+      "restaurantRequests": 1794,
+      "selectionLatencyMedianMs": 146.45000004768372,
+      "selectionLatencyWithinRunP95Ms": 211.90000009536743,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-8-baseline",
+      "pair": 8,
+      "phase": "AB",
+      "independentProcess": 20,
+      "rawSha256": "6b3df2b1b0d8fc3efa1593fbd820f951fde02558f32706fb64af0f53dda54491",
+      "endHeapBytes": 48358164,
+      "idleHeapBytes": 49426872,
+      "reviewVisibleMedianMs": 228.34999990463257,
+      "restaurantRequests": 2434,
+      "selectionLatencyMedianMs": 159.89999985694885,
+      "selectionLatencyWithinRunP95Ms": 227.30000019073486,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-9-candidate",
+      "pair": 9,
+      "phase": "AB",
+      "independentProcess": 21,
+      "rawSha256": "584418dff5a48e85cd8d27d6cdb90dc758ccd55147bb5f14587b1d229fb1db0c",
+      "endHeapBytes": 49407776,
+      "idleHeapBytes": 50422972,
+      "reviewVisibleMedianMs": 227.60000014305115,
+      "restaurantRequests": 1794,
+      "selectionLatencyMedianMs": 160,
+      "selectionLatencyWithinRunP95Ms": 227.90000009536743,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-9-baseline",
+      "pair": 9,
+      "phase": "AB",
+      "independentProcess": 22,
+      "rawSha256": "43859e4cd596c949a297b422986c0718bcbd2c6f79a9a425f084db878f8dcd08",
+      "endHeapBytes": 45390232,
+      "idleHeapBytes": 46436304,
+      "reviewVisibleMedianMs": 244.25,
+      "restaurantRequests": 2434,
+      "selectionLatencyMedianMs": 173,
+      "selectionLatencyWithinRunP95Ms": 251.7999997138977,
+      "sdkConsoleIncidents": 1,
+      "rawDiagnosticOnly": false
+    }
+  ],
+  "bootstrap": {
+    "seed": 20261015,
+    "repeats": 20000,
+    "method": "paired percentile bootstrap of per-process medians; approximate small-sample intervals"
+  },
+  "rawDiagnosticOnlyFlag": false,
+  "primaryGuardEvaluation": "predeclared matched natural conditions from PLAN-v4; no profiler or forced GC",
+  "independentPopulationP95": null,
+  "fieldAdmission": 0,
+  "physicalDevice": false,
+  "productionDeployment": false,
+  "performanceAdmitted": false,
+  "remainingAdmission": "all primary guard bounds, actual database/count-cost and viewport/invalidation cases, independent validation and canonical scoring",
+  "allPrimaryGuardsSupported": false
+}

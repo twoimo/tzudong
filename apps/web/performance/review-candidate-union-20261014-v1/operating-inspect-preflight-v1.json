@@ -1,0 +1,8 @@
+{
+  "atUTC": "2026-10-14T04:56:16.265736+00:00",
+  "failureCode": "LOCAL_PROJECT_LINK_ABSENT",
+  "vercelActionStarted": false,
+  "globalOrProjectConfigurationChanged": false,
+  "operatingWrites": 0,
+  "nextMethod": "authenticated read-only API with explicit project id; no linking"
+}

@@ -1,0 +1,7 @@
+{
+  "phase": "before browser/process measurement initialization",
+  "code": "RUNTIME_INPUT_PATH_MISSING",
+  "runtimeSha256": "539ad220d0a906fd08446552f7c16e6dbd46dd9d21cafc59544336809ee27c93",
+  "independentMeasurementStarted": false,
+  "measurementSamples": 0
+}

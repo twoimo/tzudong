@@ -1,0 +1,887 @@
+{
+  "runs": [
+    {
+      "label": "aa-1",
+      "kind": "baseline",
+      "phase": "AA",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 692
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 2510,
+        "jsEventListeners": 2915
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 2510,
+        "jsEventListeners": 2915
+      },
+      "naturalEndHeapBytes": 36197536,
+      "naturalIdleHeapBytes": 37239280,
+      "checkpointHeapBytes": [
+        34472488,
+        48201312,
+        27012972,
+        35360212,
+        51077596,
+        22277344,
+        42069812,
+        38422780,
+        32973228,
+        42275864,
+        24688632,
+        32634804,
+        38026808,
+        46951052,
+        45952268,
+        35896064
+      ]
+    },
+    {
+      "label": "aa-2",
+      "kind": "baseline",
+      "phase": "AA",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 688
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 1520,
+        "jsEventListeners": 1496
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 1520,
+        "jsEventListeners": 1496
+      },
+      "naturalEndHeapBytes": 25574724,
+      "naturalIdleHeapBytes": 26590384,
+      "checkpointHeapBytes": [
+        35422124,
+        18667520,
+        33387660,
+        40289308,
+        25501236,
+        55578316,
+        43234592,
+        29479276,
+        43857892,
+        48118856,
+        27951200,
+        49426664,
+        48885548,
+        33792704,
+        43258984,
+        25260760
+      ]
+    },
+    {
+      "label": "aa-3",
+      "kind": "baseline",
+      "phase": "AA",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 688
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 1520,
+        "jsEventListeners": 1500
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 1520,
+        "jsEventListeners": 1500
+      },
+      "naturalEndHeapBytes": 25408888,
+      "naturalIdleHeapBytes": 26459932,
+      "checkpointHeapBytes": [
+        34668224,
+        48060716,
+        26599036,
+        35845468,
+        21109876,
+        52519856,
+        33794596,
+        35183632,
+        37452812,
+        37396560,
+        46363380,
+        50418104,
+        25709964,
+        34566260,
+        43103660,
+        25094940
+      ]
+    },
+    {
+      "label": "aa-4",
+      "kind": "baseline",
+      "phase": "AA",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 680
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 3506,
+        "jsEventListeners": 4336
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 3506,
+        "jsEventListeners": 4336
+      },
+      "naturalEndHeapBytes": 45130016,
+      "naturalIdleHeapBytes": 46174224,
+      "checkpointHeapBytes": [
+        35028508,
+        48286184,
+        26514452,
+        35129716,
+        25713368,
+        33008596,
+        31822636,
+        54093884,
+        23968224,
+        34331920,
+        34534060,
+        41174604,
+        28269192,
+        29497956,
+        44528984,
+        44834004
+      ]
+    },
+    {
+      "label": "ab-1-baseline",
+      "kind": "baseline",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 680
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 3506,
+        "jsEventListeners": 4344
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 3506,
+        "jsEventListeners": 4344
+      },
+      "naturalEndHeapBytes": 45287732,
+      "naturalIdleHeapBytes": 46327272,
+      "checkpointHeapBytes": [
+        34561408,
+        47994112,
+        26682944,
+        34996476,
+        32343744,
+        37450756,
+        47959820,
+        48547464,
+        39253516,
+        34447372,
+        24604376,
+        49079524,
+        41506440,
+        27955272,
+        42908388,
+        44933644
+      ]
+    },
+    {
+      "label": "ab-1-candidate",
+      "kind": "candidate",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 686
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 11591,
+        "jsEventListeners": 15382
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 11591,
+        "jsEventListeners": 15382
+      },
+      "naturalEndHeapBytes": 41511292,
+      "naturalIdleHeapBytes": 42559148,
+      "checkpointHeapBytes": [
+        34681240,
+        48480508,
+        23852052,
+        23297588,
+        50402120,
+        54219156,
+        43049272,
+        27346664,
+        50066652,
+        24062816,
+        46617616,
+        33404892,
+        28443672,
+        28146656,
+        43134600,
+        41210732
+      ]
+    },
+    {
+      "label": "ab-2-candidate",
+      "kind": "candidate",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 686
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 3503,
+        "jsEventListeners": 4346
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 3503,
+        "jsEventListeners": 4346
+      },
+      "naturalEndHeapBytes": 45397740,
+      "naturalIdleHeapBytes": 46435716,
+      "checkpointHeapBytes": [
+        36479440,
+        39125264,
+        47264008,
+        44892160,
+        25775948,
+        44317148,
+        30614840,
+        44139828,
+        40380416,
+        37524176,
+        34682416,
+        32698280,
+        29886044,
+        42646796,
+        24807560,
+        45098332
+      ]
+    },
+    {
+      "label": "ab-2-baseline",
+      "kind": "baseline",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 684
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 1522,
+        "jsEventListeners": 1492
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 1522,
+        "jsEventListeners": 1492
+      },
+      "naturalEndHeapBytes": 25323972,
+      "naturalIdleHeapBytes": 26367816,
+      "checkpointHeapBytes": [
+        24752292,
+        35554636,
+        33429144,
+        29864092,
+        48484732,
+        32887128,
+        43386364,
+        58712380,
+        23945400,
+        49492740,
+        24553264,
+        45866412,
+        51702028,
+        47171356,
+        30808348,
+        25010552
+      ]
+    },
+    {
+      "label": "ab-3-candidate",
+      "kind": "candidate",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 688
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 4488,
+        "jsEventListeners": 5754
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 4488,
+        "jsEventListeners": 5754
+      },
+      "naturalEndHeapBytes": 28847596,
+      "naturalIdleHeapBytes": 29878780,
+      "checkpointHeapBytes": [
+        26720652,
+        28297648,
+        19259436,
+        38192204,
+        48545596,
+        48554340,
+        43880428,
+        27400984,
+        27601756,
+        37500536,
+        34562728,
+        50166296,
+        47104132,
+        27968556,
+        43932388,
+        28547904
+      ]
+    },
+    {
+      "label": "ab-3-baseline",
+      "kind": "baseline",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 688
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 1520,
+        "jsEventListeners": 1500
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 1520,
+        "jsEventListeners": 1500
+      },
+      "naturalEndHeapBytes": 25376572,
+      "naturalIdleHeapBytes": 26452492,
+      "checkpointHeapBytes": [
+        35354628,
+        47760600,
+        30441892,
+        38763284,
+        21207016,
+        43712532,
+        41359164,
+        45787936,
+        28740120,
+        34383252,
+        52330024,
+        32866412,
+        48451624,
+        34369844,
+        35178804,
+        47819796
+      ]
+    },
+    {
+      "label": "ab-4-candidate",
+      "kind": "candidate",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 696
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 2515,
+        "jsEventListeners": 2875
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 2524,
+        "jsEventListeners": 2875
+      },
+      "naturalEndHeapBytes": 34373268,
+      "naturalIdleHeapBytes": 35453992,
+      "checkpointHeapBytes": [
+        35679332,
+        47999608,
+        46158812,
+        32395640,
+        31843492,
+        31140428,
+        29788432,
+        38992196,
+        35924800,
+        44154196,
+        34871000,
+        32956524,
+        41716988,
+        24770924,
+        45860732,
+        34053720
+      ]
+    },
+    {
+      "label": "ab-4-baseline",
+      "kind": "baseline",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 516,
+        "jsEventListeners": 688
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 27996,
+        "jsEventListeners": 37708
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 27996,
+        "jsEventListeners": 37708
+      },
+      "naturalEndHeapBytes": 48772404,
+      "naturalIdleHeapBytes": 49825316,
+      "checkpointHeapBytes": [
+        35052680,
+        47303276,
+        48321452,
+        36946816,
+        32277664,
+        37355232,
+        36293068,
+        37673488,
+        33730208,
+        27405972,
+        35198796,
+        52161512,
+        34621540,
+        32890500,
+        32184528,
+        48477824
+      ]
+    },
+    {
+      "label": "ab-5-candidate",
+      "kind": "candidate",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 688
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 20066,
+        "jsEventListeners": 26874
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 1520,
+        "jsEventListeners": 1490
+      },
+      "naturalEndHeapBytes": 44949276,
+      "naturalIdleHeapBytes": 25231744,
+      "checkpointHeapBytes": [
+        35144240,
+        48349972,
+        46006484,
+        39320148,
+        39625448,
+        37157652,
+        42964676,
+        34869956,
+        45782724,
+        34453620,
+        24801044,
+        45988260,
+        24520964,
+        42564328,
+        28074144,
+        44654732
+      ]
+    },
+    {
+      "label": "ab-5-baseline",
+      "kind": "baseline",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 688
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 1520,
+        "jsEventListeners": 1488
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 1520,
+        "jsEventListeners": 1488
+      },
+      "naturalEndHeapBytes": 25365556,
+      "naturalIdleHeapBytes": 26409968,
+      "checkpointHeapBytes": [
+        34526636,
+        48277404,
+        39101272,
+        27690760,
+        27042000,
+        25866944,
+        56811948,
+        56724796,
+        24222004,
+        48462172,
+        29835692,
+        36801432,
+        34708648,
+        30017508,
+        44642596,
+        24998052
+      ]
+    },
+    {
+      "label": "ab-6-candidate",
+      "kind": "candidate",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 688
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 1520,
+        "jsEventListeners": 1500
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 1520,
+        "jsEventListeners": 1500
+      },
+      "naturalEndHeapBytes": 25465132,
+      "naturalIdleHeapBytes": 26498532,
+      "checkpointHeapBytes": [
+        27018632,
+        28893556,
+        37012868,
+        35040596,
+        20900324,
+        41663324,
+        43057896,
+        45471620,
+        32934288,
+        44160444,
+        34510936,
+        49065660,
+        41504660,
+        38212108,
+        42811628,
+        25154344
+      ]
+    },
+    {
+      "label": "ab-6-baseline",
+      "kind": "baseline",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 680
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 6429,
+        "jsEventListeners": 8052
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 6429,
+        "jsEventListeners": 8052
+      },
+      "naturalEndHeapBytes": 48165848,
+      "naturalIdleHeapBytes": 49174040,
+      "checkpointHeapBytes": [
+        26949764,
+        48926768,
+        22875844,
+        32076628,
+        47221252,
+        49845108,
+        34344268,
+        40655920,
+        24217876,
+        34485180,
+        29446060,
+        48192844,
+        34802260,
+        43327288,
+        39375924,
+        47866280
+      ]
+    },
+    {
+      "label": "ab-7-candidate",
+      "kind": "candidate",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 694
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 2509,
+        "jsEventListeners": 2914
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 2509,
+        "jsEventListeners": 2914
+      },
+      "naturalEndHeapBytes": 35649832,
+      "naturalIdleHeapBytes": 36764384,
+      "checkpointHeapBytes": [
+        26556344,
+        28596116,
+        26357652,
+        34818524,
+        42732176,
+        44296364,
+        36924348,
+        26935432,
+        34344612,
+        33624164,
+        24583224,
+        43133124,
+        30620784,
+        24829312,
+        34755972,
+        35351524
+      ]
+    },
+    {
+      "label": "ab-7-baseline",
+      "kind": "baseline",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 692
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 3500,
+        "jsEventListeners": 4340
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 3500,
+        "jsEventListeners": 4340
+      },
+      "naturalEndHeapBytes": 45273964,
+      "naturalIdleHeapBytes": 46315012,
+      "checkpointHeapBytes": [
+        35450276,
+        28497604,
+        22739172,
+        39051580,
+        25833372,
+        36362544,
+        53052484,
+        48533900,
+        35956136,
+        24327752,
+        48457288,
+        45781904,
+        52168056,
+        47135364,
+        28117108,
+        44977416
+      ]
+    },
+    {
+      "label": "ab-8-candidate",
+      "kind": "candidate",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 694
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 10947,
+        "jsEventListeners": 14314
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 1517,
+        "jsEventListeners": 1490
+      },
+      "naturalEndHeapBytes": 40978328,
+      "naturalIdleHeapBytes": 25131404,
+      "checkpointHeapBytes": [
+        34354056,
+        47376260,
+        45950940,
+        47761984,
+        26215840,
+        25196648,
+        22884572,
+        34813700,
+        23925100,
+        44191744,
+        46096828,
+        49325352,
+        29666776,
+        38991792,
+        34632916,
+        40683444
+      ]
+    },
+    {
+      "label": "ab-8-baseline",
+      "kind": "baseline",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 684
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 26424,
+        "jsEventListeners": 35654
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 26424,
+        "jsEventListeners": 35654
+      },
+      "naturalEndHeapBytes": 48358164,
+      "naturalIdleHeapBytes": 49426872,
+      "checkpointHeapBytes": [
+        34675000,
+        48086548,
+        26698676,
+        35760536,
+        21047936,
+        33648640,
+        51826172,
+        37788800,
+        33046920,
+        44047536,
+        34736212,
+        49473040,
+        24574860,
+        44275760,
+        40780960,
+        48063444
+      ]
+    },
+    {
+      "label": "ab-9-candidate",
+      "kind": "candidate",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 688
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 9808,
+        "jsEventListeners": 12422
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 9808,
+        "jsEventListeners": 12422
+      },
+      "naturalEndHeapBytes": 49407776,
+      "naturalIdleHeapBytes": 50422972,
+      "checkpointHeapBytes": [
+        34700556,
+        47741900,
+        46013096,
+        29452108,
+        33655328,
+        49075592,
+        23017708,
+        43262844,
+        28936440,
+        51194568,
+        37336956,
+        50562140,
+        34681616,
+        43324060,
+        49159560,
+        49113240
+      ]
+    },
+    {
+      "label": "ab-9-baseline",
+      "kind": "baseline",
+      "phase": "AB",
+      "initialDom": {
+        "documents": 2,
+        "nodes": 507,
+        "jsEventListeners": 688
+      },
+      "endDom": {
+        "documents": 2,
+        "nodes": 3502,
+        "jsEventListeners": 4344
+      },
+      "idleDom": {
+        "documents": 2,
+        "nodes": 3502,
+        "jsEventListeners": 4344
+      },
+      "naturalEndHeapBytes": 45390232,
+      "naturalIdleHeapBytes": 46436304,
+      "checkpointHeapBytes": [
+        28254496,
+        27666136,
+        39172732,
+        20170660,
+        42703148,
+        43639096,
+        43134604,
+        23779132,
+        32978428,
+        27355796,
+        37398376,
+        40359028,
+        29579648,
+        47197668,
+        43174100,
+        45094472
+      ]
+    }
+  ],
+  "rawUnchanged": true,
+  "endHeapGuardStillUnsupported": true,
+  "hypothesis": "garbage lifetime/GC phase affects sampled heap and DOM/listener counters; no claim of leak absence or fixed guard"
+}

@@ -1,0 +1,19 @@
+{
+  "startedAtUTC": "2026-10-14T04:39:59.277Z",
+  "sourceCommit": "fb5fc0c4285bd2095a0c86bb6306e6043480f395",
+  "buildId": "1Yvbv01aPHEP8HwZ-3U2U",
+  "productionBuild": true,
+  "realRemoteSDK": true,
+  "diagnosticOnly": true,
+  "physicalDevice": false,
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "viewportInterpretation": "CSS breakpoint coverage; context retains touch/mobile emulation at all widths",
+  "measuredPrimarySeriesReused": false,
+  "cases": [],
+  "screenshotsContainOnlySyntheticRestaurantAndReviewContent": true,
+  "browserVersion": "155.0.8059.40",
+  "passed": false,
+  "failureCode": "FALLBACK_UI_ASSERTION_FAILED",
+  "completedAtUTC": "2026-10-14T04:40:11.162Z"
+}

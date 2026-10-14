@@ -1,0 +1,45 @@
+{
+  "cases": [
+    {
+      "label": "union-503-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "faults": 4,
+      "passed": true,
+      "evidence": "fallback-ui-v3/result.json"
+    },
+    {
+      "label": "unknown-count-tablet",
+      "viewport": {
+        "width": 834,
+        "height": 1112
+      },
+      "faults": 1,
+      "passed": true,
+      "evidence": "fallback-ui-v3/result.json"
+    },
+    {
+      "label": "capped-response-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "faults": 1,
+      "passed": true,
+      "evidence": "fallback-ui-v4/result.json"
+    }
+  ],
+  "actualRemoteNaver": true,
+  "productionCandidateBuild": true,
+  "contextTouchEmulation": true,
+  "pixelFlickerAssertion": false,
+  "failuresPreserved": [
+    1,
+    2,
+    3
+  ],
+  "phoneUsed": false,
+  "admittedPerformanceSlices": 0
+}

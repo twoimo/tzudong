@@ -1,0 +1,20 @@
+{
+  "observedAtUTC": "2026-10-14T04:56:56.061205+00:00",
+  "readOnly": true,
+  "cli": "56.5.0",
+  "node": "24.21.0",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "orgId": "team_OUj64KeLxJI3PkEbOaFZnorA",
+  "name": "tzudong",
+  "rootDirectory": "apps/web",
+  "nodeVersion": "24.x",
+  "alias": "www.tzudong.app",
+  "deploymentId": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5",
+  "deploymentState": "READY",
+  "url": "tzudong-dbx25vroz-twoimos-projects.vercel.app",
+  "githubCommitSha": "1884f87e53c4567ead7c9a0fb394b09b91a70396",
+  "protectedMainSha": "3d7919d6ea396b21bd185fb2a96ae9677e34824c",
+  "latestCandidateDeployed": false,
+  "operatingMutation": 0,
+  "rawResponsePersisted": false
+}

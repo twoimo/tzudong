@@ -1,0 +1,230 @@
+diff --git a/apps/web/components/restaurant/RestaurantDetailPanel.tsx b/apps/web/components/restaurant/RestaurantDetailPanel.tsx
+index 62131790..b5360122 100644
+--- a/apps/web/components/restaurant/RestaurantDetailPanel.tsx
++++ b/apps/web/components/restaurant/RestaurantDetailPanel.tsx
+@@ -39,6 +39,7 @@ import { ReviewCard } from "@/components/reviews/ReviewCard";
+ import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
+ import { useReviewLikesRealtime } from "@/hooks/use-review-likes-realtime";
+ import { openExternalUrl } from "@/lib/open-external-url";
++import { readRestaurantReviewCandidates, RESTAURANT_REVIEW_CANDIDATE_SELECT } from "@/lib/restaurant-review-candidate-reader";
+ import {
+     collectDirectRestaurantReviewIds,
+     getRestaurantReviewLookupName,
+@@ -446,7 +447,6 @@ export function RestaurantDetailPanel({
+                 const reviewLookupName = getRestaurantReviewLookupName(restaurant);
+ 
+                 if (reviewLookupName) {
+-                    const candidateSelect = 'id, name:approved_name, approved_name, origin_name, naver_name, google_name, road_address, jibun_address';
+                     const lookupNames = Array.from(new Set([
+                         reviewLookupName,
+                         restaurant.origin_name,
+@@ -469,40 +469,14 @@ export function RestaurantDetailPanel({
+                         ]),
+                     ].filter((address): address is string => Boolean(address))));
+ 
+-                    const relatedRestaurantResults = await Promise.all([
+-                        ...lookupNames.flatMap((name) => [
+-                            supabase
+-                                .from('restaurants')
+-                                .select(candidateSelect)
+-                                .eq('approved_name', name),
+-                            supabase
+-                                .from('restaurants')
+-                                .select(candidateSelect)
+-                                .eq('origin_name', name),
+-                            supabase
+-                                .from('restaurants')
+-                                .select(candidateSelect)
+-                                .eq('naver_name', name),
+-                            supabase
+-                                .from('restaurants')
+-                                .select(candidateSelect)
+-                                .eq('google_name', name),
+-                        ]),
+-                        ...lookupAddresses.map((address) =>
+-                            supabase
+-                                .from('restaurants')
+-                                .select(candidateSelect)
+-                                .eq('road_address', address)
+-                        ),
+-                        ...lookupAddresses.map((address) =>
+-                            supabase
+-                                .from('restaurants')
+-                                .select(candidateSelect)
+-                                .eq('jibun_address', address)
+-                        ),
+-                    ]);
+-
+-                    const relatedRestaurants = relatedRestaurantResults.flatMap((result) => result.data || []);
++                    const relatedRestaurants = await readRestaurantReviewCandidates({
++                        names: lookupNames,
++                        addresses: lookupAddresses,
++                        readUnion: async filter => await supabase.from('restaurants')
++                            .select(RESTAURANT_REVIEW_CANDIDATE_SELECT, { count: 'exact' }).or(filter),
++                        readOne: async ({ field, value }) => await supabase.from('restaurants')
++                            .select(RESTAURANT_REVIEW_CANDIDATE_SELECT).eq(field, value),
++                    });
+ 
+                     allIds = selectRelatedRestaurantReviewIds(restaurant, relatedRestaurants as Restaurant[]);
+                 }
+diff --git a/apps/web/lib/restaurant-review-candidate-reader.ts b/apps/web/lib/restaurant-review-candidate-reader.ts
+new file mode 100644
+index 00000000..3f4d5aca
+--- /dev/null
++++ b/apps/web/lib/restaurant-review-candidate-reader.ts
+@@ -0,0 +1,58 @@
++export const RESTAURANT_REVIEW_CANDIDATE_SELECT =
++    'id, name:approved_name, approved_name, origin_name, naver_name, google_name, road_address, jibun_address';
++
++const NAME_FIELDS = ['approved_name', 'origin_name', 'naver_name', 'google_name'] as const;
++type CandidateField = typeof NAME_FIELDS[number] | 'road_address' | 'jibun_address';
++export type ReviewCandidateCriterion = Readonly<{ field: CandidateField; value: string }>;
++type CandidateRow = Partial<Record<CandidateField, string | null>>;
++type CandidateResult<T> = { data: T[] | null; error: unknown; count?: number | null };
++
++export function buildReviewCandidateCriteria(names: readonly string[], addresses: readonly string[]): ReviewCandidateCriterion[] {
++    return [
++        ...names.flatMap(value => NAME_FIELDS.map(field => ({ field, value }))),
++        ...addresses.map(value => ({ field: 'road_address' as const, value })),
++        ...addresses.map(value => ({ field: 'jibun_address' as const, value })),
++    ];
++}
++
++export function buildReviewCandidateUnionFilter(criteria: readonly ReviewCandidateCriterion[]): string {
++    // PostgREST quoted literals protect commas, parentheses, periods, quotes and backslashes.
++    return criteria.map(({ field, value }) => `${field}.eq."${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',');
++}
++
++export async function readRestaurantReviewCandidates<T extends CandidateRow>({
++    names,
++    addresses,
++    readUnion,
++    readOne,
++}: {
++    names: readonly string[];
++    addresses: readonly string[];
++    readUnion: (filter: string) => PromiseLike<CandidateResult<T>>;
++    readOne: (criterion: ReviewCandidateCriterion) => PromiseLike<CandidateResult<T>>;
++}): Promise<T[]> {
++    const criteria = buildReviewCandidateCriteria(names, addresses);
++    if (criteria.length === 0) return [];
++    const filter = buildReviewCandidateUnionFilter(criteria);
++
++    // Long merged alias lists keep the original individual-query behavior.
++    if (encodeURIComponent(filter).length <= 6000) {
++        try {
++            const result = await readUnion(filter);
++            if (!result.error && Array.isArray(result.data)
++                && Number.isSafeInteger(result.count) && result.count === result.data.length) {
++                // Database equality can use a different collation from JavaScript.
++                // Keep the complete server union; the existing name/address ID selector
++                // decides membership, and the review query retains its own ordering.
++                return result.data;
++            }
++        } catch {
++            // A new union failure must not discard rows that legacy reads can still obtain.
++        }
++    }
++
++    // Missing/estimated counts, server row caps and partial failures use the unchanged
++    // individual predicates, preserving their existing partial-error/throw semantics.
++    const results = await Promise.all(criteria.map(criterion => readOne(criterion)));
++    return results.flatMap(result => result.data || []);
++}
+diff --git a/apps/web/tests-unit/restaurant-review-candidate-reader.test.ts b/apps/web/tests-unit/restaurant-review-candidate-reader.test.ts
+new file mode 100644
+index 00000000..a20b3bb1
+--- /dev/null
++++ b/apps/web/tests-unit/restaurant-review-candidate-reader.test.ts
+@@ -0,0 +1,91 @@
++import {expect, test} from 'bun:test';
++import {buildReviewCandidateCriteria, buildReviewCandidateUnionFilter, readRestaurantReviewCandidates} from '../lib/restaurant-review-candidate-reader';
++
++const names = ['맛집'];
++const addresses = ['서울 주소'];
++const rows = [
++    {id:'one',approved_name:'맛집',origin_name:'옛 이름',road_address:'서울 주소'},
++    {id:'two',naver_name:'맛집',jibun_address:'서울 주소'},
++    {id:'three',google_name:'맛집'},
++];
++const criteria = buildReviewCandidateCriteria(names, addresses);
++const legacy = criteria.flatMap(({field,value}) => rows.filter(row => row[field as keyof typeof row] === value));
++
++test('complete union preserves legacy ID set without duplicate row allocations', async () => {
++    let calls=0;
++    const result=await readRestaurantReviewCandidates({names,addresses,
++        readUnion:async () => {calls++;return {data:rows,count:rows.length,error:null};},
++        readOne:async () => {throw Error('individual read was unnecessary');}});
++    expect(result).toEqual(rows);
++    expect(calls).toBe(1);
++    expect(new Set(result.map(x=>x.id))).toEqual(new Set(legacy.map(x=>x.id)));
++    expect(result.filter(x=>x.id==='one').every(x=>x===rows[0])).toBe(true);
++});
++
++test('quoted filter retains literal Unicode and reserved characters without adding predicates', () => {
++    const value='가게, (별관). "한식" \\ 길:끝';
++    const filter=buildReviewCandidateUnionFilter([{field:'approved_name',value}]);
++    expect(filter).toBe('approved_name.eq.'+JSON.stringify(value));
++    expect(buildReviewCandidateCriteria([value],[value])).toHaveLength(6);
++});
++
++for(const fault of ['nullCount','capped','error','throw','badCount'] as const){
++    test(`union ${fault} restores individual partial-error semantics`, async () => {
++        let fallback=0;
++        const result=await readRestaurantReviewCandidates({names,addresses,
++            readUnion:async () => {
++                if(fault==='throw')throw Error('untrusted provider detail');
++                return {data:rows.slice(0,1),count:fault==='nullCount'?null:fault==='badCount'?NaN:rows.length,error:fault==='error'?{code:'unavailable'}:null};
++            },
++            readOne:async c => {fallback++;return c.field==='google_name'?{data:null,error:{code:'partial'}}:{data:rows.filter(row=>row[c.field as keyof typeof row]===c.value),error:null};}});
++        expect(result).toEqual(legacy.filter(x=>x.id!=='three'));
++        expect(fallback).toBe(6);
++    });
++}
++
++test('server cap with 2000 rows falls back without silently discarding individual candidates', async () => {
++    const many=Array.from({length:2000},(_,i)=>({id:String(i),approved_name:i<1000?'맛집':'옛 이름',origin_name:i>=1000?'맛집':null}));
++    let calls=0;
++    const result=await readRestaurantReviewCandidates({names,addresses:[],
++        readUnion:async () => ({data:many.slice(0,1000),count:2000,error:null}),
++        readOne:async ({field,value}) => {calls++;return {data:many.filter(row=>row[field as keyof typeof row]===value),error:null};}});
++    expect(new Set(result.map(x=>x.id)).size).toBe(2000);
++    expect(calls).toBe(4);
++});
++
++test('empty results are complete and empty predicates perform no requests', async () => {
++    const unexpected=async () => {throw Error('unexpected read');};
++    expect(await readRestaurantReviewCandidates({names:[],addresses:[],readUnion:unexpected,readOne:unexpected})).toEqual([]);
++    expect(await readRestaurantReviewCandidates({names,addresses,readUnion:async () => ({data:[],count:0,error:null}),readOne:unexpected})).toEqual([]);
++});
++
++test('oversized alias filter uses legacy reads without an oversized request', async () => {
++    let unions=0,individuals=0;
++    const result=await readRestaurantReviewCandidates({names:['가'.repeat(1500)],addresses:[],
++        readUnion:async () => {unions++;throw Error('oversized request');},readOne:async () => {individuals++;return {data:[],error:null};}});
++    expect(result).toEqual([]);
++    expect(unions).toBe(0);expect(individuals).toBe(4);
++});
++
++test('server collation matches are not discarded by JavaScript string equality', async () => {
++    const matched=[{id:'case',approved_name:'CAFE'}];
++    expect(await readRestaurantReviewCandidates({names:['cafe'],addresses:[],
++        readUnion:async () => ({data:matched,count:1,error:null}),readOne:async () => {throw Error('unexpected fallback');}})).toEqual(matched);
++});
++
++test('a throwing legacy read retains the existing failure path', async () => {
++    await expect(readRestaurantReviewCandidates({names,addresses,
++        readUnion:async () => ({data:null,count:null,error:{code:'union unavailable'}}),
++        readOne:async () => {throw Error('legacy unavailable');}})).rejects.toThrow('legacy unavailable');
++});
++
++test('changing names and addresses between calls has no stale cached result', async () => {
++    const observed:string[]=[];
++    const readUnion=async (filter:string) => {observed.push(filter);return {data:[],count:0,error:null};};
++    const mutableNames=['처음'],mutableAddresses=['처음 주소'];
++    await readRestaurantReviewCandidates({names:mutableNames,addresses:mutableAddresses,readUnion,readOne:async () => ({data:[],error:null})});
++    mutableNames[0]='새 이름';mutableAddresses[0]='새 주소';
++    await readRestaurantReviewCandidates({names:mutableNames,addresses:mutableAddresses,readUnion,readOne:async () => ({data:[],error:null})});
++    expect(observed[0]).not.toBe(observed[1]);
++    expect(observed[1]).toContain('새 이름');expect(observed[1]).toContain('새 주소');
++});

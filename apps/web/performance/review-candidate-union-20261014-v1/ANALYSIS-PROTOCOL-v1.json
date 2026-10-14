@@ -1,0 +1,20 @@
+{
+  "recordedAtUTC": "2026-10-14T04:03:03.420821+00:00",
+  "plan": "PLAN-v4.json",
+  "primaryGuardsUnchanged": {
+    "endHeapBytes": 20,
+    "idleHeapBytes": 20,
+    "selectionLatencyMedianMs": 15
+  },
+  "priorPracticalMemoryThresholdBytes": 1000000,
+  "thresholdSource": "../swipe-snapshot-comparison-20261013-v1/PLAN-v1.json claimPlan",
+  "secondary": [
+    "reviewVisibleMedianMs",
+    "restaurantRequests"
+  ],
+  "secondaryNoRegressionGuard": true,
+  "bootstrapSeed": 20261015,
+  "bootstrapRepeats": 20000,
+  "simultaneous95ConfidenceClaimed": false,
+  "noResultDependentThresholdAdjustment": true
+}

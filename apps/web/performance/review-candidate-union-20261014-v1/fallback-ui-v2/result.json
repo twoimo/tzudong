@@ -1,0 +1,60 @@
+{
+  "startedAtUTC": "2026-10-14T04:41:40.545Z",
+  "sourceCommit": "fb5fc0c4285bd2095a0c86bb6306e6043480f395",
+  "buildId": "1Yvbv01aPHEP8HwZ-3U2U",
+  "productionBuild": true,
+  "realRemoteSDK": true,
+  "diagnosticOnly": true,
+  "physicalDevice": false,
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "viewportInterpretation": "CSS breakpoint coverage; context retains touch/mobile emulation at all widths",
+  "measuredPrimarySeriesReused": false,
+  "cases": [],
+  "screenshotsContainOnlySyntheticRestaurantAndReviewContent": true,
+  "browserVersion": "155.0.8059.40",
+  "failedCase": {
+    "label": "union-503-mobile",
+    "phase": "invariants",
+    "faultCount": 4,
+    "assertionCode": "UNION_FAULT_COUNT_MISMATCH",
+    "timeout": false,
+    "assertion": true,
+    "requests": {
+      "restaurant": 21,
+      "otherFixture": 6,
+      "failedAppAsset": 0,
+      "failedRemoteProvider": 1,
+      "remoteFailureKinds": {
+        "other-network-failure": 1
+      }
+    },
+    "errors": {
+      "page": 0,
+      "console": 5,
+      "consoleCategories": {
+        "http401": 0,
+        "blockedClient": 0,
+        "provider": 0,
+        "other": 4,
+        "csp": 1
+      },
+      "cspDirectives": {
+        "connect-src": 1
+      },
+      "cspResourceGroups": {
+        "naver-family": 1
+      }
+    },
+    "diagnostics": {
+      "loadedSDK": true,
+      "mapCreates": 1,
+      "panelCount": 1,
+      "markerCount": 30,
+      "syntheticReviewPresent": true
+    }
+  },
+  "passed": false,
+  "failureCode": "FALLBACK_UI_ASSERTION_FAILED",
+  "completedAtUTC": "2026-10-14T04:41:55.433Z"
+}

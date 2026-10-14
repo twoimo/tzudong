@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUTC": "2026-10-14T03:28:56.482974+00:00",
+  "baselineSource": "9fba35f9",
+  "equivalentProtectedSource": "3d7919d6ea396b21bd185fb2a96ae9677e34824c",
+  "prototypeCreatedBeforeThisMeasurementPlan": true,
+  "baselineEvidence": "apps/web/performance/network-request-shapes-20261014-v1",
+  "conditions": {
+    "cpuRate": 4,
+    "cache": "off / SW bypass",
+    "viewport": "390x844/DPR1/touch emulation",
+    "sdk": "real remote Naver SDK and tiles",
+    "rest": "strict synthetic fixtures; 735 approved + 735 deleted aliases + one verified review per alias",
+    "forcedGC": false
+  },
+  "schedule": {
+    "seed": 20261014,
+    "aaProcesses": 4,
+    "abPairs": 9,
+    "independentProcesses": 22,
+    "queries": 128,
+    "passes": 2,
+    "dependentActionsPerProcess": 256
+  },
+  "primaryMetrics": [
+    "endHeapUsedBytes",
+    "idle5sHeapUsedBytes",
+    "perProcessMedianClickToDetailMs"
+  ],
+  "existingRegressionGuards": {
+    "endHeapPercent": 20,
+    "idleHeapPercent": 20,
+    "latencyPercent": 15,
+    "decision": "paired-ratio bootstrap95% upper bound at or below guard; insufficient evidence is not a pass"
+  },
+  "secondaryMetrics": [
+    "restaurantGETCount",
+    "frameGaps",
+    "longTasks",
+    "DOM/listener counters",
+    "per-process reviewVisibleLatency and deleted-review membership"
+  ],
+  "inclusion": "Every scheduled run. Pilot excluded. Failed invariant or SDK/fixture mismatch blocks admission; no favorable replacements.",
+  "statistics": "process-level paired percentile bootstrap20000 seed20261015; preserve dependent action clusters; A/A range/MAD. No population p95 at9 pairs.",
+  "limitations": "New complete count headers and deleted-review fixtures define a new baseline; do not compare numeric results directly with the earlier735/no-review experiment.",
+  "fieldAdmission": 0,
+  "physicalDevice": false,
+  "performanceAdmission": "must be independently validated; canonical admission stays separate from local guard",
+  "visibilityProtocol": "Wait for the related-deleted review text, scroll into view, two RAFs, and bounds inside viewport. Click-to-detail remains separately measured. No synthetic waits are added to production."
+}

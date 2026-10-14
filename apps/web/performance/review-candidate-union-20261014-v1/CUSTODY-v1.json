@@ -1,0 +1,19 @@
+{
+  "recordedAtUTC": "2026-10-14T04:59:01.655311+00:00",
+  "goalObjectiveSha256": "20e83282c0d909af33998e85d3ee5934733c9b53894f09229ca07160946081d5",
+  "sourceWorktree": "/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong",
+  "sourceBranch": "codex/review-candidate-union-20261014",
+  "candidate": "fb5fc0c4285bd2095a0c86bb6306e6043480f395",
+  "candidateTree": "676fc8f3f73be2177ac317394904dfa4f99edff2",
+  "protectedMain": "3d7919d6ea396b21bd185fb2a96ae9677e34824c",
+  "sourceDirty": false,
+  "sourcePromotionForCandidate": false,
+  "candidatePush": false,
+  "operatingWrites": 0,
+  "phoneUsed": false,
+  "fieldSamples": 0,
+  "initialPrototypeBeforePlan": true,
+  "primaryScenarioChangesExcludedFromOldComparison": true,
+  "fullSourcePatchRetained": true,
+  "oldFailuresNotReplaced": true
+}

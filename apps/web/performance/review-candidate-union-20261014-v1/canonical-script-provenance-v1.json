@@ -1,0 +1,12 @@
+[
+  {
+    "path": "apps/web/scripts/score-performance-backlog.mjs",
+    "sha256": "6dc0407c02dee4022d649a847c43b8b1c1d4bf12176e1113834574c78f8c9ce0",
+    "currentCandidateBytesEqual": true
+  },
+  {
+    "path": "apps/web/scripts/validate-performance-backlog.mjs",
+    "sha256": "a30c65c8b4f48ce4289b170254a5a72e999baa28a74721cf48461d8e3e90caea",
+    "currentCandidateBytesEqual": true
+  }
+]

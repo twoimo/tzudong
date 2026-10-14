@@ -1,0 +1,9 @@
+{
+  "package": "2.117.2",
+  "sourceSha256": "b83315a6e0b6bd4887cff0807114d3afa437ce4ef7614a92297c095e3e80691b",
+  "defaultRetries": 3,
+  "503Attempts": 4,
+  "productionRetryConfigurationChanged": false,
+  "v1andv2FailureRetained": true,
+  "reason": "one-request fault assertion omitted existing library retries; related review was already visibly restored"
+}

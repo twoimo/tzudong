@@ -1,0 +1,15 @@
+{
+  "recordedAtUTC": "2026-10-14T04:32:00Z",
+  "purpose": "Read-only live PostgREST union grammar, exact-count completeness, ID-set equivalence and bounded end-to-end API cost diagnostic",
+  "role": "anonymous publishable key; no user session, service secret or direct SQL",
+  "cases": ["two deterministically selected approved restaurant name/address pairs", "nonexistent literal with reserved punctuation"],
+  "pairedRepeatsPerCase": 2,
+  "maxRequests": 100,
+  "fixedOrder": ["legacy then union", "union then legacy"],
+  "rawResponseRetention": false,
+  "output": "only status, count, request counts, equal-ID-set booleans and elapsed milliseconds",
+  "timeResolution": "performance.now; API wall includes network and client overhead; not server query time",
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "operatingWrites": 0
+}

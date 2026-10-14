@@ -1,0 +1,75 @@
+{
+  "runs": [
+    {
+      "kind": "baseline",
+      "naturalEndHeapMB": 41.380344,
+      "naturalIdleHeapMB": 25.273308,
+      "postForcedGCHeapMB": 23.434292,
+      "markerCalls": {
+        "created": 164,
+        "setIcon": 9354,
+        "setMap": 16904,
+        "detach": 8471,
+        "reattach": 8433
+      },
+      "postForcedGCDom": {
+        "documents": 2,
+        "nodes": 1516,
+        "jsEventListeners": 1491
+      },
+      "knownNameCounts": {
+        "Array": 23209,
+        "Map": 1640,
+        "Promise": 14,
+        "Set": 1141,
+        "WeakMap": 64,
+        "HTMLImageElement": 246,
+        "HTMLDivElement": 654,
+        "AbortController": 5,
+        "XMLHttpRequest": 5,
+        "HTMLButtonElement": 31,
+        "AbortSignal": 7
+      },
+      "snapshotRawPersisted": false
+    },
+    {
+      "kind": "candidate",
+      "naturalEndHeapMB": 28.696264,
+      "naturalIdleHeapMB": 29.715624,
+      "postForcedGCHeapMB": 23.362392,
+      "markerCalls": {
+        "created": 164,
+        "setIcon": 9354,
+        "setMap": 16904,
+        "detach": 8471,
+        "reattach": 8433
+      },
+      "postForcedGCDom": {
+        "documents": 2,
+        "nodes": 1520,
+        "jsEventListeners": 1491
+      },
+      "knownNameCounts": {
+        "Array": 23192,
+        "Map": 1639,
+        "Promise": 14,
+        "Set": 1140,
+        "WeakMap": 64,
+        "HTMLImageElement": 246,
+        "HTMLDivElement": 654,
+        "AbortController": 5,
+        "XMLHttpRequest": 5,
+        "HTMLButtonElement": 31,
+        "AbortSignal": 7
+      },
+      "snapshotRawPersisted": false
+    }
+  ],
+  "independentDiagnosticProcesses": 2,
+  "actionsPerProcess": 256,
+  "noStatisticalPerformanceClaim": true,
+  "retainedPathProof": false,
+  "primaryNaturalMemoryGuardStillUnsupported": true,
+  "potentialNextMeasuredTarget": "marker icon/setMap DOM churn; union does not change marker implementation",
+  "productionWrites": 0
+}

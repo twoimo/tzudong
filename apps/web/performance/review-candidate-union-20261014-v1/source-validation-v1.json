@@ -1,0 +1,30 @@
+{
+  "sourceCommit": "fb5fc0c4285bd2095a0c86bb6306e6043480f395",
+  "base": "3d7919d6ea396b21bd185fb2a96ae9677e34824c",
+  "sourceFiles": [
+    {
+      "path": "apps/web/lib/restaurant-review-candidate-reader.ts",
+      "bytes": 2971,
+      "sha256": "1f0c3c9ca90d05e881e8b069bddf153d4a7c580f670ebbff32010a274578ef40"
+    },
+    {
+      "path": "apps/web/components/restaurant/RestaurantDetailPanel.tsx",
+      "bytes": 81564,
+      "sha256": "9d5caa6c027287b2f13a0d826593cf2fc4671bef7164f0032be74b2b2839e01e"
+    },
+    {
+      "path": "apps/web/tests-unit/restaurant-review-candidate-reader.test.ts",
+      "bytes": 5554,
+      "sha256": "268cac97bd2138171f4a573ea1d5b50e5a363be2b1605c4cfec3b4473ad54544"
+    }
+  ],
+  "localChecks": {
+    "newAndLookupTests": 19,
+    "coupledSourceTests": 110,
+    "lintExit": 0,
+    "typeParity": "native7.0.2/compat6.0.2 diagnostics0;3149logicalinputs",
+    "buildAndCssExit": 0
+  },
+  "promoted": false,
+  "operatingWrites": 0
+}

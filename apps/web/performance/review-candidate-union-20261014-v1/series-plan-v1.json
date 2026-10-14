@@ -1,0 +1,167 @@
+{
+  "seed": 20261014,
+  "independentProcesses": 22,
+  "dependentActionsPerProcess": 256,
+  "planSha256": "46097392766180a65a006237c1121a2c0d598aa2764491551686b319974a8bfa",
+  "schedule": [
+    {
+      "kind": "baseline",
+      "label": "aa-1",
+      "independentProcess": 1,
+      "phase": "AA"
+    },
+    {
+      "kind": "baseline",
+      "label": "aa-2",
+      "independentProcess": 2,
+      "phase": "AA"
+    },
+    {
+      "kind": "baseline",
+      "label": "aa-3",
+      "independentProcess": 3,
+      "phase": "AA"
+    },
+    {
+      "kind": "baseline",
+      "label": "aa-4",
+      "independentProcess": 4,
+      "phase": "AA"
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-1-baseline",
+      "pair": 1,
+      "phase": "AB",
+      "independentProcess": 5
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-1-candidate",
+      "pair": 1,
+      "phase": "AB",
+      "independentProcess": 6
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-2-candidate",
+      "pair": 2,
+      "phase": "AB",
+      "independentProcess": 7
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-2-baseline",
+      "pair": 2,
+      "phase": "AB",
+      "independentProcess": 8
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-3-candidate",
+      "pair": 3,
+      "phase": "AB",
+      "independentProcess": 9
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-3-baseline",
+      "pair": 3,
+      "phase": "AB",
+      "independentProcess": 10
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-4-candidate",
+      "pair": 4,
+      "phase": "AB",
+      "independentProcess": 11
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-4-baseline",
+      "pair": 4,
+      "phase": "AB",
+      "independentProcess": 12
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-5-candidate",
+      "pair": 5,
+      "phase": "AB",
+      "independentProcess": 13
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-5-baseline",
+      "pair": 5,
+      "phase": "AB",
+      "independentProcess": 14
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-6-candidate",
+      "pair": 6,
+      "phase": "AB",
+      "independentProcess": 15
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-6-baseline",
+      "pair": 6,
+      "phase": "AB",
+      "independentProcess": 16
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-7-candidate",
+      "pair": 7,
+      "phase": "AB",
+      "independentProcess": 17
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-7-baseline",
+      "pair": 7,
+      "phase": "AB",
+      "independentProcess": 18
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-8-candidate",
+      "pair": 8,
+      "phase": "AB",
+      "independentProcess": 19
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-8-baseline",
+      "pair": 8,
+      "phase": "AB",
+      "independentProcess": 20
+    },
+    {
+      "kind": "candidate",
+      "label": "ab-9-candidate",
+      "pair": 9,
+      "phase": "AB",
+      "independentProcess": 21
+    },
+    {
+      "kind": "baseline",
+      "label": "ab-9-baseline",
+      "pair": 9,
+      "phase": "AB",
+      "independentProcess": 22
+    }
+  ],
+  "overwriteOrReplacementAllowed": false,
+  "failedRunsRetained": true,
+  "sourceOrOperatingMutation": false,
+  "measurementParameters": {
+    "queries": 128,
+    "passes": 2,
+    "profiler": false,
+    "forcedGC": false
+  }
+}

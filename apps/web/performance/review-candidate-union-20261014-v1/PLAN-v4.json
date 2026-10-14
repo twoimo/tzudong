@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUTC": "2026-10-14T03:28:56.482974+00:00",
+  "baselineSource": "9fba35f9",
+  "equivalentProtectedSource": "3d7919d6ea396b21bd185fb2a96ae9677e34824c",
+  "prototypeCreatedBeforeThisMeasurementPlan": true,
+  "baselineEvidence": "apps/web/performance/network-request-shapes-20261014-v1",
+  "conditions": {
+    "cpuRate": 4,
+    "cache": "off / SW bypass",
+    "viewport": "390x844/DPR1/touch emulation",
+    "sdk": "real remote Naver SDK and tiles",
+    "rest": "strict synthetic fixtures; 735 approved + 735 deleted aliases + one verified review per alias",
+    "forcedGC": false,
+    "chrome": "155.0.8059.40",
+    "sdkScriptSha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+  },
+  "schedule": {
+    "seed": 20261014,
+    "aaProcesses": 4,
+    "abPairs": 9,
+    "independentProcesses": 22,
+    "queries": 128,
+    "passes": 2,
+    "dependentActionsPerProcess": 256
+  },
+  "primaryMetrics": [
+    "endHeapUsedBytes",
+    "idle5sHeapUsedBytes",
+    "perProcessMedianClickToDetailMs"
+  ],
+  "existingRegressionGuards": {
+    "endHeapPercent": 20,
+    "idleHeapPercent": 20,
+    "latencyPercent": 15,
+    "decision": "paired-ratio bootstrap95% upper bound at or below guard; insufficient evidence is not a pass"
+  },
+  "secondaryMetrics": [
+    "restaurantGETCount",
+    "frameGaps",
+    "longTasks",
+    "DOM/listener counters",
+    "per-process reviewVisibleLatency and deleted-review membership"
+  ],
+  "inclusion": "Every scheduled run. Pilot excluded. Failed invariant or SDK/fixture mismatch blocks admission; no favorable replacements.",
+  "statistics": "process-level paired percentile bootstrap20000 seed20261015; preserve dependent action clusters; A/A range/MAD. No population p95 at9 pairs.",
+  "limitations": "New complete count headers and deleted-review fixtures define a new baseline; do not compare numeric results directly with the earlier735/no-review experiment.",
+  "fieldAdmission": 0,
+  "physicalDevice": false,
+  "performanceAdmission": "must be independently validated; canonical admission stays separate from local guard",
+  "visibilityProtocol": "Wait for the related-deleted review text, scroll into view, two RAFs, and bounds inside viewport. Click-to-detail remains separately measured. No synthetic waits are added to production.",
+  "syntheticServerMaxRows": 1000,
+  "fixtureSha256": "7d24228c5d7946d5f1e17cb3b9cfb193ebc15ebed5d2952511c44f7fe64b17e8",
+  "beforeSource": "9fba35f92b9b0f517d1f726461f38bc4a91e49e6",
+  "candidateSource": "fb5fc0c4285bd2095a0c86bb6306e6043480f395",
+  "builds": {
+    "before": "p1-IJ-04eZu5YFbWfLGje",
+    "after": "1Yvbv01aPHEP8HwZ-3U2U"
+  },
+  "harnessBindings": [
+    {
+      "path": "measure-ui-v3.mjs",
+      "sha256": "61f8cb2e0aeaefe5dbd91d9271245a3374e68deeeb9555359a957c353bd98d1c"
+    },
+    {
+      "path": "runtime-v3.mjs",
+      "sha256": "bc3bb8182ee4b5b8f990abc542717a714d183e4d6575c42ea623d87f4aa5ba1c"
+    },
+    {
+      "path": "fixture-query-v3.mjs",
+      "sha256": "7d24228c5d7946d5f1e17cb3b9cfb193ebc15ebed5d2952511c44f7fe64b17e8"
+    },
+    {
+      "path": "build-receipts-v1.json",
+      "sha256": "bcf756e47b93321e4dc6b4534aaaebe473af3f213260ccf82cfadedb3152237e"
+    }
+  ]
+}

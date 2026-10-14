@@ -1,0 +1,27 @@
+{
+  "sourceCommit": "fb5fc0c4285bd2095a0c86bb6306e6043480f395",
+  "distDir": ".next-review-candidate-union-after-v1",
+  "node": "24.21.0",
+  "next": "16.3.8",
+  "startedAtUtc": "2026-10-14T03:30:51.315Z",
+  "envValuesPersisted": false,
+  "serverSettingsForwarded": false,
+  "build": {
+    "exit": 0,
+    "wallMs": 71986.474375,
+    "outputBytes": 5850,
+    "rawOutputSha256": "c429bcf82ff5f14ad126e6fe328fc2d3514b57dfda92a0507c058e24c7039635",
+    "rawOutputPersisted": false,
+    "compiled": true,
+    "compiledSeconds": 30.1
+  },
+  "cssGate": {
+    "exit": 0,
+    "wallMs": 236.32087499999034,
+    "outputBytes": 119,
+    "rawOutputSha256": "d050d9334b090cc0dfc7ee2627fe058ea3af7bfb4c3a80d4728f4f25798ef0de",
+    "rawOutputPersisted": false,
+    "compiled": false,
+    "compiledSeconds": null
+  }
+}

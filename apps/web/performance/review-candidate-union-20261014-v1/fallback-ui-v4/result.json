@@ -1,0 +1,59 @@
+{
+  "startedAtUTC": "2026-10-14T04:45:25.951Z",
+  "sourceCommit": "fb5fc0c4285bd2095a0c86bb6306e6043480f395",
+  "buildId": "1Yvbv01aPHEP8HwZ-3U2U",
+  "productionBuild": true,
+  "realRemoteSDK": true,
+  "diagnosticOnly": true,
+  "physicalDevice": false,
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "viewportInterpretation": "CSS breakpoint coverage; context retains touch/mobile emulation at all widths",
+  "measuredPrimarySeriesReused": false,
+  "cases": [
+    {
+      "label": "capped-response-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "unionFaults": 1,
+      "deletedAliasReviewVisible": true,
+      "selectedRestaurantPreserved": true,
+      "present": true,
+      "mapCreates": 1,
+      "requests": {
+        "restaurant": 22,
+        "otherFixture": 9,
+        "failedAppAsset": 0,
+        "failedRemoteProvider": 1,
+        "remoteFailureKinds": {
+          "other-network-failure": 1
+        }
+      },
+      "errors": {
+        "page": 0,
+        "console": 1,
+        "consoleCategories": {
+          "http401": 0,
+          "blockedClient": 0,
+          "provider": 0,
+          "other": 0,
+          "csp": 1
+        },
+        "cspDirectives": {
+          "connect-src": 1
+        },
+        "cspResourceGroups": {
+          "naver-family": 1
+        }
+      },
+      "screenshot": "capped-response-desktop.png",
+      "passed": true
+    }
+  ],
+  "screenshotsContainOnlySyntheticRestaurantAndReviewContent": true,
+  "browserVersion": "155.0.8059.40",
+  "passed": true,
+  "completedAtUTC": "2026-10-14T04:45:32.615Z"
+}

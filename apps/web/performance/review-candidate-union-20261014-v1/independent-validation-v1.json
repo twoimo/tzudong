@@ -1,0 +1,36 @@
+{
+  "statisticsSha256": "0cc4764dad263b31e4bd07ef5b1eda4de25ea61562087c842c75479486771967",
+  "rawExecutions": 22,
+  "dependentActions": 5632,
+  "bootstrapRepeatsPerMetric": 20000,
+  "allReconstructed": true,
+  "metrics": [
+    {
+      "metric": "endHeapBytes",
+      "reconstructed": true,
+      "guardPass": false
+    },
+    {
+      "metric": "idleHeapBytes",
+      "reconstructed": true,
+      "guardPass": true
+    },
+    {
+      "metric": "selectionLatencyMedianMs",
+      "reconstructed": true,
+      "guardPass": true
+    },
+    {
+      "metric": "reviewVisibleMedianMs",
+      "reconstructed": true,
+      "guardPass": null
+    },
+    {
+      "metric": "restaurantRequests",
+      "reconstructed": true,
+      "guardPass": null
+    }
+  ],
+  "performanceAdmission": 0,
+  "rawDiagnosticOnlyFlagsPreserved": true
+}
