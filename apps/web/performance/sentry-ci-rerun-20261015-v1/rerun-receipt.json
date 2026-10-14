@@ -1,0 +1,16 @@
+{
+  "runId": 38617798185,
+  "attempt": 2,
+  "sourceSha": "da65ba93c46bb6f3e212ec158cc17357ec05e474",
+  "oldArtifactId": 11920019337,
+  "newArtifactId": 11921368124,
+  "bothArtifactsStillPresent": true,
+  "ciConclusion": "success",
+  "independentValidator": {
+    "status": "verified",
+    "evidenceStatus": "inconclusive_noise",
+    "admittedSlices": 0
+  },
+  "rulesChanged": false,
+  "sameSource": true
+}

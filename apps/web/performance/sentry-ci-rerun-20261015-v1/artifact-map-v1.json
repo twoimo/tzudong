@@ -1,0 +1,130 @@
+{
+  "admittedPerformanceSlices": 0,
+  "entries": [
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/attempt-outcomes.json",
+      "bytes": 13849,
+      "sha256": "42981ae61d53fea7904cef1ade7944e33edcad2fcad40fc4f5438cfda64ba04f"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/preflight-receipts.json",
+      "bytes": 1753,
+      "sha256": "45191da8dad466ee2ea789e40b2b4934ce9f133c3c516a3a8d3846a19925a28b"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/01-native-attempt-1.ndjson",
+      "bytes": 203196,
+      "sha256": "1be0e87ccad316c9efe9f35003cc6859758ea829a165e6293341f20799521893"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/02-compat-attempt-1.ndjson",
+      "bytes": 1193005,
+      "sha256": "551082e3f5df48ee680ff242df9b3b478f1198afe9f419f6c185d60238dd275f"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/03-native-attempt-1.ndjson",
+      "bytes": 204029,
+      "sha256": "8c6521609c319676828b9f220345667fd84ef829a960a300f74cc54ed055d78c"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/04-compat-attempt-1.ndjson",
+      "bytes": 1171689,
+      "sha256": "9a7aa32c4aa517f596fed37966302d85db7eb886bacedc1f8b53cdd40348b0df"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/05-native-attempt-1.ndjson",
+      "bytes": 191140,
+      "sha256": "52b268c61ad85b0197e6903851862200605fb22256d50ee014e7efa545f41bc2"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/06-compat-attempt-1.ndjson",
+      "bytes": 1170504,
+      "sha256": "73bef9d41cb1da95c73b133b1d95e8ab4d27bc66e6685e06fffad1a03abc5b78"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/07-native-attempt-1.ndjson",
+      "bytes": 190320,
+      "sha256": "5fff7e0f7d559266c9f5cb0f9a2295b9ef94a511bb820454173b97dca67629f5"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/08-compat-attempt-1.ndjson",
+      "bytes": 1207114,
+      "sha256": "09bad870c5517a7f58a3042e3f11bc5839ed2449596dd44a63c38f994f98dcca"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/09-native-attempt-1.ndjson",
+      "bytes": 199446,
+      "sha256": "17a6efba105b1bd8f60367ec094665e6ffbc5b0f0beaf872c65a81325c8aeec4"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/10-compat-attempt-1.ndjson",
+      "bytes": 1202811,
+      "sha256": "04c789ad07e86cc14fee3191832e918b31a5de7b073172d057523039d5fadfb3"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/11-native-attempt-1.ndjson",
+      "bytes": 211939,
+      "sha256": "6dfdf3551cd14c2b1f3d9671a7ecb16867ad6ec2c880a02e5db715fd3ccb4b84"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/12-compat-attempt-1.ndjson",
+      "bytes": 1220565,
+      "sha256": "79f329efa0280fc97ac5c8f65073a7ab47dce5a64331c908130c79a0dadb1345"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/13-native-attempt-1.ndjson",
+      "bytes": 212760,
+      "sha256": "3f136c8a04530f6e370d9b0d9ecc32e7da943be2d578437b63e70254df742e5c"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/14-compat-attempt-1.ndjson",
+      "bytes": 1212722,
+      "sha256": "1b69b67f00fa8b5c695e82137ec32524911b383619e2007bb0adcfb9c70d12ab"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/15-native-attempt-1.ndjson",
+      "bytes": 201925,
+      "sha256": "e19cc5ddcc4617fd12e69a694989458c2406d67afa7b32391f19d331eaf7092d"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/16-compat-attempt-1.ndjson",
+      "bytes": 1206742,
+      "sha256": "25bac62474a07320db3b0294162dfd19ec611aa478c7470242d31f99deac3b33"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/17-native-attempt-1.ndjson",
+      "bytes": 199497,
+      "sha256": "490c061686c3735bd4f6a584c8cc89a5d9e74b4df6e470f4ef4c3a1a8100bf29"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/18-compat-attempt-1.ndjson",
+      "bytes": 1197175,
+      "sha256": "d82686688979fb224fff7e5a6b0edd6c78aa93943921365058c1a13bf860d954"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/warmup-compat.ndjson",
+      "bytes": 1188416,
+      "sha256": "dd232b5f0d0b3c4ea28eeab333aeb9d9fe123f00073cc722af75141d5888c1bb"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/warmup-native.ndjson",
+      "bytes": 195735,
+      "sha256": "95b7b8e9d7b74276b731ef60802e67bbb3b5ab76252fa8ea7d5ae6f1777f99da"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/report.json",
+      "bytes": 16090,
+      "sha256": "8498c0f22a4daec4984118a21f6613e6d1b678f35c5ddc4adc96ee215fce715e"
+    },
+    {
+      "path": "REPORT.md",
+      "bytes": 676,
+      "sha256": "4e3f42f7c1c566956bcf0b900699288bc0a068a0cd499100f474751e513225bd"
+    },
+    {
+      "path": "rerun-receipt.json",
+      "bytes": 406,
+      "sha256": "3cff70e19d5833bb08d21350730744a5b6e66f2ef44695aaf3ece0bc9b36edb3"
+    }
+  ]
+}
