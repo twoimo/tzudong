@@ -1,0 +1,16 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/sentry-admin.test.ts:
+(pass) Sentry read-only bounded feed > supports an explicit numeric project ID while verifying both returned ID and slug [2.30ms]
+(pass) Sentry read-only bounded feed > missing configuration makes zero provider calls [0.10ms]
+(pass) Sentry read-only bounded feed > coalesces 100 identical concurrent reads and relays only safe fields and cursor [1.17ms]
+(pass) Sentry read-only bounded feed > expires cache after 30 seconds and separates changed token/status/cursor [2.32ms]
+(pass) Sentry read-only bounded feed > caps unrelated simultaneous reads at four in one server process [1.62ms]
+(pass) Sentry read-only bounded feed > fails closed for invalid upstream payload, foreign project, oversized body or diagnostics [2.06ms]
+(pass) Sentry read-only bounded feed > forbids cursor injection and unapproved API origins [0.13ms]
+(pass) Sentry read-only bounded feed > shares Retry-After cooldown across status/cursor changes without retrying [0.25ms]
+
+ 8 pass
+ 0 fail
+ 38 expect() calls
+Ran 8 tests across 1 file. [162.00ms]

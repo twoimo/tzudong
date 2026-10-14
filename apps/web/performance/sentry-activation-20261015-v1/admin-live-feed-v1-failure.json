@@ -1,0 +1,1 @@
+{"status":"failed","cause":"Standalone runner had no Next server-only bundler sentinel package; first CLI flag syntax also printed help","providerWrites":0,"repair":"Local test stub for sentinel only; actual server function and provider GET retained"}

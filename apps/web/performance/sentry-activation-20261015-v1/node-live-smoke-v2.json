@@ -1,0 +1,14 @@
+{
+  "node": "v24.21.0",
+  "sdk": "11.4.0",
+  "eventId": "27209741777b424787ec40e5ab5fddf1",
+  "flushed": true,
+  "readback": {
+    "status": 200,
+    "idMatches": true,
+    "sensitivePresent": false,
+    "userPresent": false,
+    "environment": "test"
+  },
+  "scope": "Isolated actual Node SDK and source privacy filter, synthetic event; not a deployed Next route failure or field metric."
+}

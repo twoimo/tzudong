@@ -1,0 +1,1 @@
+{"status":"failed","cause":"Harness used absent /login route; HTTP404, expected login button timeout","applicationSourceChanged":false,"syntheticEventsTriggered":0,"repair":"Use actual /auth/required page and observed heading"}

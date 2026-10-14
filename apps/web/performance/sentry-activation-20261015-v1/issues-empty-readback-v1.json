@@ -1,0 +1,7 @@
+{
+  "status": 200,
+  "rows": 0,
+  "projectMatches": true,
+  "tokenScope": "event:read",
+  "readOnly": true
+}

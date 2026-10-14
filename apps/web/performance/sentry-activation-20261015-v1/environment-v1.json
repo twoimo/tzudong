@@ -1,0 +1,28 @@
+{
+  "sourceCommit": "18400459f85f3fee574db6bdc33159ef8bcc88b2",
+  "parent": "3d7919d6ea396b21bd185fb2a96ae9677e34824c",
+  "sourceBranch": "codex/sentry-activation-20261015",
+  "sdk": "11.4.0",
+  "next": "16.3.8",
+  "node": "24.21.0",
+  "npm": "11.6.2",
+  "bun": "1.4.0",
+  "browser": "155.0.8059.40",
+  "physicalDeviceUsed": false,
+  "fieldSamples": 0,
+  "billingMutations": 0,
+  "privateTokensInEvidence": false,
+  "sourceMapsUploaded": false,
+  "asideSource": {
+    "id": "496eGBI4iHvc9n7L",
+    "sha256": "76f54bf6fc8e36832cc6a6f66da9698057205519711c50a25497f51f982e88bb",
+    "relevantLines": [
+      861,
+      865,
+      871,
+      877,
+      878
+    ],
+    "rawTranscriptCopied": false
+  }
+}

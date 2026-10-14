@@ -1,0 +1,5 @@
+{
+  "exit": 1,
+  "kind": "write_receipt_unparsed",
+  "stderr": "Vercel CLI 56.5.0 (Node.js 24.21.0) | api is in beta \u2014 https://vercel.com/feedback\nError: Invalid JSON (400)\n"
+}

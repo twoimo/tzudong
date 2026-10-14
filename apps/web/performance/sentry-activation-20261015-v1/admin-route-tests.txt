@@ -1,0 +1,11 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-sentry-route.test.ts:
+(pass) Sentry admin authorization and query boundary > denies unauthenticated and non-admin users before provider lookup [0.27ms]
+(pass) Sentry admin authorization and query boundary > returns only a private noncacheable admin response [0.48ms]
+(pass) Sentry admin authorization and query boundary > rejects provider URLs, arbitrary search and malformed status/cursor [0.27ms]
+
+ 3 pass
+ 0 fail
+ 13 expect() calls
+Ran 3 tests across 1 file. [110.00ms]

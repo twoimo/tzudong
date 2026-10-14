@@ -1,0 +1,11 @@
+{
+  "status": 200,
+  "issues": [
+    {
+      "id": "7792657624",
+      "type": "TypeError",
+      "count": "2",
+      "lastSeen": "2026-10-14T18:13:11Z"
+    }
+  ]
+}

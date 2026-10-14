@@ -1,0 +1,34 @@
+{
+  "org": "tinyburn-data-lab",
+  "project": "tzudong",
+  "projectId": "4512255864864768",
+  "allowedDomains": [
+    "https://tzudong.app",
+    "https://www.tzudong.app",
+    "https://localhost:3000",
+    "http://localhost:3003"
+  ],
+  "scrubIPAddresses": true,
+  "dataScrubber": true,
+  "dataScrubberDefaults": true,
+  "verifySSL": true,
+  "scrapeJavaScript": false,
+  "keys": [
+    {
+      "name": "Default",
+      "rateLimit": {
+        "window": 86400,
+        "count": 100
+      },
+      "dynamicSdkLoaderOptions": {
+        "hasReplay": false,
+        "hasPerformance": false,
+        "hasDebug": false,
+        "hasFeedback": false,
+        "hasLogsAndMetrics": false
+      }
+    }
+  ],
+  "paidChanges": 0,
+  "defaultAlertEnabled": false
+}

@@ -1,0 +1,139 @@
+{
+  "receipts": [
+    {
+      "key": "NEXT_PUBLIC_SENTRY_DSN",
+      "exit": 0,
+      "requestedTargets": [
+        "production",
+        "preview"
+      ],
+      "requestedType": "plain"
+    },
+    {
+      "key": "SENTRY_DSN",
+      "exit": 0,
+      "requestedTargets": [
+        "production",
+        "preview"
+      ],
+      "requestedType": "sensitive"
+    },
+    {
+      "key": "SENTRY_ORG",
+      "exit": 0,
+      "requestedTargets": [
+        "production",
+        "preview"
+      ],
+      "requestedType": "plain"
+    },
+    {
+      "key": "SENTRY_PROJECT",
+      "exit": 0,
+      "requestedTargets": [
+        "production",
+        "preview"
+      ],
+      "requestedType": "plain"
+    },
+    {
+      "key": "SENTRY_PROJECT_ID",
+      "exit": 0,
+      "requestedTargets": [
+        "production",
+        "preview"
+      ],
+      "requestedType": "plain"
+    },
+    {
+      "key": "SENTRY_URL",
+      "exit": 0,
+      "requestedTargets": [
+        "production",
+        "preview"
+      ],
+      "requestedType": "plain"
+    },
+    {
+      "key": "SENTRY_ISSUES_READ_TOKEN",
+      "exit": 0,
+      "requestedTargets": [
+        "production",
+        "preview"
+      ],
+      "requestedType": "sensitive"
+    }
+  ],
+  "readback": [
+    {
+      "key": "SENTRY_ISSUES_READ_TOKEN",
+      "id": "8Hm5Zdy8KRRPEtwp",
+      "type": "sensitive",
+      "target": [
+        "production",
+        "preview"
+      ],
+      "nonSensitiveValueMatches": null
+    },
+    {
+      "key": "SENTRY_URL",
+      "id": "BrpBDBCqdIw7rbd3",
+      "type": "encrypted",
+      "target": [
+        "production",
+        "preview"
+      ],
+      "nonSensitiveValueMatches": null
+    },
+    {
+      "key": "SENTRY_PROJECT_ID",
+      "id": "HIpmScUdN1FM0gNt",
+      "type": "encrypted",
+      "target": [
+        "production",
+        "preview"
+      ],
+      "nonSensitiveValueMatches": null
+    },
+    {
+      "key": "SENTRY_PROJECT",
+      "id": "7FsV768mFNkNodhZ",
+      "type": "encrypted",
+      "target": [
+        "production",
+        "preview"
+      ],
+      "nonSensitiveValueMatches": null
+    },
+    {
+      "key": "SENTRY_ORG",
+      "id": "igXLMTmR8xhkwlyT",
+      "type": "encrypted",
+      "target": [
+        "production",
+        "preview"
+      ],
+      "nonSensitiveValueMatches": null
+    },
+    {
+      "key": "SENTRY_DSN",
+      "id": "mpuqcfqT4tBWHy73",
+      "type": "sensitive",
+      "target": [
+        "production",
+        "preview"
+      ],
+      "nonSensitiveValueMatches": null
+    },
+    {
+      "key": "NEXT_PUBLIC_SENTRY_DSN",
+      "id": "Mb90bVKbMJVNLVto",
+      "type": "encrypted",
+      "target": [
+        "production",
+        "preview"
+      ],
+      "nonSensitiveValueMatches": null
+    }
+  ]
+}

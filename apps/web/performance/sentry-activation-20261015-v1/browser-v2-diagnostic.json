@@ -1,0 +1,18 @@
+{
+  "carrier": {
+    "sentryPresent": true,
+    "sentryKeys": [
+      "version",
+      "11.4.0"
+    ],
+    "reactHydrated": 22
+  },
+  "hits": [
+    {
+      "method": "POST",
+      "bytes": 844
+    }
+  ],
+  "errs": 1,
+  "failed": 0
+}

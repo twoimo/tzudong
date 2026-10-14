@@ -1,0 +1,14 @@
+bun test v1.4.0 (34cbb9a40)
+
+apps/web/tests-unit/root-layout-local-runtime-contract.test.ts:
+(pass) root layout local runtime and CSP nonce contract > binds the native parser viewport bootstrap to the proxy request nonce [0.18ms]
+(pass) root layout local runtime and CSP nonce contract > keeps the local workspace banner outside the app tree [0.02ms]
+(pass) root layout local runtime and CSP nonce contract > does not reserve viewport height for the removed local workspace banner [0.11ms]
+(pass) root layout local runtime and CSP nonce contract > inlines only the hash-pinned source-controlled viewport bootstrap [0.28ms]
+(pass) root layout local runtime and CSP nonce contract > keeps hosted hints in production but suppresses them in strict local runtime [0.17ms]
+(pass) root layout local runtime and CSP nonce contract > rejects malformed and non-http Supabase preconnect targets [0.05ms]
+
+ 6 pass
+ 0 fail
+ 52 expect() calls
+Ran 6 tests across 1 file. [158.00ms]

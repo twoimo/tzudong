@@ -1,0 +1,1 @@
+{"status":"failed","cause":"Project event endpoint403 for event:read-only token","tokenScopeWidened":false,"sourceChanged":false,"repair":"Use documented organization issue event endpoint supporting event:read"}

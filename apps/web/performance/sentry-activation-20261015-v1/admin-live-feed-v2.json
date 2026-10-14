@@ -1,0 +1,14 @@
+{
+  "state": "connected",
+  "collection": {
+    "browser": true,
+    "server": true
+  },
+  "issueCount": 2,
+  "types": [
+    "TypeError",
+    "RangeError"
+  ],
+  "privateSentinelPresent": false,
+  "scope": "Actual server feed function and Sentry API. Admin route authorization is covered by isolated tests, not a logged-in production CMS proof."
+}

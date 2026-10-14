@@ -1,0 +1,1 @@
+{"status":"failed","cause":"Browser HTTP response event timeout20s; emission was not yet evidence of reception","applicationSourceChanged":false,"followup":"Independent issue API subsequently reported TypeError group count2. v3 requires exact event ID retrieval instead of HTTP response only."}

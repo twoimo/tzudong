@@ -1,0 +1,97 @@
+{
+  "kind": "local-production-build-actual-sentry-network",
+  "browser": "155.0.8059.40",
+  "sdk": "11.4.0",
+  "buildId": "XfsAt81LzLrtZxc1sCXeH",
+  "sourceCommit": "18400459f85f3fee574db6bdc33159ef8bcc88b2",
+  "scope": "Three independent clean browser contexts; synthetic TypeError. No physical device or field proof. Browser build environment is production; these exact IDs are synthetic and must be excluded from field cohorts.",
+  "rows": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "status": 200,
+      "ingestionOriginAllowed": true,
+      "cspBlocked": 0,
+      "pageErrorsBeforeInjection": 0,
+      "pageErrors": 1,
+      "received": {
+        "status": 200,
+        "idMatches": true,
+        "type": "TypeError",
+        "userPresent": false,
+        "messageSanitized": true,
+        "syntheticPrivatePresent": false
+      },
+      "events": [
+        {
+          "httpResponseUnobserved": true,
+          "eventId": "441af906712247c18cc889dadd327167",
+          "containsSyntheticPrivate": false,
+          "itemTypes": [
+            "event"
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 834,
+        "height": 1112
+      },
+      "status": 200,
+      "ingestionOriginAllowed": true,
+      "cspBlocked": 0,
+      "pageErrorsBeforeInjection": 0,
+      "pageErrors": 1,
+      "received": {
+        "status": 200,
+        "idMatches": true,
+        "type": "TypeError",
+        "userPresent": false,
+        "messageSanitized": true,
+        "syntheticPrivatePresent": false
+      },
+      "events": [
+        {
+          "httpResponseUnobserved": true,
+          "eventId": "7b10edd13176457d81fb2265af2fb864",
+          "containsSyntheticPrivate": false,
+          "itemTypes": [
+            "event"
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "status": 200,
+      "ingestionOriginAllowed": true,
+      "cspBlocked": 0,
+      "pageErrorsBeforeInjection": 0,
+      "pageErrors": 1,
+      "received": {
+        "status": 200,
+        "idMatches": true,
+        "type": "TypeError",
+        "userPresent": false,
+        "messageSanitized": true,
+        "syntheticPrivatePresent": false
+      },
+      "events": [
+        {
+          "httpResponseUnobserved": true,
+          "eventId": "ded8b52d6a994ac8a2302783c108c28b",
+          "containsSyntheticPrivate": false,
+          "itemTypes": [
+            "event"
+          ]
+        }
+      ]
+    }
+  ]
+}

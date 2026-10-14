@@ -1,0 +1,206 @@
+{
+  "schema": "functional-sentry-evidence-v1",
+  "performanceImprovementClaim": false,
+  "entries": [
+    {
+      "path": "REPORT.md",
+      "bytes": 5900,
+      "sha256": "ab60e80ce898a310e7b8e1ccc06b0fa861ea6796f413021e82d8214ce091a190"
+    },
+    {
+      "path": "admin-feed-tests.txt",
+      "bytes": 1083,
+      "sha256": "14af2b1f18fc684cdc94936f2d2549d48fe443409282c243b2a2701e4d8b52af"
+    },
+    {
+      "path": "admin-live-feed-v1-failure.json",
+      "bytes": 252,
+      "sha256": "0cdd6105d540099db8078bd4a803f15d8a0c566848388cd289af06b61f8dec35"
+    },
+    {
+      "path": "admin-live-feed-v2.json",
+      "bytes": 348,
+      "sha256": "b223087958cdec354bed85c7a92255554bdacfd9319802731bdef645bd42fcdb"
+    },
+    {
+      "path": "admin-live-feed.ts",
+      "bytes": 1505,
+      "sha256": "c1d1c71d7513780efc82d67bf0ac0612ee967488f67454297a8debdcfb0cce74"
+    },
+    {
+      "path": "admin-route-tests.txt",
+      "bytes": 519,
+      "sha256": "fd876bee7daf02a49f2f3a64c49b0ca181466dd12be140bb9b5d2d83f6954dc0"
+    },
+    {
+      "path": "affected-tests-v1.txt",
+      "bytes": 3779,
+      "sha256": "c56e38042962ea5f7e121c47fbc041e73bac594c0e939142a7112497a483a359"
+    },
+    {
+      "path": "browser-smoke-v1-failure.json",
+      "bytes": 228,
+      "sha256": "672167bc9e46e49a6e0c7dee0e5559c76061f43e66d438705f9fe20401e1a315"
+    },
+    {
+      "path": "browser-smoke-v1.mjs",
+      "bytes": 3330,
+      "sha256": "2acd7488c2370efb8937de8b5bacc2a72b2a42e46206a8f05f108d5c57a1f480"
+    },
+    {
+      "path": "browser-smoke-v2-failure.json",
+      "bytes": 295,
+      "sha256": "817b57798ab77485df529d284bdfdd3c22486d1f47191478c0abb7f760fd13c3"
+    },
+    {
+      "path": "browser-smoke-v2.mjs",
+      "bytes": 3387,
+      "sha256": "299fa537b1471908252092522b61bde4bd5dac44752a119190ec130ba0e28882"
+    },
+    {
+      "path": "browser-smoke-v3-failure.json",
+      "bytes": 212,
+      "sha256": "844ad77c40c7d66815fadc668c094dae10cd946ccef0a608fa0334bc3c199b05"
+    },
+    {
+      "path": "browser-smoke-v3.mjs",
+      "bytes": 4397,
+      "sha256": "f647c67e962a6773a691a6f9216c3bb67bbc38cd22dff4a29ce560471a5624bc"
+    },
+    {
+      "path": "browser-smoke-v4-failure.json",
+      "bytes": 179,
+      "sha256": "7ba607a5cdf332cd4917b6b9413fabb7635b08ae9bcf7a07dae07f74eba553a4"
+    },
+    {
+      "path": "browser-smoke-v4.mjs",
+      "bytes": 4929,
+      "sha256": "05117ca2dad90a9263761152ba65ed027bcebe4281127337e599ef5a5e3747ec"
+    },
+    {
+      "path": "browser-smoke-v5.json",
+      "bytes": 2519,
+      "sha256": "b6a243c7a3ecb782dd1f866a7e4499b1abfa991c2467ed5514f2e72153bce356"
+    },
+    {
+      "path": "browser-smoke-v5.mjs",
+      "bytes": 5004,
+      "sha256": "573838a41f058c37614ad52c2c36896dfa51deba5935eaa4e37d3e04ce4805fc"
+    },
+    {
+      "path": "browser-transport-diagnostic-v1.json",
+      "bytes": 153,
+      "sha256": "b0d594784795426d42122f7deb277a45ee5a89d678594f93a1d43b94a5fa8481"
+    },
+    {
+      "path": "browser-v2-diagnostic.json",
+      "bytes": 233,
+      "sha256": "db3684d07ec0766b356e91eaf2991a9124207861906cd6e6b0397b8b103e7504"
+    },
+    {
+      "path": "build-v1.txt",
+      "bytes": 1484,
+      "sha256": "f83da6f473cc227ab2601d7cd31b30c1b9eca18412f86519ecbcec27cfbf8712"
+    },
+    {
+      "path": "csp-before-test.txt",
+      "bytes": 4539,
+      "sha256": "9bf87ebfd9124e98d1c93124fb39287d6bc924ea51a7dd8494fbac57d962652d"
+    },
+    {
+      "path": "environment-v1.json",
+      "bytes": 699,
+      "sha256": "f9e0d29a9155d03e892d984f9cf855c27be76439f83da75a6bbf3b11de8895b7"
+    },
+    {
+      "path": "issues-after-browser-v2.json",
+      "bytes": 165,
+      "sha256": "487aa71ea2f1b2327b0edf08b94b7338509be86b36812259f515056e6b7c70b7"
+    },
+    {
+      "path": "issues-empty-readback-v1.json",
+      "bytes": 109,
+      "sha256": "5bee6415f51b985e479ad46116fef07b7b9be26f8df1acc187e0dc2b84003b2c"
+    },
+    {
+      "path": "lint-v1.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "login-1440.png",
+      "bytes": 23482,
+      "sha256": "751b7691b66da59d88d06f0553c634461392d90e08487cf5e5e45bfe0eeaa6aa"
+    },
+    {
+      "path": "login-390.png",
+      "bytes": 18971,
+      "sha256": "12cd42d0d9fe72103b97a9a8d3ed15c8a01d182106ea63dc045afb5ac6b8a5bb"
+    },
+    {
+      "path": "login-834.png",
+      "bytes": 22463,
+      "sha256": "a3e79f87f7a765ce71e347a09c70612b1d850ad0a7e86504a18a8674452adfb2"
+    },
+    {
+      "path": "node-live-smoke-v1-failure.json",
+      "bytes": 156,
+      "sha256": "d61507d22f48c36237f5d9639903f987eee548344bb65bd2c4055877180b2643"
+    },
+    {
+      "path": "node-live-smoke-v1.ts",
+      "bytes": 2371,
+      "sha256": "8097d3a7d61bff99f765a2e02cde043883f64a6d1de884bb312946109bbd1b99"
+    },
+    {
+      "path": "node-live-smoke-v2.json",
+      "bytes": 392,
+      "sha256": "a362f5ef13547187e19d7f33703e6bc698ec7f90b3ff0846bed6dcdb3be0be76"
+    },
+    {
+      "path": "node-live-smoke.ts",
+      "bytes": 3024,
+      "sha256": "4b11fd9dce087997a82830197b5d2388888b13d7fe51b5c7ea74e682b0ae02f7"
+    },
+    {
+      "path": "parity-v1.txt",
+      "bytes": 510,
+      "sha256": "7364dc9aea8fae6de29347e1983b7e6452a3bdbcd38bc8249477b2a407e772c2"
+    },
+    {
+      "path": "privacy-final-v1.txt",
+      "bytes": 762,
+      "sha256": "5b58d770ab97b2736521314ca8b3d320156332316794e4affd6794c0847207ca"
+    },
+    {
+      "path": "production-before-v1.json",
+      "bytes": 245,
+      "sha256": "e8748c77efb78fd4c3bd0a424c3280eef53352a3df91f36b385af73965b8c3d0"
+    },
+    {
+      "path": "project-settings-readback-v1.json",
+      "bytes": 746,
+      "sha256": "6a8336b1c67c88f550492bfe38a194cc6187988799bc46f4b38e8fdc5941a66c"
+    },
+    {
+      "path": "root-layout-tests.txt",
+      "bytes": 967,
+      "sha256": "0c28c94a92918a9be94f568f4f05631d9648ba83964221706b872f840750f0b6"
+    },
+    {
+      "path": "vercel-env-cli-receipt-v1.json",
+      "bytes": 2715,
+      "sha256": "25bc46744382ca70d227637cfdba50a34858c7346f6f84ea9f81b583817cd957"
+    },
+    {
+      "path": "vercel-env-create-v1.json",
+      "bytes": 184,
+      "sha256": "3f589d784d9507a34be002188ae37c3159b2dc389a0ce75d2106b324e2dfae8b"
+    },
+    {
+      "path": "vercel-env-create-v2.json",
+      "bytes": 59,
+      "sha256": "cb04c53f3ca3fe6ff7e2a71778c16145f211b4c995051f980b983ec08402fb32"
+    }
+  ]
+}
