@@ -1,0 +1,35 @@
+{
+  "performanceClaim": false,
+  "entries": [
+    {
+      "path": "REPORT.md",
+      "bytes": 1366,
+      "sha256": "ae5561690a0c21d6ccf49c97de434fa716eba59bb578c3c036da1c53b40f9572"
+    },
+    {
+      "path": "login-390.png",
+      "bytes": 18971,
+      "sha256": "12cd42d0d9fe72103b97a9a8d3ed15c8a01d182106ea63dc045afb5ac6b8a5bb"
+    },
+    {
+      "path": "preview-release-smoke-v1-failure.json",
+      "bytes": 242,
+      "sha256": "51a54612134175da7396119fcafc591920df98dc9d9d3f993d2d3f0de82cfced"
+    },
+    {
+      "path": "preview-release-smoke-v1.mjs",
+      "bytes": 5395,
+      "sha256": "e19816a2515b1ecc6ef3b5b801517277d856ad477440509bed72dbd3bfa1ed0a"
+    },
+    {
+      "path": "preview-release-smoke-v2.json",
+      "bytes": 1238,
+      "sha256": "4670d7d1d8b76b2417c8d1d978c875f6109518a604e540a6dbfbe5378d351285"
+    },
+    {
+      "path": "preview-release-smoke-v2.mjs",
+      "bytes": 5913,
+      "sha256": "2f37bd94f7f8791d971e817433aab5778196405217ffeac12114c58172dfebec"
+    }
+  ]
+}

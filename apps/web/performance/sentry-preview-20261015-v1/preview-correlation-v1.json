@@ -1,0 +1,9 @@
+{
+  "eventId": "69291aa46d3849119a70b2c55970abff",
+  "idMatches": true,
+  "projectMatches": true,
+  "environment": "preview",
+  "releaseIsGitSha": false,
+  "releaseMatchesPreviewSha": false,
+  "privateSentinelPresent": false
+}

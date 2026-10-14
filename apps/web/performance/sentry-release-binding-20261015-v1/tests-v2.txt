@@ -1,0 +1,43 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/next-image-config-security.test.ts:
+(pass) Next image optimizer trust boundary > allows only purpose-scoped Supabase buckets and fixed image hosts [0.11ms]
+(pass) Next image optimizer trust boundary > rejects malformed and non-Supabase origins instead of extracting a hostname [0.13ms]
+(pass) Next image optimizer trust boundary > disables SVG and limits the local-IP exception to the declared local stack mode [0.02ms]
+(pass) Next image optimizer trust boundary > enables the loopback optimizer exception only for the gated local stacks [0.03ms]
+
+tests-unit/sentry-dsn.test.ts:
+(pass) Sentry CSP ingestion boundary > grants the precise configured Cloud region without disclosing ingestion credentials [0.13ms]
+(pass) Sentry CSP ingestion boundary > refuses missing, forged, broad, encoded, or credential-bearing sources [0.04ms]
+
+tests-unit/sentry-release.test.ts:
+4 | 
+5 | test('binds a full source commit through the event privacy boundary', () => {
+6 |   const sha='b01012345678'+'b'.repeat(28);
+7 |   expect(sentryBuildRelease(sha)).toBe(sha);
+8 |   const event=sanitizeSentryEvent({type:undefined,release:sentryBuildRelease(sha),user:{email:'synthetic-private@example.test'}});
+9 |   expect(event?.release).toBe(sha);
+                             ^
+error: expect(received).toBe(expected)
+
+Expected: "b01012345678bbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+Received: undefined
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web/tests-unit/sentry-release.test.ts:9:26)
+(fail) binds a full source commit through the event privacy boundary [1.26ms]
+(pass) does not substitute package versions, account identifiers, abbreviated commits, or secret values [0.03ms]
+
+tests-unit/sentry-sdk-transport.test.ts:
+(pass) actual Sentry SDK applies the privacy filter before a transport sees an error [26.01ms]
+
+tests-unit/sentry-privacy.test.ts:
+(pass) Sentry event privacy > preserves validated opaque IDs containing phone-like digits while still removing actual personal data [0.35ms]
+(pass) Sentry event privacy > retains error type and repository frame while dropping request, OCR, identity and provider diagnostics [0.29ms]
+(pass) Sentry event privacy > bounds frames/exceptions and refuses unknown diagnostic types, functions and external paths [1.57ms]
+(pass) Sentry event privacy > turns off all sensitive SDK 11 defaults, telemetry categories and breadcrumbs [0.07ms]
+(pass) Sentry event privacy > fails closed for malformed or credential-bearing DSNs [0.06ms]
+
+ 13 pass
+ 1 fail
+ 105 expect() calls
+Ran 14 tests across 5 files. [652.00ms]

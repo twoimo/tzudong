@@ -1,0 +1,103 @@
+{
+  "kind": "local-production-build-actual-sentry-network",
+  "browser": "155.0.8059.40",
+  "sdk": "11.4.0",
+  "buildId": "0pUaTwxQk69McuNHLbjtM",
+  "sourceCommit": "4397d53a3aa3ba7ded3f1ce82bb2e950aef09ca6",
+  "scope": "Three independent clean browser contexts; synthetic TypeError. No physical device or field proof. Browser build environment is production; these exact IDs are synthetic and must be excluded from field cohorts.",
+  "rows": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "status": 200,
+      "ingestionOriginAllowed": true,
+      "cspBlocked": 0,
+      "pageErrorsBeforeInjection": 0,
+      "pageErrors": 1,
+      "received": {
+        "status": 200,
+        "idMatches": true,
+        "type": "TypeError",
+        "releaseMatches": true,
+        "environment": "production",
+        "userPresent": false,
+        "messageSanitized": true,
+        "syntheticPrivatePresent": false
+      },
+      "events": [
+        {
+          "httpResponseUnobserved": true,
+          "eventId": "5651962da9ee4e3eb70a3b1ca19fa1b8",
+          "containsSyntheticPrivate": false,
+          "itemTypes": [
+            "event"
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 834,
+        "height": 1112
+      },
+      "status": 200,
+      "ingestionOriginAllowed": true,
+      "cspBlocked": 0,
+      "pageErrorsBeforeInjection": 0,
+      "pageErrors": 1,
+      "received": {
+        "status": 200,
+        "idMatches": true,
+        "type": "TypeError",
+        "releaseMatches": true,
+        "environment": "production",
+        "userPresent": false,
+        "messageSanitized": true,
+        "syntheticPrivatePresent": false
+      },
+      "events": [
+        {
+          "httpResponseUnobserved": true,
+          "eventId": "c7157edad59748b8baad9fecf18d5c0f",
+          "containsSyntheticPrivate": false,
+          "itemTypes": [
+            "event"
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "status": 200,
+      "ingestionOriginAllowed": true,
+      "cspBlocked": 0,
+      "pageErrorsBeforeInjection": 0,
+      "pageErrors": 1,
+      "received": {
+        "status": 200,
+        "idMatches": true,
+        "type": "TypeError",
+        "releaseMatches": true,
+        "environment": "production",
+        "userPresent": false,
+        "messageSanitized": true,
+        "syntheticPrivatePresent": false
+      },
+      "events": [
+        {
+          "httpResponseUnobserved": true,
+          "eventId": "d6a4e03d46654796b8df0d49f0861854",
+          "containsSyntheticPrivate": false,
+          "itemTypes": [
+            "event"
+          ]
+        }
+      ]
+    }
+  ]
+}

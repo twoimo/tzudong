@@ -1,0 +1,31 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/next-image-config-security.test.ts:
+(pass) Next image optimizer trust boundary > allows only purpose-scoped Supabase buckets and fixed image hosts [0.10ms]
+(pass) Next image optimizer trust boundary > rejects malformed and non-Supabase origins instead of extracting a hostname [0.10ms]
+(pass) Next image optimizer trust boundary > disables SVG and limits the local-IP exception to the declared local stack mode [0.02ms]
+(pass) Next image optimizer trust boundary > enables the loopback optimizer exception only for the gated local stacks [0.03ms]
+
+tests-unit/sentry-dsn.test.ts:
+(pass) Sentry CSP ingestion boundary > grants the precise configured Cloud region without disclosing ingestion credentials [0.12ms]
+(pass) Sentry CSP ingestion boundary > refuses missing, forged, broad, encoded, or credential-bearing sources [0.03ms]
+
+tests-unit/sentry-release.test.ts:
+(pass) binds a full source commit through the event privacy boundary [1.00ms]
+(pass) does not substitute package versions, account identifiers, abbreviated commits, or secret values [0.03ms]
+(pass) actual composed Next config keeps a valid build identity and drops a package label [428.53ms]
+
+tests-unit/sentry-sdk-transport.test.ts:
+(pass) actual Sentry SDK applies the privacy filter before a transport sees an error [36.25ms]
+
+tests-unit/sentry-privacy.test.ts:
+(pass) Sentry event privacy > preserves validated opaque IDs containing phone-like digits while still removing actual personal data [0.38ms]
+(pass) Sentry event privacy > retains error type and repository frame while dropping request, OCR, identity and provider diagnostics [0.20ms]
+(pass) Sentry event privacy > bounds frames/exceptions and refuses unknown diagnostic types, functions and external paths [1.22ms]
+(pass) Sentry event privacy > turns off all sensitive SDK 11 defaults, telemetry categories and breadcrumbs [0.07ms]
+(pass) Sentry event privacy > fails closed for malformed or credential-bearing DSNs [0.06ms]
+
+ 15 pass
+ 0 fail
+ 108 expect() calls
+Ran 15 tests across 5 files. [927.00ms]

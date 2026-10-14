@@ -1,0 +1,11 @@
+{
+  "sha": "4397d53a3aa3ba7ded3f1ce82bb2e950aef09ca6",
+  "branch": "codex/sentry-release-binding-20261015",
+  "buildDist": ".next-sentry-release-binding-20261015-v1",
+  "sdk": "11.4.0",
+  "next": "16.3.8",
+  "node": "24.21.0",
+  "bindingExpected": "4397d53a3aa3ba7ded3f1ce82bb2e950aef09ca6",
+  "dataMutationCount": 0,
+  "sourceMapUploadTokenConfigured": false
+}

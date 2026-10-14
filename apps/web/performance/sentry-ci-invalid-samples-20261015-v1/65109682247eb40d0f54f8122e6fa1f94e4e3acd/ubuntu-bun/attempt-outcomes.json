@@ -1,0 +1,120 @@
+[
+  {
+    "phase": "warmup",
+    "kind": "native",
+    "retry": 1,
+    "accepted": false,
+    "rawOutput": "warmup-native.ndjson",
+    "rawSha256": "5d7cf01b7a8b19cca8bb5b637343da80731a9d4140671098daed58979ddd451b",
+    "failure": "TYPECHECK_SAMPLER_SUMMARY_INVALID",
+    "summary": {
+      "schemaVersion": 2,
+      "rootPid": 3057,
+      "rootStartIdentity": "27356",
+      "requestedIntervalMs": 10,
+      "maximumAllowedGapMs": 60,
+      "samples": 941,
+      "peakRssBytes": 1894084608,
+      "maximumGapMs": 76.77138000000014,
+      "terminalObserved": true,
+      "valid": false,
+      "invalidReasons": [
+        "sampling-gap-exceeded"
+      ],
+      "output": "warmup-native.ndjson"
+    }
+  },
+  {
+    "phase": "warmup",
+    "kind": "native",
+    "retry": 2,
+    "accepted": false,
+    "rawOutput": "warmup-native-attempt-2.ndjson",
+    "rawSha256": "5620994e94b281e6659a41deec244e0345f3120c1c6ba970d9f3683fab22c828",
+    "failure": "TYPECHECK_SAMPLER_SUMMARY_INVALID",
+    "summary": {
+      "schemaVersion": 2,
+      "rootPid": 3091,
+      "rootStartIdentity": "28308",
+      "requestedIntervalMs": 10,
+      "maximumAllowedGapMs": 60,
+      "samples": 1113,
+      "peakRssBytes": 1954902016,
+      "maximumGapMs": 68.45783099999971,
+      "terminalObserved": true,
+      "valid": false,
+      "invalidReasons": [
+        "sampling-gap-exceeded"
+      ],
+      "output": "warmup-native-attempt-2.ndjson"
+    }
+  },
+  {
+    "phase": "warmup",
+    "kind": "native",
+    "retry": 3,
+    "accepted": true,
+    "durationMs": 11870.761181,
+    "rawOutput": "warmup-native-attempt-3.ndjson",
+    "rawSha256": "2351ed6ea81bb0885fe973f0e54d5b56a274b53214e0f1d2b322a569f18d096c",
+    "summary": {
+      "schemaVersion": 2,
+      "rootPid": 3119,
+      "rootStartIdentity": "29432",
+      "requestedIntervalMs": 10,
+      "maximumAllowedGapMs": 60,
+      "samples": 1185,
+      "peakRssBytes": 1910358016,
+      "maximumGapMs": 52.89005400000133,
+      "terminalObserved": true,
+      "valid": true,
+      "invalidReasons": [],
+      "output": "warmup-native-attempt-3.ndjson"
+    },
+    "failure": null
+  },
+  {
+    "phase": "warmup",
+    "kind": "compat",
+    "retry": 1,
+    "accepted": true,
+    "durationMs": 55603.430369,
+    "rawOutput": "warmup-compat.ndjson",
+    "rawSha256": "102a1bc9991cb570210749d60312bb8d2d94da94681555586c69fa87fc40bbba",
+    "summary": {
+      "schemaVersion": 2,
+      "rootPid": 3150,
+      "rootStartIdentity": "30625",
+      "requestedIntervalMs": 10,
+      "maximumAllowedGapMs": 60,
+      "samples": 5540,
+      "peakRssBytes": 1906143232,
+      "maximumGapMs": 46.741867000000184,
+      "terminalObserved": true,
+      "valid": true,
+      "invalidReasons": [],
+      "output": "warmup-compat.ndjson"
+    },
+    "failure": null
+  },
+  {
+    "phase": "measured",
+    "position": 1,
+    "retry": 1,
+    "kind": "native",
+    "accepted": false,
+    "rawOutput": "01-native-attempt-1.ndjson",
+    "rawSha256": "853fa062779476e5223da83f475406a976db45559ad9fe72bbad0a331bb2a30d",
+    "failure": "TYPECHECK_SAMPLER_SUMMARY_INVALID"
+  },
+  {
+    "phase": "measured",
+    "position": 1,
+    "retry": 2,
+    "kind": "native",
+    "accepted": false,
+    "rawOutput": "01-native-attempt-2.ndjson",
+    "rawSha256": "34cd5b68042e0ee9bda1854b0c8427a5b61a19b856778e8fd8277fd3602ee199",
+    "failure": "TYPECHECK_SAMPLER_SUMMARY_INVALID"
+  }
+]

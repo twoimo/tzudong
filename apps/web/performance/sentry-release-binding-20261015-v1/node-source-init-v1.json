@@ -1,0 +1,15 @@
+{
+  "node": "v24.21.0",
+  "sdk": "11.4.0",
+  "eventId": "baa8afb294184bafba944fe9bf4b130e",
+  "flushed": true,
+  "readback": {
+    "status": 200,
+    "idMatches": true,
+    "sensitivePresent": false,
+    "userPresent": false,
+    "releaseMatches": true,
+    "environment": "test"
+  },
+  "scope": "Actual source server initialization and Node SDK, synthetic error, immutable SHA binding; not a deployed Next route failure or field metric."
+}

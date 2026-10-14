@@ -1,0 +1,39 @@
+{
+  "kind": "actual-protected-vercel-preview-sentry-receipt",
+  "browser": "155.0.8059.40",
+  "sdk": "11.4.0",
+  "deploymentId": "dpl_DRxWpShr1MSg6WAHahQszD8aA3t5",
+  "sourceCommit": "d33640b226fcd2df9de349bad83e972b3a45a17f",
+  "scope": "One clean Chrome context; actual protected Vercel preview. Development OIDC attached only to the exact preview origin, never Sentry or other requests. Synthetic TypeError; no production alias, physical phone, or field claim.",
+  "rows": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "status": 200,
+      "ingestionOriginAllowed": true,
+      "cspBlocked": 0,
+      "pageErrorsBeforeInjection": 0,
+      "pageErrors": 1,
+      "received": {
+        "status": 200,
+        "idMatches": true,
+        "type": "TypeError",
+        "userPresent": false,
+        "messageSanitized": true,
+        "syntheticPrivatePresent": false
+      },
+      "events": [
+        {
+          "httpResponseUnobserved": true,
+          "eventId": "69291aa46d3849119a70b2c55970abff",
+          "containsSyntheticPrivate": false,
+          "itemTypes": [
+            "event"
+          ]
+        }
+      ]
+    }
+  ]
+}

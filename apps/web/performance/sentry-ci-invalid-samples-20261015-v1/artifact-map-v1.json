@@ -1,0 +1,55 @@
+{
+  "admittedPerformanceMeasurements": 0,
+  "entries": [
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/attempt-outcomes.json",
+      "bytes": 3369,
+      "sha256": "534108c30a1e5058ab92bb25f99db349d79af51dd30791c564b154784d343238"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/failure-receipt.json",
+      "bytes": 847,
+      "sha256": "8cc91ac502b095be126fd218e2010556e3625e77f26e341ca65b0cc0a7931b6b"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/preflight-receipts.json",
+      "bytes": 1753,
+      "sha256": "45191da8dad466ee2ea789e40b2b4934ce9f133c3c516a3a8d3846a19925a28b"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/01-native-attempt-1.ndjson",
+      "bytes": 427360,
+      "sha256": "853fa062779476e5223da83f475406a976db45559ad9fe72bbad0a331bb2a30d"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/01-native-attempt-2.ndjson",
+      "bytes": 467483,
+      "sha256": "34cd5b68042e0ee9bda1854b0c8427a5b61a19b856778e8fd8277fd3602ee199"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/warmup-compat.ndjson",
+      "bytes": 2305625,
+      "sha256": "102a1bc9991cb570210749d60312bb8d2d94da94681555586c69fa87fc40bbba"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/warmup-native-attempt-2.ndjson",
+      "bytes": 461912,
+      "sha256": "5620994e94b281e6659a41deec244e0345f3120c1c6ba970d9f3683fab22c828"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/warmup-native-attempt-3.ndjson",
+      "bytes": 491821,
+      "sha256": "2351ed6ea81bb0885fe973f0e54d5b56a274b53214e0f1d2b322a569f18d096c"
+    },
+    {
+      "path": "65109682247eb40d0f54f8122e6fa1f94e4e3acd/ubuntu-bun/raw/warmup-native.ndjson",
+      "bytes": 390492,
+      "sha256": "5d7cf01b7a8b19cca8bb5b637343da80731a9d4140671098daed58979ddd451b"
+    },
+    {
+      "path": "REPORT.md",
+      "bytes": 960,
+      "sha256": "4205f3d4dab51c899f0c557730a126dab134d85e195bfca9d5348e31e7a64184"
+    }
+  ]
+}

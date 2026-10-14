@@ -1,0 +1,95 @@
+{
+  "performanceClaim": false,
+  "entries": [
+    {
+      "path": "REPORT-local-v1.md",
+      "bytes": 1985,
+      "sha256": "72ad883f08028587e04196f2e08857da169b0a21479941d6ea1157ba2857e6eb"
+    },
+    {
+      "path": "build-v1.txt",
+      "bytes": 1494,
+      "sha256": "b75d017e1354fe831286695f1e8efd5e33f9defccf64683fca34e3c176bd78d0"
+    },
+    {
+      "path": "lint-v1.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "lint-v2.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "lint-v3.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "local-release-smoke-v1.json",
+      "bytes": 2726,
+      "sha256": "28057712a1cfc812d27d587155adf582b47f07bcec024da3b4fa840020063162"
+    },
+    {
+      "path": "local-release-smoke-v1.mjs",
+      "bytes": 5180,
+      "sha256": "0956b8c48e32e13f164e742c9021ae671234ae66d61157eac91762f6a70a430f"
+    },
+    {
+      "path": "login-1440.png",
+      "bytes": 23482,
+      "sha256": "751b7691b66da59d88d06f0553c634461392d90e08487cf5e5e45bfe0eeaa6aa"
+    },
+    {
+      "path": "login-390.png",
+      "bytes": 18971,
+      "sha256": "12cd42d0d9fe72103b97a9a8d3ed15c8a01d182106ea63dc045afb5ac6b8a5bb"
+    },
+    {
+      "path": "login-834.png",
+      "bytes": 22463,
+      "sha256": "a3e79f87f7a765ce71e347a09c70612b1d850ad0a7e86504a18a8674452adfb2"
+    },
+    {
+      "path": "node-source-init-v1.json",
+      "bytes": 441,
+      "sha256": "dc1dd8d25fde5e08c9bd1a6ccfa8754ef403ff3492f339b5f2ce47df5d149ab4"
+    },
+    {
+      "path": "node-source-init-v1.ts",
+      "bytes": 3138,
+      "sha256": "393f1f7f7bf809046ff0ec708e074e8158bcd171828bb10768598df0aab0d26f"
+    },
+    {
+      "path": "parity-v1.txt",
+      "bytes": 510,
+      "sha256": "4d38bf3e6e7049c119b449b60a19c60a49bb1534b148f19e2640a3c8d1118284"
+    },
+    {
+      "path": "parity-v2.txt",
+      "bytes": 510,
+      "sha256": "4d38bf3e6e7049c119b449b60a19c60a49bb1534b148f19e2640a3c8d1118284"
+    },
+    {
+      "path": "source-receipt-v1.json",
+      "bytes": 362,
+      "sha256": "4b8cd3fe4041c8aa4e2caadf23c5adb71e65a624d2d4798d5ffe8fcdd0cc967f"
+    },
+    {
+      "path": "tests-v1.txt",
+      "bytes": 2610,
+      "sha256": "fae916f0bdca4c442edccfceb671c83cdbb8d31a08bf2a81dc7daa1468b6fa14"
+    },
+    {
+      "path": "tests-v2.txt",
+      "bytes": 2610,
+      "sha256": "4035c76859eae87e2e312d88265ead3d05ac35ca37cacd50126247b1e919c3c9"
+    },
+    {
+      "path": "tests-v3.txt",
+      "bytes": 2073,
+      "sha256": "b007b1bc0f745501cd8b189df7fcdb6b737dda8ca74083b09ca6971417e39bdf"
+    }
+  ]
+}
