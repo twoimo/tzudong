@@ -1,0 +1,8 @@
+{
+  "status": "passed",
+  "remoteCommit": "1d6b25e962c84bd5818de585166813e5e2e7c412",
+  "remotePacketTree": "72c51e6fa19452d2d32ef47e6b96a51bd44fb12b",
+  "blobsChecked": 41,
+  "allSha256AndSizesMatch": true,
+  "unexpectedFiles": 0
+}
