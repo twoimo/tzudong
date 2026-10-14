@@ -1,0 +1,63 @@
+{
+  "sourceMainSha": "275fb4bedcaabfe151658acebeaf4611d9db9115",
+  "protectedPromotion": {
+    "source": [
+      3205,
+      3207,
+      3210,
+      3212
+    ],
+    "data": [
+      3206,
+      3208,
+      3211
+    ],
+    "main": 3209
+  },
+  "production": {
+    "sha": "1884f87e53c4567ead7c9a0fb394b09b91a70396",
+    "deploymentId": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5",
+    "state": "READY",
+    "approvalUpdated": false,
+    "newMainGitDeployment": "dpl_8cp7MwHonkdVhfS16YcLqaw6wvsT",
+    "newMainGitDeploymentState": "CANCELED"
+  },
+  "actualSDKReceipts": {
+    "localBrowserInitial": 3,
+    "localNodeInitial": 1,
+    "firstPreview": 1,
+    "localBrowserReleaseBinding": 3,
+    "sourceNodeReleaseBinding": 1,
+    "correctedPreview": 1
+  },
+  "correctedPreview": {
+    "sha": "da65ba93c46bb6f3e212ec158cc17357ec05e474",
+    "deploymentId": "dpl_BKmLDcSFdSR6gB35WN7GhjrJ8aKN",
+    "eventIdAndReleaseShaMatch": true,
+    "privateSentinelAbsent": true
+  },
+  "limits": {
+    "errorsPer86400Seconds": 100,
+    "tracing": false,
+    "replay": false,
+    "logs": false,
+    "paidChanges": 0,
+    "uploadTokenConfigured": false
+  },
+  "remaining": {
+    "production": "Existing review SQL dependencies need direct PostgreSQL connection/rehearsal/readback; no supported credential in known files/process. Existing request pending.",
+    "mainAdditionalCI": "Main required Release/Promotion passed; broader exact-head jobs were still running, no observed failures.",
+    "physicalDevice": "User explicitly requested phone-free validation.",
+    "field": "Zero admitted real-user field samples; synthetic events excluded.",
+    "memory": "Original natural heap regression guard not yet proven satisfied."
+  },
+  "attachmentLimit": 100,
+  "unattachedCreatedPrs": [
+    3207,
+    3208,
+    3209,
+    3210,
+    3211,
+    3212
+  ]
+}
