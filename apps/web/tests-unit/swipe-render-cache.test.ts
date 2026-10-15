@@ -4,6 +4,7 @@ import {
     buildPostSearchSwipeCandidates,
     getLastSwipeOrderBuildCount,
     getNearestFallbackScanCount,
+    getSwipeListSnapshotCreationCount,
     isSameRestaurantSelection,
 } from '../lib/mobile-home-search-selection';
 
@@ -16,6 +17,35 @@ const order = (visible: Restaurant[], searched: Restaurant, all = visible) =>
     buildPostSearchSwipeCandidates({ visibleRestaurants: visible, allRestaurants: all, activeSearchedRestaurant: searched });
 
 describe('swipe render cache correctness and capacity', () => {
+    test('shares unchanged row snapshots across separately retained result lists', () => {
+        const rows = [restaurant('shared-a'), restaurant('shared-b'), restaurant('shared-c')];
+        const before = getSwipeListSnapshotCreationCount();
+        const lists = Array.from({ length: 128 }, () => [...rows]);
+        for (const visible of lists) {
+            expect(buildPostSearchSwipeCandidates({
+                visibleRestaurants: visible, allRestaurants: visible, activeSearchedRestaurant: null,
+            })).toBe(visible);
+        }
+        expect(getSwipeListSnapshotCreationCount() - before).toBe(rows.length);
+    });
+
+    test('invalidates each older list after a shared row changes and another list observes it', () => {
+        const a = restaurant('shared-before', { lat: 38 });
+        const b = restaurant('shared-after', { lat: 39, mergedRestaurants: merged('old-alias') });
+        const searched = restaurant('shared-search');
+        const lists = [[a, b], [a, b], [a, b]];
+        const previous = lists.map(visible => order(visible, searched));
+        const count = getSwipeListSnapshotCreationCount();
+        b.mergedRestaurants![0].id = searched.id;
+        lists.forEach((visible, index) => {
+            const updated = order(visible, searched);
+            expect(updated).not.toBe(previous[index]);
+            expect(updated).toEqual([b, a]);
+            expect(order(visible, searched)).toBe(updated);
+        });
+        expect(getSwipeListSnapshotCreationCount() - count).toBe(1);
+    });
+
     test('deduplicates a previously unique array after an in-place duplicate append', () => {
         const visible = [restaurant('a'), restaurant('b')];
         const input = { visibleRestaurants: visible, allRestaurants: visible, activeSearchedRestaurant: null };

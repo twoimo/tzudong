@@ -317,14 +317,31 @@ const orderedVisibleCache = new WeakMap<readonly Restaurant[], Map<string, {
     searched: SelectionCacheKey;
     restaurants: Restaurant[];
 }>>();
-const swipeListSnapshots = new WeakMap<readonly Restaurant[], Array<{
+type SwipeListEntrySnapshot = {
     restaurant: Restaurant;
     key: SelectionCacheKey;
-}>>();
+};
+const swipeListSnapshots = new WeakMap<readonly Restaurant[], SwipeListEntrySnapshot[]>();
+const swipeRestaurantSnapshots = new WeakMap<Restaurant, SwipeListEntrySnapshot>();
+let swipeListSnapshotCreationCount = 0;
+
+export function getSwipeListSnapshotCreationCount() {
+    return swipeListSnapshotCreationCount;
+}
+
+const snapshotSwipeRestaurant = (restaurant: Restaurant): SwipeListEntrySnapshot => {
+    const previous = swipeRestaurantSnapshots.get(restaurant);
+    if (previous && matchesSelectionCacheKey(previous.key, restaurant)) return previous;
+    const snapshot = { restaurant, key: selectionCacheKey(restaurant) };
+    swipeRestaurantSnapshots.set(restaurant, snapshot);
+    swipeListSnapshotCreationCount += 1;
+    return snapshot;
+};
 
 // React callers normally replace lists, but mutable inputs are also supported.
-// One snapshot per live list invalidates all results that depend on changed
-// membership, object identity or selection fields, including merged IDs.
+// Lists retain their own membership/order snapshot but share unchanged row
+// snapshots. Older lists keep their previous row version, so revisiting one
+// still detects in-place edits even if a different list saw the edit first.
 const refreshSwipeListCaches = (restaurants: Restaurant[]): void => {
     const previous = swipeListSnapshots.get(restaurants);
     if (previous && previous.length === restaurants.length && previous.every((entry, index) =>
@@ -334,10 +351,7 @@ const refreshSwipeListCaches = (restaurants: Restaurant[]): void => {
     rememberedUniqueSwipeLists.delete(restaurants);
     orderedVisibleCache.delete(restaurants);
     nearestSwipeFallbackCache.delete(restaurants);
-    swipeListSnapshots.set(restaurants, restaurants.map(restaurant => ({
-        restaurant,
-        key: selectionCacheKey(restaurant),
-    })));
+    swipeListSnapshots.set(restaurants, restaurants.map(snapshotSwipeRestaurant));
 };
 let lastSwipeOrderBuildCount = 0;
 
