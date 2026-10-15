@@ -64,17 +64,30 @@ function patchStableMarkerReviewBubble(element: HTMLElement, nextContent: unknow
         const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
         if (currentId && nextId && currentId !== nextId && uuid.test(currentId) && uuid.test(nextId)) {
             const attribute = ` data-restaurant-id="${currentId}"`;
-            const overlay = '[data-visible-marker-review-bubble-anchor="true"]';
-            const currentRoot = currentMarker.closest?.(overlay)
-                ?? currentMarker.closest?.(MARKER_KIND_SELECTOR) ?? currentMarker;
-            const nextRoot = nextMarker.closest?.(overlay)
-                ?? nextMarker.closest?.(MARKER_KIND_SELECTOR) ?? nextMarker;
+            const nextAttribute = ` data-restaurant-id="${nextId}"`;
             if (currentContent.indexOf(attribute) === currentContent.lastIndexOf(attribute)
                 && currentContent.includes(attribute)
-                && currentContent.replace(attribute, ` data-restaurant-id="${nextId}"`) === nextContent
-                && currentRoot.outerHTML.replace(attribute, ` data-restaurant-id="${nextId}"`) === nextRoot.outerHTML) {
-                currentMarker.setAttribute('data-restaurant-id', nextId);
-                return true;
+                && currentContent.replace(attribute, nextAttribute) === nextContent) {
+                const overlay = '[data-visible-marker-review-bubble-anchor="true"]';
+                const currentRoot = currentMarker.closest?.(overlay)
+                    ?? currentMarker.closest?.(MARKER_KIND_SELECTOR) ?? currentMarker;
+                const nextRoot = nextMarker.closest?.(overlay)
+                    ?? nextMarker.closest?.(MARKER_KIND_SELECTOR) ?? nextMarker;
+                // The SDK adds its documented default cursor to the category
+                // wrapper. Admit only that exact addition; all other attributes,
+                // styles and children must match the app-generated root.
+                const rootsMatch = currentRoot.outerHTML.replace(attribute, nextAttribute) === nextRoot.outerHTML
+                    || (currentRoot.getAttribute('data-restaurant-marker-kind') === 'category'
+                        && nextRoot.getAttribute('data-restaurant-marker-kind') === 'category'
+                        && currentRoot.getAttribute('style') === 'cursor: pointer;'
+                        && !nextRoot.hasAttribute('style')
+                        && currentRoot.attributes.length === nextRoot.attributes.length + 1
+                        && Array.from(nextRoot.attributes).every(({ name, value }) => currentRoot.getAttribute(name) === value)
+                        && currentRoot.innerHTML.replace(attribute, nextAttribute) === nextRoot.innerHTML);
+                if (rootsMatch) {
+                    currentMarker.setAttribute('data-restaurant-id', nextId);
+                    return true;
+                }
             }
         }
     }

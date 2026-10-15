@@ -695,7 +695,10 @@ test('renderer category wrappers rebind only when the complete wrapper remains u
         createElement: () => ({ innerHTML: '', content: { querySelector: () => ({
           getAttribute: (key: string) => key === 'data-restaurant-id' ? nextId : null,
           closest: (selector: string) => selector.includes('review-bubble-anchor') && !overlay
-            ? null : { outerHTML: serial(nextId) },
+            ? null : {
+              getAttribute: (name: string) => name === 'data-restaurant-marker-kind' ? 'category' : null,
+              outerHTML: serial(nextId),
+            },
         }) } }),
       } });
       const marker = markerPool.acquire(oldId, makePosition('old'), { ...visual(oldId), content: content(oldId) }, 'map') as unknown as FakeMarker;
@@ -705,6 +708,54 @@ test('renderer category wrappers rebind only when the complete wrapper remains u
       expect(marker.setIconCalls).toBe(mutated ? 1 : 0);
       expect(domId).toBe(mutated ? oldId : nextId);
       expect(marker.getIcon().content).toBe(content(nextId));
+    }
+  } finally {
+    if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument);
+    else delete (globalThis as { document?: Document }).document;
+  }
+});
+
+test('SDK default category cursor is preserved while unexpected wrapper styles force replacement', () => {
+  const oldId = '00000000-0000-4000-8000-000000000001';
+  const nextId = '00000000-0000-4000-8000-000000000002';
+  const content = (id: string) => getNaverIndividualMarkerVisual({ id, categories: ['한식'] }, false).content;
+  const attributes = [...content(oldId).matchAll(/(data-restaurant-marker-[\w-]+)="([^"]+)"/g)]
+    .map(([, name, value]) => ({ name, value }));
+  const inner = (id: string) => content(id).replace(/^<div[^>]*>/, '').replace(/<\/div>$/, '');
+  const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  try {
+    for (const style of ['cursor: pointer;', 'cursor: crosshair;', 'cursor: pointer; width: 60px;']) {
+      markerPool.clear();
+      let domId = oldId;
+      const currentRoot = {
+        attributes: [...attributes, { name: 'style', value: style }],
+        getAttribute: (name: string) => name === 'style' ? style : attributes.find(a => a.name === name)?.value ?? null,
+        get innerHTML() { return inner(domId); },
+        get outerHTML() { return content(domId).replace('<div ', `<div style="${style}" `); },
+      };
+      const nextRoot = {
+        attributes,
+        getAttribute: (name: string) => attributes.find(a => a.name === name)?.value ?? null,
+        hasAttribute: (name: string) => attributes.some(a => a.name === name),
+        innerHTML: inner(nextId),
+        outerHTML: content(nextId),
+      };
+      const node = (id: string, root: typeof currentRoot | typeof nextRoot) => ({
+        getAttribute: (name: string) => name === 'data-restaurant-id' ? id : null,
+        closest: (selector: string) => selector.includes('review-bubble-anchor') ? null : root,
+        setAttribute: (_name: string, value: string) => { domId = value; },
+      });
+      Object.defineProperty(globalThis, 'document', { configurable: true, value: {
+        createElement: () => ({ innerHTML: '', content: { querySelector: () => node(nextId, nextRoot) } }),
+      } });
+      const marker = markerPool.acquire(oldId, makePosition('old'), { content: content(oldId) }, 'map') as unknown as FakeMarker;
+      marker.getElement = () => ({ querySelector: () => node(domId, currentRoot) }) as unknown as HTMLElement;
+      markerPool.release(oldId);
+      markerPool.acquire(nextId, makePosition('new'), { content: content(nextId) }, 'map');
+      const reused = style === 'cursor: pointer;';
+      expect(marker.setIconCalls).toBe(reused ? 0 : 1);
+      expect(domId).toBe(reused ? nextId : oldId);
+      expect(currentRoot.getAttribute('style')).toBe(style);
     }
   } finally {
     if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument);
