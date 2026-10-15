@@ -1,0 +1,113 @@
+{
+  "observedAtUtc": "2026-10-15T05:58:44.892Z",
+  "sourceCommit": "275fb4bedcaabfe151658acebeaf4611d9db9115",
+  "helperSourceSha256": "3a4283f484db1571fd6245cc4f95f03a2ccb24096e6945cf1c9f903481105e69",
+  "runtime": "1.4.0",
+  "scope": "pure helper correctness under explicit same-array/object mutation; not a production UI reproduction or performance result",
+  "cases": [
+    {
+      "name": "visible-array-duplicate-appended",
+      "first": [
+        "append-a",
+        "append-b"
+      ],
+      "afterMutationCached": [
+        "append-a",
+        "append-b"
+      ],
+      "afterMutationFresh": [
+        "append-a",
+        "append-b"
+      ],
+      "expected": [
+        "append-a",
+        "append-b"
+      ],
+      "passed": true
+    },
+    {
+      "name": "visible-name-coordinate-mutated",
+      "first": [
+        "order-a",
+        "order-b"
+      ],
+      "afterMutationCached": [
+        "order-b",
+        "order-a"
+      ],
+      "afterMutationFresh": [
+        "order-b",
+        "order-a"
+      ],
+      "expected": [
+        "order-b",
+        "order-a"
+      ],
+      "passed": true
+    },
+    {
+      "name": "visible-merged-id-mutated",
+      "first": [
+        "merged-a",
+        "merged-b"
+      ],
+      "afterMutationCached": [
+        "merged-b",
+        "merged-a"
+      ],
+      "afterMutationFresh": [
+        "merged-b",
+        "merged-a"
+      ],
+      "expected": [
+        "merged-b",
+        "merged-a"
+      ],
+      "passed": true
+    },
+    {
+      "name": "catalog-fallback-coordinate-mutated",
+      "first": [
+        "distance-visible",
+        "distance-a"
+      ],
+      "afterMutationCached": [
+        "distance-visible",
+        "distance-b"
+      ],
+      "afterMutationFresh": [
+        "distance-visible",
+        "distance-b"
+      ],
+      "expected": [
+        "distance-visible",
+        "distance-b"
+      ],
+      "passed": true
+    },
+    {
+      "name": "catalog-cached-fallback-removed",
+      "first": [
+        "remove-visible",
+        "remove-a"
+      ],
+      "afterMutationCached": [
+        "remove-visible",
+        "remove-b"
+      ],
+      "afterMutationFresh": [
+        "remove-visible",
+        "remove-b"
+      ],
+      "expected": [
+        "remove-visible",
+        "remove-b"
+      ],
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "failures": 0,
+  "productionWrites": 0,
+  "fieldAdmission": 0
+}

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "tzudong-complete-set-artifact-map.v1",
+  "candidate": "0620b97d21c63121668ee8229eaaf43acca0e5c9",
+  "performanceAdmission": 0,
+  "scope": "pure helper correctness; no browser or performance proof",
+  "entries": [
+    {
+      "path": "REPORT-v1.md",
+      "bytes": 4975,
+      "sha256": "3f3c1c3bda44800e71501a0df8f2220139a36918588eb9eb9d88f9f594f5f958"
+    },
+    {
+      "path": "baseline-reproduction-v1.json",
+      "bytes": 2408,
+      "sha256": "56989f282ce41756c044e8f8baff75d52b15083c251cc821c3189790c28d828e"
+    },
+    {
+      "path": "candidate-reproduction-v1.json",
+      "bytes": 2382,
+      "sha256": "5114c65784be9ff0a5b92a98b39d942fbbe93a5778951d2b5f4ea734d652df54"
+    },
+    {
+      "path": "reproduce-candidate-v1.mjs",
+      "bytes": 3626,
+      "sha256": "d5a46b33fe2ad7745d74fe9b3ca4c9bf7b3877f1528fef75be3112839a71c91c"
+    },
+    {
+      "path": "reproduce-v1.mjs",
+      "bytes": 3629,
+      "sha256": "cd1f5c240a925d5c3e4eeadab3084ba55f3cb31e270dbdd2e83a454451eedb40"
+    },
+    {
+      "path": "source.patch",
+      "bytes": 6552,
+      "sha256": "ca378d6ff5904df9bff3b24af7e2adcb98f617b95a335da689489e83fc9e1c4e"
+    },
+    {
+      "path": "validation-v1.json",
+      "bytes": 1063,
+      "sha256": "6ac19166d54ad7ef621b019beddce362ee304bea696e6af26495dc83760b9d70"
+    }
+  ]
+}

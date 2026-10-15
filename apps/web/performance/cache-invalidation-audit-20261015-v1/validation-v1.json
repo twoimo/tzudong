@@ -1,0 +1,30 @@
+{
+  "atUtc": "2026-10-15T06:03:30.116968+00:00",
+  "sourceBefore": "275fb4bedcaabfe151658acebeaf4611d9db9115",
+  "sourceAfter": "0620b97d21c63121668ee8229eaaf43acca0e5c9",
+  "baselineHelperHash": "d8a184e8945dbeabd98218143ac52830bb21b38800dfed937f6cd57893f233d4",
+  "candidateHelperHash": "3a4283f484db1571fd6245cc4f95f03a2ccb24096e6945cf1c9f903481105e69",
+  "baselineHelperAlsoIdenticalInMarkerCandidate": true,
+  "candidateReceiptWasDirtySource": true,
+  "candidateReceiptBaseCommit": "275fb4bedcaabfe151658acebeaf4611d9db9115",
+  "finalCandidateBlobMatchesReceipt": true,
+  "unit": {
+    "pass": 31,
+    "fail": 0,
+    "assertions": 2067,
+    "files": 2,
+    "newRegressionCases": 8
+  },
+  "lint": {
+    "exit": 0
+  },
+  "diffCheck": {
+    "exit": 0
+  },
+  "typecheckBuild": "deferred locally during40processmeasurement; canonical cloudCI pending",
+  "browserUiEquivalence": "pending",
+  "naturalMemoryGuard": "pending integration; not part of current marker-only40series",
+  "productionDeployment": false,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0
+}

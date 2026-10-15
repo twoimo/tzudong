@@ -1,0 +1,114 @@
+{
+  "observedAtUtc": "2026-10-15T05:55:42.916Z",
+  "sourceCommit": "1ec703840670c922dbccc661c1efdd10ad257cdb",
+  "helperSourceSha256": "d8a184e8945dbeabd98218143ac52830bb21b38800dfed937f6cd57893f233d4",
+  "runtime": "1.4.0",
+  "scope": "pure helper correctness under explicit same-array/object mutation; not a production UI reproduction or performance result",
+  "cases": [
+    {
+      "name": "visible-array-duplicate-appended",
+      "first": [
+        "append-a",
+        "append-b"
+      ],
+      "afterMutationCached": [
+        "append-a",
+        "append-b",
+        "append-a"
+      ],
+      "afterMutationFresh": [
+        "append-a",
+        "append-b"
+      ],
+      "expected": [
+        "append-a",
+        "append-b"
+      ],
+      "passed": false
+    },
+    {
+      "name": "visible-name-coordinate-mutated",
+      "first": [
+        "order-a",
+        "order-b"
+      ],
+      "afterMutationCached": [
+        "order-a",
+        "order-b"
+      ],
+      "afterMutationFresh": [
+        "order-b",
+        "order-a"
+      ],
+      "expected": [
+        "order-b",
+        "order-a"
+      ],
+      "passed": false
+    },
+    {
+      "name": "visible-merged-id-mutated",
+      "first": [
+        "merged-a",
+        "merged-b"
+      ],
+      "afterMutationCached": [
+        "merged-a",
+        "merged-b"
+      ],
+      "afterMutationFresh": [
+        "merged-b",
+        "merged-a"
+      ],
+      "expected": [
+        "merged-b",
+        "merged-a"
+      ],
+      "passed": false
+    },
+    {
+      "name": "catalog-fallback-coordinate-mutated",
+      "first": [
+        "distance-visible",
+        "distance-a"
+      ],
+      "afterMutationCached": [
+        "distance-visible",
+        "distance-a"
+      ],
+      "afterMutationFresh": [
+        "distance-visible",
+        "distance-b"
+      ],
+      "expected": [
+        "distance-visible",
+        "distance-b"
+      ],
+      "passed": false
+    },
+    {
+      "name": "catalog-cached-fallback-removed",
+      "first": [
+        "remove-visible",
+        "remove-a"
+      ],
+      "afterMutationCached": [
+        "remove-visible",
+        "remove-a"
+      ],
+      "afterMutationFresh": [
+        "remove-visible",
+        "remove-b"
+      ],
+      "expected": [
+        "remove-visible",
+        "remove-b"
+      ],
+      "passed": false
+    }
+  ],
+  "passed": false,
+  "failures": 5,
+  "productionWrites": 0,
+  "fieldAdmission": 0
+}
