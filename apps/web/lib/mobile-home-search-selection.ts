@@ -291,7 +291,6 @@ export const buildRestaurantsForSwipe = ({
     return [...displayRestaurants, ...restaurantsToAdd];
 };
 
-// List-reference caches require replacing catalog/visible arrays on edits.
 // Bound query history while retaining common back-and-forth searches.
 const MAX_SEARCH_CACHE_ENTRIES = 64;
 const rememberSelectionResult = <T>(cache: Map<string, T>, id: string, value: T) => {
@@ -318,6 +317,28 @@ const orderedVisibleCache = new WeakMap<readonly Restaurant[], Map<string, {
     searched: SelectionCacheKey;
     restaurants: Restaurant[];
 }>>();
+const swipeListSnapshots = new WeakMap<readonly Restaurant[], Array<{
+    restaurant: Restaurant;
+    key: SelectionCacheKey;
+}>>();
+
+// React callers normally replace lists, but mutable inputs are also supported.
+// One snapshot per live list invalidates all results that depend on changed
+// membership, object identity or selection fields, including merged IDs.
+const refreshSwipeListCaches = (restaurants: Restaurant[]): void => {
+    const previous = swipeListSnapshots.get(restaurants);
+    if (previous && previous.length === restaurants.length && previous.every((entry, index) =>
+        entry.restaurant === restaurants[index] && matchesSelectionCacheKey(entry.key, restaurants[index]))) {
+        return;
+    }
+    rememberedUniqueSwipeLists.delete(restaurants);
+    orderedVisibleCache.delete(restaurants);
+    nearestSwipeFallbackCache.delete(restaurants);
+    swipeListSnapshots.set(restaurants, restaurants.map(restaurant => ({
+        restaurant,
+        key: selectionCacheKey(restaurant),
+    })));
+};
 let lastSwipeOrderBuildCount = 0;
 
 export function getLastSwipeOrderBuildCount() {
@@ -329,6 +350,7 @@ export const buildPostSearchSwipeCandidates = ({
     allRestaurants,
     activeSearchedRestaurant,
 }: BuildPostSearchSwipeCandidatesInput): Restaurant[] => {
+    refreshSwipeListCaches(visibleRestaurants);
     const dedupedVisibleRestaurants = dedupeRestaurants(visibleRestaurants);
     let orderedVisibleRestaurants = dedupedVisibleRestaurants;
     if (activeSearchedRestaurant) {
@@ -370,6 +392,7 @@ export const buildPostSearchSwipeCandidates = ({
     }
 
     const visibleRestaurant = orderedVisibleRestaurants[0];
+    if (allRestaurants !== visibleRestaurants) refreshSwipeListCaches(allRestaurants);
     let fallbacks = nearestSwipeFallbackCache.get(allRestaurants);
     if (!fallbacks) {
         fallbacks = new Map();
