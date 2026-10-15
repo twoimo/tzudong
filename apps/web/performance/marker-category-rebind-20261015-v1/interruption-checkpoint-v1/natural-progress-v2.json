@@ -1,0 +1,353 @@
+{
+  "startedAtUtc": "2026-10-15T05:39:08.984Z",
+  "planSha256": "75b61465c6f23479ebffe072d668711f521179a7dc5b4fe6428147f358578c13",
+  "pid": 71857,
+  "environment": {
+    "node": "24.21.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "osRelease": "25.6.0",
+    "cpuModel": "Apple M5 Max",
+    "cpuCount": 18,
+    "physicalMemoryBytes": 137438953472,
+    "physicalDevice": false
+  },
+  "status": "running",
+  "completed": [
+    {
+      "kind": "baseline",
+      "label": "aa-01",
+      "phase": "AA",
+      "startedAtUtc": "2026-10-15T05:39:08.986Z",
+      "loadBefore": [
+        19.78369140625,
+        24.9541015625,
+        25.3818359375
+      ],
+      "endedAtUtc": "2026-10-15T05:41:38.505Z",
+      "loadAfter": [
+        21.58154296875,
+        25.376953125,
+        25.58349609375
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "4395b3e643e334c6e87a8b65dd88e4ad89a9266de982fd25afe78cc8717c3e27"
+    },
+    {
+      "kind": "baseline",
+      "label": "aa-02",
+      "phase": "AA",
+      "startedAtUtc": "2026-10-15T05:41:38.508Z",
+      "loadBefore": [
+        21.58154296875,
+        25.376953125,
+        25.58349609375
+      ],
+      "endedAtUtc": "2026-10-15T05:44:14.757Z",
+      "loadAfter": [
+        38.11572265625,
+        30.669921875,
+        27.66357421875
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "d16038889470462e1485584ede92900e98c020c8e6909e0255f5571bf8813ecd"
+    },
+    {
+      "kind": "baseline",
+      "label": "aa-03",
+      "phase": "AA",
+      "startedAtUtc": "2026-10-15T05:44:14.761Z",
+      "loadBefore": [
+        38.11572265625,
+        30.669921875,
+        27.66357421875
+      ],
+      "endedAtUtc": "2026-10-15T05:46:47.410Z",
+      "loadAfter": [
+        49.94140625,
+        38.60205078125,
+        31.36962890625
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "63041e1003877dae545269bf79d77195214a72585109c44ec443d13932e9f091"
+    },
+    {
+      "kind": "baseline",
+      "label": "aa-04",
+      "phase": "AA",
+      "startedAtUtc": "2026-10-15T05:46:47.416Z",
+      "loadBefore": [
+        49.94140625,
+        38.60205078125,
+        31.36962890625
+      ],
+      "endedAtUtc": "2026-10-15T05:49:37.420Z",
+      "loadAfter": [
+        50.79736328125,
+        45.0478515625,
+        35.40673828125
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "55e52f5fe217203c9aacfee9b20a63b19e200a8e3fd61b72e6f0ba5116d18971"
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-01-candidate",
+      "phase": "AB",
+      "pair": 1,
+      "startedAtUtc": "2026-10-15T05:49:37.449Z",
+      "loadBefore": [
+        50.79736328125,
+        45.0478515625,
+        35.40673828125
+      ],
+      "endedAtUtc": "2026-10-15T05:52:15.507Z",
+      "loadAfter": [
+        30.6142578125,
+        42.6748046875,
+        36.44189453125
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "4d1bbab84f5de1de7d7d887f8131d4f05d41543c741bb223187a7aaecab57391"
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-01-baseline",
+      "phase": "AB",
+      "pair": 1,
+      "startedAtUtc": "2026-10-15T05:52:15.509Z",
+      "loadBefore": [
+        30.6142578125,
+        42.6748046875,
+        36.44189453125
+      ],
+      "endedAtUtc": "2026-10-15T05:54:31.885Z",
+      "loadAfter": [
+        36.15576171875,
+        39.48193359375,
+        36.00390625
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "d55eebb29de7db834c03735f3980ee0de49b955600680e5482cf29e1731cc322"
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-02-candidate",
+      "phase": "AB",
+      "pair": 2,
+      "startedAtUtc": "2026-10-15T05:54:31.892Z",
+      "loadBefore": [
+        36.15576171875,
+        39.48193359375,
+        36.00390625
+      ],
+      "endedAtUtc": "2026-10-15T05:56:47.064Z",
+      "loadAfter": [
+        37.04443359375,
+        37.66259765625,
+        35.6787109375
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "8b1624644d8385556a033e994ada25f68fcbb194c237ebda25005a222905fb33"
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-02-baseline",
+      "phase": "AB",
+      "pair": 2,
+      "startedAtUtc": "2026-10-15T05:56:47.067Z",
+      "loadBefore": [
+        37.04443359375,
+        37.66259765625,
+        35.6787109375
+      ],
+      "endedAtUtc": "2026-10-15T05:58:58.019Z",
+      "loadAfter": [
+        20.61865234375,
+        31.7490234375,
+        33.65966796875
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "5d6e23fe7f6b663364d46da852a1028a54a0427f4d16fac98ebf41419f85f14c"
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-03-baseline",
+      "phase": "AB",
+      "pair": 3,
+      "startedAtUtc": "2026-10-15T05:58:58.025Z",
+      "loadBefore": [
+        20.61865234375,
+        31.7490234375,
+        33.65966796875
+      ],
+      "endedAtUtc": "2026-10-15T06:01:07.388Z",
+      "loadAfter": [
+        24.8857421875,
+        29.34228515625,
+        32.41064453125
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "d9ea5e3508683f4ad3092605101caa723d57706000c41b225082e233af918a9c"
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-03-candidate",
+      "phase": "AB",
+      "pair": 3,
+      "startedAtUtc": "2026-10-15T06:01:07.390Z",
+      "loadBefore": [
+        24.8857421875,
+        29.34228515625,
+        32.41064453125
+      ],
+      "endedAtUtc": "2026-10-15T06:03:14.464Z",
+      "loadAfter": [
+        23.751953125,
+        27.634765625,
+        31.306640625
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "71c3106e1c29195d84eb70e06a5e47c84f214addbeb9a70d24a3a5d3932233dc"
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-04-baseline",
+      "phase": "AB",
+      "pair": 4,
+      "startedAtUtc": "2026-10-15T06:03:14.465Z",
+      "loadBefore": [
+        23.751953125,
+        27.634765625,
+        31.306640625
+      ],
+      "endedAtUtc": "2026-10-15T06:05:21.028Z",
+      "loadAfter": [
+        20.64208984375,
+        25.1533203125,
+        29.80322265625
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "2ea620591718238e5b85e27ee42b7d76d0d8aa709bc3c18dbc39bbbedf6c4719"
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-04-candidate",
+      "phase": "AB",
+      "pair": 4,
+      "startedAtUtc": "2026-10-15T06:05:21.034Z",
+      "loadBefore": [
+        20.64208984375,
+        25.1533203125,
+        29.80322265625
+      ],
+      "endedAtUtc": "2026-10-15T06:07:24.438Z",
+      "loadAfter": [
+        22.82666015625,
+        25.49853515625,
+        29.388671875
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "e52af4f5b7e7d954d67b4f4154f959fef90337e4da72c008c0c5e8155535a687"
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-05-candidate",
+      "phase": "AB",
+      "pair": 5,
+      "startedAtUtc": "2026-10-15T06:07:24.439Z",
+      "loadBefore": [
+        22.82666015625,
+        25.49853515625,
+        29.388671875
+      ],
+      "endedAtUtc": "2026-10-15T06:09:30.824Z",
+      "loadAfter": [
+        26.23095703125,
+        26.83837890625,
+        29.43505859375
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "01dab827cad0222a18dedb7a66961a8edb3687449f471dcdc5d4828c4a78333d"
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-05-baseline",
+      "phase": "AB",
+      "pair": 5,
+      "startedAtUtc": "2026-10-15T06:09:30.827Z",
+      "loadBefore": [
+        26.23095703125,
+        26.83837890625,
+        29.43505859375
+      ],
+      "endedAtUtc": "2026-10-15T06:11:41.545Z",
+      "loadAfter": [
+        20.01025390625,
+        25.029296875,
+        28.40673828125
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "4617f1d0001b9d655db4de8c4a98b8d2cdf630daf6351a265d7018288d2805b4"
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-06-candidate",
+      "phase": "AB",
+      "pair": 6,
+      "startedAtUtc": "2026-10-15T06:11:41.547Z",
+      "loadBefore": [
+        20.01025390625,
+        25.029296875,
+        28.40673828125
+      ],
+      "endedAtUtc": "2026-10-15T06:13:52.936Z",
+      "loadAfter": [
+        22.80908203125,
+        25.60107421875,
+        28.248046875
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "bb5e141e1856c5b885d4dc96228430a748889270c490d1324841a3899ef52312"
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-06-baseline",
+      "phase": "AB",
+      "pair": 6,
+      "startedAtUtc": "2026-10-15T06:13:52.940Z",
+      "loadBefore": [
+        22.80908203125,
+        25.60107421875,
+        28.248046875
+      ],
+      "endedAtUtc": "2026-10-15T06:16:12.236Z",
+      "loadAfter": [
+        21.18115234375,
+        23.7998046875,
+        27.1005859375
+      ],
+      "exit": 0,
+      "passed": true,
+      "rawSha256": "c76ce585c80b8db92bd8ac9feaaa9d5d454cf536f757e072f86647bf413c0f80"
+    }
+  ],
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "primaryForcedGC": false
+}

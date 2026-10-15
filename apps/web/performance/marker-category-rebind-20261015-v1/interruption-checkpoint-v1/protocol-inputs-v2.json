@@ -1,0 +1,19 @@
+{
+  "frozenBeforePrimaryAtUtc": "2026-10-15T05:39:08.925811+00:00",
+  "files": {
+    "MEASUREMENT-PLAN-v2.json": "75b61465c6f23479ebffe072d668711f521179a7dc5b4fe6428147f358578c13",
+    "run-natural-v2.mjs": "83bd52422859058835375a3addc5be51e4e8b51eec0ade7a11ef2452bcf73ab5",
+    "measure-natural-v2.mjs": "26d4c05d75429d6f362996fede8b22c89182d9a9bdcacc1214f53f8ccf8b3e86",
+    "runtime-v3.mjs": "e7f46a3ae202abd3f6fc5b7421e4b8a2f1dfaa15c0a7a8b2cbeb966075bbbb9e",
+    "fixture-query-v3.mjs": "7d24228c5d7946d5f1e17cb3b9cfb193ebc15ebed5d2952511c44f7fe64b17e8",
+    "browser-plan-v3.json": "9245c77e0494184adcf90a1facfa4c2beaf6ac970d6812843a49100e6f94b800",
+    "build-receipts-v2.json": "b3d0e26bc097de7039ac25ba75f417ca4548c2ca3450a3dec2abf55be5b2fd18",
+    "analyze-natural-v2.mjs": "fef325474ef4f62db8845bdd4a07a78ea7d01f77c73d4b495a2b3e0923926754",
+    "validate-natural-v2.py": "17c1e718d2af475c6e268fed5ccf2ecaa3aeeff518ece8e20e8da6f26f4373bf"
+  },
+  "sourceBefore": "275fb4bedcaabfe151658acebeaf4611d9db9115",
+  "sourceAfter": "1ec703840670c922dbccc661c1efdd10ad257cdb",
+  "primaryProcesses": 40,
+  "dependentActionsPerProcess": 256,
+  "performanceAdmission": 0
+}

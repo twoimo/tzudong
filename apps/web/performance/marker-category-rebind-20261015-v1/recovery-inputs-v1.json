@@ -1,0 +1,15 @@
+{
+  "recordedBeforeResumeAtUtc": "2026-10-15T06:24:59.050004+00:00",
+  "originalMeasurementProgramUnchanged": true,
+  "primaryOutcomeBlinded": true,
+  "files": {
+    "MEASUREMENT-PLAN-v2.json": "75b61465c6f23479ebffe072d668711f521179a7dc5b4fe6428147f358578c13",
+    "MEASUREMENT-RECOVERY-PLAN-v1.json": "1c17b2f1ac679b27c3d199b8a5a1acb41ba082d770ef6cc38cba38204ed9d4d6",
+    "measure-natural-v2.mjs": "26d4c05d75429d6f362996fede8b22c89182d9a9bdcacc1214f53f8ccf8b3e86",
+    "runtime-v3.mjs": "e7f46a3ae202abd3f6fc5b7421e4b8a2f1dfaa15c0a7a8b2cbeb966075bbbb9e",
+    "fixture-query-v3.mjs": "7d24228c5d7946d5f1e17cb3b9cfb193ebc15ebed5d2952511c44f7fe64b17e8",
+    "build-receipts-v2.json": "b3d0e26bc097de7039ac25ba75f417ca4548c2ca3450a3dec2abf55be5b2fd18",
+    "run-natural-recovery-v1.mjs": "de5d68249008f1bb813b0d9509c2a92415f7a0390579b1148d778b76aa040665",
+    "launch-recovery-v1.mjs": "0ec6a18994207d2941365a60c593c842789bea1f439cf8d7e9e083658163f15c"
+  }
+}

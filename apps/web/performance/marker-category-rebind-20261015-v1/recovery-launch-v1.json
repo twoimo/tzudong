@@ -1,0 +1,8 @@
+{
+  "launchedAtUtc": "2026-10-15T06:24:59.151Z",
+  "pid": 74586,
+  "detached": true,
+  "script": "run-natural-recovery-v1.mjs",
+  "logPath": "/Users/twoimo/.codex/runtime-cache/marker-category-recovery-20261015-v1/runner.log",
+  "reason": "Survive turn interruption; explicit stop remains SIGTERM to this owned PID. No retries on failure."
+}

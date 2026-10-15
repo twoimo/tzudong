@@ -1,0 +1,12 @@
+{
+  "recordedBeforeOutcomeAnalysisAtUtc": "2026-10-15T07:05:05.611968+00:00",
+  "primaryOutcomeBlinded": true,
+  "originalNumericalFormulasAndThresholdsUnchanged": true,
+  "files": {
+    "MEASUREMENT-PLAN-v2.json": "75b61465c6f23479ebffe072d668711f521179a7dc5b4fe6428147f358578c13",
+    "MEASUREMENT-RECOVERY-PLAN-v1.json": "1c17b2f1ac679b27c3d199b8a5a1acb41ba082d770ef6cc38cba38204ed9d4d6",
+    "analyze-natural-recovered-v1.mjs": "9df1efcaf731ae425f5c8dfc8955b6a8eccedca3b1588fc79dff26fa939a0f8d",
+    "validate-natural-recovered-v1.py": "916cb9e0b8fc7d734d835f309794fdbe2dbd6e62d542d3f3eaf3156ecf69b0ac"
+  },
+  "newAnalysisChanges": "storageLabel mapping and explicit descriptive collection-segment metadata only"
+}

@@ -1,0 +1,49 @@
+{
+  "recordedAtUtc": "2026-10-15T06:15:58.842084+00:00",
+  "evidenceKind": "static SDK source analysis, not runtime request-body verification",
+  "sourceEndpointWithoutCredentials": "https://oapi.map.naver.com/openapi/v3/maps.js",
+  "queryKeys": [
+    "ncpKeyId"
+  ],
+  "httpStatus": 200,
+  "observedSourceBytes": 333385,
+  "sdkSourceSha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1",
+  "sameShaAcrossThreeScopedReads": true,
+  "rawSdkSourcePersisted": false,
+  "credentialValuesPersisted": false,
+  "loggerDestination": "https://kr-col-ext.nelo.navercorp.com/_store",
+  "staticLoggerEnvelopeKeys": [
+    "log",
+    "logLevel",
+    "projectName",
+    "projectVersion"
+  ],
+  "vendorLoggerProjectVersion": "3.10.4",
+  "vendorLoggerVersionIsNotClaimedAsSdkVersion": true,
+  "recognizedStaticCalls": [
+    {
+      "event": "setMapTypeId",
+      "level": "log",
+      "additionalKeys": [
+        "ncpKeyId",
+        "mapTypeId"
+      ]
+    },
+    {
+      "event": "cttMetadataFailure",
+      "level": "error"
+    },
+    {
+      "event": "tileMetadataFailure",
+      "level": "error"
+    }
+  ],
+  "runtimeBlockedEventIdentity": "unverified; use bounded probe after current natural series releasesports",
+  "officialDocumentedDisableOption": "not established by targeted official-source lookup",
+  "cspPolicyChanged": false,
+  "sdkRuntimePatched": false,
+  "probeScriptSyntaxExit": 0,
+  "runtimeProbeExecuted": false,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0
+}

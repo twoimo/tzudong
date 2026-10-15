@@ -1,0 +1,22 @@
+{
+  "scope": "hosted-ledger-transport-20261015-v1",
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "entries": [
+    {
+      "path": "REPORT-v1.md",
+      "bytes": 2686,
+      "sha256": "0577058b139e1c424bec9bf34b93dafaaabcb6a1f6a6e71ce23caa558d94b5eb"
+    },
+    {
+      "path": "readback-v1.json",
+      "bytes": 1939,
+      "sha256": "fa489637bc5787ab3751825ec3ecaa9afffc6a2451b454de160b8e0c87a0b36f"
+    },
+    {
+      "path": "run-metadata-v1.json",
+      "bytes": 305,
+      "sha256": "2af10ea60e2b124b76d6d1caec6318151e1ad0985701d5e250b9e2e7fcc00af1"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "observedAtUtc": "2026-10-15T06:45:09.471434+00:00",
+  "repository": "twoimo/tzudong",
+  "runId": 38693415701,
+  "runUrl": "https://github.com/twoimo/tzudong/actions/runs/38693415701",
+  "runHeadSha": "275fb4bedcaabfe151658acebeaf4611d9db9115",
+  "runConclusion": "success",
+  "workflow": "g014-historical-migration-ledger.yml",
+  "credentialEnvironmentName": "SUPABASE_DB_URL",
+  "credentialValuesExported": false,
+  "connectionPath": "existing repository secret consumed in protected-main GitHub Runner; psycopg direct PostgreSQL",
+  "readOnlySourceControls": [
+    "default_transaction_read_only=on",
+    "BEGIN READ ONLY",
+    "bounded fixed migration-ledger SELECT queries"
+  ],
+  "schemaOrDataMutations": 0,
+  "artifactId": 11952494270,
+  "artifactName": "hosted-migration-ledger",
+  "githubReportedArchiveDigest": "sha256:b3b1310a73e9f91f6c693f6a8d97b60940c9455fb9252d8fc872bd73089079c5",
+  "archiveBytes": 1835,
+  "fileBytes": 6212,
+  "fileSha256": "0bd7003feb7920bbff9317f205d098ea32ebf6d5508b3ae8982d2a88c7c905e0",
+  "schemaVersion": 1,
+  "ledgerRowCount": 86,
+  "canonicalLedgerSha256": "9268b38eacf1201a2c96743d1982d3d2fc71fe2593ae176686cecf2346aec9e5",
+  "artifactValidationExit": 0,
+  "rawRowValuesPublished": false,
+  "rawArtifactHeldOnlyInPrivateRuntimeCache": true,
+  "sourceFileSha256": {
+    ".github/workflows/g014-historical-migration-ledger.yml": "9d6095039904159e6a95e7ff13c73bca31ebf3322b2f98fb35801bf2f2a2f055",
+    "backend/supabase/scripts/read_hosted_migration_ledger.py": "131f0b8a48ff9f7bd1f67b3268d1370c5bd622ef261f32614ff41d9271f1cc86"
+  },
+  "readinessVersionLedgerPresence": {
+    "20261008192455": false,
+    "20261008200719": false,
+    "20261008201635": false
+  },
+  "ledgerAbsenceDoesNotProveCatalogAbsence": true,
+  "dbEndpointProjectActorAndServerVersionNotIndependentlyVerified": true,
+  "operatingReviewApplyComplete": false,
+  "productionAppDeploymentChanged": false,
+  "fieldAdmission": 0
+}

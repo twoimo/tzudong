@@ -1,0 +1,12 @@
+{
+  "atUtc": "2026-10-15T06:16:00.269021+00:00",
+  "evidenceCommit": "f384267b6263745e5071042ffa0044431ce157a3",
+  "sourceCommit": "0620b97d21c63121668ee8229eaaf43acca0e5c9",
+  "remoteHeadEqual": true,
+  "readbackMethod": "live remote ref equality + immutable Git blob byte verification",
+  "mappedFiles": 7,
+  "allGitBlobBytesEqual": true,
+  "mapSha256": "fc3c961f8755c5d7e5788a5237ee48e1e257153c521f554cbd9b73d481682706",
+  "performanceAdmission": 0,
+  "productionDeployment": false
+}

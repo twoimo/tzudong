@@ -1,0 +1,17 @@
+{
+  "scope": "sdk-telemetry-boundary-20261015-v1",
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "entries": [
+    {
+      "path": "probe-v1.mjs",
+      "bytes": 5458,
+      "sha256": "2519d1c2995921b73218807d500b9f6be534e717534015d982c10a26c779bf01"
+    },
+    {
+      "path": "static-findings-v1.json",
+      "bytes": 1491,
+      "sha256": "bdf2b10ddc8c8b9cb4c3542c12738eb787e4df939850693f1676e768707224d5"
+    }
+  ]
+}
