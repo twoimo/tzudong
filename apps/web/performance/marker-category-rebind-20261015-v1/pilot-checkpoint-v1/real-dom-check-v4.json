@@ -1,0 +1,125 @@
+{
+  "sourceCommit": "af04e9c0b1e0f3201ad19ba5a5ab9d9cb7f8546f",
+  "browser": "155.0.8059.40",
+  "realBrowserDom": true,
+  "actualNaverSdk": false,
+  "performanceAdmission": 0,
+  "startedAtUtc": "2026-10-15T05:32:00.156Z",
+  "cases": [
+    {
+      "name": "category",
+      "passed": true,
+      "sdkSetIconCalls": 0,
+      "reusedImage": true
+    },
+    {
+      "name": "category-overlay",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "visit-count",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "category-changed",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "selected-anchor",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "asset-version",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "source-changed",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "aria-changed",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "wrapper-mutation",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "wrapper-added-style",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "cursor-changed",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "picture-mutation",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "style-mutation",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "alt-mutation",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "overlay-mutation",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "user-submitted",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "trend",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "seasonal",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    }
+  ],
+  "listeners": {
+    "added": 18,
+    "removed": 18
+  },
+  "passed": true,
+  "bundleSha256": "2ce628fa451297b0f3b5d5e16b67abfcc49a95629b6b2fc5e49464f6f9a8aace",
+  "endedAtUtc": "2026-10-15T05:32:01.103Z"
+}

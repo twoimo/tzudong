@@ -1,0 +1,304 @@
+{
+  "schemaVersion": 1,
+  "atUTC": "2026-10-15T05:34:17.735066+00:00",
+  "sourceBefore": "275fb4bedcaabfe151658acebeaf4611d9db9115",
+  "equivalentProtectedBase": "275fb4bedcaabfe151658acebeaf4611d9db9115",
+  "sourceAfter": "1ec703840670c922dbccc661c1efdd10ad257cdb",
+  "callerUnionExcluded": true,
+  "conditions": {
+    "SDK": "actual remote Naver; exact script hash required",
+    "chrome": "155.0.8059.40",
+    "cpuRate": 4,
+    "viewport": "390x844/DPR1/touch emulation",
+    "cache": "off/SW bypass",
+    "rest": "strict synthetic735 approved +735 deleted aliases and verified reviews; cap1000 and complete count",
+    "forcedGC": false,
+    "profiler": false
+  },
+  "schedule": {
+    "seed": 20261015,
+    "AAProcesses": 4,
+    "ABPairs": 18,
+    "independentProcesses": 40,
+    "withinProcessQueries": 128,
+    "passes": 2,
+    "dependentActionsPerProcess": 256
+  },
+  "reasonForLargerSample": "Previously retained A/A heap range/median63.85% and nine-pair end-heap regression CI upper77.21%; fix18pairs before seeing this candidate primary results. More independent processes; same256 within-run actions.",
+  "primaryMetrics": [
+    "endHeapBytes",
+    "idleHeapBytes",
+    "selectionLatencyMedianMs"
+  ],
+  "guards": {
+    "endHeapBytes": 20,
+    "idleHeapBytes": 20,
+    "selectionLatencyMedianMs": 15,
+    "decision": "paired ratio median bootstrap95% upper bound <=existing guard; no individual/tail or simultaneous95% claim"
+  },
+  "practicalMemoryThresholdBytes": 1000000,
+  "secondaryMetrics": [
+    "restaurantRequests",
+    "reviewVisibleMedianMs",
+    "DOM/listeners",
+    "natural heap checkpoint trend"
+  ],
+  "bootstrap": {
+    "repeats": 20000,
+    "seed": 20261015,
+    "unit": "independent paired process medians",
+    "method": "paired percentile, small-sample approximate"
+  },
+  "invalidRunPolicy": "All scheduled runs retained. Stop upon failed flow/SDK/fixture/source binding; no favourable replacement or threshold change. No automatic retry after a partially executed measurement; inspect and preserve the first failure.",
+  "AA": "report all4 independent values, range/MAD, no noise exemption",
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "physicalDevice": false,
+  "productionMutation": 0,
+  "previousUnionResultsNotCombined": true,
+  "idAffinityExcluded": true,
+  "candidateMechanism": "UUID-only raw signature plus complete app-owned root equality. For category wrappers only, admit the SDK default cursor:pointer as the sole added attribute/style; every original attribute, child, image and badge must match. No added cache. Review-overlay or other SDK changes keep full replacement.",
+  "pilotExcludedFromPrimary": true,
+  "previousPlansPreserved": true,
+  "runs": [
+    {
+      "kind": "baseline",
+      "label": "aa-01",
+      "phase": "AA"
+    },
+    {
+      "kind": "baseline",
+      "label": "aa-02",
+      "phase": "AA"
+    },
+    {
+      "kind": "baseline",
+      "label": "aa-03",
+      "phase": "AA"
+    },
+    {
+      "kind": "baseline",
+      "label": "aa-04",
+      "phase": "AA"
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-01-candidate",
+      "phase": "AB",
+      "pair": 1
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-01-baseline",
+      "phase": "AB",
+      "pair": 1
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-02-candidate",
+      "phase": "AB",
+      "pair": 2
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-02-baseline",
+      "phase": "AB",
+      "pair": 2
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-03-baseline",
+      "phase": "AB",
+      "pair": 3
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-03-candidate",
+      "phase": "AB",
+      "pair": 3
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-04-baseline",
+      "phase": "AB",
+      "pair": 4
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-04-candidate",
+      "phase": "AB",
+      "pair": 4
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-05-candidate",
+      "phase": "AB",
+      "pair": 5
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-05-baseline",
+      "phase": "AB",
+      "pair": 5
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-06-candidate",
+      "phase": "AB",
+      "pair": 6
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-06-baseline",
+      "phase": "AB",
+      "pair": 6
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-07-candidate",
+      "phase": "AB",
+      "pair": 7
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-07-baseline",
+      "phase": "AB",
+      "pair": 7
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-08-candidate",
+      "phase": "AB",
+      "pair": 8
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-08-baseline",
+      "phase": "AB",
+      "pair": 8
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-09-baseline",
+      "phase": "AB",
+      "pair": 9
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-09-candidate",
+      "phase": "AB",
+      "pair": 9
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-10-baseline",
+      "phase": "AB",
+      "pair": 10
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-10-candidate",
+      "phase": "AB",
+      "pair": 10
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-11-baseline",
+      "phase": "AB",
+      "pair": 11
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-11-candidate",
+      "phase": "AB",
+      "pair": 11
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-12-candidate",
+      "phase": "AB",
+      "pair": 12
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-12-baseline",
+      "phase": "AB",
+      "pair": 12
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-13-baseline",
+      "phase": "AB",
+      "pair": 13
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-13-candidate",
+      "phase": "AB",
+      "pair": 13
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-14-candidate",
+      "phase": "AB",
+      "pair": 14
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-14-baseline",
+      "phase": "AB",
+      "pair": 14
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-15-candidate",
+      "phase": "AB",
+      "pair": 15
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-15-baseline",
+      "phase": "AB",
+      "pair": 15
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-16-candidate",
+      "phase": "AB",
+      "pair": 16
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-16-baseline",
+      "phase": "AB",
+      "pair": 16
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-17-candidate",
+      "phase": "AB",
+      "pair": 17
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-17-baseline",
+      "phase": "AB",
+      "pair": 17
+    },
+    {
+      "kind": "baseline",
+      "label": "pair-18-baseline",
+      "phase": "AB",
+      "pair": 18
+    },
+    {
+      "kind": "candidate",
+      "label": "pair-18-candidate",
+      "phase": "AB",
+      "pair": 18
+    }
+  ],
+  "sdkConsoleIncidentPolicy": "Preserve all incidents; memory-specific guard result is separate from canonical release admission. No assertion that a blocked third-party connect is harmless.",
+  "warmup": "No external warm-up or excluded actions. Identical cluster-ready precondition before all256 actions; cold/JIT actions retained.",
+  "previousPlan": "MEASUREMENT-PLAN-v1.json"
+}

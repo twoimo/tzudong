@@ -1,0 +1,29 @@
+{
+  "kind": "baseline",
+  "root": "/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web",
+  "sourceCommit": "275fb4bedcaabfe151658acebeaf4611d9db9115",
+  "distDir": ".next-marker-category-baseline-20261015-v1",
+  "node": "24.21.0",
+  "next": "16.3.8",
+  "startedAtUtc": "2026-10-15T05:21:12.370Z",
+  "envValuesPersisted": false,
+  "serverSettingsForwarded": false,
+  "build": {
+    "exit": 0,
+    "wallMs": 89998.104083,
+    "outputBytes": 6001,
+    "rawOutputSha256": "1122b15636ee950ba64095bd6983f1ffaa906dd34d9af0838d0d3b5131c19ad7",
+    "rawOutputPersisted": false,
+    "compiled": true,
+    "compiledSeconds": 42
+  },
+  "cssGate": {
+    "exit": 0,
+    "wallMs": 246.74541599999066,
+    "outputBytes": 119,
+    "rawOutputSha256": "d050d9334b090cc0dfc7ee2627fe058ea3af7bfb4c3a80d4728f4f25798ef0de",
+    "rawOutputPersisted": false,
+    "compiled": false,
+    "compiledSeconds": null
+  }
+}

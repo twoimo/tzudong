@@ -1,0 +1,28 @@
+{
+  "atUtc": "2026-10-15T05:35:01.507617+00:00",
+  "sourceCommit": "1ec703840670c922dbccc661c1efdd10ad257cdb",
+  "unit": {
+    "pass": 34,
+    "fail": 0,
+    "assertions": 1231,
+    "files": 3
+  },
+  "lint": {
+    "exit": 0
+  },
+  "diffCheck": {
+    "exit": 0
+  },
+  "priorFailure": {
+    "unitPass": 32,
+    "unitFail": 1,
+    "reason": "New DOM wrapper guard required the next-root DOM test double to expose getAttribute; production Element already provides it. Failure retained in tool transcript and this receipt."
+  },
+  "realDomReceipt": "real-dom-check-v4.json",
+  "realDomBinding": "dom-v4-source-binding.json",
+  "markerPoolSha256": "2ccba3a8837b4ffa66c93225de9f27c59dea17f1df3b56d0a08b73544262a889",
+  "testSourceSha256": "5edb70faeb690acb73bdf00ad074730639261f66231159f36a6f4daae8f14a34",
+  "performanceAdmission": 0,
+  "physicalDevice": false,
+  "operatingChanges": 0
+}

@@ -1,0 +1,28 @@
+{
+  "sourceCommit": "af04e9c0b1e0f3201ad19ba5a5ab9d9cb7f8546f",
+  "unit": {
+    "pass": 33,
+    "fail": 0,
+    "assertions": 1219,
+    "matchedFiles": 3
+  },
+  "lint": {
+    "exit": 0
+  },
+  "diffCheck": {
+    "exit": 0
+  },
+  "parity": {
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 3150,
+    "native": "7.0.2",
+    "compat": "6.0.2"
+  },
+  "realDomValidReceipt": "real-dom-check-v3.json",
+  "failedHarnessReceiptsPreserved": [
+    "real-dom-check-v1.json",
+    "real-dom-check-v2.json"
+  ],
+  "note": "DOM-only harness initially lacked the compile-time public client-ID substitution. No SDK or source-performance claim from that harness."
+}

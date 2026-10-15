@@ -1,0 +1,31 @@
+{
+  "sourceBefore": "275fb4bedcaabfe151658acebeaf4611d9db9115",
+  "sourceAfter": "1ec703840670c922dbccc661c1efdd10ad257cdb",
+  "independent64ActionPilotProcesses": 2,
+  "withinProcessActions": 64,
+  "sdkSetIcon": {
+    "before": 2207,
+    "after": 1143,
+    "absoluteDecrease": 1064,
+    "relativeImprovementPercent": 48.21024014499321,
+    "confidenceInterval": null,
+    "classification": "single-pair causal diagnostic; not memory/latency proof"
+  },
+  "markerCreates": {
+    "before": 164,
+    "after": 164
+  },
+  "actualSdkIdMismatches": {
+    "before": 0,
+    "after": 0
+  },
+  "allPilotFlowsPassed": true,
+  "consoleIncidents": 6,
+  "actualSdkHash": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1",
+  "physicalDevice": false,
+  "performanceAdmission": 0,
+  "fieldAdmission": 0,
+  "operatingDeployment": false,
+  "primaryNaturalSeries": "40 processes started separately; live state excluded from this checkpoint",
+  "atUtc": "2026-10-15T05:43:23.531524+00:00"
+}

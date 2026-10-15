@@ -1,0 +1,37 @@
+{
+  "kind": "candidate",
+  "root": "/Users/twoimo/.codex/worktrees/mobile-nav-read-20261012/tzudong/apps/web",
+  "sourceCommit": "1ec703840670c922dbccc661c1efdd10ad257cdb",
+  "distDir": ".next-marker-category-candidate-20261015-v2",
+  "node": "24.21.0",
+  "next": "16.3.8",
+  "startedAtUtc": "2026-10-15T05:34:17.797Z",
+  "envValuesPersisted": false,
+  "serverSettingsForwarded": false,
+  "build": {
+    "exit": 0,
+    "wallMs": 90774.686459,
+    "outputBytes": 5858,
+    "rawOutputSha256": "68f7938f3db121c9752b32171618165a76fdc15dd2747a27f58c410e524bff9e",
+    "rawOutputPersisted": false,
+    "compiled": true,
+    "compiledSeconds": 41
+  },
+  "cssGate": {
+    "exit": 0,
+    "wallMs": 228.77008300001035,
+    "outputBytes": 119,
+    "rawOutputSha256": "d050d9334b090cc0dfc7ee2627fe058ea3af7bfb4c3a80d4728f4f25798ef0de",
+    "rawOutputPersisted": false,
+    "compiled": false,
+    "compiledSeconds": null
+  },
+  "generatedConfigOnlyChangesRestored": true,
+  "lockSha256": "607175eda02d7746caf5593d34835cef317bf197ca6d5428fa1266cdb2aae5f4",
+  "helperSourceSha256": "d8a184e8945dbeabd98218143ac52830bb21b38800dfed937f6cd57893f233d4",
+  "detailComponentSha256": "fe6375ed1165f80de054748d262d7111ec8efb88a38f795ea4aed62f28fa0a7a",
+  "markerPoolSourceSha256": "2ccba3a8837b4ffa66c93225de9f27c59dea17f1df3b56d0a08b73544262a889",
+  "markerVisualSourceSha256": "3dbb59524012a0f42370515993a9b06a3c94ae8b30446cd12a10e5e339f7cee9",
+  "buildId": "H0hXGGWZFzVMPoCqAvWN9",
+  "endedAtUtc": "2026-10-15T05:35:48.808Z"
+}

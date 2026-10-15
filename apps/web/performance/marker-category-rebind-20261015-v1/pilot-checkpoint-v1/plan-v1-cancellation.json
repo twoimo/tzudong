@@ -1,0 +1,8 @@
+{
+  "plan": "MEASUREMENT-PLAN-v1.json",
+  "status": "cancelled_before_primary",
+  "primaryRunsStarted": 0,
+  "reason": "4-action actual-SDK causal pilot had identical40setIcon before/after, so no expensive primary series was launched. The complete-root comparison rejected the SDK-added cursor style.",
+  "sourceAfter": "af04e9c0b1e0f3201ad19ba5a5ab9d9cb7f8546f",
+  "performanceAdmission": 0
+}

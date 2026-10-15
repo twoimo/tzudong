@@ -1,0 +1,12 @@
+{
+  "sourceCommit": "af04e9c0b1e0f3201ad19ba5a5ab9d9cb7f8546f",
+  "browser": "155.0.8059.40",
+  "realBrowserDom": true,
+  "actualNaverSdk": false,
+  "performanceAdmission": 0,
+  "startedAtUtc": "2026-10-15T05:24:45.416Z",
+  "passed": false,
+  "failure": "bounded_dom_contract_failure",
+  "bundleSha256": "8c07002a4a75d5284643bb6839c7b7c0de9449b202e0af33bbe707bd6fa981fb",
+  "endedAtUtc": "2026-10-15T05:24:47.143Z"
+}

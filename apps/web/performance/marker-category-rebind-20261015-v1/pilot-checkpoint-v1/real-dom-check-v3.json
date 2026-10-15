@@ -1,0 +1,113 @@
+{
+  "sourceCommit": "af04e9c0b1e0f3201ad19ba5a5ab9d9cb7f8546f",
+  "browser": "155.0.8059.40",
+  "realBrowserDom": true,
+  "actualNaverSdk": false,
+  "performanceAdmission": 0,
+  "startedAtUtc": "2026-10-15T05:25:56.999Z",
+  "cases": [
+    {
+      "name": "category",
+      "passed": true,
+      "sdkSetIconCalls": 0,
+      "reusedImage": true
+    },
+    {
+      "name": "category-overlay",
+      "passed": true,
+      "sdkSetIconCalls": 0,
+      "reusedImage": true
+    },
+    {
+      "name": "visit-count",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "category-changed",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "selected-anchor",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "asset-version",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "source-changed",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "aria-changed",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "wrapper-mutation",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "picture-mutation",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "style-mutation",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "alt-mutation",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "overlay-mutation",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "user-submitted",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "trend",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    },
+    {
+      "name": "seasonal",
+      "passed": true,
+      "sdkSetIconCalls": 1,
+      "reusedImage": false
+    }
+  ],
+  "listeners": {
+    "added": 16,
+    "removed": 16
+  },
+  "passed": true,
+  "bundleSha256": "1b0c3eab1f1e78a43d43c11bdebca68af2e06fef4cf5d22582e8280c528a42f6",
+  "endedAtUtc": "2026-10-15T05:25:58.617Z"
+}

@@ -1,0 +1,13 @@
+{
+  "sourceCommit": "af04e9c0b1e0f3201ad19ba5a5ab9d9cb7f8546f",
+  "browser": "155.0.8059.40",
+  "realBrowserDom": true,
+  "actualNaverSdk": false,
+  "performanceAdmission": 0,
+  "startedAtUtc": "2026-10-15T05:25:23.620Z",
+  "passed": false,
+  "failure": "synthetic_dom_contract_failure",
+  "syntheticOnlyMessage": "page.evaluate: TypeError: Cannot destructure property 'markerPool' of 'window.__markerTest' as it is undefined.\n    at eval (eval at evaluate (:311:30), <anonymous>:2:25)\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)",
+  "bundleSha256": "fc19a4baaf08837388c7d7d6087a9176e0025d4f645f7603f2947ca03950bfc4",
+  "endedAtUtc": "2026-10-15T05:25:24.536Z"
+}

@@ -1,0 +1,352 @@
+{
+  "kind": "baseline",
+  "sourceCommit": "275fb4bedcaabfe151658acebeaf4611d9db9115",
+  "buildId": "vOZoqbiwU2IdWfUMXAc_V",
+  "startedAtUtc": "2026-10-15T05:27:34.737Z",
+  "environment": {
+    "cpuRate": 4,
+    "network": "unthrottled real remote SDK/tiles; synthetic REST735/Auth401",
+    "cache": "disabled and SW bypassed",
+    "viewport": "390x844/dpr1/touch emulation",
+    "productionBuild": true,
+    "forcedGC": false
+  },
+  "queries": 4,
+  "passes": 1,
+  "cycles": [
+    {
+      "pass": 0,
+      "query": 0,
+      "state": {
+        "observedAt": 1951.5,
+        "inputToObservedMs": 508.09999990463257,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 30,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.4960203,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 81,
+        "maxFrameGapMs": 166.70000000000005,
+        "longTaskCount": 3,
+        "longTaskMs": 341,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 17,
+      "restaurantRequestsSinceQueryStart": 15,
+      "reviewObservedMs": 609.5999999046326,
+      "relatedDeletedReviewObserved": true
+    },
+    {
+      "pass": 0,
+      "query": 1,
+      "state": {
+        "observedAt": 2554,
+        "inputToObservedMs": 293.2999997138977,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 55,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.6070307,
+          "lng": 126.96
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 27,
+        "maxFrameGapMs": 116.80000000000018,
+        "longTaskCount": 1,
+        "longTaskMs": 138,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 32,
+      "restaurantRequestsSinceQueryStart": 15,
+      "reviewObservedMs": 409.40000009536743,
+      "relatedDeletedReviewObserved": true
+    },
+    {
+      "pass": 0,
+      "query": 2,
+      "state": {
+        "observedAt": 3037.7000002861023,
+        "inputToObservedMs": 211.30000019073486,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 84,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.5980299,
+          "lng": 126.963
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 25,
+        "maxFrameGapMs": 66.69999999999982,
+        "longTaskCount": 1,
+        "longTaskMs": 84,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 47,
+      "restaurantRequestsSinceQueryStart": 15,
+      "reviewObservedMs": 326.7000002861023,
+      "relatedDeletedReviewObserved": true
+    },
+    {
+      "pass": 0,
+      "query": 3,
+      "state": {
+        "observedAt": 3535.4000000953674,
+        "inputToObservedMs": 223.7999997138977,
+        "panelMatches": true,
+        "selectedMarkerPresent": true,
+        "markerCount": 98,
+        "duplicateMarkers": 0,
+        "mapCreates": 1,
+        "center": {
+          "lat": 37.589029,
+          "lng": 126.966
+        },
+        "zoom": 15,
+        "visibility": "visible",
+        "overflow": 0,
+        "frameCount": 24,
+        "maxFrameGapMs": 100.10000000000036,
+        "longTaskCount": 1,
+        "longTaskMs": 114,
+        "layoutShiftWithoutInput": 0
+      },
+      "restaurantRequestsAtSample": 62,
+      "restaurantRequestsSinceQueryStart": 15,
+      "heap": {
+        "usedSize": 25135960,
+        "totalSize": 39190528,
+        "embedderHeapUsedSize": 23670304,
+        "backingStorageSize": 3526776
+      },
+      "resources": [
+        {
+          "name": "Documents",
+          "value": 3
+        },
+        {
+          "name": "JSEventListeners",
+          "value": 4204
+        },
+        {
+          "name": "Nodes",
+          "value": 3779
+        },
+        {
+          "name": "JSHeapUsedSize",
+          "value": 25142708
+        }
+      ],
+      "reviewObservedMs": 324.19999980926514,
+      "relatedDeletedReviewObserved": true
+    }
+  ],
+  "fieldAdmission": 0,
+  "performanceAdmission": 0,
+  "physicalDevice": false,
+  "pilotOnly": true,
+  "diagnosticOnly": true,
+  "measurementProtocol": "marker-category-rebind-causal-v1",
+  "approvedRows": 735,
+  "deletedAliasRows": 735,
+  "verifiedReviews": 735,
+  "independentExecutionLabel": "pilot-before-4",
+  "browserVersion": "155.0.8059.40",
+  "sdk": {
+    "loaded": true,
+    "remoteScript": true,
+    "stub": false,
+    "captured": true,
+    "reportedVersion": null
+  },
+  "sdkScript": {
+    "status": 200,
+    "sha256": "802f8c5bb436eeb0014e0e8c72e7f675ae88e102766d2a923cd2c24c7eca74d1"
+  },
+  "initialRestaurantRequests": 2,
+  "initialHeap": {
+    "usedSize": 12263844,
+    "totalSize": 20250624,
+    "embedderHeapUsedSize": 5502424,
+    "backingStorageSize": 2119599
+  },
+  "initialResources": [
+    {
+      "name": "Documents",
+      "value": 2
+    },
+    {
+      "name": "JSEventListeners",
+      "value": 690
+    },
+    {
+      "name": "Nodes",
+      "value": 507
+    },
+    {
+      "name": "JSHeapUsedSize",
+      "value": 12263844
+    }
+  ],
+  "initialDomCounters": {
+    "documents": 2,
+    "nodes": 507,
+    "jsEventListeners": 690
+  },
+  "endHeap": {
+    "usedSize": 25928212,
+    "totalSize": 39190528,
+    "embedderHeapUsedSize": 23710152,
+    "backingStorageSize": 3527507
+  },
+  "endDomCounters": {
+    "documents": 3,
+    "nodes": 3833,
+    "jsEventListeners": 4223
+  },
+  "idleHeap": {
+    "usedSize": 15812340,
+    "totalSize": 38666240,
+    "embedderHeapUsedSize": 6866632,
+    "backingStorageSize": 3279578
+  },
+  "idleDomCounters": {
+    "documents": 2,
+    "nodes": 1380,
+    "jsEventListeners": 1282
+  },
+  "idleResources": [
+    {
+      "name": "Documents",
+      "value": 2
+    },
+    {
+      "name": "JSEventListeners",
+      "value": 1282
+    },
+    {
+      "name": "Nodes",
+      "value": 1380
+    },
+    {
+      "name": "JSHeapUsedSize",
+      "value": 15812340
+    }
+  ],
+  "markerCalls": {
+    "created": 116,
+    "setIcon": 40,
+    "setMap": 80,
+    "detach": 49,
+    "reattach": 31,
+    "foreignRestaurantIcon": 30,
+    "sameRestaurantIcon": 9,
+    "clusterOrUnidentifiedIcon": 1,
+    "sameContentIcon": 5
+  },
+  "cspRecords": [
+    {
+      "at": 919.5,
+      "event": "csp",
+      "directive": "connect-src",
+      "host": "naver-family",
+      "vendorOrigin": null
+    }
+  ],
+  "connectedDocumentNodes": 1104,
+  "diagnosticForcedGC": true,
+  "primaryNaturalMemoryGuardReplaced": false,
+  "postForcedGCHeap": {
+    "usedSize": 14939448,
+    "totalSize": 16121856,
+    "embedderHeapUsedSize": 5138832,
+    "backingStorageSize": 3202534
+  },
+  "postForcedGCDomCounters": {
+    "documents": 2,
+    "nodes": 1371,
+    "jsEventListeners": 1282
+  },
+  "sanitizedHeapStructure": {
+    "snapshotBytes": 35532177,
+    "rawSnapshotPersisted": false,
+    "rawStringsPersisted": false,
+    "types": {
+      "synthetic": 32,
+      "native": 77767,
+      "string": 65628,
+      "object shape": 16761,
+      "code": 92930,
+      "array": 14736,
+      "number": 33844,
+      "symbol": 161,
+      "object": 49350,
+      "closure": 21721,
+      "concatenated string": 9019,
+      "regexp": 147,
+      "sliced string": 290
+    },
+    "knownNameCounts": {
+      "Array": 14758,
+      "Map": 1512,
+      "Promise": 14,
+      "Set": 141,
+      "WeakMap": 64,
+      "HTMLImageElement": 156,
+      "HTMLDivElement": 467,
+      "AbortController": 5,
+      "XMLHttpRequest": 5,
+      "HTMLButtonElement": 41,
+      "AbortSignal": 7
+    },
+    "detachednessCodes": {
+      "0": 381118,
+      "1": 1107,
+      "2": 161
+    },
+    "totalSelfBytes": 24478792,
+    "interpretation": "diagnostic structural counts after forced GC; not the natural guard or a retained-path proof"
+  },
+  "passed": true,
+  "errors": {
+    "page": 0,
+    "console": 1,
+    "consoleCategories": {
+      "http401": 0,
+      "blockedClient": 0,
+      "provider": 0,
+      "other": 0,
+      "csp": 1
+    },
+    "cspDirectives": {
+      "connect-src": 1
+    },
+    "cspResourceGroups": {
+      "naver-family": 1
+    }
+  },
+  "requests": {
+    "restaurant": 62,
+    "otherFixture": 15,
+    "failedAppAsset": 0,
+    "failedRemoteProvider": 1,
+    "remoteFailureKinds": {
+      "other-network-failure": 1
+    }
+  },
+  "endedAtUtc": "2026-10-15T05:27:48.585Z"
+}
