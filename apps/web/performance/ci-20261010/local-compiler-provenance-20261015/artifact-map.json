@@ -1,0 +1,65 @@
+{
+  "artifacts": [
+    {
+      "bytes": 6976,
+      "path": "build-evidence.py",
+      "role": "path sanitizer and provenance inventory builder",
+      "sha256": "8b1fb27ed3899db4ea8c9a5db5d39af95e4443846da34550c54bc1938c209cd1"
+    },
+    {
+      "bytes": 16407,
+      "path": "validate-evidence.py",
+      "role": "deterministic evidence validator",
+      "sha256": "a4afbeece83e037f3f7b4be4716efef0cb69175a1485d809542eb37fdf7d7394"
+    },
+    {
+      "bytes": 3476,
+      "path": "configuration.json",
+      "role": "pre-measurement frozen contract",
+      "sha256": "d3bf6a2d3bb9d4c61bdd34aaf2931f8ff6a468ab47c8fd14882f31dc0f3f8dd3"
+    },
+    {
+      "bytes": 83621,
+      "path": "raw.json",
+      "role": "path-sanitized raw measurement",
+      "sha256": "440c27c9ec97b9cdb44222a67f37cf396c52b6f603f63f4b6297c9b0a9ba4eb3"
+    },
+    {
+      "bytes": 5427,
+      "path": "summary.json",
+      "role": "unchanged scorer output",
+      "sha256": "4a31914ed4337688b528a000feba8e80a4ec209372449ef727882b45c7425f5a"
+    },
+    {
+      "bytes": 2187,
+      "path": "report.md",
+      "role": "unchanged measurement report",
+      "sha256": "c5d0c1895f94bad2a961ddceb402988953eb25929449c2fc031bf1ac8e700ddb"
+    },
+    {
+      "bytes": 503792,
+      "path": "input-manifest.json",
+      "role": "logical compiler input names and content hashes",
+      "sha256": "d7a84a2bedf93979a1bbcae6e8d2006aef4147b781d97dbd15d9eba242fe74d1"
+    },
+    {
+      "bytes": 3636,
+      "path": "compiler-provenance-inventory.json",
+      "role": "executed compiler byte inventory",
+      "sha256": "2f1a8c6363e9f46bbaf2a5346f6d147f149b5f9087cc7b519ed01d0f947104e8"
+    },
+    {
+      "bytes": 1475,
+      "path": "sanitization-receipt.json",
+      "role": "private-to-public hash and redaction receipt",
+      "sha256": "914a1dfcaac1c68c9a61f794b92aba2f5aaac0402a79771c953a80ee94dcc831"
+    },
+    {
+      "bytes": 1244,
+      "path": "validation.json",
+      "role": "deterministic validation result",
+      "sha256": "ce2295d24cbd3f9e31db9abb179fd202881ef97046dca82e46c026d5f1cc460f"
+    }
+  ],
+  "schema": "tzudong-ci-performance/v1/artifact-map"
+}

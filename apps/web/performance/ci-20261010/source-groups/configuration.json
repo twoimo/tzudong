@@ -1,0 +1,51 @@
+{
+  "bootstrap": {
+    "confidenceLevel": 0.95,
+    "method": "one-stage source-cluster percentile bootstrap; sample K source groups with replacement, concatenate complete selected clusters, then calculate run-weighted statistic",
+    "possibleResampledRunCountRange": [
+      3,
+      18
+    ],
+    "randomIndexGenerator": "splitmix64-v1",
+    "resampledClusterCount": 3,
+    "resamples": 10000,
+    "seed": 20261010,
+    "sourceGroupCount": 3
+  },
+  "dataAccess": {
+    "githubWorkflowRunQueries": false,
+    "rawLogReads": false,
+    "retainedSanitizedMetadataOnly": true
+  },
+  "distinctHeadCount": 7,
+  "inputs": {
+    "baselineArtifactMap": {
+      "path": "apps/web/performance/ci-20261010/artifact-map.json",
+      "sha256": "ad091212d4e223b711e761aafea797e2632a1ad4d5ff3c6c99d66fb74732a296"
+    },
+    "baselineSummary": {
+      "path": "apps/web/performance/ci-20261010/summary.json",
+      "sha256": "97d63069ebe0d62dae2841a44dad7db0644561bd717b064493470d8f5499ae0e"
+    },
+    "retainedHeadTreeMap": {
+      "path": "apps/web/performance/ci-20261010/source-groups/retained-head-tree-map.json",
+      "sha256": "f6a54be3d5e5958f95b793844932f5f1f7d123083145304891c6dcd977700fe8"
+    },
+    "successfulRuns": {
+      "path": "apps/web/performance/ci-20261010/successful-runs.json",
+      "sha256": "245f7afc2345556e619fd7be23613b89ffa5561689bfc954b5ec3f43af9eb6b1"
+    }
+  },
+  "localObjectAbsentHeadCount": 0,
+  "locallyVerifiedHeadCount": 7,
+  "runCount": 9,
+  "schema": "tzudong-ci-performance/v1/source-group-sensitivity/configuration",
+  "sourceGroupCount": 3,
+  "treeResolution": {
+    "fetchPerformedByScript": false,
+    "localCommand": "git rev-parse --verify <head>^{tree} when object is present",
+    "localObjectAbsentRule": "replay the authenticated retained tree mapping",
+    "mismatchRule": "fail closed",
+    "retainedRule": "require the authenticated exact head-to-tree map"
+  }
+}

@@ -1,0 +1,368 @@
+{
+  "schemaVersion": 1,
+  "baseCommit": "a9ce6ba2be377594e30dc865c621f2854006aa79",
+  "files": [
+    {
+      "path": ".github/scripts/classify-ci-benchmark.mjs",
+      "sha256": "0c224f74f12e098d42700ad98a4f7f68bec6b455dfead78df2a82aebbe56744f",
+      "bytes": 5667
+    },
+    {
+      "path": ".github/scripts/classify-ci-benchmark.test.mjs",
+      "sha256": "9eb5540223b023e660814dce0d2dfb1fbfe894af78f931c1e2b8ce58708f7c5e",
+      "bytes": 7130
+    },
+    {
+      "path": ".github/scripts/collect-ci-monitor.py",
+      "sha256": "0d8d63bf2ab4b26a9da1b12fc8758b8dd5f6f278565e787cabc0d38bac97c06e",
+      "bytes": 22071
+    },
+    {
+      "path": ".github/scripts/collect-ci-performance.py",
+      "sha256": "3cca836db070697afbf6a31d5df0d2711863c64efa2df4738d26571681aae58d",
+      "bytes": 40740
+    },
+    {
+      "path": ".github/scripts/monitor-ci-performance.py",
+      "sha256": "dcf43e801c435887c56cb327e620adfa41f2eb9840c0d525157cdcedfd1c5c50",
+      "bytes": 50598
+    },
+    {
+      "path": ".github/scripts/prepare-ci-reference.py",
+      "sha256": "aab6ad4941adbc5365e42c0284cad5674db369998f899f8093d87752722e80f0",
+      "bytes": 23803
+    },
+    {
+      "path": ".github/scripts/run-ci-monitor.py",
+      "sha256": "fa1b4de6d107bf4a3433c18d941ac98392f1d24f89f2b98c669e5b388c9f93b2",
+      "bytes": 13905
+    },
+    {
+      "path": ".github/scripts/test_ci_audit_budget.py",
+      "sha256": "3d73b9461350255dc1c4696ad13889cc14e74674b69724c0cfe72383d989eb9d",
+      "bytes": 3945
+    },
+    {
+      "path": ".github/scripts/test_collect_ci_monitor.py",
+      "sha256": "ee739673a282eb2234ed5dd3da939a0363bc3423f071e113969aad2c0db93158",
+      "bytes": 16739
+    },
+    {
+      "path": ".github/scripts/test_collect_ci_performance.py",
+      "sha256": "1c7cfbef5103011b9a8f49866436f58013f2684dff8b54a97ba026a7f2761cd1",
+      "bytes": 8744
+    },
+    {
+      "path": ".github/scripts/test_monitor_ci_performance.py",
+      "sha256": "209bdcf3215174a6689c91e7890affe50a649c46cb4b9931b1ca70135f13df3c",
+      "bytes": 33117
+    },
+    {
+      "path": ".github/scripts/test_prepare_ci_reference.py",
+      "sha256": "c4bc5cf1ca45482e724929b108feed2eb9d6166355a25058f8603060c2ce6193",
+      "bytes": 23359
+    },
+    {
+      "path": ".github/scripts/test_run_ci_monitor.py",
+      "sha256": "b7a10580e0c4f99ccbf5a63cfb4953c380ec9a0dba64f00d65bd0d049648bd30",
+      "bytes": 17300
+    },
+    {
+      "path": ".github/workflows/security-audit.yml",
+      "sha256": "55fff34edfd1dcdd2f112ee7752e18454e35dc68159d8ce9f85e1101e2cac8c9",
+      "bytes": 35272
+    },
+    {
+      "path": ".github/workflows/web-admin-ci.yml",
+      "sha256": "984fab56261b08dc64b12d70add53065a228f028a446c58b0b38ea9cdadc72a7",
+      "bytes": 21827
+    },
+    {
+      "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+      "sha256": "d8fca20e987dd54ba515006ee6c5f9493e208d85bac3879ffc5801640902f598",
+      "bytes": 168157
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/artifact-map.json",
+      "sha256": "ad091212d4e223b711e761aafea797e2632a1ad4d5ff3c6c99d66fb74732a296",
+      "bytes": 1034
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/artifact-map.json.sha256",
+      "sha256": "4e85854a6fc0283cffc23b35d18f67c0f5ccb4d071cf24b5352a4191e9c41fd4",
+      "bytes": 84
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/artifact-map-current-source.json",
+      "sha256": "ab92a441f6d1b74e7900899d005ed6cb2f3f044c082338e2edacc1f3728ac8fe",
+      "bytes": 1034
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/artifact-map-current-source.json.sha256",
+      "sha256": "4af3a72b0524241a1324e0253f2ec2dcdfb20c936d53a0d9c99ea2bb141240be",
+      "bytes": 99
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/historical-collector-380c6e3f/.github/scripts/collect-ci-performance.py",
+      "sha256": "b53442332490b1386e936890c6ab7f21d4d6bd00602983880447a64bf0e2f2df",
+      "bytes": 34050
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/artifact-map.json",
+      "sha256": "6010e50f6d59965215999004ef6312feaaa107db403132125d10a04175cbee40",
+      "bytes": 3402
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/artifact-map.json.sha256",
+      "sha256": "52a67c9e97a6e2c975123203f407705b87feba6cd3fd3fff1086b9156d5e56ec",
+      "bytes": 84
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/capture-input-manifest.py",
+      "sha256": "223f8339b32e4fbda8665cf4ef0e5dea3f8d9252d7f303d9f6649bce553ddea4",
+      "bytes": 14194
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/configuration.json",
+      "sha256": "320b640467be72fa14e8f37f2af4db43235cdb6f7055be3a924cbbc8c1d8da93",
+      "bytes": 2052
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/failed-v1-receipt.json",
+      "sha256": "7110d7d45f62efd6315d38f9bf5da5b6900b6b1aad9d00e98e129c12d6fa67eb",
+      "bytes": 747
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/input-manifest.json",
+      "sha256": "54a7e6da72114fc6c1e96d1337f30e638c2690d6a10f38df5227ace97fdeee34",
+      "bytes": 500209
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/raw.json",
+      "sha256": "c396f059821cf3288d4057c5242ec144b64955b6b271c01acc84cbfa1f9e0221",
+      "bytes": 78489
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/report.md",
+      "sha256": "5746765e3152f8d8272076faf93408b70dbf9adaa1955d2b4dffd9de3705ad64",
+      "bytes": 2435
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/sanitization-receipt.json",
+      "sha256": "0e736aa758393ff01b07212b729fb2137be343250e2885713007ce2a38957146",
+      "bytes": 2361
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/sanitize-results.py",
+      "sha256": "dffc220f7fba563a45057bd53e3facfcf69cf09341cc7aa7a26e7ef5563a0056",
+      "bytes": 12205
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/summary.json",
+      "sha256": "9558ffce8a71a1023bc5fe0a87881b96440112dd78c996fdb2cc3878bf359f7f",
+      "bytes": 5383
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/test_sanitize_results.py",
+      "sha256": "3d131a10ee53c12bd61262ddddd59586683a39503dac8f13126fdafaa48300fe",
+      "bytes": 1411
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/test_validate_evidence.py",
+      "sha256": "a4d4a0635f2aa795af4b7e0f9a939ae3fd657eeb94cc0d34fe84a4d5e0fabf17",
+      "bytes": 3908
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/validate-evidence.py",
+      "sha256": "b3710c2facb98698c066dbf3f083c4ea66a8a5f1544fd05d3002a048bbd26145",
+      "bytes": 12971
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler-clean-20261011/validation.json",
+      "sha256": "763e1613c4d3af418ea8ed1ff7625749fa97de6a848a8e926b8f24b7c7439ae9",
+      "bytes": 1493
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/admission.json",
+      "sha256": "7bf720bf098f9b6f54493a1fe833bec2476af68163bab6750445836bfbfc5d92",
+      "bytes": 1456
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/artifact-map.json",
+      "sha256": "3190bbc41a44486f747aabca6ad35b9d27e7f4a1e030a476a46129a7dca155a6",
+      "bytes": 2172
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/artifact-map.json.sha256",
+      "sha256": "baf6b69165edaf0979adfb0164349095a51afc21b4b160ebaa60aa46985ccec8",
+      "bytes": 84
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/benchmark-failed-snapshot-symlink.py",
+      "sha256": "990639a936d566de761387e1155f86c16d528d3cddaecc91c484d76b40c60b85",
+      "bytes": 14910
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/benchmark.py",
+      "sha256": "9bc20eac6ce416dc4e4368da910e01c81371a541712f7e4989d4285677dd7023",
+      "bytes": 35365
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/historical-scorer-7f9df77e.py",
+      "sha256": "7f9df77e63482b7db9b0e41c7db3277bc8b47ba0434a7099f0bf2c0885db0719",
+      "bytes": 31911
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/failed-experiment.md",
+      "sha256": "00d4c0326caa5d2b48b54fa283cf55917a25c1445e34350584ec8eaea0ccffdc",
+      "bytes": 1304
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/raw-failed-snapshot-symlink.json",
+      "sha256": "372289466426a0c42a0592bf0a2b8e7908d5d91dcce639ef75238655d6df4316",
+      "bytes": 41011
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/raw.json",
+      "sha256": "cb8249a9e1cf90641b2789098e58a5841d8d85ad5bfe78bfcdefeac69258c93e",
+      "bytes": 35260
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/report.md",
+      "sha256": "21c05081567ecec8fe10b16522d9f2f07ecf2e9966bd9a2e70f2908137437241",
+      "bytes": 3289
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/summary.json",
+      "sha256": "7f419032943b1d8c654e24cedc675ad2a51f856e3b49715dbb2e761159a2b093",
+      "bytes": 3139
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/test_benchmark.py",
+      "sha256": "5a1a31293edc802785064cd9083c5dc91d3d77809fd1d9a72ae0084561d41a57",
+      "bytes": 9595
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-replay-validation.json",
+      "sha256": "fe3510781a3b1f20d4312b0e1347a74b35bffa5d42cdb2039308e43bca0a144c",
+      "bytes": 2159
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/test_source_replay.py",
+      "sha256": "e39fc022b500ca9d8d97adbdf51713d866c5c98a38f683efaad3296d1545d549",
+      "bytes": 2919
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/analyze-source-groups.py",
+      "sha256": "006a1f51c449b8bc232d98d0973dd31f9d2436f8cb739041bdf8ca39a2370855",
+      "bytes": 26907
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/artifact-map.json",
+      "sha256": "bd95ad2729d5d241b37f5c216f7e0dccc1869acddcbb328c852495d1b7287962",
+      "bytes": 2197
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/artifact-map.json.sha256",
+      "sha256": "a0f6e7335e3fccf7479097313ab9dfc9cf8600b3b0264cb0f7cb7510c219b15d",
+      "bytes": 84
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/configuration.json",
+      "sha256": "cfdb365f7f6f7328409cff26031401fa76d4b090029b7ad5f6a074541522dfc4",
+      "bytes": 1908
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/objectless-verification.json",
+      "sha256": "38be8da4666346c96673a40aae7b95a5ec71f53c88f79df1d78d23d5ce8494e4",
+      "bytes": 451
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/report.md",
+      "sha256": "207a43e0ca15de8acd0a30047064e9a1996fb49dde7a6c85ba4359aa36ddcf09",
+      "bytes": 3181
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/retained-head-tree-map.json",
+      "sha256": "f6a54be3d5e5958f95b793844932f5f1f7d123083145304891c6dcd977700fe8",
+      "bytes": 1246
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/source-groups.json",
+      "sha256": "d4611a3a436aa80bfd4f0ada90ba6a928c1c5ae3e31eb2c1e787063f3e9e3b25",
+      "bytes": 3331
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/summary.json",
+      "sha256": "bb8993f8c473466d07d37418c3cc847c3865e950aa29648f805ff23717c9fe97",
+      "bytes": 6466
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/test_analyze_source_groups.py",
+      "sha256": "d45631c1e3e96377a7b514d173e23c4a4459b3c8987628eb9d65789532c86cd4",
+      "bytes": 6910
+    },
+    {
+      "path": "apps/web/performance/ci-monitor-20261011/artifact-map.json",
+      "sha256": "67c2d6dba00ab7e609525693034f25b8d507c3c8bc9c52c1bdfc0394a1b71687",
+      "bytes": 14678
+    },
+    {
+      "path": "apps/web/performance/ci-monitor-20261011/artifact-map.json.sha256",
+      "sha256": "298f774495f133b3e5ae80b258928ffdb36fd5a054eb7e80870c1cf98d3417cb",
+      "bytes": 84
+    },
+    {
+      "path": "apps/web/tests-unit/ci-benchmark-scope.test.ts",
+      "sha256": "dbd23de95a2c675805336a423f4c0807bfb1deeaae040d44382ab20864d699f8",
+      "bytes": 5671
+    },
+    {
+      "path": "apps/web/tests-unit/dependency-modernization-server-compatibility.test.ts",
+      "sha256": "f7baefbedefeadd7751c480e5e5a3ae26a9faadb948c4f293c2673c116484223",
+      "bytes": 6661
+    },
+    {
+      "path": "apps/web/tests-unit/nightly-regression-workflow.test.ts",
+      "sha256": "c2b2450aaff508659aa99371cb83e01d92178f40dee6f047d39911e8024cec0f",
+      "bytes": 83156
+    },
+    {
+      "path": "apps/web/tests-unit/security-workflow-source.test.ts",
+      "sha256": "11ee38d4e9e43293b78dc76ed42e2a3e4917f189390d941c60a269b60d86470e",
+      "bytes": 16654
+    },
+    {
+      "path": "backend/pipeline_control/test_readiness_unittest.py",
+      "sha256": "33e2085ad4466d92f8135be235c537c96b6effa78c87b2b6210c44ec98623104",
+      "bytes": 28793
+    },
+    {
+      "path": "docs/operations/github-ci-monitor-20261011.md",
+      "sha256": "832211f8c67223aba85e095c9595f9ce716a4eb836bb4e082030c508b253b41f",
+      "bytes": 19566
+    },
+    {
+      "path": "docs/operations/github-ci-performance-20261010.md",
+      "sha256": "efd6c59f03c69dab15ad7a2ce9a9fa9dfc9711903ae522e50bcd87bf382dc812",
+      "bytes": 16931
+    }
+  ],
+  "performanceAdmission": {
+    "historicalCompiler": false,
+    "cleanCompilerRerun": false,
+    "cleanCompilerFailureReason": "A/A p95 28.275071878062594 exceeds predeclared 5 percent",
+    "formalOperatingImprovement": false
+  },
+  "historicalSourceBindings": [
+    {
+      "artifactMap": "apps/web/performance/ci-20261010/artifact-map.json",
+      "sourceCommit": "6098055f2d8d141625a216a99d6c8f99956de2a0",
+      "path": ".github/scripts/collect-ci-performance.py",
+      "sha256": "b53442332490b1386e936890c6ab7f21d4d6bd00602983880447a64bf0e2f2df",
+      "retainedSource": "apps/web/performance/ci-20261010/historical-collector-380c6e3f/.github/scripts/collect-ci-performance.py",
+      "replayValidation": "apps/web/performance/ci-20261010/source-replay-validation.json",
+      "reason": "immutable baseline source binding; current corrected source has its own mapping"
+    }
+  ]
+}

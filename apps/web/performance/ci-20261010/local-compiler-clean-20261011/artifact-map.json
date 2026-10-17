@@ -1,0 +1,94 @@
+{
+  "schema": "tzudong-ci-performance/v2/local-compiler-artifact-map",
+  "sourceCommit": "6098055f2d8d141625a216a99d6c8f99956de2a0",
+  "sourceTree": "24e0a272dc0fab99351890337ef10fe28f3ae88c",
+  "admitted": false,
+  "officialApproval": false,
+  "artifacts": [
+    {
+      "path": "capture-input-manifest.py",
+      "sha256": "223f8339b32e4fbda8665cf4ef0e5dea3f8d9252d7f303d9f6649bce553ddea4",
+      "bytes": 14194,
+      "role": "reproduction or negative verification source"
+    },
+    {
+      "path": "configuration.json",
+      "sha256": "320b640467be72fa14e8f37f2af4db43235cdb6f7055be3a924cbbc8c1d8da93",
+      "bytes": 2052,
+      "role": "prospective predeclared budgets and frozen source; path-sanitized"
+    },
+    {
+      "path": "failed-v1-receipt.json",
+      "sha256": "7110d7d45f62efd6315d38f9bf5da5b6900b6b1aad9d00e98e129c12d6fa67eb",
+      "bytes": 747,
+      "role": "excluded first symlink experiment; private raw preserved"
+    },
+    {
+      "path": "input-manifest.json",
+      "sha256": "54a7e6da72114fc6c1e96d1337f30e638c2690d6a10f38df5227ace97fdeee34",
+      "bytes": 500209,
+      "role": "3129 logical input names and content hashes"
+    },
+    {
+      "path": "raw.json",
+      "sha256": "c396f059821cf3288d4057c5242ec144b64955b6b271c01acc84cbfa1f9e0221",
+      "bytes": 78489,
+      "role": "path-sanitized raw measurements with private/public hash proof"
+    },
+    {
+      "path": "report.md",
+      "sha256": "5746765e3152f8d8272076faf93408b70dbf9adaa1955d2b4dffd9de3705ad64",
+      "bytes": 2435,
+      "role": "descriptive local report; not admitted"
+    },
+    {
+      "path": "sanitization-receipt.json",
+      "sha256": "0e736aa758393ff01b07212b729fb2137be343250e2885713007ce2a38957146",
+      "bytes": 2361,
+      "role": "exact three-pointer sanitization and canonical equality proof"
+    },
+    {
+      "path": "sanitize-results.py",
+      "sha256": "dffc220f7fba563a45057bd53e3facfcf69cf09341cc7aa7a26e7ef5563a0056",
+      "bytes": 12205,
+      "role": "reproduction or negative verification source"
+    },
+    {
+      "path": "summary.json",
+      "sha256": "9558ffce8a71a1023bc5fe0a87881b96440112dd78c996fdb2cc3878bf359f7f",
+      "bytes": 5383,
+      "role": "reproducible scorer output; not admitted"
+    },
+    {
+      "path": "test_sanitize_results.py",
+      "sha256": "3d131a10ee53c12bd61262ddddd59586683a39503dac8f13126fdafaa48300fe",
+      "bytes": 1411,
+      "role": "reproduction or negative verification source"
+    },
+    {
+      "path": "validate-evidence.py",
+      "sha256": "b3710c2facb98698c066dbf3f083c4ea66a8a5f1544fd05d3002a048bbd26145",
+      "bytes": 12971,
+      "role": "reproduction or negative verification source"
+    },
+    {
+      "path": "test_validate_evidence.py",
+      "sha256": "a4d4a0635f2aa795af4b7e0f9a939ae3fd657eeb94cc0d34fe84a4d5e0fabf17",
+      "bytes": 3908,
+      "role": "retained input omission, duplicate, name, and content tamper regressions"
+    },
+    {
+      "path": "validation.json",
+      "sha256": "763e1613c4d3af418ea8ed1ff7625749fa97de6a848a8e926b8f24b7c7439ae9",
+      "bytes": 1493,
+      "role": "14 structural integrity checks; confirms not admitted"
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": "apps/web/performance/ci-20261010/local-compiler/historical-scorer-7f9df77e.py",
+      "sha256": "7f9df77e63482b7db9b0e41c7db3277bc8b47ba0434a7099f0bf2c0885db0719",
+      "bytes": 31911
+    }
+  ]
+}

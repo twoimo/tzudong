@@ -1,0 +1,65 @@
+{
+  "files": [
+    {
+      "path": "configuration.json",
+      "sha256": "cfdb365f7f6f7328409cff26031401fa76d4b090029b7ad5f6a074541522dfc4",
+      "bytes": 1908
+    },
+    {
+      "path": "source-groups.json",
+      "sha256": "d4611a3a436aa80bfd4f0ada90ba6a928c1c5ae3e31eb2c1e787063f3e9e3b25",
+      "bytes": 3331
+    },
+    {
+      "path": "summary.json",
+      "sha256": "bb8993f8c473466d07d37418c3cc847c3865e950aa29648f805ff23717c9fe97",
+      "bytes": 6466
+    },
+    {
+      "path": "report.md",
+      "sha256": "207a43e0ca15de8acd0a30047064e9a1996fb49dde7a6c85ba4359aa36ddcf09",
+      "bytes": 3181
+    },
+    {
+      "path": "retained-head-tree-map.json",
+      "sha256": "f6a54be3d5e5958f95b793844932f5f1f7d123083145304891c6dcd977700fe8",
+      "bytes": 1246
+    },
+    {
+      "path": "objectless-verification.json",
+      "sha256": "38be8da4666346c96673a40aae7b95a5ec71f53c88f79df1d78d23d5ce8494e4",
+      "bytes": 451
+    }
+  ],
+  "inputs": {
+    "baselineArtifactMap": {
+      "path": "apps/web/performance/ci-20261010/artifact-map.json",
+      "sha256": "ad091212d4e223b711e761aafea797e2632a1ad4d5ff3c6c99d66fb74732a296"
+    },
+    "baselineSummary": {
+      "path": "apps/web/performance/ci-20261010/summary.json",
+      "sha256": "97d63069ebe0d62dae2841a44dad7db0644561bd717b064493470d8f5499ae0e"
+    },
+    "collector": {
+      "path": ".github/scripts/collect-ci-performance.py",
+      "sha256": "5b5fc5bdebf4161b71db91f171d277e6f0677fcbbb459f5b5c4fb1023c037cd4"
+    },
+    "successfulRuns": {
+      "path": "apps/web/performance/ci-20261010/successful-runs.json",
+      "sha256": "245f7afc2345556e619fd7be23613b89ffa5561689bfc954b5ec3f43af9eb6b1"
+    }
+  },
+  "schema": "tzudong-ci-performance/v1/source-group-sensitivity/artifact-map",
+  "sourceFiles": [
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/analyze-source-groups.py",
+      "sha256": "006a1f51c449b8bc232d98d0973dd31f9d2436f8cb739041bdf8ca39a2370855",
+      "bytes": 26907
+    },
+    {
+      "path": "apps/web/performance/ci-20261010/source-groups/test_analyze_source_groups.py",
+      "sha256": "d45631c1e3e96377a7b514d173e23c4a4459b3c8987628eb9d65789532c86cd4",
+      "bytes": 6910
+    }
+  ]
+}

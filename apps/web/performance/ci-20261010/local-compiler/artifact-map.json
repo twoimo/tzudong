@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "artifacts": [
+    {
+      "path": "benchmark.py",
+      "sha256": "9bc20eac6ce416dc4e4368da910e01c81371a541712f7e4989d4285677dd7023",
+      "bytes": 35365,
+      "role": "current benchmark and replay scorer with exact tracked snapshot inventory and strict acceptance-budget validation"
+    },
+    {
+      "path": "historical-scorer-7f9df77e.py",
+      "sha256": "7f9df77e63482b7db9b0e41c7db3277bc8b47ba0434a7099f0bf2c0885db0719",
+      "bytes": 31911,
+      "role": "exact scorer bound by retained historical raw evidence"
+    },
+    {
+      "path": "raw.json",
+      "sha256": "cb8249a9e1cf90641b2789098e58a5841d8d85ad5bfe78bfcdefeac69258c93e",
+      "role": "not admitted historical dirty-source raw; preserved byte-for-byte"
+    },
+    {
+      "path": "summary.json",
+      "sha256": "7f419032943b1d8c654e24cedc675ad2a51f856e3b49715dbb2e761159a2b093",
+      "role": "not admitted historical descriptive summary"
+    },
+    {
+      "path": "report.md",
+      "sha256": "21c05081567ecec8fe10b16522d9f2f07ecf2e9966bd9a2e70f2908137437241",
+      "role": "historical exclusion and rerun contract"
+    },
+    {
+      "path": "benchmark-failed-snapshot-symlink.py",
+      "sha256": "990639a936d566de761387e1155f86c16d528d3cddaecc91c484d76b40c60b85",
+      "role": "exact failed experiment source"
+    },
+    {
+      "path": "raw-failed-snapshot-symlink.json",
+      "sha256": "372289466426a0c42a0592bf0a2b8e7908d5d91dcce639ef75238655d6df4316",
+      "role": "excluded failed raw measurements"
+    },
+    {
+      "path": "failed-experiment.md",
+      "sha256": "00d4c0326caa5d2b48b54fa283cf55917a25c1445e34350584ec8eaea0ccffdc",
+      "role": "failure cause and exclusion rationale"
+    },
+    {
+      "path": "admission.json",
+      "sha256": "7bf720bf098f9b6f54493a1fe833bec2476af68163bab6750445836bfbfc5d92",
+      "bytes": 1456,
+      "role": "historical non-admission decision"
+    },
+    {
+      "path": "test_benchmark.py",
+      "sha256": "5a1a31293edc802785064cd9083c5dc91d3d77809fd1d9a72ae0084561d41a57",
+      "bytes": 9595,
+      "role": "ignored-input exclusion, frozen-input, and budget negative tests"
+    }
+  ],
+  "admitted": false
+}

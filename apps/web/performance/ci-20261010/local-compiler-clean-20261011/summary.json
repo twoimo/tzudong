@@ -1,0 +1,219 @@
+{
+  "aaNoise": {
+    "absoluteRelativeDifferencePercent": {
+      "max": 29.23631775508878,
+      "mean": 15.728376705054023,
+      "min": 3.0682686709429188,
+      "n": 7,
+      "p50": 19.32701503796738,
+      "p75": 23.90532321697786,
+      "p95": 28.275071878062594
+    },
+    "signedDifferenceMs": {
+      "max": 6952.463167000002,
+      "mean": 1902.994482714286,
+      "meanBootstrap95Ci": [
+        -884.1956065714294,
+        4666.535315396422
+      ],
+      "min": -4411.805916000001,
+      "n": 7,
+      "p50": 817.945416999999,
+      "p75": 5272.518480000002,
+      "p95": 6568.174079800001
+    }
+  },
+  "commandDurationMs": {
+    "after": {
+      "parity": {
+        "max": 21836.981292,
+        "mean": 18393.62406557143,
+        "min": 14252.109417,
+        "n": 7,
+        "p50": 18056.047167,
+        "p75": 19880.5717915,
+        "p95": 21310.6867044
+      },
+      "verify": {
+        "max": 355.219792,
+        "mean": 294.54244642857145,
+        "min": 223.787792,
+        "n": 7,
+        "p50": 284.177042,
+        "p75": 345.3195205,
+        "p95": 354.5921167
+      }
+    },
+    "before": {
+      "compat": {
+        "max": 16690.602917,
+        "mean": 14957.755857142856,
+        "min": 12183.887042,
+        "n": 7,
+        "p50": 15364.1125,
+        "p75": 16082.978020499999,
+        "p95": 16662.8659793
+      },
+      "native": {
+        "max": 1917.573292,
+        "mean": 1614.9094108571428,
+        "min": 1322.06925,
+        "n": 7,
+        "p50": 1634.869167,
+        "p75": 1761.4072919999999,
+        "p95": 1872.7389294999998
+      },
+      "parity": {
+        "max": 21577.164208,
+        "mean": 18200.60266057143,
+        "min": 13314.633917,
+        "n": 7,
+        "p50": 18780.821125,
+        "p75": 20110.377083,
+        "p95": 21266.183620599997
+      },
+      "verify": {
+        "max": 353.390042,
+        "mean": 299.1100297142857,
+        "min": 232.801208,
+        "n": 7,
+        "p50": 296.451208,
+        "p75": 319.298771,
+        "p95": 347.54595439999997
+      }
+    }
+  },
+  "comparison": "verify+native+compat+parity versus verify+parity",
+  "evidenceAdmission": {
+    "admitted": false,
+    "budgetChecks": {
+      "absolute": true,
+      "noiseMeanCiIncludesZero": true,
+      "noiseP95": false,
+      "relative": true
+    },
+    "integrityChecks": {
+      "aaSampleCountPreserved": true,
+      "allSequencesSucceeded": true,
+      "pairedSampleCountPreserved": true,
+      "resourceMeasurementsComplete": true,
+      "sourceContractUnchanged": true
+    },
+    "officialApproval": false,
+    "predeclaredBudgets": {
+      "absoluteMeanReductionBootstrap95CiLowerBoundMs": 2000,
+      "noiseAaMeanDifference95CiMustIncludeZero": true,
+      "noiseAaP95AbsoluteRelativeDifferencePercentMaximum": 5,
+      "relativeMeanReductionBootstrap95CiLowerBoundPercent": 5
+    },
+    "scope": "local duplicate compiler command sequence only"
+  },
+  "pairedReduction": {
+    "absoluteMs": {
+      "max": 21515.945167,
+      "mean": 16384.52483942857,
+      "meanBootstrap95Ci": [
+        14527.148797714286,
+        18362.33657757143
+      ],
+      "medianBootstrap95Ci": [
+        13082.721166000001,
+        17310.114749
+      ],
+      "min": 13060.440750000002,
+      "n": 7,
+      "p50": 16423.221293,
+      "p75": 17252.4292495,
+      "p95": 20254.1960416
+    },
+    "relativePercent": {
+      "max": 55.45134962694659,
+      "mean": 46.61284758082405,
+      "meanBootstrap95Ci": [
+        43.307835768115766,
+        50.24056522193791
+      ],
+      "medianBootstrap95Ci": [
+        43.81989582992242,
+        48.61983562772706
+      ],
+      "min": 39.10586572232482,
+      "n": 7,
+      "p50": 47.170003947601074,
+      "p75": 48.04587244371386,
+      "p95": 53.40189542718072
+    }
+  },
+  "sampleCountAaPaired": 7,
+  "sampleCountPaired": 7,
+  "schemaVersion": 2,
+  "scope": {
+    "excluded": [
+      "hosted runner latency and queue time",
+      "release typecheck benchmark routing",
+      "GitHub billing or billed minutes",
+      "application tests, builds, lint, and security scans"
+    ],
+    "included": "local duplicate diagnostic sequence only"
+  },
+  "sequenceCpuSeconds": {
+    "after": {
+      "max": 40.760000000000005,
+      "mean": 36.44571428571429,
+      "min": 31.08,
+      "n": 7,
+      "p50": 36.3,
+      "p75": 38.08,
+      "p95": 39.995000000000005
+    },
+    "before": {
+      "max": 69.37,
+      "mean": 63.92,
+      "min": 55.89,
+      "n": 7,
+      "p50": 64.05,
+      "p75": 66.695,
+      "p95": 68.95
+    }
+  },
+  "sequenceDurationMs": {
+    "after": {
+      "max": 22192.751292,
+      "mean": 18688.48443442857,
+      "min": 14476.147584,
+      "n": 7,
+      "p50": 18393.865666,
+      "p75": 20150.068458,
+      "p95": 21636.0891294
+    },
+    "before": {
+      "max": 39502.866041,
+      "mean": 35073.00927385715,
+      "min": 27558.86875,
+      "n": 7,
+      "p50": 35365.697,
+      "p75": 37434.4473335,
+      "p95": 39292.4506787
+    }
+  },
+  "sequenceMaximumResidentSetBytes": {
+    "after": {
+      "max": 1949302784.0,
+      "mean": 1932235337.142857,
+      "min": 1912176640.0,
+      "n": 7,
+      "p50": 1931739136.0,
+      "p75": 1936670720.0,
+      "p95": 1946540441.6
+    },
+    "before": {
+      "max": 2060369920.0,
+      "mean": 1972631259.4285715,
+      "min": 1852063744.0,
+      "n": 7,
+      "p50": 1937178624.0,
+      "p75": 2052890624.0,
+      "p95": 2058261299.2
+    }
+  }
+}

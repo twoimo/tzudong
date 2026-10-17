@@ -1,0 +1,2718 @@
+{
+  "analysis": {
+    "absoluteChangeBudgetSeconds": null,
+    "bootstrap": {
+      "confidenceLevel": 0.95,
+      "method": "nonparametric percentile bootstrap",
+      "randomIndexGenerator": "splitmix64-v1",
+      "resamples": 10000,
+      "seed": 20261010
+    },
+    "censoredObservationCount": 1,
+    "counterfactuals": {
+      "computed": false,
+      "requiredAccounting": [
+        "Retained verification, parity, and platform-test lanes must remain represented.",
+        "Coverage timing changes must be included rather than treated as zero cost.",
+        "Added full-history checkout and classifier time must be included.",
+        "Forecast gross removals cannot be reported as actual net savings."
+      ],
+      "statement": "No before/after source comparison is included. Any projected savings from changing jobs, platforms, or steps remain forecasts until measured under a comparable retained run set.",
+      "status": "forecast_only"
+    },
+    "excludedObservationCount": 1,
+    "kind": "unpaired observational baseline",
+    "noiseBudget": "No acceptance noise budget was predeclared. Observed spread and bootstrap intervals describe this unpaired baseline and are not a pass/fail threshold.",
+    "performanceImprovementClaim": false,
+    "relativeChangeBudgetPercent": null,
+    "successfulRunCount": 9
+  },
+  "capturedAtUtc": "2026-10-10T09:22:16Z",
+  "excludedObservationSummary": {
+    "censoredCount": 1,
+    "count": 1,
+    "reasonCounts": {
+      "run_conclusion_cancelled": 1
+    }
+  },
+  "jobDistributions": {
+    "Admin": {
+      "queueSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          2.333333,
+          8.888889
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          2.0,
+          3.0
+        ],
+        "max": 21.0,
+        "mean": 4.666667,
+        "median": 3.0,
+        "min": 2.0,
+        "n": 9,
+        "p25": 2.0,
+        "p75": 3.0,
+        "sampleStandardDeviation": 6.144103,
+        "unit": "seconds"
+      },
+      "runnerOccupiedSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          87.111111,
+          96.891667
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          85.0,
+          102.0
+        ],
+        "max": 105.0,
+        "mean": 92.0,
+        "median": 91.0,
+        "min": 80.0,
+        "n": 9,
+        "p25": 88.0,
+        "p75": 96.0,
+        "sampleStandardDeviation": 7.905694,
+        "unit": "seconds"
+      },
+      "stage.benchmark_reportSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.buildSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.combined_install_build_browser_testSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.installSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          24.555556,
+          30.222222
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          22.0,
+          31.0
+        ],
+        "max": 32.0,
+        "mean": 27.666667,
+        "median": 30.0,
+        "min": 19.0,
+        "n": 9,
+        "p25": 25.0,
+        "p75": 30.0,
+        "sampleStandardDeviation": 4.555217,
+        "unit": "seconds"
+      },
+      "stage.lintSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          5.111111,
+          6.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          5.0,
+          6.0
+        ],
+        "max": 6.0,
+        "mean": 5.555556,
+        "median": 6.0,
+        "min": 4.0,
+        "n": 9,
+        "p25": 5.0,
+        "p75": 6.0,
+        "sampleStandardDeviation": 0.726483,
+        "unit": "seconds"
+      },
+      "stage.otherSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          2.777778,
+          4.111111
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          2.0,
+          5.0
+        ],
+        "max": 5.0,
+        "mean": 3.444444,
+        "median": 3.0,
+        "min": 2.0,
+        "n": 9,
+        "p25": 3.0,
+        "p75": 4.0,
+        "sampleStandardDeviation": 1.130388,
+        "unit": "seconds"
+      },
+      "stage.setupSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          36.444444,
+          45.555556
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          35.0,
+          46.0
+        ],
+        "max": 58.0,
+        "mean": 40.222222,
+        "median": 38.0,
+        "min": 35.0,
+        "n": 9,
+        "p25": 35.0,
+        "p75": 39.0,
+        "sampleStandardDeviation": 7.496295,
+        "unit": "seconds"
+      },
+      "stage.testSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          6.666667,
+          7.333333
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          7.0,
+          7.0
+        ],
+        "max": 8.0,
+        "mean": 7.0,
+        "median": 7.0,
+        "min": 6.0,
+        "n": 9,
+        "p25": 7.0,
+        "p75": 7.0,
+        "sampleStandardDeviation": 0.5,
+        "unit": "seconds"
+      },
+      "stage.typecheckSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          4.444444,
+          5.555556
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          5.0,
+          6.0
+        ],
+        "max": 6.0,
+        "mean": 5.111111,
+        "median": 5.0,
+        "min": 3.0,
+        "n": 9,
+        "p25": 5.0,
+        "p75": 6.0,
+        "sampleStandardDeviation": 0.927961,
+        "unit": "seconds"
+      },
+      "stage.uploadSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      }
+    },
+    "Install": {
+      "queueSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          2.222222,
+          2.888889
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          2.0,
+          3.0
+        ],
+        "max": 3.0,
+        "mean": 2.555556,
+        "median": 3.0,
+        "min": 2.0,
+        "n": 9,
+        "p25": 2.0,
+        "p75": 3.0,
+        "sampleStandardDeviation": 0.527046,
+        "unit": "seconds"
+      },
+      "runnerOccupiedSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          331.888889,
+          396.333333
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          310.0,
+          413.0
+        ],
+        "max": 427.0,
+        "mean": 366.111111,
+        "median": 384.0,
+        "min": 275.0,
+        "n": 9,
+        "p25": 318.0,
+        "p75": 398.0,
+        "sampleStandardDeviation": 52.510581,
+        "unit": "seconds"
+      },
+      "stage.benchmark_reportSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.buildSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.combined_install_build_browser_testSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          277.663889,
+          340.780556
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          257.0,
+          351.0
+        ],
+        "max": 383.0,
+        "mean": 310.111111,
+        "median": 329.0,
+        "min": 224.0,
+        "n": 9,
+        "p25": 262.0,
+        "p75": 336.0,
+        "sampleStandardDeviation": 51.382012,
+        "unit": "seconds"
+      },
+      "stage.installSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          15.333333,
+          19.666667
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          13.0,
+          21.0
+        ],
+        "max": 21.0,
+        "mean": 17.555556,
+        "median": 20.0,
+        "min": 12.0,
+        "n": 9,
+        "p25": 15.0,
+        "p75": 20.0,
+        "sampleStandardDeviation": 3.574602,
+        "unit": "seconds"
+      },
+      "stage.lintSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.otherSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          1.444444,
+          2.777778
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          1.0,
+          3.0
+        ],
+        "max": 4.0,
+        "mean": 2.111111,
+        "median": 2.0,
+        "min": 1.0,
+        "n": 9,
+        "p25": 1.0,
+        "p75": 3.0,
+        "sampleStandardDeviation": 1.054093,
+        "unit": "seconds"
+      },
+      "stage.setupSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          15.666667,
+          18.777778
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          14.0,
+          19.0
+        ],
+        "max": 22.0,
+        "mean": 17.111111,
+        "median": 17.0,
+        "min": 14.0,
+        "n": 9,
+        "p25": 16.0,
+        "p75": 18.0,
+        "sampleStandardDeviation": 2.522124,
+        "unit": "seconds"
+      },
+      "stage.testSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.typecheckSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.uploadSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          8.444444,
+          12.333333
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          7.0,
+          14.0
+        ],
+        "max": 14.0,
+        "mean": 10.444444,
+        "median": 11.0,
+        "min": 6.0,
+        "n": 9,
+        "p25": 8.0,
+        "p75": 13.0,
+        "sampleStandardDeviation": 3.205897,
+        "unit": "seconds"
+      }
+    },
+    "Ubuntu Bun": {
+      "queueSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          2.555556,
+          17.888889
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          2.0,
+          3.0
+        ],
+        "max": 48.0,
+        "mean": 7.777778,
+        "median": 3.0,
+        "min": 2.0,
+        "n": 9,
+        "p25": 3.0,
+        "p75": 3.0,
+        "sampleStandardDeviation": 15.089548,
+        "unit": "seconds"
+      },
+      "runnerOccupiedSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          399.222222,
+          482.111111
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          438.0,
+          480.0
+        ],
+        "max": 520.0,
+        "mean": 448.666667,
+        "median": 469.0,
+        "min": 272.0,
+        "n": 9,
+        "p25": 450.0,
+        "p75": 475.0,
+        "sampleStandardDeviation": 70.02321,
+        "unit": "seconds"
+      },
+      "stage.benchmark_reportSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          268.216667,
+          326.666667
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          298.0,
+          336.0
+        ],
+        "max": 348.0,
+        "mean": 303.333333,
+        "median": 310.0,
+        "min": 176.0,
+        "n": 9,
+        "p25": 308.0,
+        "p75": 326.0,
+        "sampleStandardDeviation": 50.229473,
+        "unit": "seconds"
+      },
+      "stage.buildSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.combined_install_build_browser_testSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.installSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          3.222222,
+          4.111111
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          3.0,
+          4.0
+        ],
+        "max": 5.0,
+        "mean": 3.666667,
+        "median": 4.0,
+        "min": 3.0,
+        "n": 9,
+        "p25": 3.0,
+        "p75": 4.0,
+        "sampleStandardDeviation": 0.707107,
+        "unit": "seconds"
+      },
+      "stage.lintSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.otherSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          1.555556,
+          2.666667
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          1.0,
+          3.0
+        ],
+        "max": 4.0,
+        "mean": 2.111111,
+        "median": 2.0,
+        "min": 1.0,
+        "n": 9,
+        "p25": 2.0,
+        "p75": 2.0,
+        "sampleStandardDeviation": 0.927961,
+        "unit": "seconds"
+      },
+      "stage.setupSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          7.777778,
+          10.666667
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          6.0,
+          11.0
+        ],
+        "max": 13.0,
+        "mean": 9.222222,
+        "median": 10.0,
+        "min": 6.0,
+        "n": 9,
+        "p25": 8.0,
+        "p75": 10.0,
+        "sampleStandardDeviation": 2.279132,
+        "unit": "seconds"
+      },
+      "stage.testSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          53.444444,
+          65.888889
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          50.0,
+          68.0
+        ],
+        "max": 69.0,
+        "mean": 60.444444,
+        "median": 65.0,
+        "min": 38.0,
+        "n": 9,
+        "p25": 59.0,
+        "p75": 66.0,
+        "sampleStandardDeviation": 10.187138,
+        "unit": "seconds"
+      },
+      "stage.typecheckSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          58.0,
+          72.222222
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          55.0,
+          72.0
+        ],
+        "max": 81.0,
+        "mean": 65.777778,
+        "median": 70.0,
+        "min": 41.0,
+        "n": 9,
+        "p25": 63.0,
+        "p75": 71.0,
+        "sampleStandardDeviation": 11.648796,
+        "unit": "seconds"
+      },
+      "stage.uploadSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.888889,
+          1.777778
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          1.0,
+          2.0
+        ],
+        "max": 2.0,
+        "mean": 1.333333,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 1.0,
+        "p75": 2.0,
+        "sampleStandardDeviation": 0.707107,
+        "unit": "seconds"
+      }
+    },
+    "Ubuntu npm": {
+      "queueSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          2.555556,
+          3.888889
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          2.0,
+          3.0
+        ],
+        "max": 6.0,
+        "mean": 3.111111,
+        "median": 3.0,
+        "min": 2.0,
+        "n": 9,
+        "p25": 3.0,
+        "p75": 3.0,
+        "sampleStandardDeviation": 1.166667,
+        "unit": "seconds"
+      },
+      "runnerOccupiedSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          656.222222,
+          775.333333
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          584.0,
+          796.0
+        ],
+        "max": 808.0,
+        "mean": 722.111111,
+        "median": 761.0,
+        "min": 532.0,
+        "n": 9,
+        "p25": 721.0,
+        "p75": 783.0,
+        "sampleStandardDeviation": 97.313211,
+        "unit": "seconds"
+      },
+      "stage.benchmark_reportSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          278.663889,
+          318.888889
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          261.0,
+          325.0
+        ],
+        "max": 334.0,
+        "mean": 300.888889,
+        "median": 312.0,
+        "min": 234.0,
+        "n": 9,
+        "p25": 298.0,
+        "p75": 323.0,
+        "sampleStandardDeviation": 32.804133,
+        "unit": "seconds"
+      },
+      "stage.buildSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          99.111111,
+          122.333333
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          85.0,
+          128.0
+        ],
+        "max": 129.0,
+        "mean": 111.888889,
+        "median": 119.0,
+        "min": 75.0,
+        "n": 9,
+        "p25": 112.0,
+        "p75": 121.0,
+        "sampleStandardDeviation": 18.950227,
+        "unit": "seconds"
+      },
+      "stage.combined_install_build_browser_testSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.installSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          15.666667,
+          20.111111
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          13.0,
+          21.0
+        ],
+        "max": 21.0,
+        "mean": 18.0,
+        "median": 20.0,
+        "min": 12.0,
+        "n": 9,
+        "p25": 15.0,
+        "p75": 20.0,
+        "sampleStandardDeviation": 3.605551,
+        "unit": "seconds"
+      },
+      "stage.lintSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          54.555556,
+          65.113889
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          47.0,
+          65.0
+        ],
+        "max": 69.0,
+        "mean": 60.333333,
+        "median": 64.0,
+        "min": 44.0,
+        "n": 9,
+        "p25": 61.0,
+        "p75": 65.0,
+        "sampleStandardDeviation": 8.703448,
+        "unit": "seconds"
+      },
+      "stage.otherSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          2.222222,
+          2.888889
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          2.0,
+          3.0
+        ],
+        "max": 3.0,
+        "mean": 2.555556,
+        "median": 3.0,
+        "min": 2.0,
+        "n": 9,
+        "p25": 2.0,
+        "p75": 3.0,
+        "sampleStandardDeviation": 0.527046,
+        "unit": "seconds"
+      },
+      "stage.setupSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          17.111111,
+          21.777778
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          15.0,
+          23.0
+        ],
+        "max": 24.0,
+        "mean": 19.555556,
+        "median": 21.0,
+        "min": 13.0,
+        "n": 9,
+        "p25": 17.0,
+        "p75": 23.0,
+        "sampleStandardDeviation": 3.844188,
+        "unit": "seconds"
+      },
+      "stage.testSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          123.555556,
+          147.555556
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          107.0,
+          152.0
+        ],
+        "max": 153.0,
+        "mean": 137.0,
+        "median": 146.0,
+        "min": 101.0,
+        "n": 9,
+        "p25": 137.0,
+        "p75": 147.0,
+        "sampleStandardDeviation": 19.326148,
+        "unit": "seconds"
+      },
+      "stage.typecheckSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          58.555556,
+          71.888889
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          50.0,
+          74.0
+        ],
+        "max": 75.0,
+        "mean": 66.0,
+        "median": 70.0,
+        "min": 45.0,
+        "n": 9,
+        "p25": 67.0,
+        "p75": 73.0,
+        "sampleStandardDeviation": 10.851267,
+        "unit": "seconds"
+      },
+      "stage.uploadSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          1.333333,
+          2.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          1.0,
+          2.0
+        ],
+        "max": 2.0,
+        "mean": 1.666667,
+        "median": 2.0,
+        "min": 1.0,
+        "n": 9,
+        "p25": 1.0,
+        "p75": 2.0,
+        "sampleStandardDeviation": 0.5,
+        "unit": "seconds"
+      }
+    },
+    "Windows Bun": {
+      "queueSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          2.333333,
+          3.222222
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          2.0,
+          3.0
+        ],
+        "max": 4.0,
+        "mean": 2.777778,
+        "median": 3.0,
+        "min": 2.0,
+        "n": 9,
+        "p25": 2.0,
+        "p75": 3.0,
+        "sampleStandardDeviation": 0.666667,
+        "unit": "seconds"
+      },
+      "runnerOccupiedSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          615.219444,
+          772.777778
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          643.0,
+          786.0
+        ],
+        "max": 908.0,
+        "mean": 699.111111,
+        "median": 710.0,
+        "min": 437.0,
+        "n": 9,
+        "p25": 648.0,
+        "p75": 741.0,
+        "sampleStandardDeviation": 126.363013,
+        "unit": "seconds"
+      },
+      "stage.benchmark_reportSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          328.444444,
+          461.888889
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          321.0,
+          495.0
+        ],
+        "max": 577.0,
+        "mean": 395.333333,
+        "median": 405.0,
+        "min": 210.0,
+        "n": 9,
+        "p25": 321.0,
+        "p75": 437.0,
+        "sampleStandardDeviation": 106.503521,
+        "unit": "seconds"
+      },
+      "stage.buildSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.combined_install_build_browser_testSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.installSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          65.777778,
+          109.666667
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          62.0,
+          113.0
+        ],
+        "max": 172.0,
+        "mean": 84.222222,
+        "median": 67.0,
+        "min": 61.0,
+        "n": 9,
+        "p25": 62.0,
+        "p75": 81.0,
+        "sampleStandardDeviation": 36.816361,
+        "unit": "seconds"
+      },
+      "stage.lintSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.otherSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          4.222222,
+          5.555556
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          4.0,
+          6.0
+        ],
+        "max": 6.0,
+        "mean": 4.888889,
+        "median": 5.0,
+        "min": 3.0,
+        "n": 9,
+        "p25": 4.0,
+        "p75": 6.0,
+        "sampleStandardDeviation": 1.054093,
+        "unit": "seconds"
+      },
+      "stage.setupSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          21.0,
+          25.888889
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          20.0,
+          28.0
+        ],
+        "max": 30.0,
+        "mean": 23.333333,
+        "median": 23.0,
+        "min": 18.0,
+        "n": 9,
+        "p25": 20.0,
+        "p75": 26.0,
+        "sampleStandardDeviation": 4.031129,
+        "unit": "seconds"
+      },
+      "stage.testSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          96.222222,
+          117.222222
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          104.0,
+          119.0
+        ],
+        "max": 124.0,
+        "mean": 108.888889,
+        "median": 114.0,
+        "min": 63.0,
+        "n": 9,
+        "p25": 112.0,
+        "p75": 116.0,
+        "sampleStandardDeviation": 18.051624,
+        "unit": "seconds"
+      },
+      "stage.typecheckSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          71.444444,
+          84.444444
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          66.0,
+          87.0
+        ],
+        "max": 91.0,
+        "mean": 78.111111,
+        "median": 84.0,
+        "min": 62.0,
+        "n": 9,
+        "p25": 69.0,
+        "p75": 86.0,
+        "sampleStandardDeviation": 10.635371,
+        "unit": "seconds"
+      },
+      "stage.uploadSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          1.222222,
+          2.111111
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          1.0,
+          2.0
+        ],
+        "max": 3.0,
+        "mean": 1.666667,
+        "median": 2.0,
+        "min": 1.0,
+        "n": 9,
+        "p25": 1.0,
+        "p75": 2.0,
+        "sampleStandardDeviation": 0.707107,
+        "unit": "seconds"
+      }
+    },
+    "Windows npm": {
+      "queueSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          2.555556,
+          6.002778
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          2.0,
+          8.0
+        ],
+        "max": 10.0,
+        "mean": 4.111111,
+        "median": 3.0,
+        "min": 2.0,
+        "n": 9,
+        "p25": 3.0,
+        "p75": 3.0,
+        "sampleStandardDeviation": 2.848001,
+        "unit": "seconds"
+      },
+      "runnerOccupiedSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          768.555556,
+          844.777778
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          758.0,
+          862.0
+        ],
+        "max": 894.0,
+        "mean": 809.111111,
+        "median": 807.0,
+        "min": 686.0,
+        "n": 9,
+        "p25": 784.0,
+        "p75": 853.0,
+        "sampleStandardDeviation": 63.02667,
+        "unit": "seconds"
+      },
+      "stage.benchmark_reportSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          389.888889,
+          463.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          370.0,
+          492.0
+        ],
+        "max": 494.0,
+        "mean": 427.666667,
+        "median": 433.0,
+        "min": 325.0,
+        "n": 9,
+        "p25": 388.0,
+        "p75": 490.0,
+        "sampleStandardDeviation": 59.692964,
+        "unit": "seconds"
+      },
+      "stage.buildSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.combined_install_build_browser_testSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          0.0,
+          0.0
+        ],
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p25": 0.0,
+        "p75": 0.0,
+        "sampleStandardDeviation": 0.0,
+        "unit": "seconds"
+      },
+      "stage.installSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          36.111111,
+          39.777778
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          35.0,
+          41.0
+        ],
+        "max": 41.0,
+        "mean": 38.111111,
+        "median": 39.0,
+        "min": 32.0,
+        "n": 9,
+        "p25": 38.0,
+        "p75": 40.0,
+        "sampleStandardDeviation": 2.934469,
+        "unit": "seconds"
+      },
+      "stage.lintSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          74.777778,
+          82.555556
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          74.0,
+          85.0
+        ],
+        "max": 90.0,
+        "mean": 78.555556,
+        "median": 77.0,
+        "min": 69.0,
+        "n": 9,
+        "p25": 75.0,
+        "p75": 82.0,
+        "sampleStandardDeviation": 6.306963,
+        "unit": "seconds"
+      },
+      "stage.otherSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          4.333333,
+          5.222222
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          4.0,
+          5.0
+        ],
+        "max": 6.0,
+        "mean": 4.777778,
+        "median": 5.0,
+        "min": 4.0,
+        "n": 9,
+        "p25": 4.0,
+        "p75": 5.0,
+        "sampleStandardDeviation": 0.666667,
+        "unit": "seconds"
+      },
+      "stage.setupSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          53.444444,
+          67.666667
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          50.0,
+          72.0
+        ],
+        "max": 83.0,
+        "mean": 60.0,
+        "median": 54.0,
+        "min": 50.0,
+        "n": 9,
+        "p25": 51.0,
+        "p75": 65.0,
+        "sampleStandardDeviation": 11.55422,
+        "unit": "seconds"
+      },
+      "stage.testSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          111.666667,
+          115.555556
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          110.0,
+          117.0
+        ],
+        "max": 118.0,
+        "mean": 113.666667,
+        "median": 115.0,
+        "min": 110.0,
+        "n": 9,
+        "p25": 110.0,
+        "p75": 116.0,
+        "sampleStandardDeviation": 3.201562,
+        "unit": "seconds"
+      },
+      "stage.typecheckSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          77.886111,
+          84.111111
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          80.0,
+          84.0
+        ],
+        "max": 86.0,
+        "mean": 81.555556,
+        "median": 84.0,
+        "min": 68.0,
+        "n": 9,
+        "p25": 81.0,
+        "p75": 84.0,
+        "sampleStandardDeviation": 5.387743,
+        "unit": "seconds"
+      },
+      "stage.uploadSeconds": {
+        "bootstrapMean95PercentileInterval": [
+          1.333333,
+          2.222222
+        ],
+        "bootstrapMedian95PercentileInterval": [
+          1.0,
+          2.0
+        ],
+        "max": 3.0,
+        "mean": 1.777778,
+        "median": 2.0,
+        "min": 1.0,
+        "n": 9,
+        "p25": 1.0,
+        "p75": 2.0,
+        "sampleStandardDeviation": 0.666667,
+        "unit": "seconds"
+      }
+    }
+  },
+  "limits": [
+    "GitHub Actions API timestamps have one-second resolution.",
+    "Runner-occupied seconds sum parallel jobs and are not wall-clock duration or billed-minute totals.",
+    "Step categories are deterministic name-based groups; the combined Install step cannot be decomposed without logs.",
+    "The benchmark_report group includes its adjacent validation/report step when GitHub gives both the same generated step-name prefix.",
+    "Bootstrap intervals quantify sampling variation within these recent unpaired runs; they do not establish causality."
+  ],
+  "repository": "twoimo/tzudong",
+  "runDistributions": {
+    "benchmarkContributionPercent": {
+      "bootstrapMean95PercentileInterval": [
+        43.765124,
+        46.941969
+      ],
+      "bootstrapMedian95PercentileInterval": [
+        42.084942,
+        48.03124
+      ],
+      "max": 48.850932,
+      "mean": 45.426892,
+      "median": 45.844749,
+      "min": 41.013014,
+      "n": 9,
+      "p25": 44.73192,
+      "p75": 47.228049,
+      "sampleStandardDeviation": 2.587354,
+      "unit": "percent"
+    },
+    "benchmarkReportSeconds": {
+      "bootstrapMean95PercentileInterval": [
+        1341.0,
+        1503.444444
+      ],
+      "bootstrapMedian95PercentileInterval": [
+        1308.0,
+        1573.0
+      ],
+      "max": 1576.0,
+      "mean": 1427.222222,
+      "median": 1438.0,
+      "min": 1166.0,
+      "n": 9,
+      "p25": 1367.0,
+      "p75": 1506.0,
+      "sampleStandardDeviation": 131.446546,
+      "unit": "seconds"
+    },
+    "criticalPathSeconds": {
+      "bootstrapMean95PercentileInterval": [
+        819.666667,
+        872.225
+      ],
+      "bootstrapMedian95PercentileInterval": [
+        800.0,
+        903.0
+      ],
+      "max": 912.0,
+      "mean": 845.555556,
+      "median": 848.0,
+      "min": 787.0,
+      "n": 9,
+      "p25": 811.0,
+      "p75": 866.0,
+      "sampleStandardDeviation": 43.718163,
+      "unit": "seconds"
+    },
+    "maxQueueSeconds": {
+      "bootstrapMean95PercentileInterval": [
+        3.555556,
+        19.447222
+      ],
+      "bootstrapMedian95PercentileInterval": [
+        3.0,
+        10.0
+      ],
+      "max": 48.0,
+      "mean": 9.444444,
+      "median": 3.0,
+      "min": 3.0,
+      "n": 9,
+      "p25": 3.0,
+      "p75": 8.0,
+      "sampleStandardDeviation": 14.689376,
+      "unit": "seconds"
+    },
+    "runnerOccupiedSeconds": {
+      "bootstrapMean95PercentileInterval": [
+        3040.0,
+        3222.333333
+      ],
+      "bootstrapMedian95PercentileInterval": [
+        3035.0,
+        3285.0
+      ],
+      "max": 3337.0,
+      "mean": 3137.111111,
+      "median": 3125.0,
+      "min": 2843.0,
+      "n": 9,
+      "p25": 3073.0,
+      "p75": 3220.0,
+      "sampleStandardDeviation": 148.22065,
+      "unit": "seconds"
+    },
+    "totalQueueSeconds": {
+      "bootstrapMean95PercentileInterval": [
+        16.555556,
+        39.666667
+      ],
+      "bootstrapMedian95PercentileInterval": [
+        16.0,
+        25.0
+      ],
+      "max": 81.0,
+      "mean": 25.0,
+      "median": 18.0,
+      "min": 14.0,
+      "n": 9,
+      "p25": 16.0,
+      "p75": 20.0,
+      "sampleStandardDeviation": 21.230874,
+      "unit": "seconds"
+    }
+  },
+  "runObservations": [
+    {
+      "benchmarkContributionPercent": 47.228049,
+      "benchmarkReportSeconds": 1576,
+      "createdAt": "2026-10-10T08:53:47Z",
+      "criticalJob": "Ubuntu npm",
+      "criticalJobConclusion": "success",
+      "criticalPathSeconds": 827,
+      "event": "pull_request",
+      "headSha": "7343d92c77a0d4114db16871363c31b54b66ef82",
+      "jobs": [
+        {
+          "name": "Admin",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 90,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 30,
+            "lint": 6,
+            "other": 2,
+            "setup": 37,
+            "test": 7,
+            "typecheck": 6,
+            "upload": 0
+          }
+        },
+        {
+          "name": "Install",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 384,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 329,
+            "install": 20,
+            "lint": 0,
+            "other": 1,
+            "setup": 14,
+            "test": 0,
+            "typecheck": 0,
+            "upload": 13
+          }
+        },
+        {
+          "name": "Ubuntu Bun",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 475,
+          "stageSeconds": {
+            "benchmark_report": 336,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 3,
+            "lint": 0,
+            "other": 2,
+            "setup": 8,
+            "test": 59,
+            "typecheck": 63,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Ubuntu npm",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 808,
+          "stageSeconds": {
+            "benchmark_report": 334,
+            "build": 129,
+            "combined_install_build_browser_test": 0,
+            "install": 20,
+            "lint": 69,
+            "other": 2,
+            "setup": 19,
+            "test": 152,
+            "typecheck": 75,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Windows Bun",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 786,
+          "stageSeconds": {
+            "benchmark_report": 495,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 61,
+            "lint": 0,
+            "other": 6,
+            "setup": 24,
+            "test": 112,
+            "typecheck": 84,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Windows npm",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 794,
+          "stageSeconds": {
+            "benchmark_report": 411,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 41,
+            "lint": 76,
+            "other": 5,
+            "setup": 54,
+            "test": 117,
+            "typecheck": 84,
+            "upload": 3
+          }
+        }
+      ],
+      "maxQueueSeconds": 3,
+      "runId": 38039467558,
+      "runnerOccupiedSeconds": 3337,
+      "stageSeconds": {
+        "benchmark_report": 1576,
+        "build": 129,
+        "combined_install_build_browser_test": 329,
+        "install": 175,
+        "lint": 151,
+        "other": 18,
+        "setup": 156,
+        "test": 447,
+        "typecheck": 312,
+        "upload": 22
+      },
+      "totalQueueSeconds": 16
+    },
+    {
+      "benchmarkContributionPercent": 42.084942,
+      "benchmarkReportSeconds": 1308,
+      "createdAt": "2026-10-09T18:50:32Z",
+      "criticalJob": "Ubuntu npm",
+      "criticalJobConclusion": "success",
+      "criticalPathSeconds": 800,
+      "event": "push",
+      "headSha": "d9144efed7212a3bdd2849231b7b851602811543",
+      "jobs": [
+        {
+          "name": "Admin",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 102,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 30,
+            "lint": 6,
+            "other": 3,
+            "setup": 46,
+            "test": 7,
+            "typecheck": 5,
+            "upload": 0
+          }
+        },
+        {
+          "name": "Install",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 413,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 351,
+            "install": 21,
+            "lint": 0,
+            "other": 2,
+            "setup": 18,
+            "test": 0,
+            "typecheck": 0,
+            "upload": 13
+          }
+        },
+        {
+          "name": "Ubuntu Bun",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 272,
+          "stageSeconds": {
+            "benchmark_report": 176,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 3,
+            "lint": 0,
+            "other": 2,
+            "setup": 9,
+            "test": 38,
+            "typecheck": 41,
+            "upload": 1
+          }
+        },
+        {
+          "name": "Ubuntu npm",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 796,
+          "stageSeconds": {
+            "benchmark_report": 325,
+            "build": 128,
+            "combined_install_build_browser_test": 0,
+            "install": 21,
+            "lint": 65,
+            "other": 2,
+            "setup": 23,
+            "test": 153,
+            "typecheck": 73,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Windows Bun",
+          "queueSeconds": 4,
+          "runnerOccupiedSeconds": 741,
+          "stageSeconds": {
+            "benchmark_report": 437,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 62,
+            "lint": 0,
+            "other": 5,
+            "setup": 26,
+            "test": 119,
+            "typecheck": 85,
+            "upload": 3
+          }
+        },
+        {
+          "name": "Windows npm",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 784,
+          "stageSeconds": {
+            "benchmark_report": 370,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 39,
+            "lint": 82,
+            "other": 5,
+            "setup": 83,
+            "test": 116,
+            "typecheck": 84,
+            "upload": 2
+          }
+        }
+      ],
+      "maxQueueSeconds": 4,
+      "runId": 37976075302,
+      "runnerOccupiedSeconds": 3108,
+      "stageSeconds": {
+        "benchmark_report": 1308,
+        "build": 128,
+        "combined_install_build_browser_test": 351,
+        "install": 176,
+        "lint": 153,
+        "other": 19,
+        "setup": 205,
+        "test": 433,
+        "typecheck": 288,
+        "upload": 21
+      },
+      "totalQueueSeconds": 18
+    },
+    {
+      "benchmarkContributionPercent": 45.041186,
+      "benchmarkReportSeconds": 1367,
+      "createdAt": "2026-10-09T18:47:27Z",
+      "criticalJob": "Windows npm",
+      "criticalJobConclusion": "success",
+      "criticalPathSeconds": 903,
+      "event": "pull_request",
+      "headSha": "a6eae5b4ac5225309e3cad0b3e8dc3b2f5dde525",
+      "jobs": [
+        {
+          "name": "Admin",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 91,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 30,
+            "lint": 6,
+            "other": 2,
+            "setup": 38,
+            "test": 8,
+            "typecheck": 5,
+            "upload": 0
+          }
+        },
+        {
+          "name": "Install",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 398,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 336,
+            "install": 21,
+            "lint": 0,
+            "other": 2,
+            "setup": 16,
+            "test": 0,
+            "typecheck": 0,
+            "upload": 14
+          }
+        },
+        {
+          "name": "Ubuntu Bun",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 472,
+          "stageSeconds": {
+            "benchmark_report": 320,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 4,
+            "lint": 0,
+            "other": 1,
+            "setup": 6,
+            "test": 66,
+            "typecheck": 71,
+            "upload": 1
+          }
+        },
+        {
+          "name": "Ubuntu npm",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 532,
+          "stageSeconds": {
+            "benchmark_report": 234,
+            "build": 75,
+            "combined_install_build_browser_test": 0,
+            "install": 12,
+            "lint": 44,
+            "other": 3,
+            "setup": 13,
+            "test": 101,
+            "typecheck": 45,
+            "upload": 1
+          }
+        },
+        {
+          "name": "Windows Bun",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 648,
+          "stageSeconds": {
+            "benchmark_report": 321,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 113,
+            "lint": 0,
+            "other": 5,
+            "setup": 20,
+            "test": 116,
+            "typecheck": 69,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Windows npm",
+          "queueSeconds": 8,
+          "runnerOccupiedSeconds": 894,
+          "stageSeconds": {
+            "benchmark_report": 492,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 38,
+            "lint": 90,
+            "other": 6,
+            "setup": 65,
+            "test": 115,
+            "typecheck": 83,
+            "upload": 1
+          }
+        }
+      ],
+      "maxQueueSeconds": 8,
+      "runId": 37975717229,
+      "runnerOccupiedSeconds": 3035,
+      "stageSeconds": {
+        "benchmark_report": 1367,
+        "build": 75,
+        "combined_install_build_browser_test": 336,
+        "install": 218,
+        "lint": 140,
+        "other": 19,
+        "setup": 158,
+        "test": 406,
+        "typecheck": 273,
+        "upload": 19
+      },
+      "totalQueueSeconds": 20
+    },
+    {
+      "benchmarkContributionPercent": 45.844749,
+      "benchmarkReportSeconds": 1506,
+      "createdAt": "2026-10-09T18:46:16Z",
+      "criticalJob": "Windows npm",
+      "criticalJobConclusion": "success",
+      "criticalPathSeconds": 811,
+      "event": "push",
+      "headSha": "a6eae5b4ac5225309e3cad0b3e8dc3b2f5dde525",
+      "jobs": [
+        {
+          "name": "Admin",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 88,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 30,
+            "lint": 6,
+            "other": 3,
+            "setup": 35,
+            "test": 7,
+            "typecheck": 5,
+            "upload": 0
+          }
+        },
+        {
+          "name": "Install",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 398,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 333,
+            "install": 20,
+            "lint": 0,
+            "other": 1,
+            "setup": 22,
+            "test": 0,
+            "typecheck": 0,
+            "upload": 14
+          }
+        },
+        {
+          "name": "Ubuntu Bun",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 520,
+          "stageSeconds": {
+            "benchmark_report": 348,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 5,
+            "lint": 0,
+            "other": 1,
+            "setup": 11,
+            "test": 68,
+            "typecheck": 81,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Ubuntu npm",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 761,
+          "stageSeconds": {
+            "benchmark_report": 312,
+            "build": 118,
+            "combined_install_build_browser_test": 0,
+            "install": 20,
+            "lint": 64,
+            "other": 2,
+            "setup": 21,
+            "test": 146,
+            "typecheck": 71,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Windows Bun",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 711,
+          "stageSeconds": {
+            "benchmark_report": 413,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 62,
+            "lint": 0,
+            "other": 6,
+            "setup": 23,
+            "test": 112,
+            "typecheck": 91,
+            "upload": 1
+          }
+        },
+        {
+          "name": "Windows npm",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 807,
+          "stageSeconds": {
+            "benchmark_report": 433,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 41,
+            "lint": 74,
+            "other": 5,
+            "setup": 51,
+            "test": 112,
+            "typecheck": 86,
+            "upload": 2
+          }
+        }
+      ],
+      "maxQueueSeconds": 3,
+      "runId": 37975584201,
+      "runnerOccupiedSeconds": 3285,
+      "stageSeconds": {
+        "benchmark_report": 1506,
+        "build": 118,
+        "combined_install_build_browser_test": 333,
+        "install": 178,
+        "lint": 144,
+        "other": 18,
+        "setup": 163,
+        "test": 445,
+        "typecheck": 334,
+        "upload": 21
+      },
+      "totalQueueSeconds": 17
+    },
+    {
+      "benchmarkContributionPercent": 46.016,
+      "benchmarkReportSeconds": 1438,
+      "createdAt": "2026-10-09T18:44:00Z",
+      "criticalJob": "Windows npm",
+      "criticalJobConclusion": "success",
+      "criticalPathSeconds": 848,
+      "event": "pull_request",
+      "headSha": "a9ce6ba2be377594e30dc865c621f2854006aa79",
+      "jobs": [
+        {
+          "name": "Admin",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 80,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 19,
+            "lint": 4,
+            "other": 5,
+            "setup": 39,
+            "test": 7,
+            "typecheck": 3,
+            "upload": 0
+          }
+        },
+        {
+          "name": "Install",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 427,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 383,
+            "install": 13,
+            "lint": 0,
+            "other": 3,
+            "setup": 14,
+            "test": 0,
+            "typecheck": 0,
+            "upload": 6
+          }
+        },
+        {
+          "name": "Ubuntu Bun",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 480,
+          "stageSeconds": {
+            "benchmark_report": 326,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 3,
+            "lint": 0,
+            "other": 2,
+            "setup": 6,
+            "test": 69,
+            "typecheck": 72,
+            "upload": 0
+          }
+        },
+        {
+          "name": "Ubuntu npm",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 584,
+          "stageSeconds": {
+            "benchmark_report": 261,
+            "build": 85,
+            "combined_install_build_browser_test": 0,
+            "install": 13,
+            "lint": 47,
+            "other": 2,
+            "setup": 15,
+            "test": 107,
+            "typecheck": 50,
+            "upload": 1
+          }
+        },
+        {
+          "name": "Windows Bun",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 710,
+          "stageSeconds": {
+            "benchmark_report": 405,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 64,
+            "lint": 0,
+            "other": 5,
+            "setup": 30,
+            "test": 116,
+            "typecheck": 86,
+            "upload": 1
+          }
+        },
+        {
+          "name": "Windows npm",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 844,
+          "stageSeconds": {
+            "benchmark_report": 446,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 40,
+            "lint": 85,
+            "other": 4,
+            "setup": 62,
+            "test": 118,
+            "typecheck": 84,
+            "upload": 2
+          }
+        }
+      ],
+      "maxQueueSeconds": 3,
+      "runId": 37975317691,
+      "runnerOccupiedSeconds": 3125,
+      "stageSeconds": {
+        "benchmark_report": 1438,
+        "build": 85,
+        "combined_install_build_browser_test": 383,
+        "install": 152,
+        "lint": 136,
+        "other": 21,
+        "setup": 166,
+        "test": 417,
+        "typecheck": 295,
+        "upload": 10
+      },
+      "totalQueueSeconds": 14
+    },
+    {
+      "benchmarkContributionPercent": 41.013014,
+      "benchmarkReportSeconds": 1166,
+      "createdAt": "2026-10-09T18:42:56Z",
+      "criticalJob": "Ubuntu npm",
+      "criticalJobConclusion": "success",
+      "criticalPathSeconds": 787,
+      "event": "push",
+      "headSha": "a9ce6ba2be377594e30dc865c621f2854006aa79",
+      "jobs": [
+        {
+          "name": "Admin",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 96,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 31,
+            "lint": 6,
+            "other": 4,
+            "setup": 39,
+            "test": 7,
+            "typecheck": 5,
+            "upload": 0
+          }
+        },
+        {
+          "name": "Install",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 372,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 316,
+            "install": 20,
+            "lint": 0,
+            "other": 1,
+            "setup": 17,
+            "test": 0,
+            "typecheck": 0,
+            "upload": 11
+          }
+        },
+        {
+          "name": "Ubuntu Bun",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 469,
+          "stageSeconds": {
+            "benchmark_report": 308,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 4,
+            "lint": 0,
+            "other": 3,
+            "setup": 13,
+            "test": 65,
+            "typecheck": 70,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Ubuntu npm",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 783,
+          "stageSeconds": {
+            "benchmark_report": 323,
+            "build": 121,
+            "combined_install_build_browser_test": 0,
+            "install": 20,
+            "lint": 65,
+            "other": 3,
+            "setup": 23,
+            "test": 147,
+            "typecheck": 74,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Windows Bun",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 437,
+          "stageSeconds": {
+            "benchmark_report": 210,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 76,
+            "lint": 0,
+            "other": 4,
+            "setup": 18,
+            "test": 63,
+            "typecheck": 62,
+            "upload": 1
+          }
+        },
+        {
+          "name": "Windows npm",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 686,
+          "stageSeconds": {
+            "benchmark_report": 325,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 32,
+            "lint": 69,
+            "other": 5,
+            "setup": 72,
+            "test": 110,
+            "typecheck": 68,
+            "upload": 2
+          }
+        }
+      ],
+      "maxQueueSeconds": 3,
+      "runId": 37975198548,
+      "runnerOccupiedSeconds": 2843,
+      "stageSeconds": {
+        "benchmark_report": 1166,
+        "build": 121,
+        "combined_install_build_browser_test": 316,
+        "install": 183,
+        "lint": 140,
+        "other": 20,
+        "setup": 182,
+        "test": 392,
+        "typecheck": 279,
+        "upload": 18
+      },
+      "totalQueueSeconds": 18
+    },
+    {
+      "benchmarkContributionPercent": 48.850932,
+      "benchmarkReportSeconds": 1573,
+      "createdAt": "2026-10-09T18:39:57Z",
+      "criticalJob": "Windows Bun",
+      "criticalJobConclusion": "success",
+      "criticalPathSeconds": 912,
+      "event": "pull_request",
+      "headSha": "efef17c4087808ea50cd9cb6bd8f38265f4cc2ae",
+      "jobs": [
+        {
+          "name": "Admin",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 85,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 25,
+            "lint": 5,
+            "other": 4,
+            "setup": 35,
+            "test": 7,
+            "typecheck": 6,
+            "upload": 0
+          }
+        },
+        {
+          "name": "Install",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 310,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 257,
+            "install": 16,
+            "lint": 0,
+            "other": 2,
+            "setup": 16,
+            "test": 0,
+            "typecheck": 0,
+            "upload": 8
+          }
+        },
+        {
+          "name": "Ubuntu Bun",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 438,
+          "stageSeconds": {
+            "benchmark_report": 310,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 4,
+            "lint": 0,
+            "other": 4,
+            "setup": 10,
+            "test": 50,
+            "typecheck": 55,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Ubuntu npm",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 721,
+          "stageSeconds": {
+            "benchmark_report": 298,
+            "build": 112,
+            "combined_install_build_browser_test": 0,
+            "install": 15,
+            "lint": 61,
+            "other": 3,
+            "setup": 24,
+            "test": 137,
+            "typecheck": 67,
+            "upload": 1
+          }
+        },
+        {
+          "name": "Windows Bun",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 908,
+          "stageSeconds": {
+            "benchmark_report": 577,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 81,
+            "lint": 0,
+            "other": 6,
+            "setup": 28,
+            "test": 124,
+            "typecheck": 87,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Windows npm",
+          "queueSeconds": 10,
+          "runnerOccupiedSeconds": 758,
+          "stageSeconds": {
+            "benchmark_report": 388,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 38,
+            "lint": 77,
+            "other": 4,
+            "setup": 53,
+            "test": 115,
+            "typecheck": 80,
+            "upload": 1
+          }
+        }
+      ],
+      "maxQueueSeconds": 10,
+      "runId": 37974853501,
+      "runnerOccupiedSeconds": 3220,
+      "stageSeconds": {
+        "benchmark_report": 1573,
+        "build": 112,
+        "combined_install_build_browser_test": 257,
+        "install": 179,
+        "lint": 143,
+        "other": 23,
+        "setup": 166,
+        "test": 433,
+        "typecheck": 295,
+        "upload": 14
+      },
+      "totalQueueSeconds": 25
+    },
+    {
+      "benchmarkContributionPercent": 48.03124,
+      "benchmarkReportSeconds": 1476,
+      "createdAt": "2026-10-09T17:51:54Z",
+      "criticalJob": "Windows npm",
+      "criticalJobConclusion": "success",
+      "criticalPathSeconds": 866,
+      "event": "push",
+      "headSha": "f55117f878596447f286aece13acf903205af71c",
+      "jobs": [
+        {
+          "name": "Admin",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 91,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 32,
+            "lint": 6,
+            "other": 3,
+            "setup": 35,
+            "test": 7,
+            "typecheck": 6,
+            "upload": 0
+          }
+        },
+        {
+          "name": "Install",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 275,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 224,
+            "install": 12,
+            "lint": 0,
+            "other": 4,
+            "setup": 19,
+            "test": 0,
+            "typecheck": 0,
+            "upload": 7
+          }
+        },
+        {
+          "name": "Ubuntu Bun",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 450,
+          "stageSeconds": {
+            "benchmark_report": 298,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 4,
+            "lint": 0,
+            "other": 2,
+            "setup": 10,
+            "test": 65,
+            "typecheck": 68,
+            "upload": 1
+          }
+        },
+        {
+          "name": "Ubuntu npm",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 752,
+          "stageSeconds": {
+            "benchmark_report": 305,
+            "build": 120,
+            "combined_install_build_browser_test": 0,
+            "install": 21,
+            "lint": 63,
+            "other": 3,
+            "setup": 21,
+            "test": 144,
+            "typecheck": 69,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Windows Bun",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 643,
+          "stageSeconds": {
+            "benchmark_report": 379,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 67,
+            "lint": 0,
+            "other": 3,
+            "setup": 21,
+            "test": 104,
+            "typecheck": 66,
+            "upload": 1
+          }
+        },
+        {
+          "name": "Windows npm",
+          "queueSeconds": 3,
+          "runnerOccupiedSeconds": 862,
+          "stageSeconds": {
+            "benchmark_report": 494,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 39,
+            "lint": 75,
+            "other": 5,
+            "setup": 50,
+            "test": 110,
+            "typecheck": 84,
+            "upload": 2
+          }
+        }
+      ],
+      "maxQueueSeconds": 3,
+      "runId": 37969263340,
+      "runnerOccupiedSeconds": 3073,
+      "stageSeconds": {
+        "benchmark_report": 1476,
+        "build": 120,
+        "combined_install_build_browser_test": 224,
+        "install": 175,
+        "lint": 144,
+        "other": 20,
+        "setup": 156,
+        "test": 430,
+        "typecheck": 293,
+        "upload": 13
+      },
+      "totalQueueSeconds": 16
+    },
+    {
+      "benchmarkContributionPercent": 44.73192,
+      "benchmarkReportSeconds": 1435,
+      "createdAt": "2026-10-09T17:48:49Z",
+      "criticalJob": "Windows npm",
+      "criticalJobConclusion": "success",
+      "criticalPathSeconds": 856,
+      "event": "pull_request",
+      "headSha": "9986afefd546d20f4f2593b4ac41143f58f3f45f",
+      "jobs": [
+        {
+          "name": "Admin",
+          "queueSeconds": 21,
+          "runnerOccupiedSeconds": 105,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 22,
+            "lint": 5,
+            "other": 5,
+            "setup": 58,
+            "test": 6,
+            "typecheck": 5,
+            "upload": 0
+          }
+        },
+        {
+          "name": "Install",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 318,
+          "stageSeconds": {
+            "benchmark_report": 0,
+            "build": 0,
+            "combined_install_build_browser_test": 262,
+            "install": 15,
+            "lint": 0,
+            "other": 3,
+            "setup": 18,
+            "test": 0,
+            "typecheck": 0,
+            "upload": 8
+          }
+        },
+        {
+          "name": "Ubuntu Bun",
+          "queueSeconds": 48,
+          "runnerOccupiedSeconds": 462,
+          "stageSeconds": {
+            "benchmark_report": 308,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 3,
+            "lint": 0,
+            "other": 2,
+            "setup": 10,
+            "test": 64,
+            "typecheck": 71,
+            "upload": 1
+          }
+        },
+        {
+          "name": "Ubuntu npm",
+          "queueSeconds": 6,
+          "runnerOccupiedSeconds": 762,
+          "stageSeconds": {
+            "benchmark_report": 316,
+            "build": 119,
+            "combined_install_build_browser_test": 0,
+            "install": 20,
+            "lint": 65,
+            "other": 3,
+            "setup": 17,
+            "test": 146,
+            "typecheck": 70,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Windows Bun",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 708,
+          "stageSeconds": {
+            "benchmark_report": 321,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 172,
+            "lint": 0,
+            "other": 4,
+            "setup": 20,
+            "test": 114,
+            "typecheck": 73,
+            "upload": 2
+          }
+        },
+        {
+          "name": "Windows npm",
+          "queueSeconds": 2,
+          "runnerOccupiedSeconds": 853,
+          "stageSeconds": {
+            "benchmark_report": 490,
+            "build": 0,
+            "combined_install_build_browser_test": 0,
+            "install": 35,
+            "lint": 79,
+            "other": 4,
+            "setup": 50,
+            "test": 110,
+            "typecheck": 81,
+            "upload": 1
+          }
+        }
+      ],
+      "maxQueueSeconds": 48,
+      "runId": 37968902769,
+      "runnerOccupiedSeconds": 3208,
+      "stageSeconds": {
+        "benchmark_report": 1435,
+        "build": 119,
+        "combined_install_build_browser_test": 262,
+        "install": 267,
+        "lint": 149,
+        "other": 21,
+        "setup": 173,
+        "test": 440,
+        "typecheck": 300,
+        "upload": 14
+      },
+      "totalQueueSeconds": 81
+    }
+  ],
+  "schema": "tzudong-ci-performance/v1/summary",
+  "workflow": "web-admin-ci.yml"
+}

@@ -1,0 +1,18 @@
+{
+  "schema": "tzudong-scoped-test-credential-readback/v1",
+  "observedAtUtc": "2026-10-11T09:43:20.242626+00:00",
+  "repository": "twoimo/tzudong",
+  "pullRequest": 3168,
+  "headSha": "6098055f2d8d141625a216a99d6c8f99956de2a0",
+  "incidentId": 38096602,
+  "checkRunId": 114434689929,
+  "status": "completed",
+  "conclusion": "skipped",
+  "title": "You tagged this GitGuardian alert as a test credential",
+  "userAuthorized": true,
+  "action": "Skip: test cred",
+  "classificationCount": 1,
+  "globalScannerConfigurationChanged": false,
+  "actualCredentialEstablished": false,
+  "incidentClosedVerified": false
+}

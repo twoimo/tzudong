@@ -1,0 +1,36 @@
+{
+  "admitted": false,
+  "checks": {
+    "allMeasuredParityOutputsBoundToRetainedPayload": true,
+    "benchmarkScriptHashMatches": true,
+    "dependencyHashesStable": true,
+    "embeddedConfigMatches": true,
+    "executedCompilerRolesBound": true,
+    "expectedNonAdmissionPreserved": true,
+    "inputManifestBoundToRaw": true,
+    "provenanceInventorySelfHashes": true,
+    "retainedInputEntriesRecomputeNameContentDigest": true,
+    "sampleCountsPreserved": true,
+    "sanitizedPublicHashesMatch": true,
+    "scorerRegenerationMatches": true,
+    "sourceContractUnchanged": true
+  },
+  "dependencyFileCount": 12,
+  "executedCompilerRoleCount": 8,
+  "failedBudgetChecks": [
+    "noiseP95"
+  ],
+  "measuredParityOutput": {
+    "commands": 28,
+    "stdoutBytes": 428,
+    "stdoutSha256": "3c1cfc4955c81f5c4024803911a61642e0afce462afe194168394d75aa1a3a54"
+  },
+  "provenanceInventorySha256": "6a35c1ab0ca5db9142daa3198df360119de11b69669cd86a4bd02a065ae21446",
+  "retainedInputManifest": {
+    "logicalInputs": 3062,
+    "nonLibraryContentSha256": "42ffba9a0c50a147826df7c773f4bc8c561043640913b9a050465b2890573dca"
+  },
+  "sampleCountAaPaired": 7,
+  "sampleCountPaired": 7,
+  "schema": "tzudong-ci-performance/v1/compiler-provenance-validation"
+}

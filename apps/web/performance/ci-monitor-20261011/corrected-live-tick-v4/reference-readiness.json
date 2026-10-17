@@ -1,0 +1,68 @@
+{
+  "blockingCoverageAlerts": [],
+  "blockingPendingCount": 2,
+  "candidateAttemptCount": 0,
+  "candidateIsImprovementClaim": false,
+  "candidateWithinBound": true,
+  "cohortId": "ff1ea15127667ba5",
+  "collectionComplete": true,
+  "distinctSourceTreeCount": 0,
+  "maximumCandidateAttempts": 100,
+  "minimumDistinctSourceTreeCount": 7,
+  "minimumSuccessCount": 7,
+  "pendingAssessments": [
+    {
+      "attempt": 1,
+      "blocksReferenceFreeze": true,
+      "event": "pull_request",
+      "executionMode": "unknown",
+      "jobTopology": "c39652d55c37bae285ae018d0bfe3e4daa547f7d7c8a85fbe003074d0233470e",
+      "potentiallySameCohort": true,
+      "reason": "potential_same_cohort_execution_mode_unverified",
+      "runId": 38132174902,
+      "runnerFamilies": [
+        "linux",
+        "windows"
+      ],
+      "sourceFingerprint": "c5f6d2c9212a2bbb22810fe9e6d8c89d8acb34c676f8333581483f91dedfcb05",
+      "workflow": ".github/workflows/web-admin-ci.yml",
+      "workflowRevision": "7b0db1b538b7f6737e4bb292a5a87b4dc1dfba06"
+    },
+    {
+      "attempt": 1,
+      "blocksReferenceFreeze": true,
+      "event": "pull_request",
+      "executionMode": "diagnostic",
+      "jobTopology": "c39652d55c37bae285ae018d0bfe3e4daa547f7d7c8a85fbe003074d0233470e",
+      "potentiallySameCohort": true,
+      "reason": "exact_cohort_pending",
+      "runId": 38132336011,
+      "runnerFamilies": [
+        "linux",
+        "windows"
+      ],
+      "sourceFingerprint": "5d4172fc721d9d05e9a7de7eddf7755303254efa1bc57e098fde939f339433c2",
+      "workflow": ".github/workflows/web-admin-ci.yml",
+      "workflowRevision": "7b0db1b538b7f6737e4bb292a5a87b4dc1dfba06"
+    }
+  ],
+  "pendingReasonCounts": {
+    "exact_cohort_pending": 1,
+    "potential_same_cohort_execution_mode_unverified": 1
+  },
+  "pendingSameCohortCount": 1,
+  "potentialSameCohortPendingCount": 1,
+  "readinessReceiptPath": "state://reference-readiness/20261011T103501.642176Z.json",
+  "schema": "tzudong-ci-reference/v1/readiness",
+  "status": "collecting_reference",
+  "successCount": 0,
+  "terminalFailureCounts": {},
+  "transitionPolicy": {
+    "automaticPhaseMoveAllowed": false,
+    "continuedSourceWindowMonitoringGuaranteedByHelper": false,
+    "preserveSourceWindowForUnresolvedAttempts": true,
+    "trackingBoundary": "original_source_window",
+    "unresolvedAttemptCount": 2
+  },
+  "verifiedDifferentPendingCount": 0
+}

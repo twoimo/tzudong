@@ -1,0 +1,17 @@
+{
+  "aaPairsRecorded": 0,
+  "admitted": false,
+  "failureCodes": [
+    "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_RECEIPT_PATH_INVALID"
+  ],
+  "gitHead": "6098055f2d8d141625a216a99d6c8f99956de2a0",
+  "measuredPairsRecorded": 2,
+  "privateRawSha256": "94ba4ed6d4c8cabfacb6238f8f2b0061f21debd7fc976ce2beab3ba1e585a3ae",
+  "reason": "The source node_modules symlink caused toolchain receipt path validation to fail; the incomplete raw evidence is retained privately and was never reused.",
+  "schema": "tzudong-ci-performance/v1/failed-experiment-receipt",
+  "sequencesRecorded": 6,
+  "sourceTreeSha": "24e0a272dc0fab99351890337ef10fe28f3ae88c",
+  "statusAtTermination": "running",
+  "successfulSequences": 0,
+  "warmupsRecorded": 1
+}

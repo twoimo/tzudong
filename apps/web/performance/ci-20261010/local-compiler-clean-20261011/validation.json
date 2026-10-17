@@ -1,0 +1,37 @@
+{
+  "checks": {
+    "allAppInputsInFrozenGitTree": true,
+    "allMeasuredParityOutputsIdentical": true,
+    "benchmarkScriptHashMatches": true,
+    "declaredPathRedactionsExact": true,
+    "embeddedConfigEqualsPublicConfig": true,
+    "expectedNonAdmission": true,
+    "failedAttemptExcluded": true,
+    "listFilesManifestBindsParityPayload": true,
+    "privateRawBoundByReceipt": true,
+    "publicHashesMatchReceipt": true,
+    "reportDistinguishesEstimatorsAndAdmission": true,
+    "retainedInputEntriesRecomputeNameContentDigest": true,
+    "sampleCountsPreserved": true,
+    "scorerRegenerationEqualsSummary": true
+  },
+  "decision": {
+    "admitted": false,
+    "failedBudget": "noiseAaP95AbsoluteRelativeDifferencePercentMaximum",
+    "maximumPercent": 5,
+    "observedPercent": 28.275071878062594,
+    "officialApproval": false
+  },
+  "retainedInputManifest": {
+    "logicalInputNamesSha256": "38b25da61f8d6c9c43e4a170c9a36fad3cc9de32be9b5a2700779c9731b339e9",
+    "logicalInputs": 3040,
+    "nonLibraryContentSha256": "84d227f083f72338595ce19d0f9a8f8adbb3d771cba76fedac33be822ba80387"
+  },
+  "schema": "tzudong-ci-performance/v1/local-compiler-validation",
+  "scorer": {
+    "regeneratedSummarySha256": "9558ffce8a71a1023bc5fe0a87881b96440112dd78c996fdb2cc3878bf359f7f",
+    "retainedSummarySha256": "9558ffce8a71a1023bc5fe0a87881b96440112dd78c996fdb2cc3878bf359f7f"
+  },
+  "valid": true,
+  "validatorScriptSha256": "b3710c2facb98698c066dbf3f083c4ea66a8a5f1544fd05d3002a048bbd26145"
+}

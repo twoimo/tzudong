@@ -1,0 +1,73 @@
+{
+  "activeAlertKeys": [
+    "failure:38123578345:1"
+  ],
+  "admittedAttemptCount": 29,
+  "analysisSha256": "8e540f8f5bc2e85eb5bf1be1b4dc1eb65654e02b7969be22556582d6f3f2b3cc",
+  "apiRequestsThisTick": 9,
+  "causalClaimAllowed": false,
+  "cohortCount": 5,
+  "collection": {
+    "apiRequests": 9,
+    "asymptoticApiReads": "O(P + A + S), bounded by configured pages, active attempts, and uncached sources",
+    "elapsedSeconds": 6.23607,
+    "llmCalls": 0,
+    "maximumIncrementalListedRuns": 100,
+    "maximumListPages": 5,
+    "maximumListedRunsPerPage": 20,
+    "refreshedJobSets": 2,
+    "remoteMutations": 0,
+    "reusedJobSets": 58,
+    "sqliteLookupCost": "O(log H) per keyed run or source lookup"
+  },
+  "conclusions": {
+    "cancelled": 2,
+    "failure": 2,
+    "missing": 2,
+    "success": 23
+  },
+  "configSha256": "b78b6876a47cb6d1220aeb5462f8bd094496b291e6ed6df7c2f192fe927dae36",
+  "coverage": {
+    "alerts": [],
+    "bootstrapOnly": false,
+    "completeHistoryClaimed": false,
+    "incrementalWindowComplete": true,
+    "listPages": 3,
+    "overlapHours": 48,
+    "reportedWindowRunCount": 60,
+    "scope": "bounded_recent_window_plus_known_active_runs",
+    "uniqueListedRunCount": 60,
+    "watermarkAdvanced": true,
+    "watermarkAfter": "2026-10-11T10:32:51Z",
+    "watermarkBefore": "2026-10-11T10:00:45Z"
+  },
+  "duplicateAttemptCount": 0,
+  "excludedHistoricalAttempts": 31,
+  "exportSha256": "e8b330d014c9ed3d3bbad0ab9e192bf814077329d0d0aedb129c710fa87946b1",
+  "mode": "live_read",
+  "modelsInvokedByProgram": 0,
+  "newAlertKeys": [],
+  "observedAtUtc": "2026-10-11T10:35:01.742674Z",
+  "receiptPath": "state://ticks/20261011T103501.642176Z/analysis.json",
+  "referenceReadiness": {
+    "blockingPendingCount": 2,
+    "cohortId": "ff1ea15127667ba5",
+    "collectionComplete": true,
+    "distinctSourceTreeCount": 0,
+    "pendingReasonCounts": {
+      "exact_cohort_pending": 1,
+      "potential_same_cohort_execution_mode_unverified": 1
+    },
+    "pendingSameCohortCount": 1,
+    "potentialSameCohortPendingCount": 1,
+    "readinessReceiptPath": "state://reference-readiness/20261011T103501.642176Z.json",
+    "status": "collecting_reference",
+    "successCount": 0,
+    "verifiedDifferentPendingCount": 0
+  },
+  "remoteMutations": 0,
+  "schema": "tzudong-ci-monitor-tick/v1",
+  "shouldNotify": false,
+  "status": "observed",
+  "tickId": "20261011T103501.642176Z"
+}

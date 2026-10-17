@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/**'
+      - '.github/scripts/*ci*.py'
       - '.github/dependabot.yml'
       - '.kiro/specs/crawler-pipeline-*/**'
       - 'apps/web/package.json'
@@ -214,15 +215,10 @@ concurrency:
 jobs:
   npm-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Two 20-minute audits, bounded termination and shared setup.
+    timeout-minutes: 50
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        project:
-          - apps/web
-          - backend
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
@@ -235,26 +231,35 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+          cache-dependency-path: |
+            apps/web/package-lock.json
+            backend/package-lock.json
+
+      - name: Pin authoritative npm
+        run: |
+          npm install --global npm@11.6.2
+          test "$(npm --version)" = "11.6.2"
 
       - name: Audit npm dependencies
-        working-directory: ${{ matrix.project }}
-        run: npm audit --audit-level=moderate
+        run: |
+          set -uo pipefail
+          status=0
+          for project in apps/web backend; do
+            if ! (
+              cd "$project" &&
+              timeout --signal=TERM --kill-after=30s 20m npm audit --audit-level=moderate
+            ); then
+              status=1
+            fi
+          done
+          exit "$status"
 
   pip-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Five 20-minute audits, bounded termination and shared setup.
+    timeout-minutes: 110
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        requirements:
-          - backend/test-requirements.txt
-          - backend/pipeline/requirements.txt
-          - backend/restaurant-crawling/scripts/requirements.txt
-          - backend/supabase/scripts/g037-hosted-closure-requirements.txt
-          - backend/pipeline-control/requirements.txt
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
@@ -271,7 +276,20 @@ jobs:
         run: python -m pip install --disable-pip-version-check 'pip-audit==2.10.1'
 
       - name: Audit Python requirements
-        run: python -m pip_audit -r "${{ matrix.requirements }}" --strict
+        run: |
+          set -uo pipefail
+          status=0
+          for requirements in \
+            backend/test-requirements.txt \
+            backend/pipeline/requirements.txt \
+            backend/restaurant-crawling/scripts/requirements.txt \
+            backend/supabase/scripts/g037-hosted-closure-requirements.txt \
+            backend/pipeline-control/requirements.txt; do
+            if ! timeout --signal=TERM --kill-after=30s 20m python -m pip_audit -r "$requirements" --strict; then
+              status=1
+            fi
+          done
+          exit "$status"
 
   orchestration-readiness:
     runs-on: ubuntu-latest
@@ -302,6 +320,9 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # oven-sh/setup-bun@v2
         with:
           bun-version: '1.4.0'
+
+      - name: Verify incremental CI monitoring contracts
+        run: python -m unittest discover -s .github/scripts -p 'test_*ci*.py'
 
       - name: Install focused test dependencies
         run: python -m pip install --disable-pip-version-check -r backend/test-requirements.txt

@@ -1,0 +1,2204 @@
+{
+  "aaPairs": [
+    {
+      "loadAverageAfter": [
+        15.54541015625,
+        12.54052734375,
+        11.5341796875
+      ],
+      "loadAverageBefore": [
+        11.9365234375,
+        11.4775390625,
+        11.125
+      ],
+      "order": [
+        "aa_a",
+        "aa_b"
+      ],
+      "pair": 1,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.26,
+              "durationMs": 279.348041,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102236160,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.21
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 39.51,
+              "durationMs": 21149.213833,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2062876672,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 5.4,
+              "userCpuSeconds": 34.11
+            }
+          ],
+          "cpuSeconds": 39.769999999999996,
+          "durationMs": 21428.888333,
+          "maximumResidentSetBytes": 2062876672,
+          "sequence": "aa_a",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.28,
+              "durationMs": 304.4145,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103235584,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.06,
+              "userCpuSeconds": 0.22
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 38.68,
+              "durationMs": 20306.219625,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1914273792,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 5.0,
+              "userCpuSeconds": 33.68
+            }
+          ],
+          "cpuSeconds": 38.96,
+          "durationMs": 20610.942916,
+          "maximumResidentSetBytes": 1914273792,
+          "sequence": "aa_b",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        15.74853515625,
+        13.033203125,
+        11.76708984375
+      ],
+      "loadAverageBefore": [
+        15.54541015625,
+        12.54052734375,
+        11.5341796875
+      ],
+      "order": [
+        "aa_b",
+        "aa_a"
+      ],
+      "pair": 2,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.30000000000000004,
+              "durationMs": 336.299792,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103038976,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.07,
+              "userCpuSeconds": 0.23
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 40.169999999999995,
+              "durationMs": 22204.001875,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2058518528,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 5.3,
+              "userCpuSeconds": 34.87
+            }
+          ],
+          "cpuSeconds": 40.46999999999999,
+          "durationMs": 22540.842708,
+          "maximumResidentSetBytes": 2058518528,
+          "sequence": "aa_b",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.27,
+              "durationMs": 304.274209,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103120896,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.06,
+              "userCpuSeconds": 0.21
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 40.75,
+              "durationMs": 22938.611541,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1928495104,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 5.35,
+              "userCpuSeconds": 35.4
+            }
+          ],
+          "cpuSeconds": 41.02,
+          "durationMs": 23243.231917,
+          "maximumResidentSetBytes": 1928495104,
+          "sequence": "aa_a",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        12.62109375,
+        12.57080078125,
+        11.6552734375
+      ],
+      "loadAverageBefore": [
+        15.74853515625,
+        13.033203125,
+        11.76708984375
+      ],
+      "order": [
+        "aa_a",
+        "aa_b"
+      ],
+      "pair": 3,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.32,
+              "durationMs": 372.034292,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103251968,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.08,
+              "userCpuSeconds": 0.24
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 38.92,
+              "durationMs": 20785.436417,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1926627328,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 5.06,
+              "userCpuSeconds": 33.86
+            }
+          ],
+          "cpuSeconds": 39.24,
+          "durationMs": 21157.983208,
+          "maximumResidentSetBytes": 1926627328,
+          "sequence": "aa_a",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.24,
+              "durationMs": 252.542875,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102498304,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.19
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 33.510000000000005,
+              "durationMs": 16031.620125,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1923809280,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 4.16,
+              "userCpuSeconds": 29.35
+            }
+          ],
+          "cpuSeconds": 33.75000000000001,
+          "durationMs": 16284.445791,
+          "maximumResidentSetBytes": 1923809280,
+          "sequence": "aa_b",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        18.18701171875,
+        13.85205078125,
+        12.166015625
+      ],
+      "loadAverageBefore": [
+        12.62109375,
+        12.57080078125,
+        11.6552734375
+      ],
+      "order": [
+        "aa_b",
+        "aa_a"
+      ],
+      "pair": 4,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.27,
+              "durationMs": 302.849333,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102465536,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.06,
+              "userCpuSeconds": 0.21
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 41.099999999999994,
+              "durationMs": 22902.854292,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2042265600,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 4.8,
+              "userCpuSeconds": 36.3
+            }
+          ],
+          "cpuSeconds": 41.37,
+          "durationMs": 23206.008541,
+          "maximumResidentSetBytes": 2042265600,
+          "sequence": "aa_b",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.26,
+              "durationMs": 291.682,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103464960,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.21
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 44.699999999999996,
+              "durationMs": 28585.38175,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1916616704,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 5.19,
+              "userCpuSeconds": 39.51
+            }
+          ],
+          "cpuSeconds": 44.959999999999994,
+          "durationMs": 28877.508084,
+          "maximumResidentSetBytes": 1916616704,
+          "sequence": "aa_a",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        17.5205078125,
+        14.48876953125,
+        12.5078125
+      ],
+      "loadAverageBefore": [
+        18.18701171875,
+        13.85205078125,
+        12.166015625
+      ],
+      "order": [
+        "aa_a",
+        "aa_b"
+      ],
+      "pair": 5,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.37,
+              "durationMs": 1020.065541,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102989824,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.1,
+              "userCpuSeconds": 0.27
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 43.08,
+              "durationMs": 26234.012667,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1853095936,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 5.09,
+              "userCpuSeconds": 37.99
+            }
+          ],
+          "cpuSeconds": 43.449999999999996,
+          "durationMs": 27256.460083,
+          "maximumResidentSetBytes": 1853095936,
+          "sequence": "aa_a",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.24,
+              "durationMs": 259.6625,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102350848,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.19
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 37.32,
+              "durationMs": 20043.867916,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1914585088,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 4.37,
+              "userCpuSeconds": 32.95
+            }
+          ],
+          "cpuSeconds": 37.56,
+          "durationMs": 20303.996916,
+          "maximumResidentSetBytes": 1914585088,
+          "sequence": "aa_b",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        16.52490234375,
+        14.6123046875,
+        12.63330078125
+      ],
+      "loadAverageBefore": [
+        17.5205078125,
+        14.48876953125,
+        12.5078125
+      ],
+      "order": [
+        "aa_b",
+        "aa_a"
+      ],
+      "pair": 6,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.33,
+              "durationMs": 363.248875,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102678528,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.08,
+              "userCpuSeconds": 0.25
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 38.67,
+              "durationMs": 19274.415666,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2033532928,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 4.78,
+              "userCpuSeconds": 33.89
+            }
+          ],
+          "cpuSeconds": 39.0,
+          "durationMs": 19638.073,
+          "maximumResidentSetBytes": 2033532928,
+          "sequence": "aa_b",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.25,
+              "durationMs": 272.327625,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102219776,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.2
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 35.79,
+              "durationMs": 18080.302666,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1936621568,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 4.11,
+              "userCpuSeconds": 31.68
+            }
+          ],
+          "cpuSeconds": 36.04,
+          "durationMs": 18353.005542,
+          "maximumResidentSetBytes": 1936621568,
+          "sequence": "aa_a",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        18.55224609375,
+        15.31103515625,
+        12.9853515625
+      ],
+      "loadAverageBefore": [
+        16.52490234375,
+        14.6123046875,
+        12.63330078125
+      ],
+      "order": [
+        "aa_a",
+        "aa_b"
+      ],
+      "pair": 7,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.26,
+              "durationMs": 294.145917,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102334464,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.21
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 38.67,
+              "durationMs": 20326.388125,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2067218432,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 4.61,
+              "userCpuSeconds": 34.06
+            }
+          ],
+          "cpuSeconds": 38.93,
+          "durationMs": 20621.242917,
+          "maximumResidentSetBytes": 2067218432,
+          "sequence": "aa_a",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.29000000000000004,
+              "durationMs": 322.817542,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102612992,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.07,
+              "userCpuSeconds": 0.22
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 41.56,
+              "durationMs": 24709.909708,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1852932096,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 5.36,
+              "userCpuSeconds": 36.2
+            }
+          ],
+          "cpuSeconds": 41.85,
+          "durationMs": 25033.048833,
+          "maximumResidentSetBytes": 1852932096,
+          "sequence": "aa_b",
+          "success": true
+        }
+      ]
+    }
+  ],
+  "completedAt": "2026-10-11T10:25:30.316523+00:00",
+  "loadAverageAfter": [
+    17.947265625,
+    15.2392578125,
+    12.9736328125
+  ],
+  "measuredPairs": [
+    {
+      "loadAverageAfter": [
+        13.96484375,
+        10.50048828125,
+        10.71044921875
+      ],
+      "loadAverageBefore": [
+        9.93017578125,
+        9.59228515625,
+        10.44287109375
+      ],
+      "order": [
+        "before",
+        "after"
+      ],
+      "pair": 1,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.27,
+              "durationMs": 296.451208,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103235584,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.06,
+              "userCpuSeconds": 0.21
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "cpuSeconds": 7.47,
+              "durationMs": 1634.869167,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1783513088,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 0.71,
+              "userCpuSeconds": 6.76
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "cpuSeconds": 20.73,
+              "durationMs": 15364.1125,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2053341184,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 1.1,
+              "userCpuSeconds": 19.63
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 33.05,
+              "durationMs": 16101.609458,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1934934016,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 3.85,
+              "userCpuSeconds": 29.2
+            }
+          ],
+          "cpuSeconds": 61.519999999999996,
+          "durationMs": 33397.6515,
+          "maximumResidentSetBytes": 2053341184,
+          "sequence": "before",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.24,
+              "durationMs": 254.256541,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102449152,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.19
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 37.97,
+              "durationMs": 20082.666,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1940094976,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 4.66,
+              "userCpuSeconds": 33.31
+            }
+          ],
+          "cpuSeconds": 38.21,
+          "durationMs": 20337.21075,
+          "maximumResidentSetBytes": 1940094976,
+          "sequence": "after",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        13.0224609375,
+        10.91064453125,
+        10.84765625
+      ],
+      "loadAverageBefore": [
+        13.96484375,
+        10.50048828125,
+        10.71044921875
+      ],
+      "order": [
+        "after",
+        "before"
+      ],
+      "pair": 2,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.31,
+              "durationMs": 355.219792,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102793216,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.07,
+              "userCpuSeconds": 0.24
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 40.45,
+              "durationMs": 21836.981292,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1912176640,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 5.42,
+              "userCpuSeconds": 35.03
+            }
+          ],
+          "cpuSeconds": 40.760000000000005,
+          "durationMs": 22192.751292,
+          "maximumResidentSetBytes": 1912176640,
+          "sequence": "after",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.31,
+              "durationMs": 353.390042,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102547456,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.08,
+              "userCpuSeconds": 0.23
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "cpuSeconds": 7.82,
+              "durationMs": 1917.573292,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1734950912,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 0.92,
+              "userCpuSeconds": 6.9
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "cpuSeconds": 22.29,
+              "durationMs": 16690.602917,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1926184960,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 1.43,
+              "userCpuSeconds": 20.86
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 38.95,
+              "durationMs": 20540.56225,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2060369920,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 5.45,
+              "userCpuSeconds": 33.5
+            }
+          ],
+          "cpuSeconds": 69.37,
+          "durationMs": 39502.866041,
+          "maximumResidentSetBytes": 2060369920,
+          "sequence": "before",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        12.82666015625,
+        11.21435546875,
+        10.962890625
+      ],
+      "loadAverageBefore": [
+        13.0224609375,
+        10.91064453125,
+        10.84765625
+      ],
+      "order": [
+        "before",
+        "after"
+      ],
+      "pair": 3,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.29000000000000004,
+              "durationMs": 333.90975,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102662144,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.06,
+              "userCpuSeconds": 0.23
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "cpuSeconds": 6.2299999999999995,
+              "durationMs": 1322.06925,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1733738496,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 0.67,
+              "userCpuSeconds": 5.56
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "cpuSeconds": 21.08,
+              "durationMs": 15567.809583,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1919434752,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 1.36,
+              "userCpuSeconds": 19.72
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 40.37,
+              "durationMs": 21577.164208,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2052440064,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 5.71,
+              "userCpuSeconds": 34.66
+            }
+          ],
+          "cpuSeconds": 67.97,
+          "durationMs": 38801.4815,
+          "maximumResidentSetBytes": 2052440064,
+          "sequence": "before",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.31,
+              "durationMs": 353.127541,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103137280,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.08,
+              "userCpuSeconds": 0.23
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 35.31,
+              "durationMs": 16932.086625,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1933246464,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 4.58,
+              "userCpuSeconds": 30.73
+            }
+          ],
+          "cpuSeconds": 35.620000000000005,
+          "durationMs": 17285.536333,
+          "maximumResidentSetBytes": 1933246464,
+          "sequence": "after",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        13.31005859375,
+        11.49755859375,
+        11.07470703125
+      ],
+      "loadAverageBefore": [
+        12.82666015625,
+        11.21435546875,
+        10.962890625
+      ],
+      "order": [
+        "after",
+        "before"
+      ],
+      "pair": 4,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.24,
+              "durationMs": 253.716917,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102285312,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.19
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 34.96,
+              "durationMs": 17917.000375,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1931739136,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 4.07,
+              "userCpuSeconds": 30.89
+            }
+          ],
+          "cpuSeconds": 35.2,
+          "durationMs": 18170.95325,
+          "maximumResidentSetBytes": 1931739136,
+          "sequence": "after",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.22,
+              "durationMs": 232.801208,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102465536,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.04,
+              "userCpuSeconds": 0.18
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "cpuSeconds": 6.569999999999999,
+              "durationMs": 1424.505958,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1796456448,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 0.64,
+              "userCpuSeconds": 5.93
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "cpuSeconds": 19.34,
+              "durationMs": 14926.985792,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1934753792,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 0.88,
+              "userCpuSeconds": 18.46
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 37.09,
+              "durationMs": 18780.821125,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1854242816,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 5.09,
+              "userCpuSeconds": 32.0
+            }
+          ],
+          "cpuSeconds": 63.220000000000006,
+          "durationMs": 35365.697,
+          "maximumResidentSetBytes": 1934753792,
+          "sequence": "before",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        12.41748046875,
+        11.5048828125,
+        11.09765625
+      ],
+      "loadAverageBefore": [
+        13.31005859375,
+        11.49755859375,
+        11.07470703125
+      ],
+      "order": [
+        "before",
+        "after"
+      ],
+      "pair": 5,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.26,
+              "durationMs": 291.673875,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102776832,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.21
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "cpuSeconds": 7.409999999999999,
+              "durationMs": 1768.125417,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1760264192,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 0.89,
+              "userCpuSeconds": 6.52
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "cpuSeconds": 17.860000000000003,
+              "durationMs": 12183.887042,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1912963072,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 0.92,
+              "userCpuSeconds": 16.94
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 30.36,
+              "durationMs": 13314.633917,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1918271488,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 3.26,
+              "userCpuSeconds": 27.1
+            }
+          ],
+          "cpuSeconds": 55.89,
+          "durationMs": 27558.86875,
+          "maximumResidentSetBytes": 1918271488,
+          "sequence": "before",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.22,
+              "durationMs": 223.787792,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102481920,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.04,
+              "userCpuSeconds": 0.18
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 30.86,
+              "durationMs": 14252.109417,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1949302784,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 3.58,
+              "userCpuSeconds": 27.28
+            }
+          ],
+          "cpuSeconds": 31.08,
+          "durationMs": 14476.147584,
+          "maximumResidentSetBytes": 1949302784,
+          "sequence": "after",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        11.16259765625,
+        11.310546875,
+        11.04931640625
+      ],
+      "loadAverageBefore": [
+        12.41748046875,
+        11.5048828125,
+        11.09765625
+      ],
+      "order": [
+        "after",
+        "before"
+      ],
+      "pair": 6,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.26,
+              "durationMs": 284.177042,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 103251968,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.21
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 37.69,
+              "durationMs": 19678.477583,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1930100736,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 4.71,
+              "userCpuSeconds": 32.98
+            }
+          ],
+          "cpuSeconds": 37.949999999999996,
+          "durationMs": 19962.926166,
+          "maximumResidentSetBytes": 1930100736,
+          "sequence": "after",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.27,
+              "durationMs": 304.687792,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102596608,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.22
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "cpuSeconds": 7.48,
+              "durationMs": 1754.689167,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1731248128,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 0.75,
+              "userCpuSeconds": 6.73
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "cpuSeconds": 22.18,
+              "durationMs": 16598.146458,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1850671104,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 1.28,
+              "userCpuSeconds": 20.9
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 35.489999999999995,
+              "durationMs": 17409.23575,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1852063744,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 4.66,
+              "userCpuSeconds": 30.83
+            }
+          ],
+          "cpuSeconds": 65.42,
+          "durationMs": 36067.413167,
+          "maximumResidentSetBytes": 1852063744,
+          "sequence": "before",
+          "success": true
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        11.9365234375,
+        11.4775390625,
+        11.125
+      ],
+      "loadAverageBefore": [
+        11.16259765625,
+        11.310546875,
+        11.04931640625
+      ],
+      "order": [
+        "before",
+        "after"
+      ],
+      "pair": 7,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.26,
+              "durationMs": 280.856333,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102760448,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.21
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "cpuSeconds": 7.17,
+              "durationMs": 1482.533625,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1783742464,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 0.68,
+              "userCpuSeconds": 6.49
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "cpuSeconds": 19.2,
+              "durationMs": 13372.746708,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1937178624,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 0.93,
+              "userCpuSeconds": 18.27
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 37.42,
+              "durationMs": 19680.191916,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1935360000,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 5.18,
+              "userCpuSeconds": 32.24
+            }
+          ],
+          "cpuSeconds": 64.05,
+          "durationMs": 34817.086959,
+          "maximumResidentSetBytes": 1937178624,
+          "sequence": "before",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.29000000000000004,
+              "durationMs": 337.5115,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102793216,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.07,
+              "userCpuSeconds": 0.22
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 36.01,
+              "durationMs": 18056.047167,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1928986624,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 4.71,
+              "userCpuSeconds": 31.3
+            }
+          ],
+          "cpuSeconds": 36.3,
+          "durationMs": 18393.865666,
+          "maximumResidentSetBytes": 1928986624,
+          "sequence": "after",
+          "success": true
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "benchmarkScriptSha256": "7f9df77e63482b7db9b0e41c7db3277bc8b47ba0434a7099f0bf2c0885db0719",
+    "bootstrap": {
+      "samples": 10000,
+      "seed": 20261010
+    },
+    "bunVersion": "1.4.0 (recorded project/runtime pin; Bun not invoked)",
+    "cpuCount": 18,
+    "createdAt": "2026-10-11T10:13:18.635734+00:00",
+    "dependencyHashes": {
+      "@typescript/native/package.json": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e",
+      "@typescript/old/package.json": "bb6ee7e709ae60426e30b8d393df4d939ee61407794b4f053ce6338d6eaa8c63",
+      "@typescript/typescript-darwin-arm64/package.json": "e88558e22e3db6c4da920e15a60eb2bbea801732b94aedb67e972be2a7f485b8",
+      "typescript/package.json": "d9b8fb53c67c947fece83bcb73fa8512227ea6a12b110e096fdab8ecdc02b655"
+    },
+    "experimentConfig": {
+      "aaPairs": 7,
+      "acceptanceBudgets": {
+        "absoluteMeanReductionBootstrap95CiLowerBoundMs": 2000,
+        "noiseAaMeanDifference95CiMustIncludeZero": true,
+        "noiseAaP95AbsoluteRelativeDifferencePercentMaximum": 5,
+        "relativeMeanReductionBootstrap95CiLowerBoundPercent": 5
+      },
+      "bootstrapSamples": 10000,
+      "bootstrapSeed": 20261010,
+      "createdBeforeMeasurementAt": "2026-10-11T10:03:27Z",
+      "expectedBenchmarkScriptSha256": "7f9df77e63482b7db9b0e41c7db3277bc8b47ba0434a7099f0bf2c0885db0719",
+      "expectedDependencyHashes": {
+        "@typescript/native/package.json": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e",
+        "@typescript/old/package.json": "bb6ee7e709ae60426e30b8d393df4d939ee61407794b4f053ce6338d6eaa8c63",
+        "@typescript/typescript-darwin-arm64/package.json": "e88558e22e3db6c4da920e15a60eb2bbea801732b94aedb67e972be2a7f485b8",
+        "typescript/package.json": "d9b8fb53c67c947fece83bcb73fa8512227ea6a12b110e096fdab8ecdc02b655"
+      },
+      "expectedGitHead": "6098055f2d8d141625a216a99d6c8f99956de2a0",
+      "expectedNodeModulesTarget": "<shared-node-modules-root>",
+      "expectedNodePath": "/opt/homebrew/Cellar/node@24/24.21.0_2/bin/node",
+      "expectedNodeVersion": "v24.21.0",
+      "expectedSourceHashes": {
+        "package-lock.json": "ce2e7d9dee5cb837a77f504028452b5e04f9f96a3413bfa2e9a005fa5de7531d",
+        "package.json": "d271e307e944fca7aa8c354bf664733807ee6f03958de2ab05c2adf96fcd44be",
+        "scripts/run-typecheck.mjs": "3e006896b1c85d61b9b8f5ac0020822faf573212c473c70089b190d84313fb9d",
+        "scripts/verify-typescript-toolchain.mjs": "b7f7450e7477e3664b410b4a501df99317e2711c8c3db03911826a157d0689f5",
+        "tsconfig.json": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+      },
+      "expectedSourceTreeSha": "24e0a272dc0fab99351890337ef10fe28f3ae88c",
+      "pairs": 7,
+      "rationale": "Prospective rerun after historical dirty-source evidence was de-admitted; budgets are frozen before this measurement and remain local-only.",
+      "schema": "tzudong-ci-performance/v2/local-compiler-experiment",
+      "warmups": 1
+    },
+    "experimentConfigSha256": "6ba6e7d6a4e5b9d028453afdbab51f826242143321e159bd13f3b80759ab0c4f",
+    "gitHead": "6098055f2d8d141625a216a99d6c8f99956de2a0",
+    "gitStatusSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "loadAverageBefore": [
+      6.66845703125,
+      8.861328125,
+      10.24609375
+    ],
+    "machine": "arm64",
+    "nodeModulesTarget": "<shared-node-modules-root>",
+    "nodePath": "/opt/homebrew/Cellar/node@24/24.21.0_2/bin/node",
+    "nodeVersion": "v24.21.0",
+    "npmPackageManagerPin": "npm@11.6.2",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "rssMeasurement": "/usr/bin/time -l maximum resident set size per command; descriptive only",
+    "schemaVersion": 2,
+    "sequences": {
+      "aa_a": [
+        "verify",
+        "parity"
+      ],
+      "aa_b": [
+        "verify",
+        "parity"
+      ],
+      "after": [
+        "verify",
+        "parity"
+      ],
+      "before": [
+        "verify",
+        "native",
+        "compat",
+        "parity"
+      ]
+    },
+    "snapshotDependencyHashes": {
+      "@typescript/native/package.json": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e",
+      "@typescript/old/package.json": "bb6ee7e709ae60426e30b8d393df4d939ee61407794b4f053ce6338d6eaa8c63",
+      "@typescript/typescript-darwin-arm64/package.json": "e88558e22e3db6c4da920e15a60eb2bbea801732b94aedb67e972be2a7f485b8",
+      "typescript/package.json": "d9b8fb53c67c947fece83bcb73fa8512227ea6a12b110e096fdab8ecdc02b655"
+    },
+    "sourceAdmission": "clean exact tracked apps/web Git tree",
+    "sourceContractUnchanged": true,
+    "sourceExecutionMode": "copy-on-write snapshot from clean private checkout; shared node_modules used only as the source of a private copy",
+    "sourceHashes": {
+      "package-lock.json": "ce2e7d9dee5cb837a77f504028452b5e04f9f96a3413bfa2e9a005fa5de7531d",
+      "package.json": "d271e307e944fca7aa8c354bf664733807ee6f03958de2ab05c2adf96fcd44be",
+      "scripts/run-typecheck.mjs": "3e006896b1c85d61b9b8f5ac0020822faf573212c473c70089b190d84313fb9d",
+      "scripts/verify-typescript-toolchain.mjs": "b7f7450e7477e3664b410b4a501df99317e2711c8c3db03911826a157d0689f5",
+      "tsconfig.json": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+    },
+    "sourceTreeSha": "24e0a272dc0fab99351890337ef10fe28f3ae88c",
+    "trackedSnapshotContract": {
+      "lsTreeSha256": "a8c421e52d2b51ad102d288b62d7a67db1e9157355cc2ac9e7526288837f09dd",
+      "trackedBlobCount": 7350
+    }
+  },
+  "status": "completed",
+  "warmups": [
+    {
+      "index": 1,
+      "order": [
+        "before",
+        "after"
+      ],
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.28,
+              "durationMs": 795.007958,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102383616,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.23
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "cpuSeconds": 7.2700000000000005,
+              "durationMs": 1532.941709,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1788608512,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 0.74,
+              "userCpuSeconds": 6.53
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "cpuSeconds": 17.73,
+              "durationMs": 11307.795292,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1839284224,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true,
+              "systemCpuSeconds": 0.69,
+              "userCpuSeconds": 17.04
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 29.830000000000002,
+              "durationMs": 13259.325875,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1934835712,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 3.48,
+              "userCpuSeconds": 26.35
+            }
+          ],
+          "cpuSeconds": 55.11,
+          "durationMs": 26895.683667,
+          "maximumResidentSetBytes": 1934835712,
+          "sequence": "before",
+          "success": true
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "cpuSeconds": 0.24,
+              "durationMs": 264.089833,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 102449152,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 812,
+              "stdoutSha256": "31d63c4bb74d86549ff3eb5b5ace19bd8cdc1361067b633f6d7c19f842ad7af8",
+              "success": true,
+              "systemCpuSeconds": 0.05,
+              "userCpuSeconds": 0.19
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "cpuSeconds": 33.33,
+              "durationMs": 18162.847666,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1933148160,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true,
+              "systemCpuSeconds": 4.61,
+              "userCpuSeconds": 28.72
+            }
+          ],
+          "cpuSeconds": 33.57,
+          "durationMs": 18427.289292,
+          "maximumResidentSetBytes": 1933148160,
+          "sequence": "after",
+          "success": true
+        }
+      ]
+    }
+  ]
+}

@@ -201,11 +201,11 @@ describe("nightly regression package and source contracts", () => {
     expect(hostedWorkflowSource).not.toMatch(/^\s*uses:\s+\S+@v\d+\b/gm);
   });
 
-  test("routes publication script changes through web admin pull and push CI", () => {
+  test("routes GitHub workflow inputs through web admin pull and push CI", () => {
     const pullPaths = sourceBlock(webAdminWorkflowSource, "  pull_request:", "  push:");
     const pushPaths = sourceBlock(webAdminWorkflowSource, "  push:", "  schedule:");
-    expect(pullPaths).toContain("      - '.github/scripts/**'");
-    expect(pushPaths).toContain("      - '.github/scripts/**'");
+    expect(pullPaths).toContain("      - '.github/**'");
+    expect(pushPaths).toContain("      - '.github/**'");
   });
 
   test("parses local and hosted mode only from explicit command arguments", () => {
@@ -1630,25 +1630,26 @@ describe("nightly regression package and source contracts", () => {
   });
 
   test("routes public web and local Supabase changes into Web Admin CI", () => {
-    const pullPaths = sourceBlock(webAdminWorkflowSource, "  pull_request:", "  push:");
-    const pushPaths = sourceBlock(webAdminWorkflowSource, "  push:", "  schedule:");
+    const workflow = Bun.YAML.parse(webAdminWorkflowSource) as {
+      on: { pull_request: { paths: string[] }; push: { paths: string[] } };
+    };
     for (const path of [
-      "apps/web/**",
-      "apps/web/app/**",
-      "apps/web/components/**",
-      "apps/web/hooks/**",
-      "apps/web/integrations/**",
-      "apps/web/lib/**",
-      "apps/web/public/**",
-      "apps/web/supabase/**",
-      "backend/supabase/**",
+      "apps/web/app/page.tsx",
+      "apps/web/app/admin/page.tsx",
+      "apps/web/components/admin/Table.tsx",
+      "apps/web/hooks/useRestaurants.ts",
+      "apps/web/integrations/supabase/client.ts",
+      "apps/web/lib/supabase/server.ts",
+      "apps/web/public/logo.svg",
+      "apps/web/supabase/migrations/change.sql",
+      "backend/supabase/migrations/change.sql",
       ".github/workflows/nightly-regression.yml",
       ".github/workflows/nightly-local-regression.yml",
       ".github/nightly-local-publication-allowlist.txt",
     ]) {
-      const line = `      - '${path}'`;
-      expect(pullPaths).toContain(line);
-      expect(pushPaths).toContain(line);
+      for (const paths of [workflow.on.pull_request.paths, workflow.on.push.paths]) {
+        expect(paths.some((pattern) => new Bun.Glob(pattern).match(path))).toBe(true);
+      }
     }
   });
 });

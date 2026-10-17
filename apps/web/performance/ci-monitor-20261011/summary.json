@@ -1,0 +1,86 @@
+{
+  "schema": "tzudong-ci-monitor-evidence/v1",
+  "baselineAttempts": 20,
+  "baselineConclusionCounts": {
+    "success": 17,
+    "failure": 1,
+    "cancelled": 2
+  },
+  "baselineSourceTrees": 10,
+  "newPostBaselineAttempts": 0,
+  "actualReads": {
+    "initial20": {
+      "apiRequests": 53,
+      "elapsedSeconds": 33.453306,
+      "llmCalls": 0,
+      "maximumListedRuns": 20,
+      "refreshedJobSets": 20,
+      "remoteMutations": 0,
+      "reusedJobSets": 0
+    },
+    "repeat20Pilot": {
+      "apiRequests": 1,
+      "elapsedSeconds": 1.074422,
+      "llmCalls": 0,
+      "maximumListedRuns": 20,
+      "refreshedJobSets": 0,
+      "remoteMutations": 0,
+      "reusedJobSets": 20
+    },
+    "catchUp60": {
+      "apiRequests": 115,
+      "asymptoticApiReads": "O(P + A + S), bounded by configured pages, active attempts, and uncached sources",
+      "elapsedSeconds": 74.044295,
+      "llmCalls": 0,
+      "maximumIncrementalListedRuns": 100,
+      "maximumListPages": 5,
+      "maximumListedRunsPerPage": 20,
+      "refreshedJobSets": 40,
+      "remoteMutations": 0,
+      "reusedJobSets": 20,
+      "sqliteLookupCost": "O(log H) per keyed run or source lookup"
+    },
+    "repeat60": {
+      "apiRequests": 3,
+      "asymptoticApiReads": "O(P + A + S), bounded by configured pages, active attempts, and uncached sources",
+      "elapsedSeconds": 3.859042,
+      "llmCalls": 0,
+      "maximumIncrementalListedRuns": 100,
+      "maximumListPages": 5,
+      "maximumListedRunsPerPage": 20,
+      "refreshedJobSets": 0,
+      "remoteMutations": 0,
+      "reusedJobSets": 60,
+      "sqliteLookupCost": "O(log H) per keyed run or source lookup"
+    }
+  },
+  "comparisonMetadata": {
+    "samplePairsPerCollectionExperiment": 1,
+    "confidenceInterval": null,
+    "moneySavingsVerified": false,
+    "ciSpeedSavingsVerifiedByCollection": false,
+    "same60Records": true
+  },
+  "checks": {
+    "monitorPythonPassed": 33,
+    "relatedPythonPassed": 16,
+    "bunPassed": 45,
+    "nodePassed": 6,
+    "actionlintPassed": true,
+    "failures": 0
+  },
+  "opus": {
+    "route": "google-antigravity/claude-opus-5-5",
+    "effort": "high",
+    "attempts": 2,
+    "completedReviews": 1,
+    "truncatedRequests": 1,
+    "reportedTokens": 16707,
+    "actualMonetaryCostVerified": false
+  },
+  "formalPerformanceAdmittedSlices": 0,
+  "finalLiveTickApiRequests": 3,
+  "finalOfflineReplayApiRequests": 0,
+  "activeSourceConfigurationSha256": "c31e35f6acfd3b3e168352cad38b182f68a38950aab2933a060b85143ac9e48f",
+  "scheduledExecutionVerified": false
+}

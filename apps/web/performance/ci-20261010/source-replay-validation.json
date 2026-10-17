@@ -1,0 +1,39 @@
+{
+  "schema": "tzudong-ci-performance/v1/source-replay-validation",
+  "inputs": {
+    "collectionSha256": "78b0b7e8be65032b4f59a5b73ab6aaca530b317a0b92dd41d5af497e637020be",
+    "excludedObservationsSha256": "726fb18889ac2723b37ef9ec5191169d5a22be92e61c7f9e11d3fc5d19731edf",
+    "successfulRunsSha256": "245f7afc2345556e619fd7be23613b89ffa5561689bfc954b5ec3f43af9eb6b1"
+  },
+  "historicalSource": {
+    "artifactSourceCommit": "6098055f2d8d141625a216a99d6c8f99956de2a0",
+    "retrievedFromCommit": "380c6e3fb72aa5bcc6e1f64671f723735a6113cd",
+    "retainedPath": "historical-collector-380c6e3f/.github/scripts/collect-ci-performance.py",
+    "bytes": 34050,
+    "sha256": "b53442332490b1386e936890c6ab7f21d4d6bd00602983880447a64bf0e2f2df",
+    "replayedArtifactMapSha256": "ad091212d4e223b711e761aafea797e2632a1ad4d5ff3c6c99d66fb74732a296",
+    "allSevenOutputsByteIdenticalToRetained": true
+  },
+  "currentSource": {
+    "path": ".github/scripts/collect-ci-performance.py",
+    "bytes": 41295,
+    "sha256": "b62e60b3dbb150c2300c39d2ca77d337e32bdb14aa2ae52e9c93caeddb044577",
+    "testPath": ".github/scripts/test_collect_ci_performance.py",
+    "testSha256": "d9019ff7f6f38e2c55536ac861806c29275fcf72265daa769dbc8637db275c9f",
+    "replayedArtifactMapPath": "artifact-map-current-source.json",
+    "replayedArtifactMapSha256": "7b48fb113291b4ae6206b8807140d513be888117c56a22eb6ff5f16324db0f22",
+    "fiveEvidenceOutputsByteIdenticalToRetained": true
+  },
+  "replayedOutputs": {
+    "collection.json": "78b0b7e8be65032b4f59a5b73ab6aaca530b317a0b92dd41d5af497e637020be",
+    "excluded-observations.json": "726fb18889ac2723b37ef9ec5191169d5a22be92e61c7f9e11d3fc5d19731edf",
+    "report.md": "25da2f315aec8791f7ad12769ff6944a47099ea21fbac051dedf434c916e2e81",
+    "successful-runs.json": "245f7afc2345556e619fd7be23613b89ffa5561689bfc954b5ec3f43af9eb6b1",
+    "summary.json": "97d63069ebe0d62dae2841a44dad7db0644561bd717b064493470d8f5499ae0e"
+  },
+  "performanceAdmission": {
+    "historicalBaseline": false,
+    "currentReplay": false,
+    "reason": "unpaired observational baseline with no predeclared absolute, relative, or noise acceptance threshold"
+  }
+}

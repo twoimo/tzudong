@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "requestedModel": "google-antigravity/claude-opus-5-5",
+  "requestedEffort": "high",
+  "inputSha256": "6af9ae273a7141b8e464e9a46668af08dfdd6db4d8039de52b967c10b994abb9",
+  "inputBytes": 1594,
+  "attempts": 1,
+  "previousRequestTruncated": true,
+  "elapsedSeconds": 29.527,
+  "reportedModel": "google-antigravity/claude-opus-5-5",
+  "finishReason": "stop",
+  "usage": {
+    "prompt_tokens": 1014,
+    "completion_tokens": 2552,
+    "total_tokens": 3566,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  },
+  "contentType": "str",
+  "messageKeys": [
+    "content",
+    "reasoning_content",
+    "refusal",
+    "role"
+  ],
+  "completed": true
+}

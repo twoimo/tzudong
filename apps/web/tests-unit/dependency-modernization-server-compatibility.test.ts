@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const appRoot = join(import.meta.dir, '..');
+const repoRoot = join(appRoot, '..', '..');
 const source = (relativePath: string) => readFileSync(join(appRoot, relativePath), 'utf8');
 const packagePath = (name: string) => new RegExp(`(?:^|/)node_modules/${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`);
 
@@ -58,6 +59,29 @@ describe('dependency modernization release authority', () => {
       "'tests/dependency-modernization.spec.ts', '--project=chromium'",
     ]) expect(runner).toContain(token);
   });
+
+  test('the install job delegates its package and build proof to the pinned browser runner once', () => {
+    const workflow = readFileSync(join(repoRoot, '.github', 'workflows', 'web-admin-ci.yml'), 'utf8').replace(/\r\n/g, '\n');
+    const start = workflow.indexOf('  dependency-modernization-proof:\n');
+    const end = workflow.indexOf('\n  ubuntu-npm-authority:\n', start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const installJob = workflow.slice(start, end);
+
+    expect(installJob.match(/npm run test:dependency-modernization:browser/g)).toHaveLength(1);
+    expect(installJob).not.toMatch(/^\s*npm run test:dependency-modernization\s*$/m);
+    expect(installJob).not.toMatch(/^\s*npm run build\s*$/m);
+    for (const token of [
+      'npm ci',
+      'sha256sum package-lock.json bun.lock',
+      'npx playwright install --with-deps chromium',
+      'TZUDONG_DEPENDENCY_PROOF_ROOT="$root"',
+      'TZUDONG_NODE24_EXECUTABLE="$node_bin"',
+      'TZUDONG_NPM_11_EXECUTABLE="$npm_bin"',
+      'PLAYWRIGHT_WEB_SERVER_COMMAND="npm run start:playwright"',
+    ]) expect(installJob).toContain(token);
+  });
+
   test('the built server, health probe, and isolated browser share the admitted origin', () => {
     const runner = source('scripts/run-dependency-modernization-browser.mjs');
     const browser = source('tests/dependency-modernization.spec.ts');

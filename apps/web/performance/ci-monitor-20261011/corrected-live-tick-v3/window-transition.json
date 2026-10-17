@@ -1,0 +1,22 @@
+{
+  "schema": "tzudong-ci-monitor-window-transition/v1",
+  "oldVersion": "v2",
+  "newVersion": "v3",
+  "reason": "block reference freeze while any unresolved non-tombstone attempt remains",
+  "oldBaselineChanged": false,
+  "oldCheckpointChanged": false,
+  "analysisCheckpointCopied": false,
+  "cacheBackup": {
+    "attempts": 67,
+    "runsSha256": "2bdbebdff07c7dbddab4e509e210b919ea3013c046b865e6e72f8ccd11aed80e",
+    "integrity": "ok"
+  },
+  "oldAlertKeysPreserved": true,
+  "archiveFileCount": 15,
+  "archiveManifestSha256": "65e4819ec861324554cfc9a451446dce5dbec92135e6c66225e5c399f1630577",
+  "status": "activated_first_manual_tick_verified",
+  "firstTickId": "20261011T101839.893277Z",
+  "configSha256": "48e8ee405ec9314ae02a1042156cbe2e9131d24156fcf18977cb4990834a83b8",
+  "automationPromptSha256": "0e39865b302d763889468255faac4cbed838a17a843bc9a9222e9827b5091ba4",
+  "futureScheduledTickVerified": false
+}

@@ -1,0 +1,172 @@
+{
+  "schema": "tzudong-ci-review-fixes/v1",
+  "reviewedHead": "6098055f2d8d141625a216a99d6c8f99956de2a0",
+  "evidenceScope": "local source corrections and retained measurements; hosted CI and merge are separate",
+  "reviewThreadCount": 16,
+  "threadResolutionVerified": false,
+  "fixes": [
+    {
+      "commentDatabaseId": 4237280107,
+      "threadId": "PRRT_kwDOQGRyNc6rDIAz",
+      "correction": "frozen compiler input",
+      "testPath": "apps/web/performance/ci-20261010/local-compiler/test_benchmark.py",
+      "testNames": [
+        "test_clean_source_is_bound_to_exact_head_and_tree",
+        "test_dirty_tracked_source_is_rejected",
+        "test_dirty_untracked_source_is_rejected",
+        "test_tracked_snapshot_content_tamper_is_rejected"
+      ]
+    },
+    {
+      "commentDatabaseId": 4237280110,
+      "threadId": "PRRT_kwDOQGRyNc6rDIA3",
+      "correction": "compiler acceptance budgets and historical de-admission",
+      "testPath": "apps/web/performance/ci-20261010/local-compiler/test_benchmark.py",
+      "testNames": [
+        "test_analysis_admits_only_when_reduction_and_noise_budgets_pass",
+        "test_analysis_rejects_excessive_aa_noise"
+      ]
+    },
+    {
+      "commentDatabaseId": 4237280115,
+      "threadId": "PRRT_kwDOQGRyNc6rDIA6",
+      "correction": "serialized audit target budgets",
+      "testPath": ".github/scripts/test_ci_audit_budget.py",
+      "testNames": [
+        "test_npm_timeout_continues_then_fails",
+        "test_pip_failure_continues_then_fails"
+      ]
+    },
+    {
+      "commentDatabaseId": 4237280120,
+      "threadId": "PRRT_kwDOQGRyNc6rDIA_",
+      "correction": "retained source-tree replay",
+      "testPath": "apps/web/performance/ci-20261010/source-groups/test_analyze_source_groups.py",
+      "testNames": [
+        "test_local_git_mapping_contradiction_fails_closed"
+      ]
+    },
+    {
+      "commentDatabaseId": 4237280124,
+      "threadId": "PRRT_kwDOQGRyNc6rDIBC",
+      "correction": "collection metadata reconciliation",
+      "testPath": ".github/scripts/test_collect_ci_performance.py",
+      "testNames": [
+        "test_replay_collection_summary_is_bound_to_both_observation_payloads"
+      ]
+    },
+    {
+      "commentDatabaseId": 4240829890,
+      "threadId": "PRRT_kwDOQGRyNc6rLsrG",
+      "correction": "terminal-only failure-rate denominator",
+      "testPath": ".github/scripts/test_monitor_ci_performance.py",
+      "testNames": [
+        "test_failure_rate_excludes_unfinished_attempts"
+      ]
+    },
+    {
+      "commentDatabaseId": 4240829894,
+      "threadId": "PRRT_kwDOQGRyNc6rLsrK",
+      "correction": "malformed jobs rejected",
+      "testPath": ".github/scripts/test_monitor_ci_performance.py",
+      "testNames": [
+        "test_non_object_run_and_job_entries_fail_closed"
+      ]
+    },
+    {
+      "commentDatabaseId": 4240829896,
+      "threadId": "PRRT_kwDOQGRyNc6rLsrM",
+      "correction": "run chronology validated",
+      "testPath": ".github/scripts/test_monitor_ci_performance.py",
+      "testNames": [
+        "test_job_timestamps_before_run_creation_are_rejected"
+      ]
+    },
+    {
+      "commentDatabaseId": 4240829897,
+      "threadId": "PRRT_kwDOQGRyNc6rLsrN",
+      "correction": "public opaque state references",
+      "testPath": ".github/scripts/test_run_ci_monitor.py",
+      "testNames": [
+        "test_receipts_use_only_state_relative_opaque_paths",
+        "test_state_receipt_reader_rejects_escape_and_absolute_paths"
+      ]
+    },
+    {
+      "commentDatabaseId": 4240829899,
+      "threadId": "PRRT_kwDOQGRyNc6rLsrO",
+      "correction": "empty successful jobs refreshable",
+      "testPath": ".github/scripts/test_collect_ci_monitor.py",
+      "testNames": [
+        "test_empty_completed_success_job_set_is_rechecked"
+      ]
+    },
+    {
+      "commentDatabaseId": 4241032862,
+      "threadId": "PRRT_kwDOQGRyNc6rMM72",
+      "correction": "completed attempts preserved during tombstones",
+      "testPath": ".github/scripts/test_collect_ci_monitor.py",
+      "testNames": [
+        "test_missing_active_attempt_does_not_tombstone_completed_attempt"
+      ]
+    },
+    {
+      "commentDatabaseId": 4241032866,
+      "threadId": "PRRT_kwDOQGRyNc6rMM73",
+      "correction": "malformed runs rejected",
+      "testPath": ".github/scripts/test_monitor_ci_performance.py",
+      "testNames": [
+        "test_non_object_run_and_job_entries_fail_closed"
+      ]
+    },
+    {
+      "commentDatabaseId": 4241032867,
+      "threadId": "PRRT_kwDOQGRyNc6rMM74",
+      "correction": "immutable explicit cohort rollover",
+      "testPath": ".github/scripts/test_prepare_ci_reference.py",
+      "testNames": [
+        "test_insufficient_reference_becomes_ready_at_seven_distinct_trees",
+        "test_unverified_shape_or_revision_pending_blocks_reference",
+        "test_verified_different_cohort_pending_is_distinct_but_still_blocks_cutoff"
+      ]
+    },
+    {
+      "commentDatabaseId": 4241032869,
+      "threadId": "PRRT_kwDOQGRyNc6rMM76",
+      "correction": "complete successful step timing",
+      "testPath": ".github/scripts/test_collect_ci_performance.py",
+      "testNames": [
+        "test_success_requires_every_non_skipped_step_to_be_terminal_and_timed"
+      ]
+    },
+    {
+      "commentDatabaseId": 4241032870,
+      "threadId": "PRRT_kwDOQGRyNc6rMM77",
+      "correction": "cross-phase identical attempt rejected",
+      "testPath": ".github/scripts/test_monitor_ci_performance.py",
+      "testNames": [
+        "test_identical_attempt_cannot_appear_in_both_phases"
+      ]
+    },
+    {
+      "commentDatabaseId": 4241032873,
+      "threadId": "PRRT_kwDOQGRyNc6rMM79",
+      "correction": "zero baseline uses absolute threshold",
+      "testPath": ".github/scripts/test_monitor_ci_performance.py",
+      "testNames": [
+        "test_zero_baseline_relative_change_is_undefined_and_absolute_regression_applies"
+      ]
+    }
+  ],
+  "verification": {
+    "ciPythonPassed": 77,
+    "ciPythonFailed": 0,
+    "backendPythonPassed": 19,
+    "bunSourceContractPassed": 28,
+    "bunAssertions": 635,
+    "nodeClassifierPassed": 6,
+    "workflowActionlintPassed": true,
+    "reconciliationCurrent": true,
+    "hostedVerificationSeparate": true
+  }
+}

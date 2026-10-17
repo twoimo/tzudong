@@ -1,0 +1,37 @@
+{
+  "files": [
+    {
+      "bytes": 648,
+      "path": "collection.json",
+      "sha256": "78b0b7e8be65032b4f59a5b73ab6aaca530b317a0b92dd41d5af497e637020be"
+    },
+    {
+      "bytes": 40345,
+      "path": "excluded-observations.json",
+      "sha256": "726fb18889ac2723b37ef9ec5191169d5a22be92e61c7f9e11d3fc5d19731edf"
+    },
+    {
+      "bytes": 3828,
+      "path": "report.md",
+      "sha256": "25da2f315aec8791f7ad12769ff6944a47099ea21fbac051dedf434c916e2e81"
+    },
+    {
+      "bytes": 343961,
+      "path": "successful-runs.json",
+      "sha256": "245f7afc2345556e619fd7be23613b89ffa5561689bfc954b5ec3f43af9eb6b1"
+    },
+    {
+      "bytes": 68557,
+      "path": "summary.json",
+      "sha256": "97d63069ebe0d62dae2841a44dad7db0644561bd717b064493470d8f5499ae0e"
+    }
+  ],
+  "schema": "tzudong-ci-performance/v1/artifact-map",
+  "sourceFiles": [
+    {
+      "bytes": 34050,
+      "path": ".github/scripts/collect-ci-performance.py",
+      "sha256": "b53442332490b1386e936890c6ab7f21d4d6bd00602983880447a64bf0e2f2df"
+    }
+  ]
+}

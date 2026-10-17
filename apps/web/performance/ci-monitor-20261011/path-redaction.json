@@ -1,0 +1,42 @@
+{
+  "schema": "ci-public-path-redaction/v1",
+  "originalsPreservedPrivately": true,
+  "historyRewritten": false,
+  "files": [
+    {
+      "path": "apps/web/performance/ci-monitor-20261011/final-live-tick/tick.json",
+      "originalSha256": "12b957db29095154b11562bd871963aeefa346bc41edf4624ebae4fdcdb539bc",
+      "publicSha256": "92da11225dee912838a615c79e4062057ae08f68c6f83c6da567418c52f41eca",
+      "changedField": "receiptPath",
+      "method": "replace operator state root with state://; metrics unchanged"
+    },
+    {
+      "path": "apps/web/performance/ci-monitor-20261011/final-offline-replay/tick.json",
+      "originalSha256": "0505d8e26bba44cfb35889f3f2797bc372e3b0b2e016f83534c62cd5017fdb41",
+      "publicSha256": "ef9c2c5c0e679b2b114e4ccee56ad57d1616995aa83f9952dce06c3a6d5ee9c9",
+      "changedField": "receiptPath",
+      "method": "replace operator state root with state://; metrics unchanged"
+    },
+    {
+      "path": "apps/web/performance/ci-monitor-20261011/first-tick/tick.json",
+      "originalSha256": "b8771f09e5ce5522a5d1d72cb4e7070f7e8e936881cf4170869a8594addcc305",
+      "publicSha256": "ef7bf08148b8f9df150ce402ef1b85f41aedcc6fcd8730fe0dbad96a4b210e75",
+      "changedField": "receiptPath",
+      "method": "replace operator state root with state://; metrics unchanged"
+    },
+    {
+      "path": "apps/web/performance/ci-monitor-20261011/followup-live-tick/tick.json",
+      "originalSha256": "2438aefa55fee76714a1a8a051f106879dc2be8691f1a629804fd92ebcb807d0",
+      "publicSha256": "3ea2411be4b031a1466048dc4b977bd4819dc65b220b8f630febb2dce25f0fba",
+      "changedField": "receiptPath",
+      "method": "replace operator state root with state://; metrics unchanged"
+    },
+    {
+      "path": "apps/web/performance/ci-monitor-20261011/offline-replay/tick.json",
+      "originalSha256": "f4ca8309f33c8f2501628fb8cf55f906f3ce32db7a41f88e263f68a09656cac3",
+      "publicSha256": "54c136f686e17978406b7d2b1621af46bf04fcab3f47758416b4581ec3ec8ed4",
+      "changedField": "receiptPath",
+      "method": "replace operator state root with state://; metrics unchanged"
+    }
+  ]
+}
