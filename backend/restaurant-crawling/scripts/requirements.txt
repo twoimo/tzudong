@@ -1,5 +1,5 @@
 google-api-python-client==2.200.0
-python-dotenv==1.2.3
+python-dotenv==1.2.4
 yt-dlp[default]==2026.8.19
 pyyaml==6.0.3
 tqdm==4.70.1
