@@ -1,3 +1,24 @@
+export interface NaverObservedMapSize {
+    map: unknown;
+    target: Element;
+    width: number;
+    height: number;
+}
+
+/** New observer subscriptions report an initial size even if it is unchanged. */
+export function shouldResizeNaverObservedMap(
+    previous: NaverObservedMapSize | null,
+    current: NaverObservedMapSize,
+): boolean {
+    return !previous
+        || !Number.isFinite(current.width)
+        || !Number.isFinite(current.height)
+        || previous.map !== current.map
+        || previous.target !== current.target
+        || previous.width !== current.width
+        || previous.height !== current.height;
+}
+
 export function buildNaverResizeObserverHandler<TMap>({
     clearTimeoutFn = clearTimeout,
     delayMs = 320,
