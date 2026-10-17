@@ -254,14 +254,189 @@ function publishSyntheticRehearsal(custodyDirectory: string) {
   return {
     admission,
     admissionSha256,
+    custodyDirectory,
     journalSha256: sha256(journalBytes),
     receipt,
     receiptSha256,
   };
 }
 
+function writeApplyOperatingEvidence(custodyDirectory: string) {
+  const freshObservedAt = '2026-10-13T08:00:18.000Z';
+  const attestation = {
+    assertedAt: observedAt,
+    authority: 'authenticated-repository-owner-workflow-dispatch',
+    basis: 'standing-custody-confirmation-bound-by-owner-dispatch',
+    event: 'workflow_dispatch',
+    fences: {
+      browserRpc: 'stopped',
+      dashboard: 'stopped',
+      directSql: 'stopped',
+      providerIngress: 'stopped',
+    },
+    kind: 'review-media-successor-operator-custody-attestation',
+    noticeState: 'not-issued',
+    operatorRole: 'repository-owner',
+    repository: 'twoimo/tzudong',
+    runAttempt: '1',
+    runId: '42',
+    schemaVersion: 1,
+    scope: 'stopped-until-application-result',
+    sourceRevision,
+    workflowRef: 'twoimo/tzudong/.github/workflows/review-media-sql-successor.yml@refs/heads/main',
+  };
+  const bundle = {
+    adminRecordMutationsHold: {
+      commit: sourceRevision,
+      deploymentId: 'dpl_TestOnlyAdmissionEvidence123',
+      holdActive: true,
+      observedAt,
+    },
+    createdAt,
+    expiresAt,
+    kind: 'review-media-successor-vercel-operating-bundle',
+    manifestSha256: manifestRecord.manifestSha256,
+    protectedMain: {},
+    rollbackPolicy: {},
+    rollbackReadback: {
+      deploymentId: 'dpl_TestOnlyAdmissionEvidence123',
+      gitSha: '1884f87e53c4567ead7c9a0fb394b09b91a70396',
+    },
+    schemaVersion: 1,
+    sourceRevision,
+    sourceRoot: manifest.sourceRoot,
+    storyboardPolicy: {
+      deployment: {
+        branch: 'main',
+        deploymentId: 'dpl_TestOnlyAdmissionEvidence123',
+        sourceCommit: sourceRevision,
+      },
+      policy: { canonicalPolicySha256: 'c'.repeat(64) },
+      schemaVersion: 1,
+    },
+  };
+  const inFlightQuiescence = {
+    coverage: [
+      'pipeline_control.admin_record_media_cleanup',
+      'pipeline_control.admin_record_operations',
+      'public.reviews',
+      'storage.objects',
+    ],
+    inFlightWriters: 0,
+    lockMode: 'SHARE',
+    observedAt: freshObservedAt,
+  };
+  const machine = {
+    adminRuntimeHold: {
+      deploymentId: 'dpl_TestOnlyAdmissionEvidence123',
+      holdActive: true,
+      observedAt,
+    },
+    automaticReviewer: { observedAt: freshObservedAt, state: 'stopped' },
+    g037WriteFreeze: { observedAt: freshObservedAt, state: 'active' },
+    inFlightQuiescence,
+    kind: 'review-media-successor-machine-operating-observations',
+    schemaVersion: 1,
+    sourceRevision,
+  };
+  const common = {
+    expiresAt,
+    id: manifest.id,
+    manifestSha256: manifestRecord.manifestSha256,
+    projectRef: manifest.projectRef,
+    purpose: manifest.purpose,
+    schemaVersion: 1,
+    sourceRevision,
+  };
+  const quiescence = {
+    ...common,
+    ...inFlightQuiescence,
+    kind: 'apply-in-flight-quiescence-readback',
+  };
+  const attestationBytes = canonicalBytes(attestation);
+  const bundleBytes = canonicalBytes(bundle);
+  const machineBytes = canonicalBytes(machine);
+  const quiescenceBytes = canonicalBytes(quiescence);
+  const receiptProvenance: Record<string, any> = {};
+  for (const [fence, state] of Object.entries(manifest.requiredWriterFences)) {
+    const operator = ['browserRpc', 'dashboard', 'directSql', 'providerIngress'].includes(fence);
+    const receipt = {
+      ...common,
+      fence,
+      kind: 'writer-fence-readback-receipt',
+      observedAt: ['automaticReviewer', 'g037WriteFreeze'].includes(fence)
+        ? freshObservedAt
+        : observedAt,
+      state,
+    };
+    const receiptBytes = canonicalBytes(receipt);
+    writeFileSync(join(custodyDirectory, `apply-writer-fence-${fence}.json`), receiptBytes, { mode: 0o600 });
+    receiptProvenance[fence] = {
+      evidenceSha256: operator
+        ? sha256(attestationBytes)
+        : fence === 'adminRecordMutationsHold'
+          ? sha256(bundleBytes)
+          : sha256(machineBytes),
+      provenance: operator
+        ? 'authenticated-owner-custody-commitment'
+        : fence === 'adminRecordMutationsHold'
+          ? 'immutable-deployment-machine-observation'
+          : 'fresh-machine-observation',
+      receiptSha256: sha256(receiptBytes),
+    };
+  }
+  const map = {
+    attestationSha256: sha256(attestationBytes),
+    bundleSha256: sha256(bundleBytes),
+    kind: 'review-media-successor-apply-operating-evidence-map',
+    machineSha256: sha256(machineBytes),
+    quiescenceSha256: sha256(quiescenceBytes),
+    receiptProvenance,
+    schemaVersion: 1,
+    sourceRevision,
+  };
+  writePrivateCanonical(join(custodyDirectory, 'operator-custody-attestation.json'), attestation);
+  writePrivateCanonical(join(custodyDirectory, 'vercel-operating-bundle.json'), bundle);
+  writePrivateCanonical(join(custodyDirectory, 'apply-machine-operating-observations.json'), machine);
+  writePrivateCanonical(join(custodyDirectory, 'apply-quiescence-readback.json'), quiescence);
+  writePrivateCanonical(join(custodyDirectory, 'apply-operating-evidence-map.json'), map);
+  return {
+    applyEvidenceMapSha256: sha256(canonicalBytes(map)),
+    applyQuiescenceReadbackSha256: sha256(quiescenceBytes),
+  };
+}
+
+function rehashApplyOperatingEvidence(custodyDirectory: string, input: any) {
+  const attestationBytes = readFileSync(join(custodyDirectory, 'operator-custody-attestation.json'));
+  const bundleBytes = readFileSync(join(custodyDirectory, 'vercel-operating-bundle.json'));
+  const machineBytes = readFileSync(join(custodyDirectory, 'apply-machine-operating-observations.json'));
+  const quiescenceBytes = readFileSync(join(custodyDirectory, 'apply-quiescence-readback.json'));
+  const mapPath = join(custodyDirectory, 'apply-operating-evidence-map.json');
+  const map = JSON.parse(readFileSync(mapPath, 'utf8'));
+  map.attestationSha256 = sha256(attestationBytes);
+  map.bundleSha256 = sha256(bundleBytes);
+  map.machineSha256 = sha256(machineBytes);
+  map.quiescenceSha256 = sha256(quiescenceBytes);
+  for (const key of Object.keys(manifest.requiredWriterFences)) {
+    const receiptBytes = readFileSync(join(custodyDirectory, `apply-writer-fence-${key}.json`));
+    map.receiptProvenance[key].receiptSha256 = sha256(receiptBytes);
+    map.receiptProvenance[key].evidenceSha256 = [
+      'browserRpc', 'dashboard', 'directSql', 'providerIngress',
+    ].includes(key)
+      ? map.attestationSha256
+      : key === 'adminRecordMutationsHold'
+        ? map.bundleSha256
+        : map.machineSha256;
+  }
+  const mapBytes = canonicalBytes(map);
+  writeFileSync(mapPath, mapBytes, { mode: 0o600 });
+  input.applyEvidenceMapSha256 = sha256(mapBytes);
+  input.applyQuiescenceReadbackSha256 = sha256(quiescenceBytes);
+}
+
 function applyInput(published: ReturnType<typeof publishSyntheticRehearsal>, overrides = {}) {
   return {
+    ...writeApplyOperatingEvidence(published.custodyDirectory),
     attemptId: '123e4567-e89b-42d3-a456-426614174101',
     expiresAt,
     kind: 'review-media-successor-apply-admission-input',
@@ -453,6 +628,16 @@ test('apply producer binds the verified rehearsal artifacts without extending th
     join(prepared.custodyDirectory, 'rehearsal-admission.json'),
   )));
   expect(admission.rehearsalAdmissionSha256).toBe(published.receipt.admissionSha256);
+  for (const key of [
+    'adminRecordMutationsHold', 'browserRpc', 'dashboard', 'directSql', 'providerIngress',
+  ]) {
+    expect(admission.writerFences[key]).toEqual(published.admission.writerFences[key]);
+  }
+  for (const key of ['automaticReviewer', 'g037WriteFreeze']) {
+    expect(admission.writerFences[key].state).toBe(published.admission.writerFences[key].state);
+    expect(admission.writerFences[key].evidenceSha256)
+      .not.toBe(published.admission.writerFences[key].evidenceSha256);
+  }
   expect(admission.createdAt).toBe(createdAt);
   expect(admission.expiresAt).toBe(expiresAt);
   expect(admission.stageStates).toEqual(published.receipt.stageStates);
@@ -467,6 +652,79 @@ test('apply producer binds the verified rehearsal artifacts without extending th
     manifestRecord,
     now: fixedNow,
   })).toThrow('SUCCESSOR_OPERATING_ADMISSION_OUTPUT_EXISTS');
+});
+
+test('apply producer rejects pre-publication machine evidence even when every hash is refreshed', () => {
+  const prepared = prepareRehearsal();
+  const published = publishSyntheticRehearsal(prepared.custodyDirectory);
+  const input = applyInput(published);
+  const staleObservedAt = '2026-10-13T08:00:14.000Z';
+  const machinePath = join(prepared.custodyDirectory, 'apply-machine-operating-observations.json');
+  const machine = JSON.parse(readFileSync(machinePath, 'utf8'));
+  machine.automaticReviewer.observedAt = staleObservedAt;
+  machine.g037WriteFreeze.observedAt = staleObservedAt;
+  machine.inFlightQuiescence.observedAt = staleObservedAt;
+  writePrivateCanonical(machinePath, machine);
+  const quiescencePath = join(prepared.custodyDirectory, 'apply-quiescence-readback.json');
+  const quiescence = JSON.parse(readFileSync(quiescencePath, 'utf8'));
+  quiescence.observedAt = staleObservedAt;
+  writePrivateCanonical(quiescencePath, quiescence);
+  for (const key of ['automaticReviewer', 'g037WriteFreeze']) {
+    const path = join(prepared.custodyDirectory, `apply-writer-fence-${key}.json`);
+    const receipt = JSON.parse(readFileSync(path, 'utf8'));
+    receipt.observedAt = staleObservedAt;
+    writePrivateCanonical(path, receipt);
+  }
+  rehashApplyOperatingEvidence(prepared.custodyDirectory, input);
+  const inputPath = join(prepared.root, 'apply-input-stale-machine.json');
+  writePrivateCanonical(inputPath, input);
+  expect(() => prepareReviewMediaApplyAdmission({
+    custodyDirectory: prepared.custodyDirectory,
+    inputPath,
+    manifestRecord,
+    now: fixedNow,
+  })).toThrow('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
+  expect(existsSync(join(prepared.custodyDirectory, 'apply-admission.json'))).toBe(false);
+});
+
+test('apply producer rejects a changed deployment after rehearsal even when rehashed', () => {
+  const prepared = prepareRehearsal();
+  const published = publishSyntheticRehearsal(prepared.custodyDirectory);
+  const input = applyInput(published);
+  const machinePath = join(prepared.custodyDirectory, 'apply-machine-operating-observations.json');
+  const machine = JSON.parse(readFileSync(machinePath, 'utf8'));
+  machine.adminRuntimeHold.deploymentId = 'dpl_ChangedDuringRehearsal123';
+  writePrivateCanonical(machinePath, machine);
+  rehashApplyOperatingEvidence(prepared.custodyDirectory, input);
+  const inputPath = join(prepared.root, 'apply-input-changed-deployment.json');
+  writePrivateCanonical(inputPath, input);
+  expect(() => prepareReviewMediaApplyAdmission({
+    custodyDirectory: prepared.custodyDirectory,
+    inputPath,
+    manifestRecord,
+    now: fixedNow,
+  })).toThrow('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
+  expect(existsSync(join(prepared.custodyDirectory, 'apply-admission.json'))).toBe(false);
+});
+
+test('apply producer rejects a rehashed storyboard runtime identity drift', () => {
+  const prepared = prepareRehearsal();
+  const published = publishSyntheticRehearsal(prepared.custodyDirectory);
+  const input = applyInput(published);
+  const bundlePath = join(prepared.custodyDirectory, 'vercel-operating-bundle.json');
+  const bundle = JSON.parse(readFileSync(bundlePath, 'utf8'));
+  bundle.storyboardPolicy.deployment.sourceCommit = 'f'.repeat(40);
+  writePrivateCanonical(bundlePath, bundle);
+  rehashApplyOperatingEvidence(prepared.custodyDirectory, input);
+  const inputPath = join(prepared.root, 'apply-input-storyboard-policy-drift.json');
+  writePrivateCanonical(inputPath, input);
+  expect(() => prepareReviewMediaApplyAdmission({
+    custodyDirectory: prepared.custodyDirectory,
+    inputPath,
+    manifestRecord,
+    now: fixedNow,
+  })).toThrow('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
+  expect(existsSync(join(prepared.custodyDirectory, 'apply-admission.json'))).toBe(false);
 });
 
 test('apply producer rejects a relabeled or tampered rehearsal before writing an admission', () => {

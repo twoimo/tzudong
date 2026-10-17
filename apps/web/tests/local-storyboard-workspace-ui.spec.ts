@@ -6,11 +6,15 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  STORYBOARD_ARCHIVE_WORKFLOW,
   STORYBOARD_WORKFLOW,
-  buildStoryboardDraftPrompt,
   storyboardProductionDocumentSchema,
   storyboardProductionRequestSchema,
 } from "../lib/admin/storyboard/production-contract";
+import {
+  STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL,
+  STORYBOARD_GEMINI_TEXT_MODEL,
+} from "../lib/admin/storyboard/gemini-models";
 
 // UI contracts only: the real React components run against mocked HTTP in Chromium.
 // No backend, authentication session, external provider, or model success is claimed.
@@ -31,7 +35,8 @@ const NOW = "2026-09-18T01:00:00.000Z";
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jO1sAAAAASUVORK5CYII=", "base64");
 const REQUEST = storyboardProductionRequestSchema.parse({
   workflow: STORYBOARD_WORKFLOW, requestId: REQUEST_ID, prompt: "한국어 영상의 실제 촬영용 장면을 작성합니다.", sceneCount: 5,
-  providers: { externalAI: false, text: { id: "local-mlx", model: "installed-text" }, image: { id: "local-mlx", model: "installed-image" } },
+  providers: { externalAI: true, text: { id: "gemini-api", model: STORYBOARD_GEMINI_TEXT_MODEL },
+    image: { id: "gemini-api", model: STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL } },
 });
 const DRAFT = {
   title: "UI 계약용 프로젝트", logline: "이 데이터는 모델 성공 증거가 아닌 UI 계약 테스트 픽스처입니다.",
@@ -43,8 +48,8 @@ const DRAFT = {
   })),
 };
 const PROVENANCE = {
-  providerId: "manual", model: "", verification: "user-import", generatedAt: NOW,
-  requestId: REQUEST_ID, responseId: null, responseModel: null, modelEvidence: "unverified",
+  providerId: "gemini-api", model: STORYBOARD_GEMINI_TEXT_MODEL, verification: "official-api", generatedAt: NOW,
+  requestId: REQUEST_ID, responseId: "fixture-response", responseModel: STORYBOARD_GEMINI_TEXT_MODEL, modelEvidence: "response",
 };
 const DOCUMENT = storyboardProductionDocumentSchema.parse({
   ...DRAFT, schema: STORYBOARD_WORKFLOW, projectId: ID, revision: 4, generatedAt: NOW, textProvenance: PROVENANCE,
@@ -60,15 +65,15 @@ function saved(id = ID) {
   };
 }
 function activeJob(status = "queued") {
-  return { id: "job-ui-contract", status, stage: "image", sceneNo: 1, errorCode: null, attempts: 1, lastHeartbeat: NOW };
+  return { id: "10000000-0000-4000-8000-000000000005", status, stage: "images", sceneNo: 1, errorCode: null, attempts: 1, lastHeartbeat: NOW };
 }
 function summary(id: string, title: string) { return { id, title, revision: 4, status: "partial", createdAt: NOW, updatedAt: NOW }; }
 const CATALOG = {
   ok: true, projects: [summary(ID, "UI 계약용 프로젝트"), summary(OTHER_ID, "다른 프로젝트")],
-  workers: [{ id: "local-worker", online: true, lastHeartbeat: NOW, models: [
-    { id: "installed-text", capabilities: ["chat"], loaded: true, bytes_on_disk: 4 * 1024 ** 3, bytes_resident: 4 * 1024 ** 3 },
-    { id: "installed-image", capabilities: ["image"], loaded: false, bytes_on_disk: 2 * 1024 ** 3, bytes_resident: 0 },
-    { id: "not-installed", capabilities: ["chat", "image"], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+  workers: [{ id: "10000000-0000-4000-8000-000000000006", online: true, lastHeartbeat: NOW, models: [
+    { id: STORYBOARD_GEMINI_TEXT_MODEL, owned_by: "gemini-api", capabilities: ["chat"], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+    { id: STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL, owned_by: "gemini-api", capabilities: ["image"], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+    { id: "gemini-3-pro-image", owned_by: "gemini-api", capabilities: ["image"], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
   ] }],
 };
 function asset() {
@@ -138,7 +143,7 @@ test.afterEach(async ({ page }) => {
 async function open(page: Page, id?: string) {
   await page.goto(`${origin}/admin?module=storyboard${id ? `&storyboardProject=${id}` : ""}#workspace`);
   await expect(page.getByRole("heading", { name: "스토리보드", exact: true })).toBeVisible();
-  if (!id) await expect(page.locator('#local-text-model option[value="installed-text"]')).toHaveCount(1);
+  if (!id) await expect(page.locator(`#local-text-model option[value="${STORYBOARD_GEMINI_TEXT_MODEL}"]`)).toHaveCount(1);
   if (id) await expect(page.getByRole("heading", { name: "UI 계약용 프로젝트", exact: true })).toBeVisible();
 }
 
@@ -181,52 +186,53 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await page.reload();
     await expect(page.getByRole("heading", { name: "1. 이전 장면 제목", exact: true })).toBeVisible();
   });
-  test("defaults to local, filters model capabilities, and mounts legacy only after a keyboard click", async ({ page }) => {
+  test("exposes only the fixed Gemini execution models and no legacy workspace", async ({ page }) => {
     const requests: string[] = [];
     page.on("request", (request) => requests.push(request.url()));
     await page.clock.install();
     await open(page);
-    await expect(page.getByLabel("텍스트 생성 방식", { exact: true })).toHaveValue("local-mlx");
-    await expect(page.getByLabel("이미지 생성 방식", { exact: true })).toHaveValue("local-mlx");
-    await expect(page.getByLabel("외부 AI 사용 허용", { exact: false })).not.toBeChecked();
-    await expect(page.locator('option[value="chatgpt-manual"]')).toHaveCount(2);
-    await expect(page.locator('option[value="grok-manual"]')).toHaveCount(2);
-    await expect(page.locator('#local-text-provider option[value="openai-api"]')).toBeDisabled();
-    await expect(page.locator('#local-image-provider option[value="xai-api"]')).toBeDisabled();
-    await expect(page.locator('#local-text-model option[value="installed-image"]')).toHaveCount(0);
-    await expect(page.locator('#local-image-model option[value="installed-text"]')).toHaveCount(0);
-    await expect(page.locator('option[value="not-installed"]')).toHaveCount(0);
+    await expect(page.getByLabel("텍스트 모델", { exact: true })).toHaveValue(STORYBOARD_GEMINI_TEXT_MODEL);
+    await expect(page.getByLabel("이미지 모델", { exact: true })).toHaveValue(STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL);
+    await expect(page.locator('#local-text-model option')).toHaveCount(1);
+    await expect(page.locator('#local-image-model option')).toHaveCount(2);
+    await expect(page.getByText("Gemini API 지원 모델로만 생성합니다", { exact: false })).toBeVisible();
+    await expect(page.locator('option[value="chatgpt-manual"], option[value="grok-manual"], option[value="local-mlx"]')).toHaveCount(0);
     await page.clock.fastForward(20_000);
     expect(requests.filter((url) => url.includes("/api/") || url.includes("/qa-history/"))).toEqual([`${origin}${API}`]);
     await expect(page.locator('[data-admin-storyboard-generator="true"]')).toHaveCount(0);
-    await expect(page.getByRole("region", { name: "로컬 워커", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "연결 설정", exact: true }).click();
-    await expect(page.getByRole("region", { name: "로컬 워커", exact: true })).toBeVisible();
-    const legacy = page.getByRole("button", { name: "이전 작업 공간 열기", exact: true });
-    await legacy.focus(); await page.keyboard.press("Enter");
-    await expect(page.locator('[data-local-storyboard-workspace="true"]')).toHaveCount(0);
-    await expect(page.locator('[data-admin-storyboard-generator="true"]')).toBeVisible();
-    await page.getByRole("button", { name: "로컬 작업 공간으로 돌아가기" }).click();
-    await expect(page.locator('[data-admin-storyboard-generator="true"]')).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "제작 연결", exact: true })).toBeVisible();
+    await expect(page.getByText("Gemini API 확인됨", { exact: false })).toHaveCount(3);
+    await expect(page.getByRole("button", { name: "이전 작업 공간 열기", exact: true })).toHaveCount(0);
   });
 
-  test("keeps text/image selections independent without cloud AI consent", async ({ page }) => {
+  test("keeps the two approved image models independent from the fixed text model", async ({ page }) => {
     await open(page);
-    await page.getByLabel("텍스트 생성 방식", { exact: true }).selectOption("manual");
-    await expect(page.getByLabel("이미지 생성 방식", { exact: true })).toHaveValue("local-mlx");
-    await page.getByLabel("텍스트 생성 방식", { exact: true }).selectOption("chatgpt-manual");
-    await page.getByLabel("이미지 생성 방식", { exact: true }).selectOption("grok-manual");
-    await expect(page.getByLabel("텍스트 생성 방식", { exact: true })).toHaveValue("chatgpt-manual");
-    await expect(page.getByLabel("이미지 생성 방식", { exact: true })).toHaveValue("grok-manual");
-    await page.getByLabel("외부 AI 사용 허용", { exact: false }).check();
-    await page.getByLabel("외부 AI 사용 허용", { exact: false }).uncheck();
-    await expect(page.getByLabel("텍스트 생성 방식", { exact: true })).toHaveValue("chatgpt-manual");
-    await expect(page.getByLabel("이미지 생성 방식", { exact: true })).toHaveValue("grok-manual");
-    await expect(page.locator('option[value="chatgpt-manual"]')).toHaveCount(2);
-    await expect(page.locator('#local-text-provider option[value="openai-api"]')).toBeDisabled();
+    await page.getByLabel("이미지 모델", { exact: true }).selectOption("gemini-3-pro-image");
+    await expect(page.getByLabel("텍스트 모델", { exact: true })).toHaveValue(STORYBOARD_GEMINI_TEXT_MODEL);
+    await expect(page.getByLabel("이미지 모델", { exact: true })).toHaveValue("gemini-3-pro-image");
+    await expect(page.locator('select[id$="provider"]')).toHaveCount(0);
+    await expect(page.getByLabel("외부 AI 사용 허용", { exact: false })).toHaveCount(0);
   });
 
-  test("creates the schema request without cloud calls and reuses the UUID after an uncertain identical create", async ({ page }) => {
+  test("requires the selected text and image models on the same fresh worker", async ({ page }) => {
+    const splitCatalog = structuredClone(CATALOG);
+    splitCatalog.workers = [
+      { ...splitCatalog.workers[0], id: "10000000-0000-4000-8000-000000000016", models: [
+        { id: STORYBOARD_GEMINI_TEXT_MODEL, owned_by: "gemini-api", capabilities: ["chat"], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+      ] },
+      { ...splitCatalog.workers[0], id: "10000000-0000-4000-8000-000000000017", models: [
+        { id: STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL, owned_by: "gemini-api", capabilities: ["image"], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+      ] },
+    ];
+    await page.route(`**${API}`, (route) => fulfill(route, splitCatalog));
+    await open(page);
+    await expect(page.getByLabel("텍스트 모델", { exact: true })).toHaveValue(STORYBOARD_GEMINI_TEXT_MODEL);
+    await expect(page.getByLabel("이미지 모델", { exact: true })).toHaveValue(STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL);
+    await expect(page.getByRole("button", { name: "프로젝트 만들기", exact: true })).toBeDisabled();
+  });
+
+  test("creates the fixed Gemini schema request and reuses the UUID after an uncertain identical create", async ({ page }) => {
     const posts: Record<string, unknown>[] = [];
     let created = saved();
     await page.route(`**${API}`, async (route) => {
@@ -240,8 +246,7 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await open(page);
     await page.getByLabel("제작 요청", { exact: true }).fill(REQUEST.prompt);
     await page.getByLabel("장면 수 (5–12)", { exact: true }).fill("5");
-    await page.getByLabel("텍스트 생성 방식", { exact: true }).selectOption("manual");
-    await page.getByLabel("이미지 모델", { exact: true }).selectOption("installed-image");
+    await page.getByLabel("이미지 모델", { exact: true }).selectOption(STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL);
     await page.getByRole("button", { name: "프로젝트 만들기", exact: true }).click();
     await expect(page.getByRole("alert")).toContainText("자동 재전송하지 않습니다");
     await expect(page.getByText("private-provider-diagnostic-do-not-render", { exact: false })).toHaveCount(0);
@@ -251,30 +256,36 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     expect(posts).toHaveLength(2);
     expect(posts[0].requestId).toBe(posts[1].requestId);
     expect(posts[1]).toMatchObject({ workflow: STORYBOARD_WORKFLOW, retrieval: "none", sources: [], providers: {
-      externalAI: false, text: { id: "manual", model: "" }, image: { id: "local-mlx", model: "installed-image" },
+      externalAI: true, text: { id: "gemini-api", model: STORYBOARD_GEMINI_TEXT_MODEL },
+      image: { id: "gemini-api", model: STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL },
     } });
   });
 
-  test("does not restore external consent from a saved project; opening either website needs an explicit button", async ({ page }) => {
+  test("renders a legacy provider project as a readable archive with execution controls held", async ({ page }) => {
     const current = saved();
-    current.project.request.providers = { externalAI: true, text: { id: "chatgpt-manual", model: "" }, image: { id: "grok-manual", model: "" } };
+    const archiveProject = current.project as unknown as { request: Record<string, unknown>; document: Record<string, unknown> };
+    archiveProject.request = {
+      ...REQUEST,
+      workflow: STORYBOARD_ARCHIVE_WORKFLOW,
+      providers: { externalAI: true, text: { id: "chatgpt-manual", model: "historical-text" },
+        image: { id: "grok-manual", model: "historical-image" } },
+    };
+    archiveProject.document = {
+      ...DOCUMENT,
+      schema: STORYBOARD_ARCHIVE_WORKFLOW,
+      textProvenance: { ...PROVENANCE, providerId: "chatgpt-manual", model: "historical-text",
+        verification: "user-import", responseId: null, responseModel: null, modelEvidence: "unverified" },
+    };
     await page.route(`**${API}/${ID}`, (route) => fulfill(route, current));
-    await page.addInitScript(() => {
-      (window as HarnessWindow).opened = [];
-      window.open = (...args) => { (window as HarnessWindow).opened?.push(args.map(String)); return null; };
-    });
     await open(page, ID);
-    await expect(page.getByRole("button", { name: "ChatGPT 웹 직접 열기" })).toHaveCount(0);
+    await page.getByText("제작 요청과 모델 정보", { exact: true }).click();
+    await expect(page.getByText("읽기 전용 프로젝트", { exact: false })).toBeVisible();
     await expect(page.getByRole("button", { name: "장면 1 재생성", exact: true })).toBeDisabled();
-    await page.getByRole("button", { name: "연결 설정", exact: true }).click();
-    await page.getByLabel("외부 AI 사용 허용", { exact: false }).check();
-    await page.getByRole("button", { name: "결과 가져오기", exact: true }).click();
-    expect(await page.evaluate(() => (window as HarnessWindow).opened)).toEqual([]);
-    await page.getByRole("button", { name: "ChatGPT 웹 직접 열기" }).click();
-    await page.getByRole("button", { name: "Grok 웹 직접 열기" }).click();
-    expect(await page.evaluate(() => (window as HarnessWindow).opened)).toEqual([
-      ["https://chatgpt.com", "_blank", "noopener,noreferrer"], ["https://grok.com", "_blank", "noopener,noreferrer"],
-    ]);
+    await expect(page.getByRole("button", { name: "장면 1 편집", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "재시도", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "ChatGPT 웹 직접 열기" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Grok 웹 직접 열기" })).toHaveCount(0);
+    await expect(page.getByText("이미지 파일 가져오기", { exact: true })).toHaveCount(0);
   });
 
   test("polls queued/claimed jobs, locks scene edits, and stops after a terminal response", async ({ page }) => {
@@ -453,65 +464,31 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await page.getByRole("button", { name: "장면 1 재생성", exact: true }).click();
     await expect.poll(() => posts.length).toBe(3);
     expect(posts[0]).toMatchObject({ action: "retry", revision: 4 });
-    expect(posts[1]).toEqual({ action: "cancel", revision: 5, jobId: "job-ui-contract" });
+    expect(posts[1]).toEqual({ action: "cancel", revision: 5, jobId: "10000000-0000-4000-8000-000000000005" });
     expect(posts[2]).toMatchObject({ action: "regenerate", revision: 6, sceneNo: 1 });
     expect(posts[0].requestId).toMatch(/^[a-f0-9-]{36}$/);
     expect(posts[2].requestId).not.toBe(posts[0].requestId);
   });
 
-  test("copies the real schema prompt and imports only a matching versioned text envelope", async ({ page }) => {
+  test("does not expose manual text or image import paths", async ({ page }) => {
     const posts: Record<string, unknown>[] = [];
     await page.route(`**${API}/${ID}`, async (route) => {
       if (route.request().method() === "POST") posts.push(route.request().postDataJSON());
       await fulfill(route, saved());
     });
     await open(page, ID);
-    await page.getByRole("button", { name: "결과 가져오기", exact: true }).click();
-    await page.getByRole("button", { name: "현재 텍스트 프롬프트 복사", exact: true }).click();
-    const copied = await page.evaluate(() => (window as HarnessWindow).copiedPrompt);
-    expect(copied).toContain(buildStoryboardDraftPrompt(REQUEST));
-    expect(copied).toContain(`"schema":"${STORYBOARD_WORKFLOW}","projectId":"${ID}","revision":4`);
-    expect(copied).toContain('"productionNotes"');
-    const input = page.getByLabel("버전이 포함된 JSON", { exact: false });
-    const envelope = { schema: STORYBOARD_WORKFLOW, projectId: ID, revision: 4, draft: DRAFT };
-    for (const invalid of [{ ...envelope, projectId: OTHER_ID }, { ...envelope, revision: 3 }, { ...envelope, schema: "unversioned" }, { ...envelope, draft: { ...DRAFT, scenes: DRAFT.scenes.slice(0, 4) } }, { ...envelope, provenance: PROVENANCE }]) {
-      await input.fill(JSON.stringify(invalid));
-      await page.getByRole("button", { name: "텍스트 가져오기", exact: true }).click();
-      await expect(page.getByRole("alert")).toContainText("현재 프로젝트의 schema");
-    }
+    await expect(page.getByRole("button", { name: "결과 가져오기", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "텍스트 가져오기", exact: true })).toHaveCount(0);
+    await expect(page.getByText("이미지 파일 가져오기", { exact: true })).toHaveCount(0);
+    await expect(page.locator('input[type="file"]')).toHaveCount(0);
     expect(posts).toHaveLength(0);
-    await input.fill(JSON.stringify(envelope));
-    await page.getByRole("button", { name: "텍스트 가져오기", exact: true }).click();
-    await expect(input).toHaveValue("");
-    expect(posts).toEqual([{ action: "import-text", ...envelope }]);
-    await page.getByText("제작 요청과 모델 정보", { exact: true }).click();
-    await expect(page.getByText("모델 미검증", { exact: false })).toBeVisible();
   });
 
-  test("validates image files, sends only the multipart contract, and renders authenticated responsive variants", async ({ page }) => {
+  test("renders authenticated responsive variants without a manual upload route", async ({ page }) => {
     const current = saved();
-    let uploaded: FormData | null = null;
+    current.project.document.scenes[0].image = asset();
     await page.route(`**${API}/${ID}`, (route) => fulfill(route, current));
-    await page.route(`**${API}/${ID}/images`, async (route) => {
-      const body = route.request().postDataBuffer();
-      uploaded = await new Response(new Uint8Array(body!), { headers: { "content-type": route.request().headers()["content-type"] } }).formData();
-      current.project.document.scenes[0].image = asset(); current.project.revision++;
-      await fulfill(route, current);
-    });
     await open(page, ID);
-    await page.getByText("이미지 파일 가져오기", { exact: true }).click();
-    const input = page.getByLabel("장면 1 이미지 파일", { exact: false });
-    const apply = page.getByRole("button", { name: "장면 1 이미지 가져오기 적용", exact: true });
-    await input.setInputFiles({ name: "blocked.svg", mimeType: "image/svg+xml", buffer: Buffer.from("<svg/>") });
-    await apply.click(); await expect(page.getByRole("alert")).toContainText("PNG, JPEG, WebP"); expect(uploaded).toBeNull();
-    await input.setInputFiles({ name: "too-large.png", mimeType: "image/png", buffer: Buffer.alloc(12 * 1024 ** 2 + 1) });
-    await apply.click(); await expect(page.getByRole("alert")).toContainText("허용 범위"); expect(uploaded).toBeNull();
-    await input.setInputFiles({ name: "scene.png", mimeType: "image/png", buffer: PNG });
-    await apply.click();
-    await expect.poll(() => uploaded !== null).toBe(true);
-    expect([...uploaded!.keys()].sort()).toEqual(["file", "projectId", "revision", "sceneNo", "schema"]);
-    expect(uploaded!.get("revision")).toBe("4"); expect(uploaded!.get("projectId")).toBe(ID);
-    expect(uploaded!.get("sceneNo")).toBe("1"); expect(uploaded!.get("schema")).toBe(STORYBOARD_WORKFLOW);
     const image = page.getByRole("img", { name: "촬영 장면 1", exact: true });
     await expect(image).toHaveAttribute("src", `${API}/${ID}/assets/${ASSET_ID}?variant=web-640.png`);
     await expect(image).toHaveAttribute("srcset", `${API}/${ID}/assets/${ASSET_ID}?variant=web-320.png 320w, ${API}/${ID}/assets/${ASSET_ID}?variant=web-640.png 640w`);

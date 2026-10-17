@@ -70,7 +70,7 @@ export function AdminOperationsPanel() {
     <div className="flex items-start justify-between gap-2"><h2 className="min-w-0 text-base font-semibold leading-6">{selected.title}</h2><Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" aria-label="운영 항목 상세 닫기" onClick={closeDetail}><X className="h-3.5 w-3.5" /></Button></div>
     <span className={`mt-2 inline-flex rounded border px-1.5 py-0.5 text-[11px] ${stateClass(selected)}`}>{stateLabel(selected)}</span>
     <p className="mt-3 text-xs leading-5 text-muted-foreground">{selected.summary}</p>
-    {selected.metrics.length > 0 ? <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 rounded-md border p-3">
+    {selected.metrics.length > 0 ? <dl className="admin-detail-section mt-3 grid grid-cols-2 gap-x-4 gap-y-3 p-3">
       {selected.metrics.map(item => <div key={item.id} className="min-w-0"><dt className="text-xs text-muted-foreground">{item.label}</dt><dd className="mt-0.5 break-words text-sm font-medium tabular-nums">{item.value === null ? '확인 불가' : `${number.format(item.value)}건`}</dd></div>)}
     </dl> : null}
     <dl className="mt-3 space-y-3 text-xs leading-5">
@@ -83,14 +83,14 @@ export function AdminOperationsPanel() {
     </div>
   </aside> : null;
 
-  return <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background" aria-labelledby="admin-operations-title" data-admin-operations-panel data-admin-embedded-module-shell="true" data-admin-embedded-module-id="llm">
+  return <section className="admin-surface flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background" aria-labelledby="admin-operations-title" data-admin-operations-panel data-admin-embedded-module-shell="true" data-admin-embedded-module-id="llm">
     <AdminPageHeader title={getAdminModuleTitle("llm")} icon={Bot} titleId="admin-operations-title" summary="읽기 전용" data-admin-module-header="compact" data-admin-module-header-module="llm"
       actions={<Button variant="ghost" size="sm" disabled={busy} onClick={refresh} aria-label="운영 상태 새로고침" className="gap-1.5"><RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />새로고침</Button>}
     />
-    <div className="flex shrink-0 flex-wrap gap-x-5 gap-y-1 border-b px-3 py-2 text-xs" aria-label="운영 집계">
+    <div className="flex shrink-0 flex-wrap gap-x-5 gap-y-1 bg-muted/30 px-3 py-2 text-xs" aria-label="운영 집계">
       {model.summaries.map(item => <span key={item.id} className="text-muted-foreground">{item.label} <strong className="font-medium tabular-nums text-foreground" data-operations-summary={item.id}>{item.value === null ? (snapshots[item.id as OperationsSourceId] ? '확인 불가' : '조회 중') : `${number.format(item.value)}건`}</strong></span>)}
     </div>
-    <div className="admin-cms-toolbar shrink-0">
+    <div className="admin-cms-toolbar admin-toolbar shrink-0">
       <label className="relative min-w-[150px] flex-1"><Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /><input type="search" aria-label="운영 항목 검색" value={search} onChange={event => { setSearch(event.target.value); setSelectedId(null); }} maxLength={120} placeholder="운영 항목 검색" className="h-9 w-full rounded-md border bg-background pl-8 pr-2 text-sm" /></label>
       <select aria-label="운영 상태 필터" value={status} onChange={event => { setStatus(event.target.value as typeof status); setSelectedId(null); }} className="h-9 rounded-md border bg-background px-2 text-xs"><option value="all">전체 상태</option><option value="attention">확인 필요 ({model.attentionCount})</option><option value="failure">실패 확인</option><option value="waiting">검수 대기</option><option value="running">진행 중</option><option value="idle">대기 없음</option></select>
       <select aria-label="운영 목록 정렬" value={sort} onChange={event => setSort(event.target.value as typeof sort)} className="h-9 rounded-md border bg-background px-2 text-xs"><option value="priority">우선순위순</option><option value="name">항목 이름순</option></select>
@@ -104,7 +104,7 @@ export function AdminOperationsPanel() {
             <td><span className={`inline-flex rounded border px-1.5 py-0.5 text-[11px] ${stateClass(row)}`}>{stateLabel(row)}</span></td>
           </tr>)}
         </tbody></table>
-        {!rows.length ? <div role="status" className="flex min-h-40 flex-col items-center justify-center gap-3 p-4 text-sm text-muted-foreground"><p>조건에 맞는 운영 항목이 없습니다.</p><Button size="sm" variant="outline" onClick={() => { setSearch(''); setStatus('all'); }}>필터 초기화</Button></div> : null}
+        {!rows.length ? <div role="status" className="admin-empty-state m-3 !min-h-0 !flex-row !items-center !justify-between gap-3 p-3 !text-left text-sm text-muted-foreground"><p>조건에 맞는 운영 항목이 없습니다.</p><Button size="sm" variant="outline" onClick={() => { setSearch(''); setStatus('all'); }}>필터 초기화</Button></div> : null}
       </div>
       {inlineInspector ? inspector : null}
     </div>

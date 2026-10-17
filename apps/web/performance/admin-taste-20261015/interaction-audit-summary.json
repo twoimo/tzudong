@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "kind": "admin-taste-read-only-interaction-audit-summary",
+  "status": "passed",
+  "scope": {
+    "origin": "http://127.0.0.1:18822",
+    "syntheticFixture": true,
+    "productionEvidence": false,
+    "taskSpeedEvidence": false,
+    "mutationEvidence": false
+  },
+  "adapter": {
+    "path": "performance/admin-taste-20261015/taste-fixture.mjs",
+    "runtime": "Bun 1.4.0",
+    "validation": "passed",
+    "validatedContracts": {
+      "knowledgeKinds": 5,
+      "pipelineJobs": 1,
+      "pipelineEvents": 17,
+      "storyboardWorkers": 1,
+      "storyboardModels": 3,
+      "states": [
+        "success",
+        "error",
+        "held"
+      ]
+    },
+    "runtimeBoundary": "Node 24 import is not validated because an extensionless normalize-evaluation-record transitively fails there. Root's separate Node 24 basic-view audit is not combined with this Bun validation."
+  },
+  "bestRun": {
+    "report": "performance/admin-taste-20261015/interaction-audit-run3-partial/report.json",
+    "passedCases": 22,
+    "failedCases": 3,
+    "screenshots": 22,
+    "runtimePageErrors": 0,
+    "network": {
+      "permittedRequests": 225,
+      "blockedExternalRequests": 0,
+      "blockedExternalWebSockets": 0,
+      "blockedNonReadMethodRequests": 0,
+      "sentNonReadMethodRequests": 0,
+      "syntheticPreflightResponses": 0,
+      "loopbackWebSocketsObserved": 3
+    },
+    "passedCoverage": [
+      "15 desktop sidebar destinations",
+      "desktop collapsed rail labels and focus",
+      "mobile navigation open and select",
+      "pipeline keyboard selection and detail",
+      "knowledge graph kind filter, keyboard selection, and detail",
+      "users read-only filter and inspector",
+      "knowledge graph explicit error state",
+      "pipeline explicit error state"
+    ]
+  },
+  "focusedGapCompletion": {
+    "report": "performance/admin-taste-20261015/interaction-gap-audit/report.json",
+    "passedCases": 4,
+    "failedCases": 0,
+    "screenshots": 3,
+    "runtimePageErrors": 0,
+    "allRequestedInteractionCoverage": true,
+    "network": {
+      "blockedExternalRequests": 0,
+      "blockedExternalWebSockets": 0,
+      "blockedNonReadMethodRequests": 2,
+      "blockedNonReadMethodRequestCounts": {
+        "POST /api/admin/profile-summaries": 2
+      },
+      "sentNonReadMethodRequests": 0,
+      "syntheticSessionGets": 2,
+      "syntheticReadRpcFulfillments": {
+        "POST /rest/v1/rpc/get_current_privacy_eligibility": 5,
+        "POST /rest/v1/rpc/read_public_profile_summaries": 5
+      }
+    }
+  },
+  "resolvedCoverage": [
+    {
+      "case": "submissions-read-only-filter-inspector",
+      "selector": "[data-admin-submission-row]:visible",
+      "visibleRowsAfterFilter": 1,
+      "inspectorOpened": true
+    },
+    {
+      "case": "reviews-read-only-filter-inspector",
+      "selector": "[data-admin-review-row]:visible",
+      "visibleRowsAfterFilter": 3,
+      "inspectorOpened": true
+    },
+    {
+      "case": "storyboard-explicit-held-state",
+      "visibleHeldNotices": 1,
+      "createDisabled": true
+    },
+    {
+      "case": "synthetic-auth-loaded",
+      "accountLabelPublished": true,
+      "adminRoleReadObserved": true
+    }
+  ],
+  "evidenceBoundary": "The 22-case broad run and the four-case focused completion are separate runs. This proves local synthetic fixture behavior only, with no production or task-speed claim.",
+  "preservedRuns": [
+    "performance/admin-taste-20261015/interaction-audit-partial-prestable",
+    "performance/admin-taste-20261015/interaction-audit-run1-partial",
+    "performance/admin-taste-20261015/interaction-audit-run2-partial",
+    "performance/admin-taste-20261015/interaction-audit-run3-partial",
+    "performance/admin-taste-20261015/interaction-audit-run4-partial",
+    "performance/admin-taste-20261015/interaction-gap-audit-run1-partial"
+  ]
+}

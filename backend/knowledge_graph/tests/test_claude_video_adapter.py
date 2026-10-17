@@ -206,7 +206,7 @@ class PinnedAdapterTests(unittest.TestCase):
             prompt,65536)
         self.assertEqual(adapter.digest(predecessor),"121a7580dde9db30051ec8c05c63f843a478eb59ec9e6900e39f27bd11c8d331")
         self.assertEqual((len(adapter.canonical(adapter.wire_schema())),adapter.digest(adapter.wire_schema())),
-                         (365,"e3f27356cdb188197c709fb607446f606fc250f60ef84bd7bd89062c2e71c360"))
+                         (3600,"73b3aed03cc12cd373ee91d0134f73c61b5ac26b00e6efdc528355eac9630343"))
         self.assertEqual(payload["response_format"]["schema"],adapter.wire_schema())
         self.assertEqual(predecessor["response_format"]["schema"],adapter.schema("-D43ezc57z8",0,835))
         changed=copy.deepcopy(predecessor);changed["response_format"]["schema"]=adapter.wire_schema()
@@ -216,6 +216,55 @@ class PinnedAdapterTests(unittest.TestCase):
         expected=adapter.request_payload(engine,"gemini-3.8-flash","ABCDEFGHIJK",900,1765.25,self.kwargs['prompt'],100)
         self.assertEqual(adapter.canonical(sent),adapter.canonical(expected))
         self.assertEqual(self.observations[-1]['requestSha256'],adapter.digest(expected))
+
+    def test_wire_schema_rejects_diagnosed_scalar_nested_items_offline(self):
+        def accepts(schema, value):
+            expected = schema.get("type")
+            typed = ((expected == "object" and isinstance(value, dict))
+                     or (expected == "array" and isinstance(value, list))
+                     or (expected == "string" and isinstance(value, str))
+                     or (expected == "integer" and type(value) is int)
+                     or (expected == "number" and type(value) in (int, float) and type(value) is not bool)
+                     or (expected == "boolean" and type(value) is bool))
+            if not typed:
+                return False
+            if "enum" in schema and value not in schema["enum"]:
+                return False
+            if expected == "object":
+                properties = schema.get("properties", {})
+                if any(key not in value for key in schema.get("required", [])):
+                    return False
+                if schema.get("additionalProperties") is False and any(key not in properties for key in value):
+                    return False
+                return all(accepts(properties[key], item) for key, item in value.items() if key in properties)
+            if expected == "array":
+                return "items" not in schema or all(accepts(schema["items"], item) for item in value)
+            return True
+
+        fact = {"text": "fixture", "kind": "spoken", "evidence": ["00:01"],
+                "confidence": .8, "uncertainty": []}
+        diagnosed = {"schemaVersion": 1, "videoId": "ABCDEFGHIJK", "coverage": {},
+                     "summary": [fact], "restaurants": [{"name": "fixture", "evidence": ["00:01"],
+                         "confidence": .8, "uncertainty": [], "menus": ["fixture"], "claims": ["fixture"]}],
+                     "claims": [fact], "uncertainty": []}
+        old_properties = {"schemaVersion": {"type": "integer"}, "videoId": {"type": "string"},
+                          "coverage": {"type": "object"}, "summary": {"type": "array"},
+                          "restaurants": {"type": "array"}, "claims": {"type": "array"},
+                          "uncertainty": {"type": "array"}}
+        old_wire = {"type": "object", "properties": old_properties, "required": list(old_properties),
+                    "additionalProperties": False}
+        self.assertTrue(accepts(old_wire, diagnosed))
+        self.assertFalse(accepts(adapter.wire_schema(), diagnosed))
+
+        evidence = {"startSeconds": 1, "endSeconds": 2, "modality": "audio"}
+        valid_fact = {**fact, "evidence": [evidence]}
+        valid = {**diagnosed,
+                 "coverage": {"startSeconds": 0, "endSeconds": 30, "complete": True, "limitations": []},
+                 "summary": [valid_fact], "restaurants": [], "claims": [valid_fact]}
+        self.assertTrue(accepts(adapter.wire_schema(), valid))
+        bad_enum = copy.deepcopy(valid)
+        bad_enum["claims"][0]["kind"] = "other"
+        self.assertFalse(accepts(adapter.wire_schema(), bad_enum))
 
     def test_original_id_readback_is_only_a_get_and_checks_request_binding(self):
         engine = adapter.load_engine(analysis.DEFAULT_CHECKOUT)

@@ -1,4 +1,4 @@
-/** Official Gemini API IDs verified against Google documentation on 2026-10-03. */
+/** Official Gemini API IDs verified against Google documentation on 2026-10-13. */
 export const STORYBOARD_GEMINI_TEXT_MODEL = 'gemini-3.8-flash' as const;
 export const STORYBOARD_GEMINI_IMAGE_MODELS = [
   { id: 'gemini-3.1-flash-image', label: 'Nano Banana 2' },
@@ -14,6 +14,7 @@ const STORYBOARD_GEMINI_DECLARED_MODEL_SPECS = [
 
 export type StoryboardGeminiWorkerModel = {
   id: string;
+  /** Legacy catalog ownership remains decodable; the policy check admits only gemini-api. */
   owned_by?: 'gemini-api' | 'mlx-serve';
   capabilities: string[];
   loaded: boolean;

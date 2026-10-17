@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "phase": "final product source before verification",
+  "createdAt": "2026-10-15T13:54:08.369807+00:00",
+  "head": "5e34c44d58f55b52bb057c42cb6cd341d82ad701",
+  "files": {
+    "apps/web/app/api/admin/ocr-receipts/process/route.ts": {
+      "bytes": 3877,
+      "sha256": "c220d563d205b774096ef734224fa38633304aca1c5026e32e174f34bda18655"
+    },
+    "apps/web/app/api/admin/ocr-receipts/rerun/route.ts": {
+      "bytes": 11549,
+      "sha256": "d50607b6f18934518499e0dd7628f15cf25fecc5a1c29e2e968ca64ec0358e8e"
+    },
+    "apps/web/app/api/admin/ocr-receipts/reset-all/route.ts": {
+      "bytes": 13002,
+      "sha256": "f781a16ee0c9ecef15ed2970b8c638a82f1d569df157b61a6cbc5ef7f14fd8ba"
+    },
+    "apps/web/app/api/admin/ocr-receipts/route.ts": {
+      "bytes": 8318,
+      "sha256": "cdf5b18997cf13db44e8f30f58b580a0fcd6518bc909d5e8fdd9b2e442f7efa8"
+    },
+    "apps/web/app/api/ocr/extract/route.ts": {
+      "bytes": 15562,
+      "sha256": "6da24bf95db89f4a63860294d1e9fddb3df905b4b4e2a5e63f11eae0da0f0fbc"
+    },
+    "apps/web/app/api/ocr/extract/stream/route.ts": {
+      "bytes": 15731,
+      "sha256": "5bfb196fb7473a2c65930621aaf2caccdfd422495bac056df4d16769bb929bae"
+    },
+    "apps/web/app/api/ocr/results/status/route.ts": {
+      "bytes": 5521,
+      "sha256": "fc36af9ccfbbfc4dbc9925965950d77376c65d97428c1ad2bbc10290211952c3"
+    },
+    "apps/web/app/insights/insights-client.tsx": {
+      "bytes": 65199,
+      "sha256": "2800276413948ef13b5fc6f6a31ab153280d7921155774f43e6bcac38a75ba73"
+    },
+    "apps/web/bun.lock": {
+      "bytes": 248083,
+      "sha256": "7a5d246b5d7dd25f57ebce510e197e3da3da3790e7c9906b3b1151278633b5f9"
+    },
+    "apps/web/components/admin/AdminConsoleOverview.tsx": {
+      "bytes": 396440,
+      "sha256": "35bfe60a0284d51ad78bb0c1ad8b1c86c86dbe13e0b1be51ff102d244965bc9c"
+    },
+    "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx": {
+      "bytes": 15829,
+      "sha256": "a6679a8ada20ca49482710824fdcaab4051905fa39f910e8ba89c92cfe00167a"
+    },
+    "apps/web/components/admin/AdminOperationsPanel.tsx": {
+      "bytes": 12584,
+      "sha256": "6299e3f37ebc8435bcb2a3e359c3036f88491b5139cc90021ff642c3ddf1685d"
+    },
+    "apps/web/components/admin/AdminOverviewDashboard.tsx": {
+      "bytes": 65657,
+      "sha256": "7e0502daa392fa0a1281284c3eeec3f5c6eba1deba4ad558dfc4f4058cd0e262"
+    },
+    "apps/web/components/admin/AdminRestaurantModal.tsx": {
+      "bytes": 82777,
+      "sha256": "360d3c5a269f7d0553c0590422d4c907dc9832b7336a0558a810c4f7c1ae895c"
+    },
+    "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx": {
+      "bytes": 43793,
+      "sha256": "f38b0e73f41acac751445a05d1f0bc5a69e3304798b3b2ff1183412cf817e9a5"
+    },
+    "apps/web/components/admin/AdminReviewPanel.tsx": {
+      "bytes": 31429,
+      "sha256": "1bc8dd96730bd3c6f45ce82c90fae06dfdd7d02fc5ced28a4ead2ead583217fd"
+    },
+    "apps/web/components/admin/AdminSentryPanel.tsx": {
+      "bytes": 13138,
+      "sha256": "14fba17237f72d2a8d96849a3227e93809e73a9ffcd289f6a7f609b2ff659cef"
+    },
+    "apps/web/components/admin/AdminUsersPanel.tsx": {
+      "bytes": 48418,
+      "sha256": "776f4c78f5bca322c52735fc5c09dd6a842f200e786101312f8e29624ce5bc66"
+    },
+    "apps/web/components/admin/EvaluationDetailView.tsx": {
+      "bytes": 37765,
+      "sha256": "f9f339b69460cfd00b6a1f1de09ebcc8ec3a55099b7aa2188ba0696237c614da"
+    },
+    "apps/web/components/admin/EvaluationRowDetails.tsx": {
+      "bytes": 9962,
+      "sha256": "a9b59723bf9a7c3e9c6e67886c0db8da2f1a77dd4d964117e3fb155a11da8c25"
+    },
+    "apps/web/components/admin/EvaluationTableNew.tsx": {
+      "bytes": 73638,
+      "sha256": "420618ca7ab58ba3482e311499b6ee35855fb545fe469a92ff95ee7d1dedcc46"
+    },
+    "apps/web/components/admin/RestaurantManagementWorkspace.tsx": {
+      "bytes": 3180,
+      "sha256": "2eca55be8992a5bb17dbd1c2e4d10f590ff6dc1fe05ae3fddf8331e1a3c82b21"
+    },
+    "apps/web/components/admin/SubmissionDetailView.tsx": {
+      "bytes": 58725,
+      "sha256": "db7a1022ea5a3fb5109ff067b350ba5e72015ee800b89af94a7b00ce1b3483ed"
+    },
+    "apps/web/components/admin/SubmissionListView.tsx": {
+      "bytes": 133655,
+      "sha256": "2407103a7e8b3f54f288c33ede5b8b405539573958c25af4a7c4f1b0f7e46387"
+    },
+    "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx": {
+      "bytes": 22788,
+      "sha256": "98c76b13f011af921ecb9ef341156fc9ab68a191ab7cf3aaa4c9e170c4a916fa"
+    },
+    "apps/web/components/admin/pipeline/PipelineFlowDiagram.module.css": {
+      "bytes": 1643,
+      "sha256": "34c59d1d31d270f2e948db1010a1b535371d0715b2cc939908913b0d59df8f97"
+    },
+    "apps/web/components/admin/storyboard/AdminStoryboardGenerator.tsx": {
+      "bytes": 2483,
+      "sha256": "4ff212460b87e8628bd3142f7e721e95d5391bb18ac312fa7261c57f25fc7c93"
+    },
+    "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx": {
+      "bytes": 60484,
+      "sha256": "33187b79864b7e906f5a5fb5f8a9d1d3db4b819a6b2086afe345156a5cd4a93c"
+    },
+    "apps/web/components/admin/storyboard/StoryboardProjectLibrary.tsx": {
+      "bytes": 5700,
+      "sha256": "b5feb8de3af4e045ab53d52b5f2800a904730a1d82595485ae950850b4e907ef"
+    },
+    "apps/web/components/admin/system-status/AdminSystemStatusCenter.tsx": {
+      "bytes": 6014,
+      "sha256": "9b6cc910fe2f3c91492938e92616ae3d670ab2150e2d2aee143ed649e8464597"
+    },
+    "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx": {
+      "bytes": 306493,
+      "sha256": "3d98dbfadd5dd6ba6726eb01bee625b5fed4da11e10ae044ddf2fdbaad2e40a2"
+    },
+    "apps/web/lib/ocr/durable-result.ts": {
+      "bytes": 22074,
+      "sha256": "9ff047a50c2d633370751fa3d40038d016a7054d796db5920c68bc5f945ffb35"
+    },
+    "apps/web/lib/ocr/gemini.ts": {
+      "bytes": 8555,
+      "sha256": "b3cfef34848e63caf4b040d6c28941d19f2e5faa169d38f1fc6faf6f3b25406d"
+    },
+    "apps/web/lib/ocr/runtime-config.ts": {
+      "bytes": 4800,
+      "sha256": "d7050e234eeb28fdb5e635f2bdf3edf6adedbb129a0e9ccdbdf01268994beac1"
+    },
+    "apps/web/package-lock.json": {
+      "bytes": 503494,
+      "sha256": "3449c447593b6ca87b8c2a86ecb37b2dad46950532513b100c17648377cdf966"
+    },
+    "apps/web/package.json": {
+      "bytes": 7179,
+      "sha256": "1f19b1216c4f482f3feaa818866622b0308338bdbba15c952da1f1f36e13b4bb"
+    },
+    "apps/web/scripts/run-unit-tests.mjs": {
+      "bytes": 4685,
+      "sha256": "ffc76d4b2e082d7807f090d1b553822c3f4bc081b988ed6c069952d84252bbf8"
+    },
+    "apps/web/styles/admin-ui.css": {
+      "bytes": 17386,
+      "sha256": "0dbb37978d377f2b2e5b4c2c395940575d1ab9bea9fbe9cb6b7a6a6aeb8fd904"
+    },
+    "apps/web/tests-unit/admin-console-uiux-source.test.ts": {
+      "bytes": 316946,
+      "sha256": "df5d09c2babed8ec629f1f47560f4310fe5f075e16dfe90800d84e742106fba9"
+    },
+    "apps/web/tests-unit/admin-evaluation-status-filter-options.test.ts": {
+      "bytes": 14965,
+      "sha256": "dc155d98cd4fce390acba97a88a34e5edee71adcec01150c401d270f1c499db0"
+    },
+    "apps/web/tests-unit/admin-home-review-actions.test.ts": {
+      "bytes": 10283,
+      "sha256": "ab319497051e97188806733ea0381e60a3a53c7445b1760917d1860b11659ffd"
+    },
+    "apps/web/tests-unit/admin-mutation-request-security.test.ts": {
+      "bytes": 9431,
+      "sha256": "12ea7096f8e6e1b6de39b675c3775859ebdc864db46d925439fdbdae82f50da6"
+    },
+    "apps/web/tests-unit/admin-workflow-request-security.test.ts": {
+      "bytes": 6263,
+      "sha256": "6b9359d963663030b065d9eecaf6807771e6435fb1a8640f53ce7e159396bd16"
+    },
+    "apps/web/tests-unit/api-security-source.test.ts": {
+      "bytes": 29398,
+      "sha256": "5dddf93c5ffbdc0bf010134a373eb9a7bc341ea86e69d46c457bdffdd7c08714"
+    },
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": {
+      "bytes": 33151,
+      "sha256": "350b1ca55f197d922dbee3fa0b8ade7a6686ffb45fc71fbed1d0f45cc5906c03"
+    },
+    "apps/web/tests-unit/gemini-ocr.test.ts": {
+      "bytes": 13650,
+      "sha256": "ca24fcc6c305388bf1b7c779d8d7f0846d87f037f1e9fe926d27eb60d649e86f"
+    },
+    "apps/web/tests-unit/mobile-desktop-parity-source.test.ts": {
+      "bytes": 60430,
+      "sha256": "294780b91c0cea719035c706bf713f10b5cc093177f0251c02b2b260ea4b2198"
+    },
+    "apps/web/tests-unit/public-insights-treemap.test.ts": {
+      "bytes": 4487,
+      "sha256": "14c39e9cb001fce7d93a7d4ac3c672fb1975169a971a0fb2b21beee4f5d247ba"
+    },
+    "apps/web/tests-unit/storage-server-client.test.ts": {
+      "bytes": 4782,
+      "sha256": "ce3aeb28101b9b5079594411c84a4fe600c4f4d023f01b66e347d5bde4753fde"
+    },
+    "apps/web/tests-unit/zz-ocr-route-contract.test.ts": {
+      "bytes": 39731,
+      "sha256": "e656efed2da92e565f1057d4bb52c5800b7645a586eade03f56d7c94a913b3b9"
+    },
+    ".github/workflows/ocr-review-receipts.yml": {
+      "bytes": 2166,
+      "sha256": "1e6a68610884c01eaef78410d76b6ce444c116c8709a0dfb4ed467f078ef6514"
+    },
+    "apps/web/lib/ocr/admin-receipt-batch.ts": {
+      "bytes": 4019,
+      "sha256": "f2ba1392b39990839b01baeaea6358d9e80b9397aa01ea4ec42c2b077ecbfaa2"
+    },
+    "apps/web/lib/ocr/admin-receipt-processor.ts": {
+      "bytes": 28705,
+      "sha256": "7ff2b90ce8b105a6f3eee3610fd50c276537998659b8a07f19112bd768d48274"
+    },
+    "apps/web/lib/ocr/admin-receipt-reset.ts": {
+      "bytes": 3427,
+      "sha256": "8ddb5a38ecd70a05c956a993d6b2f508041edd0460037c9f92cbcb0824ff8ff7"
+    },
+    "apps/web/lib/ocr/workflow-dispatch.ts": {
+      "bytes": 2561,
+      "sha256": "019959cb9e87d642018d43f483c0bcb8872f4f95b03bc6d0469bf3cf1d66a852"
+    },
+    "apps/web/lib/ocr/workflow-policy.ts": {
+      "bytes": 1595,
+      "sha256": "a9ad1c2fe077218b77fd43ed055f35f4eb801d78350ef3dd00ff74424403f4fd"
+    },
+    "apps/web/scripts/run-admin-receipt-ocr-workflow.ts": {
+      "bytes": 3600,
+      "sha256": "4da7cfecd87ef24161cdd5e97a63c20931a1f717bcb9828a2811f8f36c08a09a"
+    },
+    "apps/web/tests-unit/admin-receipt-ocr-workflow.test.ts": {
+      "bytes": 16136,
+      "sha256": "59efd57eb7fff6e5c5d08b24cdb19317b5d8c3e14d6d72cbd769a8ed0bd6eaef"
+    }
+  },
+  "scope": "Changed/new product, workflow and test files; evidence/docs/generated skill direction excluded; not a full transitive source closure."
+}

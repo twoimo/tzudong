@@ -4,8 +4,8 @@
   "latestRunnerCorrectionEvidence": "../ci-followthrough-20261009/windows-npm-fix-receipt.json",
   "artifacts": {
     "README.md": {
-      "sha256": "9a7baea101887345735330c885486aa15210cf651119e93bf83e1236087245d4",
-      "bytes": 9860
+      "sha256": "93201943d30a9464a09163ea10e2b148ce4f3d2673446cfb3eb17a71e4021621",
+      "bytes": 10366
     },
     "archive/windows-npm-module-binding-original/artifact-map.json.original.txt": {
       "sha256": "9ca9711c9b8a057e6e3600c8fd658d75d6ed4298aa5274079e3369187b932128",
@@ -104,8 +104,8 @@
       "bytes": 440
     },
     "route-inventory.json": {
-      "sha256": "7c806a038b38810e925b6b87026450ee6ca3b92fb294da2b723cd7b3ad432c60",
-      "bytes": 4610
+      "sha256": "d035e3ee761d9a4544d2b58f760513052a49e0db7128d3ec2fc5cdeadd9d4127",
+      "bytes": 4969
     },
     "run-hydration.mjs": {
       "sha256": "80eb680e04318ca108c6bef510dc619d89b599084c372decf43117677a975546",
@@ -126,6 +126,15 @@
     "unit.log": {
       "sha256": "d0c5bea87346bf7a29c0ffc802ea4039ff35f520f5fbc5a6d2472dfcef41c5cf",
       "bytes": 3620
+    },
+    "archive/route-inventory-page-source-original.json": {
+      "sha256": "7c806a038b38810e925b6b87026450ee6ca3b92fb294da2b723cd7b3ad432c60",
+      "bytes": 4610
     }
+  },
+  "routeInventorySourceBindingCorrection": {
+    "scope": "source-binding-only; no new browser, authentication, database, mutation, or production evidence",
+    "historicalOriginal": "archive/route-inventory-page-source-original.json",
+    "authoritativeCurrentCensus": "../admin-route-consistency-20261012/route-census.json"
   }
 }

@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "kind": "durable-receipt-ocr-pg17.6-verification",
+  "status": "passed",
+  "recordedAtUTC": "2026-10-13T10:12:45.633Z",
+  "sourceHead": "683f8975069ebd6d366112e6a1816959e751eb19",
+  "sourceHashes": {
+    "backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql": "27d357c1232a67d6376fe9893a0f2259119459dc35b6c5343b3b6dd7d3b94eb5",
+    "apps/web/lib/ocr/durable-result.ts": "f4171bef775c2ea2bb999fadb534110304999bf366ffb0033c515afacb28eda2",
+    "apps/web/app/api/ocr/extract/route.ts": "93fc6ebdb6a69f246e9da101b4117af89d5e6aa17a702cb9a454113b49522978",
+    "apps/web/app/api/ocr/extract/stream/route.ts": "54bb4782fa03751824f5336a7c7bca868adf3a0a1858e5b5a0d630b4658787c7",
+    "apps/web/app/api/ocr/reviews/save/route.ts": "b091d3743d5b4fc92ca64e5357e39f23745ce5900771b03b8f6a7713f57ee844",
+    "apps/web/app/api/admin/ocr-receipts/process/route.ts": "e9fcfaaf7b8ba87ae4281e033ed90bd53e8d69cfd7771711c5247cef97717436",
+    "apps/web/components/reviews/ReviewModal.tsx": "1c5a4f2077fe9d8937517032a39f0778caddf996b7edb17508c034c7494dfd1d",
+    "apps/web/lib/reviews/review-save-operation.ts": "1d9a984017091c63d51510ad9b6cf0b403dfad1dbe1b16229606eb25247cb0ba",
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": "5dbdf3c8ad38dd8b0820c388ba716a08283b5e08fc2261891beed5233d782f72",
+    "apps/web/tests-unit/review-save-submit.test.ts": "0a8d1dcb09ec4b49ec1eabb62f9b1ef41fa239a4c127ce298ce608210912e3d4",
+    "apps/web/tests-unit/zz-ocr-route-contract.test.ts": "e3bea3851a70a0e5bff7d289b8fe25af68fe6efc37859931c2106caf384ef18c",
+    "apps/web/performance/review-db-rehearsal-20261012/verify-review-media-sql-rehearsal.mjs": "f7321f607a5bf3a24ba099d51abc67254db52fcc385945692426d1b2dfa6e431"
+  },
+  "runtime": {
+    "dockerContext": "colima-tzudong-catalog-20261007",
+    "sourceContainer": "tzudong-ranking-clone-20261008",
+    "sourceImage": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+    "sourceImageId": "sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+    "sourceEngine": "17.6",
+    "targetEngine": "17.6"
+  },
+  "fixture": {
+    "sourceSnapshotSha256Before": "7564993d5d055629885d715b9bdf4a469f9380fdc78122a6936db31f33b3e6ae",
+    "sourceSnapshotSha256After": "7564993d5d055629885d715b9bdf4a469f9380fdc78122a6936db31f33b3e6ae",
+    "dumpSha256": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+    "sourceLogicalCounts": {
+      "authUsers": 0,
+      "restaurants": 0,
+      "reviews": 0,
+      "migrations": 0
+    },
+    "sourceReadOnly": true
+  },
+  "measuredChecks": {
+    "sourceUnitTests": {
+      "files": 7,
+      "tests": 92,
+      "assertions": 895,
+      "failures": 0
+    },
+    "sourceTypechecks": {
+      "native": "passed",
+      "compatibility": "passed"
+    },
+    "sourceLint": {
+      "targetedFiles": 7,
+      "status": "passed"
+    },
+    "sql": {
+      "migrationApplied": true,
+      "migrationSecurity": {
+        "rls": true,
+        "force_rls": true,
+        "policy_count": 0,
+        "table_exists": true,
+        "service_claim_execute": true,
+        "authenticated_table_select": false,
+        "authenticated_claim_execute": false
+      },
+      "payloadValidator": {
+        "validAllowed": true,
+        "rawOrUnknownFieldRejected": true,
+        "nonStringModelRejected": true
+      },
+      "claimRace": {
+        "connections": 2,
+        "outcomes": [
+          "claimed",
+          "processing"
+        ],
+        "resultRows": 1
+      },
+      "reuse": {
+        "cacheStatus": "cached",
+        "sameResultRef": true,
+        "noProviderCallRequired": true
+      },
+      "binding": {
+        "crossOwnerIndependent": true,
+        "imageHashIndependent": true,
+        "promptVersionIndependent": true,
+        "completionVersionMismatchRejected": {
+          "rejected": true,
+          "sqlstate": "42501"
+        }
+      },
+      "uncertainty": {
+        "firstAttemptStatus": "indeterminate",
+        "repeatStatus": "indeterminate",
+        "automaticRetryAllowed": false
+      },
+      "refreshFailure": {
+        "indeterminateRestoredPriorResult": true,
+        "preProviderReleaseRestoredPriorResult": true
+      },
+      "reviewSaveRace": {
+        "count": 2,
+        "hashes": 1,
+        "processed": 2,
+        "duplicates": 1,
+        "server_refs": 2,
+        "duplicate_links": 1
+      },
+      "tampering": {
+        "crossOwnerResultReference": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "protectedCorrectionField": {
+          "rejected": true,
+          "sqlstate": "22023"
+        }
+      },
+      "roleAccess": {
+        "authenticatedFunctionDenied": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "authenticatedTableDenied": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "serviceRoleClaimAndRelease": true
+      }
+    }
+  },
+  "measuredCallCounts": {
+    "sqlRpcAttempts": {
+      "claim": 14,
+      "complete": 3,
+      "markIndeterminate": 2,
+      "release": 2,
+      "createReview": 4
+    },
+    "concurrentSqlConnections": 4,
+    "providerCalls": 0,
+    "paidProviderCalls": 0,
+    "hostedDatabaseCalls": 0,
+    "hostedStorageCalls": 0
+  },
+  "cleanup": {
+    "ownedTargetContainerRemoved": true,
+    "sourceContainerMutationObserved": false
+  },
+  "actions": {
+    "hostedDatabaseWrites": 0,
+    "hostedStorageWrites": 0,
+    "providerCalls": 0,
+    "paidCalls": 0,
+    "deployments": 0,
+    "commits": 0,
+    "pushes": 0
+  },
+  "separateLocalCompatibilityCheck": {
+    "engine": "17.11",
+    "status": "passed",
+    "retainedAsSeparateEnvironment": true
+  },
+  "expiryBehavior": {
+    "automaticExpiry": false,
+    "accountDeletion": "cascade",
+    "uncertainResult": "blocked_until_explicit_force_refresh"
+  }
+}

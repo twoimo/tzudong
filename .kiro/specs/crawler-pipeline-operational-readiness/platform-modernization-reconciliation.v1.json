@@ -3,7 +3,7 @@
   "kind": "platform_modernization_reconciliation",
   "baseCommit": "3f4ca55742aa33869b776291e0d035a16024eef1",
   "sourceCommit": "880bf06d375dbc6ebe8dcf108419c3f455048a97",
-  "candidateContentSha256": "78b368cdf2ec506cf8ca4cc7735d35d7023c455e5383da3684ea45c5e4a40649",
+  "candidateContentSha256": "85c62b1cbc706af0c5dbd1beef6e84bac9cd820b1f7f3c3e1d16ab05023445db",
   "candidateWorkingTreeStateIncluded": true,
   "sourceDeltaEntryCount": 207,
   "dispositionCounts": {
@@ -313,7 +313,7 @@
       "candidatePresentAtInspectionPath": true,
       "baseGitBlobSha1": null,
       "sourceGitBlobSha1": "ac09ecd1a0955549a68f08b1c1b0ab9c245824d9",
-      "candidateGitBlobSha1": "c7f9e9959b9207a50a0e8a9f65d01c8dbe5f055e",
+      "candidateGitBlobSha1": "e7a7329b773354e7faa6a6b9a101237023296311",
       "contentState": "candidate_transformed",
       "disposition": "candidate_transformed_present",
       "rationale": "The candidate differs from both Git endpoints because current-layout, security, or compatibility hardening has been applied."
@@ -579,7 +579,7 @@
       "candidatePresentAtInspectionPath": true,
       "baseGitBlobSha1": null,
       "sourceGitBlobSha1": "9055a7380a4033b8337f574bdd44c331d78b7ebd",
-      "candidateGitBlobSha1": "bde3d1324ccf6dd749e78a6af0129039061dcc4b",
+      "candidateGitBlobSha1": "637a01d238a33faadd155f254c3c18aca08d0fc0",
       "contentState": "candidate_transformed",
       "disposition": "candidate_transformed_present",
       "rationale": "The candidate differs from both Git endpoints because current-layout, security, or compatibility hardening has been applied."
@@ -1335,7 +1335,7 @@
       "candidatePresentAtInspectionPath": true,
       "baseGitBlobSha1": null,
       "sourceGitBlobSha1": "e2cd20c357e627ab90adf2f54a6bc958757bb927",
-      "candidateGitBlobSha1": "281be5ecc5a317671f1272b01577d8b6f0ffe209",
+      "candidateGitBlobSha1": "90c1313d98fdf58cf6f7bcb895f1c0d76920f8eb",
       "contentState": "candidate_transformed",
       "disposition": "candidate_transformed_present",
       "rationale": "The candidate differs from both Git endpoints because current-layout, security, or compatibility hardening has been applied."

@@ -31,7 +31,7 @@ function harness(options: { busy?: boolean; isAdmin?: boolean; error?: boolean; 
     Button: ({ children, ...props }: { children?: React.ReactNode }) => React.createElement('button', props, children), Input: wrapper, Textarea: wrapper, Card: wrapper, Badge: wrapper,
     Dialog: ({ open, children }: { open: boolean; children?: React.ReactNode }) => open ? React.createElement('div', null, children) : null,
     DialogContent: wrapper, DialogFooter: wrapper, DialogHeader: wrapper, DialogTitle: wrapper, DialogDescription: wrapper, Label: wrapper, Avatar: wrapper, AvatarFallback: wrapper,
-    CheckCircle2: icon, XCircle: icon, Clock: icon, Trash2: icon, MapPin: icon, Calendar: icon, Loader2: icon, ChevronRight: icon, ChevronLeft: icon,
+    CheckCircle2: icon, XCircle: icon, Clock: icon, Trash2: icon, MapPin: icon, Calendar: icon, Loader2: icon, ChevronRight: icon, ChevronLeft: icon, LockKeyhole: icon, Camera: icon,
     ADMIN_MODAL_ACTION: '', ADMIN_MODAL_CONTENT_SM_FLEX: '', ADMIN_MODAL_FOOTER_DIVIDER: '',
   };
   const code = new Bun.Transpiler({ loader: 'tsx', tsconfig: { compilerOptions: { jsx: 'react' } } }).transformSync(`const {${Object.keys(deps).join(',')}}=deps;${executable};return AdminReviewPanel;`);

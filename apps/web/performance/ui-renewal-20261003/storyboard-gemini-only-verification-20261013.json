@@ -1,0 +1,555 @@
+{
+  "schema": "tzudong-storyboard-gemini-verification-v1",
+  "recordedAt": "2026-10-13T10:18:07.612685Z",
+  "evidenceClass": "local source, mocked runtime, synthetic loopback UI and owned PostgreSQL fixture only",
+  "sourceFreeze": {
+    "baselineCommit": "683f8975069ebd6d366112e6a1816959e751eb19",
+    "branch": "codex/feature-completion-20261013",
+    "independentReview": "/root/storyboard_independent_review",
+    "implementationChangedDuringReceipt": false,
+    "staged": false,
+    "committed": false,
+    "pushed": false,
+    "deployed": false
+  },
+  "executionPolicy": {
+    "workflow": "storyboard-gemini-v1",
+    "archiveWorkflow": "storyboard-mlx-v1",
+    "provider": "gemini-api",
+    "executableModels": {
+      "text": [
+        "gemini-3.8-flash"
+      ],
+      "image": [
+        "gemini-3.1-flash-image",
+        "gemini-3-pro-image"
+      ]
+    },
+    "textThinkingLevel": "MEDIUM",
+    "held": "All other provider/model identifiers and storyboard-mlx-v1 mutations/claims are rejected.",
+    "liveAccountAvailabilityVerified": false
+  },
+  "runtime": {
+    "bun": "1.4.0",
+    "node": "v26.11.1",
+    "python": "3.14.8",
+    "psycopg2": "2.9.11",
+    "postgresFixture": "15.8",
+    "fixtureTransport": "task-owned Unix socket under /Users/twoimo/.codex/runtime-cache; no hosted database"
+  },
+  "sourceBinding": {
+    "algorithm": "sha256(path NUL file-sha LF), followed by D NUL deleted-path LF in listed order",
+    "aggregateSha256": "d66ff6201790d8eab4c8dab48b29fa5efbb83f0dc409d0a9e3a214c445eee55f",
+    "files": [
+      {
+        "path": "apps/web/app/api/admin/storyboard/production/[id]/images/route.ts",
+        "sha256": "f4e430ad1d0a5eff6c19ed13cfffba1d561710d701b7b68a0ccec1af6df2d465",
+        "bytes": 191
+      },
+      {
+        "path": "apps/web/app/api/admin/storyboard/production/route.ts",
+        "sha256": "b847d1e6e849d7dc2b1c380fe72ed426fcac1b8471be4f938d6909683bcd0803",
+        "bytes": 261
+      },
+      {
+        "path": "apps/web/app/api/storyboard-worker/images/route.ts",
+        "sha256": "b3f71403e3d1f87fdaf52f0cd064e656c544ea36204422b8ab4b9e466b81db2b",
+        "bytes": 216
+      },
+      {
+        "path": "apps/web/app/api/storyboard-worker/route.ts",
+        "sha256": "a009f6a702efc42dc3731f2b76cc6dfce69761313e9d947ada4c9b9b86eba2c5",
+        "bytes": 211
+      },
+      {
+        "path": "apps/web/components/admin/storyboard/AdminStoryboardGenerator.tsx",
+        "sha256": "cb8dcc7bcd01d62d293793fd13461817063ea68b61acf040d5e452cf7c15a752",
+        "bytes": 2503
+      },
+      {
+        "path": "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+        "sha256": "6b52acff054d9a079f5e2d0198d885dee13bbd9ecc906e9e8b261d4b5a396a4d",
+        "bytes": 59473
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/gemini-client.ts",
+        "sha256": "6871648fe277076766d00c30ad1b063a60825fe4e59110146ee7037e831d3a30",
+        "bytes": 9146
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/gemini-models.ts",
+        "sha256": "ab400eb533abb4c4a65d2a1c31329fbe744c4569e3a7187a8d2e01a4c3816dca",
+        "bytes": 2192
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/outbound-worker-contract.ts",
+        "sha256": "e54bb5c1a26bdba03c8c3f485b784b6a7a313ba5602a82bc8a01cdcbcfe901cf",
+        "bytes": 1644
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/outbound-worker.ts",
+        "sha256": "411f338117f30678295ae24d96e97dbdd6e703fc5290345b86ea80c7c045f739",
+        "bytes": 21327
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-api.ts",
+        "sha256": "a3f6bd9fe82ce1e072052cbf6d75feef34c56afa2ab2f666d362d81636203d9f",
+        "bytes": 10960
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-assets.ts",
+        "sha256": "445f1a9395ba32772e216e8e7cb3e6a814d60fa6d795ba733959329a14913814",
+        "bytes": 4234
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-contract.ts",
+        "sha256": "1e4a0676ccb4672021b2c1f1ddc7eb9060eda70efcf3a3c1f7760a3e538a0132",
+        "bytes": 14271
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-store.ts",
+        "sha256": "f2f7c56bbf0596853a9acf2dd9c9518a2aa75631f0b6063355c9e3e71adc3cdd",
+        "bytes": 27324
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-worker-auth.ts",
+        "sha256": "f3993b0cb2d2a2cbf41c9d2d005dc26ed48cc5c2751fa9a5c908babded3e35a2",
+        "bytes": 4990
+      },
+      {
+        "path": "apps/web/package.json",
+        "sha256": "769833dbc4cf52e21f70c7b9d826f34a9f5fd09c5be87574dbb7485366c75485",
+        "bytes": 7151
+      },
+      {
+        "path": "apps/web/bun.lock",
+        "sha256": "f8d69a346d03c28298bfcf715dcf94bc2f6854c1493286ddb7ca3e80a5fee22d",
+        "bytes": 247901
+      },
+      {
+        "path": "apps/web/scripts/preview-design-fixtures.mjs",
+        "sha256": "580365d4e7c0a7a6469544fb8ce99debc93367b10501aafbe5d5975beaef23f4",
+        "bytes": 24101
+      },
+      {
+        "path": "apps/web/scripts/run-unit-tests.mjs",
+        "sha256": "563fca587ac4abce9517844e989d91d9a5d87d9f6300cc648c2db4e218e238a3",
+        "bytes": 4446
+      },
+      {
+        "path": "apps/web/scripts/storyboard-gemini-worker.ts",
+        "sha256": "b937d14c2dc76e41f0521596a21a5ac3fcf50eb726e085f22666b516eeb6e38a",
+        "bytes": 2484
+      },
+      {
+        "path": "apps/web/scripts/verify-storyboard-gemini-live.ts",
+        "sha256": "da08d8b1061a86aa1f1f7a94e10cdf6f6ff7ab89f19abc18ae15e3a5755dfe4d",
+        "bytes": 4596
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-gemini-client.test.ts",
+        "sha256": "b5708bb1d73bdbdc68895f782f80cccb25edadeb27204b76bb75c0ecb4d3d4e9",
+        "bytes": 10082
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-gemini-execution-contract.test.ts",
+        "sha256": "fe48c8c487c94579b5e9324baba462e44bef3e44b57d7188bb10d7716e909e9d",
+        "bytes": 8704
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-outbound-worker.test.ts",
+        "sha256": "bd2ac7956463c2809b5e6273c2400fe7b5c79818a8774a6655e3cf33e54e8bf6",
+        "bytes": 32926
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-production-api.test.ts",
+        "sha256": "f416858ac9b51409041181386064bbf024126de869f0f38c77eec2645ad3a2e0",
+        "bytes": 31933
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-provider-allowlist-parity.test.ts",
+        "sha256": "355d956dc8d32f3ce17e91dcf450978c52bacbcc63636f484265d9791968ca8f",
+        "bytes": 1583
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-resource-invariants.test.ts",
+        "sha256": "22adb6c7ddd8f85203a63f2a75a3f80566e1178ccee5b788c9c13d128309b85c",
+        "bytes": 3272
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-retired-cli.test.ts",
+        "sha256": "9b5474655324cde569e04e6c5b86dd584bf9fe2565dc58efdb8f6281a2020585",
+        "bytes": 1296
+      },
+      {
+        "path": "apps/web/tests/local-storyboard-workspace-ui.spec.ts",
+        "sha256": "5067ec8bd5a5ef4fe42c3b4088ed5f9a89ba502512e1e54a233d130113f07f6f",
+        "bytes": 32737
+      },
+      {
+        "path": "apps/web/tests/fixtures/local-storyboard-ui/build.mjs",
+        "sha256": "bf47acce685f551b7832f5486b4656410eabbeab5096987224377c5df16455ee",
+        "bytes": 1128
+      },
+      {
+        "path": "apps/web/tests/fixtures/local-storyboard-ui/entry.ts",
+        "sha256": "ec49df6da2d6a85d403c1db3a258e020b23cf50146f80eacb540cc15d95b587e",
+        "bytes": 398
+      },
+      {
+        "path": "apps/web/tests/fixtures/local-storyboard-ui/input.css",
+        "sha256": "651e215d9dc7189c8c4d296ce9f4bfd5bd4cba1c1978e6c2e9f1c3ef84a18906",
+        "bytes": 76
+      },
+      {
+        "path": "apps/web/tests/fixtures/local-storyboard-ui/next-image-shim.ts",
+        "sha256": "bf9876adfa7e9504d0fab86626113754c62c4f72325add7b8faf74e7dda4d14e",
+        "bytes": 233
+      },
+      {
+        "path": "backend/bin/verify_storyboard_gemini_migration.py",
+        "sha256": "5230360d6c1512e7fe864dfbb879fa1ba8312d28ed59a332e176afd65d45d155",
+        "bytes": 27625
+      },
+      {
+        "path": "backend/supabase/migrations/20261013093518_storyboard_gemini_execution_v1.sql",
+        "sha256": "0443877742120acd60aa6a7053e56fc12c0f3e3d6e6cc985e0ed891fe03c0688",
+        "bytes": 8081
+      }
+    ],
+    "deletedPaths": [
+      "apps/web/lib/admin/storyboard/mlx-client.ts",
+      "apps/web/lib/admin/storyboard/mlx-transport.ts",
+      "apps/web/scripts/codex-imagegen-storyboard-provider.py",
+      "apps/web/scripts/storyboard-eight-real-provider-smoke.ts",
+      "apps/web/scripts/storyboard-gemini-only.mjs",
+      "apps/web/scripts/storyboard-local-bridge.ts",
+      "apps/web/scripts/storyboard-mlx-live.ts",
+      "apps/web/scripts/storyboard-mlx-worker.ts",
+      "apps/web/scripts/storyboard-rag-ollama-pull.mjs",
+      "apps/web/tests-unit/admin-storyboard-local-bridge.test.ts",
+      "apps/web/tests-unit/storyboard-local-egress-child.ts",
+      "apps/web/tests-unit/storyboard-local-egress.test.ts",
+      "apps/web/tests-unit/storyboard-mlx-provider.test.ts",
+      "scripts/codex-imagegen-storyboard-provider.py"
+    ]
+  },
+  "testRuns": [
+    {
+      "id": "storyboard-unit-all",
+      "cwd": "apps/web",
+      "command": "bun test tests-unit/storyboard*.test.ts --timeout 30000",
+      "result": {
+        "exitCode": 0,
+        "passed": 130,
+        "failed": 0,
+        "expectCalls": 801
+      },
+      "overlap": "Primary storyboard unit set; includes both focused repeats below.",
+      "providerCalls": 0,
+      "hostedCalls": 0
+    },
+    {
+      "id": "admin-storyboard-unit-all",
+      "cwd": "apps/web",
+      "command": "bun test tests-unit/admin-storyboard*.test.ts --timeout 30000",
+      "result": {
+        "exitCode": 0,
+        "passed": 171,
+        "skipped": 8,
+        "failed": 0,
+        "expectCalls": 1564
+      },
+      "overlap": "Filename-disjoint from storyboard-unit-all.",
+      "providerCalls": 0,
+      "hostedCalls": 0
+    },
+    {
+      "id": "focused-gemini-worker-api",
+      "cwd": "apps/web",
+      "command": "bun test tests-unit/storyboard-gemini-execution-contract.test.ts tests-unit/storyboard-gemini-client.test.ts tests-unit/storyboard-outbound-worker.test.ts tests-unit/storyboard-production-api.test.ts --timeout 30000",
+      "result": {
+        "exitCode": 0,
+        "passed": 83,
+        "failed": 0,
+        "expectCalls": 526
+      },
+      "overlap": "Strict subset of storyboard-unit-all; excluded from unique total.",
+      "providerCalls": 0,
+      "hostedCalls": 0
+    },
+    {
+      "id": "gemini-client-repeat",
+      "cwd": "apps/web",
+      "command": "bun test tests-unit/storyboard-gemini-client.test.ts --timeout 30000",
+      "result": {
+        "exitCode": 0,
+        "passed": 12,
+        "failed": 0,
+        "expectCalls": 137
+      },
+      "overlap": "Strict subset of focused-gemini-worker-api and storyboard-unit-all; excluded from unique total.",
+      "providerCalls": 0,
+      "hostedCalls": 0
+    },
+    {
+      "id": "native-typecheck",
+      "cwd": "apps/web",
+      "command": "npm run typecheck:native",
+      "result": {
+        "exitCode": 0
+      },
+      "overlap": "Static compiler check; not counted as a test case.",
+      "providerCalls": 0,
+      "hostedCalls": 0
+    },
+    {
+      "id": "diff-whitespace",
+      "cwd": ".",
+      "command": "git diff --check",
+      "result": {
+        "exitCode": 0
+      },
+      "overlap": "Source formatting guard; not counted as a test case.",
+      "providerCalls": 0,
+      "hostedCalls": 0
+    },
+    {
+      "id": "playwright-ui",
+      "cwd": "apps/web",
+      "command": "npx playwright test --config=playwright.storyboard.config.ts --workers=1",
+      "result": {
+        "exitCode": 1,
+        "executedTests": 0,
+        "reason": "Playwright Chromium Headless Shell 1243 binary missing"
+      },
+      "overlap": "No browser assertion executed; excluded from pass counts.",
+      "providerCalls": 0,
+      "hostedCalls": 0
+    }
+  ],
+  "uniqueTestAccounting": {
+    "passed": 301,
+    "skipped": 8,
+    "failed": 0,
+    "included": [
+      "storyboard-unit-all:130",
+      "admin-storyboard-unit-all:171"
+    ],
+    "excludedAsOverlap": [
+      "focused-gemini-worker-api:83",
+      "gemini-client-repeat:12"
+    ],
+    "sqlAssertionsReportedSeparately": true
+  },
+  "sqlFixtureVerification": {
+    "chains": [
+      {
+        "chain": "original",
+        "command": "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python backend/bin/verify_storyboard_gemini_migration.py --chain original --output /tmp/tzudong-storyboard-gemini-execution-original.json",
+        "exitCode": 0,
+        "postgresVersion": "15.8",
+        "assertionCount": 25,
+        "assertions": [
+          "idempotent_create",
+          "remote_models_claim_without_fake_disk_bytes",
+          "draft_checkpoint_readback",
+          "non_gemini_create_denied",
+          "stale_lease_rejected",
+          "duplicate_result_rejected_without_resend",
+          "five_images_checkpoint_and_finish_ready",
+          "cas_edit_and_restore_replay_preserve_assets",
+          "expired_lease_backoff_and_restart",
+          "active_cancel_readback",
+          "concurrent_workers_never_double_claim",
+          "browser_roles_denied",
+          "empty_search_path_preserved",
+          "existing_auth_table_grants_unchanged",
+          "bridge_reapply_preserves_all_seven_data_tables",
+          "legacy_public_definers_removed",
+          "unknown_installed_body_fails_and_rolls_back",
+          "expired_claim_never_requeues_paid_generation",
+          "explicit_operator_retry_creates_one_fresh_job",
+          "compatible_job_after_65_incompatible_jobs_is_claimed",
+          "capability_filter_preserves_rpc_metadata_and_incompatible_jobs",
+          "archive_readable_but_retry_rejected_before_queue",
+          "non_gemini_create_has_zero_queue_writes",
+          "new_gemini_workflow_creates_and_claims",
+          "gemini_execution_migration_preserves_rpc_metadata"
+        ],
+        "migrations": [
+          {
+            "file": "20260918021531_storyboard_mlx_worker.sql",
+            "sha256": "3584d659ad253971771bc1a1f49e2f19e837e609e375c22c078673095105a5fa"
+          },
+          {
+            "file": "20260920021531_storyboard_historical_restore.sql",
+            "sha256": "6cd66d48f9fde8b86d89f089da3a5f4cc15dd85475fa0769e5724d40f68d2b95"
+          },
+          {
+            "file": "20261003000812_storyboard_gemini_only.sql",
+            "sha256": "a8b26fae49470cab9f1f6e6471930c48b16ddf3b91f18f734bdf24b4f2930470"
+          },
+          {
+            "file": "20261003182338_storyboard_service_role_bridge.sql",
+            "sha256": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436"
+          },
+          {
+            "file": "20261003205335_storyboard_uncertain_lease_recovery.sql",
+            "sha256": "8ff385edd91aced61c6384c28cee78c2b00f6c7a573c0ac24d4d7a4e7ed4a7c0"
+          },
+          {
+            "file": "20261004023841_storyboard_claim_capability_order.sql",
+            "sha256": "ac20f93c7feb4febb91a3d4ba187e38feba55427da131e011d730505e3dad8a0"
+          },
+          {
+            "file": "20261013093518_storyboard_gemini_execution_v1.sql",
+            "sha256": "0443877742120acd60aa6a7053e56fc12c0f3e3d6e6cc985e0ed891fe03c0688"
+          }
+        ],
+        "operationalDatabaseChanges": false,
+        "rawReceipt": "/private/tmp/tzudong-storyboard-gemini-execution-original.json",
+        "rawReceiptSha256": "7c15229ce5982960d64ae12a3855b7d70a7d0b81caf012d32ccf9d7a3167faef"
+      },
+      {
+        "chain": "receipt",
+        "command": "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python backend/bin/verify_storyboard_gemini_migration.py --chain receipt --output /tmp/tzudong-storyboard-gemini-execution-receipt.json",
+        "exitCode": 0,
+        "postgresVersion": "15.8",
+        "assertionCount": 25,
+        "assertions": [
+          "idempotent_create",
+          "remote_models_claim_without_fake_disk_bytes",
+          "draft_checkpoint_readback",
+          "non_gemini_create_denied",
+          "stale_lease_rejected",
+          "duplicate_result_rejected_without_resend",
+          "five_images_checkpoint_and_finish_ready",
+          "cas_edit_and_restore_replay_preserve_assets",
+          "expired_lease_backoff_and_restart",
+          "active_cancel_readback",
+          "concurrent_workers_never_double_claim",
+          "browser_roles_denied",
+          "empty_search_path_preserved",
+          "existing_auth_table_grants_unchanged",
+          "bridge_reapply_preserves_all_seven_data_tables",
+          "legacy_public_definers_removed",
+          "unknown_installed_body_fails_and_rolls_back",
+          "expired_claim_never_requeues_paid_generation",
+          "explicit_operator_retry_creates_one_fresh_job",
+          "compatible_job_after_65_incompatible_jobs_is_claimed",
+          "capability_filter_preserves_rpc_metadata_and_incompatible_jobs",
+          "archive_readable_but_retry_rejected_before_queue",
+          "non_gemini_create_has_zero_queue_writes",
+          "new_gemini_workflow_creates_and_claims",
+          "gemini_execution_migration_preserves_rpc_metadata"
+        ],
+        "migrations": [
+          {
+            "file": "20261003000711_storyboard_production_foundation.sql",
+            "sha256": "3364e8c2857b6cb89975f1f91c4b36ffc6007804002152b1db93a597765d5e7e"
+          },
+          {
+            "file": "20261003000811_storyboard_historical_restore.sql",
+            "sha256": "27f610ca03aa1f2513a99c7984f4d07874bbdc9f1069cf2de1775e5cd1da5100"
+          },
+          {
+            "file": "20261003000812_storyboard_gemini_only.sql",
+            "sha256": "a8b26fae49470cab9f1f6e6471930c48b16ddf3b91f18f734bdf24b4f2930470"
+          },
+          {
+            "file": "20261003182338_storyboard_service_role_bridge.sql",
+            "sha256": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436"
+          },
+          {
+            "file": "20261003205335_storyboard_uncertain_lease_recovery.sql",
+            "sha256": "8ff385edd91aced61c6384c28cee78c2b00f6c7a573c0ac24d4d7a4e7ed4a7c0"
+          },
+          {
+            "file": "20261004023841_storyboard_claim_capability_order.sql",
+            "sha256": "ac20f93c7feb4febb91a3d4ba187e38feba55427da131e011d730505e3dad8a0"
+          },
+          {
+            "file": "20261013093518_storyboard_gemini_execution_v1.sql",
+            "sha256": "0443877742120acd60aa6a7053e56fc12c0f3e3d6e6cc985e0ed891fe03c0688"
+          }
+        ],
+        "operationalDatabaseChanges": false,
+        "rawReceipt": "/private/tmp/tzudong-storyboard-gemini-execution-receipt.json",
+        "rawReceiptSha256": "739cb7aa3ddc80faec9983734079580f9e132a869b8950df48f0c40cbe4986c1"
+      }
+    ],
+    "leftoverFixtureDatabases": 0,
+    "providerCalls": 0,
+    "hostedCalls": 0,
+    "hostedWrites": 0
+  },
+  "standaloneUi": {
+    "artifactRoot": "/private/tmp/tzudong-storyboard-gemini-ui-20261013",
+    "artifactFiles": [
+      {
+        "path": "/private/tmp/tzudong-storyboard-gemini-ui-20261013/bundle.js",
+        "sha256": "c530de7b9ec2465971adbb970885c5df462c489a9f0a1cde484ea467eb67e5c7",
+        "bytes": 2175868
+      },
+      {
+        "path": "/private/tmp/tzudong-storyboard-gemini-ui-20261013/bundle.css",
+        "sha256": "a05ff5d54f4f5d2cc4c95f655f2b233478b6ba5e0369c0f990d90cc7d2a93b29",
+        "bytes": 359884
+      },
+      {
+        "path": "/private/tmp/tzudong-storyboard-gemini-ui-20261013/index.html",
+        "sha256": "7c456d4a7ae655b78dfa4335649a6b205ca10e411880046584c3029a5ee01488",
+        "bytes": 741
+      },
+      {
+        "path": "/private/tmp/tzudong-storyboard-gemini-ui-20261013/server.mjs",
+        "sha256": "6b3ffc6aa447789ad048f814365d812c7b2a806cfbb3d7920fde694e03469d18",
+        "bytes": 6118
+      }
+    ],
+    "buildCommands": [
+      "cd apps/web && bun tests/fixtures/local-storyboard-ui/build.mjs /private/tmp/tzudong-storyboard-gemini-ui-20261013/bundle.js",
+      "cd apps/web && bun node_modules/@tailwindcss/cli/dist/index.mjs -i tests/fixtures/local-storyboard-ui/input.css -o /private/tmp/tzudong-storyboard-gemini-ui-20261013/bundle.css"
+    ],
+    "sourceEntrypoint": "apps/web/tests/fixtures/local-storyboard-ui/entry.ts",
+    "componentEntrypoint": "apps/web/components/admin/storyboard/AdminStoryboardGenerator.tsx",
+    "loopbackUrl": "http://127.0.0.1:59996/admin?module=storyboard&storyboardProject=10000000-0000-4000-8000-000000000001#workspace",
+    "runtimeReceiptUrl": "http://127.0.0.1:59996/__receipt",
+    "execSessionId": 21248,
+    "sharedPort18794Touched": false,
+    "syntheticOnly": true,
+    "networkBoundary": "127.0.0.1 ephemeral listener; CSP connect-src self; server has no proxy or external client",
+    "mutationBoundary": "Every non-GET/HEAD request is consumed locally and returns HTTP 409 archived_project_read_only.",
+    "validation": {
+      "indexGetStatus": 200,
+      "projectGetStatus": 200,
+      "projectWorkflow": "storyboard-gemini-v1",
+      "projectSceneCount": 5,
+      "mutationProbeStatus": 409,
+      "runtimeCounters": {
+        "ok": true,
+        "syntheticOnly": true,
+        "bindHost": "127.0.0.1",
+        "localRequests": 5,
+        "mutationRequests": 1,
+        "providerCalls": 0,
+        "hostedCalls": 0
+      }
+    },
+    "visualInspection": "Pending Root native Chrome CUA; no visual success claimed by this receipt."
+  },
+  "externalOperations": {
+    "geminiProviderCalls": 0,
+    "otherModelProviderCalls": 0,
+    "hostedDatabaseCalls": 0,
+    "hostedStorageCalls": 0,
+    "hostedWrites": 0,
+    "deployments": 0
+  },
+  "limitations": [
+    "Official model support was checked separately by Root against primary Google documentation; this receipt does not repeat or reinterpret that lookup.",
+    "Mock and local fixture success is not live Gemini provider, hosted Supabase, deployment, or production evidence.",
+    "The standalone artifact lives under /private/tmp and is disposable."
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "kind": "longform-inventory-consumer-count-followthrough",
+  "reviewedRevision": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "supersedesForFinalValidation": "longform-inventory-review-validation.json",
+  "priorReceiptPreserved": true,
+  "resolvedMismatch": {
+    "field": "counts.videos",
+    "previousMeaning": "raw videos-tab membership rows",
+    "currentMeaning": "unique eligible video-only IDs after shorts, active-stream and completed-stream precedence",
+    "consumerField": "load_inventory.info.videoTabCount",
+    "rawMembershipPreservedAt": "invariants.rawTabMembershipCounts"
+  },
+  "integrationRegressions": [
+    {
+      "fixture": "active stream membership",
+      "path": "longform_analysis._inventory_from_args",
+      "assertion": "materialization, readback and consumer count comparison succeed with one active stream excluded"
+    },
+    {
+      "fixture": "videos-streams-shorts overlap",
+      "path": "longform_analysis._inventory_from_args",
+      "assertion": "merged membership, shorts precedence and consumer-aligned video/completed counts succeed"
+    }
+  ],
+  "sourceSha256": {
+    "backend/knowledge_graph/longform_inventory.py": "4ed3c17e123754e968f48ddd47eae9a17f97679086952f955be5691aa939c906",
+    "backend/knowledge_graph/tests/test_longform_inventory.py": "0efe218de229dc5748e9e71b91f3d6a0becbda3c4c03c84ae24f440dece137cf"
+  },
+  "checks": {
+    "python": "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3",
+    "pythonVersion": "3.14.8",
+    "command": "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 -m unittest backend.knowledge_graph.tests.test_longform_inventory backend.knowledge_graph.tests.test_longform_analysis",
+    "existingRelatedTests": 48,
+    "newIntegrationTests": 2,
+    "passed": 50,
+    "failed": 0,
+    "pyCompile": "passed",
+    "diffCheck": "passed"
+  },
+  "boundaries": {
+    "youtubeCollection": 0,
+    "modelInference": 0,
+    "databaseWrites": 0,
+    "externalWrites": 0,
+    "gitMutations": 0,
+    "builds": 0,
+    "reviewThreadMutations": 0,
+    "priorFrozenEvidenceModified": false
+  }
+}

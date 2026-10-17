@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "kind": "longform-next-three-bounded-execution-readback",
+  "observedAt": "2026-10-15T07:08:01Z",
+  "handle": "longform-next3-standard-v1-20261015-01",
+  "source": {
+    "frozenEligibleRows": 1071,
+    "frozenInventorySha256": "c94fcf5236af9388ad47ce984f993f42c157c5633417743f8d9b64d1a73cbd73",
+    "candidateInventoryFileSha256": "b7e79b6e89e19b1a3e0694b971d78261181264f0b53e892100cbce955f141e86",
+    "candidateCanonicalInventorySha256": "2689b09cfcef7a5b133d2cabdcc9e142050c002604c11a7f4b1529ad1ce36d9a",
+    "candidateRowsExact": true,
+    "existingBatchOverlap": 0,
+    "initialAdmission": {
+      "new": 3,
+      "reusable": 0,
+      "readbackRequired": 0,
+      "corrupt": 0,
+      "segments": 5,
+      "initialCallsUpper": 10
+    }
+  },
+  "runtime": {
+    "route": "standard Interactions",
+    "model": "gemini-3.8-flash",
+    "modelEvidenceSha256": "f5001bba8f40b35d52259a8cefeda797ac61a1ca0756d64409e4b240370ce24a",
+    "claudeVideoCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+    "configSha256": "2ec3512139192428e1f25423bd6fb567c9accc34ae62b0a1dffd47cb2b9882bb",
+    "requestsPerMinute": 1,
+    "maxInflight": 1,
+    "maxVideos": 3,
+    "maxInitialCalls": 10,
+    "maxInputTokenReservation": 5242880,
+    "maxOutputTokensPerGeneration": 65536,
+    "thinkingIncludedInMaxOutputTokens": true,
+    "thinkingLimitSource": "https://ai.google.dev/gemini-api/docs/thinking#token_limits_and_max_output_tokens",
+    "temperatureChanged": false,
+    "thinkingConfigurationChanged": false,
+    "modelChanged": false,
+    "engineChanged": false,
+    "quotaChanged": false,
+    "billingChanged": false,
+    "credentialsChanged": false,
+    "additionalPaidTools": 0
+  },
+  "batch": {
+    "fileSha256": "83bb0e52ab80613e772953b72f78e7e684d372936255d4643ab68d3322f8d097",
+    "payloadSha256": "dc023d3bcebcc5f2b5f6583649f7f153b35aa872051f5348a88f0fa547acca3d",
+    "reservedInitialCalls": 8,
+    "reservedInputTokens": 4194304,
+    "reservedOutputAndThinkingTokens": 262144,
+    "segmentsAttempted": 4,
+    "segmentsSucceeded": 3,
+    "videosSucceeded": 2,
+    "videosRejected": 1,
+    "videosReused": 0,
+    "deferredByBudget": 0,
+    "countTokenCalls": 4,
+    "interactionCreateCalls": 4,
+    "interactionGetCalls": 0,
+    "retries": 0,
+    "fallbackModels": 0
+  },
+  "results": [
+    {
+      "videoId": "-1OU4tkFJns",
+      "durationSeconds": 780,
+      "state": "succeeded",
+      "code": "COMPLETED",
+      "segments": 1,
+      "callsAttempted": 2,
+      "analysisFileSha256": "e1b27152e310be2bf0ab5df6f4e6447a321937c9b629e362ad2c96ea381bb38d",
+      "receiptFileSha256": "e380cb2966af8e4ab2baa24bb91fe2c0e2472cd8f9a455eb6a2c5da877e87227",
+      "evidenceSha256": "98aa0e59aeb07701e5b53be19a0146d33f884f8de130e090502b868db92ee985",
+      "usage": {
+        "inputTokens": 71412,
+        "countedInputTokens": 80830,
+        "outputTokens": 1360,
+        "thinkingTokens": 605,
+        "totalTokens": 73377,
+        "complete": true
+      }
+    },
+    {
+      "videoId": "-C4280KT3S4",
+      "durationSeconds": 1316,
+      "state": "rejected",
+      "code": "ANALYSIS_PARTIAL",
+      "segmentsPlanned": 2,
+      "segmentsAttempted": 1,
+      "callsAttempted": 2,
+      "providerHttpOutcome": "http_success",
+      "transportUncertain": false,
+      "providerReadbackEligible": false,
+      "providerReadbackCalls": 0,
+      "secondSegmentAttempted": false,
+      "segmentReceiptFileSha256": "c96cc1bdadf95d04df228750da952726ec82dd514a6a61be6b68ce9cd61aa87d",
+      "observationFileSha256": "9233c4292e526d071911813e656a3621a1628ba010f072f6606887755daf710b",
+      "semanticEvidenceStored": false,
+      "usage": {
+        "inputTokens": 82416,
+        "countedInputTokens": 93215,
+        "outputTokens": 1721,
+        "thinkingTokens": 244,
+        "totalTokens": 84381,
+        "complete": true
+      }
+    },
+    {
+      "videoId": "-H-mhUeu_qk",
+      "durationSeconds": 937,
+      "state": "succeeded",
+      "code": "COMPLETED",
+      "segments": 2,
+      "callsAttempted": 4,
+      "analysisFileSha256": "6141f3c59ff4c12f943d185064025e180b725a96e3e74e7692e3a0d3b9b09ad8",
+      "receiptFileSha256": "ae4beee8eabe3a310ce8e0c2e284e95b765ffc36f15b668f6fa5554d41fa2645",
+      "evidenceSha256": "14ab8806d68802c4a519e051e98bc88da02cb129a24a5a757fd33903e2d99f90",
+      "usage": {
+        "inputTokens": 86215,
+        "countedInputTokens": 97516,
+        "outputTokens": 1894,
+        "thinkingTokens": 980,
+        "totalTokens": 89089,
+        "complete": true
+      }
+    }
+  ],
+  "executionUsage": {
+    "inputTokens": 240043,
+    "countedInputTokens": 271561,
+    "outputTokens": 4975,
+    "thinkingTokens": 1829,
+    "outputPlusThinkingTokens": 6804,
+    "totalTokens": 246847,
+    "usageComplete": true
+  },
+  "pricingArithmetic": {
+    "source": "https://ai.google.dev/gemini-api/docs/pricing",
+    "standardInputUsdPerMillion": 0.75,
+    "standardOutputAndThinkingUsdPerMillion": 3.75,
+    "inputUsd": 0.18003225,
+    "outputAndThinkingUsd": 0.025515,
+    "totalUsd": 0.20554725,
+    "formula": "240043*0.75/1000000 + 6804*3.75/1000000",
+    "successfulVideosOnlyUsd": 0.1363665,
+    "rejectedVideoUsd": 0.06918075,
+    "actualBillingVerified": false,
+    "taxVerified": false,
+    "otherFeatureChargesVerified": false
+  },
+  "offlineReadback": {
+    "reusable": 2,
+    "new": 0,
+    "readbackRequired": 1,
+    "corrupt": 0,
+    "remainingSegments": 0,
+    "providerReadbackCalls": 0,
+    "recovered": 0,
+    "unresolved": 1,
+    "reason": "confirmed response failed semantic completeness; repeating GET cannot supply a different response"
+  },
+  "publication": {
+    "preWriteBackup": {
+      "files": 52,
+      "bytes": 2149717,
+      "relativeManifestSha256": "76a7f08c514e0cbad1b68b00e28961a203eaff93b896f94cd3eba2803cb4a6ab",
+      "exactCopy": true
+    },
+    "plan": {
+      "videos": 2,
+      "skippedNotComplete": 1,
+      "nodes": 28,
+      "edgesUpper": 84,
+      "providerCalls": 0,
+      "admitted": true
+    },
+    "applied": [
+      {
+        "videoId": "-1OU4tkFJns",
+        "createdNodes": 13,
+        "createdEdges": 39,
+        "mutationsIncludingHub": 14,
+        "publicationReceiptFileSha256": "a64778c8d72bad0f333952f73ac47e561a564d97cc6fac65d12395f022ce4a36",
+        "publicationReceiptPayloadSha256": "11983f94efc9d89211d40d48bc9fedced49713ecac6ea0d44ef1ec874e8261ff"
+      },
+      {
+        "videoId": "-H-mhUeu_qk",
+        "createdNodes": 15,
+        "createdEdges": 45,
+        "mutationsIncludingHub": 16,
+        "publicationReceiptFileSha256": "5e0b9b3202d7aa6a5cb5431b821b1643c1088997fe72f6a98ba5b24c2485cfb5",
+        "publicationReceiptPayloadSha256": "f785f916aef5824aa2f90e8f65aad78c4f191ed42706c19e50154c6bd25236e0"
+      }
+    ],
+    "providerCalls": 0,
+    "independentlyVerified": false,
+    "idempotentReplay": {
+      "videos": 0,
+      "skippedNotComplete": 1,
+      "skippedPublicationComplete": 2,
+      "nodes": 0,
+      "providerCalls": 0
+    },
+    "postWrite": {
+      "scopeFiles": 80,
+      "scopeBytes": 2206932,
+      "relativeManifestSha256": "067e605bb3a0f2b8025b20838d6c8c0a8ec6fbbc80fb1dd10a2db22aff948365"
+    }
+  },
+  "graphValidation": {
+    "verdict": "PASS",
+    "globalNodes": 135,
+    "tzudongScopeNodes": 78,
+    "tzudongUnreachableNodes": 0,
+    "danglingReferences": 0,
+    "duplicateEdges": 0,
+    "unrelatedPreExistingRechecks": 21,
+    "newObservationStatus": "unverified",
+    "automaticApprovalBasis": false
+  },
+  "adminProjection": {
+    "preparedPrivately": true,
+    "format": "tzudong-graph-shards/v1",
+    "revision": "203251f83daa7f20420468af601052cf7a51d8618d81d22f291e80456f15b94c",
+    "manifestFileSha256": "10627313ca4520e13d6d5aca9e7d15328cf691d81a92f7ce20f6cbdd0362e1a3",
+    "nodeShardSha256": "7cd3eaa6039e3970438fe789151903f147b2c5ba2eab638ac46aed79dc413bc9",
+    "edgeShardSha256": "72d531f00837741af4d519dbbb1e0c9710b8011e6ce980303a22d287beb6b115",
+    "nodes": 71,
+    "edges": 217,
+    "shards": 2,
+    "bytes": 62670,
+    "readerReadback": [
+      {
+        "videoId": "-1OU4tkFJns",
+        "matched": true,
+        "videoNodeId": "261015-18kg-68a36dq1",
+        "videoEvidenceItems": 2,
+        "relatedProjectedNodes": 11,
+        "relatedEvidenceItems": 17,
+        "relatedEvidenceStatus": "unverified"
+      },
+      {
+        "videoId": "-H-mhUeu_qk",
+        "matched": true,
+        "videoNodeId": "261015-18kk-xj5ibc9q",
+        "videoEvidenceItems": 6,
+        "relatedProjectedNodes": 13,
+        "relatedEvidenceItems": 16,
+        "relatedEvidenceStatus": "unverified"
+      }
+    ],
+    "coverage": {
+      "inventoryCount": 1152,
+      "eligibleCount": 1071,
+      "analyzedCount": 0,
+      "pendingCount": 1071,
+      "failedCount": 0,
+      "reason": "model extraction and schema validation are not independent factual verification"
+    },
+    "trackedWebDataChanged": true,
+    "operatingDatabaseChanged": false,
+    "deployed": false,
+    "canonicalDelivery": {
+      "deliveryObservedAt": "2026-10-15T07:16:26Z",
+      "deploymentPreparationOnly": true,
+      "deployed": false,
+      "operatingDatabaseChanged": false,
+      "manifestLast": true,
+      "oldManifestFileSha256": "9f23f634c05b17f682eb8639c0dba4019b28ddd9dc1eadbeff5f8ffd6c958c6d",
+      "oldRevision": "285ba23b0eacb4a7069205b90e772b613daeadc6f34bbc18f0ad73afb3da6150",
+      "newManifestFileSha256": "10627313ca4520e13d6d5aca9e7d15328cf691d81a92f7ce20f6cbdd0362e1a3",
+      "newRevision": "203251f83daa7f20420468af601052cf7a51d8618d81d22f291e80456f15b94c",
+      "newContentAddressedShardsCopied": 2,
+      "oldShardsPreserved": 6,
+      "finalShardFiles": 8,
+      "privateOrCredentialPatternMatches": 0,
+      "projectedEvidenceItems": 87,
+      "projectedEvidenceStatus": "unverified",
+      "reader": {
+        "totalNodes": 71,
+        "totalEdges": 217,
+        "returnedNodes": 71,
+        "returnedEdges": 217,
+        "nextCursor": null,
+        "nextEdgeCursor": null,
+        "searchAndDetail": [
+          {
+            "videoId": "-1OU4tkFJns",
+            "videoNodeId": "261015-18kg-68a36dq1",
+            "searchNodes": 3,
+            "selectedEvidenceItems": 2,
+            "directRelatedNodes": 12,
+            "directRelatedEvidenceItems": 15
+          },
+          {
+            "videoId": "-H-mhUeu_qk",
+            "videoNodeId": "261015-18kk-xj5ibc9q",
+            "searchNodes": 3,
+            "selectedEvidenceItems": 6,
+            "directRelatedNodes": 14,
+            "directRelatedEvidenceItems": 10
+          }
+        ]
+      },
+      "targetedTests": {
+        "files": 3,
+        "testsPassed": 22,
+        "testsFailed": 0,
+        "expectations": 1406
+      }
+    }
+  },
+  "boundaries": [
+    "The execution completed two of three videos; it does not establish full-channel quality or zero omissions.",
+    "The rejected video remains preserved under ANALYSIS_PARTIAL without retry, fallback or provider GET.",
+    "All newly published claims, menus, restaurants and visit relationships retain source times and unverified status.",
+    "No backend application source, Git history, operating database, deployment, credential, billing or quota setting changed.",
+    "The fixed server data path now contains the projection as deployment preparation only; no deployment or operating apply is claimed."
+  ]
+}

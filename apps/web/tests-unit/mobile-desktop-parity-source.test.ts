@@ -156,7 +156,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(tableSource).toContain("const mobileControls = (");
     expect(tableSource).toContain("const mobileCards = (");
     expect(tableSource).toMatch(/grid grid-cols-1 [^\"]*md:grid-cols-2 lg:hidden/);
-    expect(tableSource).toContain("hidden rounded-lg border lg:block");
+    expect(tableSource).toContain("admin-surface hidden min-h-0 flex-1 flex-col overflow-hidden lg:flex");
     expect(tableSource).toContain('aria-label="상호·영상 ID 검색"');
     expect(tableSource).toContain('aria-label="검색어 지우기"');
     expect(tableSource).toContain("필터 초기화");

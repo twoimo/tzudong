@@ -303,8 +303,16 @@ describe('storyboard local RAG layer', () => {
       new URL('../lib/admin/storyboard/route-telemetry.ts', import.meta.url),
       'utf8',
     );
-    const generatorSource = readFileSync(
-      new URL('../components/admin/storyboard/LegacyStoryboardReference.tsx', import.meta.url),
+    const workspaceSource = readFileSync(
+      new URL('../components/admin/storyboard/LocalStoryboardWorkspace.tsx', import.meta.url),
+      'utf8',
+    );
+    const archiveSource = readFileSync(
+      new URL('../components/admin/storyboard/AdminStoryboardGenerator.tsx', import.meta.url),
+      'utf8',
+    );
+    const imageTrustSource = readFileSync(
+      new URL('../lib/admin/storyboard/image-trust.ts', import.meta.url),
       'utf8',
     );
 
@@ -322,10 +330,11 @@ describe('storyboard local RAG layer', () => {
     expect(retiredHandler).toContain('no-store');
     expect(documentsRoute).toMatch(/readStoryboardRouteJson\(\s*request,\s*telemetry,\s*MAX_STORYBOARD_RAG_DOCUMENTS_REQUEST_BYTES,\s*\)/);
     expect(searchRoute).toMatch(/readStoryboardRouteJson\(\s*request,\s*telemetry,\s*MAX_STORYBOARD_RAG_SEARCH_REQUEST_BYTES,\s*\)/);
-    expect(generatorSource).toContain('stripStoryboardGeneratedImagesForTransport(result)');
-    expect(generatorSource).toContain('stripStoryboardGeneratedImagesFromScenes(scenes)');
-    expect(generatorSource).toContain('cache: "no-store"');
-    expect(generatorSource).toContain('credentials: "omit"');
+    expect(workspaceSource).toContain('cache: "no-store"');
+    expect(workspaceSource).toContain('credentials: "same-origin"');
+    expect(workspaceSource).toContain('redirect: "error"');
+    expect(archiveSource).toContain('getTrustedStoryboardGeneratedImage');
+    expect(imageTrustSource).toContain('stripUntrustedStoryboardGeneratedImages');
   });
 
   test('selects operating profiles without credentials, network, or GPU execution', () => {

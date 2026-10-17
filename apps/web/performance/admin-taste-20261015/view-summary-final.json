@@ -1,0 +1,295 @@
+{
+  "schemaVersion": 1,
+  "kind": "final-production-bundle-view-coverage",
+  "createdAt": "2026-10-15T14:17:36.005376+00:00",
+  "reports": [
+    {
+      "path": "after-final-light/report.json",
+      "sha256": "1ec2924a469a5574d7f86a108f8aa75d2b09aad4305709b17f6abd0c9d24bb54",
+      "cases": 32
+    },
+    {
+      "path": "after-final-mobile-loopback/report.json",
+      "sha256": "50d4ef6054a60c5d6c3ea62cc3e9b2de6dad914a80bb1974d0661a14fee298de",
+      "cases": 13
+    },
+    {
+      "path": "after-final-dark/report.json",
+      "sha256": "a3e6ef8d81482e012033e8f06edb98a2c4c5586e61b5ba688e3464450b0cb407",
+      "cases": 12
+    },
+    {
+      "path": "after-final-success/report.json",
+      "sha256": "fc2ba9da30ffaad2e8b6ec6242d857d2c12baa8b93875de7357174348edad75b",
+      "cases": 9
+    }
+  ],
+  "light": {
+    "views": 45,
+    "modules": 15,
+    "widths": [
+      1440,
+      834,
+      390
+    ],
+    "documentOverflow": 0,
+    "pageErrors": 0,
+    "headerCountMismatch": 0,
+    "mainCountMismatch": 0,
+    "titleSizeMismatch": 0,
+    "lowContrastSamples": 0,
+    "consoleErrors": 53,
+    "requestFailures": 232,
+    "cases": [
+      {
+        "module": "overview",
+        "width": 1440,
+        "screenshot": "after-final-light/overview-1440.png"
+      },
+      {
+        "module": "restaurants",
+        "width": 1440,
+        "screenshot": "after-final-light/restaurants-1440.png"
+      },
+      {
+        "module": "submissions",
+        "width": 1440,
+        "screenshot": "after-final-light/submissions-1440.png"
+      },
+      {
+        "module": "reviews",
+        "width": 1440,
+        "screenshot": "after-final-light/reviews-1440.png"
+      },
+      {
+        "module": "users",
+        "width": 1440,
+        "screenshot": "after-final-light/users-1440.png"
+      },
+      {
+        "module": "banners",
+        "width": 1440,
+        "screenshot": "after-final-light/banners-1440.png"
+      },
+      {
+        "module": "insights",
+        "width": 1440,
+        "screenshot": "after-final-light/insights-1440.png"
+      },
+      {
+        "module": "pipeline",
+        "width": 1440,
+        "screenshot": "after-final-light/pipeline-1440.png"
+      },
+      {
+        "module": "knowledge-graph",
+        "width": 1440,
+        "screenshot": "after-final-light/knowledge-graph-1440.png"
+      },
+      {
+        "module": "sentry",
+        "width": 1440,
+        "screenshot": "after-final-light/sentry-1440.png"
+      },
+      {
+        "module": "youtube-thumbnail-generator",
+        "width": 1440,
+        "screenshot": "after-final-light/youtube-thumbnail-generator-1440.png"
+      },
+      {
+        "module": "storyboard",
+        "width": 1440,
+        "screenshot": "after-final-light/storyboard-1440.png"
+      },
+      {
+        "module": "routes",
+        "width": 1440,
+        "screenshot": "after-final-light/routes-1440.png"
+      },
+      {
+        "module": "llm",
+        "width": 1440,
+        "screenshot": "after-final-light/llm-1440.png"
+      },
+      {
+        "module": "audit",
+        "width": 1440,
+        "screenshot": "after-final-light/audit-1440.png"
+      },
+      {
+        "module": "overview",
+        "width": 834,
+        "screenshot": "after-final-light/overview-834.png"
+      },
+      {
+        "module": "restaurants",
+        "width": 834,
+        "screenshot": "after-final-light/restaurants-834.png"
+      },
+      {
+        "module": "submissions",
+        "width": 834,
+        "screenshot": "after-final-light/submissions-834.png"
+      },
+      {
+        "module": "reviews",
+        "width": 834,
+        "screenshot": "after-final-light/reviews-834.png"
+      },
+      {
+        "module": "users",
+        "width": 834,
+        "screenshot": "after-final-light/users-834.png"
+      },
+      {
+        "module": "banners",
+        "width": 834,
+        "screenshot": "after-final-light/banners-834.png"
+      },
+      {
+        "module": "insights",
+        "width": 834,
+        "screenshot": "after-final-light/insights-834.png"
+      },
+      {
+        "module": "pipeline",
+        "width": 834,
+        "screenshot": "after-final-light/pipeline-834.png"
+      },
+      {
+        "module": "knowledge-graph",
+        "width": 834,
+        "screenshot": "after-final-light/knowledge-graph-834.png"
+      },
+      {
+        "module": "sentry",
+        "width": 834,
+        "screenshot": "after-final-light/sentry-834.png"
+      },
+      {
+        "module": "youtube-thumbnail-generator",
+        "width": 834,
+        "screenshot": "after-final-light/youtube-thumbnail-generator-834.png"
+      },
+      {
+        "module": "storyboard",
+        "width": 834,
+        "screenshot": "after-final-light/storyboard-834.png"
+      },
+      {
+        "module": "routes",
+        "width": 834,
+        "screenshot": "after-final-light/routes-834.png"
+      },
+      {
+        "module": "llm",
+        "width": 834,
+        "screenshot": "after-final-light/llm-834.png"
+      },
+      {
+        "module": "audit",
+        "width": 834,
+        "screenshot": "after-final-light/audit-834.png"
+      },
+      {
+        "module": "overview",
+        "width": 390,
+        "screenshot": "after-final-light/overview-390.png"
+      },
+      {
+        "module": "restaurants",
+        "width": 390,
+        "screenshot": "after-final-light/restaurants-390.png"
+      },
+      {
+        "module": "submissions",
+        "width": 390,
+        "screenshot": "after-final-mobile-loopback/submissions-390.png"
+      },
+      {
+        "module": "reviews",
+        "width": 390,
+        "screenshot": "after-final-mobile-loopback/reviews-390.png"
+      },
+      {
+        "module": "users",
+        "width": 390,
+        "screenshot": "after-final-mobile-loopback/users-390.png"
+      },
+      {
+        "module": "banners",
+        "width": 390,
+        "screenshot": "after-final-mobile-loopback/banners-390.png"
+      },
+      {
+        "module": "insights",
+        "width": 390,
+        "screenshot": "after-final-mobile-loopback/insights-390.png"
+      },
+      {
+        "module": "pipeline",
+        "width": 390,
+        "screenshot": "after-final-mobile-loopback/pipeline-390.png"
+      },
+      {
+        "module": "knowledge-graph",
+        "width": 390,
+        "screenshot": "after-final-mobile-loopback/knowledge-graph-390.png"
+      },
+      {
+        "module": "sentry",
+        "width": 390,
+        "screenshot": "after-final-mobile-loopback/sentry-390.png"
+      },
+      {
+        "module": "youtube-thumbnail-generator",
+        "width": 390,
+        "screenshot": "after-final-mobile-loopback/youtube-thumbnail-generator-390.png"
+      },
+      {
+        "module": "storyboard",
+        "width": 390,
+        "screenshot": "after-final-mobile-loopback/storyboard-390.png"
+      },
+      {
+        "module": "routes",
+        "width": 390,
+        "screenshot": "after-final-mobile-loopback/routes-390.png"
+      },
+      {
+        "module": "llm",
+        "width": 390,
+        "screenshot": "after-final-mobile-loopback/llm-390.png"
+      },
+      {
+        "module": "audit",
+        "width": 390,
+        "screenshot": "after-final-mobile-loopback/audit-390.png"
+      }
+    ]
+  },
+  "dark": {
+    "views": 12,
+    "actualDarkClassVerified": true,
+    "documentOverflow": 0,
+    "pageErrors": 0,
+    "lowContrastSamples": 0,
+    "consoleErrors": 3,
+    "requestFailures": 56
+  },
+  "successFixtures": {
+    "views": 9,
+    "documentOverflow": 0,
+    "pageErrors": 0,
+    "lowContrastSamples": 0,
+    "consoleErrors": 0,
+    "requestFailures": 41
+  },
+  "boundary": "32 light captures precede a preserved mobile fixture timeout. The remaining13 use the same product bundle with a synthetic session, two locally fulfilled read RPCs and one fixed mock-origin CSP exception in the owned browser response only. No production source/security policy was changed. Captured UI states include empty/error/held states; console errors, blocked requests and navigation cancellations are not a clean end-to-end runtime. No provider/mutation/CSP/auth success or performance claim.",
+  "failedAttemptsPreserved": [
+    "after-final-light/report.json (partial32, mobile timeout)",
+    "after-final-mobile-auth/report.json (0, CSP blocks mock origin)",
+    "mobile-submissions-diagnostic-auth-predicate.json",
+    "mobile-submissions-diagnostic-auth-exceptions.json"
+  ]
+}

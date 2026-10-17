@@ -1,0 +1,689 @@
+{
+  "schemaVersion": 1,
+  "kind": "admin-taste-read-only-interaction-audit",
+  "scope": {
+    "origin": "http://127.0.0.1:18822",
+    "syntheticFixture": true,
+    "productionEvidence": false,
+    "taskSpeedEvidence": false,
+    "moduleCount": 15,
+    "permittedMethods": [
+      "GET",
+      "HEAD"
+    ]
+  },
+  "environment": {
+    "node": "v26.3.0",
+    "playwright": "1.63",
+    "browser": "155.0.8059.40",
+    "browserContexts": [
+      "desktop-1440",
+      "mobile-390"
+    ]
+  },
+  "sourceSha256": {
+    "components/admin/AdminConsoleOverview.tsx": "35bfe60a0284d51ad78bb0c1ad8b1c86c86dbe13e0b1be51ff102d244965bc9c",
+    "components/admin/AdminUsersPanel.tsx": "776f4c78f5bca322c52735fc5c09dd6a842f200e786101312f8e29624ce5bc66",
+    "components/admin/SubmissionListView.tsx": "8d3e53847c408ee23d680e8ec0bf9c7a55604d46f21ed0aa61844abf4fb9744b",
+    "components/admin/pipeline/AdminPipelineDashboard.tsx": "98c76b13f011af921ecb9ef341156fc9ab68a191ab7cf3aaa4c9e170c4a916fa",
+    "components/admin/AdminKnowledgeGraphPanel.tsx": "a6679a8ada20ca49482710824fdcaab4051905fa39f910e8ba89c92cfe00167a",
+    "components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx": "3d98dbfadd5dd6ba6726eb01bee625b5fed4da11e10ae044ddf2fdbaad2e40a2",
+    "styles/admin-ui.css": "a42216e19842a9d771b3f8d1c49c26f6504a473e28b8c7e548908caa76e8af45",
+    "performance/admin-taste-20261015/taste-fixture.mjs": "369a6c60a8a11dd4ffe064a984a33aef67aade970b0fded75cb8dd4d3ea6ab35",
+    "performance/admin-taste-20261015/interaction-audit.mjs": "343ab11502f97d8889298210413e89da57cb309cf4c834e2ac98865d801d6172"
+  },
+  "cases": [
+    {
+      "id": "desktop-sidebar-destination:overview",
+      "passed": true,
+      "metrics": {
+        "moduleId": "overview",
+        "image": "desktop-overview.png",
+        "menu": {
+          "x": 10,
+          "y": 98,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 57
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:restaurants",
+      "passed": true,
+      "metrics": {
+        "moduleId": "restaurants",
+        "image": "desktop-restaurants.png",
+        "menu": {
+          "x": 10,
+          "y": 172,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:submissions",
+      "passed": true,
+      "metrics": {
+        "moduleId": "submissions",
+        "image": "desktop-submissions.png",
+        "menu": {
+          "x": 10,
+          "y": 212,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:reviews",
+      "passed": true,
+      "metrics": {
+        "moduleId": "reviews",
+        "image": "desktop-reviews.png",
+        "menu": {
+          "x": 10,
+          "y": 252,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:users",
+      "passed": true,
+      "metrics": {
+        "moduleId": "users",
+        "image": "desktop-users.png",
+        "menu": {
+          "x": 10,
+          "y": 326,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:banners",
+      "passed": true,
+      "metrics": {
+        "moduleId": "banners",
+        "image": "desktop-banners.png",
+        "menu": {
+          "x": 10,
+          "y": 366,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:insights",
+      "passed": true,
+      "metrics": {
+        "moduleId": "insights",
+        "image": "desktop-insights.png",
+        "menu": {
+          "x": 10,
+          "y": 406,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:pipeline",
+      "passed": true,
+      "metrics": {
+        "moduleId": "pipeline",
+        "image": "desktop-pipeline.png",
+        "menu": {
+          "x": 10,
+          "y": 446,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:knowledge-graph",
+      "passed": true,
+      "metrics": {
+        "moduleId": "knowledge-graph",
+        "image": "desktop-knowledge-graph.png",
+        "menu": {
+          "x": 10,
+          "y": 486,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:sentry",
+      "passed": true,
+      "metrics": {
+        "moduleId": "sentry",
+        "image": "desktop-sentry.png",
+        "menu": {
+          "x": 10,
+          "y": 526,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:youtube-thumbnail-generator",
+      "passed": true,
+      "metrics": {
+        "moduleId": "youtube-thumbnail-generator",
+        "image": "desktop-youtube-thumbnail-generator.png",
+        "menu": {
+          "x": 10,
+          "y": 600,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:storyboard",
+      "passed": true,
+      "metrics": {
+        "moduleId": "storyboard",
+        "image": "desktop-storyboard.png",
+        "menu": {
+          "x": 10,
+          "y": 640,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:routes",
+      "passed": true,
+      "metrics": {
+        "moduleId": "routes",
+        "image": "desktop-routes.png",
+        "menu": {
+          "x": 10,
+          "y": 680,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:llm",
+      "passed": true,
+      "metrics": {
+        "moduleId": "llm",
+        "image": "desktop-llm.png",
+        "menu": {
+          "x": 10,
+          "y": 720,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:audit",
+      "passed": true,
+      "metrics": {
+        "moduleId": "audit",
+        "image": "desktop-audit.png",
+        "menu": {
+          "x": 10,
+          "y": 760,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-collapsed-rail-labels-focus",
+      "passed": true,
+      "metrics": {
+        "image": "desktop-collapsed-rail-focus.png",
+        "toggle": {
+          "x": 162,
+          "y": 17,
+          "width": 32,
+          "height": 32
+        },
+        "items": [
+          {
+            "moduleId": "overview",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "restaurants",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "submissions",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "reviews",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "users",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "banners",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "insights",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "pipeline",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "knowledge-graph",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "sentry",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "youtube-thumbnail-generator",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "storyboard",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "routes",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "llm",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "audit",
+            "width": 36,
+            "height": 36
+          }
+        ]
+      }
+    },
+    {
+      "id": "pipeline-keyboard-detail",
+      "passed": true,
+      "metrics": {
+        "image": "pipeline-keyboard-detail.png",
+        "node": {
+          "x": 241.85,
+          "y": 476.85,
+          "width": 150.87,
+          "height": 66.3
+        },
+        "detail": {
+          "x": 928,
+          "y": 0,
+          "width": 512,
+          "height": 960
+        }
+      }
+    },
+    {
+      "id": "knowledge-graph-filter-keyboard-detail",
+      "passed": true,
+      "metrics": {
+        "image": "knowledge-filter-detail.png",
+        "filteredKind": "restaurant",
+        "visibleNodes": 1,
+        "node": {
+          "x": 757,
+          "y": 481,
+          "width": 134,
+          "height": 46
+        },
+        "detail": {
+          "x": 928,
+          "y": 0,
+          "width": 512,
+          "height": 960
+        }
+      }
+    },
+    {
+      "id": "users-read-only-filter-inspector",
+      "passed": false,
+      "errorCode": "USERS_SELECTION_COUNT"
+    },
+    {
+      "id": "submissions-read-only-filter-inspector",
+      "passed": false,
+      "errorCode": "SUBMISSIONS_FILTER_EMPTY"
+    },
+    {
+      "id": "reviews-read-only-filter-inspector",
+      "passed": false,
+      "errorCode": "REVIEWS_FILTER_EMPTY"
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "interaction-audit/desktop-overview.png",
+      "sha256": "188cf9415e77cd72aa0f5fc063aeb243ead89b7111b6cafe09f8aa33f96bec09"
+    },
+    {
+      "file": "interaction-audit/desktop-restaurants.png",
+      "sha256": "48366828b06396153c7dc952e760ec061797c627603000aa0608803665a02881"
+    },
+    {
+      "file": "interaction-audit/desktop-submissions.png",
+      "sha256": "a82b736d3faca27553f15e84908f97086a5d10640659f672d7abfd35582539fb"
+    },
+    {
+      "file": "interaction-audit/desktop-reviews.png",
+      "sha256": "c52bcaf8c901c728e39c067bea75ed73f0da45db0935ae699be4069678f72ce2"
+    },
+    {
+      "file": "interaction-audit/desktop-users.png",
+      "sha256": "cea0cf8e6e04183deaf234f2ce55bb7a2ae115b1dec06a7769fba2bff9a0eb6e"
+    },
+    {
+      "file": "interaction-audit/desktop-banners.png",
+      "sha256": "c5db22186aece0089f9d5f1a3105fea1520c1bb85c99f48176f553fb00227f59"
+    },
+    {
+      "file": "interaction-audit/desktop-insights.png",
+      "sha256": "ebdd73eb9d5cef820c5ba3367889ce622e3b4c32d2476607f99e949c8416a9b2"
+    },
+    {
+      "file": "interaction-audit/desktop-pipeline.png",
+      "sha256": "cbd882c85bcee736e6b772314fa8f26fb58b5330153187f90a94bd592e77d7e2"
+    },
+    {
+      "file": "interaction-audit/desktop-knowledge-graph.png",
+      "sha256": "25fd475ce67d64ff6877ec065c663fa11c04de9c46be9a1889f59e1539ccb9c2"
+    },
+    {
+      "file": "interaction-audit/desktop-sentry.png",
+      "sha256": "83070ad4bbd29e05bc202074d939fbedfc1ae9d058f54e67885cf5c376460f7b"
+    },
+    {
+      "file": "interaction-audit/desktop-youtube-thumbnail-generator.png",
+      "sha256": "8a4cb435544d65eb9cc26901585405b474009ab9fd00e3476fdb272648b9d866"
+    },
+    {
+      "file": "interaction-audit/desktop-storyboard.png",
+      "sha256": "82a3a6d21070ee3257b22dea3f2df2d16f0f2e021c853d50787f64f8e47fa681"
+    },
+    {
+      "file": "interaction-audit/desktop-routes.png",
+      "sha256": "5ea07360905829276eef61bd00a7e57d7daf54aa1e82408a0889c33060ccca75"
+    },
+    {
+      "file": "interaction-audit/desktop-llm.png",
+      "sha256": "f901f69563dd5e5625dbd8f72093f93516049fb6db1639877302d99082995fd7"
+    },
+    {
+      "file": "interaction-audit/desktop-audit.png",
+      "sha256": "b10f63f19d99cf1c61c7eb698764f649282b99c23fcbc1df576f572da43e0b38"
+    },
+    {
+      "file": "interaction-audit/desktop-collapsed-rail-focus.png",
+      "sha256": "69ccf525e13c801e3c3d602b6ceb2dbb002bf17c05a7ec5791361b3bf1684bba"
+    },
+    {
+      "file": "interaction-audit/pipeline-keyboard-detail.png",
+      "sha256": "dd08a69986abc5476b21f59655d7eccd1451c0f0db99483e8bc5a84f9cfd55f4"
+    },
+    {
+      "file": "interaction-audit/knowledge-filter-detail.png",
+      "sha256": "34270f15d1488c89875818ba3127fd67fc48f4e8df7dab3de03654e28f6f1b73"
+    }
+  ],
+  "network": {
+    "permittedRequests": 173,
+    "blockedExternalRequests": 0,
+    "blockedMutationRequests": 0,
+    "webSocketsObserved": 2
+  },
+  "summary": {
+    "passedCases": 18,
+    "failedCases": 3,
+    "screenshots": 18,
+    "runtimePageErrors": 0,
+    "passed": false
+  }
+}

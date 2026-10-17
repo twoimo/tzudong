@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "kind": "durable-receipt-ocr-pg17.6-verification-v2",
+  "status": "passed",
+  "recordedAtUTC": "2026-10-13T10:34:17.098Z",
+  "sourceHead": "683f8975069ebd6d366112e6a1816959e751eb19",
+  "sourceHashes": {
+    "backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql": "8a34a4db23ba3cb7393a7d4d03d2a4538fc4246976d663072115485ee85738cf",
+    "apps/web/lib/ocr/durable-result.ts": "a9bd3ae14ffab26b9ebbf05a1e826329053e0a2c41deb0ac5c2704bd59756ce7",
+    "apps/web/lib/ocr/review-storage-verification.ts": "5271c64859b6a9ef229b8a8b9afaefd99b4b1abd2779bbc9e2222ff4dfb23e0d",
+    "apps/web/lib/review-photo-url.ts": "811a669cada5b4938afc012a2e0f26ca82e080522306cfd424c2892cb979187e",
+    "apps/web/app/api/ocr/extract/route.ts": "93fc6ebdb6a69f246e9da101b4117af89d5e6aa17a702cb9a454113b49522978",
+    "apps/web/app/api/ocr/extract/stream/route.ts": "54bb4782fa03751824f5336a7c7bca868adf3a0a1858e5b5a0d630b4658787c7",
+    "apps/web/app/api/ocr/reviews/save/route.ts": "c69e7e69d46a7467fd434f43a0f89c684de7021d5ecc54bfe227ec86036db787",
+    "apps/web/app/api/admin/ocr-receipts/process/route.ts": "e9fcfaaf7b8ba87ae4281e033ed90bd53e8d69cfd7771711c5247cef97717436",
+    "apps/web/components/reviews/ReviewModal.tsx": "b8237954c1510f044dac369648342f3f1af0641b6228481c77c7f76327048215",
+    "apps/web/lib/reviews/review-save-operation.ts": "1d9a984017091c63d51510ad9b6cf0b403dfad1dbe1b16229606eb25247cb0ba",
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": "2b962abafcd446fa6b031bdd727f9f27f7dc427b3bded03d6ab91a293484328c",
+    "apps/web/tests-unit/review-storage-verification.test.ts": "7b091177723a423e8667ea66d88bfcbb199484cc7949aecf6cfe3570a423e7b1",
+    "apps/web/tests-unit/review-save-submit.test.ts": "0a8d1dcb09ec4b49ec1eabb62f9b1ef41fa239a4c127ce298ce608210912e3d4",
+    "apps/web/tests-unit/zz-ocr-route-contract.test.ts": "e3bea3851a70a0e5bff7d289b8fe25af68fe6efc37859931c2106caf384ef18c",
+    "apps/web/performance/review-db-rehearsal-20261012/verify-review-media-sql-rehearsal.mjs": "f7321f607a5bf3a24ba099d51abc67254db52fcc385945692426d1b2dfa6e431"
+  },
+  "runtime": {
+    "dockerContext": "colima-tzudong-catalog-20261007",
+    "sourceContainer": "tzudong-ranking-clone-20261008",
+    "sourceImage": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+    "sourceImageId": "sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+    "sourceEngine": "17.6",
+    "targetEngine": "17.6"
+  },
+  "fixture": {
+    "sourceSnapshotSha256Before": "7564993d5d055629885d715b9bdf4a469f9380fdc78122a6936db31f33b3e6ae",
+    "sourceSnapshotSha256After": "7564993d5d055629885d715b9bdf4a469f9380fdc78122a6936db31f33b3e6ae",
+    "dumpSha256": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+    "sourceLogicalCounts": {
+      "authUsers": 0,
+      "restaurants": 0,
+      "reviews": 0,
+      "migrations": 0
+    },
+    "sourceReadOnly": true
+  },
+  "measuredChecks": {
+    "sourceUnitTests": {
+      "files": 4,
+      "tests": 69,
+      "assertions": 796,
+      "failures": 0
+    },
+    "sourceTypechecks": {
+      "native": "passed",
+      "compatibility": "passed"
+    },
+    "sourceLint": {
+      "targetedFiles": 6,
+      "status": "passed"
+    },
+    "sql": {
+      "migrationApplied": true,
+      "migrationSecurity": {
+        "rls": true,
+        "force_rls": true,
+        "policy_count": 0,
+        "table_exists": true,
+        "service_claim_execute": true,
+        "service_dispatch_execute": true,
+        "authenticated_table_select": false,
+        "authenticated_claim_execute": false,
+        "service_storage_snapshot_execute": true,
+        "authenticated_storage_snapshot_execute": false
+      },
+      "payloadValidator": {
+        "validAllowed": true,
+        "rawOrUnknownFieldRejected": true,
+        "nonStringModelRejected": true
+      },
+      "claimRace": {
+        "connections": 2,
+        "outcomes": [
+          "claimed",
+          "processing"
+        ],
+        "resultRows": 1
+      },
+      "reuse": {
+        "cacheStatus": "cached",
+        "sameResultRef": true,
+        "noProviderCallRequired": true
+      },
+      "binding": {
+        "crossOwnerIndependent": true,
+        "imageHashIndependent": true,
+        "promptVersionIndependent": true,
+        "completionVersionMismatchRejected": {
+          "rejected": true,
+          "sqlstate": "42501"
+        }
+      },
+      "uncertainty": {
+        "firstAttemptStatus": "indeterminate",
+        "repeatStatus": "indeterminate",
+        "automaticRetryAllowed": false
+      },
+      "recovery": {
+        "undispatchedReservationRecoveredByExplicitForce": true,
+        "staleClaimDispatchRejected": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "possiblyDispatchedBecameIndeterminate": true,
+        "uncertainForceReplayBlocked": true
+      },
+      "refreshFailure": {
+        "indeterminateRestoredPriorResult": true,
+        "uncertainRefreshReplayBlocked": true,
+        "preProviderReleaseRestoredPriorResult": true
+      },
+      "canonicalMedia": {
+        "generatedBySharedHelper": true,
+        "verificationPrefixValid": true,
+        "foodPrefixValid": true,
+        "storageSnapshots": {
+          "verification": 2,
+          "food": 1
+        },
+        "verificationHashesMatched": true
+      },
+      "reviewSaveRace": {
+        "count": 2,
+        "hashes": 1,
+        "processed": 2,
+        "duplicates": 1,
+        "server_refs": 2,
+        "duplicate_links": 1
+      },
+      "tampering": {
+        "crossOwnerResultReference": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "protectedCorrectionField": {
+          "rejected": true,
+          "sqlstate": "22023"
+        },
+        "storedObjectHashMismatch": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "nonexistentStoredObject": {
+          "rejected": true,
+          "sqlstate": "42501"
+        }
+      },
+      "roleAccess": {
+        "authenticatedFunctionDenied": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "authenticatedStorageSnapshotDenied": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "authenticatedTableDenied": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "serviceRoleClaimAndRelease": true
+      }
+    }
+  },
+  "measuredCallCounts": {
+    "sqlRpcAttempts": {
+      "claim": 18,
+      "markDispatched": 6,
+      "complete": 3,
+      "markIndeterminate": 2,
+      "release": 3,
+      "storageSnapshot": 3,
+      "createReview": 6
+    },
+    "concurrentSqlConnections": 4,
+    "providerCalls": 0,
+    "paidProviderCalls": 0,
+    "hostedDatabaseCalls": 0,
+    "hostedStorageCalls": 0
+  },
+  "cleanup": {
+    "ownedTargetContainerRemoved": true,
+    "sourceContainerMutationObserved": false
+  },
+  "actions": {
+    "hostedDatabaseWrites": 0,
+    "hostedStorageWrites": 0,
+    "providerCalls": 0,
+    "paidCalls": 0,
+    "deployments": 0,
+    "commits": 0,
+    "pushes": 0
+  },
+  "priorEvidenceLimits": [
+    {
+      "path": "apps/web/performance/readiness-ocr-followup-20261011/durable-receipt-ocr-pg17-6-verification-20261013.json",
+      "sha256": "e5636a95112f7e97eb9a2311ef6d6413e901cc4d62281afba7bdd1b9a4802a1a",
+      "immutable": true,
+      "engine": "17.6",
+      "limits": [
+        "pre_fix_noncanonical_review_media_paths",
+        "pre_fix_no_storage_owner_existence_or_byte_hash_binding",
+        "pre_fix_no_durable_provider_dispatch_stage"
+      ]
+    },
+    {
+      "path": null,
+      "immutable": true,
+      "engine": "17.11",
+      "priorStatus": "passed",
+      "retainedAsSeparateEnvironment": true,
+      "limits": [
+        "pre_fix_source_snapshot",
+        "no_retained_machine_readable_receipt"
+      ]
+    }
+  ],
+  "expiryBehavior": {
+    "automaticExpiry": false,
+    "accountDeletion": "cascade",
+    "uncertainResult": "blocked_until_explicit_force_refresh"
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "kind": "pr-3215-orchestration-readiness-reconciliation-followup",
+  "reviewedRevision": "df32869714088c372a936cf10a5ac91fe7ee0665",
+  "failedJob": {
+    "runId": 38759806030,
+    "jobId": 116507768397,
+    "name": "orchestration-readiness",
+    "firstFailedStep": "Verify recovered observability and readiness-agent boundaries",
+    "failedTest": "backend.utils.tests.test_platform_modernization_reconciliation.PlatformModernizationReconciliationTests.test_manifest_is_reproducible_from_current_candidate_blobs",
+    "fixedFailure": "platform_modernization_reconciliation_stale"
+  },
+  "regeneration": {
+    "runtime": "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3",
+    "command": "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 backend/bin/build_platform_modernization_reconciliation.py",
+    "output": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+    "sourceDeltaEntryCount": 207,
+    "changedFields": [
+      "candidateContentSha256",
+      "entries[backend/bin/tests/test_check_layout_manifest_unittest.py].candidateGitBlobSha1",
+      "entries[backend/layout-manifest.v1.json].candidateGitBlobSha1"
+    ],
+    "oldCandidateContentSha256": "53a6b140f94c673976d3fcc171fea6e7127f9bc143bebe317dc736ab9772b8d8",
+    "newCandidateContentSha256": "85c62b1cbc706af0c5dbd1beef6e84bac9cd820b1f7f3c3e1d16ab05023445db",
+    "candidateBlobUpdates": {
+      "backend/bin/tests/test_check_layout_manifest_unittest.py": {
+        "old": "bde3d1324ccf6dd749e78a6af0129039061dcc4b",
+        "new": "637a01d238a33faadd155f254c3c18aca08d0fc0"
+      },
+      "backend/layout-manifest.v1.json": {
+        "old": "281be5ecc5a317671f1272b01577d8b6f0ffe209",
+        "new": "90c1313d98fdf58cf6f7bcb895f1c0d76920f8eb"
+      }
+    }
+  },
+  "sourceSha256": {
+    ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json": "40e7e965af1d4671656b4ff8a16ee0c5532ca205768ecb9ab24f372c9782c2cb",
+    "backend/layout-manifest.v1.json": "228fd9ccf8c9fdab3260a43683a9a4eda8ab39828c59d5c80943c34f01ad5851",
+    "backend/bin/tests/test_check_layout_manifest_unittest.py": "12b38cd922d3e772424833eae9f651e023c454452af3224b85831c4b6b4d232f",
+    "backend/bin/build_platform_modernization_reconciliation.py": "4c65f67605f0a3c1a025569a7fd4b6cdb5ef66a7f29d427a71e7322550196e1b",
+    "backend/utils/tests/test_platform_modernization_reconciliation.py": "45d50af1929b4f8063d8936ed77beba3719375a2afb9a70cf79f607debaa1135"
+  },
+  "checks": {
+    "affectedTests": {
+      "runtime": "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3",
+      "modules": [
+        "backend.utils.tests.test_operational_source_recovery",
+        "backend.utils.tests.test_platform_modernization_reconciliation"
+      ],
+      "passed": 10,
+      "failed": 0
+    },
+    "generatorCheck": {
+      "status": "passed",
+      "fixedOutput": "platform_modernization_reconciliation_current"
+    },
+    "candidateBlobReadback": "passed",
+    "jsonValidation": "passed",
+    "diffCheck": "passed"
+  },
+  "diffScope": {
+    "modifiedProductOrOperationalFiles": [
+      ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json"
+    ],
+    "manifestInsertions": 3,
+    "manifestDeletions": 3,
+    "existingAdminTasteReviewEvidenceModified": false
+  },
+  "evidenceHandling": {
+    "jobStepMetadataRead": true,
+    "checkAnnotationsRead": true,
+    "artifactMetadataRead": true,
+    "rawLogsPersisted": false,
+    "rawLogsIncluded": false,
+    "sanitizedFailureOnly": true
+  },
+  "boundaries": {
+    "ciReruns": 0,
+    "externalWrites": 0,
+    "gitMutations": 0,
+    "providerCalls": 0,
+    "hostedOperations": 0
+  }
+}

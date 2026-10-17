@@ -1,0 +1,516 @@
+{
+  "schemaVersion": 1,
+  "phase": "after",
+  "theme": "light",
+  "environment": "Bun 1.4.0 / Playwright 1.63 / Chrome; synthetic loopback fixture; no hosted API or provider calls",
+  "cases": [
+    {
+      "module": "pipeline",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "resolvedTheme": "light",
+      "title": "크롤러 파이프라인",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 1232,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "WARN",
+            "id": "outlined-box"
+          },
+          {
+            "level": "FAIL",
+            "id": "few-pictures"
+          },
+          {
+            "level": "WARN",
+            "id": "no-footage"
+          },
+          {
+            "level": "WARN",
+            "id": "small-text"
+          }
+        ],
+        "smallTextBlocks": 1,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "pipeline-1440.png"
+    },
+    {
+      "module": "knowledge-graph",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "resolvedTheme": "light",
+      "title": "지식 그래프",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 1232,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "WARN",
+            "id": "outlined-box"
+          },
+          {
+            "level": "FAIL",
+            "id": "few-pictures"
+          },
+          {
+            "level": "WARN",
+            "id": "no-footage"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "knowledge-graph-1440.png"
+    },
+    {
+      "module": "storyboard",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "resolvedTheme": "light",
+      "title": "스토리보드 생성",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 1232,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "FAIL",
+            "id": "body-size"
+          },
+          {
+            "level": "FAIL",
+            "id": "few-pictures"
+          },
+          {
+            "level": "WARN",
+            "id": "no-footage"
+          },
+          {
+            "level": "FAIL",
+            "id": "focal-point"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "storyboard-1440.png"
+    },
+    {
+      "module": "pipeline",
+      "width": 834,
+      "visibleHeaders": 1,
+      "resolvedTheme": "light",
+      "title": "크롤러 파이프라인",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 626,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "outlined-box"
+          },
+          {
+            "level": "FAIL",
+            "id": "focal-point"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "pipeline-834.png"
+    },
+    {
+      "module": "knowledge-graph",
+      "width": 834,
+      "visibleHeaders": 1,
+      "resolvedTheme": "light",
+      "title": "지식 그래프",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 626,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "WARN",
+            "id": "outlined-box"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "knowledge-graph-834.png"
+    },
+    {
+      "module": "storyboard",
+      "width": 834,
+      "visibleHeaders": 1,
+      "resolvedTheme": "light",
+      "title": "스토리보드 생성",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 602,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 626,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "FAIL",
+            "id": "body-size"
+          },
+          {
+            "level": "FAIL",
+            "id": "focal-point"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "storyboard-834.png"
+    },
+    {
+      "module": "pipeline",
+      "width": 390,
+      "visibleHeaders": 1,
+      "resolvedTheme": "light",
+      "title": "크롤러 파이프라인",
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 112
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 0,
+        "y": 56,
+        "width": 390,
+        "height": 788
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 0,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "WARN",
+            "id": "outlined-box"
+          },
+          {
+            "level": "WARN",
+            "id": "small-text"
+          }
+        ],
+        "smallTextBlocks": 1,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "pipeline-390.png"
+    },
+    {
+      "module": "knowledge-graph",
+      "width": 390,
+      "visibleHeaders": 1,
+      "resolvedTheme": "light",
+      "title": "지식 그래프",
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 112
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 0,
+        "y": 56,
+        "width": 390,
+        "height": 788
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 0,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "WARN",
+            "id": "outlined-box"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "knowledge-graph-390.png"
+    },
+    {
+      "module": "storyboard",
+      "width": 390,
+      "visibleHeaders": 1,
+      "resolvedTheme": "light",
+      "title": "스토리보드 생성",
+      "header": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 61
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 0,
+        "y": 56,
+        "width": 390,
+        "height": 788
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 0,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "FAIL",
+            "id": "body-size"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "storyboard-390.png"
+    }
+  ],
+  "source": {
+    "styles/admin-ui.css": "0dbb37978d377f2b2e5b4c2c395940575d1ab9bea9fbe9cb6b7a6a6aeb8fd904",
+    "components/admin/AdminPageHeader.tsx": "ac2621a32fbed7b801798675683a439b8900621ef86e6116034d71a1cfb40a73",
+    "components/admin/AdminConsoleOverview.tsx": "35bfe60a0284d51ad78bb0c1ad8b1c86c86dbe13e0b1be51ff102d244965bc9c",
+    "performance/admin-taste-20261015/taste-fixture.mjs": "369a6c60a8a11dd4ffe064a984a33aef67aade970b0fded75cb8dd4d3ea6ab35"
+  },
+  "tasteSkill": {
+    "repository": "Leonxlnx/taste-skill",
+    "commit": "f624f37a8c650b9cc550253104925efe4c8de246",
+    "files": {
+      "SKILL.md": "ee847084e58f5a81a46120912be9cd15f083570a6ca8f3d1a30372a720633043",
+      "scripts/lib/probe.mjs": "5c5148893414ce7eeca4aaa0c476cf196cd8c22cfc514b737c2a614fac77fc1c",
+      "scripts/lib/rules.mjs": "71435cdac327b71f2ff8b79b8bbb26ff6023c40fb21eab8cce2ef71af4a3812a"
+    }
+  },
+  "successFixture": {
+    "knowledgeKinds": 5,
+    "pipelineJobs": 1,
+    "pipelineEvents": 17,
+    "storyboardWorkers": 1,
+    "storyboardModels": 3,
+    "states": [
+      "success",
+      "error",
+      "held"
+    ],
+    "installedStates": {
+      "knowledgeGraph": "success",
+      "pipeline": "success",
+      "systemStatus": "success",
+      "storyboard": "ready"
+    }
+  },
+  "blockedExternalRequests": 0,
+  "blockedMutationRequests": 0
+}

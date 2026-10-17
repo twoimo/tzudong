@@ -1,0 +1,128 @@
+{
+  "schema": "tzudong-caption-bounded-preparation-verification/v2",
+  "verifiedAtUtc": "2026-10-13T09:52:50Z",
+  "scope": "post-independent-review local validation and disposable-vault OSK public API test",
+  "supersedesForCurrentSource": {
+    "path": "apps/web/performance/longform-followthrough-20261009/caption-adapter/bounded-preparation-verification-20261013.json",
+    "sha256": "b1dc04b83679281fc6283814cfe3dd2507f72eefd6d8d9e4b86fce73a83b24b8",
+    "priorReceiptPreservedByteExact": true
+  },
+  "canonicalCoverage": {
+    "eligibleLongformCount": 1071,
+    "shortsExcludedCount": 81,
+    "captionReviewCount": 9,
+    "eligibleCaptionReviewCount": 9,
+    "eligibleWithoutCaptionReviewCount": 1062,
+    "excludedCaptionReviewCount": 0,
+    "eligibleSetSha256": "9c2564ae7feba097dbf32caf85a2af43ebbac95e28faae8cc8360abd08c2c705",
+    "captionReviewSetSha256": "162f038007dea3f9d940572d2ef4ba66f01126ef97cff5878c21afed7b3487ae",
+    "captionSourceSetSha256": "9e011f3b5b05c3f8756fcc34a88b941fa854bb77e2b3e09df59fda834c095141",
+    "coverageRevision": "4e0f93909c6d2ea28f93563702ca1a20454d1014cca3dbde7e8e166804325de4"
+  },
+  "membershipSources": [
+    {
+      "tab": "videos",
+      "entryCount": 1053,
+      "sha256": "0bfc95e7dbcd45f02205ca4bd61b69145fb7196ab52052178a8c01006bfe7cbb",
+      "idSetSha256": "242f2b42106376e59f43648b2a7a1952f00ef29b3f0b443e528356e4a24564ca"
+    },
+    {
+      "tab": "streams",
+      "entryCount": 18,
+      "sha256": "619512bd137e62318ad443d9357efbfd6829c9bbe0acc4374fa473c812e5bfc5",
+      "idSetSha256": "21eded1e1b09c36b894e0e1e0075015b6167bfb699b05d5b04088c0441f5262d"
+    },
+    {
+      "tab": "shorts",
+      "entryCount": 81,
+      "sha256": "b8eea784e4953a80e743dca5b5f30b05a8752a50585a2840940183eee3640d2f",
+      "idSetSha256": "866bbcd5d5d81fce8b1f3c9977bf42c50ee8b85a7858bf40086559e3a27c456f"
+    }
+  ],
+  "sourceFreeze": [
+    {
+      "path": "backend/knowledge_graph/caption_osk_adapter.py",
+      "sha256": "c1b21270596a7b4d6e5b49915354a78d12a4189a137421ebf77235aa7ea59bf9"
+    },
+    {
+      "path": "backend/knowledge_graph/caption_title_enrichment.py",
+      "sha256": "a523056e864abc887ee304926b1780723c4cbf8fe2ad19e4231cd8e06971af84"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_caption_osk_adapter.py",
+      "sha256": "bfb513c4ca437f54bd3564971f6c0d2158d64ce72e749a2704c92b59c5120556"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_caption_title_enrichment.py",
+      "sha256": "41f8b24a1a9834b00c709e8f14861ea19b457727ce3b550c41ae6d20c9dfb6e1"
+    },
+    {
+      "path": "backend/knowledge_graph/CAPTION_OSK_ADAPTER.md",
+      "sha256": "383b8cf497620cd6e3dfa7ed4401572c46f7d41aeca184b32c58a70c26bac72b"
+    }
+  ],
+  "independentReviewRegressions": [
+    {
+      "defect": "stale source or invalid untimed evidence counted current",
+      "test": "test_stale_source_and_invalid_untimed_evidence_are_preserved_but_not_current",
+      "result": "passed"
+    },
+    {
+      "defect": "active or upcoming membership admitted as longform",
+      "test": "test_active_or_upcoming_membership_never_admits_longform",
+      "result": "passed"
+    },
+    {
+      "defect": "membership mutation after preimage read allowed stale update",
+      "tests": [
+        "test_membership_change_during_preimage_read_blocks_stale_update",
+        "test_committed_checkpoint_survives_later_membership_change_and_resumes_once"
+      ],
+      "result": "passed"
+    },
+    {
+      "defect": "checkpoint plan or file symlink escaped owned root",
+      "tests": [
+        "test_checkpoint_plan_and_file_symlinks_never_escape_owned_root",
+        "test_concurrent_plan_directory_replacement_cannot_write_external_target"
+      ],
+      "result": "passed",
+      "externalFilesChanged": 0
+    },
+    {
+      "defect": "duplicate title JSON keys accepted",
+      "test": "test_duplicate_title_key_is_rejected_before_index_comparison",
+      "result": "passed"
+    }
+  ],
+  "disposableOskVerification": {
+    "python": "/Users/twoimo/Documents/osk-vault/.venv/bin/python",
+    "pythonVersion": "3.13.16",
+    "engineRoot": "/Users/twoimo/Documents/osk-vault/_governance/_engine",
+    "expectedEngineSha256": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358",
+    "actualEngineSha256": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358",
+    "enginePinMatched": true,
+    "testModules": [
+      "backend.knowledge_graph.tests.test_caption_osk_adapter",
+      "backend.knowledge_graph.tests.test_caption_title_enrichment"
+    ],
+    "testsRun": 19,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "result": "passed",
+    "vault": "owned tempfile created and removed by the test"
+  },
+  "boundaries": {
+    "providerCalls": 0,
+    "downloads": 0,
+    "sharedOskWrites": false,
+    "hostedDatabaseWrites": false,
+    "canonicalInputWrites": false,
+    "commits": 0,
+    "pushes": 0,
+    "independentFullVisualVerified": false,
+    "independentAudioVerified": false,
+    "meaning": "Caption membership, source binding, CAS, checkpoint isolation and disposable OSK API verification only. No full-video analysis, graph materialization, deployment or independent viewing completion is established."
+  }
+}

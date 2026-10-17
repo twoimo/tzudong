@@ -3474,7 +3474,7 @@ export function AdminYoutubeThumbnailGenerator() {
           context.fillStyle = layer.fill;
           context.strokeStyle = layer.stroke;
           context.lineWidth = layer.strokeWidth;
-          if (layer.shadow !== "none") {
+          if (layer.shadow !== "none") { // taste-skill-ignore: canvas text effect selected by the editor
             context.shadowColor = "rgba(0,0,0,0.62)";
             context.shadowBlur = layer.shadow.includes("24px") ? 18 : 10;
             context.shadowOffsetY = layer.shadow.includes("12px") ? 8 : 5;
@@ -4162,7 +4162,7 @@ export function AdminYoutubeThumbnailGenerator() {
       if (typeof patch.fill === "string") nextLayer.fill = patch.fill.slice(0, 32);
       if (typeof patch.stroke === "string") nextLayer.stroke = patch.stroke.slice(0, 32);
       if (Number.isFinite(patch.strokeWidth)) nextLayer.strokeWidth = Math.max(0, Math.min(20, Number(patch.strokeWidth)));
-      if (typeof patch.shadow === "string") nextLayer.shadow = patch.shadow.slice(0, 120);
+      if (typeof patch.shadow === "string") nextLayer.shadow = patch.shadow.slice(0, 120); // taste-skill-ignore: canvas text data
       if (Number.isFinite(patch.x)) nextLayer.x = clampCanvasCoordinate(Number(patch.x), TARGET_WIDTH);
       if (Number.isFinite(patch.y)) nextLayer.y = clampCanvasCoordinate(Number(patch.y), TARGET_HEIGHT);
       if (patch.align === "left" || patch.align === "center" || patch.align === "right") nextLayer.align = patch.align;
@@ -5329,7 +5329,7 @@ export function AdminYoutubeThumbnailGenerator() {
             type="button"
             tabIndex={-1}
             aria-label="문구 크기 조절"
-            className={`pointer-events-auto absolute h-3 w-3 rounded-full border-2 border-sky-500 bg-white/95 shadow-[0_2px_8px_rgba(2,132,199,0.35)] ring-1 ring-slate-950/10 transition-transform hover:scale-110 ${positionClass}`}
+            className={`pointer-events-auto absolute h-3 w-3 rounded-full border-2 border-sky-500 bg-white/95 ring-1 ring-slate-950/10 transition-transform hover:scale-110 ${positionClass}`}
             data-thumbnail-text-transform-handle-state={state}
             data-thumbnail-text-transform-handle-mode="resize"
             data-thumbnail-text-resize-handle={handleId}
@@ -5345,7 +5345,7 @@ export function AdminYoutubeThumbnailGenerator() {
           type="button"
           tabIndex={-1}
           aria-label="문구 회전"
-          className="pointer-events-auto absolute -top-8 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full border-2 border-sky-500 bg-white/95 text-sky-600 shadow-[0_2px_8px_rgba(2,132,199,0.35)] ring-1 ring-slate-950/10 transition-transform hover:scale-110"
+          className="pointer-events-auto absolute -top-8 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full border-2 border-sky-500 bg-white/95 text-sky-600 ring-1 ring-slate-950/10 transition-transform hover:scale-110"
           data-thumbnail-text-transform-handle-state={state}
           data-thumbnail-text-transform-handle-mode="rotate"
           data-thumbnail-text-rotate-handle="true"
@@ -5749,7 +5749,7 @@ export function AdminYoutubeThumbnailGenerator() {
         context.fillStyle = layer.fill;
         context.strokeStyle = layer.stroke;
         context.lineWidth = layer.strokeWidth;
-        if (layer.shadow !== "none") {
+        if (layer.shadow !== "none") { // taste-skill-ignore: canvas text effect selected by the editor
           context.shadowColor = "rgba(0,0,0,0.62)";
           context.shadowBlur = layer.shadow.includes("24px") ? 18 : 10;
           context.shadowOffsetY = layer.shadow.includes("12px") ? 8 : 5;
@@ -5959,7 +5959,7 @@ export function AdminYoutubeThumbnailGenerator() {
   function renderChatSettingsDropdownPanel() {
     return (
       <div
-        className="space-y-2 rounded-2xl bg-background/95 p-2.5 shadow-sm"
+        className="admin-detail-section space-y-2 bg-background p-2.5"
         data-thumbnail-chat-settings-panel="true"
         data-thumbnail-chat-settings-panel-parity="storyboard"
       >
@@ -5993,9 +5993,9 @@ export function AdminYoutubeThumbnailGenerator() {
         >
           <button
             type="button"
-            className={`rounded-xl px-2 py-1.5 text-left transition ${
+            className={`rounded-md px-2 py-1.5 text-left transition ${
               thumbnailImageRouteChoice === "local-codex-oauth"
-                ? "bg-primary text-primary-foreground shadow-sm"
+                ? "bg-primary text-primary-foreground"
                 : "bg-muted/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
             }`}
             aria-pressed={thumbnailImageRouteChoice === "local-codex-oauth"}
@@ -6017,9 +6017,9 @@ export function AdminYoutubeThumbnailGenerator() {
           </button>
           <button
             type="button"
-            className={`rounded-xl px-2 py-1.5 text-left transition ${
+            className={`rounded-md px-2 py-1.5 text-left transition ${
               thumbnailImageRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID
-                ? "bg-primary text-primary-foreground shadow-sm"
+                ? "bg-primary text-primary-foreground"
                 : "bg-muted/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
             }`}
             aria-pressed={thumbnailImageRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID}
@@ -6040,9 +6040,9 @@ export function AdminYoutubeThumbnailGenerator() {
           </button>
           <button
             type="button"
-            className={`rounded-xl px-2 py-1.5 text-left transition ${
+            className={`rounded-md px-2 py-1.5 text-left transition ${
               thumbnailImageRouteChoice === "browser-openai-api-key"
-                ? "bg-primary text-primary-foreground shadow-sm"
+                ? "bg-primary text-primary-foreground"
                 : "bg-muted/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
             }`}
             aria-pressed={thumbnailImageRouteChoice === "browser-openai-api-key"}
@@ -6337,7 +6337,7 @@ export function AdminYoutubeThumbnailGenerator() {
   function renderThumbnailHistoryDropdownPanel() {
     return (
       <div
-        className="space-y-2 rounded-2xl bg-background/95 p-2 shadow-sm"
+        className="admin-detail-section space-y-2 bg-background p-2"
         data-thumbnail-history-panel="true"
         data-thumbnail-history-status={historyStatus}
       >
@@ -6354,7 +6354,7 @@ export function AdminYoutubeThumbnailGenerator() {
               </Badge>
             </div>
             <p className="mt-0.5 truncate text-2xs text-muted-foreground">
-              정적 HTML 대신 이 페이지에서 실제 생성 기록을 관리합니다.
+              실제 생성 완료 기록만 표시합니다.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
@@ -6385,23 +6385,23 @@ export function AdminYoutubeThumbnailGenerator() {
         </div>
 
         {historyStatus === "error" ? (
-          <div className="rounded-xl bg-destructive/10 px-2.5 py-2 text-2xs text-destructive" data-thumbnail-history-error="true">
+          <div className="admin-empty-state !min-h-0 !items-start !justify-start bg-destructive/10 px-2.5 py-2 !text-left text-2xs text-destructive" data-thumbnail-history-error="true">
             히스토리를 불러오지 못했습니다. {historyError ?? "API 상태를 확인하세요."}
           </div>
         ) : null}
 
         {historyStatus === "empty" ? (
-          <div className="rounded-xl bg-muted/40 px-2.5 py-2 text-2xs text-muted-foreground" data-thumbnail-history-empty="true">
+          <div className="admin-empty-state !min-h-0 !items-start !justify-start bg-muted/40 px-2.5 py-2 !text-left text-2xs text-muted-foreground" data-thumbnail-history-empty="true">
             아직 저장된 실제 생성 기록이 없습니다. 생성 완료 후 다시 새로고침하세요.
           </div>
         ) : null}
 
         {historyRuns.length ? (
-          <div className="max-h-80 space-y-1.5 overflow-y-auto pr-0.5" data-thumbnail-history-run-list="true">
+          <div className="max-h-80 space-y-1 overflow-y-auto pr-0.5" data-thumbnail-history-run-list="true">
             {historyRuns.map((run) => (
               <div
                 key={run.id ?? run.timestamp ?? run.imagePath}
-                className="grid gap-2 rounded-xl bg-muted/35 p-2 text-2xs sm:grid-cols-[56px_minmax(0,1fr)]"
+                className="grid gap-2 rounded-md bg-muted/25 p-2 text-2xs sm:grid-cols-[56px_minmax(0,1fr)]"
                 data-thumbnail-history-run="true"
               >
                 <div className="aspect-video overflow-hidden rounded-lg bg-background/80 ring-1 ring-border/60">
@@ -6435,7 +6435,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       type="button"
                       variant="secondary"
                       size="sm"
-                      className="h-7 rounded-full px-2 text-2xs"
+                      className="h-7 rounded-md px-2 text-2xs"
                       onClick={() => {
                         applyThumbnailHistoryRun(run);
                         setIsHistoryPanelOpen(false);
@@ -6448,7 +6448,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-7 rounded-full px-2 text-2xs"
+                      className="h-7 rounded-md px-2 text-2xs"
                       onClick={() => void copyThumbnailHistoryRun(run)}
                       data-thumbnail-history-copy-json={run.id ?? run.timestamp ?? "history-run"}
                     >
@@ -6480,19 +6480,19 @@ export function AdminYoutubeThumbnailGenerator() {
       icon={Wand2}
       summary={thumbnailModuleSummary}
     >
-      <main
-        className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-3"
+      <section
+        className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-3 admin-surface !p-2"
         aria-label="유튜브 썸네일 생성기"
         data-admin-youtube-thumbnail-generator="true"
         data-thumbnail-initial-preview-source={initialPreviewSource}
         onKeyDown={handleThumbnailEditorShellKeyDown}
       >
         <div
-          className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
+          className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] !gap-2"
           data-thumbnail-chat-right-layout="true"
         >
         <Card
-          className="order-2 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
+          className="order-2 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none !bg-card"
           aria-label="요구사항 채팅"
           data-thumbnail-generation-input-panel="right-chat"
           data-thumbnail-input-panel="chat-stream"
@@ -6501,9 +6501,7 @@ export function AdminYoutubeThumbnailGenerator() {
           <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
             <div className="flex items-center justify-between gap-2" data-thumbnail-chat-header="true">
               <CardTitle className="flex min-w-0 items-center gap-2 text-base">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                  <MessageCircle className="h-4 w-4" />
-                </span>
+                <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <span className="min-w-0 truncate">유튜브 썸네일 생성 도우미</span>
                 <Badge
                   variant={
@@ -6541,7 +6539,7 @@ export function AdminYoutubeThumbnailGenerator() {
                   <DropdownMenuContent
                     align="end"
                     sideOffset={8}
-                    className="w-[min(28rem,calc(100vw-2rem))] max-h-[min(34rem,calc(100vh-7rem))] overflow-y-auto rounded-2xl p-0"
+                    className="w-[min(28rem,calc(100vw-2rem))] max-h-[min(34rem,calc(100vh-7rem))] overflow-y-auto rounded-lg p-0"
                     data-thumbnail-history-dropdown="true"
                   >
                     {renderThumbnailHistoryDropdownPanel()}
@@ -6577,7 +6575,7 @@ export function AdminYoutubeThumbnailGenerator() {
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 pt-0">
             <section
-              className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-b from-background/95 to-muted/35 shadow-sm"
+              className="admin-detail-section flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
               data-thumbnail-chat-panel="true"
               data-thumbnail-chat-style="storyboard-like"
             >
@@ -6613,45 +6611,30 @@ export function AdminYoutubeThumbnailGenerator() {
                     >
                       {isThumbnailChatStarterMessage ? (
                         <div
-                          className="mx-auto flex w-full max-w-sm flex-col items-center justify-center gap-3 px-3 py-6 text-center"
+                          className="w-full space-y-3 p-3 text-left"
                           data-thumbnail-chat-starter-panel="true"
                           data-thumbnail-chat-starter-panel-layout="centered-thumbnail-guide"
                         >
-                          <div
-                            className="relative grid h-14 w-14 place-items-center overflow-hidden rounded-[1.35rem] bg-transparent"
-                            data-thumbnail-chat-starter-logo="true"
-                          >
-                            <NextImage
-                              src="/logo.webp"
-                              alt="Tzudong 프로젝트 로고"
-                              width={40}
-                              height={40}
-                              className="h-10 w-10 object-contain"
-                              priority={false}
-                            />
-                          </div>
-                          <div className="min-w-0 space-y-1">
-                            <h4
-                              className="text-xl font-semibold tracking-tight text-foreground"
-                              data-thumbnail-chat-starter-title="true"
-                              data-thumbnail-chat-starter-title-size="storyboard-parity"
-                            >
-                              무엇부터 만들까요?
-                            </h4>
+                          <div className="min-w-0 space-y-1" data-thumbnail-chat-starter-logo="true">
+                            <div className="flex items-center gap-2">
+                              <NextImage src="/logo.webp" alt="" width={20} height={20} className="h-5 w-5 object-contain" priority={false} />
+                              <h4
+                                className="text-sm font-semibold text-foreground"
+                                data-thumbnail-chat-starter-title="true"
+                                data-thumbnail-chat-starter-title-size="storyboard-parity"
+                              >
+                                무엇부터 만들까요?
+                              </h4>
+                            </div>
                             <p
-                              className="mx-auto max-w-[18rem] text-2xs leading-5 text-muted-foreground"
+                              className="text-xs leading-5 text-muted-foreground"
                               data-thumbnail-chat-starter-guide-copy="true"
                             >
-                              <span className="block">
-                                음식·인물·짧은 문구를 한두 문장으로 적거나,
-                              </span>
-                              <span className="block">
-                                아래 예시를 골라 썸네일 방향을 바로 잡아보세요.
-                              </span>
+                              음식·인물·문구를 적거나 예시를 선택하세요.
                             </p>
                           </div>
                           <div
-                            className="grid w-full grid-cols-1 gap-1.5 sm:grid-cols-3"
+                            className="grid w-full grid-cols-1 gap-1.5"
                             data-thumbnail-chat-example-grid="true"
                             data-thumbnail-chat-example-grid-layout="3-card-grid"
                           >
@@ -6659,7 +6642,7 @@ export function AdminYoutubeThumbnailGenerator() {
                               <button
                                 key={preset.topic}
                                 type="button"
-                                className="group min-h-[4.25rem] rounded-2xl border border-border/70 bg-background/75 p-2 text-left shadow-sm transition hover:border-primary/45 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                className="group rounded-md bg-muted/40 px-2.5 py-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                 onClick={() =>
                                   handleThumbnailGuidedExamplePresetClick(preset)
                                 }
@@ -6681,7 +6664,7 @@ export function AdminYoutubeThumbnailGenerator() {
                             ))}
                           </div>
                           <div
-                            className="flex flex-wrap justify-center gap-1.5"
+                            className="flex flex-wrap gap-1.5"
                             data-thumbnail-chat-message-actions="true"
                             data-thumbnail-chat-message-actions-placement="starter-panel"
                           >
@@ -6689,7 +6672,7 @@ export function AdminYoutubeThumbnailGenerator() {
                               type="button"
                               size="sm"
                               variant="outline"
-                              className="h-7 rounded-full bg-background/80 px-2 text-2xs shadow-sm"
+                              className="h-7 rounded-md bg-background px-2 text-2xs shadow-none"
                               onClick={handleThumbnailUsageGuideClick}
                               disabled={isGenerating || isChatAgentStreaming}
                               data-thumbnail-chat-guide-button="true"
@@ -6700,7 +6683,7 @@ export function AdminYoutubeThumbnailGenerator() {
                             <Button
                               type="button"
                               size="sm"
-                              className="h-7 rounded-full px-2 text-2xs shadow-sm"
+                              className="h-7 rounded-md px-2 text-2xs shadow-none"
                               onClick={handleThumbnailGuidedExampleClick}
                               disabled={isGenerating || isChatAgentStreaming}
                               data-thumbnail-chat-guide-example="true"
@@ -6713,7 +6696,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       ) : (
                         <>
                           {message.role !== "user" ? (
-                            <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                            <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center text-muted-foreground">
                               {message.mode === "stream" ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                               ) : (
@@ -6727,7 +6710,7 @@ export function AdminYoutubeThumbnailGenerator() {
                             }`}
                           >
                             <div
-                              className={`text-2xs font-medium uppercase tracking-wide ${
+                              className={`text-2xs font-medium ${
                                 message.role === "user"
                                   ? "text-primary"
                                   : "text-muted-foreground"
@@ -6743,12 +6726,12 @@ export function AdminYoutubeThumbnailGenerator() {
                                     : "유튜브 썸네일 도우미"}
                             </div>
                             <div
-                              className={`rounded-2xl px-3 py-2 text-xs leading-5 shadow-sm ${
+                              className={`rounded-lg px-3 py-2 text-xs leading-5 ${
                                 message.role === "user"
-                                  ? "rounded-br-md bg-primary text-primary-foreground"
+                                  ? "bg-primary text-primary-foreground"
                                   : message.mode === "live" || message.mode === "stream"
-                                    ? "rounded-bl-md border border-sky-300/60 bg-sky-500/10 text-sky-950 dark:text-sky-100"
-                                    : "rounded-bl-md bg-background text-foreground ring-1 ring-border/60"
+                                    ? "border border-sky-300/60 bg-sky-500/10 text-sky-950 dark:text-sky-100"
+                                    : "border border-border/60 bg-background text-foreground"
                               }`}
                               data-thumbnail-chat-message-bubble="true"
                             >
@@ -6767,7 +6750,7 @@ export function AdminYoutubeThumbnailGenerator() {
                             </div>
                           </div>
                           {message.role === "user" ? (
-                            <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
+                            <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center text-primary">
                               <MessageCircle className="h-3.5 w-3.5" />
                             </div>
                           ) : null}
@@ -6782,14 +6765,14 @@ export function AdminYoutubeThumbnailGenerator() {
                     data-thumbnail-chat-draft-preview="true"
                     data-thumbnail-chat-live-stream="true"
                   >
-                    <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-sky-500/15 text-sky-600">
+                    <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center text-sky-600">
                       {isChatAgentStreaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />}
                     </div>
                     <div className="max-w-[86%] space-y-1">
-                      <div className="text-2xs font-medium uppercase tracking-wide text-sky-700 dark:text-sky-200">
+                      <div className="text-2xs font-medium text-sky-700 dark:text-sky-200">
                         {currentThumbnailStreamingLabel}
                       </div>
-                      <div className="rounded-2xl rounded-bl-md border border-dashed border-sky-400/70 bg-sky-500/10 px-3 py-2 text-xs leading-5 text-sky-950 shadow-sm whitespace-pre-wrap break-keep [overflow-wrap:anywhere] dark:text-sky-100">
+                      <div className="rounded-lg border border-dashed border-sky-400/70 bg-sky-500/10 px-3 py-2 text-xs leading-5 text-sky-950 whitespace-pre-wrap break-keep [overflow-wrap:anywhere] dark:text-sky-100">
                         {currentThumbnailStreamingPhase}
                       </div>
                     </div>
@@ -6797,7 +6780,7 @@ export function AdminYoutubeThumbnailGenerator() {
                 ) : null}
               </div>
 
-              <div className="shrink-0 space-y-2 border-t border-border/70 bg-background/80 p-2.5" data-thumbnail-chat-controls="true">
+              <div className="shrink-0 space-y-2 bg-muted/20 p-2.5" data-thumbnail-chat-controls="true">
                 <input
                   id="thumbnail-topic"
                   type="hidden"
@@ -6808,7 +6791,7 @@ export function AdminYoutubeThumbnailGenerator() {
 
                 {shouldShowThumbnailCanvasContext ? (
                   <div
-                    className="flex min-h-8 items-center justify-between gap-2 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-2xs"
+                    className="flex min-h-8 items-center justify-between gap-2 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1 text-2xs"
                     data-thumbnail-chat-canvas-context="true"
                     data-thumbnail-chat-canvas-context-state={canvasContextState}
                     data-thumbnail-chat-canvas-context-visibility="selected-only"
@@ -6816,7 +6799,7 @@ export function AdminYoutubeThumbnailGenerator() {
                     <div className="flex min-w-0 items-center gap-1.5">
                       <Badge
                         variant={canvasContextState === "editing" ? "secondary" : "outline"}
-                        className="h-6 shrink-0 rounded-full px-2 text-2xs"
+                        className="h-6 shrink-0 rounded-md px-2 text-2xs"
                       >
                         {canvasContextState === "editing" ? "수정 중" : "선택됨"}
                       </Badge>
@@ -6842,7 +6825,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-6 shrink-0 rounded-full px-2 text-2xs"
+                      className="h-6 shrink-0 rounded-md px-2 text-2xs"
                       onClick={useCanvasContextInChat}
                       data-thumbnail-chat-canvas-context-ask="true"
                     >
@@ -6856,7 +6839,7 @@ export function AdminYoutubeThumbnailGenerator() {
                   한글 조합 중 Enter는 전송하지 않고, 조합이 끝난 뒤 Enter로 전송합니다.
                 </p>
                 <div
-                  className="rounded-3xl border border-border/60 bg-background p-2 shadow-sm"
+                  className="rounded-lg border border-border/60 bg-background p-2 shadow-none"
                   data-thumbnail-chat-composer="true"
                   data-thumbnail-chat-composer-shell="storyboard-like"
                 >
@@ -6931,7 +6914,7 @@ export function AdminYoutubeThumbnailGenerator() {
           </CardContent>
         </Card>
 
-        <Card className="order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none" data-thumbnail-canvas-panel="primary-left">
+        <Card className="order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none !bg-card" data-thumbnail-canvas-panel="primary-left">
           <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
             <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base">
               <span>캔버스 편집 / PNG 내보내기</span>
@@ -6968,11 +6951,11 @@ export function AdminYoutubeThumbnailGenerator() {
           <CardContent className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-3 overflow-hidden p-3 pt-0">
             <div
               ref={canvasViewportRef}
-              className="relative flex min-h-0 items-center justify-center overflow-hidden rounded-2xl bg-transparent"
+              className="relative flex min-h-0 items-center justify-center overflow-hidden rounded-lg bg-transparent"
               data-thumbnail-canvas-viewport="true"
             >
               <div
-                className="relative overflow-hidden rounded-2xl shadow-inner [container-type:inline-size]"
+                className="relative overflow-hidden rounded-lg border border-border [container-type:inline-size]"
                 style={{ width: `${canvasDisplaySize.width}px`, height: `${canvasDisplaySize.height}px` }}
                 data-thumbnail-canvas-aspect-frame="16:9"
               >
@@ -6998,7 +6981,7 @@ export function AdminYoutubeThumbnailGenerator() {
                 />
               {activeLayer && !editingLayer ? (
                 <div
-                  className="pointer-events-none absolute z-10 rounded-md border border-dashed border-sky-400/85 bg-sky-400/[0.03] shadow-[0_0_0_1px_rgba(255,255,255,0.55),0_0_18px_rgba(56,189,248,0.18)]"
+                  className="pointer-events-none absolute z-10 rounded-md border border-dashed border-sky-400/85 bg-sky-400/[0.03]"
                   style={getTextLayerTransformFrameStyle(activeLayer)}
                   data-thumbnail-canvas-text-transform-frame="true"
                   data-thumbnail-canvas-selected-text-transform-frame="true"
@@ -7007,7 +6990,7 @@ export function AdminYoutubeThumbnailGenerator() {
                   data-thumbnail-text-transform-metrics="visual-bounds"
                 >
                   <span
-                    className="pointer-events-none absolute -top-7 left-0 rounded-md bg-slate-950/85 px-2 py-1 text-2xs font-bold leading-none text-white shadow-sm"
+                    className="pointer-events-none absolute -top-7 left-0 rounded-md bg-slate-950/85 px-2 py-1 text-2xs font-bold leading-none text-white"
                     data-thumbnail-selected-text-transform-label="true"
                   >
                     {getTextLayerSelectionLabel(activeLayer)}
@@ -7017,27 +7000,21 @@ export function AdminYoutubeThumbnailGenerator() {
               ) : null}
               {isGenerating ? (
                 <div
-                  className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-2xl border border-slate-300/70 bg-gradient-to-br from-slate-50/86 via-slate-100/76 to-slate-200/68 shadow-sm dark:border-slate-600/60 dark:from-slate-800/62 dark:via-slate-700/50 dark:to-slate-600/44"
+                  className="pointer-events-none absolute inset-0 z-20 grid place-content-center rounded-lg border border-slate-300/70 bg-slate-100/90 dark:border-slate-600/60 dark:bg-slate-800/90"
                   role="status"
                   aria-live="polite"
                   aria-busy="true"
                   aria-label="썸네일 생성 중"
                   data-thumbnail-generation-skeleton="true"
                   data-thumbnail-generation-skeleton-variant="neutral-gray"
-                  data-thumbnail-generation-skeleton-effect="glass-shimmer"
+                  data-thumbnail-generation-skeleton-effect="flat-status"
                   data-thumbnail-unified-generation-skeleton="true"
-                  data-thumbnail-generation-skeleton-glass-surface="true"
+                  data-thumbnail-generation-skeleton-glass-surface="false"
                 >
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-90 [background:linear-gradient(135deg,rgba(255,255,255,0.54),rgba(203,213,225,0.28)_46%,rgba(100,116,139,0.20))]"
-                    aria-hidden="true"
-                  />
-                  <div
-                    className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent"
-                    aria-hidden="true"
-                    data-thumbnail-generation-skeleton-shimmer="true"
-                  />
-                  <span className="sr-only">썸네일 생성 중</span>
+                  <div className="flex items-center gap-2 rounded-md bg-background px-3 py-2 text-sm font-medium text-foreground" data-thumbnail-generation-skeleton-shimmer="false">
+                    <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                    <span>썸네일 생성 중</span>
+                  </div>
                 </div>
               ) : null}
               {editingLayer ? (
@@ -7101,7 +7078,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       fontSize: `calc(${(editingLayer.fontSize / TARGET_WIDTH) * 100}cqw)`,
                       fontWeight: editingLayer.fontWeight,
                       textAlign: editingLayer.align,
-                      textShadow: editingLayer.shadow === "none" ? "none" : editingLayer.shadow,
+                      textShadow: editingLayer.shadow === "none" ? "none" : editingLayer.shadow, // taste-skill-ignore: live canvas text preview
                       WebkitTextStroke: `${Math.max(0, editingLayer.strokeWidth / 2)}px ${editingLayer.stroke}`,
                       lineHeight: 1,
                       whiteSpace: "nowrap",
@@ -7115,14 +7092,14 @@ export function AdminYoutubeThumbnailGenerator() {
               </div>
             </div>
             <div className="min-h-0 overflow-hidden">
-              <div className="overflow-hidden rounded-xl bg-muted/30 p-1" data-thumbnail-editor-toolbar="true">
+              <div className="overflow-hidden rounded-lg bg-muted/30 p-1" data-thumbnail-editor-toolbar="true">
                 <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] gap-1.5" data-thumbnail-tradingview-tool-palette="true" data-thumbnail-canvas-tool-row="true">
                   {THUMBNAIL_EDITOR_TOOLS.map((tool) => (
                     <Button
                       key={tool.id}
                       type="button"
                       variant="ghost"
-                      className="h-8 w-full min-w-0 gap-1 rounded-lg bg-background/80 px-1.5 text-2xs leading-none shadow-sm hover:bg-background [&_span]:min-w-0 [&_span]:truncate [&_svg]:h-3.5 [&_svg]:w-3.5"
+                      className="h-8 w-full min-w-0 gap-1 rounded-md bg-background px-1.5 text-2xs leading-none shadow-none hover:bg-muted [&_span]:min-w-0 [&_span]:truncate [&_svg]:h-3.5 [&_svg]:w-3.5"
                       onClick={() => applyThumbnailEditorTool(tool.id)}
                       title={tool.description}
                       data-thumbnail-editor-tool={tool.id}
@@ -7138,7 +7115,7 @@ export function AdminYoutubeThumbnailGenerator() {
           </CardContent>
         </Card>
         </div>
-      </main>
+      </section>
     </AdminEmbeddedModuleShell>
   );
 }

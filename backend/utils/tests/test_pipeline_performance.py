@@ -117,6 +117,17 @@ class ReadBudgetTests(unittest.TestCase):
             with budget.connect() as db:
                 self.assertEqual(0, db.execute('SELECT count(*) FROM leases').fetchone()[0])
 
+    def test_project_budget_accepts_one_valid_parent_selected_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            budget = ProjectBudget(Path(directory) / 'budget.sqlite', 'project', rpm=100000, concurrency=1)
+            identity = 'a' * 32
+            self.assertEqual(identity, budget.acquire(os.getpid(), timeout=.1, identity=identity))
+            with budget.connect() as db:
+                self.assertEqual([(identity,)], db.execute('SELECT id FROM leases').fetchall())
+            budget.release(identity)
+            with self.assertRaisesRegex(ValueError, 'lease_invalid'):
+                budget.acquire(os.getpid(), timeout=.1, identity='not-a-lease')
+
     def test_reused_live_pid_reaps_only_the_old_birth_and_preserves_limit(self):
         from backend.utils import provider_budget as module
         with tempfile.TemporaryDirectory() as directory:

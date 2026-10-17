@@ -28,11 +28,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { ReviewMediaMutation, createReviewMediaDependencies, retryReviewMediaCleanup, reviewMutationMessage } from "@/lib/reviews/review-media-mutation";
+import { FEATURE_DATABASE_HELD_MESSAGE, fetchFeatureDatabaseReadiness } from "@/lib/runtime-feature-readiness-contract";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 import {
@@ -142,6 +143,14 @@ ReviewStatusBadge.displayName = "ReviewStatusBadge";
 export default function ReviewsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { data: featureReadiness } = useQuery({
+    queryKey: ['feature-database-readiness', user?.id],
+    queryFn: () => fetchFeatureDatabaseReadiness(),
+    enabled: Boolean(user?.id),
+    staleTime: 60_000,
+    retry: false,
+  });
+  const featureHeld = featureReadiness?.status !== 'ready';
   const ownerRef = useRef(user?.id);
   useLayoutEffect(() => { ownerRef.current = user?.id; }, [user?.id]);
   const deleteMutation = useRef<ReviewMediaMutation | null>(null);
@@ -181,8 +190,8 @@ export default function ReviewsPage() {
     setDeleteReviewTarget(null);
     setDeleteReviewConfirmation("");
     setCleanupPending(false);
-    void retryCleanup();
-  }, [user?.id, retryCleanup]);
+    if (!featureHeld) void retryCleanup();
+  }, [featureHeld, user?.id, retryCleanup]);
 
   // 내 리뷰 조회 - 무한 스크롤
   const {
@@ -467,12 +476,18 @@ export default function ReviewsPage() {
       }
       data-section="reviews"
     >
+      {featureHeld && (
+        <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
+          <p className="font-semibold">리뷰 변경 기능 준비 중</p>
+          <p className="mt-1">{FEATURE_DATABASE_HELD_MESSAGE}</p>
+        </div>
+      )}
       {cleanupPending && (
         <div className="mb-3 space-y-2" role="status">
           <p className="text-sm">리뷰 사진 정리가 남아 있거나 정리 상태를 확인하지 못했습니다. 다시 시도해 주세요.</p>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" disabled={isCleaning}>{isCleaning ? '사진 정리 확인 중…' : '사진 정리 다시 시도'}</Button>
+              <Button variant="outline" disabled={featureHeld || isCleaning}>{isCleaning ? '사진 정리 확인 중…' : '사진 정리 다시 시도'}</Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -558,6 +573,7 @@ export default function ReviewsPage() {
                       <Button
                         variant="outline"
                         size="sm"
+                        disabled={featureHeld}
                         onClick={() => {
                           setEditingReview(review);
                           setIsEditModalOpen(true);
@@ -571,6 +587,7 @@ export default function ReviewsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        disabled={featureHeld}
                         onClick={() => {
                           setEditingReview(review);
                           setIsEditModalOpen(true);
@@ -584,6 +601,7 @@ export default function ReviewsPage() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      disabled={featureHeld}
                       onClick={() => {
                         if (deleteMutation.current?.pending || isDeleting) return;
                         setDeleteReviewTarget(review);
@@ -703,7 +721,7 @@ export default function ReviewsPage() {
                         type="button"
                         variant="destructive"
                         disabled={
-                          isDeleting || deleteReviewConfirmation !==
+                          featureHeld || isDeleting || deleteReviewConfirmation !==
                           REVIEW_DELETE_CONFIRMATION
                         }
                         onClick={() => handleDeleteReview(review.id)}

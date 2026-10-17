@@ -1,0 +1,181 @@
+{
+  "head": "5e34c44d58f55b52bb057c42cb6cd341d82ad701",
+  "files": {
+    "apps/web/app/api/admin/ocr-receipts/process/route.ts": {
+      "bytes": 3877,
+      "sha256": "c220d563d205b774096ef734224fa38633304aca1c5026e32e174f34bda18655"
+    },
+    "apps/web/app/api/admin/ocr-receipts/rerun/route.ts": {
+      "bytes": 13912,
+      "sha256": "313c948d12d0c0643219f84b7938ac6c27a313ce8afc90575562a2b843698e92"
+    },
+    "apps/web/app/api/admin/ocr-receipts/reset-all/route.ts": {
+      "bytes": 10837,
+      "sha256": "d6f85bbb929e3a776fdb819289648c1ceed57c02a581a2127ed56e0934361df0"
+    },
+    "apps/web/app/api/admin/ocr-receipts/route.ts": {
+      "bytes": 8577,
+      "sha256": "44e6fa0473653c3ae8a380bc1aa2def0e0759c2e1ab0ed4681ae1aabfe4cf43e"
+    },
+    "apps/web/app/api/ocr/extract/route.ts": {
+      "bytes": 15562,
+      "sha256": "6da24bf95db89f4a63860294d1e9fddb3df905b4b4e2a5e63f11eae0da0f0fbc"
+    },
+    "apps/web/app/api/ocr/extract/stream/route.ts": {
+      "bytes": 15731,
+      "sha256": "5bfb196fb7473a2c65930621aaf2caccdfd422495bac056df4d16769bb929bae"
+    },
+    "apps/web/app/api/ocr/results/status/route.ts": {
+      "bytes": 5521,
+      "sha256": "fc36af9ccfbbfc4dbc9925965950d77376c65d97428c1ad2bbc10290211952c3"
+    },
+    "apps/web/app/insights/insights-client.tsx": {
+      "bytes": 65136,
+      "sha256": "0743438ca03fe5eccb9027e21565b3285e2ab1026386f5dd2729f316fc6d93c8"
+    },
+    "apps/web/components/admin/AdminConsoleOverview.tsx": {
+      "bytes": 396440,
+      "sha256": "35bfe60a0284d51ad78bb0c1ad8b1c86c86dbe13e0b1be51ff102d244965bc9c"
+    },
+    "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx": {
+      "bytes": 15829,
+      "sha256": "a6679a8ada20ca49482710824fdcaab4051905fa39f910e8ba89c92cfe00167a"
+    },
+    "apps/web/components/admin/AdminOperationsPanel.tsx": {
+      "bytes": 12584,
+      "sha256": "6299e3f37ebc8435bcb2a3e359c3036f88491b5139cc90021ff642c3ddf1685d"
+    },
+    "apps/web/components/admin/AdminOverviewDashboard.tsx": {
+      "bytes": 65657,
+      "sha256": "7e0502daa392fa0a1281284c3eeec3f5c6eba1deba4ad558dfc4f4058cd0e262"
+    },
+    "apps/web/components/admin/AdminRestaurantModal.tsx": {
+      "bytes": 83047,
+      "sha256": "f70609a0b0e545b5a0c99cdf855418be9a7fceda4b8637c273caaf9e1b2e75fa"
+    },
+    "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx": {
+      "bytes": 43793,
+      "sha256": "f38b0e73f41acac751445a05d1f0bc5a69e3304798b3b2ff1183412cf817e9a5"
+    },
+    "apps/web/components/admin/AdminReviewPanel.tsx": {
+      "bytes": 31429,
+      "sha256": "1bc8dd96730bd3c6f45ce82c90fae06dfdd7d02fc5ced28a4ead2ead583217fd"
+    },
+    "apps/web/components/admin/AdminSentryPanel.tsx": {
+      "bytes": 13138,
+      "sha256": "14fba17237f72d2a8d96849a3227e93809e73a9ffcd289f6a7f609b2ff659cef"
+    },
+    "apps/web/components/admin/AdminUsersPanel.tsx": {
+      "bytes": 48418,
+      "sha256": "776f4c78f5bca322c52735fc5c09dd6a842f200e786101312f8e29624ce5bc66"
+    },
+    "apps/web/components/admin/EvaluationDetailView.tsx": {
+      "bytes": 37826,
+      "sha256": "53a955638ab925a284c0451c569e1e33223713b1c8ff407d132e372043026685"
+    },
+    "apps/web/components/admin/EvaluationRowDetails.tsx": {
+      "bytes": 9962,
+      "sha256": "a9b59723bf9a7c3e9c6e67886c0db8da2f1a77dd4d964117e3fb155a11da8c25"
+    },
+    "apps/web/components/admin/EvaluationTableNew.tsx": {
+      "bytes": 74292,
+      "sha256": "fc30d70acd91d70295672fb05129c75f3f79ef0fdb03e2d8ce4949cea7656ce5"
+    },
+    "apps/web/components/admin/RestaurantManagementWorkspace.tsx": {
+      "bytes": 3180,
+      "sha256": "2eca55be8992a5bb17dbd1c2e4d10f590ff6dc1fe05ae3fddf8331e1a3c82b21"
+    },
+    "apps/web/components/admin/SubmissionDetailView.tsx": {
+      "bytes": 58725,
+      "sha256": "db7a1022ea5a3fb5109ff067b350ba5e72015ee800b89af94a7b00ce1b3483ed"
+    },
+    "apps/web/components/admin/SubmissionListView.tsx": {
+      "bytes": 133491,
+      "sha256": "8d3e53847c408ee23d680e8ec0bf9c7a55604d46f21ed0aa61844abf4fb9744b"
+    },
+    "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx": {
+      "bytes": 22788,
+      "sha256": "98c76b13f011af921ecb9ef341156fc9ab68a191ab7cf3aaa4c9e170c4a916fa"
+    },
+    "apps/web/components/admin/pipeline/PipelineFlowDiagram.module.css": {
+      "bytes": 1643,
+      "sha256": "34c59d1d31d270f2e948db1010a1b535371d0715b2cc939908913b0d59df8f97"
+    },
+    "apps/web/components/admin/storyboard/AdminStoryboardGenerator.tsx": {
+      "bytes": 2483,
+      "sha256": "4ff212460b87e8628bd3142f7e721e95d5391bb18ac312fa7261c57f25fc7c93"
+    },
+    "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx": {
+      "bytes": 60484,
+      "sha256": "33187b79864b7e906f5a5fb5f8a9d1d3db4b819a6b2086afe345156a5cd4a93c"
+    },
+    "apps/web/components/admin/storyboard/StoryboardProjectLibrary.tsx": {
+      "bytes": 5700,
+      "sha256": "b5feb8de3af4e045ab53d52b5f2800a904730a1d82595485ae950850b4e907ef"
+    },
+    "apps/web/components/admin/system-status/AdminSystemStatusCenter.tsx": {
+      "bytes": 6014,
+      "sha256": "9b6cc910fe2f3c91492938e92616ae3d670ab2150e2d2aee143ed649e8464597"
+    },
+    "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx": {
+      "bytes": 306487,
+      "sha256": "227fd7faa5442b5051e88af707cbe7d1750833e8b41d5c6ba0cbcff7f084eb92"
+    },
+    "apps/web/lib/ocr/durable-result.ts": {
+      "bytes": 22074,
+      "sha256": "9ff047a50c2d633370751fa3d40038d016a7054d796db5920c68bc5f945ffb35"
+    },
+    "apps/web/lib/ocr/gemini.ts": {
+      "bytes": 8548,
+      "sha256": "b788e24ed363bd5550051233e540fc9adc80a0314abe13942bf6fd65ebc2c6f2"
+    },
+    "apps/web/package-lock.json": {
+      "bytes": 503494,
+      "sha256": "3449c447593b6ca87b8c2a86ecb37b2dad46950532513b100c17648377cdf966"
+    },
+    "apps/web/package.json": {
+      "bytes": 7179,
+      "sha256": "1f19b1216c4f482f3feaa818866622b0308338bdbba15c952da1f1f36e13b4bb"
+    },
+    "apps/web/styles/admin-ui.css": {
+      "bytes": 17317,
+      "sha256": "a42216e19842a9d771b3f8d1c49c26f6504a473e28b8c7e548908caa76e8af45"
+    },
+    "apps/web/tests-unit/admin-console-uiux-source.test.ts": {
+      "bytes": 316946,
+      "sha256": "df5d09c2babed8ec629f1f47560f4310fe5f075e16dfe90800d84e742106fba9"
+    },
+    "apps/web/tests-unit/admin-evaluation-status-filter-options.test.ts": {
+      "bytes": 14965,
+      "sha256": "dc155d98cd4fce390acba97a88a34e5edee71adcec01150c401d270f1c499db0"
+    },
+    "apps/web/tests-unit/api-security-source.test.ts": {
+      "bytes": 29163,
+      "sha256": "90e2a4d76e24f2507f1695ea1d3bb31c87b2f4b9e60b7ba019251f97a559cde6"
+    },
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": {
+      "bytes": 33151,
+      "sha256": "350b1ca55f197d922dbee3fa0b8ade7a6686ffb45fc71fbed1d0f45cc5906c03"
+    },
+    "apps/web/tests-unit/gemini-ocr.test.ts": {
+      "bytes": 13650,
+      "sha256": "ca24fcc6c305388bf1b7c779d8d7f0846d87f037f1e9fe926d27eb60d649e86f"
+    },
+    "apps/web/tests-unit/mobile-desktop-parity-source.test.ts": {
+      "bytes": 60430,
+      "sha256": "294780b91c0cea719035c706bf713f10b5cc093177f0251c02b2b260ea4b2198"
+    },
+    "apps/web/tests-unit/public-insights-treemap.test.ts": {
+      "bytes": 4487,
+      "sha256": "14c39e9cb001fce7d93a7d4ac3c672fb1975169a971a0fb2b21beee4f5d247ba"
+    },
+    "apps/web/tests-unit/storage-server-client.test.ts": {
+      "bytes": 4782,
+      "sha256": "ce3aeb28101b9b5079594411c84a4fe600c4f4d023f01b66e347d5bde4753fde"
+    },
+    "apps/web/tests-unit/zz-ocr-route-contract.test.ts": {
+      "bytes": 39317,
+      "sha256": "95ab94dcc26f653a4a1010bbc38609d8e169faed49512bdab011c457786d541c"
+    }
+  }
+}

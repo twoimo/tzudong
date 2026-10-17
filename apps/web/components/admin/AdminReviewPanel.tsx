@@ -30,6 +30,8 @@ import {
     Loader2,
     ChevronRight,
     ChevronLeft,
+    LockKeyhole,
+    Camera,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -384,7 +386,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 <MapPanelHeader title="리뷰관리" onClose={onClose} closeLabel="리뷰관리 패널 닫기" />
                 <div className="flex-1 flex items-center justify-center p-8">
                     <Card className="p-8 text-center">
-                        <div className="text-4xl mb-3">🔒</div>
+                        <LockKeyhole className="mx-auto mb-3 h-8 w-8 text-muted-foreground" aria-hidden="true" />
                         <h3 className="text-lg font-semibold mb-2">접근 권한 없음</h3>
                         <p className="text-sm text-muted-foreground">관리자만 접근할 수 있습니다.</p>
                     </Card>
@@ -610,7 +612,7 @@ const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(
                             {new Date(review.visited_at).toLocaleDateString('ko-KR')}
                         </span>
                         {review.food_photos?.length > 0 && (
-                            <Badge variant="outline" className="text-xs">📷 {review.food_photos.length}</Badge>
+                            <Badge variant="outline" className="gap-1 text-xs"><Camera className="h-3 w-3" aria-hidden="true" />{review.food_photos.length}</Badge>
                         )}
                     </div>
 

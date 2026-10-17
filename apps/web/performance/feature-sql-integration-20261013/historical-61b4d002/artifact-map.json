@@ -1,0 +1,196 @@
+{
+  "schema": "tzudong-feature-sql-artifact-map/v1",
+  "artifacts": [
+    {
+      "path": "pg17-existing-catalog-replay-delete-races-success-20261013.json",
+      "bytes": 20590,
+      "sha256": "4de818ec45f4a69c1fe714fc07dbea6180af5930edd42eacf124d6b05093f356",
+      "classification": "final source-bound local receipt"
+    },
+    {
+      "path": "pg17-existing-catalog-replay-delete-races-success-20261013.json.sha256",
+      "bytes": 130,
+      "sha256": "40b28aa6ea34708b36a7e6e9db9ee6e6658d5a9a9935cff0a3ee7ef3f5351089",
+      "classification": "sidecar"
+    },
+    {
+      "path": "pg17-existing-catalog-replay-final-frozen.json",
+      "bytes": 14550,
+      "sha256": "4851f0dab3cb200b1b613b46b6da5eba58852b07733c5e4750784d0503b14fbf",
+      "classification": "retained earlier local receipt; historical inputs may differ"
+    },
+    {
+      "path": "pg17-existing-catalog-replay-final-success-20261013.json",
+      "bytes": 12641,
+      "sha256": "1d12436cb477ac1244c524f298d5ffa5606a76f8921f691d70cf37669863520c",
+      "classification": "retained earlier local receipt; historical inputs may differ"
+    },
+    {
+      "path": "pg17-existing-catalog-replay-final-success-20261013.json.sha256",
+      "bytes": 123,
+      "sha256": "12eee1a38f8cc844456740e7f4da0fd3addf0b5137f942214118e0396143b711",
+      "classification": "sidecar"
+    },
+    {
+      "path": "pg17-existing-catalog-replay.json",
+      "bytes": 12129,
+      "sha256": "bd19bef6af0babafb0220774d2686fdecaa2d8f86569c801eaffadeb3de78f1b",
+      "classification": "retained earlier local receipt; historical inputs may differ"
+    },
+    {
+      "path": "review-verification-delete-fence-delta-20261013.json",
+      "bytes": 17992,
+      "sha256": "478743bbefde1ef0487d518c1fbc0ab977e8d53872cca40ee599d383bfeb5dcb",
+      "classification": "retained earlier local receipt; historical inputs may differ"
+    },
+    {
+      "path": "review-verification-delete-fence-delta-20261013.json.sha256",
+      "bytes": 173,
+      "sha256": "67c6d4fdbf1faa47b0cd0caae2d40c4c1f0f5099d3693b01d5c537c9279b2dae",
+      "classification": "sidecar"
+    },
+    {
+      "path": "verify-feature-migrations.mjs",
+      "bytes": 82530,
+      "sha256": "e597c17fee08a8d9cbbb3705b32931bcbec944e4ec308434dd5834b2a49bb4f3",
+      "classification": "current replay harness"
+    },
+    {
+      "path": "verify-review-verification-delete-fence.mjs",
+      "bytes": 19763,
+      "sha256": "4b4ec65922be18b1fcbf32b9bb20005702022b65ab543171633cca3151a36a55",
+      "classification": "current replay harness"
+    }
+  ],
+  "artifactCount": 10,
+  "artifactBytes": 180621,
+  "currentSourceBindings": [
+    {
+      "bytes": 15228,
+      "path": "backend/supabase/migrations/20261013093518_storyboard_gemini_execution_v1.sql",
+      "sha256": "84d351dead86ef90040b6949fe4a6dc93eb91a783c1b7a78531c7f564ea4ff4e"
+    },
+    {
+      "bytes": 30334,
+      "path": "backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql",
+      "sha256": "1ebc4f512612053b62febe41f2a3aef948c93d6d45f69f9328d43db5bd46bca4"
+    },
+    {
+      "bytes": 20080,
+      "path": "backend/supabase/migrations/20261013190100_g014_feature_rpc_catalog_contract.sql",
+      "sha256": "4a7cbe506521ffcd7687c57a4e6d47a4c2fbafa6e493c9f67cae5ea0cdc905dd"
+    },
+    {
+      "bytes": 14060,
+      "path": "backend/supabase/migrations/20261013190200_review_verification_immutable_key_fence.sql",
+      "sha256": "62e88431bc46c39551d473de9d314482b3e49c7828a34769caef7f85b6886d8c"
+    },
+    {
+      "bytes": 60166,
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "sha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95"
+    },
+    {
+      "bytes": 13706,
+      "path": "backend/supabase/migrations/20261004192657_admin_evaluation_raw_warning_groups.sql",
+      "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a"
+    },
+    {
+      "bytes": 5957,
+      "path": "backend/supabase/migrations/20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+      "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020"
+    },
+    {
+      "bytes": 7769,
+      "path": "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql",
+      "sha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3"
+    },
+    {
+      "bytes": 13185,
+      "path": "backend/supabase/migrations/20261009091342_admin_record_private_verification_cleanup.sql",
+      "sha256": "b596b200e52c6813a4cfa1b0a2818625f067864549e8854f3497afdcdab706da"
+    },
+    {
+      "bytes": 40392,
+      "path": "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",
+      "sha256": "2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae"
+    },
+    {
+      "bytes": 17278,
+      "path": "backend/supabase/migrations/20261008192455_review_media_commit_cleanup.sql",
+      "sha256": "1b018884a0ba8bb25e6a9e31fa831e349bd4442118e5d4bf1699464e09e16c3c"
+    },
+    {
+      "bytes": 5281,
+      "path": "backend/supabase/migrations/20261008200719_review_verification_private.sql",
+      "sha256": "92b469ab0ed1a23bf91c1ab5a3f8e92d45cf0f4e06e5fa602d6a34ad0497a51b"
+    },
+    {
+      "bytes": 47177,
+      "path": "backend/supabase/migrations/20261008201635_review_media_catalog_integration.sql",
+      "sha256": "6e820eb535bc514e78f258110e36dff00537bcaefcffd8b354356107ca9c09fe"
+    },
+    {
+      "bytes": 13429,
+      "path": "backend/supabase/migrations/20261011072824_admin_review_media_completion.sql",
+      "sha256": "32626259ca77ea913f068ee804815ff439abbff1ce310da4525e4f0bb86d8338"
+    },
+    {
+      "bytes": 7661,
+      "path": "backend/supabase/migrations/20261011085342_review_legacy_shared_cleanup.sql",
+      "sha256": "623236ddbd87059b94c84486f9e14822dba0190d2448656259991bd1345a434f"
+    },
+    {
+      "bytes": 3666,
+      "path": "backend/supabase/migrations/20261011094346_admin_evaluation_revision_safeupdate.sql",
+      "sha256": "b7061015ea07192dccfcf0774d5548a9c2a584c7daa140d77fccd7c75cb8bf88"
+    },
+    {
+      "bytes": 4163,
+      "path": "backend/supabase/migrations/20261011100730_admin_record_expired_preview_readback.sql",
+      "sha256": "26c64074bb98e718ba96732ac2baeedb851afe6ff745e0ddb5ca075359892472"
+    },
+    {
+      "bytes": 12008,
+      "path": "backend/supabase/migrations/20261011103501_admin_verification_durable_staging.sql",
+      "sha256": "081c48e91172e4e98079b03aa210c0f7481d95a21945e5a288187263089e57db"
+    },
+    {
+      "bytes": 11418,
+      "path": "backend/supabase/migrations/20261011105114_review_media_storage_retirement_fence.sql",
+      "sha256": "79375138d7e82a3be2b85b219ff52147db13db9c93070569be40a61ab97c3d53"
+    },
+    {
+      "bytes": 8463,
+      "path": "backend/supabase/migrations/20261011110108_review_storage_caller_bound_admin_policy.sql",
+      "sha256": "45b2a0db333a1e24ac1f68b7693c7cfb98e10cd0ab366b98089c3679a6b5dfbc"
+    },
+    {
+      "bytes": 6694,
+      "path": "backend/supabase/migrations/20261011175912_review_owner_cleanup_completion.sql",
+      "sha256": "9164be35fc17e67c3f1aaf98aad13139a8fd469130bd1315879bff5dac63ba26"
+    },
+    {
+      "bytes": 82530,
+      "path": "apps/web/performance/feature-sql-integration-20261013/verify-feature-migrations.mjs",
+      "sha256": "e597c17fee08a8d9cbbb3705b32931bcbec944e4ec308434dd5834b2a49bb4f3"
+    },
+    {
+      "bytes": 150006,
+      "path": ".github/review-media-sql-successor.v1.json",
+      "sha256": "23bf7e7d7e9e5d7962021dd3ec860e87b47d07e119ba0e39de2e423a0a601f4e"
+    }
+  ],
+  "currentSourceCount": 23,
+  "finalAcceptanceReceipt": {
+    "path": "pg17-existing-catalog-replay-delete-races-success-20261013.json",
+    "sha256": "4de818ec45f4a69c1fe714fc07dbea6180af5930edd42eacf124d6b05093f356"
+  },
+  "classification": "Local PG17.6 synthetic catalog compatibility and rollback evidence. Earlier failures/intermediate proofs are retained unchanged.",
+  "limits": [
+    "Historical receipt bindings are not automatically relabeled as current; older harness bytes may be unavailable.",
+    "Every current source binding was checked against the exact final receipt.",
+    "No hosted DB, Storage network, provider, production, monetary, or comparative timing claim.",
+    "The map and detached checksum are excluded from their own inventory."
+  ]
+}

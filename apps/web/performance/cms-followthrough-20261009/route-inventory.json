@@ -1,4 +1,12 @@
 {
+  "inventory_scope": {
+    "logical_surfaces": 27,
+    "physical_page_sources": 26,
+    "public_or_account_page_sources": 21,
+    "public_share_handlers": 1,
+    "admin_page_sources": 5,
+    "limitation": "Source inventory only; no current browser, authentication, database, mutation, or production evidence."
+  },
   "public_or_account_pages": [
     {
       "route": "/auth/required",
@@ -110,7 +118,8 @@
     },
     {
       "route": "/s/[code]",
-      "source": "app/s/[code]/page.tsx",
+      "source": "app/s/[code]/route.ts",
+      "surface_kind": "http-route-handler",
       "evidence": "source-present",
       "current_browser_evidence": false
     },

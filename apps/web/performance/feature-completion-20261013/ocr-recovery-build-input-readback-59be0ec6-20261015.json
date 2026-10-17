@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "kind": "unchanged-app-build-input-readback",
+  "createdAt": "2026-10-15T10:23:06.421319+00:00",
+  "sourceHead": "59be0ec683642a3f26c759fc54589229ca16f7d6",
+  "originalBuildReceipt": "ocr-recovery-build-final-20261015.json",
+  "originalBuildReceiptSha256": "ece414dbbfa7248e58f310b6ca650fe9519da1cec6597808466bfbe189a5de5e",
+  "selectedBuildInputs": 757,
+  "mismatches": [],
+  "scope": "Only the retained 757 selected application build input bytes match. New SQL/controller/test source is verified separately.",
+  "newBuildRun": false,
+  "operatingProof": false
+}

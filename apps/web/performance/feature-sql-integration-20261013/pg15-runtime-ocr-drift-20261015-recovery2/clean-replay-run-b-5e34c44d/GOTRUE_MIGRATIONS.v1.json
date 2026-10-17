@@ -1,0 +1,405 @@
+{
+  "schemaVersion": 1,
+  "kind": "supabase-gotrue-migration-source-inventory",
+  "purpose": "Generator-only source-reconstruction inventory for validating native GoTrue migration contents against immutable upstream metadata; it contains no SQL content and is not database input.",
+  "repository": "https://github.com/supabase/auth",
+  "sourceCommit": "6a8fc26f6042ba92cda51bc62b70f1b61c2cd12e",
+  "sourceRef": "v2.184.0",
+  "sourceTree": "c44f9545914e7d939457004838549dae158a3c40",
+  "sourcePath": "migrations",
+  "ociImage": "docker.io/supabase/gotrue:v2.184.0",
+  "ociIndexDigest": "sha256:c485010238ab429edf4ac8eb70b37b41aae0a0905277a935d4a0b64bb848e393",
+  "ociAmd64ManifestDigest": "sha256:b9c5b998bd6a79f77a391db7d6607f23af2ca4cb9df00505ccb9350aebbdbfae",
+  "records": [
+    {
+      "filename": "00_init_auth_schema.up.sql",
+      "gitBlobSha1": "a040095ae1e55f43bc35535e892a3cfc4c5981f9",
+      "sha256": "4c3ab2565f2836d8fa0a54fd9d153facaee0c4c6258fa0a794c93446ddc10f71",
+      "byteLength": 3771
+    },
+    {
+      "filename": "20210710035447_alter_users.up.sql",
+      "gitBlobSha1": "fc8de129da43eca351100b1d222b2809f1367fe8",
+      "sha256": "b87f889d4839b7e092f186ad244f3f5294ab5c0f50ef2feb40cab1307be8c9cd",
+      "byteLength": 772
+    },
+    {
+      "filename": "20210722035447_adds_confirmed_at.up.sql",
+      "gitBlobSha1": "aabd42e98760541a59f61a054918c66e922819d4",
+      "sha256": "32499502e5d57594d2373e6f00d7b436a9b275c85b889680913f00d6ebc3ae73",
+      "byteLength": 212
+    },
+    {
+      "filename": "20210730183235_add_email_change_confirmed.up.sql",
+      "gitBlobSha1": "dc92c9cfae6f671013b4a5b7e2e26a831c36debc",
+      "sha256": "88da41a1dbae8077a26a4811c4d80b925162e5423c803467d3bff78407b4d995",
+      "byteLength": 666
+    },
+    {
+      "filename": "20210909172000_create_identities_table.up.sql",
+      "gitBlobSha1": "2f3a5357012d59ea94f8d895024a1c4a09f6979b",
+      "sha256": "4c2d6a94d34d34f98f1fa83537a0068f4813e49a19cfc2fd4e9199e5a941cc84",
+      "byteLength": 623
+    },
+    {
+      "filename": "20210927181326_add_refresh_token_parent.up.sql",
+      "gitBlobSha1": "a2b1c73fea2e3dd3e3ba07f93cce4bcbda26e2e3",
+      "sha256": "73fb1d320fb85e231e322d0da6184adcda838c755a2b3f1e0894c249a59ba4e3",
+      "byteLength": 1096
+    },
+    {
+      "filename": "20211122151130_create_user_id_idx.up.sql",
+      "gitBlobSha1": "d259aae6b8c892dce84ebfba2a095b05fc00a5fe",
+      "sha256": "0fbc4d8b62329aa444ea5820eef86e32a57a709964a2c65bc0463083b7130b02",
+      "byteLength": 161
+    },
+    {
+      "filename": "20211124214934_update_auth_functions.up.sql",
+      "gitBlobSha1": "2fb784bbb4cc07361bdd3f22af068bb215e21221",
+      "sha256": "abf8d29849e04db2b6a84ea9c8c58daafdabdd3e3520051efb9ec362f4679992",
+      "byteLength": 823
+    },
+    {
+      "filename": "20211202183645_update_auth_uid.up.sql",
+      "gitBlobSha1": "3ecadfd5cb2fae1e94028c2be53f36c0cf4785ee",
+      "sha256": "a70a3afa97c67fbb31aacbea496da0d01b9a809dc4b861f3187cb7e3ba5fda2d",
+      "byteLength": 311
+    },
+    {
+      "filename": "20220114185221_update_user_idx.up.sql",
+      "gitBlobSha1": "02fe76a07cd92f3fec21927aaf2da515d8769373",
+      "sha256": "89eb7cb7f44efcbf48ed854faca0347dea80cebff1693a8dc532d581729de0cd",
+      "byteLength": 241
+    },
+    {
+      "filename": "20220114185340_add_banned_until.up.sql",
+      "gitBlobSha1": "7530a7c1bb36042417107d0c43b8ab67de67e1a5",
+      "sha256": "8aea70090fdeeafc4bbf206a799551e3f7bce0e6749d8c7cc8033e983e750e38",
+      "byteLength": 136
+    },
+    {
+      "filename": "20220224000811_update_auth_functions.up.sql",
+      "gitBlobSha1": "4be423739aa3bf07bc3769aea5cc7751959ad53e",
+      "sha256": "5b72022d73e64a8e474d2122ac42f299bb7ce4d59755cdcc78e72abfe5d47dc0",
+      "byteLength": 895
+    },
+    {
+      "filename": "20220323170000_add_user_reauthentication.up.sql",
+      "gitBlobSha1": "277dbdb5a06d10c15804bb49a689adcfeeb2edd5",
+      "sha256": "5fb66f473dd37e7141c5165254a6706cae3d2cab3632b92fb0f8f7cb58f7655d",
+      "byteLength": 272
+    },
+    {
+      "filename": "20220429102000_add_unique_idx.up.sql",
+      "gitBlobSha1": "9d7644df2ccb53f8f9021a7d41dcd1dfa2945084",
+      "sha256": "4f9ce72459f72a601c4901eed0d4f5b9e9731c31f8d643736a118739c29538ee",
+      "byteLength": 1420
+    },
+    {
+      "filename": "20220531120530_add_auth_jwt_function.up.sql",
+      "gitBlobSha1": "11f84e85f16ebbc01864a646bd4272f5d34857be",
+      "sha256": "91d2d5e47f19e65a63ec411f6cbb18755ec1792cb4249694dc261ef59cc78a10",
+      "byteLength": 644
+    },
+    {
+      "filename": "20220614074223_add_ip_address_to_audit_log.postgres.up.sql",
+      "gitBlobSha1": "a1a66b4b3b1c513ceff3f9c1c20f3638af87dc2c",
+      "sha256": "0e2cbe2fc509b97f27803c04e723215c3944a7f84c043dd8f7cd7118c199a5dc",
+      "byteLength": 163
+    },
+    {
+      "filename": "20220811173540_add_sessions_table.up.sql",
+      "gitBlobSha1": "c16ef3ca56d2d0f585a8716e86d77bb413593896",
+      "sha256": "840c19639d972143bc3fc05a16e77da45c076edcba229c94b019a2db1f0eb192",
+      "byteLength": 1109
+    },
+    {
+      "filename": "20221003041349_add_mfa_schema.up.sql",
+      "gitBlobSha1": "a44654aed3cf4f746295fd0106f81b816af93c2a",
+      "sha256": "058ab23f8e55fd3ebd353f5367b9308ce88a95d0fe604b754337941095c5f3ce",
+      "byteLength": 2524
+    },
+    {
+      "filename": "20221003041400_add_aal_and_factor_id_to_sessions.up.sql",
+      "gitBlobSha1": "cc8a2096d950b288f71c95ba7299876aac78088d",
+      "sha256": "cea7d73fd31f39a0134ee4aaa16e5ff4af953cbc3f5e3321af38776bcda4943f",
+      "byteLength": 230
+    },
+    {
+      "filename": "20221011041400_add_mfa_indexes.up.sql",
+      "gitBlobSha1": "def57a299f0b7a0a11b591930b854668e3acb377",
+      "sha256": "32ab5cd482674c98fd5926e7c0995fc216d2cc2b1ff77554b6c45b4bd758dd6f",
+      "byteLength": 728
+    },
+    {
+      "filename": "20221020193600_add_sessions_user_id_index.up.sql",
+      "gitBlobSha1": "f5ba0425774ad841872934ca3b249bf025e7d688",
+      "sha256": "7b33e11e8092ea07d2f4e899558b46e0a5573f0c43a56532f1f640c2c7eb7802",
+      "byteLength": 105
+    },
+    {
+      "filename": "20221021073300_add_refresh_tokens_session_id_revoked_index.up.sql",
+      "gitBlobSha1": "0c47d4a75c72a3b4b1bf766b7f14d0e1a8db0a6e",
+      "sha256": "63887b7bd3045561c4930575d4fa324fc9090630193989a9736dd84328d1ec55",
+      "byteLength": 139
+    },
+    {
+      "filename": "20221021082433_add_saml.up.sql",
+      "gitBlobSha1": "30ac3d03a989ca9b7f06b706487ec32a2234c0b7",
+      "sha256": "af0bbfdb64dd32f512712f45b44e0dce4e9af8ce7874e01c3a804f95eeb3a387",
+      "byteLength": 4474
+    },
+    {
+      "filename": "20221027105023_add_identities_user_id_idx.up.sql",
+      "gitBlobSha1": "12e7aa5562b49dce88c2847df2f56777e68dd7af",
+      "sha256": "1e7c07b825b2ee8bdfe8fee06588525b97f3771efc6c365c7057c0f7abfbd30a",
+      "byteLength": 120
+    },
+    {
+      "filename": "20221114143122_add_session_not_after_column.up.sql",
+      "gitBlobSha1": "c729911c1e52d39ef1643d386146329b0d7f9349",
+      "sha256": "7bf30a94308028f0c8140166e9a6f3d77356daa1147e5740a27cc983e39b854c",
+      "byteLength": 304
+    },
+    {
+      "filename": "20221114143410_remove_parent_foreign_key_refresh_tokens.up.sql",
+      "gitBlobSha1": "62d207848bca6ff99865fb20129dfd0f4e7bc0ff",
+      "sha256": "5e804d7c82e0e6dca6f72e2350951e87714f6890fe63c2388dcbfa9aea687f2f",
+      "byteLength": 111
+    },
+    {
+      "filename": "20221125140132_backfill_email_identity.up.sql",
+      "gitBlobSha1": "cd06425c040821b78394cc1770fb8cc2edcc1abf",
+      "sha256": "60cfea2750a2c79c0d69bb3a08edee0efb830c12212cac0ffdb5d44937c2839d",
+      "byteLength": 683
+    },
+    {
+      "filename": "20221208132122_backfill_email_last_sign_in_at.up.sql",
+      "gitBlobSha1": "19ec79e9e357b5d847fff0b960f2ea8b1d92e5fa",
+      "sha256": "462f871362dcffdd87d70bf79941f779e7137afce4039cf7b8bfe60d74e14e34",
+      "byteLength": 358
+    },
+    {
+      "filename": "20221215195500_modify_users_email_unique_index.up.sql",
+      "gitBlobSha1": "c12de04f657811527fafa9d940eea195f4938140",
+      "sha256": "0a2cdcd4101a418ec7b482800327fc90238b498db01a657dbbeefdba8b8f3866",
+      "byteLength": 1256
+    },
+    {
+      "filename": "20221215195800_add_identities_email_column.up.sql",
+      "gitBlobSha1": "eb60334c4c7c5d037d019e15b3ea75cc29716d4b",
+      "sha256": "3ddff50750549b790eecbeac2194966ca98354564f4fba537cda70d96b575d39",
+      "byteLength": 943
+    },
+    {
+      "filename": "20221215195900_remove_sso_sessions.up.sql",
+      "gitBlobSha1": "228302d01bfe0be5f19a265d091e05b5aae36295",
+      "sha256": "f79ad2aaaa4f748836595a9ef10b3df0234e53032c339f0c74e3181271af1801",
+      "byteLength": 141
+    },
+    {
+      "filename": "20230116124310_alter_phone_type.up.sql",
+      "gitBlobSha1": "fa846dbb0e25f25b5ccbc6bf3d6ab02f7ab11271",
+      "sha256": "7d6fd7f428bd6633ab622ff1d933feb9bbe0904224eced052aae82fac2ef36a5",
+      "byteLength": 579
+    },
+    {
+      "filename": "20230116124412_add_deleted_at.up.sql",
+      "gitBlobSha1": "999abaa88de4ab4f61f06c37c7ea7785b187a9e8",
+      "sha256": "144a735e50373686e04d0cd3d46b997262162dda14965870342f65cd0b5a7845",
+      "byteLength": 148
+    },
+    {
+      "filename": "20230131181311_backfill_invite_identities.up.sql",
+      "gitBlobSha1": "2fcb3582849bac38c661af2ae082d05592cfa385",
+      "sha256": "f88443609f6d15d3d1bff00e69a6c7a455fa331cb30747c8448d5e219729a2df",
+      "byteLength": 622
+    },
+    {
+      "filename": "20230322519590_add_flow_state_table.up.sql",
+      "gitBlobSha1": "a8842e5b0daeb08b369b4877dc7c555ecb6f4c37",
+      "sha256": "55445d9e1f10d46e6edaf4718fca5be01d031e038a4a141c2eedb591f5936af7",
+      "byteLength": 905
+    },
+    {
+      "filename": "20230402418590_add_authentication_method_to_flow_state_table.up.sql",
+      "gitBlobSha1": "e83af856687c08f60523aa99fb02c4a91450ec22",
+      "sha256": "8f10e836a25f85ccdac620c36f871effc84e7d6020bd38fd002ddd119847fd84",
+      "byteLength": 399
+    },
+    {
+      "filename": "20230411005111_remove_duplicate_idx.up.sql",
+      "gitBlobSha1": "dc23931c772e23b85743ddfdf939aa9c04de65cb",
+      "sha256": "cc1b7b8a172693abafa64d0273240fa8181fdf5dde565e15b94adb38ec40c2e9",
+      "byteLength": 79
+    },
+    {
+      "filename": "20230508135423_add_cleanup_indexes.up.sql",
+      "gitBlobSha1": "162acee1598ab39dc0edfa731f875a487a24f37b",
+      "sha256": "89d4747491836d2bc33cc340029624d88ed9cf7e32574c3a9fbbe2431a27b5c8",
+      "byteLength": 566
+    },
+    {
+      "filename": "20230523124323_add_mfa_challenge_cleanup_index.up.sql",
+      "gitBlobSha1": "667d5020be0c5f6d32e1b1a8241ed649961b6e14",
+      "sha256": "af534c2184d12d00bef8fbd8b593f5a4c8b3297854bd205fb4e3bcdba9d6ca56",
+      "byteLength": 172
+    },
+    {
+      "filename": "20230818113222_add_flow_state_to_relay_state.up.sql",
+      "gitBlobSha1": "f940e706cc93ae5063aa57ce3fd0c827682d0410",
+      "sha256": "cc6587385b84deba61c31e0749eb8064f9cdf5aa6db5239713fa31966de4f2dd",
+      "byteLength": 198
+    },
+    {
+      "filename": "20230914180801_add_mfa_factors_user_id_idx.up.sql",
+      "gitBlobSha1": "805c97cb8e3f30d6d960c43676f7c94fce0496f4",
+      "sha256": "844c575a40f9609987638bb29716deaaad3b9c1c1e8c399204d870018f867684",
+      "byteLength": 109
+    },
+    {
+      "filename": "20231027141322_add_session_refresh_columns.up.sql",
+      "gitBlobSha1": "79efba9bcfb7cdf40294035e8c4eec3f17fcb2af",
+      "sha256": "d4aa51107599c755003464121d4c0d99e617543bfee9a816fd76df0b399aafe0",
+      "byteLength": 213
+    },
+    {
+      "filename": "20231114161723_add_sessions_tag.up.sql",
+      "gitBlobSha1": "7acf1bb9dd8484c0037c4f0283e5711a61b79bdd",
+      "sha256": "e32711d98cd7c3f5920ca2a79df9c597433dac1b7e8b56df7b0becb96319d147",
+      "byteLength": 101
+    },
+    {
+      "filename": "20231117164230_add_id_pkey_identities.up.sql",
+      "gitBlobSha1": "31ed280d3b76f084b9b5e8ffda05343f86c4036b",
+      "sha256": "8822b2807b672d38b212618193efdb6fc2cf787e564a495940c1a8844155d7b0",
+      "byteLength": 1002
+    },
+    {
+      "filename": "20240115144230_remove_ip_address_from_saml_relay_state.up.sql",
+      "gitBlobSha1": "169ec37b29bbe7317f6ee058ba5b847481551a25",
+      "sha256": "9e104ca8b63695f6427ff057b5b7801ef7e4cc3baf32d4289e61b0015128d651",
+      "byteLength": 317
+    },
+    {
+      "filename": "20240214120130_add_is_anonymous_column.up.sql",
+      "gitBlobSha1": "6ef963f5736e54ea6c2d6c6fabbcb6b4880709e6",
+      "sha256": "e36f403a8aad16ccbcc44e1d4198cf21451a906b45ceaedb74bfcd28e79caf21",
+      "byteLength": 273
+    },
+    {
+      "filename": "20240306115329_add_issued_at_to_flow_state.up.sql",
+      "gitBlobSha1": "d6eff157ae6ab363e49323268351d6941a262709",
+      "sha256": "bf1f44b3cb07768436f31c74baabfd2f39c738609aff8b21cfa5a432abcc8a99",
+      "byteLength": 138
+    },
+    {
+      "filename": "20240314092811_add_saml_name_id_format.up.sql",
+      "gitBlobSha1": "0196250d20ddf717e766a92376fc4df5add5a4e0",
+      "sha256": "282677b538df87612bef2780d25b08508980648e3e33e6a90f8602d35d4e96bf",
+      "byteLength": 130
+    },
+    {
+      "filename": "20240427152123_add_one_time_tokens_table.up.sql",
+      "gitBlobSha1": "be7312656f9c7409dc7d7771d96d6084192d3a1f",
+      "sha256": "84b1ffdb6aa23753405142efc9d802fe41121f4883cd6427382d789a694d3512",
+      "byteLength": 1617
+    },
+    {
+      "filename": "20240612123726_enable_rls_update_grants.up.sql",
+      "gitBlobSha1": "9201e84962a98fbb9069bbd320554198a41482b8",
+      "sha256": "4339a09e7c90d7a46d2527097bc47c382300d72faaec901a8792319bd9a28f10",
+      "byteLength": 3148
+    },
+    {
+      "filename": "20240729123726_add_mfa_phone_config.up.sql",
+      "gitBlobSha1": "ec94d7bcbe2f07768efb3fd2420577d49b9c7195",
+      "sha256": "b273758317267b6b4d126489ba93550c8d0e0584e52c08b3cc101de6fe1b857c",
+      "byteLength": 498
+    },
+    {
+      "filename": "20240802193726_add_mfa_factors_column_last_challenged_at.up.sql",
+      "gitBlobSha1": "bc3eea989450d8e4875b80aa7fc372ea68ad104e",
+      "sha256": "0e5aa195cf80e377cdca00b4e01e2c82769c03dc9ffb487dce8891944bc014dd",
+      "byteLength": 134
+    },
+    {
+      "filename": "20240806073726_drop_uniqueness_constraint_on_phone.up.sql",
+      "gitBlobSha1": "ade27eaf66d48b0be341e20b3fc407595054e12c",
+      "sha256": "41b86596488620d17e513354fa9ffda041214d9014dc34e46f68d42019d1c2ee",
+      "byteLength": 910
+    },
+    {
+      "filename": "20241009103726_add_web_authn.up.sql",
+      "gitBlobSha1": "04d897265385938764df88155b8bd9edfd2ca9d8",
+      "sha256": "4efc5df9a393ce28ef639f1523a1dbc018066daddca7fb58d2bf02214e532bd0",
+      "byteLength": 345
+    },
+    {
+      "filename": "20250717082212_add_disabled_to_sso_providers.up.sql",
+      "gitBlobSha1": "13285394743f4577c2ddfdaee40eb2a3688bec94",
+      "sha256": "4b3b6073f80799f41370cbba6706a1ea8770803746f7662ee0f82e72740af4bb",
+      "byteLength": 317
+    },
+    {
+      "filename": "20250731150234_add_oauth_clients_table.up.sql",
+      "gitBlobSha1": "9abf69a496ba1f75287e7446c788531dcb743891",
+      "sha256": "33651d28b6ea6aa1cd84b5d50cdf8181cfb9fb314b76670554bef58dbf69c168",
+      "byteLength": 1446
+    },
+    {
+      "filename": "20250804100000_add_oauth_authorizations_consents.up.sql",
+      "gitBlobSha1": "a74b4305cbf4b707a4e5c2b18340b2dab3cd89fd",
+      "sha256": "64b4730434c00864a069404a636bc2281c3920fab451517b138e6f6f056d986f",
+      "byteLength": 4279
+    },
+    {
+      "filename": "20250901200500_add_oauth_client_type.up.sql",
+      "gitBlobSha1": "a9712a704b998dc5981c3172eb09854473ff1458",
+      "sha256": "e986446884eb9b5b0f26dd667385a31da8291f8748a543669cd960c405835d1b",
+      "byteLength": 702
+    },
+    {
+      "filename": "20250903112500_remove_oauth_client_id_column.up.sql",
+      "gitBlobSha1": "273ff9e2576de7f2308daa610f1223c7a8b1ad34",
+      "sha256": "fb2df11538de2c165560c3b6bdae3d4da543a3ac136f8a0e6dc4fbd56d223c30",
+      "byteLength": 549
+    },
+    {
+      "filename": "20250904133000_add_oauth_client_id_to_session.up.sql",
+      "gitBlobSha1": "5ad7a74a6bb4237779670afa70f0367f12ae75e5",
+      "sha256": "3c4b49f787b54d4e09b48b4500226b59edc73e3f60826538e9e3552db9542faf",
+      "byteLength": 567
+    },
+    {
+      "filename": "20250925093508_add_last_webauthn_challenge_data.up.sql",
+      "gitBlobSha1": "e78d1722565ac6f47b64cabe7c56296ed33274ce",
+      "sha256": "0d1df54678aadbd03777c82e3d9e4a917717d806e884a6c69f3c0206c1963017",
+      "byteLength": 391
+    },
+    {
+      "filename": "20251007112900_add_session_refresh_token_columns.up.sql",
+      "gitBlobSha1": "5b1ca2b3e39be14e918e085a90044212b8381136",
+      "sha256": "030486cbfbd1b3cc95f029eb45d33270c22706fe33249a04240dccffc656ce2e",
+      "byteLength": 583
+    },
+    {
+      "filename": "20251104100000_add_nonce_to_oauth_authorizations.up.sql",
+      "gitBlobSha1": "cdbd514c93c7262b07c5902938142c0ab2226b3b",
+      "sha256": "830c36f9e0fd02a278e361be02fb1121ff472f3f3514f108b55ff3bc52ed122d",
+      "byteLength": 341
+    },
+    {
+      "filename": "20251111201300_add_scopes_to_sessions.up.sql",
+      "gitBlobSha1": "f869fdce3f1a964d765410c6281fec343148d6ee",
+      "sha256": "ed17a54ec423ca409b384e26805ec7e10b346a22573f5729f9580126b9715271",
+      "byteLength": 509
+    },
+    {
+      "filename": "20251201000000_add_oauth_client_states_table.up.sql",
+      "gitBlobSha1": "6bece1a570247091e1aaa2715462e40f7f628d82",
+      "sha256": "c0d1ef106dfc6b6aaf7d2ef3a7f0f723fb5b416d3e7ca5c2bc2f69e998ec8547",
+      "byteLength": 619
+    }
+  ]
+}

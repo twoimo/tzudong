@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T15:38:11.362941+00:00",
+  "baseCommit": "df32869714088c372a936cf10a5ac91fe7ee0665",
+  "files": {
+    ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json": {
+      "bytes": 168157,
+      "sha256": "40e7e965af1d4671656b4ff8a16ee0c5532ca205768ecb9ab24f372c9782c2cb"
+    }
+  },
+  "unchangedProductSourceFilesVerified": 21,
+  "unchangedPriorArtifactMapSha256": "d89d54cb0f75aa274b0b72221a205185df19a465697c65265f3610a65e075fb6",
+  "scope": "Generated source-reconciliation metadata only; not a product, hosted, or performance change."
+}

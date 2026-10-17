@@ -18,7 +18,8 @@ describe('shared review mutation UI boundary', () => {
     expect(source.match(/같은 요청 다시 확인/g)?.length).toBe(2);
     expect(source.match(/실패한 업로드 취소/g)?.length).toBe(3);
     expect(source).toContain('setRetryKind(mutationRef.current!.pendingKind)');
-    expect(source.match(/disabled=\{isSubmitting \|\| isDeleting \|\| retryKind !== null\}/g)?.length).toBe(4);
+    expect(source.match(/disabled=\{isSubmitting \|\| isDeleting \|\| retryKind !== null\}/g)?.length).toBe(2);
+    expect(source.match(/disabled=\{featureHeld \|\| isSubmitting \|\| isDeleting \|\| retryKind !== null\}/g)?.length).toBe(2);
     expect(source).toContain('mutationRef.current?.pending');
     expect(mypage.indexOf('사진 정리 다시 시도')).toBeLessThan(mypage.indexOf('{filteredReviews.length === 0'));
     expect(mypage).toContain('void retryCleanup();');

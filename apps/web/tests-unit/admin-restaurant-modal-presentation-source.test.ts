@@ -17,7 +17,9 @@ describe('admin restaurant modal presentation source contract', () => {
     expect(adminModalSource).toContain('aria-label="맛집 수정 상태 요약"');
     expect(adminModalSource).toContain('aria-label="맛집 수정 단계 진행률"');
     expect(adminModalSource).toContain('renderAdminRestaurantSection');
-    expect(adminModalSource).toContain('지도에 바로 반영되는 관리자 편집 화면입니다.');
+    expect(adminModalSource).toContain('id={adminRestaurantDescriptionId}');
+    expect(adminModalSource).toContain('ariaDescribedBy={adminRestaurantDescriptionId}');
+    expect(adminModalSource).toContain('aria-describedby={adminRestaurantDescriptionId}');
     expect(adminModalSource).toContain('1. 기본 정보');
     expect(adminModalSource).toContain('2. 주소와 좌표');
     expect(adminModalSource).toContain('3. 유튜브 링크 & 쯔양 리뷰');

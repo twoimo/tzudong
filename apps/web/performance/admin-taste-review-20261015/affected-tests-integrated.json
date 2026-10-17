@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T14:45:43.311302+00:00",
+  "command": "Bun1.4.0 --no-env-file test <affected files> --timeout30000",
+  "baseCommit": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "exitCode": 0,
+  "elapsedSeconds": 3.346,
+  "counts": {
+    "pass": 189,
+    "fail": 0,
+    "skip": 0
+  },
+  "files": [
+    "tests-unit/admin-receipt-ocr-workflow.test.ts",
+    "tests-unit/durable-receipt-ocr.test.ts",
+    "tests-unit/gemini-ocr.test.ts",
+    "tests-unit/latest-selection.test.ts",
+    "tests-unit/review-modal-ocr-ux.test.ts",
+    "tests-unit/review-save-submit.test.ts",
+    "tests-unit/review-storage-verification.test.ts",
+    "tests-unit/storyboard-gemini-client.test.ts",
+    "tests-unit/storyboard-gemini-execution-contract.test.ts",
+    "tests-unit/storyboard-outbound-worker.test.ts",
+    "tests-unit/zz-ocr-route-contract.test.ts"
+  ],
+  "failedTests": [],
+  "testInputSha256": {
+    "tests-unit/admin-receipt-ocr-workflow.test.ts": "59efd57eb7fff6e5c5d08b24cdb19317b5d8c3e14d6d72cbd769a8ed0bd6eaef",
+    "tests-unit/durable-receipt-ocr.test.ts": "1e422d7e70b4dd69449dcc5ed59e45a5763d8b6da08bd3675b288179a8fb442c",
+    "tests-unit/gemini-ocr.test.ts": "ca24fcc6c305388bf1b7c779d8d7f0846d87f037f1e9fe926d27eb60d649e86f",
+    "tests-unit/latest-selection.test.ts": "5a0e9d17ca5565ef7c6d695a21ea86f20719d5c4f01e1cf442e3f4c4f644ac7d",
+    "tests-unit/review-modal-ocr-ux.test.ts": "a43facf284aff89b01076297f092e89a11b38d0da9c85bbb3b68bfc10b3bbb1c",
+    "tests-unit/review-save-submit.test.ts": "08634d8e1493683725d9f981599c681848122e1496da4b6b570386326fc711e3",
+    "tests-unit/review-storage-verification.test.ts": "a3a4e112186824193a1598faa82320da7c33c5fd074908266fdf68baca47f355",
+    "tests-unit/storyboard-gemini-client.test.ts": "b5708bb1d73bdbdc68895f782f80cccb25edadeb27204b76bb75c0ecb4d3d4e9",
+    "tests-unit/storyboard-gemini-execution-contract.test.ts": "c08a4f451f98dda82c22ca9795b2ebd367e582139991fc40b8d93a452737f864",
+    "tests-unit/storyboard-outbound-worker.test.ts": "ceadf815ee3cc389d10eb802bcbc4417eb5e6ae0467659a00e887d09e56146dd",
+    "tests-unit/zz-ocr-route-contract.test.ts": "91c5cd26b9184e10c405b4154c9c4ffa7c4d363a761124d59bd8f7fe822d8814"
+  },
+  "productTestSha256": {
+    "apps/web/components/reviews/ReviewModal.tsx": "7fb9932ddeb4ab1d7b7d3b28dece717dded733768a2bda595e7c6d1cd2c8802d",
+    "apps/web/lib/admin/storyboard/outbound-worker.ts": "9110e912fd54094d6cd2323ce6044d8ca0028c250e2c7778409ad74b272fda9a",
+    "apps/web/lib/ocr/latest-selection.ts": "109fc4dc6ba16a24433fa698c7497ac9968dfb2cb003cbe799cdf79663825179",
+    "apps/web/lib/ocr/receipt-upload-preparation.ts": "14a011d50aa019157770bca7705bf9582a6b1a48a48e334acd8e19ba0b4bc7cd",
+    "apps/web/lib/ocr/review-modal-ocr-ux.ts": "285a0019e50cd6d73bfeb667143a0168f2f08abe36a38cb63b9c660b8372db72",
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": "1e422d7e70b4dd69449dcc5ed59e45a5763d8b6da08bd3675b288179a8fb442c",
+    "apps/web/tests-unit/latest-selection.test.ts": "5a0e9d17ca5565ef7c6d695a21ea86f20719d5c4f01e1cf442e3f4c4f644ac7d",
+    "apps/web/tests-unit/review-modal-ocr-ux.test.ts": "a43facf284aff89b01076297f092e89a11b38d0da9c85bbb3b68bfc10b3bbb1c",
+    "apps/web/tests-unit/review-save-submit.test.ts": "08634d8e1493683725d9f981599c681848122e1496da4b6b570386326fc711e3",
+    "apps/web/tests-unit/review-storage-verification.test.ts": "a3a4e112186824193a1598faa82320da7c33c5fd074908266fdf68baca47f355",
+    "apps/web/tests-unit/storyboard-outbound-worker.test.ts": "ceadf815ee3cc389d10eb802bcbc4417eb5e6ae0467659a00e887d09e56146dd",
+    "apps/web/tests-unit/zz-ocr-route-contract.test.ts": "91c5cd26b9184e10c405b4154c9c4ffa7c4d363a761124d59bd8f7fe822d8814"
+  },
+  "drift": [],
+  "rawOutputSha256": "1212db162a2e54bb8ebfe402ab4d6eb5a1748bf39f6c7e46bddc4d9c031a65c0",
+  "rawLogsPersisted": false,
+  "boundary": "Local integration of affected review fixes. Overlaps agent runs and prior canonical suite; do not sum them. No hosted/provider proof."
+}

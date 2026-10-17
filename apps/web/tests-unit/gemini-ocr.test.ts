@@ -6,6 +6,7 @@ import {
   callGeminiReceiptOcr,
   GEMINI_OCR_FALLBACK_MODEL,
   getGeminiOcrDefaultModel,
+  getGeminiOcrInferenceConfigSnapshot,
   getGeminiOcrThinkingLevel,
   GeminiOcrError,
   getGeminiOcrModels,
@@ -133,7 +134,7 @@ describe('gemini receipt ocr helper', () => {
       } as NodeJS.ProcessEnv,
       generateContentImpl: async ({ model }) => {
         seenModels.push(model);
-        if (model !== 'other-model') throw new Error('synthetic fallback');
+        if (model !== 'other-model') throw { status: 404, message: 'synthetic unavailable model' };
         return '{"store_name":"보존 식당"}';
       },
     });
@@ -150,6 +151,39 @@ describe('gemini receipt ocr helper', () => {
     expect(getGeminiOcrThinkingLevel({ GEMINI_THINKING_LEVEL: 'high' } as NodeJS.ProcessEnv)).toBe('HIGH');
     expect(getGeminiOcrThinkingLevel({ GEMINI_THINKING_LEVEL: 'high', GEMINI_OCR_THINKING_LEVEL: 'medium' } as NodeJS.ProcessEnv)).toBe('MEDIUM');
     expect(getGeminiOcrThinkingLevel({ GEMINI_OCR_THINKING_LEVEL: 'invalid' } as NodeJS.ProcessEnv)).toBe('MEDIUM');
+  });
+
+  test('uses the caller snapshot for the provider request even if the environment disagrees', async () => {
+    const inferenceConfig = getGeminiOcrInferenceConfigSnapshot({
+      GEMINI_OCR_THINKING_LEVEL: 'high',
+    } as NodeJS.ProcessEnv);
+    let receivedConfig: unknown;
+    const result = await callGeminiReceiptOcr({
+      apiKey: 'gemini-test-key',
+      imageBase64: 'AA==',
+      mimeType: 'image/png',
+      prompt: 'synthetic receipt',
+      env: {
+        GEMINI_OCR_MODEL: 'gemini-3.8-flash',
+        GEMINI_OCR_THINKING_LEVEL: 'low',
+      } as NodeJS.ProcessEnv,
+      inferenceConfig,
+      generateContentImpl: async ({ thinkingLevel, inferenceConfig: received }) => {
+        receivedConfig = received;
+        expect(thinkingLevel).toBe('HIGH');
+        return '{"store_name":"스냅샷 식당","confidence":0.9}';
+      },
+    });
+
+    expect(receivedConfig).toBe(inferenceConfig);
+    expect(Object.isFrozen(inferenceConfig)).toBe(true);
+    expect(inferenceConfig).toEqual({
+      version: 'gemini-receipt-ocr-inference-v1',
+      thinkingLevel: 'HIGH',
+      responseMimeType: 'application/json',
+      samplingPolicy: 'omit-modern-zero-legacy-v1',
+    });
+    expect(result.model).toBe('gemini-3.8-flash');
   });
 
   test('builds Gemini multimodal parts without exposing secrets', () => {
@@ -202,7 +236,7 @@ describe('gemini receipt ocr helper', () => {
       env: { GEMINI_OCR_MODEL: 'bad-model,good-model' } as NodeJS.ProcessEnv,
       generateContentImpl: async ({ model, thinkingLevel }) => {
         seenModels.push(`${model}:${thinkingLevel}`);
-        if (model === 'bad-model') throw new Error('model unavailable');
+        if (model === 'bad-model') throw { status: 404, message: 'model unavailable' };
         return '{"store_name":"스시린 불당본점","confidence":0.9}';
       },
     });
@@ -211,6 +245,22 @@ describe('gemini receipt ocr helper', () => {
     expect(result.model).toBe('good-model');
     expect(result.attempts).toHaveLength(2);
     expect(result.data.store_name).toBe('스시린 불당본점');
+  });
+
+  test('does not dispatch a fallback after an uncertain transport failure', async () => {
+    const seenModels: string[] = [];
+    await expect(callGeminiReceiptOcr({
+      apiKey: 'gemini-test-key',
+      imageBase64: 'abc123',
+      mimeType: 'image/jpeg',
+      prompt: 'read',
+      env: { GEMINI_OCR_MODEL: 'first-model,second-model' } as NodeJS.ProcessEnv,
+      generateContentImpl: async ({ model }) => {
+        seenModels.push(model);
+        throw new Error('uncertain transport outcome');
+      },
+    })).rejects.toThrow(GeminiOcrError);
+    expect(seenModels).toEqual(['first-model']);
   });
 
   test('does not include the API key in missing-key errors', async () => {

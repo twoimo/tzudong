@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { GenerateContentResponse, GoogleGenAI } from '@google/genai';
 import { GeminiStoryboardClient, resolveStoryboardGeminiKey } from '../lib/admin/storyboard/gemini-client';
-import { buildStoryboardDraftPrompt, storyboardProductionRequestSchema, StoryboardProductionError } from '../lib/admin/storyboard/production-contract';
+import { STORYBOARD_WORKFLOW, buildStoryboardDraftPrompt, storyboardProductionRequestSchema, StoryboardProductionError } from '../lib/admin/storyboard/production-contract';
 import { STORYBOARD_GEMINI_IMAGE_MODELS } from '../lib/admin/storyboard/gemini-models';
 
-const request = () => storyboardProductionRequestSchema.parse({ workflow: 'storyboard-mlx-v1', requestId: crypto.randomUUID(),
+const directBudget = async <T>(work: () => Promise<T>) => await work();
+const request = () => storyboardProductionRequestSchema.parse({ workflow: STORYBOARD_WORKFLOW, requestId: crypto.randomUUID(),
   prompt: '합성 검증용 식당 촬영안', sceneCount: 5, providers: { externalAI: true,
     text: { id: 'gemini-api', model: 'gemini-3.8-flash' }, image: { id: 'gemini-api', model: 'gemini-3.1-flash-image' } } });
 const draft = { title: '합성 검증', logline: '테스트 데이터', scenes: Array.from({ length: 5 }, (_, i) => ({
@@ -41,10 +42,10 @@ async function captureSdkRequests(work: (client: GoogleGenAI) => Promise<void>) 
 }
 
 describe('Gemini storyboard worker client', () => {
-  test('installed SDK serializes 3.8 draft without removed sampling fields and preserves the existing contract', async () => {
+  test('installed SDK serializes 3.8 draft with supported MEDIUM thinking and no removed sampling fields', async () => {
     const input = request();
     const requests = await captureSdkRequests(async client => {
-      const result = await new GeminiStoryboardClient({ client, apiKey: 'synthetic-compatibility-key' }).draft(input);
+      const result = await new GeminiStoryboardClient({ client, apiKey: 'synthetic-compatibility-key', budget: directBudget }).draft(input);
       expect(result.draft.scenes).toHaveLength(5);
       expect(result.provenance.responseModel).toBe(input.providers.text.model);
     });
@@ -64,7 +65,7 @@ describe('Gemini storyboard worker client', () => {
     const requests = await captureSdkRequests(async client => {
       for (const model of STORYBOARD_GEMINI_IMAGE_MODELS) {
         const input = request(); input.providers.image.model = model.id;
-        const result = await new GeminiStoryboardClient({ client, apiKey: 'synthetic-compatibility-key' }).image(input, 'synthetic image prompt');
+        const result = await new GeminiStoryboardClient({ client, apiKey: 'synthetic-compatibility-key', budget: directBudget }).image(input, 'synthetic image prompt');
         expect(result.bytes.toString()).toBe('synthetic-image');
         expect(result.provenance.responseModel).toBe(model.id);
       }
@@ -76,15 +77,31 @@ describe('Gemini storyboard worker client', () => {
     expect(resolveStoryboardGeminiKey({ GEMINI_CREDITS_API_KEY: 'funded', STORYBOARD_GEMINI_API_KEY: 'other' })).toBe('funded');
     expect(resolveStoryboardGeminiKey({ NEXT_PUBLIC_GOOGLE_API_KEY: 'public' })).toBeNull();
   });
+  test('passes the worker env-file scope and AbortSignal to every project-budget acquisition', async () => {
+    const fake = fakeClient();
+    const controller = new AbortController();
+    const env = { GEMINI_CREDITS_API_KEY: 'funded', GEMINI_BUDGET_PROJECT: 'worker-env-file' };
+    const observed: Array<{ env?: NodeJS.ProcessEnv; signal?: AbortSignal }> = [];
+    const budget = async <T>(work: () => Promise<T>, options?: { env?: NodeJS.ProcessEnv; signal?: AbortSignal }) => {
+      observed.push(options ?? {});
+      return await work();
+    };
+
+    await new GeminiStoryboardClient({ client: fake.client, env, budget }).models(controller.signal);
+
+    expect(observed).toHaveLength(3);
+    expect(observed.every((entry) => entry.env?.GEMINI_BUDGET_PROJECT === 'worker-env-file')).toBe(true);
+    expect(observed.every((entry) => entry.signal === controller.signal)).toBe(true);
+  });
   test('coalesces repeated metadata polling through a bounded catalog and returns independent objects', async () => {
-    const fake = fakeClient(); const provider = new GeminiStoryboardClient({ client: fake.client });
+    const fake = fakeClient(); const provider = new GeminiStoryboardClient({ client: fake.client, budget: directBudget });
     const first = await provider.models(); first[0].capabilities.push('forged');
     for (let i = 0; i < 100; i++) expect((await provider.models())[0].capabilities).toEqual(['chat']);
     expect(fake.reads()).toBe(3);
     expect(first.every((model) => model.bytes_on_disk === 0 && model.bytes_resident === 0)).toBe(true);
   });
   test('validates structured scenes and actual response model provenance', async () => {
-    const fake = fakeClient(); const provider = new GeminiStoryboardClient({ client: fake.client });
+    const fake = fakeClient(); const provider = new GeminiStoryboardClient({ client: fake.client, budget: directBudget });
     const result = await provider.draft(request());
     expect(result.draft.scenes).toHaveLength(5);
     expect(result.provenance).toMatchObject({ providerId: 'gemini-api', model: 'gemini-3.8-flash', responseModel: 'gemini-3.8-flash', verification: 'official-api' });
@@ -95,35 +112,35 @@ describe('Gemini storyboard worker client', () => {
       if(model===missing)throw {status:404,message:'synthetic-unavailable'};
       return {name:`models/${model}`};
     };
-    const models=await new GeminiStoryboardClient({client:fake.client}).models();
+    const models=await new GeminiStoryboardClient({client:fake.client,budget:directBudget}).models();
     expect(models.map(entry=>entry.id)).toEqual(['gemini-3.8-flash',STORYBOARD_GEMINI_IMAGE_MODELS[0].id]);
     expect(models.some(entry=>entry.id===missing)).toBe(false);
   });
   test('rejects an empty verified catalog and preserves caller cancellation', async () => {
     const fake=fakeClient();fake.client.models.get=async()=>{throw {status:404,message:'synthetic'};};
-    await expect(new GeminiStoryboardClient({client:fake.client}).models()).rejects.toMatchObject({code:'provider_failed'});
+    await expect(new GeminiStoryboardClient({client:fake.client,budget:directBudget}).models()).rejects.toMatchObject({code:'provider_failed'});
     const controller=new AbortController();fake.client.models.get=async()=>{controller.abort();throw new Error('synthetic');};
-    await expect(new GeminiStoryboardClient({client:fake.client}).models(controller.signal)).rejects.toBeDefined();
+    await expect(new GeminiStoryboardClient({client:fake.client,budget:directBudget}).models(controller.signal)).rejects.toBeDefined();
   });
   test('preserves an all-catalog authentication failure as an explicit provider error', async () => {
     const fake = fakeClient(); fake.client.models.get = async () => { throw { status: 401, message: 'synthetic-private' }; };
-    await expect(new GeminiStoryboardClient({ client: fake.client }).models())
+    await expect(new GeminiStoryboardClient({ client: fake.client, budget: directBudget }).models())
       .rejects.toMatchObject({ code: 'provider_auth_failed', message: 'provider_auth_failed' });
   });
   test('returns a completed result even when optional usage telemetry fails', async () => {
     const fake = fakeClient();
-    const provider = new GeminiStoryboardClient({ client: fake.client, onUsage: () => { throw new Error('telemetry unavailable'); } });
+    const provider = new GeminiStoryboardClient({ client: fake.client, budget: directBudget, onUsage: () => { throw new Error('telemetry unavailable'); } });
     expect((await provider.draft(request())).draft.scenes).toHaveLength(5);
   });
   test('rejects different response models and all non-Gemini or unapproved request models', async () => {
     const fake = fakeClient(async () => response('another-model'));
-    await expect(new GeminiStoryboardClient({ client: fake.client }).draft(request())).rejects.toMatchObject({ code: 'model_identity_mismatch' });
+    await expect(new GeminiStoryboardClient({ client: fake.client, budget: directBudget }).draft(request())).rejects.toMatchObject({ code: 'model_identity_mismatch' });
     const invalid = request(); invalid.providers.text = { id: 'openai-api', model: 'other' };
     await expect(new GeminiStoryboardClient({ client: fake.client }).draft(invalid)).rejects.toBeInstanceOf(StoryboardProductionError);
   });
   test('performs no work after abort and does not leak provider diagnostics', async () => {
     let calls = 0; const fake = fakeClient(async () => { calls++; throw { status: 429, message: 'private-provider-diagnostic' }; });
-    const provider = new GeminiStoryboardClient({ client: fake.client });
+    const provider = new GeminiStoryboardClient({ client: fake.client, budget: directBudget });
     const signal = AbortSignal.abort();
     await expect(provider.draft(request(), signal)).rejects.toBeDefined(); expect(calls).toBe(0);
     await expect(provider.draft(request())).rejects.toMatchObject({ code: 'provider_rate_limited', message: 'provider_rate_limited' });

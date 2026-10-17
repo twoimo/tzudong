@@ -428,6 +428,8 @@ describe('public API security source contracts', () => {
     const ocrRerunSource = source('app/api/admin/ocr-receipts/rerun/route.ts');
     const ocrResetAllSource = source('app/api/admin/ocr-receipts/reset-all/route.ts');
     const ocrProcessSource = source('app/api/admin/ocr-receipts/process/route.ts');
+    const ocrProcessCoreSource = source('lib/ocr/admin-receipt-processor.ts');
+    const ocrWorkflowDispatchSource = source('lib/ocr/workflow-dispatch.ts');
     const adminUsersSource = source('app/api/admin/users/route.ts');
     const adminUserUpdateSource = source('app/api/admin/users/[userId]/route.ts');
     const restaurantRequestReviewSource = source('app/api/admin/restaurant-requests/[requestId]/review/route.ts');
@@ -478,17 +480,29 @@ describe('public API security source contracts', () => {
     expect(youtubeMetaSource).not.toContain("request.json()");
     expect(youtubeMetaSource).not.toContain("console.error");
 
-    for (const routeSource of [ocrReceiptsSource, ocrRerunSource, ocrResetAllSource, ocrProcessSource]) {
+    for (const routeSource of [
+      ocrReceiptsSource,
+      ocrRerunSource,
+      ocrResetAllSource,
+      ocrProcessSource,
+      ocrProcessCoreSource,
+    ]) {
       expect(routeSource).not.toContain("err instanceof Error ? err.message : 'Unknown error'");
       expect(routeSource).not.toContain('errorText);');
       expect(routeSource).not.toContain('${updateError.message}');
       expect(routeSource).not.toContain('${resetError.message}');
-      expect(routeSource).toContain('errorName: getGuardedMutationErrorName');
     }
 
-    for (const routeSource of [ocrReceiptsSource, ocrRerunSource, ocrResetAllSource]) {
-      expect(routeSource).toContain('await response.text().catch(() => null)');
+    for (const routeSource of [ocrReceiptsSource, ocrRerunSource, ocrResetAllSource, ocrProcessCoreSource]) {
+      expect(routeSource).toContain('errorName: getGuardedMutationErrorName');
     }
+    expect(ocrProcessSource).not.toMatch(/error\.message|console\.(?:error|warn|log)/);
+
+    for (const routeSource of [ocrReceiptsSource, ocrRerunSource, ocrResetAllSource]) {
+      expect(routeSource).not.toContain('response.text()');
+    }
+    expect(ocrWorkflowDispatchSource).toContain('await response.body?.cancel().catch(() => undefined)');
+    expect(ocrWorkflowDispatchSource).not.toContain('response.text()');
 
     for (const routeSource of [
       adminUsersSource,

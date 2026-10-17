@@ -4,6 +4,7 @@ import argparse
 from contextlib import contextmanager
 import os
 from pathlib import Path
+import re
 import sqlite3
 import sys
 import time
@@ -99,12 +100,14 @@ class ProjectBudget:
         except PermissionError:
             return True
 
-    def acquire(self, pid: int, *, timeout: float = 600) -> str:
+    def acquire(self, pid: int, *, timeout: float = 600, identity: str | None = None) -> str:
         owner_birth = process_birth(pid)
         if owner_birth is None:
             raise ValueError("provider_process_identity_unavailable")
         deadline = time.monotonic() + timeout
-        identity = uuid.uuid4().hex
+        identity = identity or uuid.uuid4().hex
+        if re.fullmatch(r"[a-f0-9]{32}", identity) is None:
+            raise ValueError("provider_lease_invalid")
         while True:
             wait = 0.1
             with self.connect() as db:
@@ -181,7 +184,7 @@ def main() -> int:
     if args.action == "acquire":
         if not 0 < args.timeout <= 600:
             raise ValueError('provider_budget_invalid')
-        print(budget.acquire(args.pid, timeout=args.timeout))
+        print(budget.acquire(args.pid, timeout=args.timeout, identity=args.lease or None))
     elif args.action == "release":
         budget.release(args.lease)
     else:

@@ -32,19 +32,21 @@ const adminMutationRoutes = [
     routePath: 'app/api/admin/map-overlays/apply/route.ts',
     readerCall: 'readBoundedJsonRequest(request, MAX_MAP_OVERLAY_APPLY_REQUEST_BYTES)',
     maximumBytes: 'const MAX_MAP_OVERLAY_APPLY_REQUEST_BYTES = 64 * 1024;',
-    privilegedClientMarker: 'createSupabaseServiceRoleClient()',
+    mutationBoundaryMarker: 'createSupabaseServiceRoleClient()',
   },
   {
     routePath: 'app/api/admin/map-overlays/preview/route.ts',
     readerCall: 'readBoundedJsonRequest(request, MAX_MAP_OVERLAY_PREVIEW_REQUEST_BYTES)',
     maximumBytes: 'const MAX_MAP_OVERLAY_PREVIEW_REQUEST_BYTES = 64 * 1024;',
-    privilegedClientMarker: 'createSupabaseServiceRoleClient()',
+    mutationBoundaryMarker: 'createSupabaseServiceRoleClient()',
   },
   {
     routePath: 'app/api/admin/ocr-receipts/process/route.ts',
     readerCall: 'readBoundedJsonRequest(request, MAX_REQUEST_BYTES)',
     maximumBytes: 'const MAX_REQUEST_BYTES = 4 * 1024;',
-    privilegedClientMarker: 'const supabase = getSupabaseAdmin()',
+    mutationBoundaryMarker: 'return processAdminReceiptOcr({ reviewId: body.reviewId, signal: request.signal });',
+    delegatedServerPath: 'lib/ocr/admin-receipt-processor.ts',
+    delegatedPrivilegedMarker: 'const supabase = getSupabaseAdmin();',
   },
 ] as const;
 
@@ -54,13 +56,14 @@ describe('admin mutation request security', () => {
       routePath,
       readerCall,
       maximumBytes,
-      privilegedClientMarker,
+      mutationBoundaryMarker,
+      ...delegation
     } of adminMutationRoutes) {
       const routeSource = source(routePath);
       const guardIndex = routeSource.indexOf('isTrustedSameOriginMutation(request)');
       const requireAdminIndex = routeSource.indexOf('await requireAdmin()');
       const readerIndex = routeSource.indexOf(readerCall);
-      const serviceRoleIndex = routeSource.indexOf(privilegedClientMarker);
+      const mutationBoundaryIndex = routeSource.indexOf(mutationBoundaryMarker);
 
       expect(routeSource).toContain('@/lib/security/bounded-json-request');
       expect(routeSource).toContain('@/lib/security/same-origin-mutation');
@@ -69,10 +72,16 @@ describe('admin mutation request security', () => {
       expect(routeSource).toContain('Cache-Control');
       expect(guardIndex).toBeGreaterThan(-1);
       expect(readerIndex).toBeGreaterThan(guardIndex);
-      expect(serviceRoleIndex).toBeGreaterThan(readerIndex);
+      expect(mutationBoundaryIndex).toBeGreaterThan(readerIndex);
       expect(requireAdminIndex).toBeGreaterThan(-1);
       expect(guardIndex).toBeGreaterThan(requireAdminIndex);
       expect(routeSource.slice(guardIndex, readerIndex)).toContain('noStoreJson');
+      if ('delegatedServerPath' in delegation) {
+        const delegatedSource = source(delegation.delegatedServerPath);
+        expect(delegatedSource).toContain("import 'server-only';");
+        expect(delegatedSource).toContain(delegation.delegatedPrivilegedMarker);
+        expect(routeSource).not.toContain(delegation.delegatedPrivilegedMarker);
+      }
     }
   });
 

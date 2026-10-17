@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "kind": "review-media-runtime-admission-retained-proof",
+  "observedAt": "2026-10-15T05:27:25Z",
+  "baseRevision": "2bf10754d02728b5e9869e8630fb7789fcb7321e",
+  "candidateWorkingTree": true,
+  "previousFailure": {
+    "group": "general",
+    "pass": 3510,
+    "skip": 3,
+    "fail": 1,
+    "assertions": 89552,
+    "failedTest": "review-media-sql-rehearsal-verifier: default retained proof uses a stable current-proof selector",
+    "code": "LOCAL_REHEARSAL_ARTIFACT_SHA256_MISMATCH"
+  },
+  "historicalEvidence": {
+    "proofPath": "apps/web/performance/review-db-rehearsal-20261012/pg17-review-fixes-20261014-v1.json",
+    "proofSha256": "23fb9b471a06dbd36aafab3a678152ca897893b3cdc968f2d623035d217b1e38",
+    "manifestSha256": "295b2354c562ed87102c5e256497a2705f90941587fefa7e9ad8a4ba8e40787f",
+    "artifactMapHistoricalPath": "apps/web/performance/review-db-rehearsal-20261012/SHA256SUMS-c1af1afd-historical",
+    "artifactMapHistoricalSha256": "c1af1afd832bd2b0bbdcd4419589de778525e1b18a4dff196e457b82381c97fb",
+    "selectorHistoricalPath": "apps/web/performance/review-db-rehearsal-20261012/retained-current-proof-71ff7b8d-historical.json",
+    "selectorHistoricalSha256": "71ff7b8dde2ff6ef936a012b84453fcc0990bd9724d89b046bb1ebaa7bfddf1e",
+    "classificationBeforeReplay": "retained-historical-evidence"
+  },
+  "currentBinding": {
+    "manifestSha256": "ad1da2db884229ea4b1fbcf6e4caaa04c30c6df7562e94fff01341736ee689d6",
+    "parentControllerSha256": "4f3dacb6f51a669bf64209b380b19e8274d2703101fc50f815153237f4a99d93",
+    "parentControllerTestSha256": "8fc51e801e89052ed64d0b349cfe397a781e333f0bd90b58cb5e64838a5d00b0",
+    "rehearsalHarnessSha256": "f7321f607a5bf3a24ba099d51abc67254db52fcc385945692426d1b2dfa6e431",
+    "sourceRoot": "61f9d7637c0714a7b0d9108c6f7959ea820175a7870dba681498b570296a1544",
+    "manifestToolchainRoot": "3f72efa4dea12288164614a70d838ed16a8d00d69a667df5c5f2e8f4701b6686"
+  },
+  "postgresReplay": {
+    "proofPath": "apps/web/performance/review-db-rehearsal-20261012/pg17-runtime-admission-20261015-v1.json",
+    "proofSha256": "6bd946be5b9e0a9a9ef1523112f535456955bc424eaf278c1e23812ce8efc75e",
+    "selectorPath": "apps/web/performance/review-db-rehearsal-20261012/retained-current-proof.json",
+    "selectorSha256": "67d69712d0ded23baf81faac35bc277d3e38e156639b02030efe0f6c9276e89d",
+    "engine": "17.6",
+    "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+    "migrationCount": 11,
+    "statementCount": 112,
+    "rollbackStageCount": 12,
+    "compiledSqlBytes": 2510560,
+    "compiledSqlSha256": "285d0c859117006646389dbd2a22de9aef1c0b97bc796a9e4d4448a8a232b093",
+    "compiledSqlMatchesHistoricalProof": true,
+    "rollbackExact": true,
+    "forcedErrorRejected": true,
+    "lostResponseMutationAttempts": 1,
+    "lostResponseRestorationExact": true,
+    "contendedExpiryRejected": true,
+    "applyFinalGuardDeadlineFaultInjected": true,
+    "applyTerminalReadbackObserved": true,
+    "applyExpiryRejectedBeforeCommit": true,
+    "applyExpiryMutationAttempts": 1,
+    "applyExpiryRollbackExact": true,
+    "temporaryContainerRemoved": true
+  },
+  "artifactMaps": {
+    "rehearsal": {
+      "entries": 40,
+      "sha256": "fe2eee6bfa2f5ab20b17b10d4ca48d4e5351d57dd9330ccadab918aa183e5263",
+      "detachedDigestFileSha256": "6997a88b491085c8d718a9dd55fc52e86e1bd297c412eed5f6ecd20111f27adc"
+    },
+    "successor": {
+      "entries": 27,
+      "sha256": "b173616092cee591ecba7aa363dd05d55cfb9f75a6ce880e9e690398b309f87f",
+      "detachedDigestFileSha256": "606f67ebb90f35149ec268551b589e20386be19088307ce53ddc05f8e5b14975"
+    },
+    "allEntriesVerified": true
+  },
+  "invariants": {
+    "launchPolicy": "held",
+    "evidenceWindowMinutes": 15,
+    "writerFences": 7,
+    "migrationSourceChanges": 0,
+    "historicalProofRelabelled": false,
+    "temporarySupabaseStatePreserved": true
+  },
+  "verification": {
+    "preReplaySelectorContract": {
+      "files": 1,
+      "pass": 14,
+      "fail": 0,
+      "assertions": 55
+    },
+    "affectedCombined": {
+      "files": 5,
+      "pass": 106,
+      "fail": 0,
+      "assertions": 693,
+      "elapsedSeconds": 51.44
+    },
+    "fullGeneralGroupRerunAfterProof": false
+  },
+  "statistics": {
+    "sampleCount": 1,
+    "confidenceInterval95": null,
+    "reason": "deterministic source-bound replay and integrity verification; not a performance sample"
+  },
+  "externalEffects": {
+    "hostedDatabaseCalls": 0,
+    "providerCalls": 0,
+    "deployments": 0,
+    "remoteMutations": 0
+  },
+  "limits": [
+    "This proves a local isolated PostgreSQL 17.6 replay bound to the current parent manifest and controller source.",
+    "It does not prove hosted database application, production deployment, provider behavior, or release readiness.",
+    "The complete general unit group must be rerun after the root candidate absorbs all remaining source changes."
+  ]
+}

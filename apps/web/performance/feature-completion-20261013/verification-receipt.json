@@ -1,0 +1,666 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-13T13:05:48.775Z",
+  "evidenceClass": "local-pinned-production-build-and-focused-render-gate",
+  "status": "rejected-production-build-typescript-route-export",
+  "repository": {
+    "head": "9cd8b89a35a2c42f10d8444e71d07a40509a21dd",
+    "sourceMayBeDirty": true,
+    "sourceEditedByThisVerification": false,
+    "testsEditedByThisVerification": false,
+    "dependenciesEditedByThisVerification": false,
+    "lockfilesEditedByThisVerification": false
+  },
+  "scope": {
+    "declaredFrozenFeatures": [
+      "durable OCR",
+      "Gemini-only storyboard",
+      "UI merge c503483d",
+      "G014 and Storage SQL",
+      "TypeScript repository source contract",
+      "retired storyboard alias"
+    ],
+    "latestContractOnlyCorrection": {
+      "path": "apps/web/tests-unit/public-surface-design-contract.test.ts",
+      "sha256": "4625d681d1451bc3e6c3ab2105a69fa5147466eb3b6d7af6266cd3ceab6d4b15",
+      "capturedBeforeBuild": true
+    }
+  },
+  "runtime": {
+    "node": "24.21.0",
+    "npm": "11.6.2",
+    "next": "16.3.8",
+    "packageManager": "npm@11.6.2",
+    "nodeModulesOwnedRealDirectory": true
+  },
+  "packageAuthority": {
+    "manager": "npm",
+    "version": "11.6.2",
+    "packageManagerField": "npm@11.6.2",
+    "packageJsonSha256": "769833dbc4cf52e21f70c7b9d826f34a9f5fd09c5be87574dbb7485366c75485",
+    "packageLockSha256": "607175eda02d7746caf5593d34835cef317bf197ca6d5428fa1266cdb2aae5f4",
+    "bunLockSha256": "f8d69a346d03c28298bfcf715dcf94bc2f6854c1493286ddb7ca3e80a5fee22d",
+    "pinnedNpmCliReadbackPassed": true,
+    "homebrewBundledNpmUsed": false
+  },
+  "command": {
+    "sanitizedArgv": [
+      "/opt/homebrew/opt/node@24/bin/node",
+      "<PINNED_NPM_11_6_2_CLI>",
+      "run",
+      "build"
+    ],
+    "cwd": "apps/web",
+    "buildProcessAttemptCount": 1,
+    "resolvedPackageScript": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next build --webpack && node scripts/verify-route-css-boundaries.mjs",
+    "preflightOnlyFailure": {
+      "count": 1,
+      "buildProcessStarted": false,
+      "code": "PINNED_NPM_VERSION_READBACK_EMPTY_UNDER_OVERCONSTRAINED_CONFIG"
+    }
+  },
+  "sanitizedInputs": {
+    "distDir": ".next-feature-completion-20261013",
+    "ports": {
+      "next": 19020,
+      "supabase": 19021,
+      "gateway": 19022
+    },
+    "safeParentAllowlist": [
+      "HOME",
+      "LANG",
+      "LC_ALL",
+      "SHELL",
+      "TERM",
+      "TMPDIR",
+      "TZ",
+      "USER"
+    ],
+    "processedEnvironmentTrue": true,
+    "repositoryEnvFilesPresent": false,
+    "hostedCredentialsAdmitted": false,
+    "providerCredentialsAdmitted": false,
+    "vercelOnePresent": false,
+    "syntheticPublicInputs": {
+      "supabaseExactLoopback": true,
+      "anonDeclaredSynthetic": true,
+      "siteExactLoopback": true,
+      "naverMapLocalPath": true,
+      "localRuntimeEnabled": true
+    },
+    "packageJsonSha256": "769833dbc4cf52e21f70c7b9d826f34a9f5fd09c5be87574dbb7485366c75485",
+    "packageLockSha256": "607175eda02d7746caf5593d34835cef317bf197ca6d5428fa1266cdb2aae5f4",
+    "bunLockSha256": "f8d69a346d03c28298bfcf715dcf94bc2f6854c1493286ddb7ca3e80a5fee22d"
+  },
+  "sourceBinding": {
+    "algorithm": "git-ls-files tracked-and-untracked source extensions under apps/web, backend, scripts, and feature completion operations doc; excludes performance, node_modules, .next*, and apps/web/supabase/.temp",
+    "before": {
+      "fileCount": 2590,
+      "manifestSha256": "63cc885acdaea3aa794ad57ab58a5df1f226695becc2351197fae6f7337b05d4"
+    },
+    "after": {
+      "fileCount": 2590,
+      "manifestSha256": "63cc885acdaea3aa794ad57ab58a5df1f226695becc2351197fae6f7337b05d4"
+    },
+    "exact": true,
+    "criticalFileCount": 84,
+    "criticalFiles": [
+      {
+        "path": "apps/web/app/api/admin/ocr-receipts/process/route.ts",
+        "bytes": 34059,
+        "sha256": "e9fcfaaf7b8ba87ae4281e033ed90bd53e8d69cfd7771711c5247cef97717436"
+      },
+      {
+        "path": "apps/web/app/api/admin/operating-readback/record-mutations-hold/route.ts",
+        "bytes": 2596,
+        "sha256": "42060ff0a9351dff1da98632bcb496f187e1ac9272c83c243286d232ffae6386"
+      },
+      {
+        "path": "apps/web/app/api/admin/storyboard/production/[id]/images/route.ts",
+        "bytes": 191,
+        "sha256": "f4e430ad1d0a5eff6c19ed13cfffba1d561710d701b7b68a0ccec1af6df2d465"
+      },
+      {
+        "path": "apps/web/app/api/ocr/extract/route.ts",
+        "bytes": 14673,
+        "sha256": "93fc6ebdb6a69f246e9da101b4117af89d5e6aa17a702cb9a454113b49522978"
+      },
+      {
+        "path": "apps/web/app/api/ocr/extract/stream/route.ts",
+        "bytes": 14738,
+        "sha256": "54bb4782fa03751824f5336a7c7bca868adf3a0a1858e5b5a0d630b4658787c7"
+      },
+      {
+        "path": "apps/web/app/api/ocr/reviews/save/route.ts",
+        "bytes": 9311,
+        "sha256": "2888d350887d1428e493671ba7dafcb565a6dce5d9fb0ebc670bc2557d9bd832"
+      },
+      {
+        "path": "apps/web/components/admin/storyboard/LegacyStoryboardReference.tsx",
+        "bytes": 434,
+        "sha256": "63623da1dc74a416ca1abc23ec735d1e02a5b2c8e7a2261e6ad41d190bfa4e58"
+      },
+      {
+        "path": "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+        "bytes": 59640,
+        "sha256": "8a47dfbb241a49827270c454e9a82229feba766436749d0dd0a2b25ed4ec6882"
+      },
+      {
+        "path": "apps/web/components/reviews/ReviewModal.tsx",
+        "bytes": 206943,
+        "sha256": "bbd4e37f9a752fac136500bb0976b97f92c4c063e47f9ce9d54404df556c1593"
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/gemini-client.ts",
+        "bytes": 9175,
+        "sha256": "cacefadf6e7aae666c544cfb716662b9a2eb39a68f65ca840478797fadbb036f"
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/gemini-models.ts",
+        "bytes": 2192,
+        "sha256": "ab400eb533abb4c4a65d2a1c31329fbe744c4569e3a7187a8d2e01a4c3816dca"
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/outbound-worker-contract.ts",
+        "bytes": 1644,
+        "sha256": "e54bb5c1a26bdba03c8c3f485b784b6a7a313ba5602a82bc8a01cdcbcfe901cf"
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/outbound-worker.ts",
+        "bytes": 21445,
+        "sha256": "48e722f0d62d2e44a595b7fcc10feed04d026b23e2ebd4ff2a74618094269140"
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-api.ts",
+        "bytes": 10960,
+        "sha256": "a3f6bd9fe82ce1e072052cbf6d75feef34c56afa2ab2f666d362d81636203d9f"
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-assets.ts",
+        "bytes": 4234,
+        "sha256": "445f1a9395ba32772e216e8e7cb3e6a814d60fa6d795ba733959329a14913814"
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-contract.ts",
+        "bytes": 14271,
+        "sha256": "1e4a0676ccb4672021b2c1f1ddc7eb9060eda70efcf3a3c1f7760a3e538a0132"
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-model-catalog.ts",
+        "bytes": 1417,
+        "sha256": "a3eefe24d95c603c978d7daaf8e051fd64f73a0d74b5ab8d552012f28f0aa750"
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-store.ts",
+        "bytes": 27324,
+        "sha256": "f2f7c56bbf0596853a9acf2dd9c9518a2aa75631f0b6063355c9e3e71adc3cdd"
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-worker-auth.ts",
+        "bytes": 4990,
+        "sha256": "f3993b0cb2d2a2cbf41c9d2d005dc26ed48cc5c2751fa9a5c908babded3e35a2"
+      },
+      {
+        "path": "apps/web/lib/ocr/durable-result.ts",
+        "bytes": 16875,
+        "sha256": "234c0c57b4ed446a53d0b2df08f45aad89da566c1690adf8c5516ae5a705343c"
+      },
+      {
+        "path": "apps/web/lib/ocr/receipt-upload-preparation.ts",
+        "bytes": 1836,
+        "sha256": "97524edda3bec24e887156e0822193b4491a2a63c372bfba83ebea8a3b9ebbbc"
+      },
+      {
+        "path": "apps/web/lib/ocr/review-storage-verification.ts",
+        "bytes": 4947,
+        "sha256": "c29d934e448872e375dd03e4830359284bc692c92c317bcb17dcbe04b384d80d"
+      },
+      {
+        "path": "apps/web/lib/ocr/review-verification-contract.ts",
+        "bytes": 259,
+        "sha256": "e12681bc1219e842ec12bdb529f1ee1da1d62211036ce5b3e8460a6e013e35eb"
+      },
+      {
+        "path": "apps/web/lib/reviews/review-save-operation.ts",
+        "bytes": 15348,
+        "sha256": "73e902d4337ebb36740b06bde80d10d0d199e4f62b0d85f7b8e4a516b1b189c1"
+      },
+      {
+        "path": "apps/web/next.config.mjs",
+        "bytes": 13660,
+        "sha256": "c3ae70ee133d35dd02a12a3690e97e9f82f1d2509fe3e341c230a7b9e77b43e5"
+      },
+      {
+        "path": "apps/web/package-lock.json",
+        "bytes": 503170,
+        "sha256": "607175eda02d7746caf5593d34835cef317bf197ca6d5428fa1266cdb2aae5f4"
+      },
+      {
+        "path": "apps/web/package.json",
+        "bytes": 7151,
+        "sha256": "769833dbc4cf52e21f70c7b9d826f34a9f5fd09c5be87574dbb7485366c75485"
+      },
+      {
+        "path": "apps/web/scripts/clean-next.mjs",
+        "bytes": 10024,
+        "sha256": "6f890225dbb0df40dd40bbafe9cf96a037a5311837261790207965d927c6fe56"
+      },
+      {
+        "path": "apps/web/scripts/preview-design-fixtures.mjs",
+        "bytes": 24101,
+        "sha256": "580365d4e7c0a7a6469544fb8ce99debc93367b10501aafbe5d5975beaef23f4"
+      },
+      {
+        "path": "apps/web/scripts/review-media-operating-capture.mjs",
+        "bytes": 27051,
+        "sha256": "e534864bcefd2b22a4adcd0241ac080cffaa54b5ebc1b7da013d61b9bf675b66"
+      },
+      {
+        "path": "apps/web/scripts/run-typecheck.mjs",
+        "bytes": 10324,
+        "sha256": "fd27460b0e3e1afb3d7928caa819a41905855bded8153f3b5f768c45b0e5abdd"
+      },
+      {
+        "path": "apps/web/scripts/run-unit-tests.mjs",
+        "bytes": 4446,
+        "sha256": "563fca587ac4abce9517844e989d91d9a5d87d9f6300cc648c2db4e218e238a3"
+      },
+      {
+        "path": "apps/web/scripts/storyboard-gemini-worker.ts",
+        "bytes": 2484,
+        "sha256": "b937d14c2dc76e41f0521596a21a5ac3fcf50eb726e085f22666b516eeb6e38a"
+      },
+      {
+        "path": "apps/web/scripts/typecheck-source-contract.mjs",
+        "bytes": 8964,
+        "sha256": "1c3a87ce298abf2f82cc4a2fe20d944ad7a34aa082e846ef9ea5f046b06782ce"
+      },
+      {
+        "path": "apps/web/scripts/verify-route-css-boundaries.mjs",
+        "bytes": 17441,
+        "sha256": "399f00cd2f2955f1732d3a65af7c18e3579f226975dfc3daddac8b9789abe9be"
+      },
+      {
+        "path": "apps/web/scripts/verify-storyboard-gemini-live.ts",
+        "bytes": 6977,
+        "sha256": "e588d393899db6432dc0a13db284f9b973c388742adad8c88a23ce7041508acd"
+      },
+      {
+        "path": "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+        "bytes": 315296,
+        "sha256": "497ce63f9a0d601a131b664390e0ba9db9a7e80a087b7f6f847e149ee58922a5"
+      },
+      {
+        "path": "apps/web/tests-unit/admin-operating-readback-route.test.ts",
+        "bytes": 3780,
+        "sha256": "a9def460bf24ad6b9d3514e6d0a26227686608e9b6af3bc95c28069a80d7b9a9"
+      },
+      {
+        "path": "apps/web/tests-unit/admin-route-auth-contract.test.ts",
+        "bytes": 14073,
+        "sha256": "4d0dae05d19f7e5972c3e745b55444b4a101686e27962e9abe0222a8c03053e8"
+      },
+      {
+        "path": "apps/web/tests-unit/admin-storyboard-async-jobs-contract.test.ts",
+        "bytes": 4699,
+        "sha256": "6c8df187ac4be482fc7c30d12a8a1f3ca0a9198144bbadf374d69f2542da77c4"
+      },
+      {
+        "path": "apps/web/tests-unit/admin-storyboard-canvas-shell.test.ts",
+        "bytes": 3626,
+        "sha256": "0099d131188aa67c122d021b4e0d3f8c0dfea8a448a5da8d93d296be82e4b9e4"
+      },
+      {
+        "path": "apps/web/tests-unit/admin-storyboard-generator.test.ts",
+        "bytes": 123340,
+        "sha256": "703e80dfd318b4de104a04951734d6b27ff3add8b7a1b4c4d6b7b4551c2e8c45"
+      },
+      {
+        "path": "apps/web/tests-unit/admin-storyboard-history.test.ts",
+        "bytes": 8923,
+        "sha256": "f9f4d195ad999f0360fd8c895075450f2a6bc3584019bf49c1e160e5ffb3c41d"
+      },
+      {
+        "path": "apps/web/tests-unit/admin-storyboard-langgraph.test.ts",
+        "bytes": 26767,
+        "sha256": "ff22ca4f0059053828d4edec0b4f6477f5feeb5449bf3b303e60f1a21bc61c72"
+      },
+      {
+        "path": "apps/web/tests-unit/admin-storyboard-rag.test.ts",
+        "bytes": 35347,
+        "sha256": "ca7f0c6f780c4c77471cf453d770c622bb4afb01172a89c1af41c67631bcb3e2"
+      },
+      {
+        "path": "apps/web/tests-unit/admin-storyboard-thinking-trace-source.test.ts",
+        "bytes": 2512,
+        "sha256": "4d178c248f2c4a85341f583ca95e3d236abf3bc50bc1213820fc6614165a91a0"
+      },
+      {
+        "path": "apps/web/tests-unit/admin-youtube-thumbnail-generator.test.ts",
+        "bytes": 247833,
+        "sha256": "efcb3656378064c418e02592670ff63f33860bd280713b5f5f5ceabbda87814a"
+      },
+      {
+        "path": "apps/web/tests-unit/durable-receipt-ocr.test.ts",
+        "bytes": 25374,
+        "sha256": "132eb7bd4d391035de20e70f9eeee75167d6f81f29429bac430c77a0ac453f72"
+      },
+      {
+        "path": "apps/web/tests-unit/g014-feature-rpc-catalog-contract.test.ts",
+        "bytes": 4723,
+        "sha256": "cdca930e457d0ee86e7084fd7201b75db2369ac276c17818634c60da9fe03e7e"
+      },
+      {
+        "path": "apps/web/tests-unit/local-storyboard-departure-browser.test.ts",
+        "bytes": 17765,
+        "sha256": "c4b9b162be4072b62c888d3ec7eb3c47e6e8b655dd19f9fa85cd55899ef529f2"
+      },
+      {
+        "path": "apps/web/tests-unit/public-surface-design-contract.test.ts",
+        "bytes": 19161,
+        "sha256": "4625d681d1451bc3e6c3ab2105a69fa5147466eb3b6d7af6266cd3ceab6d4b15"
+      },
+      {
+        "path": "apps/web/tests-unit/review-close-revision-browser.test.ts",
+        "bytes": 18752,
+        "sha256": "bf0966ea944c33fd1ba11e43f04301422a059148eb8c2013be5f655910212c7c"
+      },
+      {
+        "path": "apps/web/tests-unit/review-draft-revision-browser.test.ts",
+        "bytes": 14545,
+        "sha256": "e17c4d2fbeb1b5e1c9ce6393342e4bc36affa523c1a266bea2d315b1d29fbfb2"
+      },
+      {
+        "path": "apps/web/tests-unit/review-media-operating-capture.test.ts",
+        "bytes": 19378,
+        "sha256": "ffe0cab7ef0ce5bcb92c6d5ba393d6bf9a48056464f1702c3cf43d9d592d1cce"
+      },
+      {
+        "path": "apps/web/tests-unit/review-save-owner-lifecycle.test.ts",
+        "bytes": 9200,
+        "sha256": "9e34cfef00b43c86941d592e24da0d4ab6172e513bb303454f8b4b0cef5ca60d"
+      },
+      {
+        "path": "apps/web/tests-unit/review-save-submit.test.ts",
+        "bytes": 35144,
+        "sha256": "8f42141b044edaeea33424697b059cf3858f0afea1d29e18d926d23bac6b971f"
+      },
+      {
+        "path": "apps/web/tests-unit/review-storage-verification.test.ts",
+        "bytes": 8459,
+        "sha256": "c67dacd51befcc979ccf89494e8cf51bfb38e407bd4e3069e10ad11d5efcf563"
+      },
+      {
+        "path": "apps/web/tests-unit/review-verification-immutable-storage.test.ts",
+        "bytes": 3481,
+        "sha256": "336c588ee0aebfaebad436530b3d894b72521e4f3afa33f89872ae181deee39e"
+      },
+      {
+        "path": "apps/web/tests-unit/security-headers-source.test.ts",
+        "bytes": 2662,
+        "sha256": "219c80f9b4e0b3683b2cc8cc9c5cccb31385c6e5a3fb1bb8b5e2effa7328d11e"
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-gemini-client.test.ts",
+        "bytes": 10082,
+        "sha256": "b5708bb1d73bdbdc68895f782f80cccb25edadeb27204b76bb75c0ecb4d3d4e9"
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-gemini-execution-contract.test.ts",
+        "bytes": 9084,
+        "sha256": "c08a4f451f98dda82c22ca9795b2ebd367e582139991fc40b8d93a452737f864"
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-outbound-worker.test.ts",
+        "bytes": 33521,
+        "sha256": "47449ae9d659a266a91f9cc9da962f2982683bccbe4f0685c0442db4b448afdd"
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-production-api.test.ts",
+        "bytes": 31933,
+        "sha256": "f416858ac9b51409041181386064bbf024126de869f0f38c77eec2645ad3a2e0"
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-project-library-browser.test.ts",
+        "bytes": 12735,
+        "sha256": "f5cac926cd73e3505e35f50cc485ddc66ce1c92b3a9150451e80870542a6c500"
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-provider-allowlist-parity.test.ts",
+        "bytes": 2852,
+        "sha256": "bf88bc3fce2c4cba41a501878117bf0e464602683576ec1a36f6623d2100bb42"
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-resource-invariants.test.ts",
+        "bytes": 3272,
+        "sha256": "22adb6c7ddd8f85203a63f2a75a3f80566e1178ccee5b788c9c13d128309b85c"
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-retired-cli.test.ts",
+        "bytes": 1296,
+        "sha256": "9b5474655324cde569e04e6c5b86dd584bf9fe2565dc58efdb8f6281a2020585"
+      },
+      {
+        "path": "apps/web/tests-unit/stylegallery-primitive-taxonomy.test.ts",
+        "bytes": 21078,
+        "sha256": "1bdb3151b221920a8f232bad93243c7b5ddc682f2168cd002174ca424d314612"
+      },
+      {
+        "path": "apps/web/tests-unit/typecheck-repository-source-contract.test.ts",
+        "bytes": 7080,
+        "sha256": "748577e5e3d6343dd61dfd78f5f3d40ef92e28fd5b5fc807d3fed2506a312baa"
+      },
+      {
+        "path": "apps/web/tests-unit/verify-pin-contract-source.test.ts",
+        "bytes": 9813,
+        "sha256": "1df2f609aec805eb20757f97071a2d5879e351cbe3ab3138d97894e7f5683121"
+      },
+      {
+        "path": "apps/web/tests-unit/zz-ocr-route-contract.test.ts",
+        "bytes": 35021,
+        "sha256": "e3bea3851a70a0e5bff7d289b8fe25af68fe6efc37859931c2106caf384ef18c"
+      },
+      {
+        "path": "apps/web/tests/local-storyboard-workspace-ui.spec.ts",
+        "bytes": 33963,
+        "sha256": "059cfda4b6b91be6046739e5e9ce92eba22951fc194c22dabf6e1f3dde8d33a7"
+      },
+      {
+        "path": "apps/web/tsconfig.json",
+        "bytes": 1260,
+        "sha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+      },
+      {
+        "path": "backend/bin/verify_storyboard_gemini_migration.py",
+        "bytes": 41321,
+        "sha256": "1b7b60185d8191e15ed121e33d62031c6773ddd66be16eddda6ded4563db1df5"
+      },
+      {
+        "path": "backend/knowledge_graph/CAPTION_OSK_ADAPTER.md",
+        "bytes": 7711,
+        "sha256": "7b1c0c8e844cea2ae3137f7f4e562217009664b3129f72cc272346ef58819b8a"
+      },
+      {
+        "path": "backend/knowledge_graph/caption_osk_adapter.py",
+        "bytes": 47071,
+        "sha256": "8f393cf4c487f3d3136908c7d3ad0f12f40350123677cbf237222f0474863f2f"
+      },
+      {
+        "path": "backend/knowledge_graph/caption_title_enrichment.py",
+        "bytes": 9665,
+        "sha256": "60333c1b35f4ec6c136511fc1a28f36f5033e5318e6ab69c382bfec94b99bd5d"
+      },
+      {
+        "path": "backend/knowledge_graph/tests/test_caption_osk_adapter.py",
+        "bytes": 29712,
+        "sha256": "0db85fa2944a9b181baf20a56aa69fc639eb115dab8874002e4826731473bc5d"
+      },
+      {
+        "path": "backend/knowledge_graph/tests/test_caption_title_enrichment.py",
+        "bytes": 12394,
+        "sha256": "7800331fb3a26f60bbe5468991a22c2332a0519b4fd62eda55ac46c0e9b24d97"
+      },
+      {
+        "path": "backend/supabase/migrations/20261013093518_storyboard_gemini_execution_v1.sql",
+        "bytes": 15228,
+        "sha256": "84d351dead86ef90040b6949fe4a6dc93eb91a783c1b7a78531c7f564ea4ff4e"
+      },
+      {
+        "path": "backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql",
+        "bytes": 30334,
+        "sha256": "1ebc4f512612053b62febe41f2a3aef948c93d6d45f69f9328d43db5bd46bca4"
+      },
+      {
+        "path": "backend/supabase/migrations/20261013190100_g014_feature_rpc_catalog_contract.sql",
+        "bytes": 20080,
+        "sha256": "4a7cbe506521ffcd7687c57a4e6d47a4c2fbafa6e493c9f67cae5ea0cdc905dd"
+      },
+      {
+        "path": "backend/supabase/migrations/20261013190200_review_verification_immutable_key_fence.sql",
+        "bytes": 14060,
+        "sha256": "62e88431bc46c39551d473de9d314482b3e49c7828a34769caef7f85b6886d8c"
+      },
+      {
+        "path": "docs/operations/feature-completion-20261013.md",
+        "bytes": 4100,
+        "sha256": "a4db00cd27f2acdc13e47b1582e0bb7803f269a15095281c74e583d3ca94c31f"
+      }
+    ],
+    "criticalAfterExact": true,
+    "tsconfigAndNextEnvRestoration": {
+      "tsconfig": {
+        "classification": "next-generated-includes-only",
+        "expectedOnly": true,
+        "restoredExact": true,
+        "beforeSha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17",
+        "afterRestoreSha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+      },
+      "nextEnv": {
+        "classification": "generated-then-removed",
+        "expectedOnly": true,
+        "beforePresent": false,
+        "afterRestorePresent": false,
+        "restoredExact": true,
+        "beforeSha256": null,
+        "afterRestoreSha256": null
+      }
+    }
+  },
+  "productionBuild": {
+    "attempted": true,
+    "accepted": false,
+    "exitCode": 1,
+    "signal": null,
+    "durationSeconds": 61.299113125,
+    "distDir": ".next-feature-completion-20261013",
+    "buildId": null,
+    "validProductionBundleCreated": false,
+    "webpackCompilation": {
+      "passed": true,
+      "seconds": 33.3
+    },
+    "typescript": {
+      "stageSeen": true,
+      "passed": false,
+      "diagnosticCount": 1
+    },
+    "pageDataCollectionStarted": false,
+    "staticPageGenerationStarted": false,
+    "partialArtifacts": {
+      "build-manifest.json": {
+        "sha256": "3dda99f96dc7446b088a8630cedce8efc55ba1474dd396b1a00f2bb4db12642d",
+        "bytes": 1002
+      }
+    },
+    "rawOutput": {
+      "stored": false,
+      "bytesObserved": 1617,
+      "sha256": "c07d73e294c70a93b5f1c5fe7d8f113a2c5369681fd6b6bef840a67179614258",
+      "captureTruncated": false
+    }
+  },
+  "blockingDiagnostic": {
+    "reasonCode": "NEXT_ROUTE_MODULE_EXTRA_EXPORT",
+    "typescriptCode": 2344,
+    "relatedTypescriptCodes": [
+      2530,
+      2322
+    ],
+    "category": "error",
+    "sourcePath": "apps/web/app/api/admin/operating-readback/record-mutations-hold/route.ts",
+    "sourceSha256": "42060ff0a9351dff1da98632bcb496f187e1ac9272c83c243286d232ffae6386",
+    "offendingExport": "createRecordMutationsHoldReadbackResponse",
+    "sourceLine": 57,
+    "generatedTypePath": "apps/web/.next-feature-completion-20261013/types/app/api/admin/operating-readback/record-mutations-hold/route.ts",
+    "generatedCheckLine": 14,
+    "fixedSummary": "Next route type validation rejected an extra exported helper because route modules may export only supported route handlers and segment configuration.",
+    "minimumSourceRepair": "Move the testable helper to a sibling module or keep it non-exported from route.ts, then import it into the route and its tests.",
+    "diagnosticMetadata": {
+      "path": "apps/web/.next-feature-completion-20261013/cache/.tsbuildinfo",
+      "sha256": "b0fcfe07bf08cb4444c4bb845397362ae44c4eca25a9fb7cfaeeaae65e0b85fb",
+      "bytes": 604140,
+      "usedFor": [
+        "file identity",
+        "fixed TypeScript codes"
+      ],
+      "rawMessageStored": false
+    }
+  },
+  "cssBoundary": {
+    "executed": false,
+    "passed": false,
+    "reasonCode": "PACKAGE_BUILD_STOPPED_BEFORE_CSS_GATE"
+  },
+  "render": {
+    "attempted": false,
+    "passed": false,
+    "reasonCode": "VALID_PRODUCTION_BUILD_ID_MISSING",
+    "serverStarted": false,
+    "browserStarted": false,
+    "providerCalls": 0,
+    "storageWrites": 0,
+    "databaseReads": 0,
+    "databaseWrites": 0
+  },
+  "networkAndDataBoundary": {
+    "loopbackPortsReservedForOwnedRuntime": {
+      "next": 19020,
+      "supabase": 19021,
+      "gateway": 19022
+    },
+    "portsAfterBuild": {
+      "next": {
+        "port": 19020,
+        "availableAfterBuild": true
+      },
+      "supabase": {
+        "port": 19021,
+        "availableAfterBuild": true
+      },
+      "gateway": {
+        "port": 19022,
+        "availableAfterBuild": true
+      }
+    },
+    "port18794Used": false,
+    "sharedServersReadOrStopped": false,
+    "repositoryEnvFilesLoaded": false,
+    "providerCredentialsPresent": false,
+    "hostedCredentialsPresent": false,
+    "rawProviderOrDatabaseDiagnosticsStored": false
+  },
+  "cleanup": {
+    "tsconfigRestoredExact": true,
+    "nextEnvRestoredExact": true,
+    "sourceManifestRestoredExact": true,
+    "npmCacheRemoved": true,
+    "runtimeProcessesStarted": false,
+    "runtimeProcessesRemaining": false,
+    "failedBuildDistRemoved": true
+  },
+  "limitations": [
+    "The webpack compile stage passed, but the production build failed in Next route TypeScript validation.",
+    "CSS boundaries and browser rendering were not executed because no valid BUILD_ID was produced.",
+    "This local failure receipt does not prove hosted services, deployment, provider behavior, Storage behavior, database behavior, or the independently run full unit suite."
+  ]
+}

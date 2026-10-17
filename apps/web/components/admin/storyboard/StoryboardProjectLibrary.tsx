@@ -36,15 +36,15 @@ export function StoryboardProjectLibrary({ projects, selectedId, statusLabels, b
   ).sort((left, right) => (Date.parse(right.updatedAt) || 0) - (Date.parse(left.updatedAt) || 0) || left.id.localeCompare(right.id));
   const hasFilter = normalizedQuery.length > 0 || status !== "all";
 
-  return <section id="local-storyboard-project-library" aria-labelledby="local-library-title" className="min-w-0 rounded-xl border border-border bg-card text-card-foreground">
+  return <section id="local-storyboard-project-library" aria-labelledby="local-library-title" className="admin-detail-section min-w-0 bg-card text-card-foreground">
     <div className="flex items-center justify-between gap-2 px-3 pt-3">
-      <h3 id="local-library-title" className="text-sm font-semibold">저장된 프로젝트 <span className="ml-1 font-normal tabular-nums text-muted-foreground">{projects.length}</span></h3>
+      <h3 id="local-library-title" className="admin-section-title text-sm font-semibold">저장된 프로젝트 <span className="ml-1 font-normal tabular-nums text-muted-foreground">{projects.length}</span></h3>
       <button type="button" className={`${controlClass} inline-flex shrink-0 items-center justify-center !px-2 hover:bg-muted disabled:opacity-50`}
         aria-label="프로젝트 목록 다시 불러오기" disabled={busy} onClick={onRefresh}>
         {busy ? <Loader2 aria-hidden="true" className="size-4 motion-safe:animate-spin" /> : <RefreshCw aria-hidden="true" className="size-4" />}
       </button>
     </div>
-    <div className="space-y-2 p-3">
+    <div className="admin-toolbar space-y-2 p-3">
       <label className="relative block">
         <span className="sr-only">프로젝트 검색</span>
         <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -62,8 +62,8 @@ export function StoryboardProjectLibrary({ projects, selectedId, statusLabels, b
       {busy ? "프로젝트 목록 확인 중…" : error ? "목록을 다시 확인해 주세요." : hasFilter ? `${projects.length}개 중 ${filtered.length}개` : "최근 수정 순"}
     </div>
     {error && <p role="alert" className="mx-3 mb-3 break-words text-sm text-destructive">{error}</p>}
-    <ul aria-label="저장된 프로젝트 목록" aria-busy={busy} className="max-h-72 overflow-y-auto overscroll-contain border-t border-border lg:max-h-[min(60vh,36rem)]">
-      {filtered.map((project) => <li key={project.id} className="border-b border-border last:border-b-0">
+    <ul aria-label="저장된 프로젝트 목록" aria-busy={busy} className="max-h-72 space-y-1 overflow-y-auto overscroll-contain bg-muted/20 p-1 lg:max-h-[min(60vh,36rem)]">
+      {filtered.map((project) => <li key={project.id}>
         <button type="button" onClick={() => onSelect(project.id)} aria-current={selectedId === project.id ? "true" : undefined}
           className={`block w-full min-w-0 px-3 py-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring ${selectedId === project.id ? "bg-primary/10" : "hover:bg-muted/60"}`}>
           <span className="block break-words text-sm font-medium [overflow-wrap:anywhere]">{project.title || "제목 없는 프로젝트"}</span>
@@ -74,7 +74,7 @@ export function StoryboardProjectLibrary({ projects, selectedId, statusLabels, b
         </button>
       </li>)}
     </ul>
-    {!busy && !error && filtered.length === 0 && <div className="space-y-2 p-3 text-sm">
+    {!busy && !error && filtered.length === 0 && <div className="admin-empty-state space-y-2 p-3 text-sm">
       <p className="text-muted-foreground">{hasFilter ? "검색 조건에 맞는 프로젝트가 없습니다." : "저장된 프로젝트가 없습니다."}</p>
       <button type="button" className={`${controlClass} hover:bg-muted`} onClick={hasFilter ? () => { setQuery(""); setStatus("all"); } : onStart}>
         {hasFilter ? "검색 조건 초기화" : "새 제작 요청 작성"}

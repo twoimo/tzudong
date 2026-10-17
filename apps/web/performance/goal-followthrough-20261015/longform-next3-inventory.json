@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "channelId": "UCfpaSruWW3S4dibonKXENjA",
+  "channelUrl": "https://www.youtube.com/@tzuyang6145",
+  "sources": {
+    "shorts": {
+      "observedAtUtc": "2026-10-09T00:34:33.785840+00:00",
+      "path": "/Users/twoimo/.codex/worktrees/feature-completion-20261013/tzudong/apps/web/performance/longform-followthrough-20261009/fresh-shorts-membership.json",
+      "rawResponseSha256": "5df075fbd44d8135a9d3621f1936e0a6e54a98663828f24907c7a7f5ba3131d9",
+      "sha256": "b8eea784e4953a80e743dca5b5f30b05a8752a50585a2840940183eee3640d2f"
+    },
+    "streams": {
+      "observedAtUtc": "2026-10-09T00:34:34.628933+00:00",
+      "path": "/Users/twoimo/.codex/worktrees/feature-completion-20261013/tzudong/apps/web/performance/longform-followthrough-20261009/fresh-streams-membership.json",
+      "rawResponseSha256": "37dd3e3ca74e91d26f58c534bd414a30ec68207835a834a69b59f502cc9fe9de",
+      "sha256": "619512bd137e62318ad443d9357efbfd6829c9bbe0acc4374fa473c812e5bfc5"
+    },
+    "videos": {
+      "observedAtUtc": "2026-10-09T00:34:32.580506+00:00",
+      "path": "/Users/twoimo/.codex/worktrees/feature-completion-20261013/tzudong/apps/web/performance/longform-followthrough-20261009/fresh-videos-membership.json",
+      "rawResponseSha256": "8163e4a3dcfc0fa98a4c2ce4d7e9b322c1b2fbc91f2990a6ae3f726a77d5c649",
+      "sha256": "0bfc95e7dbcd45f02205ca4bd61b69145fb7196ab52052178a8c01006bfe7cbb"
+    }
+  },
+  "videos": [
+    {
+      "durationSeconds": 780,
+      "membership": {
+        "shorts": null,
+        "streams": null,
+        "videos": {
+          "complete": true,
+          "evidenceSha256": "8163e4a3dcfc0fa98a4c2ce4d7e9b322c1b2fbc91f2990a6ae3f726a77d5c649",
+          "observedAt": "2026-10-09T00:34:32.580506+00:00",
+          "sourceUrl": "https://www.youtube.com/@tzuyang6145/videos"
+        }
+      },
+      "videoId": "-1OU4tkFJns"
+    },
+    {
+      "durationSeconds": 1316,
+      "membership": {
+        "shorts": null,
+        "streams": null,
+        "videos": {
+          "complete": true,
+          "evidenceSha256": "8163e4a3dcfc0fa98a4c2ce4d7e9b322c1b2fbc91f2990a6ae3f726a77d5c649",
+          "observedAt": "2026-10-09T00:34:32.580506+00:00",
+          "sourceUrl": "https://www.youtube.com/@tzuyang6145/videos"
+        }
+      },
+      "videoId": "-C4280KT3S4"
+    },
+    {
+      "durationSeconds": 937,
+      "membership": {
+        "shorts": null,
+        "streams": null,
+        "videos": {
+          "complete": true,
+          "evidenceSha256": "8163e4a3dcfc0fa98a4c2ce4d7e9b322c1b2fbc91f2990a6ae3f726a77d5c649",
+          "observedAt": "2026-10-09T00:34:32.580506+00:00",
+          "sourceUrl": "https://www.youtube.com/@tzuyang6145/videos"
+        }
+      },
+      "videoId": "-H-mhUeu_qk"
+    }
+  ]
+}

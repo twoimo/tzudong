@@ -1,0 +1,2846 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T14:21:08.479629+00:00",
+  "root": "apps/web/performance/admin-taste-20261015",
+  "files": [
+    {
+      "path": "after/audit-1440.png",
+      "bytes": 79591,
+      "sha256": "f9107b1b9c4b2e2bf498ccf91ab11bda0db52b186e2a4af40700a63a4cff4490",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/audit-834.png",
+      "bytes": 75380,
+      "sha256": "7fbba8dea0021fe1fa801eb65e4680ff827cc58faa1ce52439532d572dd55520",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/banners-1440.png",
+      "bytes": 74364,
+      "sha256": "fd086888f7b8614b6f47e38711c39079f77a728d0c3405d33c6d94a8d431c018",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/banners-834.png",
+      "bytes": 60074,
+      "sha256": "f9de7685ab78639c2ca9c2e9ef20bf567b9a8105166907c08f5064087e733c92",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/insights-1440.png",
+      "bytes": 138865,
+      "sha256": "c3005441086c631d08a18e879ee9dfff0b69657f79338e3bbb080e366532a434",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/insights-834.png",
+      "bytes": 111467,
+      "sha256": "23d5af3600e5b35fc9b2dd8b06035c3d2d744d979f9ee8164b566952a70d8fea",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/knowledge-graph-1440.png",
+      "bytes": 63759,
+      "sha256": "11ab5b71c70be33f2cf3be9fe94b6018898ab48cf5892646fb6b647efe4d2ae8",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/knowledge-graph-834.png",
+      "bytes": 60014,
+      "sha256": "61fcc2f6bdd9d7722fa1588e7f51229f600e040c6926428a3605688d2acf27d6",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/last-view-metrics.json",
+      "bytes": 698,
+      "sha256": "d20c28ae7d8fd16f50f10a9713c9fc732c2ff3450b20e17c32d9c8bf53cca01a",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/llm-1440.png",
+      "bytes": 95399,
+      "sha256": "d23945674a035422e3faacb477c168e51fb0c30c0dba90e0eb310464be1b759d",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/llm-834.png",
+      "bytes": 88503,
+      "sha256": "6a8ff50e10d060f9893f4ded6641dba69dc2b7d361bb074377eb6bba4e0d86c0",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/overview-1440.png",
+      "bytes": 251062,
+      "sha256": "9f36a491e7cc3e3eb9b5686276a475749c047738e718d19f7a4b4baaca5509d9",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/overview-834.png",
+      "bytes": 119038,
+      "sha256": "8d162cf3177cce7ef5ab0cec6c8a6984695b779c34ffe9743c25b0308d54c88a",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/pipeline-1440.png",
+      "bytes": 72207,
+      "sha256": "d7d1346b7a0ceff19ba0f6a5a5cf8f9cb3fca4abc7160fce13ee959e3fe4ef16",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/pipeline-834.png",
+      "bytes": 70498,
+      "sha256": "9be0ad7e0a2f293d29e0dd634be94071e7c8815ac384b0d96d901f8b2e605a90",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/report.json",
+      "bytes": 43340,
+      "sha256": "152005001519308553839dbd18d8f5f571c60c7ab423d21d171134d63873c53d",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/restaurants-1440.png",
+      "bytes": 163266,
+      "sha256": "06bfd4d8f7848a020545d15215ac04e7a0f16e484580e81e75486a199bbf70c1",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/restaurants-834.png",
+      "bytes": 102545,
+      "sha256": "0bfbf9af98281216c0e69a344319805233d84170e91cc3c50d9e518c8eab4aa2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/reviews-1440.png",
+      "bytes": 68119,
+      "sha256": "855f1cdb1034c01ac7b331b461db974eab3e4048fcd93e79389c1e6dc3e30369",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/reviews-834.png",
+      "bytes": 64279,
+      "sha256": "d3d3b3ea4d6aae62af9b2b6699e9e48ddf0202095520fc617f5ddce0b768d235",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/routes-1440.png",
+      "bytes": 125495,
+      "sha256": "d5129f715da8a1b27b8e3c71210cbf7d5eb58441a3c6bc653de83c892d3a6f8f",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/routes-834.png",
+      "bytes": 92326,
+      "sha256": "247c453e469ee62700e775038b7d499d1093d2950a6cbd75c255603239827ec2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/sentry-1440.png",
+      "bytes": 64014,
+      "sha256": "ef9282bffcb1584705f5df3352cc2fc9cb205bcfabbc4efcd92e143a76e47f2d",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/sentry-834.png",
+      "bytes": 60090,
+      "sha256": "f749b8ca1307b8f53bf66defb3cc217cd1e3c94bf03d19789dfdc4cb488827cc",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/storyboard-1440.png",
+      "bytes": 116972,
+      "sha256": "8e106461d323560142b5bf98e57bff4f198ecf8aed92261188355d9602f0a9ba",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/storyboard-834.png",
+      "bytes": 110535,
+      "sha256": "1401c80368a76fd334836f77aa4dae742f4d08488c6726798e6c7550cc38f260",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/submissions-1440.png",
+      "bytes": 70026,
+      "sha256": "f50271214a7df6945764db6ef6f87075d43f969bc1622e0c1f38bdcc316c7150",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/submissions-834.png",
+      "bytes": 66208,
+      "sha256": "4bd282bc35a6cbfa024fe123398930a4599cc937f9e8c5820cba18ec7fa13ecf",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/users-1440.png",
+      "bytes": 95355,
+      "sha256": "1df335dc757de958e41a42e40b66dfa0fdcdea1c080bd358a13247c0c1bf000b",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/users-834.png",
+      "bytes": 82716,
+      "sha256": "80c43a8d0226b85f3cc2f28a3801b3c17e71057053bc41fcbdef217066286923",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/youtube-thumbnail-generator-1440.png",
+      "bytes": 772522,
+      "sha256": "94fa76b91e6573b4dde00442ba2cc1e79fab468d0f36d58eab016d20f42f4ea6",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after/youtube-thumbnail-generator-834.png",
+      "bytes": 186912,
+      "sha256": "e3757c28a2015cf6bb3f3279a173382a91f4b7ba2031ab364906fd387a1ab408",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/insights-1440.png",
+      "bytes": 139445,
+      "sha256": "71660a5edc11f556d88db064b613b9b0dfdc101c61b140cbd375a58520384f12",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/insights-390.png",
+      "bytes": 69978,
+      "sha256": "3098ba571cb9c01538be7de22fba49855adf50450f654e5f1ee51e22e1f650fd",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/knowledge-graph-1440.png",
+      "bytes": 64156,
+      "sha256": "2ef2d7fe37e13716ff869849a5e9449ffa813c68e1f9e8868ea7fbc14cc44c25",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/knowledge-graph-390.png",
+      "bytes": 28676,
+      "sha256": "2d7446ff39c6eb573df706c87eecd90f5e69238cc939b1d27d5c72cd7321b753",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/last-view-metrics.json",
+      "bytes": 736,
+      "sha256": "31c9d318312f790c7ea0dd6e197700773b820401abd65993f043dcbf01ad3d9d",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/pipeline-1440.png",
+      "bytes": 73218,
+      "sha256": "95653566723b12789b4849f852655347c819b2fb026319ab7a8e1b9e380014c9",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/pipeline-390.png",
+      "bytes": 39176,
+      "sha256": "242764ea0866dffc6e798206fca34658fb602974611abb8403e326b4c69388bf",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/report.json",
+      "bytes": 17454,
+      "sha256": "fac5d13dc78fa1831b5945e831ba27ee9fe946959241a5ee395c4cc39ff4e2ac",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/restaurants-1440.png",
+      "bytes": 165073,
+      "sha256": "9c29747cebad3224764b3c878ce813cfdf0ff9b71f9d0febafddef7401273d25",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/restaurants-390.png",
+      "bytes": 56109,
+      "sha256": "827d85e12e0bf80a4a54b86f28950a100bd463990df549f31bbe3b01ab69fb7b",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/storyboard-1440.png",
+      "bytes": 117715,
+      "sha256": "397d671b55d72a7939fd677ce9ed7d2f3b2e661cc8cddf86d687ddedd1d8a832",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/storyboard-390.png",
+      "bytes": 57757,
+      "sha256": "82adb3b379b738416ed5b79c2dd93cd799cc938930568a0aed40f4d8901f369a",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/users-1440.png",
+      "bytes": 95890,
+      "sha256": "a48e2bc6ad69b6689611f417c384509bfc1e0be497b7df1af888f2601c6bb8b3",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark/users-390.png",
+      "bytes": 50400,
+      "sha256": "e364f7d0aa147ba016cc4d1cdf415ef1ad7e48e9817483eed2157948a5f9bbaa",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/insights-1440.png",
+      "bytes": 139445,
+      "sha256": "71660a5edc11f556d88db064b613b9b0dfdc101c61b140cbd375a58520384f12",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/insights-390.png",
+      "bytes": 69978,
+      "sha256": "3098ba571cb9c01538be7de22fba49855adf50450f654e5f1ee51e22e1f650fd",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/knowledge-graph-1440.png",
+      "bytes": 63617,
+      "sha256": "bc99636b8ab0ec98c5a8f11133a9807f6af2fedab1e31bd24482dbc6a99be708",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/knowledge-graph-390.png",
+      "bytes": 28192,
+      "sha256": "880cdc47fbb5710206cf445b55e4b2e77a943a0ada22d5fd0b43ace55b22a087",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/last-view-metrics.json",
+      "bytes": 736,
+      "sha256": "31c9d318312f790c7ea0dd6e197700773b820401abd65993f043dcbf01ad3d9d",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/pipeline-1440.png",
+      "bytes": 73218,
+      "sha256": "95653566723b12789b4849f852655347c819b2fb026319ab7a8e1b9e380014c9",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/pipeline-390.png",
+      "bytes": 39176,
+      "sha256": "242764ea0866dffc6e798206fca34658fb602974611abb8403e326b4c69388bf",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/report.json",
+      "bytes": 19737,
+      "sha256": "416e93b10485a55a03dd3e4a0291e78904dcab34c3c8e97e9a1954586ed6efa0",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/restaurants-1440.png",
+      "bytes": 163037,
+      "sha256": "f039a3d94b707d511c17ed0db8f55051e2d104e28ce5f9a868013834ce9a69fa",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/restaurants-390.png",
+      "bytes": 56080,
+      "sha256": "e6b4c86604595bb256f91589ae887e8ffb83b4adfda61bfa44534eb34a78bd85",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/storyboard-1440.png",
+      "bytes": 116952,
+      "sha256": "b359958b3a402766df46ad51e538e14558448bd9e4584509ecf9390d72fc6d29",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/storyboard-390.png",
+      "bytes": 57757,
+      "sha256": "82adb3b379b738416ed5b79c2dd93cd799cc938930568a0aed40f4d8901f369a",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/users-1440.png",
+      "bytes": 95744,
+      "sha256": "5ce587c233da3584c90846c203640269fabc43f96ae89461ce2def14b1dcd554",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-contrast-before/users-390.png",
+      "bytes": 50256,
+      "sha256": "6a1bc6b9483b8ef6cfa7fcf0df166788fe84d9ced4b4e60f06e61f467cb9da60",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-dark-unapplied/insights-1440.png",
+      "bytes": 138865,
+      "sha256": "c3005441086c631d08a18e879ee9dfff0b69657f79338e3bbb080e366532a434",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-dark-unapplied/insights-390.png",
+      "bytes": 69857,
+      "sha256": "1384c26f202bb503c75c572ba2b021a34f38827d16243d071592f7f3c213859f",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-dark-unapplied/knowledge-graph-1440.png",
+      "bytes": 63755,
+      "sha256": "b73cb3fa3004f80d8c96879c83a986c2abd309fead83c9bec525f90ae7626446",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-dark-unapplied/knowledge-graph-390.png",
+      "bytes": 28545,
+      "sha256": "0af167e06a53150a26032c9c732e798f8c1e0d05a3488f0b51dd6f9cc7d5392c",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-dark-unapplied/last-view-metrics.json",
+      "bytes": 709,
+      "sha256": "e3854e3c7e509186f3a39603f8ecfd8386480b660bea4192e247dc0ef08fe884",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-dark-unapplied/pipeline-1440.png",
+      "bytes": 72207,
+      "sha256": "d7d1346b7a0ceff19ba0f6a5a5cf8f9cb3fca4abc7160fce13ee959e3fe4ef16",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-dark-unapplied/pipeline-390.png",
+      "bytes": 38733,
+      "sha256": "80f02789d2134cff3b908fa90d713b0d69cf8c10b15a712080e56d0bb4c88a24",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-dark-unapplied/report.json",
+      "bytes": 17301,
+      "sha256": "9db904684db54816c9833dd008fe5a35089e33e1e8ab5f69501349c2f2ffba41",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-dark-unapplied/restaurants-1440.png",
+      "bytes": 163266,
+      "sha256": "06bfd4d8f7848a020545d15215ac04e7a0f16e484580e81e75486a199bbf70c1",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-dark-unapplied/restaurants-390.png",
+      "bytes": 55679,
+      "sha256": "5f895feae0e07b832212286206946dd86133dceb4170c98e3c77d3a35037472c",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-dark-unapplied/storyboard-1440.png",
+      "bytes": 116972,
+      "sha256": "8e106461d323560142b5bf98e57bff4f198ecf8aed92261188355d9602f0a9ba",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-dark-unapplied/storyboard-390.png",
+      "bytes": 58030,
+      "sha256": "bce2c85ec5b7a9b074cafc6b551b248a9c1bfd8ea95d5c5720b63f04f19975f7",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-dark-unapplied/users-1440.png",
+      "bytes": 95355,
+      "sha256": "1df335dc757de958e41a42e40b66dfa0fdcdea1c080bd358a13247c0c1bf000b",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-dark-unapplied/users-390.png",
+      "bytes": 49727,
+      "sha256": "a67982c3342299f55b67631aed4bcaa9ed328b9a9e15fdc899ab5ed24bc80be5",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-final-dark/insights-1440.png",
+      "bytes": 138420,
+      "sha256": "ebc5afa4dcac141446e1328c59da5d8f8ce615001f2009713f83dc312172a1dc",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-dark/insights-390.png",
+      "bytes": 67781,
+      "sha256": "d5c949b34b2ea866aebf726495a0b25f6bac9a4da29500ae17b9bb5b63eb964d",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-dark/knowledge-graph-1440.png",
+      "bytes": 63093,
+      "sha256": "b0be688cf4199baec1e97bc7b99bf4f0b80a730876945197ea8781896dfbffb9",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-dark/knowledge-graph-390.png",
+      "bytes": 27413,
+      "sha256": "69e5fd6cf225e3aabdabdc7e7cbdcdaa73c1b152e5ca488d40ddec080a880f77",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-dark/last-view-metrics.json",
+      "bytes": 736,
+      "sha256": "31c9d318312f790c7ea0dd6e197700773b820401abd65993f043dcbf01ad3d9d",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-dark/pipeline-1440.png",
+      "bytes": 72080,
+      "sha256": "07068dc7c1bd3ab061f9d89d7477616e9107a1c2b0f92fc481993c4172219f25",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-dark/pipeline-390.png",
+      "bytes": 37938,
+      "sha256": "a92fc8206eb69b03c0df08e365c3313fd5fc6a5f9c9d7e2f732023d658a7aa80",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-dark/report.json",
+      "bytes": 102378,
+      "sha256": "a3e6ef8d81482e012033e8f06edb98a2c4c5586e61b5ba688e3464450b0cb407",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-dark/restaurants-1440.png",
+      "bytes": 163934,
+      "sha256": "f46daec2f9e7f07352d674865cecabe1962dfe039467dc5988891e2f16705290",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-dark/restaurants-390.png",
+      "bytes": 55246,
+      "sha256": "963fbc00ffc3e81938ff9e1fe0206348ca65f99146f097ab9e11a4721304e7bc",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-dark/storyboard-1440.png",
+      "bytes": 116546,
+      "sha256": "cd9eff7b31ba6a9b1758f5a24b72123d88ef1edd0a4058dbd706da496c70e3da",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-dark/storyboard-390.png",
+      "bytes": 56208,
+      "sha256": "faea87d4267f440b2667acca13f61303e00d323636adaf4e9cfb3387b967b09b",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-dark/users-1440.png",
+      "bytes": 79738,
+      "sha256": "53eb637af82d4a8be69f85c15260b1669004b67fe5a58308375e0f4229a47572",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-dark/users-390.png",
+      "bytes": 48752,
+      "sha256": "bf0272c2d8770740e9d497c455cb0c0f509d4c3e6ec57c5931084c5908ba7063",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/audit-1440.png",
+      "bytes": 77957,
+      "sha256": "8382bb5f0c8feaea0b683585f15b912004624f68be81277e598761fbfbaf8fe2",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/audit-834.png",
+      "bytes": 73759,
+      "sha256": "eaad4ded844307f0ce6c487baa568b9746ed30c32b1743ebe63a2bb9ec8521ae",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/banners-1440.png",
+      "bytes": 72794,
+      "sha256": "480442ef9677206d9eddeff41a7349afc6f860e26c7bfc40348b4cb4c70daa52",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/banners-834.png",
+      "bytes": 58527,
+      "sha256": "9b9d8f85091d4e27bd6e1bc7b5e235d8214f4c4c64a48c00ab101de54ed75ae3",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/insights-1440.png",
+      "bytes": 137297,
+      "sha256": "d41a31a7e20fc4db0dc3155da1aa0e848a6da3c8baa61eb3e35b4f72a84df58b",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/insights-834.png",
+      "bytes": 109908,
+      "sha256": "f21a62fb554874f1f07eb28489ff7857930be79367b111d16a1a5a3ab55ef7a3",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/knowledge-graph-1440.png",
+      "bytes": 62105,
+      "sha256": "838792a7182a01b91a021112e38390a0112a70122fb0f3381e012c8459bf1781",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/knowledge-graph-834.png",
+      "bytes": 58372,
+      "sha256": "f43a1a7717f95030f39b6eb8d3496be8b778bb620066e897708358412edb8629",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/last-view-metrics.json",
+      "bytes": 730,
+      "sha256": "468fd2225512c2dc3f45e1e760554b830fb5a8dee82519ab71f148f0b81bc917",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/llm-1440.png",
+      "bytes": 93878,
+      "sha256": "ad31bfa27b2d776d708b6738c3d531474cf46f9a1655f94c180dd1ac7f214e0d",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/llm-834.png",
+      "bytes": 86956,
+      "sha256": "8c04cf592762113a485c6ff618e597a913fd4850eeffac1d055ac8038943d3c4",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/overview-1440.png",
+      "bytes": 249526,
+      "sha256": "c2f6b023c46feb80c466f07d4a2bbb78a99c9a7fc7e4c70c5b3c695f0f3f9dfc",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/overview-390.png",
+      "bytes": 53987,
+      "sha256": "179ec23c7aafeb840877194209105b41d02e19c71c691b4541ded903f449e614",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/overview-834.png",
+      "bytes": 117492,
+      "sha256": "998897bc81ef87883204eb078f73f90d9ec159f8d23c4b32cba4f620e24c074e",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/pipeline-1440.png",
+      "bytes": 70539,
+      "sha256": "689504c92a1d113fd842aa32708fc3a9ae4ea3443905a350570a3766c1364d32",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/pipeline-834.png",
+      "bytes": 68880,
+      "sha256": "ca2e4380fe1c9395d488c79a2b831e44d6d5e7a32efd3ac1524e94eb5a4a33e9",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/report.json",
+      "bytes": 132971,
+      "sha256": "1ec2924a469a5574d7f86a108f8aa75d2b09aad4305709b17f6abd0c9d24bb54",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/restaurants-1440.png",
+      "bytes": 161666,
+      "sha256": "75ed91a3f7635a643d930cfdf292eca4ab16cff80d692d891ba36ecf26e8b9c1",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/restaurants-390.png",
+      "bytes": 54440,
+      "sha256": "279035612292a01c2218b3e1d34d1766fef2b7b54162b228c9d2987a170e405c",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/restaurants-834.png",
+      "bytes": 102188,
+      "sha256": "fb7d1235a6206edcde22b122482d84a3e3bebc08658c9c876db34db6720cfa9f",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/reviews-1440.png",
+      "bytes": 66513,
+      "sha256": "f3e4bf0a2278d8429c619532d3a44d82b45f0ba38d0e29acd0cc7320b1c80e5b",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/reviews-834.png",
+      "bytes": 62669,
+      "sha256": "eed621d8524af07e9b9265c4d2230424650b76ef4328c2556ce14360f5da8157",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/routes-1440.png",
+      "bytes": 177244,
+      "sha256": "44322e5c92899885c0e1635b5587c6ef70321d0ba4c67eddbd94578802b5203c",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/routes-834.png",
+      "bytes": 90752,
+      "sha256": "8abcbaabdbf79d5def74693ca98e5ad00edafdf553b1b9f8dc675e3c763a4352",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/sentry-1440.png",
+      "bytes": 62376,
+      "sha256": "e1bbfafe7bd18456c69acfbc647b73f016c259cd4d0064fc83839807acdfb8aa",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/sentry-834.png",
+      "bytes": 58461,
+      "sha256": "9b766dd14288a94407b1ca02d35b9a0492c5b479a824761c719f359afec3c2d8",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/storyboard-1440.png",
+      "bytes": 115340,
+      "sha256": "50bb22125032814da974c393bb1913feaf3deeb59cdc7a2dc3387f718bf266af",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/storyboard-834.png",
+      "bytes": 108997,
+      "sha256": "2bb014f2ffa465129b2a05a5b4165fec706f667806c2240d8bc19b4ffe19f9cd",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/submissions-1440.png",
+      "bytes": 68387,
+      "sha256": "551ab3f3be360b5334e50f085c6a599f664da4e3806bd50dba0360f0c13554bb",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/submissions-834.png",
+      "bytes": 64587,
+      "sha256": "69e66fb7f31bbcb5371bf0d93c6c6a54c87b6b81e2542f26e47d8eaaebb0a0b3",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/users-1440.png",
+      "bytes": 93860,
+      "sha256": "81365bb02a70d3b2a43a6adb5dd664c2b9f5be480283d85a274d6eb9402b82b8",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/users-834.png",
+      "bytes": 81138,
+      "sha256": "3c8406dff3b8a6b98180ce8f6461c502e77ea4d9771cf00772a842f6d45345cf",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/youtube-thumbnail-generator-1440.png",
+      "bytes": 771020,
+      "sha256": "aaf1f1c29f3650e90ed7a692430fc0e57aa36a86e6ca7ae0830bde3d1002daef",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-light/youtube-thumbnail-generator-834.png",
+      "bytes": 185472,
+      "sha256": "c0dd997a0e4ef26fae061923e45d088a8c49ef25361e37ed1f349e6d2ae5ccd3",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-auth/report.json",
+      "bytes": 85517,
+      "sha256": "39b1a02f267cbe376618f68443a5d29973313407cb79b88c172c7b4f35fdd0b8",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-final-mobile-loopback/audit-390.png",
+      "bytes": 38666,
+      "sha256": "dfb69f4e63fbfbfe6515ae475bf39379af8340286986b9501e06b4231f3c63a7",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/banners-390.png",
+      "bytes": 27390,
+      "sha256": "af059bcc95c5965822990b36dc77627345d29c80c01355f9ca6f2b3145948231",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/insights-390.png",
+      "bytes": 67505,
+      "sha256": "d106931560ec63ce6fa6ffff81e57c27976340e63d9ba829a033a0bb31e44c46",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/knowledge-graph-390.png",
+      "bytes": 26900,
+      "sha256": "67f5b9d1be99110de60c0fca65bfd22bc12d1fd64384e68ae77ece2f2663e53b",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/last-view-metrics.json",
+      "bytes": 724,
+      "sha256": "ea65429c07078fc6b9843fb01c8fd2c564853ad1de52462c21c65b7e29ec6621",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/llm-390.png",
+      "bytes": 52723,
+      "sha256": "7213e94c1d5266c3f448b4df6440d3d96e96785679d3af28d6f22e7fea135629",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/pipeline-390.png",
+      "bytes": 36796,
+      "sha256": "fbd1f5aaf545809f4fde7805c604157c81d6d3bc2b7544e98de79f3415c070e8",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/report.json",
+      "bytes": 106313,
+      "sha256": "50d4ef6054a60c5d6c3ea62cc3e9b2de6dad914a80bb1974d0661a14fee298de",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/reviews-390.png",
+      "bytes": 30998,
+      "sha256": "4fcc606354b49c6271ef209679a09d828f0ec50984ac0d4f987c21a13207175c",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/routes-390.png",
+      "bytes": 47452,
+      "sha256": "54915c8c6bc1e26dc249bb21d72824f5c184c21715d8c4a88c9d555d08fff1c7",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/sentry-390.png",
+      "bytes": 27527,
+      "sha256": "bfc330729a98b6ed6d8f0f3b3402a52ca88082bfb3d157a7f68245caec44eacf",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/storyboard-390.png",
+      "bytes": 56090,
+      "sha256": "593b6fc685b3d709936fcb11c69e9b29ab95bf6e6bdf683a0c2640fb48b08409",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/submissions-390.png",
+      "bytes": 33056,
+      "sha256": "28b42619ff790527d5c7db5276ef4bc8a7125fce8dbc2e12f1138a445e9d3485",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/users-390.png",
+      "bytes": 35920,
+      "sha256": "13d92e0e866610292e69eff715e009e27553ba4ec9ae27cbba278b68372d1270",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-mobile-loopback/youtube-thumbnail-generator-390.png",
+      "bytes": 58968,
+      "sha256": "0ad949c82ca13984e30961ef9b27381fccf0b15c13d5e408abaa195ccae8730c",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-success/knowledge-graph-1440.png",
+      "bytes": 63683,
+      "sha256": "bec3c43eb11da894910cbe3a4de4bb6a4c6fda16d7b6c12cbe620bcdae380895",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-success/knowledge-graph-390.png",
+      "bytes": 30654,
+      "sha256": "7e890ba8cb560e11c65fa7925bac1ff1b3a31209df4dc5004e6e0ab21a6bf094",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-success/knowledge-graph-834.png",
+      "bytes": 62240,
+      "sha256": "855065a64241a787e5fa657206934a708132c53b802ede2e436409cb7b3a4102",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-success/last-view-metrics.json",
+      "bytes": 737,
+      "sha256": "0b3e24a7edda49885c366905e280789b2d8a4d20f0917b684f0c279f78760294",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-success/pipeline-1440.png",
+      "bytes": 69278,
+      "sha256": "ddf544347e96caa5b14afa512c8ce30d3df91b2145691e6486fbfea11d4d3896",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-success/pipeline-390.png",
+      "bytes": 35198,
+      "sha256": "983919ebae2bb74f06d1bc8743ef5b87c890e2bbb0aa8ef9deaf20be60699a75",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-success/pipeline-834.png",
+      "bytes": 66934,
+      "sha256": "930cd9065c2bfddbbd42460ff08e9b0f4c3ac795f2afee6d4aa9a1833db15e0f",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-success/report.json",
+      "bytes": 98070,
+      "sha256": "fc2ba9da30ffaad2e8b6ec6242d857d2c12baa8b93875de7357174348edad75b",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-success/storyboard-1440.png",
+      "bytes": 101118,
+      "sha256": "ca3a78682674c0627b7e0b98cf5f52aebec5ec203fe5852a3ad4fdb5f39d96ac",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-success/storyboard-390.png",
+      "bytes": 56090,
+      "sha256": "593b6fc685b3d709936fcb11c69e9b29ab95bf6e6bdf683a0c2640fb48b08409",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-final-success/storyboard-834.png",
+      "bytes": 96038,
+      "sha256": "52149b3ecc992f413fc73daa7da0309d20e2c3ab893b4a0f80aa7bfa54d8040c",
+      "role": "final bundle view evidence; raw report boundaries apply"
+    },
+    {
+      "path": "after-landmark-partial/banners-1440.png",
+      "bytes": 74364,
+      "sha256": "fd086888f7b8614b6f47e38711c39079f77a728d0c3405d33c6d94a8d431c018",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-landmark-partial/insights-1440.png",
+      "bytes": 138865,
+      "sha256": "c3005441086c631d08a18e879ee9dfff0b69657f79338e3bbb080e366532a434",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-landmark-partial/knowledge-graph-1440.png",
+      "bytes": 63759,
+      "sha256": "11ab5b71c70be33f2cf3be9fe94b6018898ab48cf5892646fb6b647efe4d2ae8",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-landmark-partial/overview-1440.png",
+      "bytes": 251062,
+      "sha256": "9f36a491e7cc3e3eb9b5686276a475749c047738e718d19f7a4b4baaca5509d9",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-landmark-partial/pipeline-1440.png",
+      "bytes": 72207,
+      "sha256": "d7d1346b7a0ceff19ba0f6a5a5cf8f9cb3fca4abc7160fce13ee959e3fe4ef16",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-landmark-partial/report.json",
+      "bytes": 15968,
+      "sha256": "43322cdba1395ea9b792d5b6f5aa8ac6cdefce2ae4aee5866f97a377939ff4e6",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-landmark-partial/restaurants-1440.png",
+      "bytes": 161346,
+      "sha256": "fca3a8040c4fe3d2e4b0d7624c5b61b3e9f3daf3ca0236cfea2a24b38be5b4ca",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-landmark-partial/reviews-1440.png",
+      "bytes": 68119,
+      "sha256": "855f1cdb1034c01ac7b331b461db974eab3e4048fcd93e79389c1e6dc3e30369",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-landmark-partial/sentry-1440.png",
+      "bytes": 64014,
+      "sha256": "ef9282bffcb1584705f5df3352cc2fc9cb205bcfabbc4efcd92e143a76e47f2d",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-landmark-partial/submissions-1440.png",
+      "bytes": 70026,
+      "sha256": "f50271214a7df6945764db6ef6f87075d43f969bc1622e0c1f38bdcc316c7150",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-landmark-partial/users-1440.png",
+      "bytes": 95355,
+      "sha256": "1df335dc757de958e41a42e40b66dfa0fdcdea1c080bd358a13247c0c1bf000b",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/audit-1440.png",
+      "bytes": 51277,
+      "sha256": "51cc929df3e4527ae69131cea36a9a0931752d25dd6c635c58b85eea80966fcf",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/audit-834.png",
+      "bytes": 48028,
+      "sha256": "4e9e3fb77f94bfb55713758576181b7bb5e3bc31557395bc0572ada706961dd0",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/banners-1440.png",
+      "bytes": 24576,
+      "sha256": "22a324c9e1593829251b031ae093383526f577137de9e8f5049b6cf9391aa003",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/banners-834.png",
+      "bytes": 51036,
+      "sha256": "88679413d62bb26acfac9727e3d9a8d408cc43dfe99915c1bf3415f226c77890",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/insights-1440.png",
+      "bytes": 55814,
+      "sha256": "d5552d7e667e3c128cd4877f05b396426fdfe827b38981f8e7754a5b4807c67a",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/insights-834.png",
+      "bytes": 54056,
+      "sha256": "eac623cba448649b34b49a0a0655fd57ad42e2d6c21248797d837feeb3facd53",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/knowledge-graph-1440.png",
+      "bytes": 44683,
+      "sha256": "08e84eaddbdfe8fa87a20f9e33ac91343bed7e34661c96afae27fc9d5416768c",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/knowledge-graph-834.png",
+      "bytes": 41571,
+      "sha256": "202d7a7b4139412fe8a34c827d51b8bf7d8c67c5843b7b2c2d0e2831ff5e9cd5",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/llm-1440.png",
+      "bytes": 48850,
+      "sha256": "1c2d113ce9fcbcdd7a3331c65b10a90ff45b036c29b452955f763fca6cd52e93",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/llm-834.png",
+      "bytes": 48790,
+      "sha256": "379071b4c2f06954d33a9a00a8e2e7ca5dc3b09edac822aaba75f8d341b36c8f",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/overview-1440.png",
+      "bytes": 46563,
+      "sha256": "a927a046409ed54ba0c53b4fe290a2a83fd8831588c85e50a107f2af1e5e736b",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/overview-834.png",
+      "bytes": 58621,
+      "sha256": "74327c78b1a5124b89737299e494019580c4ee73c9f158f07111da67495d6175",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/pipeline-1440.png",
+      "bytes": 50949,
+      "sha256": "dbafce3f6b145c19d5ef0fe7f49934c77bde49a72d9365e3e5a3d1ed3a382c28",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/pipeline-834.png",
+      "bytes": 43260,
+      "sha256": "993e654a71717b429065651de1282611ac67b686434ff168216f8903682c462d",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/report.json",
+      "bytes": 39983,
+      "sha256": "4db21ff026735844295a5ecf1cfd95c56d38ef2558d26e4f666bd4a32f18f99a",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/restaurants-1440.png",
+      "bytes": 53014,
+      "sha256": "562eaad21c503cda31a2933e991a7068522ce6fdf60a2b0705b036b42f540d8c",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/restaurants-834.png",
+      "bytes": 39783,
+      "sha256": "fda416883a01f74b26f1efe19b5d27bd48fa6177d9045936c2baf0c87ed3bf9d",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/reviews-1440.png",
+      "bytes": 50040,
+      "sha256": "2e1d87defc65c1f251be270c33228f59585a285ae379c4d4353de7c3a1ba4c60",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/reviews-834.png",
+      "bytes": 46681,
+      "sha256": "90b92ab3f0c301642687de77bc3e42d4145d7d5472d0871e916aaa261f65a924",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/routes-1440.png",
+      "bytes": 70421,
+      "sha256": "769380acc66175b0746321ebd1bc87def79ad8cba3b76077750ab84cf1ebcb08",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/routes-834.png",
+      "bytes": 52971,
+      "sha256": "b7e14088f7ae55e38cb393d5e1381525e04c966e7b8f532ad69a9b97117cfae8",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/sentry-1440.png",
+      "bytes": 52361,
+      "sha256": "3be0889493b0a15026918dc6171be4f0a044f6c94de9c3a8042983e86441f24b",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/sentry-834.png",
+      "bytes": 49008,
+      "sha256": "5184946de50746735345e16358e67f6a8f12d1710ab1f1826f1235f1a938c40d",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/storyboard-1440.png",
+      "bytes": 50707,
+      "sha256": "f44477c46b605f0308a9dae9f7d2451401fb90056fc276153acb97f0d54c98ea",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/storyboard-834.png",
+      "bytes": 54799,
+      "sha256": "02edf85cbcd9a829fdfaa9a955d70836a6f4fe8aba1900c623ab058d5d771b4b",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/submissions-1440.png",
+      "bytes": 48205,
+      "sha256": "bab7dfee4c20c6f4362d0423a14d3c0470457672fc70202f40ca47314905f7db",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/submissions-834.png",
+      "bytes": 44969,
+      "sha256": "10a26565bc08e553abc2f988ce7bd72a4007bf554c74e46ae208242f0bceb61a",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/users-1440.png",
+      "bytes": 32081,
+      "sha256": "8ea4c15081a8841f5917d8fb8375aa993cded3631ae9932464f0369678adfe61",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/users-834.png",
+      "bytes": 53762,
+      "sha256": "3d1d195daebdc3422eb1fd4bb31a1f126c95fd9dba8a6f1eab53363745659b6b",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/youtube-thumbnail-generator-1440.png",
+      "bytes": 51404,
+      "sha256": "adfb6f301180c2a24b2609c6d89eb9aeed9cdcd448b507f47b306f82c39df572",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-layout-regression-partial/youtube-thumbnail-generator-834.png",
+      "bytes": 46612,
+      "sha256": "59887c30fe6b58131f1dbd22f77f0062a3d7c8e82434f58a58953ebb3e0965e2",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "after-mobile/audit-390.png",
+      "bytes": 40579,
+      "sha256": "811c4454170b406fd63a32b36ef509f795928c96a4d0b3bf988abcb929cad611",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/banners-390.png",
+      "bytes": 29355,
+      "sha256": "fda939e6dd3b382b5bed39143643edc154e15dd44bc70e23a45e25b4761ae750",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/insights-390.png",
+      "bytes": 69857,
+      "sha256": "1384c26f202bb503c75c572ba2b021a34f38827d16243d071592f7f3c213859f",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/knowledge-graph-390.png",
+      "bytes": 28545,
+      "sha256": "0af167e06a53150a26032c9c732e798f8c1e0d05a3488f0b51dd6f9cc7d5392c",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/last-view-metrics.json",
+      "bytes": 696,
+      "sha256": "ac2df6aaf1ee7ab8286850e7c353a974a4f7fde5f5f499b951fa984ca467de95",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/llm-390.png",
+      "bytes": 54013,
+      "sha256": "e0ab60e22848fb7ce04d7440eea1f25514db99bdbf9f4c16aeafe1f489478991",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/overview-390.png",
+      "bytes": 57123,
+      "sha256": "40bb59b8e6c2befe312789e29358525fd65fc7186f1c6d3f0b260252de5e4ec8",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/pipeline-390.png",
+      "bytes": 38733,
+      "sha256": "80f02789d2134cff3b908fa90d713b0d69cf8c10b15a712080e56d0bb4c88a24",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/report.json",
+      "bytes": 18963,
+      "sha256": "ea04e573734c9cd3c4f9c25e4914f89f197e83c8a2b09f209e3d78e7706f70f2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/restaurants-390.png",
+      "bytes": 55679,
+      "sha256": "5f895feae0e07b832212286206946dd86133dceb4170c98e3c77d3a35037472c",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/reviews-390.png",
+      "bytes": 32976,
+      "sha256": "680564476e8dbc357e602ffa92bfb55c69e9587e2a05d6d3e456312177901432",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/routes-390.png",
+      "bytes": 40157,
+      "sha256": "eae90fe1012a908e3d62e840f4715e0fdf8782b4d63f0d21702f52aaf572a9a3",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/sentry-390.png",
+      "bytes": 29498,
+      "sha256": "5d9d17888adb65947b52df7f21342e469785c706521abf944a0e627235777b40",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/storyboard-390.png",
+      "bytes": 58030,
+      "sha256": "bce2c85ec5b7a9b074cafc6b551b248a9c1bfd8ea95d5c5720b63f04f19975f7",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/submissions-390.png",
+      "bytes": 35022,
+      "sha256": "8a792a03406b8d5d0acf88cefb1ca5d0ee5ae8c9dd7e4820a19a08c2ee2566d1",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/users-390.png",
+      "bytes": 49727,
+      "sha256": "a67982c3342299f55b67631aed4bcaa9ed328b9a9e15fdc899ab5ed24bc80be5",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-mobile/youtube-thumbnail-generator-390.png",
+      "bytes": 224860,
+      "sha256": "86fe27dca795adbdc20b101b50cbd43065c6e7b822d7c62459ca8cf5bf6c7d9f",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-success/knowledge-graph-1440.png",
+      "bytes": 65330,
+      "sha256": "d706a211ab7bd2371a7f6edef0077df4c19d714b8273378976085c811030de93",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-success/knowledge-graph-390.png",
+      "bytes": 32283,
+      "sha256": "8540597af0dc90ad8d3ce6d1bb42e119d8b9684e317c1ddf806be6c4f21b3392",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-success/knowledge-graph-834.png",
+      "bytes": 63896,
+      "sha256": "5f2cd7861d407ece9df0a1e3a6e45202715a44da83ce81e5a1928660782c00b4",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-success/last-view-metrics.json",
+      "bytes": 737,
+      "sha256": "0b3e24a7edda49885c366905e280789b2d8a4d20f0917b684f0c279f78760294",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-success/pipeline-1440.png",
+      "bytes": 70957,
+      "sha256": "67b7ec94102aef9eb6e765374fef0727eb5d964f910b39e5e773149206111dfe",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-success/pipeline-390.png",
+      "bytes": 37171,
+      "sha256": "d51cde094843273c4d156e0e2e96512cc0afe23876dd7864d19fc10c63eb4d55",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-success/pipeline-834.png",
+      "bytes": 60486,
+      "sha256": "6bb463dfa4e53dcc273a4faaf78842d687d9898bbe750e64309f3b9ef0451b62",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-success/report.json",
+      "bytes": 13309,
+      "sha256": "14fb0f4bad0bee7572ad39cf055b0a2ef7d15e9e1531555ac9cd96ed191c9ac4",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-success/storyboard-1440.png",
+      "bytes": 102848,
+      "sha256": "c2a3e5e8986ec219c16c6172170c2b42163b9116d0e708bb131b6aa174f16710",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-success/storyboard-390.png",
+      "bytes": 47969,
+      "sha256": "8659f6492d73e802b9adfaa2b63f4fbb34235cb998f3e250f9f53923653408ba",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "after-success/storyboard-834.png",
+      "bytes": 97668,
+      "sha256": "e266068eed9d979899e118be9d2502d05906a53e1ed968f728b8e1d284b74a6a",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "baseline-admission.json",
+      "bytes": 1797,
+      "sha256": "c6a4b839f0c0092a132c2fe9308003b07c4bcbf68a474efd8e869ab018354baf",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "before/audit-1440.png",
+      "bytes": 82741,
+      "sha256": "5c6915a94e62bf598aaf76a1095bc607d07287c312f184f73e4f99d004dea64a",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/audit-390.png",
+      "bytes": 40680,
+      "sha256": "404b1375668228876a6655f3c644adaf941c45a11655b7af885cd38479a70bd6",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/audit-834.png",
+      "bytes": 77816,
+      "sha256": "36bb2b90cad77220973e89cf5d875014c4052e262f962bf08380641106bb8410",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/banners-1440.png",
+      "bytes": 77930,
+      "sha256": "a12a81d2a473f357422451c1a6a95aa0114c79c9bc2a72b1ac6ea9f8199422c3",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/banners-390.png",
+      "bytes": 30740,
+      "sha256": "c22f5efac24437d7aacc01134444104c882028b040b89673e6cc6ce9ff139ac9",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/banners-834.png",
+      "bytes": 63532,
+      "sha256": "25408d4802eca8efb10507863a75b4cec5b6140cb40c1960c77698c0315ccf93",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/insights-1440.png",
+      "bytes": 153354,
+      "sha256": "fd8562271f3899e1b936d61fc4925b400476291a3534c7439f6f8fe9d4fe2ac3",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/insights-390.png",
+      "bytes": 69039,
+      "sha256": "a4bbaff243ec9c1ef1e6d97736feff3fcdc7727a6b622d577199e64bf9019892",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/insights-834.png",
+      "bytes": 119520,
+      "sha256": "56376c1790948edeea18abe20924a146b6fc8f6dfcd2472f03bfbbeadc10470a",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/knowledge-graph-1440.png",
+      "bytes": 65917,
+      "sha256": "b5ed7e426645f128a08fb987219c81907a366bc4d6fe28ac89ef535bcc9e8662",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/knowledge-graph-390.png",
+      "bytes": 27762,
+      "sha256": "a70a571e0efe919703f3752ed6acb66f4d7d6e3b1b1c36deea865493a48603ef",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/knowledge-graph-834.png",
+      "bytes": 61724,
+      "sha256": "0cd549b4dcba98a27aa428cbf9e3647d73d08e3507651e2af3e5f3d44574975e",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/llm-1440.png",
+      "bytes": 92312,
+      "sha256": "ecc7226080bb30ffb886e38cdf3b3ff04b39c14673e8397fa6d7ba30a679c727",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/llm-390.png",
+      "bytes": 53585,
+      "sha256": "63fd7f4d5cdf8d1ebdc87c2efd6b69c30271c4d1848c85467de10b004f614d80",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/llm-834.png",
+      "bytes": 85791,
+      "sha256": "83777d467b36046cc19063267a2eb8bd2d3291202fbccd6f840cfc07b925a9c7",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/overview-1440.png",
+      "bytes": 97605,
+      "sha256": "bef15767d81e82dee433d3ea42b573fbf74c4332fa84d858481fae31f3848170",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/overview-390.png",
+      "bytes": 47477,
+      "sha256": "63a4312710a79be384b53cf8c8f1e5de3cb1b955944244a572609617abc89438",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/overview-834.png",
+      "bytes": 64846,
+      "sha256": "f82c7f67f1846057a7d88da218fc63f808d595b31cc49f622079ba09bfdca169",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/pipeline-1440.png",
+      "bytes": 76893,
+      "sha256": "12d8749ad32a6bd880a67cafc2dd3f523fe3c672e5f1fc9739ac4125cc812040",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/pipeline-390.png",
+      "bytes": 39618,
+      "sha256": "93cc4cdada7f3dd4d239559fcc7c6596cf9aa796a6e695d4ba8233013f227652",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/pipeline-834.png",
+      "bytes": 73342,
+      "sha256": "9e1e3e2260a5e35602993148088eb9a19bc2399a31713f366d6a5fe39eeccdfc",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/report.json",
+      "bytes": 35034,
+      "sha256": "4d6c4282b1ed3f0f99617f58be80f30adbd742fb0e60c424cbd590d348dd4832",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/restaurants-1440.png",
+      "bytes": 30279,
+      "sha256": "3d7d39fc75dfd69dc52601195fd9ec96723600046722d92819b37fc8007a26c1",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/restaurants-390.png",
+      "bytes": 29710,
+      "sha256": "ddb726afbce21d4786c1a63b659c0d94a98468cd36e2118ff7a10d0e1b01f9fc",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/restaurants-834.png",
+      "bytes": 39146,
+      "sha256": "d46c7a07aec8738df96407fa3ef9c4455d114e94628b6d8034c86e2077e30b20",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/reviews-1440.png",
+      "bytes": 30011,
+      "sha256": "811bf63a92edca6a6a53392658daa52f3e07ce684b930e844702869ce1ae675a",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/reviews-390.png",
+      "bytes": 29445,
+      "sha256": "b6b6489e2e9eae50d2c3ee2bdf11ea388f2b3de000e65377e3857ebb16dfe5bf",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/reviews-834.png",
+      "bytes": 38899,
+      "sha256": "c45b7dc6ea87d255ca43f76a046fac99f7ac55af69c2a8fec2fc05f155d4f0c7",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/routes-1440.png",
+      "bytes": 151646,
+      "sha256": "f150176906d783a1950c1718b3a03e38df9c93d6499a3e5c8325e54f77395d8c",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/routes-390.png",
+      "bytes": 39295,
+      "sha256": "bfc5661f847a833323cf9866ca14c2ab783e0110bdf6b7301b4f24c9f889333f",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/routes-834.png",
+      "bytes": 74249,
+      "sha256": "ffc25657cfbfb7fba6a0de620e4a03b0792950192142ed83056a3798d77b2c53",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/sentry-1440.png",
+      "bytes": 66897,
+      "sha256": "dbf4bf1ee378356e1d65d32b49e069f3ba313c2f203c0e3a4c4205ac6f4f6015",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/sentry-390.png",
+      "bytes": 30329,
+      "sha256": "89aaa237d82277712b856f1e6c9241f8f103084cb53cad9f3f53e64b29343daa",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/sentry-834.png",
+      "bytes": 62868,
+      "sha256": "8094e30b1595546fed1f42c5deee5bc0ee6985558b3ec3250e66164a7e7c6fa5",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/storyboard-1440.png",
+      "bytes": 322416,
+      "sha256": "f82c7eb2028db35aa2b0d204f84c459611cf0bbd54c636b5a006ba9158b554d6",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/storyboard-390.png",
+      "bytes": 57529,
+      "sha256": "7793ff9808e7b607eb08f0d47b24c6913e3b22e0ad380150a6c2da7940fce343",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/storyboard-834.png",
+      "bytes": 93120,
+      "sha256": "5bf629683f16cb1599caa45d30b13183f957b423b49a20113af366c23a7a7a06",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/submissions-1440.png",
+      "bytes": 31631,
+      "sha256": "7083204120b25603ccd1cff6c98ab5e2bef703798f7eef91d8587a029c6a363d",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/submissions-390.png",
+      "bytes": 29520,
+      "sha256": "0df537a9f4c2c9a1354d7a9a8e763e45fe8f06d693a4f31bbabf861c8d4ceedc",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/submissions-834.png",
+      "bytes": 38913,
+      "sha256": "868361262904b7108859cb4facae3ca74deb10b081dab9e4c22bb8dd26852960",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/users-1440.png",
+      "bytes": 96675,
+      "sha256": "1b79bb7b6c66de67b88c7a05634623d9cd0cd14bda53c0b4d384af8182d334df",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/users-390.png",
+      "bytes": 48604,
+      "sha256": "ef19616d866edbe4eac1fb59d008e32e3bdd0cab8fc6c91be9b036ebe64ab609",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/users-834.png",
+      "bytes": 83441,
+      "sha256": "c7e8e8283ea190b1a5aaa152ba4eb05b6d079ac6d590dc189cc5eba39cae2dd2",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/youtube-thumbnail-generator-1440.png",
+      "bytes": 497288,
+      "sha256": "b8b09ff601a9bb1f7358a634dc84df298a05b0fb3b2be6c52cf86dd6a21675f0",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/youtube-thumbnail-generator-390.png",
+      "bytes": 135555,
+      "sha256": "11c825b96526fa3934ddbc1086f0044d4338db7f75a2332b691a7b6a0cdbbd07",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before/youtube-thumbnail-generator-834.png",
+      "bytes": 265680,
+      "sha256": "1433ece3c430079c6de33c14b5ba366a27bd20e5d68bfd4900e3111bc49c41f9",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-initial-load-timeout.json",
+      "bytes": 519,
+      "sha256": "1885a5d4770439a6ba41cd07c8706b9087f6b45f95a4be48adf1cede64d125a5",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-partial-metrics-read.json",
+      "bytes": 3456,
+      "sha256": "2ac935950a5c6b3ebc8236d452365ecd4c4772210ec6252e52870aa98b68d7c2",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/audit-1440.png",
+      "bytes": 8790,
+      "sha256": "c1ae90d58fba537921209e759735abbadad6264b92df60d71f8b887d3efa0eb0",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/audit-390.png",
+      "bytes": 40680,
+      "sha256": "404b1375668228876a6655f3c644adaf941c45a11655b7af885cd38479a70bd6",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/audit-834.png",
+      "bytes": 77816,
+      "sha256": "36bb2b90cad77220973e89cf5d875014c4052e262f962bf08380641106bb8410",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/banners-1440.png",
+      "bytes": 54666,
+      "sha256": "cd7c8703ca055da3e8e6043a3e07e37e21a3323385b6977fd204c0010d0d590a",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/banners-390.png",
+      "bytes": 5214,
+      "sha256": "17799a064dac4ed96a299c4ee4cc7639919dadf76040ad463190b25bb93b9e3a",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/banners-834.png",
+      "bytes": 6948,
+      "sha256": "88219877436dcf67bc2ad66a87ddc7270c8ead30c0d792128a0ee502c9cae4a9",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/insights-1440.png",
+      "bytes": 8790,
+      "sha256": "c1ae90d58fba537921209e759735abbadad6264b92df60d71f8b887d3efa0eb0",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/insights-390.png",
+      "bytes": 69039,
+      "sha256": "a4bbaff243ec9c1ef1e6d97736feff3fcdc7727a6b622d577199e64bf9019892",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/insights-834.png",
+      "bytes": 51064,
+      "sha256": "d2ee2bdd8cae4fc822a2df758b91bf199b1b6c84af57e8a966a2b3e2092ff4f8",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/knowledge-graph-1440.png",
+      "bytes": 61055,
+      "sha256": "2fd7e3ad21906dc2227c96f4ae13890cec343af21e2ab190bd8347d4669f3dee",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/knowledge-graph-390.png",
+      "bytes": 23246,
+      "sha256": "f4588a7e26b60be224f53a850e4defdf83bdca69d64b48575d7c16ff4b62c0da",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/knowledge-graph-834.png",
+      "bytes": 26853,
+      "sha256": "c92e5587c6679c80782a66d028325fd80a23f9cbcf4ba97627791493506dc15f",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/llm-1440.png",
+      "bytes": 92304,
+      "sha256": "dab51be565269d3573a8a67a0d3e85ab981c225afe9b90a19dbfc4ef9b2c74b2",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/llm-390.png",
+      "bytes": 46931,
+      "sha256": "68473d0cc6a12bfaa9cd12cfdcf3e57f5eeb8f79bca59b1d014a531bde429a22",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/llm-834.png",
+      "bytes": 85794,
+      "sha256": "ba228b655bd3b61c2b0ac6ddb9916a59a271fb8fa95a1d42379278ccd838ebd0",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/overview-1440.png",
+      "bytes": 95888,
+      "sha256": "30a6d1e88d8e51e7562755cae56e486fb1da4108792741b7a8b9337ce348ee87",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/overview-390.png",
+      "bytes": 45607,
+      "sha256": "9f2b2ca546662e2e444f0f27dcd91dcbcdad554018171f75ddde33cb793df76c",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/overview-834.png",
+      "bytes": 64846,
+      "sha256": "f82c7f67f1846057a7d88da218fc63f808d595b31cc49f622079ba09bfdca169",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/pipeline-1440.png",
+      "bytes": 8790,
+      "sha256": "c1ae90d58fba537921209e759735abbadad6264b92df60d71f8b887d3efa0eb0",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/pipeline-390.png",
+      "bytes": 27276,
+      "sha256": "309c3ae97290e8000984a283eb7f8fa97272c17590723da80107befce7382c07",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/pipeline-834.png",
+      "bytes": 73342,
+      "sha256": "9e1e3e2260a5e35602993148088eb9a19bc2399a31713f366d6a5fe39eeccdfc",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/report.json",
+      "bytes": 32813,
+      "sha256": "5b51f5ee7e8668a0fb4aced862a22b5ee249429e8e6994362279117aae9684d8",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/restaurants-1440.png",
+      "bytes": 30279,
+      "sha256": "3d7d39fc75dfd69dc52601195fd9ec96723600046722d92819b37fc8007a26c1",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/restaurants-390.png",
+      "bytes": 29710,
+      "sha256": "ddb726afbce21d4786c1a63b659c0d94a98468cd36e2118ff7a10d0e1b01f9fc",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/restaurants-834.png",
+      "bytes": 37566,
+      "sha256": "161a43cc9855f850ed77e7c3e3273e0a86a892284777f27d429024d673564b0c",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/reviews-1440.png",
+      "bytes": 30011,
+      "sha256": "811bf63a92edca6a6a53392658daa52f3e07ce684b930e844702869ce1ae675a",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/reviews-390.png",
+      "bytes": 29445,
+      "sha256": "b6b6489e2e9eae50d2c3ee2bdf11ea388f2b3de000e65377e3857ebb16dfe5bf",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/reviews-834.png",
+      "bytes": 37319,
+      "sha256": "281020be20e324eb838ee9afaf52baafdaa9616e31ead1c952153b36a6b6af45",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/routes-1440.png",
+      "bytes": 8790,
+      "sha256": "c1ae90d58fba537921209e759735abbadad6264b92df60d71f8b887d3efa0eb0",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/routes-390.png",
+      "bytes": 39438,
+      "sha256": "f0222c06d6c8343f4af99551a4ef1109f44e8361bff9a3e1d5a3e50d2064d764",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/routes-834.png",
+      "bytes": 6948,
+      "sha256": "88219877436dcf67bc2ad66a87ddc7270c8ead30c0d792128a0ee502c9cae4a9",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/sentry-1440.png",
+      "bytes": 8790,
+      "sha256": "c1ae90d58fba537921209e759735abbadad6264b92df60d71f8b887d3efa0eb0",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/sentry-390.png",
+      "bytes": 30328,
+      "sha256": "91a65ace94d10623215f180f90ed56176160482eb9a855d3f25e3370b3197e6e",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/sentry-834.png",
+      "bytes": 62868,
+      "sha256": "8094e30b1595546fed1f42c5deee5bc0ee6985558b3ec3250e66164a7e7c6fa5",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/storyboard-1440.png",
+      "bytes": 320673,
+      "sha256": "4102ef1f60ac2b1b7a778dbbc408535e6a0a754fd1777e4d3f11b2a92f065055",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/storyboard-390.png",
+      "bytes": 55336,
+      "sha256": "e385eea370eaca97fcc6d09a841f5cbc069360d9576485d66a77eb2b23bb7ca2",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/storyboard-834.png",
+      "bytes": 93120,
+      "sha256": "5bf629683f16cb1599caa45d30b13183f957b423b49a20113af366c23a7a7a06",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/submissions-1440.png",
+      "bytes": 30045,
+      "sha256": "7834e878ce811b9d026de3cbe1ba197aba3014d8c8cc4d0a02245aef10696b1a",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/submissions-390.png",
+      "bytes": 29520,
+      "sha256": "0df537a9f4c2c9a1354d7a9a8e763e45fe8f06d693a4f31bbabf861c8d4ceedc",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/submissions-834.png",
+      "bytes": 37329,
+      "sha256": "907d9bd1f0e180f79bc5e367401fb0d5023a87d6cd9bb662781a4850d30c388f",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/users-1440.png",
+      "bytes": 8790,
+      "sha256": "c1ae90d58fba537921209e759735abbadad6264b92df60d71f8b887d3efa0eb0",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/users-390.png",
+      "bytes": 48604,
+      "sha256": "ef19616d866edbe4eac1fb59d008e32e3bdd0cab8fc6c91be9b036ebe64ab609",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/users-834.png",
+      "bytes": 6948,
+      "sha256": "88219877436dcf67bc2ad66a87ddc7270c8ead30c0d792128a0ee502c9cae4a9",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/youtube-thumbnail-generator-1440.png",
+      "bytes": 8790,
+      "sha256": "c1ae90d58fba537921209e759735abbadad6264b92df60d71f8b887d3efa0eb0",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/youtube-thumbnail-generator-390.png",
+      "bytes": 135555,
+      "sha256": "11c825b96526fa3934ddbc1086f0044d4338db7f75a2332b691a7b6a0cdbbd07",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "before-transient-capture/youtube-thumbnail-generator-834.png",
+      "bytes": 264073,
+      "sha256": "bfe9167afa37daa92a986213914783bd419dbe3603716e8a6224efd37bc7c3eb",
+      "role": "historical/limited or failed capture; consult admission and final summary"
+    },
+    {
+      "path": "browser-audit.mjs",
+      "bytes": 13487,
+      "sha256": "f000e677604fdbad992ac378264ecea2095aabb05026ad18a597100be997697d",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "build-audit.mjs",
+      "bytes": 4267,
+      "sha256": "d4128aecf5c20a1a7edcaf376c501c3737842ded36cabdcc244390caa8db813b",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "build-report-final.json",
+      "bytes": 263343,
+      "sha256": "8bec884d7cd13283b4e27c00fc63fdc54ae5ea54c7a7e064a829b6d97982a6d2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "build-report.json",
+      "bytes": 263179,
+      "sha256": "65870b586b04d86e6f8c8c65a4a0c15ea75106b0a0245eee2bd96bd0671d8c86",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "canonical-unit-final.json",
+      "bytes": 61989,
+      "sha256": "a0e9fb3e000c9a46ba7087fcf24b395173b722d535c5c742b3e72e492b504f09",
+      "role": "preserved failed unit execution; not a pass"
+    },
+    {
+      "path": "canonical-unit-final2.json",
+      "bytes": 75000,
+      "sha256": "875af132c41c986c4ab8c4fb5efafcef9c37a279b6de636869dfc2bbca106fbe",
+      "role": "final full canonical unit execution"
+    },
+    {
+      "path": "canonical-unit.json",
+      "bytes": 58549,
+      "sha256": "f0b5f6e20c7cfc81bd22dcc160b69962b063bf4025a1476cc2a6655355498c86",
+      "role": "preserved failed unit execution; not a pass"
+    },
+    {
+      "path": "current-diagnostic.png",
+      "bytes": 32081,
+      "sha256": "8ea4c15081a8841f5917d8fb8375aa993cded3631ae9932464f0369678adfe61",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "dependency-lock-verification.json",
+      "bytes": 368,
+      "sha256": "8e2ecda680a64eb2f925d83ea390e3aca664876e62ba76a90d04a342b286b2c0",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "diagnose-mobile-submissions.mjs",
+      "bytes": 5221,
+      "sha256": "8bbf24215672513213a07c060f6f7eb760440f8734aac00c31c4afe2ca128f51",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "diagnostic-users.png",
+      "bytes": 96675,
+      "sha256": "1b79bb7b6c66de67b88c7a05634623d9cd0cd14bda53c0b4d384af8182d334df",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "diagnostic.png",
+      "bytes": 243334,
+      "sha256": "f75c0e4586b7a0d6a0c0c510809e30a45f50cbab49fd394ad46731f126c7da16",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "eslint-final.json",
+      "bytes": 8944,
+      "sha256": "7b99ed8caafd1b0e2ad3d6739c628b0e7ffd903ebd6ec7d2da92f1b949c20218",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "eslint-modal-followup.json",
+      "bytes": 363,
+      "sha256": "c1300089cd6f21983dd77856501d19eb601511d4fe3a5085e972b1a762302407",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "evidence-audit.json",
+      "bytes": 5982,
+      "sha256": "6c06093a1fdefa7cfe6b35bae32550c1f900eb3deb682d35828ef45aaaeedef2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-audit.png",
+      "bytes": 88485,
+      "sha256": "b10f63f19d99cf1c61c7eb698764f649282b99c23fcbc1df576f572da43e0b38",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-banners.png",
+      "bytes": 74419,
+      "sha256": "c5db22186aece0089f9d5f1a3105fea1520c1bb85c99f48176f553fb00227f59",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-collapsed-rail-focus.png",
+      "bytes": 235650,
+      "sha256": "69ccf525e13c801e3c3d602b6ceb2dbb002bf17c05a7ec5791361b3bf1684bba",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-insights.png",
+      "bytes": 138880,
+      "sha256": "ebdd73eb9d5cef820c5ba3367889ce622e3b4c32d2476607f99e949c8416a9b2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-knowledge-graph.png",
+      "bytes": 65310,
+      "sha256": "25fd475ce67d64ff6877ec065c663fa11c04de9c46be9a1889f59e1539ccb9c2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-llm.png",
+      "bytes": 102189,
+      "sha256": "f901f69563dd5e5625dbd8f72093f93516049fb6db1639877302d99082995fd7",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-overview.png",
+      "bytes": 251064,
+      "sha256": "188cf9415e77cd72aa0f5fc063aeb243ead89b7111b6cafe09f8aa33f96bec09",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-pipeline.png",
+      "bytes": 70905,
+      "sha256": "cbd882c85bcee736e6b772314fa8f26fb58b5330153187f90a94bd592e77d7e2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-restaurants.png",
+      "bytes": 163188,
+      "sha256": "48366828b06396153c7dc952e760ec061797c627603000aa0608803665a02881",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-reviews.png",
+      "bytes": 68078,
+      "sha256": "c52bcaf8c901c728e39c067bea75ed73f0da45db0935ae699be4069678f72ce2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-routes.png",
+      "bytes": 56096,
+      "sha256": "5ea07360905829276eef61bd00a7e57d7daf54aa1e82408a0889c33060ccca75",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-sentry.png",
+      "bytes": 63965,
+      "sha256": "83070ad4bbd29e05bc202074d939fbedfc1ae9d058f54e67885cf5c376460f7b",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-storyboard.png",
+      "bytes": 111873,
+      "sha256": "82a3a6d21070ee3257b22dea3f2df2d16f0f2e021c853d50787f64f8e47fa681",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-submissions.png",
+      "bytes": 69989,
+      "sha256": "a82b736d3faca27553f15e84908f97086a5d10640659f672d7abfd35582539fb",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-users.png",
+      "bytes": 95479,
+      "sha256": "cea0cf8e6e04183deaf234f2ce55bb7a2ae115b1dec06a7769fba2bff9a0eb6e",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/desktop-youtube-thumbnail-generator.png",
+      "bytes": 772538,
+      "sha256": "8a4cb435544d65eb9cc26901585405b474009ab9fd00e3476fdb272648b9d866",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/knowledge-filter-detail.png",
+      "bytes": 62780,
+      "sha256": "34270f15d1488c89875818ba3127fd67fc48f4e8df7dab3de03654e28f6f1b73",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/pipeline-keyboard-detail.png",
+      "bytes": 71999,
+      "sha256": "dd08a69986abc5476b21f59655d7eccd1451c0f0db99483e8bc5a84f9cfd55f4",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/receipt.json",
+      "bytes": 471,
+      "sha256": "18b4490def5b12a5b4c9aff8739a8610c5b63143e0c27685ce1fa2fa75f7e240",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-partial-prestable/report.json",
+      "bytes": 16994,
+      "sha256": "cd9236dba74eacfdbafa808004ca1613de74a9d2ff645d760b9c0c71a0d3bac6",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-routing.json",
+      "bytes": 269,
+      "sha256": "d679ef3e59a7e44920287516c5cd946feb6fb5be05bad20edc2da37fd84bce4d",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-audit.png",
+      "bytes": 88485,
+      "sha256": "b10f63f19d99cf1c61c7eb698764f649282b99c23fcbc1df576f572da43e0b38",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-banners.png",
+      "bytes": 74419,
+      "sha256": "c5db22186aece0089f9d5f1a3105fea1520c1bb85c99f48176f553fb00227f59",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-collapsed-rail-focus.png",
+      "bytes": 235650,
+      "sha256": "69ccf525e13c801e3c3d602b6ceb2dbb002bf17c05a7ec5791361b3bf1684bba",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-insights.png",
+      "bytes": 138880,
+      "sha256": "ebdd73eb9d5cef820c5ba3367889ce622e3b4c32d2476607f99e949c8416a9b2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-knowledge-graph.png",
+      "bytes": 65302,
+      "sha256": "c8d996ca0492d7edf4fd0821ccd373957bff0cc37f7e979c164e6f2c8cc1e687",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-llm.png",
+      "bytes": 102189,
+      "sha256": "f901f69563dd5e5625dbd8f72093f93516049fb6db1639877302d99082995fd7",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-overview.png",
+      "bytes": 251064,
+      "sha256": "188cf9415e77cd72aa0f5fc063aeb243ead89b7111b6cafe09f8aa33f96bec09",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-pipeline.png",
+      "bytes": 70905,
+      "sha256": "cbd882c85bcee736e6b772314fa8f26fb58b5330153187f90a94bd592e77d7e2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-restaurants.png",
+      "bytes": 163190,
+      "sha256": "dc6b70c3394f198f5ddf4ba515ff066a1e8451cb79628fe556fadd555ab3e034",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-reviews.png",
+      "bytes": 68081,
+      "sha256": "0f47dbc757454f21d89e05a2828a31627703bf2b40fbdbc347068d1d9bcc5e48",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-routes.png",
+      "bytes": 56096,
+      "sha256": "5ea07360905829276eef61bd00a7e57d7daf54aa1e82408a0889c33060ccca75",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-sentry.png",
+      "bytes": 64001,
+      "sha256": "f4de8b33aafaefd4315f5c4b6d79c03edc212dd98003b2de98470f06f69f6008",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-storyboard.png",
+      "bytes": 111854,
+      "sha256": "09f8fcb536c2e899573bfd73e82d2dd668ffe6784879cf17363738ab49831ab1",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-submissions.png",
+      "bytes": 69991,
+      "sha256": "af9c55cafbb47ae3dd6a59acd25ba3cd095a2c07e0663bfeab449cfb0d4c5356",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-users.png",
+      "bytes": 95479,
+      "sha256": "cea0cf8e6e04183deaf234f2ce55bb7a2ae115b1dec06a7769fba2bff9a0eb6e",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/desktop-youtube-thumbnail-generator.png",
+      "bytes": 772538,
+      "sha256": "8a4cb435544d65eb9cc26901585405b474009ab9fd00e3476fdb272648b9d866",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/knowledge-filter-detail.png",
+      "bytes": 62780,
+      "sha256": "34270f15d1488c89875818ba3127fd67fc48f4e8df7dab3de03654e28f6f1b73",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/pipeline-keyboard-detail.png",
+      "bytes": 71999,
+      "sha256": "dd08a69986abc5476b21f59655d7eccd1451c0f0db99483e8bc5a84f9cfd55f4",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run1-partial/report.json",
+      "bytes": 16994,
+      "sha256": "cbb777b00c20d5558b3ea80272e13581faf5212465b9177e7a9d9ac54bdea2a0",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-collapsed-rail-focus.png",
+      "bytes": 234985,
+      "sha256": "a6664b48ca71223201ab6903e786c1e352275ae0a8d20049aa29250233606b23",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-insights.png",
+      "bytes": 138882,
+      "sha256": "618bc032d57bc01e2bdbaa648164f611e779a765100829c39a44de5da703dae7",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-knowledge-graph.png",
+      "bytes": 65313,
+      "sha256": "6ab7c098a6f8d5b49656dab5f79ba995473fe8b9b9092c02356a464c9a8910dd",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-llm.png",
+      "bytes": 26115,
+      "sha256": "baf95d5d6e019fd0d23ab086d5fabc2d573d56e4d3c5a8eb6b6cf9489af20649",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-overview.png",
+      "bytes": 251064,
+      "sha256": "188cf9415e77cd72aa0f5fc063aeb243ead89b7111b6cafe09f8aa33f96bec09",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-pipeline.png",
+      "bytes": 70906,
+      "sha256": "db64e206bf318c12af5b26093e43fbb8baba133f748a4f873aa6ad5e66cd5b06",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-restaurants.png",
+      "bytes": 163188,
+      "sha256": "48366828b06396153c7dc952e760ec061797c627603000aa0608803665a02881",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-reviews.png",
+      "bytes": 68078,
+      "sha256": "c52bcaf8c901c728e39c067bea75ed73f0da45db0935ae699be4069678f72ce2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-routes.png",
+      "bytes": 47093,
+      "sha256": "ca430bd4fc7612b756f55f54d935dc997a2024f2e9986e87189f9f48246e4700",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-sentry.png",
+      "bytes": 64001,
+      "sha256": "f4de8b33aafaefd4315f5c4b6d79c03edc212dd98003b2de98470f06f69f6008",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-storyboard.png",
+      "bytes": 63082,
+      "sha256": "691f29a2704e9af7fc250968ebd654d3d2468fc781d351f1a9fb413461b0fe12",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-submissions.png",
+      "bytes": 69989,
+      "sha256": "a82b736d3faca27553f15e84908f97086a5d10640659f672d7abfd35582539fb",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-users.png",
+      "bytes": 95480,
+      "sha256": "7d11c6b3a14c7888c2ae35a3b72db6824b946421e95d87e2f4ae49125cb90955",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/desktop-youtube-thumbnail-generator.png",
+      "bytes": 65915,
+      "sha256": "1c8256cf4b4f6d972626c2b070a7e60bf2a0d9326282a8ee0e0ce41c3e534eed",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/knowledge-filter-detail.png",
+      "bytes": 62780,
+      "sha256": "3418f015f5e4acd471fa16510e28a61acbe5e5728cc0cb48f3acfe3ce3630432",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/pipeline-keyboard-detail.png",
+      "bytes": 72334,
+      "sha256": "c1767be49920186247f7dfda057dd4a38867b06d4aa8494838ccdf7baad96403",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/report.json",
+      "bytes": 16188,
+      "sha256": "4fa9fbd2b7f1d290e2de474e47e9b880c6bab4d8bf1ca4b96e6b0afb36ab6c4d",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run2-partial/users-filter-inspector.png",
+      "bytes": 95370,
+      "sha256": "1223414dbd7dc4aaa521bedea0470f4f082abbec6a809de226ede9e92ac89cf4",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-audit.png",
+      "bytes": 88485,
+      "sha256": "b10f63f19d99cf1c61c7eb698764f649282b99c23fcbc1df576f572da43e0b38",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-banners.png",
+      "bytes": 74419,
+      "sha256": "c5db22186aece0089f9d5f1a3105fea1520c1bb85c99f48176f553fb00227f59",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-collapsed-rail-focus.png",
+      "bytes": 235650,
+      "sha256": "69ccf525e13c801e3c3d602b6ceb2dbb002bf17c05a7ec5791361b3bf1684bba",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-insights.png",
+      "bytes": 138880,
+      "sha256": "ebdd73eb9d5cef820c5ba3367889ce622e3b4c32d2476607f99e949c8416a9b2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-knowledge-graph.png",
+      "bytes": 65310,
+      "sha256": "25fd475ce67d64ff6877ec065c663fa11c04de9c46be9a1889f59e1539ccb9c2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-llm.png",
+      "bytes": 102189,
+      "sha256": "f901f69563dd5e5625dbd8f72093f93516049fb6db1639877302d99082995fd7",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-overview.png",
+      "bytes": 251064,
+      "sha256": "188cf9415e77cd72aa0f5fc063aeb243ead89b7111b6cafe09f8aa33f96bec09",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-pipeline.png",
+      "bytes": 70905,
+      "sha256": "cbd882c85bcee736e6b772314fa8f26fb58b5330153187f90a94bd592e77d7e2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-restaurants.png",
+      "bytes": 163188,
+      "sha256": "48366828b06396153c7dc952e760ec061797c627603000aa0608803665a02881",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-reviews.png",
+      "bytes": 68078,
+      "sha256": "c52bcaf8c901c728e39c067bea75ed73f0da45db0935ae699be4069678f72ce2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-routes.png",
+      "bytes": 56096,
+      "sha256": "5ea07360905829276eef61bd00a7e57d7daf54aa1e82408a0889c33060ccca75",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-sentry.png",
+      "bytes": 64001,
+      "sha256": "f4de8b33aafaefd4315f5c4b6d79c03edc212dd98003b2de98470f06f69f6008",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-storyboard.png",
+      "bytes": 111873,
+      "sha256": "82a3a6d21070ee3257b22dea3f2df2d16f0f2e021c853d50787f64f8e47fa681",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-submissions.png",
+      "bytes": 69989,
+      "sha256": "a82b736d3faca27553f15e84908f97086a5d10640659f672d7abfd35582539fb",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-users.png",
+      "bytes": 95479,
+      "sha256": "cea0cf8e6e04183deaf234f2ce55bb7a2ae115b1dec06a7769fba2bff9a0eb6e",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/desktop-youtube-thumbnail-generator.png",
+      "bytes": 772538,
+      "sha256": "8a4cb435544d65eb9cc26901585405b474009ab9fd00e3476fdb272648b9d866",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/knowledge-explicit-error.png",
+      "bytes": 59958,
+      "sha256": "ff60180e9ea1838bfb3606602436bb09535f50bac39e17d9eb7e375c10ae8d24",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/knowledge-filter-detail.png",
+      "bytes": 62780,
+      "sha256": "34270f15d1488c89875818ba3127fd67fc48f4e8df7dab3de03654e28f6f1b73",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/mobile-navigation-reviews.png",
+      "bytes": 34499,
+      "sha256": "cf00656a0e71c0fb74ea54ea3f2eb9493f1cc1040562a83080487867ba97dd53",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/pipeline-explicit-error.png",
+      "bytes": 70854,
+      "sha256": "d35a3f18b58172e93c8f7cef7d4fcfc8c5f3394bed2c2cd603ba9697b26e71ea",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/pipeline-keyboard-detail.png",
+      "bytes": 71999,
+      "sha256": "dd08a69986abc5476b21f59655d7eccd1451c0f0db99483e8bc5a84f9cfd55f4",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/report.json",
+      "bytes": 19600,
+      "sha256": "b48c89d6cf799e25809ba400b381785786315eb55beace35918af2a3abb3ea83",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run3-partial/users-filter-inspector.png",
+      "bytes": 102681,
+      "sha256": "d16e8c9651bdcf0687a5ff8f91f5f43a773828fd2f9c96e3cfccf6f7ea2bb745",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-audit.png",
+      "bytes": 79542,
+      "sha256": "0b3b23f3e33a6e81044103af6f1cca1e59cddb627036f14dc5e90f7292038d43",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-banners.png",
+      "bytes": 74419,
+      "sha256": "c5db22186aece0089f9d5f1a3105fea1520c1bb85c99f48176f553fb00227f59",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-collapsed-rail-focus.png",
+      "bytes": 234866,
+      "sha256": "4864811cc0e390dc5a7c1d901240dcecc9ec860f16d66fd642d0a337ea358484",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-insights.png",
+      "bytes": 138880,
+      "sha256": "ebdd73eb9d5cef820c5ba3367889ce622e3b4c32d2476607f99e949c8416a9b2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-knowledge-graph.png",
+      "bytes": 65302,
+      "sha256": "c8d996ca0492d7edf4fd0821ccd373957bff0cc37f7e979c164e6f2c8cc1e687",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-llm.png",
+      "bytes": 93370,
+      "sha256": "2644aa3be34f2054f99bbb4170ffafde50fb9217bd7e7ae09c3ac5c8735c094e",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-overview.png",
+      "bytes": 251064,
+      "sha256": "188cf9415e77cd72aa0f5fc063aeb243ead89b7111b6cafe09f8aa33f96bec09",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-pipeline.png",
+      "bytes": 70905,
+      "sha256": "cbd882c85bcee736e6b772314fa8f26fb58b5330153187f90a94bd592e77d7e2",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-restaurants.png",
+      "bytes": 163190,
+      "sha256": "dc6b70c3394f198f5ddf4ba515ff066a1e8451cb79628fe556fadd555ab3e034",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-reviews.png",
+      "bytes": 68081,
+      "sha256": "0f47dbc757454f21d89e05a2828a31627703bf2b40fbdbc347068d1d9bcc5e48",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-routes.png",
+      "bytes": 47093,
+      "sha256": "ca430bd4fc7612b756f55f54d935dc997a2024f2e9986e87189f9f48246e4700",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-storyboard.png",
+      "bytes": 102813,
+      "sha256": "76fe89bb6cae7b84417c45914f7f4cf7197a78117cf8ff3b1abeecb4569a9927",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-submissions.png",
+      "bytes": 69991,
+      "sha256": "af9c55cafbb47ae3dd6a59acd25ba3cd095a2c07e0663bfeab449cfb0d4c5356",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/desktop-users.png",
+      "bytes": 95479,
+      "sha256": "cea0cf8e6e04183deaf234f2ce55bb7a2ae115b1dec06a7769fba2bff9a0eb6e",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/knowledge-explicit-error.png",
+      "bytes": 59963,
+      "sha256": "c73ae959f2952be70f0f113566e8406f37a1be787a099f1c40e19688bdbf8957",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/knowledge-filter-detail.png",
+      "bytes": 62767,
+      "sha256": "e219573c4a576090432a273504b418852c79f4238a544cc6df9255cd3b4721a5",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/mobile-navigation-reviews.png",
+      "bytes": 34499,
+      "sha256": "cf00656a0e71c0fb74ea54ea3f2eb9493f1cc1040562a83080487867ba97dd53",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/pipeline-explicit-error.png",
+      "bytes": 70854,
+      "sha256": "d35a3f18b58172e93c8f7cef7d4fcfc8c5f3394bed2c2cd603ba9697b26e71ea",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/pipeline-keyboard-detail.png",
+      "bytes": 72332,
+      "sha256": "1ac454b0ea318629e3ed29381b7ae03873de24b9ef968fed4a0cf9b35efa1a4e",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/report.json",
+      "bytes": 18316,
+      "sha256": "6372c79afca7f47490e68c34746b1b622f79e0f1bdf5d61de3a8e15faa3c0525",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-run4-partial/users-filter-inspector.png",
+      "bytes": 95348,
+      "sha256": "783809ec930bb7ceae8559a892de8e6c3642af2ddc671c3b468f19df42f21abd",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit-summary.json",
+      "bytes": 3850,
+      "sha256": "78be79ff629034fdf8746d65874cbfeca484b1e818e602a30726043b94d3bcbd",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-audit.mjs",
+      "bytes": 27007,
+      "sha256": "060dfa4bdd01caaec9d38f2470847d8641c654711ce72f875d2bdace60cb9fcf",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-gap-audit/report.json",
+      "bytes": 4816,
+      "sha256": "3a9136c699c93cb4cbf015b762934b25a0576a59681dd847b1850bade18357f6",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-gap-audit/reviews-filter-inspector.png",
+      "bytes": 138144,
+      "sha256": "584afa135b2bec6fe40ec755087801719af42f6dbc797b0fd29eaa0e32dcfe3b",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-gap-audit/storyboard-explicit-held.png",
+      "bytes": 99502,
+      "sha256": "838f420d8518bb8f89a99956d238745a26e132fac7d19062ec64c394842367aa",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-gap-audit/submissions-filter-inspector.png",
+      "bytes": 127123,
+      "sha256": "fe4b5f6bd2f6b5ed959c4b4c2c9a5f8f60a1c4a41469187a9e328f823a0418c5",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-gap-audit-run1-partial/report.json",
+      "bytes": 4648,
+      "sha256": "3d5f721db6a60422be2083942af4e14e1cbf854a8b68dfbabc8861244cc07a1e",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-gap-audit-run1-partial/reviews-filter-inspector.png",
+      "bytes": 138144,
+      "sha256": "584afa135b2bec6fe40ec755087801719af42f6dbc797b0fd29eaa0e32dcfe3b",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-gap-audit-run1-partial/storyboard-explicit-held.png",
+      "bytes": 99502,
+      "sha256": "838f420d8518bb8f89a99956d238745a26e132fac7d19062ec64c394842367aa",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-gap-audit-run1-partial/submissions-filter-inspector.png",
+      "bytes": 127123,
+      "sha256": "fe4b5f6bd2f6b5ed959c4b4c2c9a5f8f60a1c4a41469187a9e328f823a0418c5",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "interaction-screenshot-reconciliation.json",
+      "bytes": 15859,
+      "sha256": "81b21153ab0e9d29e43622e83c2428280e7224fb73a3ad20814f7d56fe581f9a",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "launch-built-fixture.mjs",
+      "bytes": 2494,
+      "sha256": "78d3faee66ab0bc685c5dd4cda4675e69357e84ee8f31b2e6fb00db94cfbe140",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-diagnostic.json",
+      "bytes": 6789,
+      "sha256": "6a4f775152f7a5e6888074c2e546dcbf316929f1bf16a61b7a0446b870fb6082",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-diagnostic.png",
+      "bytes": 55955,
+      "sha256": "942c5ccc49dbd8200979c4af23dc6fac31e7e16e400922805b4b7292808650a8",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-submissions-diagnostic-auth-exact.json",
+      "bytes": 789,
+      "sha256": "46407ea7e24d93b0171b2a6bd92428cd60fed64de48a6440406c9af1fd86e7d5",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-submissions-diagnostic-auth-exact.png",
+      "bytes": 40980,
+      "sha256": "eb74d6a13cf4925980fe40f73af338ed332bda40f3624eb9518bb0aab3036435",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-submissions-diagnostic-auth-exceptions.json",
+      "bytes": 11385,
+      "sha256": "c0ff38473b01c3234b3159b8690fe180f7eaaed866130633130a7f218212ab7a",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-submissions-diagnostic-auth-exceptions.png",
+      "bytes": 33056,
+      "sha256": "28b42619ff790527d5c7db5276ef4bc8a7125fce8dbc2e12f1138a445e9d3485",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-submissions-diagnostic-auth-predicate.json",
+      "bytes": 611,
+      "sha256": "177d16802f4d983d2aef8f105ba776f562a750eab3ce11a12e1fa982c4f2d155",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-submissions-diagnostic-auth-predicate.png",
+      "bytes": 19551,
+      "sha256": "185209bceb508771d96e16fb1e4e328d7c7ea384bfd5ca52823f5ea464cf1f4d",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-submissions-diagnostic-auth-runtime.json",
+      "bytes": 324,
+      "sha256": "d5827607df9f4b2cd2fe9ff079a6ffe1ec5754347f1bca11bcbd79d6b0708619",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-submissions-diagnostic-auth-runtime.png",
+      "bytes": 19551,
+      "sha256": "185209bceb508771d96e16fb1e4e328d7c7ea384bfd5ca52823f5ea464cf1f4d",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-submissions-diagnostic-auth.json",
+      "bytes": 1170,
+      "sha256": "8b133c017c61dad47725a48512666b70f2463b669b6cf537f4c74ae1f4286eda",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-submissions-diagnostic-auth.png",
+      "bytes": 33056,
+      "sha256": "28b42619ff790527d5c7db5276ef4bc8a7125fce8dbc2e12f1138a445e9d3485",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-submissions-diagnostic.json",
+      "bytes": 195,
+      "sha256": "e1b3358d22289a00f59f1eb51cc40d8fb380f39aaf53b5150b79205b4886c6e8",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "mobile-submissions-diagnostic.png",
+      "bytes": 19551,
+      "sha256": "185209bceb508771d96e16fb1e4e328d7c7ea384bfd5ca52823f5ea464cf1f4d",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "session-fixture.mjs",
+      "bytes": 3074,
+      "sha256": "618c4e09601e80fb309c35b298cb3cf19fd9dbe80586225a556335443224a796",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "skill-installation.json",
+      "bytes": 769,
+      "sha256": "5230f705b59c7ee090aee85ebfed92ad6725a282734bc7566ae48f24295b0083",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "source-freeze-delivery.json",
+      "bytes": 10370,
+      "sha256": "341fb0bf7b2df25256056d1f559fb46ca82c5d5fa79a2b72f60aafb586638949",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "source-freeze-final.json",
+      "bytes": 10191,
+      "sha256": "449c50179045a59e7d82d91331146f0463a04b6d91d3875bfd55788216667f2c",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "source-freeze.json",
+      "bytes": 7621,
+      "sha256": "cfbbc960ee377586e6cfe1d0f4f6db8bf2320d2a92338b033f05637eb20decbb",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "taste-fixture.mjs",
+      "bytes": 13212,
+      "sha256": "369a6c60a8a11dd4ffe064a984a33aef67aade970b0fded75cb8dd4d3ea6ab35",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "taste-source-lint-classification.json",
+      "bytes": 35638,
+      "sha256": "18830a4df57d3eb6fb3f292b01be24e4c3f0ea0a2d6dfc2ccf0e9624a8b2992d",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "taste-source-lint-current.json",
+      "bytes": 28452,
+      "sha256": "0664b5f091750d669c0624be65c3bd51d254a06a456fee66b918cca17df4edbc",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "taste-source-lint-final.json",
+      "bytes": 20232,
+      "sha256": "a3061465889fbd372973e5a1bb9117706b3b33d1e793e27201f2b03b93dcf6d3",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "taste-source-lint.json",
+      "bytes": 50406,
+      "sha256": "c4e5b31cf179a67e07a72d57924464d6a2c841f48f8d85e1ee44a75386ce6df0",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "typecheck-delivery.json",
+      "bytes": 863,
+      "sha256": "75874ffabb12cb367bfeb25cdb9b810f9fada172ebd4a992a7d3088e66fbe551",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "typecheck-final.json",
+      "bytes": 772,
+      "sha256": "826bdd1d287f9a9b3ae14c59f8ffe5949b0cec845279e219b13bd6f599e25b7a",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "verification-summary-final.json",
+      "bytes": 8917,
+      "sha256": "de2a64fcaa8141a9ebfe29780cd344bb0968a04e677984756778ed456c744bd3",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "verification-summary.json",
+      "bytes": 4517,
+      "sha256": "0a72713f64ae777af3bc3f52074b4780699ff847a309d68b233957d9c5c33d1d",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "view-summary-final.json",
+      "bytes": 8344,
+      "sha256": "0f2045cdf150fe5670871290016861a51a2cfb12dcee18ff991f255c535bb8bb",
+      "role": "retained evidence or reproducibility source"
+    },
+    {
+      "path": "view-summary.json",
+      "bytes": 61350,
+      "sha256": "c7871c10b592c3aa1fb81da3e0895602724e86b5df6da77114889a17d234a507",
+      "role": "retained evidence or reproducibility source"
+    }
+  ],
+  "scope": "Byte inventory, not scorer/performance/operational admission. Preserve failed and historical captures; use verification-summary-final.json."
+}

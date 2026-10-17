@@ -1,0 +1,89 @@
+{
+  "schema": "tzudong-caption-bounded-preparation-verification/v1",
+  "verifiedAtUtc": "2026-10-13T09:33:22Z",
+  "scope": "local read-only canonical input validation plus disposable-vault OSK public API test",
+  "canonicalInputs": {
+    "channelRoot": "/Users/twoimo/.aside/u/0/projects/super-knowledge-graph/channels/tzuyang",
+    "memberships": [
+      {
+        "tab": "videos",
+        "path": "apps/web/performance/longform-followthrough-20261009/fresh-videos-membership.json",
+        "bytes": 120120,
+        "entryCount": 1053,
+        "sha256": "0bfc95e7dbcd45f02205ca4bd61b69145fb7196ab52052178a8c01006bfe7cbb",
+        "idSetSha256": "242f2b42106376e59f43648b2a7a1952f00ef29b3f0b443e528356e4a24564ca"
+      },
+      {
+        "tab": "streams",
+        "path": "apps/web/performance/longform-followthrough-20261009/fresh-streams-membership.json",
+        "bytes": 2746,
+        "entryCount": 18,
+        "sha256": "619512bd137e62318ad443d9357efbfd6829c9bbe0acc4374fa473c812e5bfc5",
+        "idSetSha256": "21eded1e1b09c36b894e0e1e0075015b6167bfb699b05d5b04088c0441f5262d"
+      },
+      {
+        "tab": "shorts",
+        "path": "apps/web/performance/longform-followthrough-20261009/fresh-shorts-membership.json",
+        "bytes": 9815,
+        "entryCount": 81,
+        "sha256": "b8eea784e4953a80e743dca5b5f30b05a8752a50585a2840940183eee3640d2f",
+        "idSetSha256": "866bbcd5d5d81fce8b1f3c9977bf42c50ee8b85a7858bf40086559e3a27c456f"
+      }
+    ]
+  },
+  "coverage": {
+    "eligibleLongformCount": 1071,
+    "shortsExcludedCount": 81,
+    "captionReviewCount": 9,
+    "eligibleCaptionReviewCount": 9,
+    "eligibleWithoutCaptionReviewCount": 1062,
+    "excludedCaptionReviewCount": 0,
+    "eligibleSetSha256": "9c2564ae7feba097dbf32caf85a2af43ebbac95e28faae8cc8360abd08c2c705",
+    "captionReviewSetSha256": "162f038007dea3f9d940572d2ef4ba66f01126ef97cff5878c21afed7b3487ae",
+    "captionSourceSetSha256": "9e011f3b5b05c3f8756fcc34a88b941fa854bb77e2b3e09df59fda834c095141",
+    "coverageRevision": "4e0f93909c6d2ea28f93563702ca1a20454d1014cca3dbde7e8e166804325de4"
+  },
+  "sourceCode": [
+    {
+      "path": "backend/knowledge_graph/caption_osk_adapter.py",
+      "sha256": "5c5b5234985f14c429a2fdfd0666a1be9b38267088d02da088e4a48e7ba34c92"
+    },
+    {
+      "path": "backend/knowledge_graph/caption_title_enrichment.py",
+      "sha256": "6fb983aaccefac08f69a48380f9e8abb940027efd26456c64a6a5165115e91ab"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_caption_osk_adapter.py",
+      "sha256": "5781a5a62f6f8d674bafd74d16519a2f48780e1809b763cc6762ee75f1759ec9"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_caption_title_enrichment.py",
+      "sha256": "234db31ba8369592c755d713b863e4ab23155211a0b5f12ad30781a42d15bb27"
+    }
+  ],
+  "disposableOskVerification": {
+    "python": "/Users/twoimo/Documents/osk-vault/.venv/bin/python",
+    "pythonVersion": "3.13.16",
+    "engineRoot": "/Users/twoimo/Documents/osk-vault/_governance/_engine",
+    "expectedEngineSha256": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358",
+    "actualEngineSha256": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358",
+    "enginePinMatched": true,
+    "testModule": "backend.knowledge_graph.tests.test_caption_title_enrichment",
+    "testsRun": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "result": "passed",
+    "vault": "owned tempfile created and removed by the test"
+  },
+  "boundaries": {
+    "providerCalls": 0,
+    "downloads": 0,
+    "sharedOskWrites": false,
+    "hostedDatabaseWrites": false,
+    "canonicalInputWrites": false,
+    "independentFullVisualVerified": false,
+    "independentAudioVerified": false,
+    "meaning": "Caption membership, source binding, CAS and disposable OSK API verification only. This receipt is not claude-video analysis, independent viewing, graph materialization, deployment or full-video completion evidence."
+  }
+}

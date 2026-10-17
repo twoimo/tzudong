@@ -7,6 +7,7 @@ from pathlib import Path
 import uuid
 import re
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 import psycopg2
 
@@ -17,6 +18,7 @@ if not SOCKET.startswith('/Users/twoimo/.codex/runtime-cache/') or not Path(SOCK
     raise SystemExit('owned_fixture_socket_required')
 parser=argparse.ArgumentParser()
 parser.add_argument('--chain',choices=['original','receipt'],default='original')
+parser.add_argument('--output',type=Path)
 args=parser.parse_args()
 database = 'storyboard_gemini_' + uuid.uuid4().hex
 owner = '00000000-0000-4000-8000-111111111111'
@@ -269,9 +271,196 @@ try:
             raw['assertions']['capability_filter_preserves_rpc_metadata_and_incompatible_jobs']=True
             raw['migrations'].append({'file':capability.name,'sha256':hashlib.sha256(capability.read_bytes()).hexdigest()})
             raw['claimAdmission']={'incompatibleAhead':65,'compatibleJobs':1,'beforeClaimed':0,'afterClaimed':1,'realProviderCalls':0}
+            phase='storyboard_gemini_execution_v1'
+            c.execute("SELECT id::text FROM public.admin_storyboard_production_jobs j WHERE status IN ('queued','claimed') AND EXISTS (SELECT 1 FROM public.admin_storyboard_production_projects p WHERE p.id=j.project_id AND p.request->>'workflow'='storyboard-mlx-v1') ORDER BY id")
+            legacy_active_ids=[row[0] for row in c.fetchall()]
+            assert legacy_active_ids and compatible_claim['id'] in legacy_active_ids
+            c.execute("SELECT coalesce(max(e.id),0) FROM public.admin_storyboard_production_events e JOIN public.admin_storyboard_production_projects p ON p.id=e.project_id WHERE p.request->>'workflow'='storyboard-mlx-v1'")
+            legacy_event_upper=c.fetchone()[0]
+            def legacy_history_state():
+                values=[]
+                c.execute("SELECT coalesce(jsonb_agg(jsonb_build_object('id',p.id,'request',p.request,'document',p.document,'revision',p.revision,'title',p.title,'draftWorkerId',p.draft_worker_id) ORDER BY p.id),'[]'::jsonb) FROM public.admin_storyboard_production_projects p WHERE p.request->>'workflow'='storyboard-mlx-v1'")
+                values.append(c.fetchone()[0])
+                for suffix in ('assets','revisions','restores'):
+                    c.execute("SELECT coalesce(jsonb_agg(to_jsonb(item) ORDER BY to_jsonb(item)::text),'[]'::jsonb) FROM public.admin_storyboard_production_"+suffix+" item JOIN public.admin_storyboard_production_projects p ON p.id=item.project_id WHERE p.request->>'workflow'='storyboard-mlx-v1'")
+                    values.append(c.fetchone()[0])
+                c.execute("SELECT coalesce(jsonb_agg(to_jsonb(e) ORDER BY e.id),'[]'::jsonb) FROM public.admin_storyboard_production_events e JOIN public.admin_storyboard_production_projects p ON p.id=e.project_id WHERE p.request->>'workflow'='storyboard-mlx-v1' AND e.id<=%s",(legacy_event_upper,))
+                values.append(c.fetchone()[0])
+                return hashlib.sha256(json.dumps(values,sort_keys=True,default=str).encode()).hexdigest()
+            legacy_history_before=legacy_history_state()
+            c.execute("SELECT proowner,proacl,prosecdef,proconfig,provolatile,proparallel FROM pg_proc WHERE oid='public.storyboard_production_admin(uuid,text,uuid,integer,jsonb)'::regprocedure")
+            admin_metadata_before=c.fetchone()
+            c.execute("SELECT proowner,proacl,prosecdef,proconfig,provolatile,proparallel FROM pg_proc WHERE oid='public.storyboard_production_worker(uuid,text,uuid,uuid,jsonb)'::regprocedure")
+            worker_metadata_before=c.fetchone()
+            c.execute("SELECT 'public.admin_storyboard_production_projects'::regclass::oid")
+            project_relation_oid=c.fetchone()[0]
+            execution=ROOT/'backend/supabase/migrations/20261013093518_storyboard_gemini_execution_v1.sql'
+            conn.commit()
+
+            race_request={**request,'requestId':str(uuid.uuid4())}
+            race_apps=('storyboard_pre_cutover_create','storyboard_pre_cutover_heartbeat')
+            gate=psycopg2.connect(host=SOCKET,port=PORT,user='postgres',dbname=database)
+            gate_cursor=gate.cursor()
+            gate_cursor.execute('LOCK TABLE public.user_roles IN ACCESS EXCLUSIVE MODE')
+            def pre_cutover_create():
+                try:
+                    with psycopg2.connect(host=SOCKET,port=PORT,user='postgres',dbname=database,application_name=race_apps[0]) as late:
+                        with late.cursor() as cursor:
+                            cursor.execute('SET ROLE service_role')
+                            cursor.execute("SELECT public.storyboard_production_admin(%s,'create',NULL,NULL,%s::jsonb)",(owner,json.dumps(race_request)))
+                            return {'unexpected':cursor.fetchone()[0]}
+                except psycopg2.Error as error:
+                    return {'sqlstate':error.pgcode,'message':error.diag.message_primary}
+            def pre_cutover_heartbeat():
+                try:
+                    with psycopg2.connect(host=SOCKET,port=PORT,user='postgres',dbname=database,application_name=race_apps[1]) as late:
+                        with late.cursor() as cursor:
+                            cursor.execute('SET ROLE service_role')
+                            cursor.execute("SELECT public.storyboard_production_worker(%s,'heartbeat',%s,%s,%s::jsonb)",(capability_worker,compatible_claim['id'],compatible_claim['leaseToken'],json.dumps({'models':models})))
+                            return {'result':cursor.fetchone()[0]}
+                except psycopg2.Error as error:
+                    return {'sqlstate':error.pgcode,'message':error.diag.message_primary}
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                create_future=pool.submit(pre_cutover_create)
+                heartbeat_future=pool.submit(pre_cutover_heartbeat)
+                deadline=time.monotonic()+5
+                initial_waits=[]
+                while time.monotonic()<deadline:
+                    with admin.cursor() as monitor:
+                        monitor.execute("SELECT application_name,wait_event_type,wait_event FROM pg_stat_activity WHERE datname=%s AND application_name=ANY(%s) ORDER BY application_name",(database,list(race_apps)))
+                        initial_waits=monitor.fetchall()
+                    if len(initial_waits)==2 and all(row[1]=='Lock' for row in initial_waits): break
+                    time.sleep(0.02)
+                assert len(initial_waits)==2 and all(row[1]=='Lock' for row in initial_waits)
+                cutover=psycopg2.connect(host=SOCKET,port=PORT,user='postgres',dbname=database)
+                cutover.autocommit=True
+                try:
+                    with cutover.cursor() as migrate:
+                        migrate.execute("SET statement_timeout='10s'")
+                        migration_sql=execution.read_text().rstrip()
+                        assert migration_sql.endswith('COMMIT;')
+                        migrate.execute(migration_sql[:-len('COMMIT;')])
+                    gate.rollback(); gate_cursor.close(); gate.close(); gate=None
+                    deadline=time.monotonic()+5
+                    table_waits=[]
+                    while time.monotonic()<deadline:
+                        with admin.cursor() as monitor:
+                            monitor.execute("SELECT a.application_name,l.relation,l.mode FROM pg_stat_activity a JOIN pg_locks l ON l.pid=a.pid AND l.locktype='relation' AND NOT l.granted WHERE a.datname=%s AND a.application_name=ANY(%s) AND l.relation=%s ORDER BY a.application_name",(database,list(race_apps),project_relation_oid))
+                            table_waits=monitor.fetchall()
+                        if len(table_waits)==2 and all(row[1]==project_relation_oid for row in table_waits): break
+                        time.sleep(0.02)
+                    assert len(table_waits)==2 and all(row[1]==project_relation_oid for row in table_waits)
+                    with cutover.cursor() as migrate: migrate.execute('COMMIT')
+                    create_result=create_future.result(timeout=10)
+                    heartbeat_result=heartbeat_future.result(timeout=10)
+                finally:
+                    if gate is not None:
+                        gate.rollback(); gate_cursor.close(); gate.close()
+                    with cutover.cursor() as migrate: migrate.execute('ROLLBACK')
+                    cutover.close()
+            assert create_result=={'sqlstate':'55000','message':'archived_project_read_only'}
+            assert heartbeat_result=={'result':{'ok':True,'leaseValid':False}}
+            c.execute("SELECT count(*) FROM public.admin_storyboard_production_projects WHERE request_id=%s",(race_request['requestId'],))
+            assert c.fetchone()[0]==0
+            c.execute("SELECT count(*) FROM public.admin_storyboard_production_jobs WHERE request_id=%s",(race_request['requestId'],))
+            assert c.fetchone()[0]==0
+            raw['cutoverRace']={'initialWaits':[list(row) for row in initial_waits],
+              'tableLockWaits':[[row[0],'admin_storyboard_production_projects',row[2]] for row in table_waits],
+              'create':create_result,'heartbeat':heartbeat_result,'requestId':race_request['requestId']}
+            raw['assertions']['pre_cutover_rpc_bodies_cannot_write_after_cutover']=True
+
+            c.execute("SELECT proowner,proacl,prosecdef,proconfig,provolatile,proparallel FROM pg_proc WHERE oid='public.storyboard_production_admin(uuid,text,uuid,integer,jsonb)'::regprocedure")
+            assert c.fetchone()==admin_metadata_before
+            c.execute("SELECT proowner,proacl,prosecdef,proconfig,provolatile,proparallel FROM pg_proc WHERE oid='public.storyboard_production_worker(uuid,text,uuid,uuid,jsonb)'::regprocedure")
+            assert c.fetchone()==worker_metadata_before
+            c.execute("SELECT count(*) FROM public.admin_storyboard_production_jobs j JOIN public.admin_storyboard_production_projects p ON p.id=j.project_id WHERE p.request->>'workflow'='storyboard-mlx-v1' AND j.status IN ('queued','claimed')")
+            assert c.fetchone()[0]==0
+            c.execute("SELECT count(*) FROM public.admin_storyboard_production_jobs j WHERE j.id=ANY(%s::uuid[]) AND j.status='cancelled' AND j.stage='cancelled' AND j.error_code='generation_cancelled' AND j.worker_id IS NULL AND j.lease_token IS NULL AND j.lease_expires_at IS NULL",(legacy_active_ids,))
+            assert c.fetchone()[0]==len(legacy_active_ids)
+            c.execute("SELECT count(*) FROM public.admin_storyboard_production_events WHERE id>%s AND job_id=ANY(%s::uuid[]) AND operation='cancelled' AND error_code='generation_cancelled'",(legacy_event_upper,legacy_active_ids))
+            assert c.fetchone()[0]==len(legacy_active_ids)
+            c.execute("SELECT count(*) FROM public.admin_storyboard_production_projects p WHERE p.status='cancelled' AND EXISTS (SELECT 1 FROM public.admin_storyboard_production_jobs j WHERE j.project_id=p.id AND j.id=ANY(%s::uuid[]))",(legacy_active_ids,))
+            assert c.fetchone()[0]==len(legacy_active_ids)
+            legacy_history_after=legacy_history_state()
+            assert legacy_history_after==legacy_history_before
+            raw['legacyHistorySha256']={'before':legacy_history_before,'after':legacy_history_after,'heldJobs':len(legacy_active_ids)}
+            raw['assertions']['legacy_active_jobs_retired_without_history_loss']=True
+
+            legacy_job=compatible_claim['id']
+            c.execute("SELECT to_jsonb(j),p.document FROM public.admin_storyboard_production_jobs j JOIN public.admin_storyboard_production_projects p ON p.id=j.project_id WHERE j.id=%s",(legacy_job,))
+            legacy_job_before,legacy_document_before=c.fetchone()
+            c.execute("SELECT public.storyboard_production_worker(%s,'heartbeat',%s,%s,%s::jsonb)",(capability_worker,legacy_job,compatible_claim['leaseToken'],json.dumps({'models':models})))
+            assert c.fetchone()[0]['leaseValid'] is False
+            c.execute("SELECT public.storyboard_production_worker(%s,'claim')",(capability_worker,))
+            assert c.fetchone()[0]['job'] is None
+            c.execute("SELECT to_jsonb(j) FROM public.admin_storyboard_production_jobs j WHERE j.id=%s",(legacy_job,))
+            assert c.fetchone()[0]==legacy_job_before
+            rejected("SELECT public.storyboard_production_worker(%s,'check',%s,%s,%s::jsonb)",(capability_worker,legacy_job,compatible_claim['leaseToken'],json.dumps({})), 'worker_lease_lost')
+            c.execute("SELECT document FROM public.admin_storyboard_production_projects WHERE id=%s",(compatible_project,))
+            assert c.fetchone()[0]==legacy_document_before
+            raw['assertions']['legacy_heartbeat_recovery_and_checkpoint_are_held']=True
+
+            c.execute("SELECT tgname,tgenabled FROM pg_trigger WHERE NOT tgisinternal AND tgname LIKE 'storyboard_archive_%_write_guard' ORDER BY tgname")
+            archive_triggers=c.fetchall()
+            assert len(archive_triggers)==6 and all(enabled=='O' for _,enabled in archive_triggers)
+            c.execute("SELECT pg_get_userbyid(proowner),prosecdef,proconfig,has_function_privilege('anon',oid,'EXECUTE'),has_function_privilege('authenticated',oid,'EXECUTE'),has_function_privilege('service_role',oid,'EXECUTE') FROM pg_proc WHERE oid='public.storyboard_production_reject_archived_write()'::regprocedure")
+            assert c.fetchone()==('postgres',False,['search_path=""'],False,False,True)
+            rejected("UPDATE public.admin_storyboard_production_projects SET updated_at=clock_timestamp() WHERE id=%s",(project,), 'archived_project_read_only')
+            rejected("UPDATE public.admin_storyboard_production_jobs SET updated_at=clock_timestamp() WHERE id=%s",(legacy_job,), 'archived_project_read_only')
+            for suffix in ('assets','events','revisions','restores'):
+                rejected("UPDATE public.admin_storyboard_production_"+suffix+" SET created_at=created_at WHERE project_id=%s",(project,), 'archived_project_read_only')
+            rejected("INSERT INTO public.admin_storyboard_production_jobs(project_id,owner_id,request_id,requested_revision,base_revision,kind,status,stage) VALUES (%s,%s,%s,0,0,'generate','queued','queued')",(project,owner,str(uuid.uuid4())), 'archived_project_read_only')
+            blocked_asset=str(uuid.uuid4())
+            rejected("INSERT INTO public.admin_storyboard_production_assets(id,project_id,owner_id,scene_no,scene_revision,metadata) VALUES (%s,%s,%s,1,0,%s::jsonb)",(blocked_asset,project,owner,json.dumps({'id':blocked_asset,'trustPolicy':'storyboard-private-asset-v1'})), 'archived_project_read_only')
+            rejected("INSERT INTO public.admin_storyboard_production_events(project_id,owner_id,operation,revision) VALUES (%s,%s,'queued',0)",(project,owner), 'archived_project_read_only')
+            assert legacy_history_state()==legacy_history_after
+            raw['archiveWriteGuards']={'triggers':[name for name,_ in archive_triggers],'tables':6}
+            raw['assertions']['archived_table_guards_cover_all_execution_children']=True
+            c.execute("SELECT public.storyboard_production_admin(%s,'read',%s)",(owner,project))
+            archived=c.fetchone()[0]
+            assert archived['project']['request']['workflow']=='storyboard-mlx-v1'
+            try:
+                c.execute("SELECT public.storyboard_production_admin(%s,'retry',%s,%s,%s::jsonb)",(owner,project,archived['project']['revision'],json.dumps({'requestId':str(uuid.uuid4())})))
+                raise AssertionError('unexpected_archived_retry')
+            except psycopg2.Error as error:
+                assert 'archived_project_read_only' in str(error)
+                conn.rollback()
+            raw['assertions']['archive_readable_but_retry_rejected_before_queue']=True
+            c.execute("SELECT count(*) FROM public.admin_storyboard_production_jobs")
+            jobs_before=c.fetchone()[0]
+            forbidden={**request,'workflow':'storyboard-gemini-v1','requestId':str(uuid.uuid4()),'providers':{**request['providers'],'text':{'id':'openai-api','model':'other'}}}
+            try:
+                c.execute("SELECT public.storyboard_production_admin(%s,'create',NULL,NULL,%s::jsonb)",(owner,json.dumps(forbidden)))
+                raise AssertionError('unexpected_non_gemini_create')
+            except psycopg2.Error as error:
+                assert 'provider_not_configured' in str(error) or getattr(error,'pgcode',None)=='23514'
+                conn.rollback()
+            c.execute("SELECT count(*) FROM public.admin_storyboard_production_jobs")
+            assert c.fetchone()[0]==jobs_before
+            raw['assertions']['non_gemini_create_has_zero_queue_writes']=True
+            gemini_request={**request,'workflow':'storyboard-gemini-v1','requestId':str(uuid.uuid4())}
+            c.execute("SELECT public.storyboard_production_admin(%s,'create',NULL,NULL,%s::jsonb)",(owner,json.dumps(gemini_request)))
+            gemini_project=c.fetchone()[0]['project']['id']
+            for token,split_models in (('5'*64,[models[0]]),('6'*64,[models[1]])):
+                c.execute("INSERT INTO public.admin_storyboard_production_workers(owner_id,token_sha256,models) VALUES (%s,%s,%s::jsonb) RETURNING id",(owner,token,json.dumps(split_models)))
+                split_worker=str(c.fetchone()[0])
+                c.execute("SELECT public.storyboard_production_worker(%s,'claim')",(split_worker,))
+                assert c.fetchone()[0]['job'] is None
+            c.execute("SELECT status,attempts FROM public.admin_storyboard_production_jobs WHERE project_id=%s",(gemini_project,))
+            assert c.fetchone()==('queued',0)
+            raw['assertions']['split_workers_cannot_claim_or_increment_attempts']=True
+            c.execute("INSERT INTO public.admin_storyboard_production_workers(owner_id,token_sha256,models) VALUES (%s,%s,%s::jsonb) RETURNING id",(owner,'4'*64,json.dumps(models)))
+            gemini_worker=str(c.fetchone()[0])
+            c.execute("SELECT public.storyboard_production_worker(%s,'claim')",(gemini_worker,))
+            gemini_claim=c.fetchone()[0]['job']
+            assert gemini_claim and gemini_claim['projectId']==gemini_project
+            assert gemini_claim['request']['workflow']=='storyboard-gemini-v1'
+            raw['assertions']['new_gemini_workflow_creates_and_claims_exact_pair']=True
+            raw['assertions']['gemini_execution_migration_preserves_rpc_metadata']=True
+            raw['migrations'].append({'file':execution.name,'sha256':hashlib.sha256(execution.read_bytes()).hexdigest()})
             raw['passed'] = True
             raw['limitations'] = ['Synthetic fixture database only.', 'Real Supabase Storage object upload/download and provider inference are separate tests; fixture asset metadata only.']
-    out = ROOT / 'apps/web/performance/ui-renewal-20261003' / f'storyboard-claim-capability-{args.chain}-20261004.json'
+    out = args.output or (ROOT / 'apps/web/performance/ui-renewal-20261003' / f'storyboard-claim-capability-{args.chain}-20261004.json')
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(raw, indent=2) + '\n')
     print(json.dumps({'passed': True, 'assertions': list(raw['assertions']), 'operationalDatabaseChanges': False}))

@@ -23,7 +23,7 @@ try {
     const token = await readStoryboardWorkerToken(values['token-file']);
     const api = new StoryboardWorkerTransport({ origin: values.origin, token });
     const client = new GeminiStoryboardClient({ env, onUsage: (usage) => console.log(JSON.stringify({ event: 'gemini_usage', ...usage })) });
-    const worker = new OutboundStoryboardWorker({ api, mlx: client, onEvent: (event) => console.log(JSON.stringify(event)) });
+    const worker = new OutboundStoryboardWorker({ api, gemini: client, onEvent: (event) => console.log(JSON.stringify(event)) });
     console.log(JSON.stringify({ event: 'worker_started', provider: 'gemini-api', projectConcurrency: 1 }));
     const result = await worker.run({ signal: stop.signal, once: values.once });
     if (values.once && (result === 'failed' || result === 'lease_lost')) process.exitCode = 1;

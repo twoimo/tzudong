@@ -556,43 +556,34 @@ describe('admin storyboard LangGraph replacement contracts', () => {
     }
   });
 
-  test('storyboard image generation policy remains exact local-codex gpt-image-2 and fail-closed', async () => {
-    const { getStoryboardImageProviderAvailability } = await import(`../lib/admin/storyboard/image-provider.ts?case=${Math.random()}`);
-    const status = getStoryboardImageProviderAvailability({});
-    expect(status.providerId).toBe('local-codex');
-    expect(status.model).toBe('gpt-image-2');
-    expect(status.modelProvenance).not.toBe('fallback');
-    expect(JSON.stringify(status)).not.toContain('gpt-image-1');
+  test('storyboard generation policy remains the exact Gemini model set and fail-closed', async () => {
+    const models = await import('../lib/admin/storyboard/gemini-models');
+    expect(models.STORYBOARD_GEMINI_TEXT_MODEL).toBe('gemini-3.8-flash');
+    expect(models.STORYBOARD_GEMINI_IMAGE_MODELS.map((model) => model.id)).toEqual([
+      'gemini-3.1-flash-image',
+      'gemini-3-pro-image',
+    ]);
+    expect(models.isAllowedStoryboardGeminiModel('gpt-image-2', 'image')).toBe(false);
+    expect(models.isAllowedStoryboardGeminiModel('gemini-unapproved', 'text')).toBe(false);
   });
 
-  test('admin storyboard keeps graph diagnostics available while settings stay API-key-only', () => {
-    const source = readFileSync(
+  test('admin storyboard exposes only the server-owned Gemini production control plane', () => {
+    const workspace = readFileSync(
+      path.resolve('components/admin/storyboard/LocalStoryboardWorkspace.tsx'),
+      'utf8',
+    );
+    const alias = readFileSync(
       path.resolve('components/admin/storyboard/LegacyStoryboardReference.tsx'),
       'utf8',
     );
-    expect(source).toContain('formatStoryboardGraphDiagnosticsText');
-    expect(source).toContain('buildStoryboardBackendAgentReadiness');
-    expect(source).toContain('result.backendAnalysis.backendAgent?.graph');
-    expect(source).toContain('storyboardAgentGraphFidelity');
-    expect(source).toContain('영상 자료 검색 반영');
-    expect(source).toContain('graph.retrieval?.status === "used"');
-    expect(source).toContain('graph.toolsCalled.includes("search_scene_data")');
-    expect(source).toContain('graph.status === "used"');
-    expect(source).toContain('graph.status === "interrupted_output_ready"');
-    expect(source).toContain('graph.status === "interrupted_needs_resume"');
-    expect(source).not.toContain('data-storyboard-agent-graph-fidelity');
-    expect(source).not.toContain('참조 그래프 충실도');
-    expect(source).not.toContain('data-storyboard-backend-agent-readiness="true"');
-    expect(source).not.toContain('data-storyboard-backend-agent-live-graph-ready');
-    expect(source).not.toContain('data-storyboard-backend-agent-retrieval-used');
-    expect(source).toContain('data-storyboard-browser-api-key-settings="memory-only"');
-    expect(source).toContain('OpenAI API 키');
-    expect(source).toContain('data-storyboard-api-router-panel="true"');
-    expect(source).toContain('data-storyboard-codex-oauth-status={');
-    expect(source).toContain('자료 분석 반영');
-    expect(source).toContain('우선순위 정리');
-    expect(source).not.toContain('data-storyboard-agent-graph-role');
-    expect(source).not.toContain('data-storyboard-agent-graph-blockers');
+    expect(workspace).toContain('const API = "/api/admin/storyboard/production"');
+    expect(workspace).toContain('model.owned_by === "gemini-api"');
+    expect(workspace).toContain('storyboardWorkerSupportsPair');
+    expect(workspace).toContain('STORYBOARD_GEMINI_TEXT_MODEL');
+    expect(workspace).toContain('STORYBOARD_GEMINI_IMAGE_MODELS');
+    expect(workspace).not.toMatch(/OpenAI API 키|browser-openai|local-codex|codex-oauth/);
+    expect(workspace).toContain('owned_by: z.enum(["gemini-api", "mlx-serve"]).optional()');
+    expect(alias.trim().endsWith('export { AdminStoryboardGenerator } from "./AdminStoryboardGenerator";')).toBe(true);
   });
 
   test('maps canonical reference graph diagnostics to separate agentGraphFidelity pass report', async () =>{

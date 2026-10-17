@@ -317,13 +317,13 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
     return (
       <TableRow
         ref={ref}
-        className={cn("group bg-card hover:bg-primary/5 transition-colors cursor-pointer", isExpanded && "bg-primary/5 border-l-4 border-l-primary")}
+        className={cn("group cursor-pointer bg-card hover:bg-muted/40", isExpanded && "admin-cms-row-selected border-l-4 border-l-primary bg-primary/5")}
         onClick={onToggleExpand}
       >
         <TableCell
           className={cn(
-            "sticky left-0 z-10 px-2 sm:px-4 transition-colors",
-            isExpanded ? "bg-card shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "bg-card group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
+            "sticky left-0 z-10 px-2 sm:px-4",
+            isExpanded ? "bg-primary/5" : "bg-card group-hover:bg-muted/40"
           )}
         >
           <Button
@@ -347,8 +347,8 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
 
         <TableCell
           className={cn(
-            "min-w-[220px] sm:min-w-[280px] lg:sticky lg:left-12 lg:z-10 transition-colors",
-            isExpanded ? "lg:bg-card lg:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "lg:bg-card lg:group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
+            "min-w-[220px] sm:min-w-[280px] lg:sticky lg:left-12 lg:z-10",
+            isExpanded ? "lg:bg-primary/5" : "lg:bg-card lg:group-hover:bg-muted/40"
           )}
         >
           <div className="flex items-center gap-3">
@@ -445,8 +445,8 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
         {/* 고정 컬럼: 상태 */}
         <TableCell
           className={cn(
-            "sticky right-[120px] z-10 min-w-[84px] text-center lg:right-[160px] lg:min-w-[96px] transition-colors",
-            isExpanded ? "bg-card shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "bg-card group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
+            "sticky right-[120px] z-10 min-w-[84px] text-center lg:right-[160px] lg:min-w-[96px]",
+            isExpanded ? "bg-primary/5" : "bg-card group-hover:bg-muted/40"
           )}
         >
           <div className="flex flex-col items-center gap-1">
@@ -457,8 +457,8 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
         {/* 고정 컬럼: 액션 */}
         <TableCell
           className={cn(
-            "sticky right-0 z-10 min-w-[120px] lg:min-w-[160px] transition-colors",
-            isExpanded ? "bg-card shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "bg-card group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
+            "sticky right-0 z-10 min-w-[120px] lg:min-w-[160px]",
+            isExpanded ? "bg-primary/5" : "bg-card group-hover:bg-muted/40"
           )}
         >
           <div className="flex flex-wrap justify-center gap-1 lg:gap-2">
@@ -915,7 +915,7 @@ export function EvaluationTable({
                 aria-label={`상태 필터: ${filter.label}`}
                 aria-pressed={isActive}
                 data-admin-evaluation-mobile-status-filter-option={filter.value || 'all'}
-                className="h-8 min-w-0 rounded-full px-2 text-xs font-medium"
+                className="h-11 min-w-0 rounded-md px-2 text-xs font-medium"
                 onClick={(event) => {
                   event.stopPropagation();
                   handleMobileStatusQuickFilterChange(filter.value);
@@ -935,7 +935,7 @@ export function EvaluationTable({
             placeholder="상호·영상 ID 검색..."
             value={searchQuery}
             onChange={(e) => onSearchChange?.(e.target.value)}
-            className="h-9 pl-8 pr-8 text-sm"
+            className="h-11 pl-8 pr-8 text-sm"
           />
           {searchQuery && (
             <Button
@@ -974,7 +974,7 @@ export function EvaluationTable({
             <Button
               variant={showMobileAdvancedFilters ? "secondary" : "outline"}
               size="sm"
-              className="h-8 rounded-full px-2.5 text-xs font-semibold"
+              className="h-11 rounded-md px-2.5 text-xs font-semibold"
               onClick={() => setShowMobileAdvancedFilters(prev => !prev)}
             >
               {showMobileAdvancedFilters ? '닫기' : '상세 필터'}
@@ -986,7 +986,7 @@ export function EvaluationTable({
                 onClick={onResetFilters}
                 aria-label="필터 초기화"
                 title="필터 초기화"
-                className="h-8 w-8 rounded-full p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="h-11 w-11 rounded-md p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 <span className="sr-only">초기화</span>
@@ -996,7 +996,7 @@ export function EvaluationTable({
         </div>
 
         {showMobileAdvancedFilters && (
-          <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/35 p-2">
+          <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/35 p-2">
             {renderFilterDropdown(
               "status",
               "상태",
@@ -1183,9 +1183,9 @@ export function EvaluationTable({
               data-layout-primitives="stack frame"
               data-admin-evaluation-mobile-card="true"
               className={cn(
-                "rounded-xl border border-border/70 bg-card/95 p-2.5",
+                "admin-surface border border-border bg-card p-2.5",
                 getMobileCardTone(record.status),
-                isExpanded && "shadow-sm"
+                isExpanded && "admin-cms-row-selected bg-primary/5"
               )}
             >
             <div className="flex items-start justify-between gap-2">
@@ -1195,7 +1195,7 @@ export function EvaluationTable({
                 </h2>
                 <div className="mt-0.5 flex flex-wrap items-center gap-2 text-2xs text-muted-foreground">
                   <span>{publishedAt}</span>
-                  <Badge variant="outline" className="rounded-full text-2xs">주소 {geocodingText}</Badge>
+                  <Badge variant="outline" className="rounded-md text-2xs">주소 {geocodingText}</Badge>
                 </div>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1">
@@ -1489,7 +1489,7 @@ export function EvaluationTable({
             ) : records.length > 0 ? (
               mobileCards
             ) : (
-              <div className="rounded-lg border bg-card text-center text-sm text-muted-foreground lg:hidden flex min-h-0 flex-1 items-center justify-center p-6">
+              <div className="admin-empty-state flex min-h-0 flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground lg:hidden">
                 표시할 데이터가 없습니다
               </div>
             )}
@@ -1497,7 +1497,8 @@ export function EvaluationTable({
         )}
 
         {shouldRenderDesktop && (
-          <div className="hidden rounded-lg border lg:block">
+          <div className="admin-surface hidden min-h-0 flex-1 flex-col overflow-hidden lg:flex">
+          <div className="min-h-0 flex-1 overflow-auto">
           <Table allowHorizontalScroll horizontalScrollOwner="admin-evaluation-table">
           <TableHeader className="sticky top-0 bg-background z-20">
             <TableRow className="hover:bg-transparent">
@@ -1676,8 +1677,8 @@ export function EvaluationTable({
               desktopLoadingRows
             ) : records.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
-                  표시할 데이터가 없습니다
+                <TableCell colSpan={11} className="h-32 p-0 text-center text-muted-foreground">
+                  <div className="admin-empty-state flex h-32 items-center justify-center">표시할 데이터가 없습니다</div>
                 </TableCell>
               </TableRow>
             ) : (
@@ -1729,6 +1730,8 @@ export function EvaluationTable({
           </TableBody>
         </Table>
         <div className="h-8" /> {/* 마지막 레코드가 잘리지 않도록 충분한 하단 여백 */}
+          </div>
+          <div className="admin-cms-footer shrink-0 justify-between"><span>{records.length}개 표시</span><span>{activeFilterCount > 0 ? `필터 ${activeFilterCount}개 적용` : '전체 조건'}</span></div>
           </div>
         )}
         {loadMoreSentinel}

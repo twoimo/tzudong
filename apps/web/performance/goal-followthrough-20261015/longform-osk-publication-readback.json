@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "kind": "longform-pilot-shared-osk-publication-readback",
+  "generatedAt": "2026-10-15T06:39:47Z",
+  "scope": "tzudong",
+  "source": {
+    "frozenInventoryRows": 1071,
+    "frozenInventorySha256": "c94fcf5236af9388ad47ce984f993f42c157c5633417743f8d9b64d1a73cbd73",
+    "candidateInventoryFileSha256": "6c395640d5dba3c4037f916f0af12309e3fc6f620cd4de06ac9b0438bb73d4b5",
+    "videoId": "-D43ezc57z8",
+    "durationSeconds": 835,
+    "batchId": "pilot-D43ezc57z8-structural-v2-20261015-01",
+    "state": "succeeded",
+    "model": "gemini-3.8-flash",
+    "claudeVideoCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+    "modelEvidenceSha256": "f5001bba8f40b35d52259a8cefeda797ac61a1ca0756d64409e4b240370ce24a",
+    "analysisFileSha256": "8a2ade2fefeb26073319d50aff19d6b708106909407d35cd4de800d0476445f1",
+    "receiptFileSha256": "77b2585a3dd3e7ed342522c4b33f37a544b2a219405eeea74d9710709555a574",
+    "receiptPayloadSha256": "297c7f5c82efcb926fe272e2eea7866b80f40e8c58fdaac6ad81b1e3d4edf4e0",
+    "evidenceSha256": "55413fc4431b0b7717d89edddddd02d98dfe4719e5c95d653c86d424defad8d5",
+    "offlineCacheReplay": {
+      "reusable": 1,
+      "new": 0,
+      "readbackRequired": 0,
+      "corrupt": 0,
+      "remainingSegments": 0,
+      "plannedProviderCalls": 0
+    },
+    "providerUsageAlreadySpent": {
+      "httpCalls": 2,
+      "countTokenCalls": 1,
+      "interactionCreateCalls": 1,
+      "generationCalls": 1,
+      "inputTokens": 76415,
+      "outputTokens": 1490,
+      "thinkingTokens": 325,
+      "totalTokens": 78230,
+      "costVerified": false
+    }
+  },
+  "engine": {
+    "version": "4.1.8",
+    "commit": "627f2bfaa9d7fa774daf152cada1c50d0b4b0ef9",
+    "runtimeFiles": 54,
+    "runtimeSha256": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358",
+    "python": "3.14.8",
+    "integrationTestsPassed": 46,
+    "integrationTestsSkipped": 0,
+    "integrationEvidenceSha256": "3513d43dba5f4ad4f361eea3e03bd53379d2554ca8e918a52bd87cf6a7868b47"
+  },
+  "publication": {
+    "format": "sharded",
+    "preWriteBackup": {
+      "files": 39,
+      "sourceAndBackupRelativeContentMatched": true,
+      "relativeContentSha256": "6a6eade3c8b4c69b48d64ec680fa89ffdb6e27c66b07d25587a496ac4c06dfd4"
+    },
+    "plan": {
+      "baselineNodes": 37,
+      "baselineEdges": 95,
+      "upperAddedNodes": 13,
+      "upperAddedEdges": 38,
+      "upperTotalNodes": 50,
+      "upperTotalEdges": 133,
+      "admitted": true
+    },
+    "apply": {
+      "code": "PUBLICATION_COMPLETED",
+      "publicationComplete": true,
+      "createdNodes": 13,
+      "updatedNodes": 0,
+      "movedNodes": 0,
+      "mutationsIncludingHub": 14,
+      "remainingNodes": 0,
+      "providerCalls": 0,
+      "operatingDatabaseWrites": 0,
+      "deployments": 0
+    },
+    "idempotentReplay": {
+      "plannedVideos": 0,
+      "skippedPublicationComplete": 1,
+      "plannedNodes": 0,
+      "plannedProviderCalls": 0
+    },
+    "postWrite": {
+      "scopeFiles": 52,
+      "relativeContentSha256": "cc36bc64064e5b13211a00c39fbac174d4d17daf20cfebf8868f73fd318aab23",
+      "publicationReceiptFileSha256": "b7b2c1b44f7d017f6ae644e500c4842bc2d55b52c405149467c573fac9e105c0",
+      "publicationReceiptPayloadSha256": "705fe650457b888440e4fef36111e1ed2323d5d381f3f7cfb890e5f4abc518ed",
+      "videoNodeId": "261015-1758-4nwrk380",
+      "videoNodeHash": "sha256:95b0d51888b6b5f9252a523cd7e92f2a583da1ca785452a678c84d5be9b97ee9",
+      "rootNodeHash": "fbc133ff713e257626c71e8a3051f3035987f952e6aa99185ea2f703d7979d62",
+      "publishedSemanticNodes": {
+        "video": 1,
+        "restaurant": 1,
+        "menus": 3,
+        "claims": 4
+      },
+      "publishedStructuralAndSourceNodes": 4,
+      "targetNodesFound": 13
+    }
+  },
+  "validation": {
+    "validatorsPassed": true,
+    "validatedGraphNodes": 107,
+    "scopeNodes": 50,
+    "scopeUnreachableNodes": 0,
+    "danglingEdges": 0,
+    "duplicateEdges": 0,
+    "independentlyVerified": false,
+    "modelObservationsStatus": "unverified",
+    "unrelatedPreExistingRecheckCandidates": 21
+  },
+  "adminProjection": {
+    "preparedPrivately": true,
+    "format": "tzudong-graph-shards/v1",
+    "revision": "773e19ae8b3254297c487a874507ebcd6a0b029be8565af9a20df07fdae48fa9",
+    "manifestFileSha256": "dd513c939aef755650b43bc05832b65de8f321087c379581c2a40c51c0e34252",
+    "nodeShardSha256": "b96998edbab20747304372c9c0125bfb600c7945a38ab91b000496767d64b3b9",
+    "edgeShardSha256": "a6bd8b397f7d5814b4689bfecf10cdbccd72f2ae09bf3d2859f647391b2dd976",
+    "nodes": 43,
+    "edges": 133,
+    "shards": 2,
+    "bytes": 39620,
+    "readerReadback": {
+      "query": "-D43ezc57z8",
+      "matched": true,
+      "matchedVideoNodeId": "261015-1758-4nwrk380",
+      "evidenceItems": 5,
+      "nextNodeCursor": null,
+      "nextEdgeCursor": null
+    },
+    "coverage": {
+      "eligibleCount": 1071,
+      "analyzedCount": 0,
+      "pendingCount": 1071,
+      "reason": "publication alone does not independently verify model observations"
+    },
+    "copiedIntoTrackedWebData": false,
+    "operatingDatabaseApplied": false,
+    "deployed": false
+  },
+  "limits": [
+    "This receipt covers one successful pilot, not all 1071 long-form videos.",
+    "The restaurant, menu and claim nodes remain unverified model observations until independent review.",
+    "The first rejected pilot and its inconsistent private records were preserved without rewrite or retransmission.",
+    "No provider call was made for cache verification, OSK publication, validation or projection preparation."
+  ]
+}

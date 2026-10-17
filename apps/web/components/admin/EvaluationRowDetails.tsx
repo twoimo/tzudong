@@ -2,7 +2,7 @@ import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import React, { memo } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Copy, MapPin } from 'lucide-react';
 import { RestaurantErrorAlert } from './RestaurantErrorAlert';
 import { EvaluationDetailView } from './EvaluationDetailView';
 import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
@@ -156,13 +156,13 @@ export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record,
             <div className="mb-4">
               {isDuplicateCase && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded">
-                  <p className="text-red-800 font-semibold">🔄 중복 데이터</p>
+                  <p className="flex items-center gap-1.5 font-semibold text-red-800"><Copy className="h-4 w-4" aria-hidden="true" />중복 데이터</p>
                   <p className="text-sm text-red-700">영상 URL, 음식점명, 지오코딩 주소가 모두 같습니다.</p>
                 </div>
               )}
               {isAddressIssueCase && (
                 <div className="p-3 bg-orange-50 border border-orange-200 rounded">
-                  <p className="text-orange-800 font-semibold">📍 주소 정보 문제</p>
+                  <p className="flex items-center gap-1.5 font-semibold text-orange-800"><MapPin className="h-4 w-4" aria-hidden="true" />주소 정보 문제</p>
                   <p className="text-sm text-orange-700">영상 URL과 음식점명은 같지만 지오코딩 주소가 다릅니다.</p>
                 </div>
               )}
@@ -170,7 +170,7 @@ export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record,
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="border p-4 rounded">
-                <h4 className="font-bold mb-2">🏢 기존 데이터베이스</h4>
+                <h4 className="mb-2 font-semibold">저장된 정보</h4>
                 <dl className="space-y-1 text-sm">
                   <div><dt className="inline font-semibold">음식점명:</dt> <dd className="inline">{existing_restaurant.name}</dd></div>
                   <div><dt className="inline font-semibold">지번주소:</dt> <dd className="inline">{existing_restaurant.jibun_address}</dd></div>
@@ -181,7 +181,7 @@ export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record,
               </div>
 
               <div className="border p-4 rounded bg-yellow-50">
-                <h4 className="font-bold mb-2">🆕 신규 데이터</h4>
+                <h4 className="mb-2 font-semibold">새 입력</h4>
                 <dl className="space-y-1 text-sm">
                   <div><dt className="inline font-semibold">음식점명:</dt> <dd className="inline">{new_restaurant.name}</dd></div>
                   <div><dt className="inline font-semibold">지번주소:</dt> <dd className="inline">{new_restaurant.naver_address_info?.jibun_address}</dd></div>
@@ -201,7 +201,7 @@ export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record,
   // 일반적인 테이블 행 확장 UI와 달리, 여기서는 슬라이드 형태처럼 보이도록 고정 높이 컨테이너로 감쌉니다.
 
   return (
-    <div className="flex flex-col border-t bg-gray-50/50">
+    <div className="flex flex-col border-t bg-card">
       {/* 🔥 에러 알림 - 최상단 표시 (if present along with normal record) */}
       {showErrorAlert && (
         <div className="p-4 bg-background">

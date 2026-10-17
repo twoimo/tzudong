@@ -67,11 +67,20 @@ class LayoutNamingSourceRecoveryTests(unittest.TestCase):
         self.assertIn("관측성", entries["backend/pipeline-control"]["ownership"])
         self.assertIn("파이썬", entries["backend/pipeline_control"]["ownership"])
 
+    def test_taste_skill_direction_has_an_owned_source_entry(self) -> None:
+        document = json.loads(LAYOUT_MANIFEST.read_text(encoding="utf-8"))
+        entry = {item["path"]: item for item in document["entries"]}[".taste-skill"]
+        self.assertEqual(entry["depth"], 1)
+        self.assertEqual(entry["classification"], "source")
+        self.assertTrue(entry["vcsTracked"])
+        self.assertIn("direction.json", " ".join(entry["allowedContents"]))
+        self.assertIn("실행 소스", entry["forbiddenContents"])
+
     def test_layout_manifest_matches_versioned_and_candidate_files(self) -> None:
         result = layout.run_check(root=ROOT, manifest_path=LAYOUT_MANIFEST)
         self.assertEqual(result["errorCode"], None, result)
         self.assertTrue(result["ok"], result)
-        self.assertEqual(result["trackedDirectoryCount"], 39)
+        self.assertEqual(result["trackedDirectoryCount"], 40)
         self.assertEqual(result["checks"]["moves"], [])
 
     def test_existing_rename_ledger_is_complete_without_aliases(self) -> None:

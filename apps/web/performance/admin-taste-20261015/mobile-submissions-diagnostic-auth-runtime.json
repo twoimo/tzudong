@@ -1,0 +1,18 @@
+{
+  "syntheticOnly": true,
+  "settled": false,
+  "metrics": {
+    "title": "관리자 콘솔 - 쯔동여지도",
+    "url": "/admin",
+    "theme": "light",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "activeModules": [],
+    "headers": [],
+    "busy": []
+  },
+  "responses": [],
+  "errorCodes": []
+}

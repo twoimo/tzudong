@@ -1,0 +1,64 @@
+{
+  "schema": "tzudong-feature-sql-catalog-completeness-map/v1",
+  "sourceState": "working-tree-delta",
+  "sourceHeadLocator": "4f953944b68092ca218f42920d916857c207f402",
+  "classification": "New source-bound local PG17.6 replay after adding the preexisting operating OCR schema contract to the unapplied migration. Prior proofs remain bound to prior bytes.",
+  "artifacts": [
+    {
+      "path": "pg17-existing-catalog-replay-review-ocr-catalog-contract-20261015.json",
+      "bytes": 26691,
+      "sha256": "a8b0567bf501a1554524cf82401b60773262decfb02ad065d598155ade92cefe"
+    },
+    {
+      "path": "pg17-existing-catalog-replay-review-ocr-catalog-contract-20261015.json.sha256",
+      "bytes": 137,
+      "sha256": "c027c339f233fc802b8a3d5e6124277cbd1f810b2f51b3e47f17751d9e0ab17d"
+    }
+  ],
+  "sourceBindings": [
+    {
+      "path": "backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql",
+      "bytes": 51799,
+      "sha256": "0a99efa37fb87c425e420aca5a468f8995167e76ccc3e129d6fde2a49d3e582f"
+    },
+    {
+      "path": ".github/review-media-feature-sql-successor.v1.json",
+      "bytes": 115352,
+      "sha256": "14f7e52ab39503c624b3ad635562b70fb5ffabab7254c7b878b5a243202a4c5d"
+    },
+    {
+      "path": "apps/web/scripts/review-media-feature-sql-successor.mjs",
+      "bytes": 77583,
+      "sha256": "95efd6eee191aad38b46693ccb240768c6695af4cb3037e0fcf003917fda58ee"
+    },
+    {
+      "path": "apps/web/tests-unit/durable-receipt-ocr.test.ts",
+      "bytes": 30588,
+      "sha256": "3615d62bdecbeda21057446cdd515b58699cdb05284c74c1bd25e0024b280007"
+    },
+    {
+      "path": "apps/web/tests-unit/review-media-feature-sql-successor.test.ts",
+      "bytes": 33811,
+      "sha256": "8302ac55107fda8b1d4cdfb9f4a5bd0c67583f8ee2bb1ed64c51e5b02cd7e088"
+    },
+    {
+      "path": "apps/web/performance/feature-sql-integration-20261013/verify-feature-migrations.mjs",
+      "bytes": 104566,
+      "sha256": "c869de619bd07d2743d2f951670b0a18fc0f3104699f31a4cefe678263e6a455"
+    }
+  ],
+  "verification": {
+    "pg17Status": "passed",
+    "findings": [],
+    "rootProofSourceBindingsChecked": 23,
+    "rootSourceBindingMismatches": 0,
+    "targetedBun": {
+      "passed": 35,
+      "failed": 0,
+      "assertions": 231
+    },
+    "pg15FullDualReplay": "pending-clean-source-commit",
+    "hostedWrites": 0,
+    "providerCalls": 0
+  }
+}

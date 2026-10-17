@@ -203,6 +203,39 @@ class LongformAnalysisTests(unittest.TestCase):
         self.assertEqual(plan["boundedExecution"]["inputTokenReservationUpper"], 1000)
         self.assertFalse(self.state.exists())
 
+    def test_plan_denominator_separates_terminal_partial_failure_and_uncertainty(self):
+        rows = [{**self.row, "videoId": letter * 11} for letter in "ABCDEF"]
+        dispositions = {
+            rows[0]["videoId"]: {"state": "reusable", "kind": "reusable", "code": None,
+                                 "uncertaintyReason": None, "providerGetEligible": False},
+            rows[1]["videoId"]: {"state": "new", "kind": "new", "code": None,
+                                 "uncertaintyReason": None, "providerGetEligible": False},
+            rows[2]["videoId"]: {"state": "terminal_rejected", "kind": "partial", "code": "ANALYSIS_PARTIAL",
+                                 "uncertaintyReason": None, "providerGetEligible": False},
+            rows[3]["videoId"]: {"state": "terminal_rejected", "kind": "failed", "code": "ANALYSIS_SCHEMA_INVALID",
+                                 "uncertaintyReason": None, "providerGetEligible": False},
+            rows[4]["videoId"]: {"state": "readback_required", "kind": "uncertain", "code": "READBACK_REQUIRED",
+                                 "uncertaintyReason": "REQUEST_OBSERVATION_BINDING_MISMATCH",
+                                 "providerGetEligible": False},
+        }
+
+        def disposition(_state, row, _config, **_kwargs):
+            if row["videoId"] == rows[5]["videoId"]:
+                raise module.AnalysisError("RECEIPT_CORRUPT")
+            return dispositions[row["videoId"]]
+
+        with patch.object(module, "cached_disposition", side_effect=disposition), \
+                patch.object(module, "remaining_segments", return_value=[object()]):
+            plan = module.make_plan(rows, self.info, self.state, self.config)
+        self.assertEqual(plan["cache"], {"reusable": 1, "new": 1, "terminal_rejected": 2,
+                                         "readback_required": 1, "corrupt": 1})
+        self.assertEqual(plan["classificationDenominator"], {
+            "total": 6, "reusable": 1, "new": 1, "partial": 1, "failed": 1,
+            "uncertain": 1, "corrupt": 1, "providerGetEligible": 0,
+            "automaticProviderCalls": 0,
+            "uncertaintyReasons": {"REQUEST_OBSERVATION_BINDING_MISMATCH": 1}})
+        self.assertEqual((plan["remainingSegments"], plan["remainingWork"]["callsUpper"]), (1, 2))
+
     def test_explicit_official_exact_model_evidence_is_required(self):
         path = self.root / "model.json"
         evidence = {"sourceUrl": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash",
@@ -394,7 +427,9 @@ class LongformAnalysisTests(unittest.TestCase):
         model = self.root / "model.json"
         model.write_text(json.dumps({"sourceUrl": "https://ai.google.dev/api/models", "checkedAt": "2026-10-04T12:00:00Z",
                                      "name": "models/gemini-3.8-flash", "inputTokenLimit": 1000, "outputTokenLimit": 100}))
-        argv = ["--inventory", str(path), "--state-dir", str(self.state), "--model", "gemini-3.8-flash", "--model-evidence", str(model)]
+        argv = ["--inventory", str(path), "--inventory-sha256", module.hashlib.sha256(path.read_bytes()).hexdigest(),
+                "--expected-longform-count", "1", "--expected-inventory-rows", "1",
+                "--state-dir", str(self.state), "--model", "gemini-3.8-flash", "--model-evidence", str(model)]
         output = io.StringIO()
         with contextlib.redirect_stdout(output), patch.object(module, "execute", side_effect=AssertionError("executed")):
             self.assertEqual(module.main(argv), 0)
@@ -443,12 +478,35 @@ class LongformAnalysisTests(unittest.TestCase):
 
     def test_full_completion_requires_literal_true_full_range_and_no_limitations(self):
         coverage = self.analysis()["coverage"]
-        invalid = [{**coverage, "complete": value} for value in (False, "true", "false", 0, 1, None, [], {})]
-        invalid += [{**coverage, "startSeconds": 1}, {**coverage, "endSeconds": 59},
-                    {**coverage, "limitations": ["media unavailable"]}]
-        for candidate in invalid:
+        invalid = [({**coverage, "complete": value}, "COVERAGE_INCOMPLETE")
+                   for value in (False, "true", "false", 0, 1, None, [], {})]
+        invalid += [({**coverage, "startSeconds": 1}, "COVERAGE_START_MISMATCH"),
+                    ({**coverage, "endSeconds": 59}, "COVERAGE_END_MISMATCH"),
+                    ({**coverage, "limitations": ["media unavailable"]}, "COVERAGE_LIMITATIONS_PRESENT")]
+        for candidate, reason in invalid:
             with self.subTest(coverage=candidate), self.assertRaisesRegex(module.AnalysisError, "ANALYSIS_PARTIAL"):
-                module.validate_analysis({**self.analysis(), "coverage": candidate}, self.row)
+                try:
+                    module.validate_analysis({**self.analysis(), "coverage": candidate}, self.row)
+                except module.AnalysisError as error:
+                    self.assertEqual(error.validation_failure["reason"], reason)
+                    self.assertEqual((error.validation_failure["startSeconds"], error.validation_failure["endSeconds"]), (0, 60))
+                    raise
+
+    def test_partial_summary_reasons_store_counts_without_text(self):
+        empty = {**self.analysis(), "summary": []}
+        no_evidence = self.analysis()
+        no_evidence["summary"][0]["evidence"] = []
+        for value, reason, counts in ((empty, "SUMMARY_EMPTY", (0, 0)),
+                                      (no_evidence, "SUMMARY_EVIDENCE_MISSING", (1, 0))):
+            with self.subTest(reason=reason), self.assertRaisesRegex(module.AnalysisError, "ANALYSIS_PARTIAL"):
+                try:
+                    module.validate_analysis(value, self.row)
+                except module.AnalysisError as error:
+                    failure = error.validation_failure
+                    self.assertEqual((failure["reason"], failure["summaryCount"], failure["summaryEvidenceCount"]),
+                                     (reason, *counts))
+                    self.assertTrue({"text", "evidence", "uncertainty"}.isdisjoint(failure))
+                    raise
 
     def test_uncertain_current_membership_cannot_reuse_or_readback_a_valid_cache(self):
         with self.execution(lambda argv, **kw: subprocess.CompletedProcess(argv, 0, self.report(), b"")):

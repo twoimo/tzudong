@@ -1,0 +1,57 @@
+{
+  "canonicalMigrationsChanged": false,
+  "dataRowsCopied": 0,
+  "functions": [
+    {
+      "definitionBytes": 275,
+      "definitionSha256": "e2c0c9fb3c49f29d43eaf7f48ad35e6f658184efbc36d97d0942f9441b09a95e",
+      "signature": "public.get_all_approved_restaurant_names()"
+    },
+    {
+      "definitionBytes": 477,
+      "definitionSha256": "b2a73a9800bb9e25248df9dced4e1d176a8ed9f6a998b278073edec8eb709c9c",
+      "signature": "public.get_categories_by_restaurant_name_or_youtube_url(text,text)"
+    },
+    {
+      "definitionBytes": 1492,
+      "definitionSha256": "2149126a23803615e82cc90aefd322bfa349d9973a961d9c1019651f861f59b4",
+      "signature": "public.get_video_captions_for_range(text,integer,integer,integer)"
+    },
+    {
+      "definitionBytes": 582,
+      "definitionSha256": "e454367c0dbf2440380305596a8c0096ba279fe0c64ad33e56674e44c24d0e4b",
+      "signature": "public.get_video_metadata_filtered(integer,integer,text)"
+    },
+    {
+      "definitionBytes": 760,
+      "definitionSha256": "0aa1493d68641f8b421890b877926fdf92fb5be8a839eec363e0c633b54316a1",
+      "signature": "public.match_documents_bge(extensions.vector,double precision,integer,jsonb)"
+    },
+    {
+      "definitionBytes": 2301,
+      "definitionSha256": "e99cdb27b1caad50c1e0a5423f5804ca9757ff723e4016219c98877769259400",
+      "signature": "public.match_documents_hybrid(extensions.vector,jsonb,double precision,double precision,integer)"
+    },
+    {
+      "definitionBytes": 614,
+      "definitionSha256": "8cc3d96274c841263a37cb84ac1355ceb8979ea1707b3eee9292371a4b02a430",
+      "signature": "public.search_restaurants_by_category(text,integer)"
+    },
+    {
+      "definitionBytes": 526,
+      "definitionSha256": "8e6a8924cd1ea75359531a4dcc148543571dbdd18d1913ae1a9bde23a760e800",
+      "signature": "public.search_restaurants_by_name(text,integer)"
+    },
+    {
+      "definitionBytes": 1932,
+      "definitionSha256": "7e6a8cd83c2c2259d6e2aaf57c511690c3287129f7d8b2b40ae62f9f41c3f3c4",
+      "signature": "public.search_video_ids_by_query(extensions.vector,jsonb,double precision,double precision,integer)"
+    }
+  ],
+  "outputSha256": "182c3464ed1bed1df72779719785f8a09f28d3f7339fec6b54ef6a2ac649d236",
+  "publicExecutionGranted": false,
+  "schemaVersion": 1,
+  "scope": "current source-only replay prerequisite; not historical or hosted application evidence",
+  "sourcePath": "backend/supabase/baselines/local/application-prerequisites.sql",
+  "sourceSha256": "c4fce4f7ddaf6315474cb3a3d408eef1fb7ff538af7f39183ebdc46828630356"
+}

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "kind": "ci-monitor-candidate-preservation-audit",
+  "observedAtUtc": "2026-10-15T10:05:34.160204+00:00",
+  "status": "not-admitted-for-activation",
+  "candidateVersion": "v9",
+  "oldState": "/Users/twoimo/.codex/runtime-cache/tzudong-ci-monitor-20261015-v8-candidate-20261015T085121Z",
+  "candidateState": "/Users/twoimo/.codex/runtime-cache/tzudong-ci-monitor-20261015-v9-candidate-20261015T095338Z",
+  "oldAnalysisSha256": "65f2348582eb9b178be7dde45edc5d854e1d8618eeb2b8f00402a28b7d737c38",
+  "candidateAnalysisSha256": "59c2c9894b65122b042c8e525a714cbca1ac04ee59000783abb01bfffba183fb",
+  "beforeCount": 78,
+  "candidateCount": 78,
+  "omittedExistingObservations": [
+    {
+      "key": "38361108741:1",
+      "phase": "after",
+      "conclusion": "success",
+      "snapshotImmutable": true
+    },
+    {
+      "key": "38364792651:1",
+      "phase": "after",
+      "conclusion": "success",
+      "snapshotImmutable": true
+    },
+    {
+      "key": "38365238924:1",
+      "phase": "after",
+      "conclusion": "success",
+      "snapshotImmutable": true
+    },
+    {
+      "key": "38370124939:1",
+      "phase": "after",
+      "conclusion": "success",
+      "snapshotImmutable": true
+    }
+  ],
+  "newObservationKeys": [
+    "38712103392:1",
+    "38713800802:1",
+    "38714603652:1",
+    "38715607867:1"
+  ],
+  "phaseMoves": [],
+  "baselineChanged": false,
+  "automationChanged": false,
+  "referenceActivated": false,
+  "nextAction": "Prepare a new versioned candidate by replaying retained raw observations under the current analyzer once; preserve each original phase and do not copy the old analytical checkpoint."
+}

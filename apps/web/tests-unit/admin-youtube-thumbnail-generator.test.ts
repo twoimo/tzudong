@@ -181,13 +181,13 @@ function writeTerminationIgnoringThumbnailAgentTreeCommand(
 const { spawn } = require("node:child_process");
 const { writeFileSync } = require("node:fs");
 const grandchild = spawn(process.execPath, ["-e", ${JSON.stringify(grandchildScript)}], { stdio: "ignore" });
-writeFileSync(${JSON.stringify(directPidPath)}, String(process.pid), "utf8");
-writeFileSync(${JSON.stringify(grandchildPidPath)}, String(grandchild.pid), "utf8");
 process.on("SIGTERM", () => {
   if (process.platform !== "win32") {
     writeFileSync(${JSON.stringify(terminatedPath)}, "terminated", "utf8");
   }
 });
+writeFileSync(${JSON.stringify(directPidPath)}, String(process.pid), "utf8");
+writeFileSync(${JSON.stringify(grandchildPidPath)}, String(grandchild.pid), "utf8");
 process.stdin.resume();
 ${onInputEnd}
 `);
@@ -3001,13 +3001,13 @@ process.stdin.on("end", () => {
         });
 
         const childPid = await waitForPid(startedPath);
-        const grandchildPid = Number(await waitForMarker(grandchildPath));
+        const grandchildPid = await waitForPid(grandchildPath);
         controller.abort();
         await expectThumbnailErrorAsync(() => promise, "thumbnail_chat_aborted", 499);
         await waitForProcessExit(childPid);
         await waitForProcessExit(grandchildPid);
         if (process.platform !== "win32") {
-          expect(readFileSync(terminatedPath, "utf8")).toBe("terminated");
+          expect(await waitForMarker(terminatedPath)).toBe("terminated");
         }
       } finally {
         rmSync(tempDir, { recursive: true, force: true });
@@ -3965,9 +3965,9 @@ setTimeout(() => {}, 30_000);
       join(process.cwd(), "scripts/thumbnail-live-aesthetic-eval.mjs"),
       "utf8",
     );
-    const ollamaPullRunner = readFileSync(
-      join(process.cwd(), "scripts/storyboard-rag-ollama-pull.mjs"),
-      "utf8",
+    const retiredStoryboardOllamaPullRunner = join(
+      process.cwd(),
+      "scripts/storyboard-rag-ollama-pull.mjs",
     );
     const parsed = parseThumbnailPayload(safePayload);
     const prompt = buildYoutubeThumbnailPrompt(parsed, []);
@@ -3999,13 +3999,7 @@ setTimeout(() => {}, 30_000);
     expect(runner).not.toContain("JSON.stringify(body).slice");
     expect(runner).not.toContain("error.message");
     expect(runner).not.toContain("String(lastError)");
-    expect(ollamaPullRunner).toContain("refuseRetiredStoryboardProducer()");
-    expect(ollamaPullRunner).not.toContain("spawn(");
-    expect(ollamaPullRunner).not.toContain("writeFileSync");
-    expect(ollamaPullRunner).not.toContain("stderrTail");
-    expect(ollamaPullRunner).not.toContain("stdoutTail");
-    expect(ollamaPullRunner).not.toContain("error?.message");
-    expect(ollamaPullRunner).not.toContain("version.stdout");
+    expect(existsSync(retiredStoryboardOllamaPullRunner)).toBe(false);
     expect(prompt).toContain("food must occupy roughly 70-85%");
     expect(prompt).toContain("avoid blank_space, synthetic_host, weak_focus, text_conflict, food_density, and lighting issues");
     expect(prompt).toContain("food-only hero composition is mandatory");

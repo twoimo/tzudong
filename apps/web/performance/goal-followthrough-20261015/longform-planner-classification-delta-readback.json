@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "kind": "longform-planner-classification-delta-readback",
+  "observedAt": "2026-10-15T08:40:27Z",
+  "source": {
+    "inventoryRows": 1071,
+    "inventorySha256": "c94fcf5236af9388ad47ce984f993f42c157c5633417743f8d9b64d1a73cbd73",
+    "priorExecutionReadbackSha256": "d1ba48d41ccaa0da245f95c6c98f881d065606a39cb3e23126c95a9f743cdac0",
+    "providerCalls": 0,
+    "existingPrivateFilesModified": false,
+    "providerBodiesStored": false
+  },
+  "before": {
+    "cache": {
+      "reusable": 3,
+      "new": 1066,
+      "readbackRequired": 2,
+      "corrupt": 0
+    },
+    "remainingSegments": 2004,
+    "callsUpper": 4008
+  },
+  "after": {
+    "cache": {
+      "reusable": 3,
+      "new": 1066,
+      "terminalRejected": 1,
+      "readbackRequired": 1,
+      "corrupt": 0
+    },
+    "classificationDenominator": {
+      "total": 1071,
+      "reusable": 3,
+      "new": 1066,
+      "partial": 1,
+      "failed": 0,
+      "uncertain": 1,
+      "corrupt": 0,
+      "providerGetEligible": 0,
+      "automaticProviderCalls": 0,
+      "uncertaintyReasons": {
+        "REQUEST_OBSERVATION_BINDING_MISMATCH": 1
+      }
+    },
+    "remainingSegments": 2004,
+    "callsUpper": 4008
+  },
+  "delta": {
+    "terminalRejected": 1,
+    "readbackRequired": -1,
+    "remainingSegments": 0,
+    "callsUpper": 0,
+    "providerGetEligible": 0
+  },
+  "targets": [
+    {
+      "videoId": "-C4280KT3S4",
+      "classification": "terminal_rejected",
+      "kind": "partial",
+      "code": "ANALYSIS_PARTIAL",
+      "requestObservationBinding": "matched",
+      "providerGetEligible": false,
+      "segmentReceiptFileSha256": "c96cc1bdadf95d04df228750da952726ec82dd514a6a61be6b68ce9cd61aa87d",
+      "observationFileSha256": "9233c4292e526d071911813e656a3621a1628ba010f072f6606887755daf710b"
+    },
+    {
+      "videoId": "iRcaePXQRto",
+      "classification": "readback_required",
+      "kind": "uncertain",
+      "code": "ANALYSIS_SCHEMA_INVALID",
+      "uncertaintyReason": "REQUEST_OBSERVATION_BINDING_MISMATCH",
+      "requestObservationBinding": "mismatched",
+      "providerGetEligible": false,
+      "readbackCallsAlreadyAttempted": 1,
+      "segmentReceiptFileSha256": "bb4fbf2b95cd863252e210bdcf2d92a8a7dd54a769264fe4f88e2cbe2fd34ca2",
+      "observationFileSha256": "bc44450d9254aae105e45e35a82a2a88da74b20fb058058613a47004a67d6679"
+    }
+  ],
+  "boundaries": [
+    "The planner classification is an offline readback and made no provider request.",
+    "A confirmed semantic rejection is terminal and cannot reserve a new segment or provider call.",
+    "A request-observation binding mismatch remains uncertain and is not provider GET eligible.",
+    "Existing receipts, observations, successful evidence, input corpus and provider bodies remain unchanged."
+  ]
+}

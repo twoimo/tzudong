@@ -11,6 +11,8 @@ if (typeof window !== 'undefined') throw new Error('Storyboard worker authentica
 export const productionUuid = z.uuid().transform((value) => value.toLowerCase());
 export const productionModelSchema = z.object({
   id: z.string().min(1).max(200),
+  // Legacy worker catalog rows remain decodable for diagnostics; the heartbeat schema below
+  // admits execution only when every descriptor matches the fixed Gemini policy.
   owned_by: z.enum(['gemini-api', 'mlx-serve']).optional(),
   capabilities: z.array(z.string().min(1).max(80)).max(32),
   loaded: z.boolean(),
@@ -37,6 +39,7 @@ export type WorkerFailureCode = z.infer<typeof workerFailureSchema>;
 
 const leaseFields = { jobId: productionUuid, leaseToken: productionUuid };
 export const workerOperationSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('readiness') }).strict(),
   z.object({ action: z.literal('heartbeat'), models: storyboardGeminiHeartbeatModelsSchema,
     jobId: productionUuid.optional(), leaseToken: productionUuid.optional() }).strict()
     .refine((value) => Boolean(value.jobId) === Boolean(value.leaseToken)),

@@ -1,0 +1,94 @@
+{
+  "schema": "tzudong-feature-sql-reset-artifact-map/v1",
+  "sourceHeadLocator": "3be9973adc005d289c27dfa7d233145a4e1219cb",
+  "artifacts": [
+    {
+      "path": "pg17-existing-catalog-replay-admin-service-reset-20261015.json",
+      "bytes": 26691,
+      "sha256": "084cc23337b9e3eaa536c444ba01f1d475c21a58069a1f19ed504ab9cfc8f974",
+      "classification": "current exact-PG17.6 local replay receipt"
+    },
+    {
+      "path": "pg17-existing-catalog-replay-admin-service-reset-20261015.json.sha256",
+      "bytes": 129,
+      "sha256": "398d7316b45c9e08762e3544e6eca3bd24a9cf88e5fc3eaf4a02eefbca4a3f08",
+      "classification": "detached checksum"
+    }
+  ],
+  "artifactCount": 2,
+  "artifactBytes": 26820,
+  "sourceBindings": [
+    {
+      "path": "apps/web/performance/feature-sql-integration-20261013/verify-feature-migrations.mjs",
+      "bytes": 104566,
+      "sha256": "c869de619bd07d2743d2f951670b0a18fc0f3104699f31a4cefe678263e6a455"
+    },
+    {
+      "path": ".github/review-media-sql-successor.v1.json",
+      "bytes": 150006,
+      "sha256": "ad1da2db884229ea4b1fbcf6e4caaa04c30c6df7562e94fff01341736ee689d6"
+    },
+    {
+      "path": ".github/review-media-feature-sql-successor.v1.json",
+      "bytes": 110849,
+      "sha256": "a2cfadfbc66db5817b78aa1bb182263e5939a2eaace4f741bbb935f3b58290e7"
+    },
+    {
+      "path": "backend/supabase/migrations/20261013093518_storyboard_gemini_execution_v1.sql",
+      "bytes": 15228,
+      "sha256": "84d351dead86ef90040b6949fe4a6dc93eb91a783c1b7a78531c7f564ea4ff4e"
+    },
+    {
+      "path": "backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql",
+      "bytes": 47450,
+      "sha256": "fb80c266cfbede8141da0c8adfc2b099ed835673684aa1f17af0d7e1439526e0"
+    },
+    {
+      "path": "backend/supabase/migrations/20261013190100_g014_feature_rpc_catalog_contract.sql",
+      "bytes": 25506,
+      "sha256": "0c3f8b4cadc1d4bb0d88b53de49be34ef8e2751a47bfc18ebad89ae543b4c370"
+    },
+    {
+      "path": "backend/supabase/migrations/20261013190200_review_verification_immutable_key_fence.sql",
+      "bytes": 14358,
+      "sha256": "0a060ca537d3558779fd0cb1b780e7965189eb129f5018987f157c1cb5f2cd3d"
+    },
+    {
+      "path": "backend/supabase/scripts/transform_feature_rpc_catalog_pg15_replay.py",
+      "bytes": 4363,
+      "sha256": "0e242c3181f8653859f484c44f2cd17bed00042f5d874dd80efa59d94a416521"
+    },
+    {
+      "path": "backend/supabase/tests/test_feature_rpc_catalog_pg15_replay.py",
+      "bytes": 4533,
+      "sha256": "cf193752af788bd48accba661f2b2d86652d4a46312cddc2b07bf4ce4690b805"
+    }
+  ],
+  "sourceCount": 9,
+  "pg17Replay": {
+    "engine": "17.6",
+    "status": "passed",
+    "findings": 0,
+    "deadlocksBefore": 0,
+    "deadlocksAfter": 0,
+    "ownedContainerRemoved": true,
+    "hostedWrites": false,
+    "providerCalls": 0
+  },
+  "pg15Preparation": {
+    "sourceSqlSha256": "0c3f8b4cadc1d4bb0d88b53de49be34ef8e2751a47bfc18ebad89ae543b4c370",
+    "transformedBytes": 24832,
+    "transformedSha256": "a366542d2ce2efd1e8e8c92d5fc5ff52b398c2735f794602a0a2b9ec67475877",
+    "independentTransformRuns": 2,
+    "byteIdentical": true,
+    "databaseDualReplayComplete": false
+  },
+  "classification": "Fresh local source-bound PG17 replay for the real owner-RPC and administrator service-role reset paths. Existing maps and older receipts remain immutable.",
+  "limits": [
+    "The receipt is an isolated exact-version clone result, not hosted database or deployed application evidence.",
+    "The PG15 transformer was run twice with byte-identical output; the full clean database dual replay still requires a clean committed source checkout.",
+    "The sourceHeadLocator is a checkout locator only; every dirty input is bound by its byte length and SHA-256.",
+    "No provider, Storage network, operating database, deployment, monetary, or performance claim is made.",
+    "This map and its detached checksum are excluded from their own inventory."
+  ]
+}

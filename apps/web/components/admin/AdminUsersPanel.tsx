@@ -180,7 +180,7 @@ function UserTableSkeleton() {
       <span className="sr-only">사용자 목록을 불러오는 중입니다.</span>
       <div ref={mobileSkeletonRef} className="admin-cms-record-list divide-y divide-border md:hidden" aria-hidden="true">
         {Array.from({ length: mobileSkeletonCount }).map((_, index) => (
-          <div key={index} className="rounded-2xl border border-border/70 bg-background/80 p-3 shadow-sm">
+          <div key={index} className="rounded-md border border-border/70 bg-background p-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1 space-y-1.5">
                 <Skeleton className={cn("h-4 rounded-full motion-reduce:animate-none", index % 2 === 0 ? "w-28" : "w-20")} />
@@ -513,8 +513,8 @@ export default function AdminUsersPanel({
           <Button type="button" variant="outline" size="sm" onClick={() => { if (selectedUser) setProfileForm(getProfileForm(selectedUser)); applyIntent(pendingIntent); }}>변경 버리고 이동</Button>
         </div>
       )}
-            <CardHeader className="admin-cms-inspector-header sticky top-0 z-10 flex shrink-0 flex-row flex-wrap items-center justify-between gap-2 space-y-0 border-b bg-card px-3 py-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" />사용자 상세</CardTitle>
+            <CardHeader className="admin-cms-inspector-header sticky top-0 z-10 flex min-h-11 shrink-0 flex-row flex-wrap items-center justify-between gap-2 space-y-0 border-b bg-card px-3 py-2 md:min-h-10">
+              <CardTitle className="admin-section-title flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" />사용자 상세</CardTitle>
               {selectedUser && detailTab === "profile" && <Button type="button" size="sm" disabled={isMutating || isLoading || Boolean(errorMessage) || Boolean(pendingReadback) || !isProfileDirty} onClick={() => void patchSelectedUser({ profile: profileForm }, "프로필 정보를 저장했습니다.", "profile")}><Save className="h-4 w-4" aria-hidden="true" />{isMutating ? "적용 중…" : "프로필 저장"}</Button>}
               {selectedUser && <Button type="button" variant="ghost" size="sm" disabled={isMutating || Boolean(pendingReadback)} onClick={() => requestIntent({ type: "select", id: null })}><X className="h-4 w-4" aria-hidden="true" />{isNarrow ? "목록으로" : "선택 해제"}</Button>}
             </CardHeader>
@@ -525,12 +525,12 @@ export default function AdminUsersPanel({
             </div>}
             <CardContent className="admin-cms-inspector-body min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
               {!selectedUser ? (
-                <div className="admin-cms-empty flex min-h-48 items-center justify-center p-6 text-center text-sm text-muted-foreground">
+                <div className="admin-empty-state admin-cms-empty flex min-h-48 items-center justify-center p-6 text-center text-sm text-muted-foreground">
                   사용자를 선택하면 상세 정보와 변경 작업이 표시됩니다.
                 </div>
               ) : (
                 <>
-                  <div className="rounded-lg bg-muted/25 p-3">
+                  <section className="admin-detail-section p-3" aria-label="선택한 사용자 요약">
                     <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                       <div className="min-w-0">
                         <p className="truncate text-base font-semibold text-foreground">{selectedUser.nickname}</p>
@@ -548,19 +548,19 @@ export default function AdminUsersPanel({
                       <div><dt className="text-xs text-muted-foreground">사용자 ID</dt><dd className="mt-1 break-all font-mono text-xs text-foreground">{selectedUser.id}</dd></div>
                       <div><dt className="text-xs text-muted-foreground">비활성 만료</dt><dd className="mt-1 text-foreground">{formatDateTime(selectedUser.bannedUntil)}</dd></div>
                     </dl></details>
-                  </div>
+                  </section>
 
                   <div id="user-profile-panel" role="tabpanel" aria-labelledby="user-profile-tab" hidden={detailTab !== "profile"} className="grid gap-3 sm:grid-cols-2 [&[hidden]]:hidden">
                     <div className="space-y-1">
-                      <Label htmlFor="selected-nickname">닉네임</Label>
+                      <Label htmlFor="selected-nickname" className="admin-field-label">닉네임</Label>
                       <Input disabled={isMutating || isLoading || Boolean(pendingReadback)} id="selected-nickname" value={profileForm.nickname} onChange={(event) => setProfileForm((current) => ({ ...current, nickname: event.target.value }))} className="rounded-lg" />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="selected-username">사용자명</Label>
+                      <Label htmlFor="selected-username" className="admin-field-label">사용자명</Label>
                       <Input disabled={isMutating || isLoading || Boolean(pendingReadback)} id="selected-username" value={profileForm.username} onChange={(event) => setProfileForm((current) => ({ ...current, username: event.target.value }))} className="rounded-lg" />
                     </div>
                     <div className="space-y-1.5 md:col-span-2">
-                      <Label htmlFor="selected-avatar">아바타 URL</Label>
+                      <Label htmlFor="selected-avatar" className="admin-field-label">아바타 URL</Label>
                       <Input disabled={isMutating || isLoading || Boolean(pendingReadback)} id="selected-avatar" value={profileForm.avatarUrl} onChange={(event) => setProfileForm((current) => ({ ...current, avatarUrl: event.target.value }))} className="rounded-lg" />
                     </div>
                     <div className="md:col-span-2">
@@ -661,9 +661,9 @@ export default function AdminUsersPanel({
       />
 
 
-      <div className="admin-cms-workspace grid min-h-0 flex-1 overflow-hidden xl:grid-cols-[minmax(0,1fr)_360px]" data-admin-module-content="bounded">
+      <div className="admin-surface admin-cms-workspace grid min-h-0 flex-1 overflow-hidden xl:grid-cols-[minmax(0,1fr)_360px]" data-admin-module-content="bounded">
         <Card className="admin-cms-list-pane flex min-h-0 flex-col overflow-hidden rounded-none border-0 bg-card shadow-none xl:border-r">
-          <CardHeader className="admin-cms-toolbar sticky top-0 z-10 shrink-0 !flex-row space-y-0 bg-card" data-admin-users-toolbar>
+          <CardHeader className="admin-toolbar admin-cms-toolbar sticky top-0 z-10 shrink-0 !flex-row space-y-0 bg-card" data-admin-users-toolbar>
             <CardTitle className="sr-only">사용자 목록</CardTitle>
             <form
               className="flex w-full min-w-0 gap-2"
@@ -680,16 +680,16 @@ export default function AdminUsersPanel({
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                   placeholder="닉네임, 이메일, 사용자 ID로 검색"
-                  className="h-9 rounded-md pl-9"
+                  className="h-11 rounded-md pl-9 md:h-8"
                 />
               </div>
-              <Button type="submit" className="h-9 shrink-0 rounded-md" disabled={isLoading || isMutating} data-admin-users-search-submit>검색</Button>
+              <Button type="submit" className="h-11 shrink-0 rounded-md px-4 md:h-8" disabled={isLoading || isMutating} data-admin-users-search-submit>검색</Button>
             </form>
             <div className="flex w-full flex-wrap items-center gap-2">
-              <select aria-label="사용자 상태 필터" value={userFilter} onChange={(event) => setUserFilter(event.target.value)} className="h-8 min-w-0 rounded-md border border-input bg-background px-2 text-xs">
+              <select aria-label="사용자 상태 필터" value={userFilter} onChange={(event) => setUserFilter(event.target.value)} className="h-11 min-w-0 rounded-md border border-input bg-background px-2 text-xs md:h-8">
                 <option value="all">모든 사용자</option><option value="admin">관리자</option><option value="disabled">비활성</option><option value="unconfirmed">이메일 미확인</option>
               </select>
-              <select aria-label="사용자 정렬" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} className="h-8 min-w-0 rounded-md border border-input bg-background px-2 text-xs"><option value="newest">가입 최신순</option><option value="lastSignIn">최근 로그인순</option><option value="name">닉네임순</option></select>
+              <select aria-label="사용자 정렬" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} className="h-11 min-w-0 rounded-md border border-input bg-background px-2 text-xs md:h-8"><option value="newest">가입 최신순</option><option value="lastSignIn">최근 로그인순</option><option value="name">닉네임순</option></select>
               {(searchQuery || userFilter !== "all") && <Button type="button" variant="ghost" size="sm" onClick={() => { setUserFilter("all"); requestIntent({ type: "search", query: "" }); }}>검색·필터 초기화</Button>}
             </div>
             {errorMessage && (
@@ -703,9 +703,9 @@ export default function AdminUsersPanel({
             {isLoading && users.length === 0 ? (
               <UserTableSkeleton />
             ) : errorMessage && users.length === 0 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">목록을 확인한 후 사용자 작업을 진행할 수 있습니다.</div>
+              <div className="admin-empty-state p-4 text-center text-sm text-muted-foreground">목록을 확인한 후 사용자 작업을 진행할 수 있습니다.</div>
             ) : visibleUsers.length === 0 ? (
-              <div className="rounded-lg bg-muted/25 p-4 text-center text-sm text-muted-foreground">
+              <div className="admin-empty-state p-4 text-center text-sm text-muted-foreground">
                 {searchQuery || userFilter !== "all" ? "검색·필터에 맞는 사용자가 없습니다. 조건을 초기화해 보세요." : "등록된 사용자가 없습니다."}
               </div>
             ) : (
@@ -744,7 +744,7 @@ export default function AdminUsersPanel({
                 <div className="admin-cms-record-list hidden overflow-hidden md:block">
                   <table className="admin-cms-table w-full table-fixed text-left text-sm">
                     <caption className="sr-only">관리자 사용자 목록</caption>
-                    <thead className="sticky top-0 z-10 bg-muted text-xs text-muted-foreground">
+                    <thead className="sticky top-0 z-10 bg-card text-xs text-muted-foreground">
                       <tr>
                         <th scope="col" className="w-[40%] px-3 py-2 font-semibold">사용자</th>
                         <th scope="col" className="px-3 py-2 font-semibold">권한</th>

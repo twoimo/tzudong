@@ -239,24 +239,24 @@ async function geocodeAddressMultiple(name: string, address: string, maxResults:
 
 
     if (error) {
-        console.error('❌ Edge Function 에러:');
+        console.error('Edge Function 에러:');
         throw new Error('NAVER_GEOCODE_REQUEST_FAILED');
     }
 
     const geocodeData = data as NaverGeocodeResponse | null;
 
     if (!geocodeData) {
-        console.error('❌ 응답 데이터 없음');
+        console.error('응답 데이터 없음');
         return [];
     }
 
     if (geocodeData.error) {
-        console.error('❌ API 에러:');
+        console.error('API 에러:');
         throw new Error('NAVER_GEOCODE_PROVIDER_FAILED');
     }
 
     if (!geocodeData.addresses || geocodeData.addresses.length === 0) {
-        console.warn('⚠️ 주소 결과 없음');
+        console.warn('주소 결과 없음');
         return [];
     }
 
@@ -546,9 +546,9 @@ export function SubmissionDetailView({
 
     return (
         <div className={cn("overflow-y-auto", className)}>
-            <div className="space-y-4 p-4">
+            <div className="space-y-3">
                 {/* 제보자 정보 */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground pb-2 border-b">
+                <div className="admin-detail-section flex flex-wrap items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
                     <User className="h-4 w-4" />
                     <span>{submission.profiles?.nickname || '닉네임을 불러올 수 없음'}</span>
                     <span className="mx-1">•</span>
@@ -566,7 +566,7 @@ export function SubmissionDetailView({
                 </div>
 
                 {isClosureEditRequest && (
-                    <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900 dark:border-orange-950 dark:bg-orange-950/30 dark:text-orange-100">
+                    <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
                         <p className="font-semibold">사용자가 폐업 가능성을 제보했습니다.</p>
                         <p className="mt-1 text-xs leading-5">
                             지도 후보를 그대로 승인하지 말고 현재 영업 여부를 확인한 뒤 노출 유지, 정보 수정, 삭제/비공개 처리를 결정하세요.
@@ -576,12 +576,12 @@ export function SubmissionDetailView({
 
                 {/* 수정 요청: 기존 정보 vs 사용자 제출 정보 비교 (이름, 전화, 주소, 카테고리만) */}
                 {isEditSubmission && submission.original_restaurant_data && (
-                    <div className="rounded-lg border overflow-hidden">
-                        <div className="grid grid-cols-2 divide-x">
+                    <section className="admin-detail-section overflow-hidden p-0" aria-label="기존 정보와 사용자 제출 정보 비교">
+                        <div className="grid grid-cols-1 divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0">
                             {/* 기존 정보 */}
-                            <div className="p-3 bg-gray-50/50 dark:bg-gray-900/20">
-                                <p className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1">
-                                    📋 기존 등록 정보
+                            <div className="bg-background p-3">
+                                <p className="admin-field-label mb-2">
+                                    기존 등록 정보
                                 </p>
                                 <div className="space-y-1.5 text-xs">
                                     <p><span className="text-muted-foreground">이름:</span> <span className="font-medium">{submission.original_restaurant_data.name || '-'}</span></p>
@@ -591,9 +591,9 @@ export function SubmissionDetailView({
                                 </div>
                             </div>
                             {/* 사용자 제출 정보 */}
-                            <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20">
-                                <p className="text-xs font-semibold text-blue-600 mb-2 flex items-center gap-1">
-                                    ✏️ 사용자 제출 정보
+                            <div className="bg-background p-3">
+                                <p className="admin-field-label mb-2 text-primary">
+                                    사용자 제출 정보
                                 </p>
                                 <div className="space-y-1.5 text-xs">
                                     <p><span className="text-muted-foreground">이름:</span> <span className="font-medium">{submission.restaurant_name || '-'}</span></p>
@@ -603,12 +603,12 @@ export function SubmissionDetailView({
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </section>
                 )}
 
                 {/* 레스토랑 이름 */}
                 <div className="space-y-1">
-                    <Label htmlFor="edit-name" className="text-sm">레스토랑 이름</Label>
+                    <Label htmlFor="edit-name" className="admin-field-label">레스토랑 이름</Label>
                     <Input
                         id="edit-name"
                         value={editableData.name}
@@ -620,7 +620,7 @@ export function SubmissionDetailView({
                 {/* 주소 + 지오코딩 버튼 */}
                 <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                        <Label htmlFor="edit-address" className="text-sm">주소</Label>
+                        <Label htmlFor="edit-address" className="admin-field-label">주소</Label>
                         <div className="flex gap-1">
                             <Button
                                 type="button"
@@ -628,7 +628,7 @@ export function SubmissionDetailView({
                                 variant="outline"
                                 onClick={handleReGeocodeNaver}
                                 disabled={geocodingNaver || !editableData.address.trim()}
-                                className="h-7 text-xs"
+                                className="h-11 text-xs md:h-8"
                             >
                                 {geocodingNaver ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-1 h-3 w-3" />}
                                 네이버 지오코딩
@@ -644,7 +644,7 @@ export function SubmissionDetailView({
                         className="resize-none"
                     />
                     {addressChanged && (
-                        <p className="text-xs text-amber-600">⚠️ 주소가 변경되었습니다. 재지오코딩을 해주세요.</p>
+                        <p className="text-xs text-amber-700">주소가 변경되었습니다. 재지오코딩을 해주세요.</p>
                     )}
                 </div>
 
@@ -652,7 +652,7 @@ export function SubmissionDetailView({
                 {geocodingResults.length > 0 && (
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                            <Label className="text-sm">지오코딩 결과 ({geocodingResults.length}개)</Label>
+                            <Label className="admin-field-label">지오코딩 결과 ({geocodingResults.length}개)</Label>
                             <Badge variant="default" className="bg-green-600 text-xs">성공</Badge>
                         </div>
                             <div className="space-y-1">
@@ -662,10 +662,10 @@ export function SubmissionDetailView({
                                     key={index}
                                     onClick={() => handleSelectGeocodingResult(index)}
                                     className={cn(
-                                        "w-full text-left p-2 rounded-lg border-2 cursor-pointer transition-all text-sm",
+                                        "w-full cursor-pointer rounded-md border p-2 text-left text-sm",
                                         selectedGeocodingIndex === index
                                             ? 'border-primary bg-primary/5'
-                                            : 'border-gray-200 hover:border-gray-300'
+                                            : 'border-border hover:bg-muted/40'
                                     )}
                                     aria-label={`지오코딩 옵션 ${index + 1} 선택`}
                                 >
@@ -684,23 +684,23 @@ export function SubmissionDetailView({
                             ))}
                         </div>
                         {selectedGeocodingIndex === null && (
-                            <p className="text-xs text-muted-foreground text-center">⬆️ 위 옵션 중 하나를 클릭해서 선택해주세요</p>
+                        <p className="text-center text-xs text-muted-foreground">위 옵션 중 하나를 선택해 주세요.</p>
                         )}
                     </div>
                 )}
 
                 {/* 네이버 검색 검증 (지오코딩 선택 후 활성화) */}
-                <div className="space-y-2 pt-2 border-t">
+                <section className="admin-detail-section space-y-2 p-3" aria-label="네이버 검색 검증">
                     <div className="flex items-center justify-between">
-                        <Label className="text-sm font-semibold flex items-center gap-1">
-                            <span className="text-green-600">N</span> 네이버 검색 검증
+                        <Label className="admin-field-label flex items-center gap-1">
+                            네이버 검색 검증
                         </Label>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={onVerifyNaverSearch}
                             disabled={naverSearchLoading || selectedGeocodingIndex === null}
-                            className="h-6 text-xs"
+                            className="h-11 text-xs md:h-8"
                         >
                             {naverSearchLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
                             검증 실행
@@ -708,39 +708,39 @@ export function SubmissionDetailView({
                     </div>
 
                     {selectedGeocodingIndex === null ? (
-                        <div className="text-xs text-muted-foreground p-2 border rounded-md bg-gray-50 text-center">
+                        <div className="admin-empty-state p-2 text-center text-xs text-muted-foreground">
                             지오코딩 결과를 선택하면 검증이 가능합니다.
                         </div>
                     ) : naverSearchResults.length > 0 ? (
-                        <div className="border rounded-md p-2 bg-gray-50 space-y-2">
+                        <div className="space-y-2">
                             {naverSearchResults.map((result, idx) => (
                                 <div key={idx} className={cn(
-                                    "text-xs p-2 rounded border flex justify-between items-start",
-                                    result.isMatch ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
+                                    "flex items-start justify-between rounded-md border p-2 text-xs",
+                                    result.isMatch ? "border-emerald-200 bg-emerald-50" : "border-border bg-background"
                                 )}>
                                     <div>
-                                        <p className="font-medium text-gray-900">{sanitizePlainText(result.title)}</p>
-                                        <p className="text-gray-500 mt-0.5">{result.address}</p>
-                                        {result.roadAddress && <p className="text-gray-400 text-2xs">{result.roadAddress}</p>}
+                                        <p className="font-medium text-foreground">{sanitizePlainText(result.title)}</p>
+                                        <p className="mt-0.5 text-muted-foreground">{result.address}</p>
+                                        {result.roadAddress && <p className="text-2xs text-muted-foreground">{result.roadAddress}</p>}
                                     </div>
                                     {result.isMatch ? (
                                         <Badge variant="default" className="bg-green-600 text-2xs shrink-0">주소 일치</Badge>
                                     ) : (
-                                        <Badge variant="outline" className="text-gray-500 text-2xs shrink-0">불일치</Badge>
+                                        <Badge variant="outline" className="shrink-0 text-2xs text-destructive">불일치</Badge>
                                     )}
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div className="text-xs text-muted-foreground p-2 border rounded-md bg-gray-50 text-center">
+                        <div className="admin-empty-state p-2 text-center text-xs text-muted-foreground">
                             {naverSearchLoading ? "검색 중..." : "검증이 필요합니다. 검증 실행 버튼을 눌러주세요."}
                         </div>
                     )}
-                </div>
+                </section>
 
                 {/* 전화번호 */}
                 <div className="space-y-1">
-                    <Label htmlFor="edit-phone" className="text-sm">전화번호</Label>
+                    <Label htmlFor="edit-phone" className="admin-field-label">전화번호</Label>
                     <Input
                         id="edit-phone"
                         value={editableData.phone}
@@ -751,7 +751,7 @@ export function SubmissionDetailView({
 
                 {/* 카테고리 */}
                 <div className="space-y-2">
-                    <Label className="text-sm">카테고리 (여러 개 선택 가능)</Label>
+                    <Label className="admin-field-label">카테고리 (여러 개 선택 가능)</Label>
                     {editableData.categories.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mb-2">
                             {editableData.categories.map((cat) => (
@@ -765,7 +765,7 @@ export function SubmissionDetailView({
                             ))}
                         </div>
                     )}
-                    <div className="border rounded-lg p-3 max-h-40 overflow-y-auto">
+                    <div className="admin-detail-section max-h-40 overflow-y-auto p-3">
                         <div className="grid grid-cols-2 gap-2">
                             {RESTAURANT_CATEGORIES.map((category) => (
                                 <div key={category} className="flex items-center space-x-2">
@@ -792,7 +792,7 @@ export function SubmissionDetailView({
                 <div className="space-y-2">
                     <div className="flex items-center gap-2">
                         <YouTubeIcon className="h-4 w-4 text-red-500" />
-                        <Label className="text-sm">제보 항목</Label>
+                        <Label className="admin-field-label">제보 항목</Label>
                         <Badge variant="outline" className="text-xs">
                             {submission.items.length}개 중{' '}
                             <span className="font-bold text-primary ml-1">
@@ -813,13 +813,13 @@ export function SubmissionDetailView({
                         const isSelected = decision?.approved;
 
                         return (
-                            <div
+                            <section
                                 key={item.id}
                                 className={cn(
-                                    "border rounded-lg p-3",
-                                    isSelected && "border-green-500 bg-green-50/50",
-                                    item.item_status === 'approved' && "border-green-300 bg-green-50/50",
-                                    item.item_status === 'rejected' && "border-red-300 bg-red-50/50"
+                                    "admin-detail-section p-3",
+                                    isSelected && "border-primary bg-primary/5",
+                                    item.item_status === 'approved' && "border-emerald-300 bg-emerald-50/50",
+                                    item.item_status === 'rejected' && "border-destructive/30 bg-destructive/5"
                                 )}
                             >
                                 {/* 헤더: 선택박스 + 메타데이터 버튼 + 상태 뱃지 */}
@@ -835,24 +835,24 @@ export function SubmissionDetailView({
                                                     handleItemDecisionChange(item.id, 'approved', !decision.approved);
                                                 }}
                                                 className={cn(
-                                                    "flex items-center gap-1.5 px-2 py-1 rounded border-2 cursor-pointer transition-colors",
+                                                    "flex min-h-11 cursor-pointer items-center gap-1.5 rounded-md border px-2 md:min-h-8",
                                                     decision.approved
-                                                        ? "border-green-500 bg-green-50"
-                                                        : "border-gray-300 bg-white hover:border-gray-400"
+                                                        ? "border-primary bg-primary/5"
+                                                        : "border-border bg-background hover:bg-muted/40"
                                                 )}
                                                 aria-label={`항목 ${item.id} 선택`}
                                             >
                                                 <div className={cn(
-                                                    "w-4 h-4 rounded border flex items-center justify-center flex-shrink-0",
+                                                    "flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border",
                                                     decision.approved
-                                                        ? "border-green-500 bg-green-500"
-                                                        : "border-gray-400 bg-white"
+                                                        ? "border-primary bg-primary"
+                                                        : "border-border bg-background"
                                                 )}>
                                                     {decision.approved && <Check className="h-3 w-3 text-white" />}
                                                 </div>
                                                 <span className={cn(
                                                     "text-xs font-medium",
-                                                    decision.approved ? "text-green-700" : "text-gray-600"
+                                                    decision.approved ? "text-primary" : "text-muted-foreground"
                                                 )}>
                                                     선택
                                                 </span>
@@ -864,7 +864,7 @@ export function SubmissionDetailView({
                                             variant={decision?.metaFetched ? "default" : "destructive"}
                                             size="sm"
                                             className={cn(
-                                                "h-7 px-3 text-xs",
+                                                "h-11 px-3 text-xs md:h-8",
                                                 decision?.metaFetched && "bg-green-600 hover:bg-green-700"
                                             )}
                                             onClick={() => handleFetchMetadata(item.id, submittedYoutubeUrl ?? '')}
@@ -899,9 +899,9 @@ export function SubmissionDetailView({
                                 </div>
 
                                 {/* 사용자 제출 섹션 (썸네일 + 메타데이터 + 입력 필드) */}
-                                <div className="border rounded-lg p-3 bg-white">
+                                <div className="rounded-md border border-border bg-background p-3">
                                     {/* 사용자 제출 헤더 */}
-                                    <p className="text-sm font-semibold text-gray-800 mb-2 border-b pb-1">사용자 제출</p>
+                                    <p className="admin-section-title mb-2">사용자 제출</p>
 
                                     {/* YouTube 썸네일 + 메타데이터 */}
                                     <div className="flex gap-3 mb-3">
@@ -975,9 +975,9 @@ export function SubmissionDetailView({
 
                                 {/* EDIT 타입: 기존 데이터 섹션 (아이템별 target_restaurant_id로 매칭) */}
                                 {isEditSubmission && item.original_restaurant && (
-                                    <div className="border rounded-lg p-3 bg-gray-50 mt-2">
+                                    <div className="mt-2 rounded-md border border-border bg-muted/30 p-3">
                                         {/* 기존 데이터 헤더 */}
-                                        <p className="text-sm font-semibold text-gray-800 mb-2 border-b pb-1">기존 데이터</p>
+                                        <p className="admin-section-title mb-2">기존 데이터</p>
 
                                         {/* 기존 YouTube 썸네일 + 메타데이터 */}
                                         {(() => {
@@ -1029,18 +1029,18 @@ export function SubmissionDetailView({
                                                             </div>
                                                         ) : (
                                                             <div>
-                                                                <p className="text-xs text-gray-500 mb-1">기존 등록된 영상</p>
+                                                                <p className="mb-1 text-xs text-muted-foreground">기존 등록된 영상</p>
                                                                 {originalYoutubeUrl ? (
                                                                     <a
                                                                         href={originalYoutubeUrl}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
-                                                                        className="text-blue-500 hover:underline text-xs break-all"
+                                                                        className="break-all text-xs text-primary hover:underline"
                                                                     >
                                                                         {originalYoutubeUrl}
                                                                     </a>
-                                                                ) : <span className="text-gray-400 text-xs">기존 YouTube 링크 없음</span>}
-                                                                <p className="text-2xs text-gray-400 mt-1">메타데이터 없음</p>
+                                                                ) : <span className="text-xs text-muted-foreground">기존 YouTube 링크 없음</span>}
+                                                                <p className="mt-1 text-2xs text-muted-foreground">메타데이터 없음</p>
                                                             </div>
                                                         )}
                                                     </div>
@@ -1050,8 +1050,8 @@ export function SubmissionDetailView({
 
                                         {/* 기존 쯔양 리뷰 */}
                                         <div className="space-y-1">
-                                            <Label className="text-xs text-gray-600">기존 쯔양 리뷰</Label>
-                                            <div className="bg-white rounded p-2 text-xs whitespace-pre-wrap min-h-[40px] border">
+                                            <Label className="admin-field-label">기존 쯔양 리뷰</Label>
+                                            <div className="min-h-[40px] whitespace-pre-wrap rounded-md border bg-background p-2 text-xs">
                                                 {formatTzuyangReviewForDisplay(item.original_restaurant?.tzuyang_review || '') || '-'}
                                             </div>
                                         </div>
@@ -1060,9 +1060,9 @@ export function SubmissionDetailView({
 
                                 {/* 반려 사유 입력 (선택 안 됨 + 대기 중) - 빨간 박스 */}
                                 {isPending && decision && !decision.approved && (
-                                    <div className="border-2 border-red-300 rounded-lg p-2 bg-red-50/50 mt-2">
-                                        <Label className="text-xs text-red-600 font-medium mb-1 block">
-                                            ⚠️ 반려 사유 (필수 입력)
+                                    <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 p-2">
+                                        <Label className="mb-1 block text-xs font-medium text-destructive">
+                                            반려 사유 (필수 입력)
                                         </Label>
                                         <Input
                                             placeholder="반려 사유를 입력해주세요"
@@ -1070,14 +1070,14 @@ export function SubmissionDetailView({
                                             onChange={(e) =>
                                                 handleItemDecisionChange(item.id, 'rejectionReason', e.target.value)
                                             }
-                                            className="text-xs h-8 border-red-300 focus:border-red-500"
+                                            className="h-11 border-destructive/30 text-xs md:h-8"
                                         />
                                     </div>
                                 )}
 
                                 {/* 중복 경고 */}
                                 {item.duplicate_check_result?.isDuplicate && (
-                                    <div className="bg-red-50 border border-red-200 rounded p-2 mt-2 text-xs text-red-600">
+                                    <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
                                         <strong>중복 감지:</strong> {item.duplicate_check_result.existingRestaurantName}
                                         {item.duplicate_check_result.matchedYoutubeUrl && (
                                             <p className="mt-1 truncate">기존 URL: {item.duplicate_check_result.matchedYoutubeUrl}</p>
@@ -1087,16 +1087,16 @@ export function SubmissionDetailView({
 
                                 {/* 반려된 항목 사유 표시 */}
                                 {item.item_status === 'rejected' && item.rejection_reason && (
-                                    <div className="text-xs text-red-500 mt-2">반려 사유: {item.rejection_reason}</div>
+                                    <div className="mt-2 text-xs text-destructive">반려 사유: {item.rejection_reason}</div>
                                 )}
-                            </div>
+                            </section>
                         );
                     })}
                 </div>
 
                 {/* 중복 강제 승인 옵션 */}
                 {hasDuplicateItems && (
-                    <div className="rounded-lg p-2 bg-amber-50/50 border border-amber-200">
+                    <div className="rounded-md border border-amber-200 bg-amber-50/50 p-2">
                         <div className="flex items-center space-x-2">
                             <Checkbox
                                 id="force-approve"

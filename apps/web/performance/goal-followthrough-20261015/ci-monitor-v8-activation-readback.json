@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "kind": "ci-monitor-v8-activation-readback",
+  "recordedAt": "2026-10-15T08:56:38.031925+00:00",
+  "sourceHead": "cbecdfcfe1635c346392e79ff6dac227944628d1",
+  "frozenCheckout": "/Users/twoimo/.codex/worktrees/ci-monitor-frozen-20261015-v8/tzudong",
+  "stateDirectory": "/Users/twoimo/.codex/runtime-cache/tzudong-ci-monitor-20261015-v8-candidate-20261015T085121Z",
+  "sourceTransitionSha256": "dd2ef526bf8456a00d7ea4c62023f909ca61c7557eb9ad50d6de7012c04293c9",
+  "monitorConfigSha256": "86126f66c53b21cfb9bdcbdddd49b24c21cc0597a81cea25bf6cf915f9bfb79b",
+  "baselineSha256": "d8e08c6371f3dab93fdb3495d5b14266d457e6e0490876f1e2546177a0b89070",
+  "previousAutomationSha256": "c0d647e64e3654eb898ae3118c6c2d9f483016d1bf11848702addfbfe7079b66",
+  "persistedAutomationSha256": "6e07ac3b6657abeb0b7e2b3b3fb3137117c1baea541cef10da63aec454f79974",
+  "persistedFieldsMatch": {
+    "id": true,
+    "kind": true,
+    "name": true,
+    "prompt": true,
+    "rrule": true,
+    "status": true,
+    "target_thread_id": true
+  },
+  "sameAutomationId": true,
+  "sameSchedule": true,
+  "sameTargetThread": true,
+  "notificationPolicyChanged": false,
+  "status": "ACTIVE",
+  "firstLiveTick": {
+    "tickId": "20261015T085159.479042Z",
+    "sha256": "b75c722ebc0f5a1bf33446e1e6e62797752c1844f808af195a0c56a62dd61bd9",
+    "apiRequests": 26,
+    "coverage": {
+      "alerts": [],
+      "bootstrapOnly": false,
+      "completeHistoryClaimed": false,
+      "incrementalWindowComplete": true,
+      "listPages": 3,
+      "overlapHours": 48,
+      "reportedWindowRunCount": 57,
+      "scope": "bounded_recent_window_plus_known_active_runs",
+      "uniqueListedRunCount": 57,
+      "watermarkAdvanced": true,
+      "watermarkAfter": "2026-10-15T08:45:21Z",
+      "watermarkBefore": "2026-10-15T06:38:27Z"
+    },
+    "referenceReadiness": {
+      "blockingPendingCount": 2,
+      "chronologyInvalidAttemptCount": 2,
+      "chronologyIssueCodeCounts": {
+        "JOB_COMPLETION_FOLLOWS_RUN_UPDATE": 1,
+        "JOB_COMPLETION_PRECEDES_JOB_CREATION": 1,
+        "JOB_START_PRECEDES_JOB_CREATION": 1,
+        "JOB_START_PRECEDES_RUN_START": 1
+      },
+      "cohortId": "11fc75f5542e9328",
+      "collectionComplete": true,
+      "distinctSourceTreeCount": 4,
+      "pendingReasonCounts": {
+        "chronology_invalid_attempt": 2
+      },
+      "pendingSameCohortCount": 0,
+      "potentialSameCohortPendingCount": 2,
+      "readinessReceiptPath": "state://reference-readiness/20261015T085159.479042Z.json",
+      "status": "collecting_reference",
+      "successCount": 4,
+      "timingExcludedTerminalCount": 1,
+      "timingExclusionReasonCounts": {
+        "invalid_timing_order": 1
+      },
+      "verifiedDifferentPendingCount": 0
+    }
+  },
+  "firstFutureScheduledTriggerVerified": false,
+  "historicalStatePreserved": [
+    "v4",
+    "v5",
+    "v6",
+    "pre-review v7"
+  ],
+  "referenceActivated": false,
+  "baselineReplaced": false,
+  "remoteMutations": 0,
+  "modelsInvokedByProgram": 0,
+  "formalPerformanceAdmittedSlices": 0,
+  "limitations": [
+    "First prepared live tick and persisted scheduling are separate evidence from a future scheduled execution.",
+    "Reference remains collecting; chronology-invalid unresolved attempts are preserved.",
+    "Historical cancelled run alerts are not attributed as failures of cbecdfcf."
+  ]
+}

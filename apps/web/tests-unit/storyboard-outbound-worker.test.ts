@@ -8,9 +8,10 @@ import { setTimeout as delay } from 'node:timers/promises';
 import sharp from 'sharp';
 import { GoogleGenAI } from '@google/genai';
 import { GeminiStoryboardClient } from '../lib/admin/storyboard/gemini-client';
-import type { ProductionModel as MlxModel } from '../lib/admin/storyboard/production-worker-auth';
+import type { ProductionModel as WorkerModel } from '../lib/admin/storyboard/production-worker-auth';
 import {
   OutboundStoryboardWorker, StoryboardWorkerApiError, StoryboardWorkerTransport,
+  STORYBOARD_CATALOG_COOLDOWN_MS, STORYBOARD_CATALOG_FAILURE_LIMIT,
   readStoryboardWorkerToken, type StoryboardWorkerApi,
 } from '../lib/admin/storyboard/outbound-worker';
 import { validateStoryboardWorkerOrigin, type ClaimedStoryboardJob, type WorkerDestination } from '../lib/admin/storyboard/outbound-worker-contract';
@@ -30,9 +31,10 @@ const draft = (): StoryboardDraft => ({ title: '워커 단위 테스트', loglin
     productionNotes: ['고정 카메라'], imagePrompt: `scene ${index + 1}`, sourceIds: [],
   })),
 });
-const models: MlxModel[] = ['text', 'image'].map((kind) => ({ id: kind === 'text' ? 'gemini-3.8-flash' : 'gemini-3.1-flash-image', owned_by: 'gemini-api',
+const models: WorkerModel[] = ['text', 'image'].map((kind) => ({ id: kind === 'text' ? 'gemini-3.8-flash' : 'gemini-3.1-flash-image', owned_by: 'gemini-api',
   capabilities: [kind === 'text' ? 'chat' : 'image'], loaded: false, bytes_on_disk: 0, bytes_resident: 0 }));
 const fixturePixels = sharp({ create: { width: 128, height: 72, channels: 3, background: '#dddddd' } }).png().toBuffer();
+const directBudget = async <T>(work: () => Promise<T>) => await work();
 function job(): ClaimedStoryboardJob {
   return { id: randomUUID(), projectId: randomUUID(), revision: 0, kind: 'generate', sceneNo: null, leaseToken: randomUUID(),
     document: null, request: storyboardProductionRequestSchema.parse({ workflow: STORYBOARD_WORKFLOW, requestId: randomUUID(),
@@ -51,23 +53,38 @@ function fixture(value: ClaimedStoryboardJob | null = job()) {
   const generated: string[] = [];
   let drafts = 0;
   let catalogReads = 0;
+  let claimedJobs = 0;
+  let advertisedModels: WorkerModel[] = [];
   const api: StoryboardWorkerApi = {
     async operation(payload) {
       calls.push(payload);
-      if (payload.action === 'claim') return { ok: true, job: value };
-      if (payload.action === 'heartbeat') return { ok: true, leaseValid: true };
+      if (payload.action === 'readiness') {
+        return { schemaVersion: 1, status: 'ready', code: 'FEATURE_DATABASE_READY' };
+      }
+      if (payload.action === 'heartbeat') {
+        advertisedModels = payload.models as WorkerModel[];
+        return { ok: true, leaseValid: true };
+      }
+      if (payload.action === 'claim') {
+        const supported = value && (['text', 'image'] as const).every((modality) => advertisedModels.some((model) =>
+          model.id === value.request.providers[modality].model
+          && model.capabilities.includes(modality === 'text' ? 'chat' : 'image')));
+        if (supported) claimedJobs++;
+        return { ok: true, job: supported ? value : null };
+      }
       return { ok: true };
     },
     async image(lease, sceneNo) { calls.push({ action: 'image', ...lease, sceneNo }); },
   };
-  const mlx: Pick<GeminiStoryboardClient, 'models' | 'draft' | 'image'> = {
+  const gemini: Pick<GeminiStoryboardClient, 'models' | 'draft' | 'image'> = {
     async models() { catalogReads++; return models; },
     async draft() { drafts++; return { draft: draft(), provenance: proof('text') }; },
     async image(_request, prompt) { generated.push(prompt); return { bytes: await fixturePixels, provenance: proof('image') }; },
   };
   // Lifecycle tests exercise claim/lease/provider behavior. Keep admission
   // deterministic here; memory admission has its own host-wide test suite.
-  return { api, mlx, calls, generated, draftCalls: () => drafts, catalogCalls: () => catalogReads, admitMemory: () => true };
+  return { api, gemini, calls, generated, draftCalls: () => drafts, catalogCalls: () => catalogReads,
+    claimedJobs: () => claimedJobs, admitMemory: () => true };
 }
 async function listen(server: Server) {
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -84,21 +101,74 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
   test('claims, saves draft, uploads all scenes sequentially, then finishes', async () => {
     const f = fixture();
     let active = 0; let peak = 0;
-    const generate = f.mlx.image;
-    f.mlx.image = async (...args) => {
+    const generate = f.gemini.image;
+    f.gemini.image = async (...args) => {
       active++; peak = Math.max(peak, active);
       try { await delay(2); return await generate(...args); } finally { active--; }
     };
     expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('completed');
     expect(peak).toBe(1); expect(f.draftCalls()).toBe(1); expect(f.catalogCalls()).toBe(1);
-    expect(f.calls.filter((call) => call.action !== 'heartbeat').map((call) => call.action))
+    expect(f.calls.filter((call) => !['heartbeat', 'readiness'].includes(String(call.action))).map((call) => call.action))
       .toEqual(['claim', 'draft', 'image', 'image', 'image', 'image', 'image', 'finish']);
     expect(f.generated).toEqual(['scene 1', 'scene 2', 'scene 3', 'scene 4', 'scene 5']);
   });
   test('an empty queue does not invoke any generation', async () => {
     const f = fixture(null);
     expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('idle');
-    expect(f.draftCalls()).toBe(0); expect(f.generated).toEqual([]); expect(f.catalogCalls()).toBe(0);
+    expect(f.draftCalls()).toBe(0); expect(f.generated).toEqual([]); expect(f.catalogCalls()).toBe(1);
+  });
+  test('idle polling lets the provider client reuse its bounded catalog cache', async () => {
+    const f = fixture(null);
+    const reads = f.gemini.models;
+    const refreshes: Array<boolean | undefined> = [];
+    f.gemini.models = async (signal, refresh) => {
+      refreshes.push(refresh);
+      return reads(signal, refresh);
+    };
+    const worker = new OutboundStoryboardWorker(f);
+    expect(await worker.runOnce()).toBe('idle');
+    expect(await worker.runOnce()).toBe('idle');
+    expect(refreshes).toEqual([undefined, undefined]);
+  });
+  test('a deterministic ten-minute idle trace makes six provider catalog reads across 120 five-second polls', async () => {
+    const f = fixture(null);
+    const providerCatalogReads: string[] = [];
+    const gemini = new GeminiStoryboardClient({
+      client: {
+        models: {
+          get: async ({ model }: { model: string }) => {
+            providerCatalogReads.push(model);
+            return { name: `models/${model}` };
+          },
+          generateContent: async () => { throw new Error('unexpected_generation'); },
+        },
+      } as never,
+      budget: directBudget,
+    });
+    const originalNow = Date.now;
+    let now = 1_800_000_000_000;
+    Date.now = () => now;
+    try {
+      const worker = new OutboundStoryboardWorker({ api: f.api, gemini, admitMemory: () => true });
+      for (let poll = 0; poll < 120; poll++) {
+        expect(await worker.runOnce()).toBe('idle');
+        now += 5_000;
+      }
+    } finally {
+      Date.now = originalNow;
+    }
+    expect(providerCatalogReads).toHaveLength(6);
+    expect(providerCatalogReads.slice(0, 3)).toEqual(providerCatalogReads.slice(3));
+  });
+  test('held feature database stops before memory admission, provider catalog, heartbeat, or claim', async () => {
+    const f = fixture();
+    f.api.operation = async (payload) => {
+      f.calls.push(payload);
+      return { schemaVersion: 1, status: 'held', code: 'FEATURE_DATABASE_HELD' };
+    };
+    expect(await new OutboundStoryboardWorker(f).run({ pollMs: 1 })).toBe('held');
+    expect(f.calls).toEqual([{ action: 'readiness' }]);
+    expect(f.catalogCalls()).toBe(0); expect(f.claimedJobs()).toBe(0); expect(f.generated).toEqual([]);
   });
   test('targeted regeneration invokes only the requested scene and preserves the draft', async () => {
     const value = savedJob(); value.kind = 'scene'; value.sceneNo = 3;
@@ -119,16 +189,19 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
     expect(f.generated).toEqual(['scene 2', 'scene 4']); expect(f.draftCalls()).toBe(0);
   });
   test('rejects non-Gemini execution before any provider call while preserving saved data', async () => {
-    const old = savedJob(); old.request.providers.text = { id: 'manual', model: '' };
+    const old = savedJob();
+    (old.request as unknown as { workflow: string; providers: { text: { id: string; model: string } } }).workflow = 'storyboard-mlx-v1';
+    (old.request as unknown as { providers: { text: { id: string; model: string } } }).providers.text = { id: 'manual', model: '' };
     const a = fixture(old);
-    expect(await new OutboundStoryboardWorker(a).runOnce()).toBe('failed');
+    expect(await new OutboundStoryboardWorker(a).runOnce()).toBe('idle');
     expect(a.draftCalls()).toBe(0); expect(a.generated).toEqual([]);
-    expect(a.catalogCalls()).toBe(0);
+    expect(a.catalogCalls()).toBe(1); expect(a.claimedJobs()).toBe(0);
+    expect(a.calls.filter(call => !['claim', 'heartbeat', 'readiness'].includes(String(call.action)))).toEqual([]);
     expect(old.document?.scenes).toHaveLength(5);
   });
   test('corrupt scene failure preserves other scenes and does not report completion', async () => {
-    const f = fixture(); const generate = f.mlx.image;
-    f.mlx.image = async (...args) => {
+    const f = fixture(); const generate = f.gemini.image;
+    f.gemini.image = async (...args) => {
       if (args[1] === 'scene 2') throw new StoryboardProductionError('invalid_image_response');
       return generate(...args);
     };
@@ -139,44 +212,110 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
   test('provider authentication and invalid JSON fail without further model calls or fallback', async () => {
     for (const code of ['provider_auth_failed', 'invalid_structured_response']) {
       const f = fixture();
-      f.mlx.draft = async () => { throw new StoryboardProductionError(code); };
+      f.gemini.draft = async () => { throw new StoryboardProductionError(code); };
       expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('failed');
       expect(f.generated).toEqual([]);
       expect(f.calls.at(-1)).toMatchObject({ action: 'finish', errorCode: code });
     }
   });
-  test('a claimed catalog authentication failure finishes the lease without generation or fallback', async () => {
+  test('transient catalog failure observes cooldown and the same idle worker can recover', async () => {
     const f = fixture();
-    f.mlx.models = async () => { throw new StoryboardProductionError('provider_auth_failed'); };
-    expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('failed');
+    let now = 10_000;
+    let attempts = 0;
+    f.gemini.models = async () => {
+      attempts++;
+      if (attempts === 1) throw new StoryboardProductionError('provider_failed');
+      return models;
+    };
+    const events: Array<{ event: string; code?: string }> = [];
+    const worker = new OutboundStoryboardWorker({ ...f, now: () => now, onEvent: event => events.push(event) });
+    expect(await worker.runOnce()).toBe('idle');
     expect(f.draftCalls()).toBe(0); expect(f.generated).toEqual([]);
-    expect(f.calls.at(-1)).toMatchObject({ action: 'finish', errorCode: 'provider_auth_failed' });
+    expect(f.calls).toEqual([{ action: 'readiness' }]); expect(f.claimedJobs()).toBe(0);
+    expect(events).toEqual([{ event: 'model_catalog_deferred', code: 'provider_failed' }]);
+
+    now += STORYBOARD_CATALOG_COOLDOWN_MS - 1;
+    expect(await worker.runOnce()).toBe('idle');
+    expect(attempts).toBe(1); expect(f.claimedJobs()).toBe(0);
+
+    now += 1;
+    expect(await worker.runOnce()).toBe('completed');
+    expect(attempts).toBe(2); expect(f.claimedJobs()).toBe(1);
   });
-  test('a claimed job whose selected model is absent finishes before paid generation', async () => {
+  test('persistent transient catalog failure exhausts its bounded retries', async () => {
     const f = fixture();
-    f.mlx.models = async () => models.filter((model) => model.capabilities.includes('chat'));
-    expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('failed');
-    expect(f.draftCalls()).toBe(0); expect(f.generated).toEqual([]);
-    expect(f.calls.at(-1)).toMatchObject({ action: 'finish', errorCode: 'provider_failed' });
+    let now = 20_000;
+    let attempts = 0;
+    f.gemini.models = async () => {
+      attempts++;
+      throw new StoryboardProductionError('provider_failed');
+    };
+    const events: Array<{ event: string; code?: string }> = [];
+    const worker = new OutboundStoryboardWorker({ ...f, now: () => now, onEvent: event => events.push(event) });
+
+    for (let attempt = 1; attempt < STORYBOARD_CATALOG_FAILURE_LIMIT; attempt++) {
+      expect(await worker.runOnce()).toBe('idle');
+      expect(attempts).toBe(attempt);
+      now += STORYBOARD_CATALOG_COOLDOWN_MS * (2 ** (attempt - 1));
+    }
+    await expect(worker.runOnce()).rejects.toMatchObject({ code: 'provider_failed' });
+    expect(attempts).toBe(STORYBOARD_CATALOG_FAILURE_LIMIT);
+    expect(f.claimedJobs()).toBe(0);
+    expect(events.at(-1)).toEqual({ event: 'model_catalog_retry_exhausted', code: 'provider_failed' });
+    await expect(worker.runOnce()).rejects.toMatchObject({ code: 'provider_failed' });
+    expect(attempts).toBe(STORYBOARD_CATALOG_FAILURE_LIMIT);
   });
-  test('a saved document resumes with the selected image model even if text metadata is unavailable', async () => {
+  test('catalog rate limits terminate continuous polling without automatic retry', async () => {
+    const f = fixture();
+    let attempts = 0;
+    f.gemini.models = async () => {
+      attempts++;
+      throw new StoryboardProductionError('provider_rate_limited');
+    };
+    await expect(new OutboundStoryboardWorker(f).run({ pollMs: 1 }))
+      .rejects.toMatchObject({ code: 'provider_rate_limited' });
+    expect(attempts).toBe(1);
+    expect(f.calls).toEqual([{ action: 'readiness' }]);
+    expect(f.claimedJobs()).toBe(0);
+  });
+  test('catalog authentication failure still stops before heartbeat or claim', async () => {
+    const f = fixture();
+    f.gemini.models = async () => { throw new StoryboardProductionError('provider_auth_failed'); };
+    await expect(new OutboundStoryboardWorker(f).runOnce()).rejects.toThrow('provider_auth_failed');
+    expect(f.calls).toEqual([{ action: 'readiness' }]); expect(f.claimedJobs()).toBe(0);
+  });
+  test('an invalid catalog remains a hard failure before heartbeat or claim', async () => {
+    const f = fixture();
+    f.gemini.models = async () => [{ ...models[0], owned_by: 'mlx-serve' }];
+    await expect(new OutboundStoryboardWorker(f).runOnce()).rejects.toThrow('provider_failed');
+    expect(f.calls).toEqual([{ action: 'readiness' }]); expect(f.claimedJobs()).toBe(0);
+  });
+  test('an unavailable selected model is advertised honestly and never claims or generates', async () => {
+    const f = fixture();
+    f.gemini.models = async () => models.filter((model) => model.capabilities.includes('chat'));
+    expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('idle');
+    expect(f.draftCalls()).toBe(0); expect(f.generated).toEqual([]);
+    expect(f.claimedJobs()).toBe(0);
+    expect(f.calls.filter((call) => call.action === 'heartbeat')).toHaveLength(1);
+    expect(f.calls.find((call) => call.action === 'heartbeat')?.models).toEqual(models.filter((model) => model.capabilities.includes('chat')));
+  });
+  test('a saved document remains queued unless one verified worker has its selected text and image pair', async () => {
     const value = savedJob(); value.kind = 'scene'; value.sceneNo = 3;
     const f = fixture(value);
-    f.mlx.models = async () => models.filter((model) => model.id === 'gemini-3.1-flash-image');
-    expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('completed');
-    expect(f.draftCalls()).toBe(0); expect(f.generated).toEqual(['scene 3']);
-    expect(f.calls.at(-1)).toMatchObject({ action: 'finish' });
+    f.gemini.models = async () => models.filter((model) => model.id === 'gemini-3.1-flash-image');
+    expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('idle');
+    expect(f.draftCalls()).toBe(0); expect(f.generated).toEqual([]); expect(f.claimedJobs()).toBe(0);
   });
   test('heartbeat lease loss aborts model inference and never uploads or finishes', async () => {
     const f = fixture(); const call = f.api.operation;
     let beats = 0; let cancelled = false;
     f.api.operation = async (payload) => {
-      // One paired heartbeat confirms the declared policy and one records the
-      // provider-verified catalog before the timed renewal interrupts inference.
+      // The immediate lease heartbeat and timed renewals all use the already
+      // provider-verified catalog.
       if (payload.action === 'heartbeat' && payload.jobId && ++beats > 2) return { ok: true, leaseValid: false };
       return call(payload);
     };
-    f.mlx.draft = async (_request, signal) => {
+    f.gemini.draft = async (_request, signal) => {
       await new Promise<void>((_resolve, reject) => signal!.addEventListener('abort', () => {
         cancelled = true; reject(new StoryboardProductionError('generation_cancelled'));
       }, { once: true }));
@@ -188,7 +327,7 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
   });
   test('shutdown stops a model that ignores abort before it can save a late result', async () => {
     const f = fixture(); const stop = new AbortController();
-    f.mlx.draft = async () => { stop.abort(); return { draft: draft(), provenance: proof('text') }; };
+    f.gemini.draft = async () => { stop.abort(); return { draft: draft(), provenance: proof('text') }; };
     await expect(new OutboundStoryboardWorker(f).runOnce(stop.signal)).rejects.toThrow('worker_stopped');
     expect(f.calls.some((call) => call.action === 'draft' || call.action === 'finish')).toBe(false);
   });
@@ -216,13 +355,13 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
           }, { once: true }));
           if (!lateResult) throw new StoryboardProductionError('generation_cancelled');
         };
-        const generateDraft = f.mlx.draft;
-        f.mlx.draft = async (request, signal) => {
+        const generateDraft = f.gemini.draft;
+        f.gemini.draft = async (request, signal) => {
           if (stage === 'draft' && request.requestId === first.request.requestId) await waitForCancellation(signal);
           return generateDraft(request, signal);
         };
-        const generateImage = f.mlx.image;
-        f.mlx.image = async (...args) => { if (args[0].requestId === first.request.requestId) await waitForCancellation(args[2]); return generateImage(...args); };
+        const generateImage = f.gemini.image;
+        f.gemini.image = async (...args) => { if (args[0].requestId === first.request.requestId) await waitForCancellation(args[2]); return generateImage(...args); };
         const events: string[] = [];
         const worker = new OutboundStoryboardWorker({ ...f, heartbeatMs: 5, onEvent(event) {
           events.push(event.event);
@@ -253,7 +392,7 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
         if (lease.jobId !== first.id) return good(lease, ...args);
         f.calls.push({ action: 'image', ...lease, sceneNo: args[0] }); throw new StoryboardWorkerApiError('worker_lease_lost');
       }; }
-      if (stage === 'scene-error') { const good = f.mlx.image; f.mlx.image = async (...args) => args[0].requestId === first.request.requestId ? { bytes: Buffer.from('corrupt'), provenance: proof('image') } : good(...args); }
+      if (stage === 'scene-error') { const good = f.gemini.image; f.gemini.image = async (...args) => args[0].requestId === first.request.requestId ? { bytes: Buffer.from('corrupt'), provenance: proof('image') } : good(...args); }
       const worker = new OutboundStoryboardWorker({ ...f, onEvent(event) {
         if (event.event === 'finished' && event.jobId === next.id) stop.abort();
       } });
@@ -266,9 +405,9 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
   }
   test('cancellation while reporting a provider failure still permits the next job', async () => {
     const first = job(); const next = job();
-    const f = fixture(first); const call = f.api.operation; const generateDraft = f.mlx.draft;
+    const f = fixture(first); const call = f.api.operation; const generateDraft = f.gemini.draft;
     const queue = [first, next]; const stop = new AbortController();
-    f.mlx.draft = async (request, signal) => {
+    f.gemini.draft = async (request, signal) => {
       if (request.requestId === first.request.requestId) throw new StoryboardProductionError('provider_auth_failed');
       return generateDraft(request, signal);
     };
@@ -324,7 +463,7 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
         return call(payload);
       };
       if (stage === 'image') f.api.image = async () => { attempts++; throw new Error('untrusted transport diagnostics'); };
-      if (stage === 'scene-error') f.mlx.image = async () => ({ bytes: Buffer.from('corrupt'), provenance: proof('image') });
+      if (stage === 'scene-error') f.gemini.image = async () => ({ bytes: Buffer.from('corrupt'), provenance: proof('image') });
       await expect(new OutboundStoryboardWorker(f).run({ pollMs: 1 })).rejects.toThrow('worker_delivery_unknown');
       expect(attempts).toBe(1);
       expect(f.calls.filter((c) => c.action === 'claim')).toHaveLength(1);
@@ -359,8 +498,8 @@ describe('worker credentials and actual HTTP boundaries', () => {
   test('decoded image validation isolates corrupt scenes before the actual multipart transport', async () => {
     const bytes = await fixturePixels; const truncated = bytes.subarray(0, Math.floor(bytes.length * 0.75));
     expect((await sharp(truncated).metadata()).format).toBe('png');
-    const f = fixture(); const generate = f.mlx.image; const uploaded: number[] = [];
-    f.mlx.image = async (...args) => {
+    const f = fixture(); const generate = f.gemini.image; const uploaded: number[] = [];
+    f.gemini.image = async (...args) => {
       const result = await generate(...args);
       if (args[1] === 'scene 2') result.bytes = truncated;
       if (args[1] === 'scene 4') result.bytes = Buffer.from(Buffer.from('not image pixels').toString('base64'), 'base64');
@@ -390,7 +529,7 @@ describe('worker credentials and actual HTTP boundaries', () => {
       original: variant, web: [variant], provenance: proof('image') };
     const original = structuredClone(value.document!); const f = fixture(value);
     const bytes = await fixturePixels;
-    f.mlx.image = async () => ({ bytes: bytes.subarray(0, Math.floor(bytes.length * 0.75)), provenance: proof('image') });
+    f.gemini.image = async () => ({ bytes: bytes.subarray(0, Math.floor(bytes.length * 0.75)), provenance: proof('image') });
     let uploads = 0;
     const server = createServer((req, res) => { uploads++; req.resume(); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end('{"ok":true}'); });
     try {
@@ -469,7 +608,7 @@ describe('worker credentials and actual HTTP boundaries', () => {
     const token = randomBytes(32).toString('base64url');
     const image = await sharp({ create: { width: 128, height: 72, channels: 3, background: '#dddddd' } }).png().toBuffer();
     let uploads = 0; let authorizationLeak = false;
-    const mlxServer = createServer((req, res) => {
+    const geminiServer = createServer((req, res) => {
       authorizationLeak ||= req.headers.authorization !== undefined;
       req.resume(); res.writeHead(200, { 'Content-Type': 'application/json' });
       const model = decodeURIComponent((req.url ?? '').match(/models\/([^:?]+)/)?.[1] ?? '');
@@ -491,17 +630,19 @@ describe('worker credentials and actual HTTP boundaries', () => {
         res.end('{"ok":true}');
       } else {
         const body = JSON.parse(bytes.toString());
-        res.end(JSON.stringify(body.action === 'claim' ? { ok: true, job: value }
+        res.end(JSON.stringify(body.action === 'readiness'
+          ? { schemaVersion: 1, status: 'ready', code: 'FEATURE_DATABASE_READY' }
+          : body.action === 'claim' ? { ok: true, job: value }
           : body.action === 'heartbeat' ? { ok: true, leaseValid: true } : { ok: true }));
       }
     });
     try {
       const api = new StoryboardWorkerTransport({ origin: await listen(appServer), token, onDestination: (r) => destinations.push(r) });
-      const mlx = new GeminiStoryboardClient({ client: new GoogleGenAI({ apiKey: 'synthetic', httpOptions: { baseUrl: await listen(mlxServer), retryOptions: { attempts: 1 } } }) });
-      expect(await new OutboundStoryboardWorker({ api, mlx, admitMemory: () => true }).runOnce()).toBe('completed');
+      const gemini = new GeminiStoryboardClient({ client: new GoogleGenAI({ apiKey: 'synthetic', httpOptions: { baseUrl: await listen(geminiServer), retryOptions: { attempts: 1 } } }), budget: directBudget });
+      expect(await new OutboundStoryboardWorker({ api, gemini, admitMemory: () => true }).runOnce()).toBe('completed');
       expect(uploads).toBe(5); expect(authorizationLeak).toBe(false);
       expect(paths.every((p) => ['/api/storyboard-worker', '/api/storyboard-worker/images'].includes(p))).toBe(true);
       expect(destinations.length).toBe(paths.length); expect(destinations.every((d) => d.host === '127.0.0.1' && d.connected)).toBe(true);
-    } finally { await close(mlxServer); await close(appServer); }
+    } finally { await close(geminiServer); await close(appServer); }
   });
 });

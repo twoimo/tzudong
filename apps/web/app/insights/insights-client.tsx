@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEven
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
-import { Lightbulb } from 'lucide-react';
+import { AlertTriangle, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AdminEmbeddedModuleShell } from '@/components/admin/AdminEmbeddedModuleShell';
 import { Card, CardContent } from '@/components/ui/card';
@@ -73,6 +73,7 @@ type TreemapTileInteraction = (leaf: TreemapLeafNode, event: MouseEvent<HTMLDivE
 
 type TreemapCellRenderInput = {
     leaf: TreemapLeafNode;
+    foregroundColor: string;
     x: number;
     y: number;
     width: number;
@@ -105,6 +106,36 @@ const treemapTextFitCache = new Map<string, { text: string; fontSize: number }>(
 
 
 const TREEMAP_COLORS = ['#414554', '#35764e', '#2f9e4f', '#30cc5a'];
+const TREEMAP_LIGHT_FOREGROUND = '#ffffff';
+const TREEMAP_DARK_FOREGROUND = '#17202f';
+
+function getHexColorRelativeLuminance(color: string): number {
+    const match = /^#([0-9a-f]{6})$/i.exec(color);
+    if (!match) return 0;
+
+    const channels = [0, 2, 4].map((offset) => {
+        const channel = Number.parseInt(match[1].slice(offset, offset + 2), 16) / 255;
+        return channel <= 0.04045
+            ? channel / 12.92
+            : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+
+    return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+}
+
+function getColorContrastRatio(firstColor: string, secondColor: string): number {
+    const firstLuminance = getHexColorRelativeLuminance(firstColor);
+    const secondLuminance = getHexColorRelativeLuminance(secondColor);
+    const lighter = Math.max(firstLuminance, secondLuminance);
+    const darker = Math.min(firstLuminance, secondLuminance);
+    return (lighter + 0.05) / (darker + 0.05);
+}
+
+function getTreemapTextColor(backgroundColor: string): string {
+    const lightContrast = getColorContrastRatio(backgroundColor, TREEMAP_LIGHT_FOREGROUND);
+    const darkContrast = getColorContrastRatio(backgroundColor, TREEMAP_DARK_FOREGROUND);
+    return darkContrast >= lightContrast ? TREEMAP_DARK_FOREGROUND : TREEMAP_LIGHT_FOREGROUND;
+}
 
 const VIEW_MODE_OPTIONS: { value: ViewMode; label: string }[] = [
     { value: 'all', label: '비율' },
@@ -565,6 +596,7 @@ const TreemapTiles = memo(function TreemapTiles({
             const tileArea = Math.max(1, width * height);
             const tileInnerHeight = Math.max(6, height - 6);
             const tileBaseSize = Math.sqrt(tileArea);
+            const foregroundColor = getTreemapTextColor(leaf.color);
             const metricFont = Math.max(10, Math.min(54, Math.floor(tileBaseSize * 0.19)));
             const percentFont = Math.max(8, Math.min(24, Math.floor(metricFont * 0.6)));
             const miniFont = Math.max(8, Math.min(20, Math.floor(metricFont * 0.86)));
@@ -573,6 +605,7 @@ const TreemapTiles = memo(function TreemapTiles({
             if (width < 16 || height < 16) {
                 return {
                     leaf,
+                    foregroundColor,
                     x: Math.trunc(cell.x0),
                     y: Math.trunc(cell.y0),
                     width: Math.trunc(width),
@@ -616,6 +649,7 @@ const TreemapTiles = memo(function TreemapTiles({
 
             return {
                 leaf,
+                foregroundColor,
                 x: Math.trunc(cell.x0),
                 y: Math.trunc(cell.y0),
                 width: Math.trunc(width),
@@ -660,8 +694,7 @@ const TreemapTiles = memo(function TreemapTiles({
                         <div
                             className="flex h-full w-full flex-col items-center justify-center gap-0.5 px-1 text-center"
                             style={{
-                                color: '#ffffff',
-                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
+                                color: tile.foregroundColor,
                             }}
                         >
                             <span
@@ -689,8 +722,7 @@ const TreemapTiles = memo(function TreemapTiles({
                         <div
                             className="flex h-full w-full items-center justify-center px-1 text-center"
                             style={{
-                                color: '#ffffff',
-                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
+                                color: tile.foregroundColor,
                             }}
                         >
                             <span
@@ -707,8 +739,7 @@ const TreemapTiles = memo(function TreemapTiles({
                         <div
                             className="flex h-full w-full items-center justify-center px-1 text-center"
                             style={{
-                                color: '#ffffff',
-                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
+                                color: tile.foregroundColor,
                                 fontSize: `${tile.metricFontSize}px`,
                                 lineHeight: 1,
                                 fontWeight: 700,
@@ -1292,7 +1323,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         const errorContent = (
             <div className="flex min-h-0 items-center justify-center p-6 h-full">
                 <div className="text-center max-w-md w-full px-4">
-                    <div className="text-4xl mb-4">⚠️</div>
+                    <AlertTriangle className="mx-auto mb-4 h-8 w-8 text-muted-foreground" aria-hidden="true" />
                     <h2 className="text-xl font-bold text-foreground mb-2">문제가 발생했습니다</h2>
                     <p className="text-sm text-muted-foreground mb-6">일시적인 오류가 발생했습니다. 다시 시도해 주세요.</p>
                     <div className="flex gap-3 justify-center flex-wrap">
@@ -1413,41 +1444,41 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                     <span className="text-2xs text-muted-foreground">색상</span>
                                     <div className="inline-flex overflow-hidden rounded-md border border-border shrink-0">
                                         <div
-                                            className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
+                                            className="flex items-center justify-center h-6 px-2 text-2xs font-normal"
                                             style={{
                                                 background: TREEMAP_COLORS[0],
+                                                color: getTreemapTextColor(TREEMAP_COLORS[0]),
                                                 minWidth: 42,
-                                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
                                             }}
                                         >
                                             0%
                                         </div>
                                         <div
-                                            className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
+                                            className="flex items-center justify-center h-6 px-2 text-2xs font-normal"
                                             style={{
                                                 background: TREEMAP_COLORS[1],
+                                                color: getTreemapTextColor(TREEMAP_COLORS[1]),
                                                 minWidth: 42,
-                                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
                                             }}
                                         >
                                             +1%
                                         </div>
                                         <div
-                                            className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
+                                            className="flex items-center justify-center h-6 px-2 text-2xs font-normal"
                                             style={{
                                                 background: TREEMAP_COLORS[2],
+                                                color: getTreemapTextColor(TREEMAP_COLORS[2]),
                                                 minWidth: 42,
-                                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
                                             }}
                                         >
                                             +2%
                                         </div>
                                         <div
-                                            className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
+                                            className="flex items-center justify-center h-6 px-2 text-2xs font-normal"
                                             style={{
                                                 background: TREEMAP_COLORS[3],
+                                                color: getTreemapTextColor(TREEMAP_COLORS[3]),
                                                 minWidth: 42,
-                                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
                                             }}
                                         >
                                             +3%

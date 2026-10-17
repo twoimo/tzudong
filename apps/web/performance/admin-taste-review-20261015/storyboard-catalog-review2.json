@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "kind": "storyboard-catalog-retry-review2",
+  "createdAt": "2026-10-15T14:58:22+00:00",
+  "baseCommit": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "scope": {
+    "source": "apps/web/lib/admin/storyboard/outbound-worker.ts",
+    "test": "apps/web/tests-unit/storyboard-outbound-worker.test.ts",
+    "preservedContracts": [
+      "No heartbeat or claim without a verified provider catalog.",
+      "Authentication, authorization, cancellation, invalid catalogs and rate limits remain hard failures.",
+      "Normal successful catalogs retain the Gemini client five-minute cache."
+    ]
+  },
+  "policy": {
+    "providerRateLimited": {
+      "automaticRetries": 0,
+      "continuousWorkerResult": "throws provider_rate_limited on the first catalog failure"
+    },
+    "providerFailed": {
+      "maximumCatalogCalls": 3,
+      "cooldownMs": [
+        30000,
+        60000
+      ],
+      "postExhaustionProviderCalls": 0,
+      "continuousWorkerResult": "throws provider_failed after the third failed catalog call"
+    },
+    "successReset": "A verified catalog resets failure count and cooldown before heartbeat and claim."
+  },
+  "deterministicVerification": {
+    "targetedTest": {
+      "command": "/Users/twoimo/.bun/bin/bun test tests-unit/storyboard-outbound-worker.test.ts --timeout 30000",
+      "workingDirectory": "apps/web",
+      "exitCode": 0,
+      "passed": 43,
+      "failed": 0,
+      "expectCalls": 370,
+      "rawLogsPersisted": false
+    },
+    "scenarios": {
+      "rateLimitNoAutomaticRetry": {
+        "catalogCalls": 1,
+        "heartbeatCalls": 0,
+        "claimCalls": 0,
+        "result": "provider_rate_limited"
+      },
+      "transientFailureRecovery": {
+        "failedCatalogCalls": 1,
+        "callsSuppressedDuringCooldown": 1,
+        "successfulCatalogCalls": 1,
+        "claimedJobs": 1,
+        "result": "completed"
+      },
+      "retryExhaustion": {
+        "catalogCalls": 3,
+        "cooldownMs": [
+          30000,
+          60000
+        ],
+        "claimedJobs": 0,
+        "additionalCatalogCallsAfterExhaustion": 0,
+        "result": "provider_failed"
+      },
+      "normalCatalogCache": {
+        "polls": 120,
+        "pollIntervalSeconds": 5,
+        "providerModelMetadataReads": 6,
+        "result": "idle"
+      }
+    },
+    "eslint": {
+      "command": "/Users/twoimo/.bun/bin/bun x eslint lib/admin/storyboard/outbound-worker.ts tests-unit/storyboard-outbound-worker.test.ts",
+      "workingDirectory": "apps/web",
+      "exitCode": 0,
+      "errors": 0,
+      "warnings": 0
+    },
+    "diffCheck": {
+      "command": "git diff --check -- apps/web/lib/admin/storyboard/outbound-worker.ts apps/web/tests-unit/storyboard-outbound-worker.test.ts",
+      "exitCode": 0
+    }
+  },
+  "source": {
+    "apps/web/lib/admin/storyboard/outbound-worker.ts": {
+      "bytes": 23652,
+      "sha256": "2d6071fcbd3272bcf8cc071ad489e3c2222e4a24d81f5d6be97c1003f64211f5"
+    },
+    "apps/web/tests-unit/storyboard-outbound-worker.test.ts": {
+      "bytes": 39234,
+      "sha256": "05930248998fad5370da856addb95b3ff1acaf9f3c13b6c061217347cd8fb2c7"
+    }
+  },
+  "combinedDiffSha256": "a4dfee9d6ccef507ce6808a997daaba4a08249dc6db633071b14b276e90ea6e9",
+  "sanitization": {
+    "providerCalls": 0,
+    "databaseWrites": 0,
+    "browserLaunches": 0,
+    "builds": 0,
+    "fullSuiteRuns": 0,
+    "externalWrites": 0,
+    "gitWrites": 0,
+    "containsCredentialsOrTokens": false,
+    "containsProviderDiagnostics": false
+  },
+  "boundary": "Local deterministic fixture evidence only. It does not prove hosted worker scheduling or live provider behavior."
+}

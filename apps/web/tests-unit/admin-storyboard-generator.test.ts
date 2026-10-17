@@ -2552,18 +2552,18 @@ test('classifies the Windows Store Python alias diagnostic as an unavailable run
     }
     expect(calls).toBe(0);
   });
-  test('keeps the storyboard workspace scroll, reading-order, and lifecycle boundaries explicit', () => {
-    const generatorSource = readFileSync(
+  test('keeps the Gemini workspace scroll, reading-order, and lifecycle boundaries explicit', () => {
+    const workspaceSource = readFileSync(
       path.resolve(
         import.meta.dir,
-        '../components/admin/storyboard/LegacyStoryboardReference.tsx',
+        '../components/admin/storyboard/LocalStoryboardWorkspace.tsx',
       ),
       'utf8',
     );
-    const canvasShellSource = readFileSync(
+    const generatorSource = readFileSync(
       path.resolve(
         import.meta.dir,
-        '../components/admin/storyboard/StoryboardCanvasShell.tsx',
+        '../components/admin/storyboard/AdminStoryboardGenerator.tsx',
       ),
       'utf8',
     );
@@ -2571,82 +2571,43 @@ test('classifies the Windows Store Python alias diagnostic as an unavailable run
       path.resolve(import.meta.dir, '../components/admin/AdminConsoleOverview.tsx'),
       'utf8',
     );
-    const jobStatusRouteSource = readFileSync(
+    const productionRouteSource = readFileSync(
       path.resolve(
         import.meta.dir,
-        '../app/api/admin/storyboard/jobs/[jobId]/route.ts',
+        '../app/api/admin/storyboard/production/route.ts',
+      ),
+      'utf8',
+    );
+    const productionApiSource = readFileSync(
+      path.resolve(
+        import.meta.dir,
+        '../lib/admin/storyboard/production-api.ts',
       ),
       'utf8',
     );
 
-    expect(generatorSource).toContain('data-storyboard-pane-role="chat"');
-    expect(generatorSource).toContain(
-      'data-storyboard-scroll-mode="desktop-chat-transcript narrow-parent"',
-    );
-    expect(canvasShellSource).toContain('data-storyboard-pane-role="canvas"');
-    expect(canvasShellSource).toContain('data-storyboard-pane-role="readback"');
-    expect(canvasShellSource).toContain(
-      'data-storyboard-scroll-mode="desktop-readback narrow-parent"',
-    );
-    expect(generatorSource).toContain('overflow-y-auto');
-    expect(canvasShellSource).toContain(
-      'isSingleFrame ? "overflow-hidden" : "overflow-y-auto"',
-    );
-    expect(generatorSource).toContain('max-[1099px]:!overflow-visible');
-    expect(canvasShellSource).toContain('max-[1099px]:!overflow-visible');
-
-    expect(generatorSource).toContain(
-      'data-storyboard-dom-order="chat-then-canvas"',
-    );
-    expect(generatorSource).toContain(
-      'data-storyboard-narrow-order="chat-then-canvas"',
-    );
-    expect(generatorSource.indexOf('data-storyboard-input-panel="chat-stream"')).toBeLessThan(
-      generatorSource.indexOf('<StoryboardCanvasShell>'),
-    );
-    expect(generatorSource).toContain('max-[1099px]:![grid-row:1]');
-    expect(canvasShellSource).toContain('max-[1099px]:![grid-row:2]');
-
-    expect(generatorSource).toContain('min-h-0 min-w-0');
-    expect(canvasShellSource).toContain('min-h-0 min-w-0');
-    expect(generatorSource).toContain('[overflow-wrap:anywhere]');
-    expect(generatorSource).toContain(
-      'data-storyboard-job-readback-id="true"',
-    );
-    expect(generatorSource).not.toContain(
-      'className="truncate text-muted-foreground"\n                data-storyboard-job-readback-id="true"',
-    );
-    expect(generatorSource).toContain(
-      'data-horizontal-scroll-owner="storyboard-canvas-toolbar"',
-    );
-    expect(generatorSource).toContain(
-      'data-horizontal-scroll-owner="storyboard-chat-examples"',
-    );
-
-    expect(generatorSource).toContain(
-      'window.matchMedia?.("(prefers-reduced-motion: reduce)").matches',
-    );
-    expect(generatorSource).toContain('motion-reduce:transition-none');
-    expect(generatorSource).toContain('motion-reduce:animate-none');
-
     expect(consoleSource).toContain('const AdminStoryboardGenerator = dynamic(');
-    expect(generatorSource).toContain('getStoryboardJobStatus');
-    expect(generatorSource).toContain('abortStoryboardChatWork');
-    expect(generatorSource).toContain('abortStoryboardImageGeneration');
-    expect(generatorSource).toContain('cache: "no-store"');
-    expect(generatorSource).toContain('data-storyboard-chat-steer');
-    expect(generatorSource).toContain('data-storyboard-thinking-trace="true"');
+    expect(generatorSource).toContain('data-admin-storyboard-workspace="true"');
+    expect(generatorSource).toContain('overflow-auto');
+    expect(workspaceSource).toContain('data-local-storyboard-workspace="true"');
+    expect(workspaceSource).toContain('data-admin-storyboard-toolbar="true"');
+    expect(workspaceSource).toContain('aria-label="프로젝트 설정과 기록"');
+    expect(workspaceSource).toContain('aria-labelledby="local-scenes-title"');
+    expect(workspaceSource.indexOf('data-admin-storyboard-toolbar="true"')).toBeLessThan(
+      workspaceSource.indexOf('aria-labelledby="local-scenes-title"'),
+    );
+    expect(workspaceSource).toContain('credentials: "same-origin", cache: "no-store", redirect: "error"');
+    expect(workspaceSource).toContain('createController.current?.abort()');
+    expect(workspaceSource).toContain('window.addEventListener("beforeunload", beforeUnload)');
+    expect(workspaceSource).toContain('document.addEventListener("click", followLink, true)');
+    expect(workspaceSource).toContain('job.stage');
+    expect(workspaceSource).toContain('job.errorCode');
     expect(generatorSource).toContain('getTrustedStoryboardGeneratedImage');
-    expect(generatorSource).toContain(
-      'getExactStoryboardGeneratedImageProvenance',
-    );
-    expect(jobStatusRouteSource).toContain(
-      "await requireAdmin({ allowDevAdminBypassCookie: true })",
-    );
-    expect(jobStatusRouteSource).toContain(
-      ".eq('requested_by_admin_id', auth.userId)",
-    );
-    expect(jobStatusRouteSource).toContain('STORYBOARD_ROUTE_NO_STORE_HEADERS');
+    expect(generatorSource).toContain('data-storyboard-archive="read-only"');
+    expect(productionRouteSource).toContain('storyboardProductionApi.listGET');
+    expect(productionRouteSource).toContain('storyboardProductionApi.listPOST');
+    expect(productionApiSource).toContain('requireAdmin');
+    expect(productionApiSource).toContain("'Cache-Control': 'private, no-store'");
   });
 });
 

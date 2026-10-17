@@ -1,11 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
+import { fetchFeatureDatabaseReadiness } from '@/lib/runtime-feature-readiness-contract';
 import { buildReviewPhotoObjectPath, getCanonicalReviewPhotoObjectPath, getLegacyReviewPhotoObjectPath } from '@/lib/review-photo-url';
 import { createReviewUploadIntentStore, type ReviewUploadIntent, type ReviewUploadIntentStore } from './review-upload-intents';
 
 export type ReviewMutationCode = 'REVIEW_COMMITTED' | 'REVIEW_CLEANUP_PENDING' | 'REVIEW_NOT_CONFIRMED'
     | 'REVIEW_NOT_FOUND' | 'REVIEW_UNAUTHORIZED' | 'REVIEW_CONFLICT' | 'REVIEW_INVALID'
-    | 'REVIEW_MEDIA_MISSING' | 'REVIEW_UPLOAD_FAILED';
+    | 'REVIEW_MEDIA_MISSING' | 'REVIEW_UPLOAD_FAILED' | 'REVIEW_FEATURE_HELD';
 export type ReviewMutationResult = { committed: boolean; code: ReviewMutationCode };
 export type ReviewMediaRow = {
     id: string; user_id: string; updated_at: string; content: string;
@@ -23,6 +24,7 @@ export interface ReviewMediaDependencies {
     intents?: ReviewUploadIntentStore;
     owner(): string | undefined;
     id(): string;
+    ready(): Promise<boolean>;
     read(reviewId: string, ownerId: string): PromiseLike<{ data: ReviewMediaRow | null; error: unknown }>;
     rpc(name: string, args?: Record<string, unknown>): PromiseLike<Reply>;
     prepare(file: File): Promise<File>;
@@ -51,6 +53,7 @@ export function reviewMutationMessage(code: ReviewMutationCode): string {
         case 'REVIEW_INVALID': return '리뷰 내용과 사진을 확인해 주세요.';
         case 'REVIEW_MEDIA_MISSING': return '사진 업로드를 확인하지 못했습니다. 사진을 확인하고 다시 시도해 주세요.';
         case 'REVIEW_UPLOAD_FAILED': return '사진 업로드를 확인하지 못했습니다. 다시 시도하면 같은 사진의 업로드 상태부터 확인합니다.';
+        case 'REVIEW_FEATURE_HELD': return '데이터베이스 전환이 완료될 때까지 리뷰 변경은 잠시 보류됩니다. 저장된 리뷰는 계속 확인할 수 있습니다.';
         default: return '저장 결과를 확인하지 못했습니다. 사진은 삭제하지 않았습니다. 같은 요청을 다시 확인해 주세요.';
     }
 }
@@ -85,6 +88,7 @@ async function reconcileUploadIntents(deps: ReviewMediaDependencies, ownerId: st
 export async function retryReviewMediaCleanup(deps: ReviewMediaDependencies, ownerId: string, cancelInterrupted = false): Promise<boolean> {
     if (deps.owner() !== ownerId) return false;
     try {
+        if (!await deps.ready()) return false;
         const intentsComplete = await reconcileUploadIntents(deps, ownerId, cancelInterrupted);
         const pending = await deps.rpc('pending_review_media_cleanup');
         if (pending.error || !Array.isArray(pending.data) || deps.owner() !== ownerId) return false;
@@ -149,6 +153,7 @@ export class ReviewMediaMutation {
     async cancelConfirmedMissingUpload(): Promise<boolean> {
         const op = this.operation;
         if (this.active || !op || op.sent || !op.confirmedMissingUpload || this.deps.owner() !== op.input.ownerId) return false;
+        if (!await this.deps.ready()) return false;
         const uploadedPaths = op.uploads.map(upload => upload.path);
         if (uploadedPaths.length) {
             try {
@@ -180,6 +185,7 @@ export class ReviewMediaMutation {
     }
     private async perform(input: ReviewMutationInput): Promise<ReviewMutationResult> {
         if (this.deps.owner() !== input.ownerId) return result('REVIEW_UNAUTHORIZED');
+        if (!await this.deps.ready()) return result('REVIEW_FEATURE_HELD');
         if (this.operation && (this.operation.input.ownerId !== input.ownerId
             || this.operation.input.reviewId !== input.reviewId || this.operation.input.kind !== input.kind)) {
             return result('REVIEW_NOT_CONFIRMED');
@@ -303,6 +309,7 @@ export function createReviewMediaDependencies(
     return {
         intents: createReviewUploadIntentStore(() => window.localStorage),
         owner, id: () => crypto.randomUUID(), prepare, rpc,
+        ready: async () => (await fetchFeatureDatabaseReadiness()).status === 'ready',
         read: (reviewId, ownerId) => client.from('reviews')
             .select('id,user_id,updated_at,content,categories,food_photos')
             .eq('id', reviewId).eq('user_id', ownerId).maybeSingle(),

@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "kind": "feature-runtime-contract-source-delta",
+  "status": "source-verified-awaiting-postgres-replay",
+  "observedHead": "3be9973adc005d289c27dfa7d233145a4e1219cb",
+  "sourceState": "working-tree-delta",
+  "historicalEvidence": {
+    "heldDeltaPath": "apps/web/performance/feature-completion-20261013/held-feature-database-admission-delta-20261015.json",
+    "heldDeltaSha256": "68db600c073dac32de67fbe291d51e29465dad2882a9b04747d4758b669eba26",
+    "retainedPostgresProofPath": "apps/web/performance/feature-completion-20261013/review-media-runtime-admission-retained-proof-20261015.json",
+    "retainedPostgresProofSha256": "9c34f9dc7159e49892842f9cf71f882a7790aeede7bc2857b22a39536c262254",
+    "preservedUnchanged": true,
+    "relabeled": false
+  },
+  "runtimeBinding": {
+    "algorithm": "storyboard-runtime-source-binding/v1",
+    "schemaVersion": 1,
+    "sourceCount": 23,
+    "sourceBindingSha256": "806b8c2f95763adbb227eb3169b6a92d0b7ab2f45fac9490f84fdd0db31ecfaa",
+    "canonicalPolicySha256": "12c3f99c7841f038ceb605f76e9b23ac71f4754fa7f9d5fd4d5a9331460cbb9a",
+    "featureDatabaseAdmission": "required",
+    "postBuildRecalculated": true,
+    "postBuildDrift": false
+  },
+  "featureSql": {
+    "manifestPath": ".github/review-media-feature-sql-successor.v1.json",
+    "manifestSha256": "a2cfadfbc66db5817b78aa1bb182263e5939a2eaace4f741bbb935f3b58290e7",
+    "sourceRoot": "8f6ac5bd658cdc75c1d0a5f2ea84772c528a5d4f9f551b0533d758c676bc95b5",
+    "operatingTransition": {
+      "beforeFour": 97,
+      "afterFour": 101
+    },
+    "migrationSources": [
+      {
+        "path": "backend/supabase/migrations/20261013093518_storyboard_gemini_execution_v1.sql",
+        "sha256": "84d351dead86ef90040b6949fe4a6dc93eb91a783c1b7a78531c7f564ea4ff4e"
+      },
+      {
+        "path": "backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql",
+        "sha256": "fb80c266cfbede8141da0c8adfc2b099ed835673684aa1f17af0d7e1439526e0"
+      },
+      {
+        "path": "backend/supabase/migrations/20261013190100_g014_feature_rpc_catalog_contract.sql",
+        "sha256": "0c3f8b4cadc1d4bb0d88b53de49be34ef8e2751a47bfc18ebad89ae543b4c370"
+      },
+      {
+        "path": "backend/supabase/migrations/20261013190200_review_verification_immutable_key_fence.sql",
+        "sha256": "0a060ca537d3558779fd0cb1b780e7965189eb129f5018987f157c1cb5f2cd3d"
+      }
+    ],
+    "capabilityVersion": "review-media-feature-v1",
+    "readinessBoundary": "base97 and feature stages 98-100 remain held; final stage 101 returns ready only when the marker, eleven typed wrappers, protected tables, generation triggers, storyboard RPCs, and immutable Storage trigger are present"
+  },
+  "completedContracts": {
+    "ocrModelFallback": "the ordered Gemini model policy is part of the durable fingerprint while the actual response model must be a member of that policy",
+    "durableStatusReadback": "same-owner image and context status polling is bounded and read-only; it never claims or dispatches a provider request",
+    "pendingUserAction": "a pending review keeps the photo and exposes a result-check action that calls only the read-only status route",
+    "adminResetGeneration": "review insert and explicit OCR reset rotate a private generation; durable identity and final publish CAS include that generation",
+    "publishResetLockOrder": "publish locks the owner-matched review row before the generation row, matching reset and removing the lock inversion",
+    "triggerBoundary": "the review generation trigger helper is postgres-owned SECURITY DEFINER with an empty search_path and no anon, authenticated, or service_role EXECUTE",
+    "workerAdmission": "feature readiness is checked before provider catalog lookup, heartbeat, claim, generation, or upload"
+  },
+  "verification": {
+    "targetedTests": {
+      "files": 14,
+      "passed": 150,
+      "failed": 0,
+      "assertions": 1176
+    },
+    "typescriptParity": {
+      "status": "passed",
+      "diagnostics": 0
+    },
+    "targetedEslint": {
+      "status": "passed",
+      "warnings": 0,
+      "errors": 0
+    },
+    "productionBuild": {
+      "status": "passed",
+      "nextVersion": "16.3.8",
+      "staticPageCount": 53,
+      "routeCssBoundaryVerification": "passed"
+    },
+    "postgresReplay": {
+      "status": "pending",
+      "required": [
+        "dual PostgreSQL 15 transformed replay",
+        "PostgreSQL 17.6 exact-source replay",
+        "authenticated review INSERT and reset UPDATE",
+        "private generation table access denial",
+        "fallback actual-model readback",
+        "owner-scoped durable status readback",
+        "base97 and stages 98-100 held then stage101 ready",
+        "publish-first and reset-first two-session barriers with zero deadlocks",
+        "reset-first stale generation publish rejection"
+      ]
+    }
+  },
+  "externalEffects": {
+    "hostedDatabaseCalls": 0,
+    "providerCalls": 0,
+    "deployments": 0,
+    "remoteMutations": 0
+  },
+  "limits": [
+    "This receipt is local source, contract-test, lint, typecheck, and build evidence only.",
+    "The production database remains at the separately observed 86-migration state; none of these feature SQL sources were applied by this task.",
+    "The retained PostgreSQL proof predates these SQL and runtime source bytes and must not be treated as proof for this delta.",
+    "A fresh exact-source PostgreSQL replay and later hosted deployment/readback are still required before calling the feature release compatible or ready."
+  ]
+}

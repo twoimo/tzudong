@@ -167,9 +167,6 @@ const APPROVED_HORIZONTAL_SCROLL_OWNERS = [
   'admin-dashboard-kpi-title-actions',
   'stamp-restaurant-list-table',
   'admin-evaluation-table',
-  'storyboard-canvas-toolbar',
-  'storyboard-chat-examples',
-  'storyboard-chat-attachments',
   'knowledge-graph-canvas',
   'insights-controls',
 ] as const;

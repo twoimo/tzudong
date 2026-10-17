@@ -1,0 +1,9 @@
+{
+  "command": "Node24 local ESLint --max-warnings=0 tests-unit/admin-restaurant-modal-presentation-source.test.ts",
+  "exitCode": 0,
+  "createdAt": "2026-10-15T14:02:20.914184+00:00",
+  "sourceSha256": {
+    "tests-unit/admin-restaurant-modal-presentation-source.test.ts": "0606f284779744a47c684b4c82fa3821b86331f5a840652947cd2141e40f2ff4"
+  },
+  "output": ""
+}

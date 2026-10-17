@@ -1,0 +1,579 @@
+name: Review media SQL successor
+run-name: Review media SQL successor · ${{ inputs.mode }} · ${{ inputs.source_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Explicit bounded path; apply performs a fresh rehearsal first.'
+        required: true
+        default: observe
+        type: choice
+        options:
+          - observe
+          - rehearse
+          - apply
+      source_sha:
+        description: 'Exact 40-character protected-main commit SHA.'
+        required: true
+        type: string
+      local_vercel_evidence:
+        description: 'Canonical sanitized local Vercel rollback/runtime-hold envelope; no credentials or provider bodies.'
+        required: true
+        type: string
+      local_vercel_bundle_sha256:
+        description: 'Exact SHA-256 printed by capture-vercel for the canonical sanitized bundle.'
+        required: true
+        type: string
+      apply_confirmation:
+        description: 'For apply only, enter apply:<source_sha>:<bundle_sha256>; leave empty otherwise.'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  VERCEL_CLI_VERSION: '56.5.0'
+  VERCEL_ORG_ID: 'team_OUj64KeLxJI3PkEbOaFZnorA'
+  VERCEL_PROJECT_ID: 'prj_sau35J5uUtShIQ9OKofRtOVVnTSl'
+
+concurrency:
+  # Keep each accepted dispatch alive; the PostgreSQL transaction lock below
+  # serializes the operating command without GitHub replacing a pending run.
+  group: review-media-sql-successor-${{ github.run_id }}-${{ github.run_attempt }}
+  cancel-in-progress: false
+
+jobs:
+  operate:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'twoimo/tzudong' &&
+      github.event.repository.full_name == 'twoimo/tzudong' &&
+      github.event.repository.default_branch == 'main' &&
+      github.event.repository.owner.login == github.repository_owner &&
+      github.repository_owner == github.actor &&
+      github.triggering_actor == github.actor &&
+      github.event.sender.login == github.actor &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_name == 'main' &&
+      github.ref_protected &&
+      github.sha == inputs.source_sha
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact protected-main source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify authenticated owner dispatch and detached source
+        shell: bash
+        env:
+          APPLY_CONFIRMATION: ${{ inputs.apply_confirmation }}
+          EXPECTED_MODE: ${{ inputs.mode }}
+          EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+          LOCAL_VERCEL_BUNDLE_SHA256: ${{ inputs.local_vercel_bundle_sha256 }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          SENDER_LOGIN: ${{ github.event.sender.login }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_REPOSITORY" = twoimo/tzudong
+          test "$GITHUB_REF" = refs/heads/main
+          test "$GITHUB_REF_NAME" = main
+          test "$GITHUB_REF_PROTECTED" = true
+          test "$GITHUB_ACTOR" = "$REPOSITORY_OWNER"
+          test "$TRIGGERING_ACTOR" = "$REPOSITORY_OWNER"
+          test "$SENDER_LOGIN" = "$REPOSITORY_OWNER"
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$LOCAL_VERCEL_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          test "$EXPECTED_SOURCE_SHA" = "$GITHUB_SHA"
+          test "$EXPECTED_SOURCE_SHA" = "$(git rev-parse --verify HEAD)"
+          test "$EXPECTED_SOURCE_SHA" = "$(git show -s --format=%H HEAD)"
+          test -z "$(git symbolic-ref --quiet HEAD || true)"
+          test -z "$(git status --short)"
+          case "$EXPECTED_MODE" in
+            observe|rehearse)
+              test -z "$APPLY_CONFIRMATION"
+              ;;
+            apply)
+              test "$APPLY_CONFIRMATION" = "apply:$EXPECTED_SOURCE_SHA:$LOCAL_VERCEL_BUNDLE_SHA256"
+              ;;
+            *)
+              exit 2
+              ;;
+          esac
+
+      - name: Set up pinned project Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        with:
+          node-version: '24.21.0'
+
+      - name: Verify project runtime authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+
+          const manifest = JSON.parse(readFileSync('apps/web/package.json', 'utf8'));
+          if (manifest.engines?.node !== '24.x'
+            || manifest.packageManager !== 'npm@11.6.2'
+            || process.versions.node.split('.')[0] !== '24') {
+            process.exit(2);
+          }
+          NODE
+
+      - name: Install pinned Vercel CLI readback authority
+        id: vercel-cli
+        if: inputs.mode == 'apply'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(npm --version)" = 11.6.2
+          npm install --global --no-audit --no-fund --ignore-scripts "vercel@$VERCEL_CLI_VERSION"
+          cli_path="$(command -v vercel)"
+          test -n "$cli_path"
+          test "$(vercel --version)" = "$VERCEL_CLI_VERSION"
+          printf 'cli_path=%s\n' "$cli_path" >> "$GITHUB_OUTPUT"
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get -q update
+          sudo apt-get -q install --no-install-recommends -y postgresql-client
+          psql --version
+
+      - name: Create private exclusive operating input and serialized runner
+        id: custody
+        shell: bash
+        env:
+          LOCAL_VERCEL_EVIDENCE: ${{ inputs.local_vercel_evidence }}
+          LOCAL_VERCEL_BUNDLE_SHA256: ${{ inputs.local_vercel_bundle_sha256 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          custody_root="$(mktemp -d "$RUNNER_TEMP/review-media-sql-successor.XXXXXXXX")"
+          chmod 700 "$custody_root"
+          operating_input="$custody_root/local-vercel-evidence.json"
+          custody_dir="$custody_root/custody"
+          serialized_runner="$custody_root/run-serialized-operation"
+          vercel_readback_adapter="$custody_root/vercel-readback-adapter.mjs"
+          OPERATING_INPUT="$operating_input" node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { constants, openSync, writeFileSync, closeSync } from 'node:fs';
+
+          const raw = Buffer.from(process.env.LOCAL_VERCEL_EVIDENCE ?? '', 'utf8');
+          const expectedSha256 = process.env.LOCAL_VERCEL_BUNDLE_SHA256 ?? '';
+          if (raw.length < 2 || raw.length > 8192 || raw.includes(0)
+            || !/^[0-9a-f]{64}$/.test(expectedSha256)) process.exit(2);
+          let value;
+          try {
+            value = JSON.parse(raw.toString('utf8'));
+          } catch {
+            process.exit(2);
+          }
+          if (!value || typeof value !== 'object' || Array.isArray(value)) process.exit(2);
+          const canonical = item => Array.isArray(item)
+            ? item.map(canonical)
+            : item && typeof item === 'object'
+              ? Object.fromEntries(Object.keys(item).sort().map(key => [key, canonical(item[key])]))
+              : item;
+          const bytes = Buffer.from(`${JSON.stringify(canonical(value))}\n`);
+          if (bytes.length > 8192
+            || createHash('sha256').update(bytes).digest('hex') !== expectedSha256) process.exit(2);
+          const descriptor = openSync(
+            process.env.OPERATING_INPUT,
+            constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW,
+            0o600,
+          );
+          try {
+            writeFileSync(descriptor, bytes);
+          } finally {
+            closeSync(descriptor);
+          }
+          NODE
+          cat > "$vercel_readback_adapter" <<'NODE'
+          #!/usr/bin/env node
+          import { spawnSync } from 'node:child_process';
+          import { createHash } from 'node:crypto';
+          import { readFileSync } from 'node:fs';
+          import { isAbsolute } from 'node:path';
+
+          try {
+            const args = process.argv.slice(2);
+            const input = process.env.LOCAL_VERCEL_READBACK_INPUT ?? '';
+            const bundleSha256 = process.env.LOCAL_VERCEL_BUNDLE_SHA256 ?? '';
+            const vendorCliPath = process.env.VERCEL_VENDOR_CLI_PATH ?? '';
+            const token = process.env.VERCEL_TOKEN ?? '';
+            const teamId = 'team_OUj64KeLxJI3PkEbOaFZnorA';
+            const projectId = 'prj_sau35J5uUtShIQ9OKofRtOVVnTSl';
+            const verifyOnly = args.length === 1 && args[0] === 'verify';
+            const apiRead = args.length === 5 && args[0] === 'api' && args[2] === '--scope'
+              && args[3] === teamId && args[4] === '--raw';
+            if ((!verifyOnly && !apiRead)
+              || process.env.GITHUB_ACTIONS !== 'true'
+              || process.env.VERCEL_ORG_ID !== teamId
+              || process.env.VERCEL_PROJECT_ID !== projectId
+              || !/^[A-Za-z0-9._~-]{20,4096}$/.test(token)
+              || !isAbsolute(vendorCliPath) || /[\0-\x1f\x7f]/.test(vendorCliPath)
+              || !input || !/^[0-9a-f]{64}$/.test(bundleSha256)) process.exit(2);
+            const bytes = readFileSync(input);
+            if (bytes.length < 2 || bytes.length > 8192
+              || createHash('sha256').update(bytes).digest('hex') !== bundleSha256) process.exit(2);
+            const bundle = JSON.parse(bytes.toString('utf8'));
+            const readback = bundle.rollbackReadback;
+            const storyboardPolicy = bundle.storyboardPolicy;
+            if (bundle.kind !== 'review-media-successor-vercel-operating-bundle'
+              || bundle.schemaVersion !== 1
+              || !readback || readback.gitRef !== 'main'
+              || readback.repository !== 'twoimo/tzudong'
+              || readback.projectId !== projectId
+              || readback.teamId !== teamId
+              || readback.readyState !== 'READY' || readback.target !== 'production'
+              || readback.gitSha !== bundle.sourceRevision
+              || !Number.isFinite(Date.parse(readback.observedAt ?? ''))
+              || readback.productionAliases?.join('\0') !== 'tzudong.app\0www.tzudong.app'
+              || storyboardPolicy?.schemaVersion !== 1
+              || storyboardPolicy?.deployment?.branch !== 'main'
+              || storyboardPolicy?.deployment?.deploymentId !== readback.deploymentId
+              || storyboardPolicy?.deployment?.sourceCommit !== readback.gitSha
+              || !/^[0-9a-f]{64}$/.test(storyboardPolicy?.policy?.canonicalPolicySha256 ?? '')) {
+              process.exit(2);
+            }
+            const deploymentEndpoint = `/v13/deployments/${readback.deploymentId}?teamId=${teamId}`;
+            const aliasEndpoints = readback.productionAliases.map(host =>
+              `/v4/aliases/${host}?teamId=${teamId}`);
+            const allowedEndpoints = [deploymentEndpoint, ...aliasEndpoints];
+            if (apiRead && !allowedEndpoints.includes(args[1])) process.exit(2);
+            const invoke = endpoint => {
+              const childEnvironment = Object.fromEntries(Object.entries({
+                CI: 'true',
+                HOME: process.env.HOME,
+                NO_COLOR: '1',
+                PATH: process.env.PATH,
+                TMPDIR: process.env.TMPDIR,
+                VERCEL_ORG_ID: teamId,
+                VERCEL_PROJECT_ID: projectId,
+                VERCEL_TOKEN: token,
+              }).filter(([, value]) => typeof value === 'string'));
+              const vendor = spawnSync(vendorCliPath, [
+                'api', endpoint, '--scope', teamId, '--raw', '--non-interactive', '--no-color',
+              ], {
+                encoding: null,
+                env: childEnvironment,
+                killSignal: 'SIGKILL',
+                maxBuffer: 262144,
+                shell: false,
+                stdio: ['ignore', 'pipe', 'ignore'],
+                timeout: 15000,
+                windowsHide: true,
+              });
+              if (vendor.status !== 0 || vendor.error || vendor.stdout.length < 2
+                || vendor.stdout.length > 262144) process.exit(2);
+              const result = JSON.parse(vendor.stdout.toString('utf8'));
+              if (endpoint === deploymentEndpoint) {
+                if (result?.id !== readback.deploymentId
+                  || result?.projectId !== readback.projectId
+                  || result?.ownerId !== readback.teamId
+                  || result?.readyState !== readback.readyState
+                  || result?.target !== readback.target
+                  || result?.url !== new URL(readback.deploymentUrl).hostname
+                  || result?.meta?.githubCommitOrg !== 'twoimo'
+                  || result?.meta?.githubCommitRepo !== 'tzudong'
+                  || result?.meta?.githubCommitRef !== readback.gitRef
+                  || result?.meta?.githubCommitSha !== readback.gitSha) process.exit(2);
+              } else {
+                const alias = readback.productionAliases.find(host =>
+                  endpoint === `/v4/aliases/${host}?teamId=${teamId}`);
+                if (!alias || result?.alias !== alias
+                  || result?.deploymentId !== readback.deploymentId
+                  || result?.deployment?.id !== readback.deploymentId
+                  || result?.projectId !== readback.projectId) process.exit(2);
+              }
+              return vendor.stdout;
+            };
+            if (verifyOnly) {
+              for (const endpoint of allowedEndpoints) invoke(endpoint);
+            } else {
+              process.stdout.write(invoke(args[1]));
+            }
+          } catch {
+            process.exit(2);
+          }
+          NODE
+          chmod 700 "$vercel_readback_adapter"
+          cat > "$serialized_runner" <<'BASH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          operation=
+          if (( $# == 8 )) && [[ "$1" = node
+            && "$2" = apps/web/scripts/review-media-operating-orchestrator.mjs
+            && "$3" = --mode && "$4" =~ ^(observe|rehearse)$
+            && "$5" = --input && -n "$6"
+            && "$7" = --custody-dir && -n "$8" ]]
+          then
+            operation=base-only
+            operating_input=$6
+            custody_dir=$8
+          elif (( $# == 3 )) && [[ "$1" = apply-chain && -n "$2" && -n "$3" ]]
+          then
+            operation=apply-chain
+            operating_input=$2
+            custody_dir=$3
+          else
+            exit 2
+          fi
+          test -n "${SUPABASE_DB_URL:-}"
+          test -n "${EXPECTED_SOURCE_SHA:-}"
+
+          validate_result() {
+            RESULT_BASE=${3:-} RESULT_CUSTODY="$custody_dir" RESULT_PATH="$2" \
+              RESULT_PHASE="$1" RESULT_SOURCE="$EXPECTED_SOURCE_SHA" node --input-type=module <<'NODE'
+            import { readFileSync, realpathSync } from 'node:fs';
+            import { basename, join } from 'node:path';
+
+            const fail = () => process.exit(2);
+            const raw = readFileSync(process.env.RESULT_PATH);
+            if (raw.length < 2 || raw.length > 8192 || raw.includes(0)) fail();
+            let value;
+            try { value = JSON.parse(raw.toString('utf8')); } catch { fail(); }
+            if (!value || typeof value !== 'object' || Array.isArray(value)) fail();
+            const source = process.env.RESULT_SOURCE;
+            const custodyPath = process.env.RESULT_CUSTODY;
+            const custody = realpathSync(custodyPath);
+            const hex = /^[0-9a-f]{64}$/;
+            const exact = keys => Object.keys(value).sort().join('\0') === [...keys].sort().join('\0');
+            const exactPath = (path, name) => typeof path === 'string'
+              && realpathSync(path) === join(custody, name) && basename(path) === name;
+            const base = process.env.RESULT_BASE
+              ? JSON.parse(readFileSync(process.env.RESULT_BASE, 'utf8'))
+              : undefined;
+            switch (process.env.RESULT_PHASE) {
+              case 'base-apply':
+                if (!exact(['code', 'custodyDirectory', 'expiresAt', 'mode', 'sourceRevision', 'status'])
+                  || value.code !== 'SUCCESSOR_COMMITTED' || value.status !== 'committed'
+                  || value.mode !== 'apply' || value.sourceRevision !== source
+                  || realpathSync(value.custodyDirectory) !== custody) fail();
+                break;
+              case 'feature-prepare-rehearsal':
+                if (!exact(['admissionPath', 'admissionSha256', 'expiresAt', 'journalPath', 'mode', 'receiptPath', 'status'])
+                  || value.mode !== 'rehearsal' || value.status !== 'prepared'
+                  || value.expiresAt !== base?.expiresAt || !hex.test(value.admissionSha256)
+                  || !exactPath(value.admissionPath, 'feature-rehearsal-admission.json')
+                  || value.journalPath !== join(custodyPath, 'feature-rehearsal-journal.jsonl')
+                  || value.receiptPath !== join(custodyPath, 'feature-rehearsal-receipt.json')) fail();
+                break;
+              case 'feature-rehearsal':
+                if (!exact(['attemptId', 'code', 'receiptSha256', 'sourceRevision', 'status'])
+                  || value.code !== 'FEATURE_SUCCESSOR_REHEARSAL_PASSED'
+                  || value.status !== 'rolled_back' || value.sourceRevision !== source
+                  || !hex.test(value.receiptSha256)) fail();
+                break;
+              case 'feature-prepare-apply':
+                if (!exact(['admissionPath', 'admissionSha256', 'expiresAt', 'journalPath', 'mode', 'status'])
+                  || value.mode !== 'apply' || value.status !== 'prepared'
+                  || value.expiresAt !== base?.expiresAt || !hex.test(value.admissionSha256)
+                  || !exactPath(value.admissionPath, 'feature-apply-admission.json')
+                  || value.journalPath !== join(custodyPath, 'feature-apply-journal.jsonl')) fail();
+                break;
+              case 'feature-apply':
+                if (!exact(['attemptId', 'code', 'sourceRevision', 'status', 'terminal'])
+                  || value.code !== 'FEATURE_SUCCESSOR_COMMITTED'
+                  || value.status !== 'committed' || value.sourceRevision !== source) fail();
+                break;
+              default:
+                fail();
+            }
+          NODE
+          }
+
+          run_private() {
+            phase=$1
+            shift
+            stdout_path="$(dirname "$operating_input")/$phase.stdout.json"
+            stderr_path="$(dirname "$operating_input")/$phase.stderr"
+            (umask 077; : > "$stdout_path"; : > "$stderr_path")
+            chmod 600 "$stdout_path" "$stderr_path"
+            if ! "$@" >"$stdout_path" 2>"$stderr_path"
+            then
+              return 1
+            fi
+            test ! -s "$stderr_path"
+            validate_result "$phase" "$stdout_path" "${base_stdout:-}"
+          }
+
+          run_apply_chain() {
+            export LOCAL_VERCEL_READBACK_INPUT="$operating_input"
+            export VERCEL_CLI_PATH
+            if ! node "$VERCEL_CLI_PATH" verify >/dev/null 2>&1
+            then
+              printf '%s\n' '{"code":"SUCCESSOR_VERCEL_READBACK_UNCONFIRMED","status":"failed"}'
+              return 1
+            fi
+            if ! run_private base-apply node \
+              apps/web/scripts/review-media-operating-orchestrator.mjs \
+              --mode apply --input "$operating_input" --custody-dir "$custody_dir"
+            then
+              printf '%s\n' '{"code":"SUCCESSOR_BASE_OUTCOME_UNCONFIRMED","status":"failed"}'
+              return 1
+            fi
+            base_stdout="$(dirname "$operating_input")/base-apply.stdout.json"
+            for phase in prepare-rehearsal rehearsal prepare-apply apply
+            do
+              if ! run_private "feature-$phase" node \
+                apps/web/scripts/review-media-feature-sql-successor.mjs \
+                --mode "$phase" --custody-dir "$custody_dir"
+              then
+                printf '%s\n' '{"code":"SUCCESSOR_COMMITTED_FEATURE_HELD","featureStatus":"held","predecessorCode":"SUCCESSOR_COMMITTED","predecessorStatus":"committed","status":"partial"}'
+                return 1
+              fi
+            done
+            printf '%s\n' '{"code":"SUCCESSOR_AND_FEATURE_COMMITTED","featureStatus":"committed","predecessorCode":"SUCCESSOR_COMMITTED","predecessorStatus":"committed","status":"committed"}'
+          }
+
+          lock_read_fd=
+          lock_write_fd=
+          lock_pid=
+          cleanup() {
+            status=$?
+            trap - EXIT INT TERM
+            if [[ -n "$lock_write_fd" ]]
+            then
+              printf '%s\n' 'ROLLBACK;' '\quit' >&"$lock_write_fd" 2>/dev/null || true
+              exec {lock_write_fd}>&- 2>/dev/null || true
+            fi
+            if [[ -n "$lock_read_fd" ]]
+            then
+              exec {lock_read_fd}<&- 2>/dev/null || true
+            fi
+            if [[ -n "$lock_pid" ]] && ! wait "$lock_pid" 2>/dev/null && (( status == 0 ))
+            then
+              status=2
+            fi
+            exit "$status"
+          }
+          trap cleanup EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
+
+          lock_diagnostics="$(dirname "$operating_input")/serializer.stderr"
+          : > "$lock_diagnostics"
+          chmod 600 "$lock_diagnostics"
+          coproc SERIALIZER {
+            PGCONNECT_TIMEOUT=10 PSQLRC=/dev/null psql \
+              --no-psqlrc --no-password --quiet --tuples-only --no-align \
+              --set=ON_ERROR_STOP=1 "$SUPABASE_DB_URL" 2>"$lock_diagnostics"
+          }
+          lock_read_fd=${SERIALIZER[0]}
+          lock_write_fd=${SERIALIZER[1]}
+          lock_pid=$SERIALIZER_PID
+          printf '%s\n' \
+            'BEGIN;' \
+            "SET LOCAL lock_timeout = '840s';" \
+            "SET LOCAL idle_in_transaction_session_timeout = '900s';" \
+            "SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('tzudong:review-media-sql-successor:workflow:v1', 0));" \
+            '\echo REVIEW_MEDIA_SQL_SUCCESSOR_LOCKED' >&"$lock_write_fd"
+          locked=false
+          while IFS= read -r lock_line <&"$lock_read_fd"
+          do
+            if [[ -z "$lock_line" ]]
+            then
+              continue
+            fi
+            if [[ "$lock_line" = REVIEW_MEDIA_SQL_SUCCESSOR_LOCKED ]]
+            then
+              locked=true
+              break
+            fi
+            exit 2
+          done
+          test "$locked" = true
+          if [[ "$operation" = base-only ]]
+          then
+            "$@"
+          else
+            test -x "${VERCEL_CLI_PATH:-}"
+            test "$(dirname "$VERCEL_CLI_PATH")" = "$(dirname "$operating_input")"
+            run_apply_chain
+          fi
+          BASH
+          chmod 700 "$serialized_runner"
+          printf 'custody_dir=%s\n' "$custody_dir" >> "$GITHUB_OUTPUT"
+          printf 'operating_input=%s\n' "$operating_input" >> "$GITHUB_OUTPUT"
+          printf 'serialized_runner=%s\n' "$serialized_runner" >> "$GITHUB_OUTPUT"
+          printf 'vercel_readback_adapter=%s\n' "$vercel_readback_adapter" >> "$GITHUB_OUTPUT"
+
+      - name: Observe held successor state
+        if: inputs.mode == 'observe'
+        shell: bash
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+          OPERATOR_ACTOR: ${{ github.actor }}
+          OPERATOR_ACTOR_ID: ${{ github.actor_id }}
+          OPERATING_INPUT: ${{ steps.custody.outputs.operating_input }}
+          PRIVATE_CUSTODY_DIR: ${{ steps.custody.outputs.custody_dir }}
+          SERIALIZED_RUNNER: ${{ steps.custody.outputs.serialized_runner }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: >-
+          timeout --signal=TERM --kill-after=10s 840s
+          "$SERIALIZED_RUNNER"
+          node apps/web/scripts/review-media-operating-orchestrator.mjs
+          --mode observe
+          --input "$OPERATING_INPUT"
+          --custody-dir "$PRIVATE_CUSTODY_DIR"
+
+      - name: Rehearse held successor transaction
+        if: inputs.mode == 'rehearse'
+        shell: bash
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+          OPERATOR_ACTOR: ${{ github.actor }}
+          OPERATOR_ACTOR_ID: ${{ github.actor_id }}
+          OPERATING_INPUT: ${{ steps.custody.outputs.operating_input }}
+          PRIVATE_CUSTODY_DIR: ${{ steps.custody.outputs.custody_dir }}
+          SERIALIZED_RUNNER: ${{ steps.custody.outputs.serialized_runner }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: >-
+          timeout --signal=TERM --kill-after=10s 840s
+          "$SERIALIZED_RUNNER"
+          node apps/web/scripts/review-media-operating-orchestrator.mjs
+          --mode rehearse
+          --input "$OPERATING_INPUT"
+          --custody-dir "$PRIVATE_CUSTODY_DIR"
+
+      - name: Apply explicitly confirmed successor transaction
+        if: inputs.mode == 'apply'
+        shell: bash
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+          OPERATOR_ACTOR: ${{ github.actor }}
+          OPERATOR_ACTOR_ID: ${{ github.actor_id }}
+          OPERATING_INPUT: ${{ steps.custody.outputs.operating_input }}
+          LOCAL_VERCEL_BUNDLE_SHA256: ${{ inputs.local_vercel_bundle_sha256 }}
+          PRIVATE_CUSTODY_DIR: ${{ steps.custody.outputs.custody_dir }}
+          SERIALIZED_RUNNER: ${{ steps.custody.outputs.serialized_runner }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          VERCEL_CLI_PATH: ${{ steps.custody.outputs.vercel_readback_adapter }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_VENDOR_CLI_PATH: ${{ steps.vercel-cli.outputs.cli_path }}
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN"
+          test -x "$VERCEL_VENDOR_CLI_PATH"
+          test "$("$VERCEL_VENDOR_CLI_PATH" --version)" = "$VERCEL_CLI_VERSION"
+          timeout --signal=TERM --kill-after=10s 840s \
+            "$SERIALIZED_RUNNER" \
+            apply-chain "$OPERATING_INPUT" "$PRIVATE_CUSTODY_DIR"

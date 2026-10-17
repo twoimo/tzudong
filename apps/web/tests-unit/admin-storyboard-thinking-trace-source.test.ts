@@ -14,41 +14,29 @@ describe("admin storyboard thinking trace source contract", () => {
     expect(routeSource).not.toContain("generateStoryboardChatWithBackendAgent");
   });
 
-  test("renders a collapsible thinking timeline and keeps image generation steps in it", () => {
+  test("renders server-owned project events instead of a retired client reasoning stream", () => {
     const componentSource = source(
-      "components/admin/storyboard/LegacyStoryboardReference.tsx",
+      "components/admin/storyboard/LocalStoryboardWorkspace.tsx",
     );
 
-    expect(componentSource).toContain('data-storyboard-thinking-trace="true"');
-    expect(componentSource).toContain("StoryboardThinkingTracePanel");
-    expect(componentSource).toContain("getStoryboardThinkingTraceDurationLabel");
-    expect(componentSource).toContain("formatStoryboardThinkingDuration");
-    expect(componentSource).toContain('data-storyboard-thinking-duration="true"');
-    expect(componentSource).toContain("동안 생각함");
-    expect(componentSource).toContain("storyboard-generate");
-    expect(componentSource).toContain("storyboard-evidence");
-    expect(componentSource).toContain("image-provider-check");
-    expect(componentSource).toContain("image-plan");
-    expect(componentSource).toContain("`image-cut-${scene.sceneNo}`");
-    expect(componentSource).toContain("image-generation-skip");
+    expect(componentSource).toContain("프로젝트 변경 이력");
+    expect(componentSource).toContain("view.events.map");
+    expect(componentSource).toContain("event.revision");
+    expect(componentSource).toContain("event.createdAt");
+    expect(componentSource).not.toContain("StoryboardThinkingTracePanel");
+    expect(componentSource).not.toContain('data-storyboard-thinking-trace="true"');
   });
 
-  test("keeps the chat composer from showing stacked nested borders", () => {
+  test("keeps the Gemini operator workspace on one compact CMS surface", () => {
     const componentSource = source(
-      "components/admin/storyboard/LegacyStoryboardReference.tsx",
+      "components/admin/storyboard/LocalStoryboardWorkspace.tsx",
     );
 
-    expect(componentSource).toContain("rounded-2xl bg-muted/45");
-    expect(componentSource).toContain(
-      "rounded-[1.75rem] border border-border/80 bg-background/95",
-    );
-    expect(componentSource).toContain('style={{ borderRadius: "1.75rem" }}');
-    expect(componentSource).not.toContain(
-      "rounded-full border border-primary/20 bg-primary/5",
-    );
-    expect(componentSource).not.toContain(
-      "rounded-3xl border border-border/60 bg-background p-2 shadow-sm",
-    );
+    expect(componentSource).toContain('data-admin-storyboard-toolbar="true"');
+    expect(componentSource).toContain('className="min-w-0 p-3 pb-24 sm:p-4 sm:pb-6"');
+    expect(componentSource).toContain('const panelClass = "min-w-0 rounded-xl bg-card');
+    expect(componentSource).not.toContain("StoryboardChat");
+    expect(componentSource).not.toContain("browser-openai-api-key");
   });
 
   test("keeps the glass shimmer skeleton available in both global style bundles", () => {

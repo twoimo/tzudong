@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T14:01:21.571140+00:00",
+  "command": "/opt/homebrew/opt/node@24/bin/node scripts/run-typecheck.mjs --compiler parity",
+  "exitCode": 0,
+  "elapsedSeconds": 25.53,
+  "outputSha256": "79943a0dd9d02bf13eb3f633aa31daf27c4775ec7ac248162bd252dbca4094ba",
+  "output": "{\"status\":\"passed\",\"diagnostics\":0,\"logicalInputs\":3324,\"logicalInputNamesSha256\":\"4858633d19293e689a51ee0ea1cf5eed6a419a5d8148aaf6978eeee4fddfdb78\",\"nonLibraryContentSha256\":\"59db7582f072f1b2fa0a55cf11e7fe746639d9f551157e5144a1352cbeb4ab5f\",\"standardLibraryContentSha256\":{\"native\":\"d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64\",\"compat\":\"82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0\"}}\n"
+}

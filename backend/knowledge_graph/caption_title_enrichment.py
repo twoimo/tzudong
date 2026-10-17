@@ -2,7 +2,8 @@
 
 Planning uses current public API preimages and exact local title sources only.
 This module has no provider/download calls. Shared apply is an explicit caller
-step; callers must review the private plan before using apply().
+step; callers must review the private plan before using apply(). Apply reports
+the captured source version and does not assert later mutable-source currency.
 """
 import hashlib
 import json
@@ -51,10 +52,11 @@ def title_fields(body, video_id):
 
 def source_title(root, vid):
     review_path = f'source/analysis/{vid}/caption-review.json'; index_path = 'source/corpus/video-index.json'
-    bindings = [caption.file_binding(path, root) for path in [review_path, index_path]]
-    review_bytes = (root / review_path).read_bytes(); index_bytes = (root / index_path).read_bytes()
-    if caption.digest(review_bytes) != bindings[0]['sha256'] or caption.digest(index_bytes) != bindings[1]['sha256']: fail('CAPTION_TITLE_SOURCE_CHANGED')
-    review = json.loads(review_bytes); rows = json.loads(index_bytes)
+    review_binding, review_bytes = caption.file_snapshot(review_path, root)
+    index_binding, index_bytes = caption.file_snapshot(index_path, root)
+    bindings = [review_binding, index_binding]
+    review = caption._decode_json(review_bytes, 'CAPTION_TITLE_SOURCE_INVALID')
+    rows = caption._decode_json(index_bytes, 'CAPTION_TITLE_SOURCE_INVALID')
     title = review.get('title'); matches = [row for row in rows if isinstance(row, dict) and row.get('id') == vid] if isinstance(rows, list) else []
     if review.get('videoId') != vid or len(matches) != 1 or matches[0].get('title') != title: fail('CAPTION_TITLE_SOURCE_INVALID')
     receipt = {'schema': SCHEMA, 'videoId': vid, 'displayTitle': title, 'titleSha256': caption.digest(title.encode()) if isinstance(title, str) else '', 'reviewSha256': bindings[0]['sha256'], 'indexSha256': bindings[1]['sha256'], 'observation': 'caption-first-pass'}
@@ -69,9 +71,15 @@ def enriched_body(before, vid, receipt):
 
 
 def make_plan(records, root):
-    if [r.get('name') for r in records] != ['YT-tzuyang-Video-' + vid for vid in caption.IDS]: fail('CAPTION_TITLE_PLAN_INVALID')
+    if not isinstance(records, list) or not records: fail('CAPTION_TITLE_PLAN_INVALID')
+    names = [record.get('name') if isinstance(record, dict) else None for record in records]
+    prefix = 'YT-tzuyang-Video-'
+    if (any(not isinstance(name, str) or not name.startswith(prefix) for name in names)
+            or names != sorted(names) or len(names) != len(set(names))): fail('CAPTION_TITLE_PLAN_INVALID')
+    video_ids = [name[len(prefix):] for name in names]
+    if any(not projection.VIDEO_ID.fullmatch(video_id) for video_id in video_ids): fail('CAPTION_TITLE_PLAN_INVALID')
     targets = []
-    for vid, before in zip(caption.IDS, records):
+    for vid, before in zip(video_ids, records):
         caption.check_node(before, vid)
         if not re.fullmatch('sha256:[a-f0-9]{64}', str(before.get('hash'))) or not isinstance(before.get('id'), str) or not isinstance(before.get('meta'), dict): fail('CAPTION_TITLE_PREIMAGE_INVALID')
         receipt, bindings = source_title(root, vid); body = enriched_body(before, vid, receipt)
@@ -80,7 +88,10 @@ def make_plan(records, root):
 
 
 def validate_plan(plan):
-    if not isinstance(plan, dict) or plan.get('schema') != PLAN or [t.get('videoId') for t in plan.get('targets', [])] != list(caption.IDS): fail('CAPTION_TITLE_PLAN_INVALID')
+    ids = [t.get('videoId') for t in plan.get('targets', [])] if isinstance(plan, dict) and isinstance(plan.get('targets'), list) else []
+    if (not isinstance(plan, dict) or plan.get('schema') != PLAN or not ids
+            or ids != sorted(ids) or len(ids) != len(set(ids))
+            or any(not projection.VIDEO_ID.fullmatch(str(video_id)) for video_id in ids)): fail('CAPTION_TITLE_PLAN_INVALID')
     for t in plan['targets']:
         caption.check_node(t, t['videoId'])
         if caption.digest(t['beforeBody'].encode()) != t['beforeBodySha256'] or caption.digest(t['body'].encode()) != t['targetBodySha256'] or not re.fullmatch('sha256:[a-f0-9]{64}', str(t['beforeHash'])): fail('CAPTION_TITLE_PLAN_INVALID')
@@ -95,9 +106,13 @@ def validate_plan(plan):
 
 def apply(engine, root, plan):
     validate_plan(plan); results = []
-    def current_target(t):
+    captured_sources = []
+    for t in plan['targets']:
         receipt, bindings = source_title(root, t['videoId'])
         if bindings != t['sourceFiles'] or enriched_body({'body': t['beforeBody']}, t['videoId'], receipt) != t['body']: fail('CAPTION_TITLE_SOURCE_CHANGED')
+        captured_sources.append({'videoId': t['videoId'], 'sourceFiles': bindings})
+    source_snapshot_sha = caption.digest(caption.canonical(captured_sources).encode())
+    def current_target(t):
         current = engine.read(t['name']); caption.check_node(current, t['videoId'])
         if current['id'] != t['id'] or any(current['meta'].get(k) != v for k, v in t['meta'].items() if k != 'updated') or (current['body'] != t['body'] and (current['hash'] != t['beforeHash'] or current['body'] != t['beforeBody'])): fail('CAPTION_TITLE_NODE_CHANGED')
         return current
@@ -109,4 +124,9 @@ def apply(engine, root, plan):
             after = engine.read(t['name']); caption.check_node(after, t['videoId'])
             if after['id'] != t['id'] or after['body'] != t['body'] or any(after['meta'].get(k) != v for k, v in t['meta'].items() if k != 'updated'): fail('CAPTION_TITLE_READBACK_REQUIRED')
             results.append({'name': t['name'], 'afterHash': after['hash'], 'reused': reused})
-    return {'schema': 'tzudong-caption-title-readback/v1', 'results': results, 'providerCalls': 0, 'independentVideoCompletion': False}
+    return {'schema': 'tzudong-caption-title-readback/v2', 'results': results,
+            'sourceSnapshot': {'status': 'captured', 'sha256': source_snapshot_sha,
+                               'sourceBindingCount': sum(len(item['sourceFiles']) for item in captured_sources),
+                               'uniqueSourcePathCount': len({binding['path'] for item in captured_sources for binding in item['sourceFiles']}),
+                               'currentMutableSourcesCheckedAfterCapture': False},
+            'providerCalls': 0, 'independentVideoCompletion': False}

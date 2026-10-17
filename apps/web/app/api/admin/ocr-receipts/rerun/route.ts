@@ -16,6 +16,17 @@ import {
 } from '@/lib/admin/guarded-mutation-contract';
 import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
+import { FEATURE_DATABASE_HELD_CODE, FEATURE_DATABASE_HELD_MESSAGE } from '@/lib/runtime-feature-readiness-contract';
+import { readFeatureDatabaseReadiness } from '@/lib/server/runtime-feature-readiness';
+import {
+    buildReceiptOcrWorkflowInputs,
+    dispatchReceiptOcrWorkflow,
+    RECEIPT_OCR_WORKFLOW_FILE,
+} from '@/lib/ocr/workflow-dispatch';
+import {
+    isResetReceiptOcrState,
+    resetReceiptOcrRowWithCas,
+} from '@/lib/ocr/admin-receipt-reset';
 
 export const runtime = 'nodejs';
 
@@ -48,6 +59,13 @@ export async function POST(request: Request) {
         if (!auth.ok) {
             auth.response.headers.set('Cache-Control', 'no-store');
             return auth.response;
+        }
+
+        if ((await readFeatureDatabaseReadiness({ ownerId: auth.userId })).status !== 'ready') {
+            return noStoreJson(
+                { code: FEATURE_DATABASE_HELD_CODE, error: FEATURE_DATABASE_HELD_MESSAGE },
+                { status: 409 },
+            );
         }
 
         if (!isTrustedSameOriginMutation(request)) {
@@ -126,8 +144,22 @@ export async function POST(request: Request) {
             );
         }
 
+        let workflowInputs: Record<string, string>;
+        try {
+            workflowInputs = await buildReceiptOcrWorkflowInputs([reviewId]);
+        } catch {
+            return noStoreJson(
+                {
+                    error: 'OCR 워크플로우 설정을 확인하지 못해 OCR 데이터를 초기화하지 않았습니다.',
+                    step: 'workflow-config',
+                    resetSkipped: true,
+                },
+                { status: 503 },
+            );
+        }
+
         const workflowPreflightResponse = await fetch(
-            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/ocr-review-receipts.yml`,
+            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/${RECEIPT_OCR_WORKFLOW_FILE}`,
             {
                 method: 'GET',
                 headers: {
@@ -138,7 +170,7 @@ export async function POST(request: Request) {
         );
 
         if (!workflowPreflightResponse.ok) {
-            await workflowPreflightResponse.text().catch(() => null);
+            await workflowPreflightResponse.body?.cancel().catch(() => undefined);
             console.error('[admin/ocr-receipts/rerun] guarded mutation preflight failed', {
                 domain: 'ocr_receipt',
                 action: 'rerun',
@@ -164,77 +196,62 @@ export async function POST(request: Request) {
             receipt_hash: review.receipt_hash,
             is_duplicate: review.is_duplicate,
         };
-        const { error: updateError } = await supabase
-            .from('reviews')
-            .update({
-                ocr_processed_at: null,
-                receipt_data: null,
-                receipt_hash: null,
-                is_duplicate: false,
-            })
-            .eq('id', reviewId);
-
-        if (updateError) {
-            console.error('[admin/ocr-receipts/rerun] guarded mutation reset failed', {
-                domain: 'ocr_receipt',
-                action: 'rerun',
-                step: 'ocr-reset',
-                correlationId,
-                errorName: getGuardedMutationErrorName(updateError),
-            });
-            return NextResponse.json(
-                { error: 'OCR 초기화에 실패했습니다.', step: 'ocr-reset' },
-                { status: 500 }
+        const resetAlreadyPending = isResetReceiptOcrState({ id: reviewId, ...previousOcrState });
+        let resetApplied = false;
+        if (!resetAlreadyPending) {
+            const resetResult = await resetReceiptOcrRowWithCas(
+                supabase,
+                { id: reviewId, ...previousOcrState },
             );
+            if (resetResult !== 'applied') {
+                console.error('[admin/ocr-receipts/rerun] guarded mutation reset failed', {
+                    domain: 'ocr_receipt',
+                    action: 'rerun',
+                    step: 'ocr-reset',
+                    correlationId,
+                    resetResult,
+                });
+                return noStoreJson(
+                    { error: 'OCR 상태가 변경되어 초기화하지 않았습니다.', step: 'ocr-reset' },
+                    { status: resetResult === 'conflict' ? 409 : 503 }
+                );
+            }
+            resetApplied = true;
         }
 
         // 4. GitHub Actions 워크플로우 트리거
 
-        const response = await fetch(
-            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/ocr-review-receipts.yml/dispatches`,
-            {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${GITHUB_TOKEN}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ref: 'main',
-                    inputs: {
-                        reviewId: reviewId,  // 특정 리뷰 ID 전달
-                    },
-                }),
-            }
-        );
+        const dispatch = await dispatchReceiptOcrWorkflow({
+            url: `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/${RECEIPT_OCR_WORKFLOW_FILE}/dispatches`,
+            token: GITHUB_TOKEN,
+            inputs: workflowInputs,
+        });
 
-        if (!response.ok) {
-            await response.text().catch(() => null);
+        if (dispatch.status !== 'accepted') {
             console.error('[admin/ocr-receipts/rerun] guarded mutation dispatch failed', {
                 domain: 'ocr_receipt',
                 action: 'rerun',
                 step: 'workflow-dispatch',
-                status: response.status,
+                status: dispatch.httpStatus,
                 correlationId,
             });
-            const { error: rollbackError } = await supabase
-                .from('reviews')
-                .update(previousOcrState)
-                .eq('id', reviewId);
-            return NextResponse.json(
+            return noStoreJson(
                 {
-                    error: `GitHub Actions 트리거 실패: ${response.status}`,
+                    error: 'GitHub Actions 접수 여부를 확인하지 못했습니다. 처리 상태를 확인한 뒤 다시 시도해 주세요.',
                     step: 'workflow-dispatch',
-                    resetRolledBack: !rollbackError,
-                    rollbackError: rollbackError ? 'OCR 초기화 롤백에 실패했습니다. 수동 확인이 필요합니다.' : null,
+                    dispatchIndeterminate: true,
                     guardedMutation: {
                         domain: 'ocr_receipt',
                         action: 'rerun',
                         confirmation: GUARDED_MUTATION_CONFIRMATION,
                         readback: {
-                            resetApplied: true,
-                            resetRolledBack: !rollbackError,
-                            workflowDispatched: false,
+                            resetApplied,
+                            resetAlreadyPending,
+                            resetReadbackVerified: true,
+                            resetPreserved: true,
+                            workflowDispatched: null,
+                            workflowDispatchAccepted: null,
+                            workflowDeliveryVerified: false,
                             reviewId,
                         },
                         audit: {
@@ -243,21 +260,25 @@ export async function POST(request: Request) {
                         },
                     },
                 },
-                { status: response.status === 401 || response.status === 403 ? 502 : response.status }
+                { status: dispatch.httpStatus === 401 || dispatch.httpStatus === 403 ? 502 : 503 }
             );
         }
 
         return NextResponse.json({
             success: true,
-            message: 'OCR 재실행이 시작되었습니다. 약 30~40초 후 결과가 반영됩니다.',
+            message: 'OCR 재실행 요청이 접수되었습니다. 처리 상태에서 결과를 확인해 주세요.',
             reviewId,
             guardedMutation: {
                 domain: 'ocr_receipt',
                 action: 'rerun',
                 confirmation: GUARDED_MUTATION_CONFIRMATION,
                 readback: {
-                    resetApplied: true,
+                    resetApplied,
+                    resetAlreadyPending,
+                    resetReadbackVerified: true,
                     workflowDispatched: true,
+                    workflowDispatchAccepted: true,
+                    workflowDeliveryVerified: false,
                     reviewId,
                 },
                 audit: {

@@ -23,10 +23,14 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
     const script = `
         import React, { useState, useRef, useLayoutEffect } from 'react';
         import { createRoot } from 'react-dom/client';
+        import { flushSync } from 'react-dom';
         import { ReviewSaveOperation } from './lib/reviews/review-save-operation';
+        import { FEATURE_DATABASE_HELD, FEATURE_DATABASE_READY } from '@/lib/runtime-feature-readiness-contract';
         let owner = 'owner-a', nextInstance = 0, nextId = 0;
+        let featureReadiness = FEATURE_DATABASE_READY;
         const rows = new Map(), objects = new Set();
-        const counts = { inserts: 0, removes: 0, crossOwnerMutations: 0 };
+        const counts = { readinessChecks: 0, inserts: 0, removes: 0, crossOwnerMutations: 0 };
+        const fetchFeatureDatabaseReadiness = async () => { counts.readinessChecks++; return featureReadiness; };
         const useAuth = () => ({ user: owner ? { id: owner } : null });
         function createReviewSaveOperation(currentOwner) {
             return new ReviewSaveOperation({
@@ -68,15 +72,23 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
             const [verificationPhoto] = useState(() => new File(['receipt'], 'receipt.jpg'));
             const [foodPhotos] = useState(() => [new File(['food'], 'food.jpg')]);
             const reviewTargetRestaurant = { id: 'fixture-restaurant' };
+            const ocrResultRef = null, ocrResultRevision = null;
             const draftScopeRef = useRef({ ownerId: user?.id, restaurantId: reviewTargetRestaurant.id, revision: null });
             const saveOwnerRef = useRef(user?.id), saveOperationRef = useRef(null);
             const composerOpenRef = useRef(isOpen), closeRequestedRef = useRef(false), consumerNotifiedRef = useRef(false);
-            const latestSaveInputsRef = useRef(null);
+            const ocrRunGenerationRef = useRef(0), ocrAbortControllerRef = useRef(null), ocrRecoveryContextRef = useRef(null);
+            const latestSaveInputsRef = useRef({ visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: reviewTargetRestaurant.id, ocrResultRef, ocrResultRevision });
             ${lifecycle.join(';\n')};
-            const submit = async () => setResult(await saveOperationRef.current.submit({
-                ownerId: user.id, restaurantId: reviewTargetRestaurant.id, title: 'Fixture',
-                content, visitedAt: '2026-10-04T12:00:00', categories, verificationPhoto, foodPhotos,
-            }));
+            const submit = async () => {
+                if ((await fetchFeatureDatabaseReadiness()).status !== 'ready') {
+                    setResult('held');
+                    return;
+                }
+                setResult(await saveOperationRef.current.submit({
+                    ownerId: user.id, restaurantId: reviewTargetRestaurant.id, title: 'Fixture',
+                    content, visitedAt: '2026-10-04T12:00:00', categories, verificationPhoto, foodPhotos,
+                }));
+            };
             return <div data-instance={instance}>
                 <input value={content} onChange={event => setContent(event.target.value)} />
                 <button id="save" onClick={submit}>save</button>
@@ -85,9 +97,10 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
             </div>;
         }
         const root = createRoot(document.getElementById('root'));
-        const render = () => root.render(<ReviewModal isOpen={true} restaurant={null} onClose={() => {}} />);
+        const render = () => flushSync(() => root.render(<ReviewModal isOpen={true} restaurant={null} onClose={() => {}} />));
         window.fixture = {
             switchOwner: value => { owner = value; render(); },
+            setReadiness: ready => { featureReadiness = ready ? FEATURE_DATABASE_READY : FEATURE_DATABASE_HELD; },
             summary: () => ({ ...counts, rows: rows.size, objects: objects.size }),
         };
         render();
@@ -98,6 +111,9 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
         plugins: [{ name: 'offline-fixture', setup(builder) {
             builder.onResolve({ filter: /^review-owner-fixture$/ }, () => ({ path: 'fixture.tsx', namespace: 'fixture' }));
             builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: script, loader: 'tsx', resolveDir: join(import.meta.dir, '..') }));
+            builder.onResolve({ filter: /^@\/lib\/review-photo-url$/ }, () => ({ path: join(import.meta.dir, '../lib/review-photo-url.ts') }));
+            builder.onResolve({ filter: /^@\/lib\/profile-avatar-url$/ }, () => ({ path: join(import.meta.dir, '../lib/profile-avatar-url.ts') }));
+            builder.onResolve({ filter: /^@\/lib\/runtime-feature-readiness-contract$/ }, () => ({ path: join(import.meta.dir, '../lib/runtime-feature-readiness-contract.ts') }));
         } }],
     });
     expect(bundle.success).toBe(true);
@@ -105,14 +121,21 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
     try {
         const page = await browser.newPage();
         page.setDefaultTimeout(5_000);
-        let browserErrors = 0;
+        let browserErrors = 0, externalRequests = 0;
         page.on('pageerror', () => { browserErrors++; });
-        await page.route('**/*', route => route.abort());
+        await page.route('**/*', route => { externalRequests++; return route.abort(); });
         await page.setContent('<div id="root"></div>');
         await page.addScriptTag({ content: await bundle.outputs[0].text() });
         expect(browserErrors).toBe(0);
         await page.locator('input').fill('Owner A private fixture draft');
         const instanceA = await page.locator('[data-instance]').getAttribute('data-instance');
+        await page.evaluate(() => (window as unknown as {fixture: {setReadiness(ready: boolean): void}}).fixture.setReadiness(false));
+        await page.locator('#save').click();
+        await page.waitForFunction(() => document.querySelector('output')?.textContent === 'held');
+        expect(await page.evaluate(() => (window as unknown as {fixture: {summary(): unknown}}).fixture.summary())).toEqual({
+            readinessChecks: 1, inserts: 0, removes: 0, crossOwnerMutations: 0, rows: 0, objects: 0,
+        });
+        await page.evaluate(() => (window as unknown as {fixture: {setReadiness(ready: boolean): void}}).fixture.setReadiness(true));
         await page.locator('#save').click();
         await page.waitForFunction(() => document.querySelector('output')?.textContent === 'blocked');
         await page.evaluate(() => (window as unknown as {fixture: {switchOwner(owner: string | null): void}}).fixture.switchOwner('owner-b'));
@@ -125,7 +148,8 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
         await page.locator('#close').click();
         await page.waitForFunction(() => document.querySelector('output')?.textContent === 'close-saved');
         const summary = await page.evaluate(() => (window as unknown as {fixture: {summary(): unknown}}).fixture.summary());
-        expect(summary).toEqual({ inserts: 2, removes: 0, crossOwnerMutations: 0, rows: 2, objects: 4 });
+        expect(summary).toEqual({ readinessChecks: 3, inserts: 2, removes: 0, crossOwnerMutations: 0, rows: 2, objects: 4 });
+        expect(externalRequests).toBe(0);
         await page.evaluate(() => (window as unknown as {fixture: {switchOwner(owner: string | null): void}}).fixture.switchOwner(null));
         await page.waitForFunction(() => document.querySelector('input')?.value === '');
         expect(await page.locator('output').textContent()).toBe('idle');

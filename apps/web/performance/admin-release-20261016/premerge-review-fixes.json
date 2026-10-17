@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "kind": "premerge-review-fixes",
+  "baseSha": "c8b617539dbc0a95935531fc5c218c48c2adf4ff",
+  "reviews": [
+    "PRRT_kwDOQGRyNc6s2tHR",
+    "PRRT_kwDOQGRyNc6s2tHe",
+    "PRRT_kwDOQGRyNc6s2tHn",
+    "PRRT_kwDOQGRyNc6s2tHw"
+  ],
+  "checks": {
+    "bun": {
+      "passed": 129,
+      "failed": 0,
+      "files": 5,
+      "assertions": 1158
+    },
+    "node": {
+      "passed": 4,
+      "failed": 0
+    },
+    "python": {
+      "passed": 19,
+      "failed": 0
+    },
+    "targetedEslint": "passed",
+    "actionlint": {
+      "version": "1.7.12",
+      "status": "passed"
+    },
+    "typecheck": {
+      "initial": "TS2345",
+      "repair": "explicit-budget-options-jsdoc",
+      "final": "passed",
+      "logicalInputs": 3324,
+      "diagnostics": 0
+    },
+    "build": {
+      "nextVersion": "16.3.8",
+      "status": "passed",
+      "cssBoundary": "passed",
+      "homeBytes": 195887,
+      "generalAppBytes": 327984,
+      "adminBytes": 345069,
+      "deferredBytes": 195887
+    }
+  },
+  "files": [
+    {
+      "path": ".github/workflows/ocr-review-receipts.yml",
+      "sha256": "70f00cf7b423de50f152ef49fc89a65f31c91cb89ec06894a38a4dfde6d1ba9f"
+    },
+    {
+      "path": "apps/web/components/reviews/ReviewModal.tsx",
+      "sha256": "ddfb8e20295d14e7b3b43bc3276d30c167b850a2c3fee27b75fbe798b33c1431"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/gemini-client.ts",
+      "sha256": "30a6b03b56aa8c153a0c690a065d99b825bba2e41a057132021c43a310e34562"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-receipt-ocr-workflow.test.ts",
+      "sha256": "b53fa991c9a423b76b175b3d2efe7f55defb25feb9c65b15c92dfcf432a32f83"
+    },
+    {
+      "path": "apps/web/tests-unit/review-modal-ocr-ux.test.ts",
+      "sha256": "d7e760a59de8b320cae67e76dd519184d4ad1e424300814b9b96b4b99c022dd8"
+    },
+    {
+      "path": "apps/web/tests-unit/review-save-submit.test.ts",
+      "sha256": "189794be71b2e249c550719410dea8bda8267aa446778dcf3749905fbbc47007"
+    },
+    {
+      "path": "apps/web/tests-unit/storyboard-gemini-client.test.ts",
+      "sha256": "90bef7387a63267af495f9b54efa4ac68cc9367d7ef8b692ad085a46f50acf0b"
+    },
+    {
+      "path": "backend/utils/provider-budget.mjs",
+      "sha256": "186fc064471db899084201111cfe8fffcf6b6c21d48bf38e7446f5f1c2999a98"
+    },
+    {
+      "path": "backend/utils/provider_budget.py",
+      "sha256": "79cfb4e2b7cf047414ced105ff40dfd5c26d2b9bd6e41af9baf683e35507e6ca"
+    },
+    {
+      "path": "backend/utils/tests/provider-budget-js.test.mjs",
+      "sha256": "da54355ce1b95081369d291107f50d230bd26b6d4a325b64bf1edf303c258329"
+    },
+    {
+      "path": "backend/utils/tests/test_pipeline_performance.py",
+      "sha256": "c44bdceb47e6b95d21551b35adad356392868c31b897904ebe2124cad9311203"
+    }
+  ],
+  "externalWrites": {
+    "provider": 0,
+    "database": 0,
+    "deployment": 0
+  },
+  "performanceClaim": false
+}

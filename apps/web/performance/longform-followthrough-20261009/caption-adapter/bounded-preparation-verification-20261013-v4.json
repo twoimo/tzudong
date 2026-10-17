@@ -1,0 +1,106 @@
+{
+  "schema": "tzudong-caption-bounded-preparation-verification/v4",
+  "verifiedAtUtc": "2026-10-13T10:44:15Z",
+  "scope": "final delta for captured title apply and ancestor-safe membership reads",
+  "preservedPriorReceipts": [
+    {
+      "path": "apps/web/performance/longform-followthrough-20261009/caption-adapter/bounded-preparation-verification-20261013.json",
+      "sha256": "b1dc04b83679281fc6283814cfe3dd2507f72eefd6d8d9e4b86fce73a83b24b8",
+      "preservedByteExact": true
+    },
+    {
+      "path": "apps/web/performance/longform-followthrough-20261009/caption-adapter/bounded-preparation-verification-20261013-v2.json",
+      "sha256": "9100cfda8b7d0af01d4b868e068724d3c7349f8043dfe0691edf91ac8602b18b",
+      "preservedByteExact": true
+    },
+    {
+      "path": "apps/web/performance/longform-followthrough-20261009/caption-adapter/bounded-preparation-verification-20261013-v3.json",
+      "sha256": "a613fda30a7e5122370566ed3b981c164aad9fb0b1bce24e8f6927fc6fddaef9",
+      "preservedByteExact": true
+    }
+  ],
+  "canonicalCoverage": {
+    "membershipRereadAtUtc": "2026-10-13T10:44:15Z",
+    "eligibleLongformCount": 1071,
+    "shortsExcludedCount": 81,
+    "captionReviewCount": 9,
+    "eligibleWithoutCaptionReviewCount": 1062,
+    "eligibleSetSha256": "9c2564ae7feba097dbf32caf85a2af43ebbac95e28faae8cc8360abd08c2c705",
+    "coverageRevision": "4e0f93909c6d2ea28f93563702ca1a20454d1014cca3dbde7e8e166804325de4",
+    "captionSourceSetSha256": "9e011f3b5b05c3f8756fcc34a88b941fa854bb77e2b3e09df59fda834c095141"
+  },
+  "delta": [
+    {
+      "issue": "title source change at update entry could return plain success",
+      "contract": "All review/index bindings are captured and matched to the reviewed plan before any title mutation. The captured set is held through CAS/readback. Readback schema v2 returns its SHA-256, binding/path counts, status captured, and currentMutableSourcesCheckedAfterCapture false.",
+      "regression": "test_apply_reports_captured_title_when_sources_change_at_update_entry",
+      "result": "passed",
+      "canonicalSourceWrites": 0
+    },
+    {
+      "issue": "membership final-file O_NOFOLLOW allowed ancestor symlink traversal",
+      "contract": "Membership paths are opened from root through one O_DIRECTORY|O_NOFOLLOW descriptor per ancestor and an O_NOFOLLOW final file descriptor. Only verified macOS /var, /tmp, and /etc aliases to their expected /private roots are normalized.",
+      "regression": "test_membership_linked_parent_is_rejected",
+      "repro": "linked/videos.json with linked pointing to an outside directory",
+      "result": "CAPTION_COVERAGE_INVALID before planning"
+    }
+  ],
+  "retainedSnapshotEvidence": {
+    "firstApplyMutableSourceReads": 13,
+    "resumeMutableSourceReads": 0,
+    "immutableCaptionSnapshotIndependentlyConfirmed": true,
+    "descriptorCheckpointIsolationIndependentlyConfirmed": true
+  },
+  "sourceFreeze": [
+    {
+      "path": "backend/knowledge_graph/caption_osk_adapter.py",
+      "sha256": "8f393cf4c487f3d3136908c7d3ad0f12f40350123677cbf237222f0474863f2f"
+    },
+    {
+      "path": "backend/knowledge_graph/caption_title_enrichment.py",
+      "sha256": "60333c1b35f4ec6c136511fc1a28f36f5033e5318e6ab69c382bfec94b99bd5d"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_caption_osk_adapter.py",
+      "sha256": "0db85fa2944a9b181baf20a56aa69fc639eb115dab8874002e4826731473bc5d"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_caption_title_enrichment.py",
+      "sha256": "7800331fb3a26f60bbe5468991a22c2332a0519b4fd62eda55ac46c0e9b24d97"
+    },
+    {
+      "path": "backend/knowledge_graph/CAPTION_OSK_ADAPTER.md",
+      "sha256": "7b1c0c8e844cea2ae3137f7f4e562217009664b3129f72cc272346ef58819b8a"
+    }
+  ],
+  "disposableOskVerification": {
+    "python": "/Users/twoimo/Documents/osk-vault/.venv/bin/python",
+    "pythonVersion": "3.13.16",
+    "engineRoot": "/Users/twoimo/Documents/osk-vault/_governance/_engine",
+    "expectedEngineSha256": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358",
+    "actualEngineSha256": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358",
+    "testsRun": 25,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "result": "passed",
+    "vault": "owned tempfile created and removed by the test"
+  },
+  "checks": {
+    "pyCompile": "passed",
+    "gitDiffCheck": "passed"
+  },
+  "boundaries": {
+    "providerCalls": 0,
+    "downloads": 0,
+    "sharedOskWrites": false,
+    "hostedDatabaseWrites": false,
+    "canonicalSourceInputWrites": false,
+    "staging": false,
+    "commits": 0,
+    "pushes": 0,
+    "independentFullVisualVerified": false,
+    "independentAudioVerified": false,
+    "meaning": "Local captured caption/title registration verification only; no full claude-video analysis, shared graph materialization, Admin readback, deployment or release."
+  }
+}

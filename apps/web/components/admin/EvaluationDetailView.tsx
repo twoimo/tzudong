@@ -9,6 +9,7 @@ import { formatCategoryText } from '@/lib/category-utils';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { extractCanonicalYouTubeVideoId, normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { getYoutubeThumbnailCandidates, shouldTryNextYoutubeThumbnailCandidate } from '@/lib/youtube-thumbnail';
+import { AlertTriangle } from 'lucide-react';
 import {
     explainAddressConsistency,
     getAddressConsistencyAhpSummary,
@@ -35,44 +36,44 @@ type EvaluationTone = 'pink' | 'blue' | 'purple' | 'green' | 'indigo' | 'orange'
 
 const evaluationToneClasses: Record<EvaluationTone, { rail: string; badge: string; value: string }> = {
     pink: {
-        rail: 'border-l-pink-500',
-        badge: 'border-pink-200 bg-pink-50 text-pink-700',
-        value: 'text-pink-700',
+        rail: 'border-l-slate-400',
+        badge: 'border-slate-200 bg-slate-50 text-slate-700',
+        value: 'text-foreground',
     },
     blue: {
-        rail: 'border-l-blue-500',
-        badge: 'border-blue-200 bg-blue-50 text-blue-700',
-        value: 'text-blue-700',
+        rail: 'border-l-slate-400',
+        badge: 'border-slate-200 bg-slate-50 text-slate-700',
+        value: 'text-foreground',
     },
     purple: {
-        rail: 'border-l-purple-500',
-        badge: 'border-purple-200 bg-purple-50 text-purple-700',
-        value: 'text-purple-700',
+        rail: 'border-l-slate-400',
+        badge: 'border-slate-200 bg-slate-50 text-slate-700',
+        value: 'text-foreground',
     },
     green: {
-        rail: 'border-l-green-500',
-        badge: 'border-green-200 bg-green-50 text-green-700',
-        value: 'text-green-700',
+        rail: 'border-l-slate-400',
+        badge: 'border-slate-200 bg-slate-50 text-slate-700',
+        value: 'text-foreground',
     },
     indigo: {
-        rail: 'border-l-indigo-500',
-        badge: 'border-indigo-200 bg-indigo-50 text-indigo-700',
-        value: 'text-indigo-700',
+        rail: 'border-l-slate-400',
+        badge: 'border-slate-200 bg-slate-50 text-slate-700',
+        value: 'text-foreground',
     },
     orange: {
-        rail: 'border-l-orange-500',
-        badge: 'border-orange-200 bg-orange-50 text-orange-700',
-        value: 'text-orange-700',
+        rail: 'border-l-slate-400',
+        badge: 'border-slate-200 bg-slate-50 text-slate-700',
+        value: 'text-foreground',
     },
     teal: {
-        rail: 'border-l-teal-500',
-        badge: 'border-teal-200 bg-teal-50 text-teal-700',
-        value: 'text-teal-700',
+        rail: 'border-l-slate-400',
+        badge: 'border-slate-200 bg-slate-50 text-slate-700',
+        value: 'text-foreground',
     },
     yellow: {
-        rail: 'border-l-yellow-500',
-        badge: 'border-yellow-200 bg-yellow-50 text-yellow-800',
-        value: 'text-yellow-800',
+        rail: 'border-l-slate-400',
+        badge: 'border-slate-200 bg-slate-50 text-slate-700',
+        value: 'text-foreground',
     },
 };
 
@@ -92,10 +93,10 @@ function SectionPanel({
     return (
         <section
             aria-labelledby={titleId}
-            className={cn('rounded-2xl border border-border/80 bg-card/95 p-4 shadow-sm', className)}
+            className={cn('admin-detail-section p-3', className)}
         >
             <div className="mb-3 min-w-0">
-                <h3 id={titleId} className="text-sm font-bold tracking-[-0.02em] text-foreground sm:text-base">{title}</h3>
+                <h3 id={titleId} className="admin-section-title">{title}</h3>
                 {description && (
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
                 )}
@@ -105,22 +106,8 @@ function SectionPanel({
     );
 }
 
-function NumberBadge({ index, tone }: { index: number; tone: EvaluationTone }) {
-    return (
-        <Badge
-            variant="outline"
-            className={cn(
-                'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg p-0 text-2xs font-bold',
-                evaluationToneClasses[tone].badge,
-            )}
-        >
-            {index}
-        </Badge>
-    );
-}
-
 function EvalItem({
-    index,
+    index: _index,
     title,
     tone,
     value,
@@ -135,12 +122,11 @@ function EvalItem({
     return (
         <article
             className={cn(
-                'rounded-xl border border-border/80 border-l-4 bg-background/85 p-3 shadow-[0_1px_0_rgba(0,0,0,0.03)]',
+                'rounded-md border border-border border-l-4 bg-background p-3',
                 evaluationToneClasses[tone].rail,
             )}
         >
             <div className="flex flex-wrap items-center gap-2">
-                <NumberBadge index={index} tone={tone} />
                 <h4 className="min-w-0 flex-1 text-sm font-bold text-foreground">{title}</h4>
                 {value && <div className="shrink-0">{value}</div>}
             </div>
@@ -161,7 +147,7 @@ function SourceNameRow({
     valueClassName?: string;
 }) {
     return (
-        <div className="grid grid-cols-[86px_minmax(0,1fr)_auto] items-start gap-2 rounded-lg bg-muted/35 px-2 py-1.5">
+        <div className="grid grid-cols-[86px_minmax(0,1fr)_auto] items-start gap-2 rounded-md border border-border bg-background px-2 py-1.5">
             <span className="text-xs font-medium text-muted-foreground">{label}</span>
             <span className={cn('min-w-0 overflow-wrap-anywhere text-xs font-bold text-foreground', valueClassName)}>{value}</span>
             <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-2xs text-muted-foreground">
@@ -208,7 +194,7 @@ function BooleanBadge({ value, rerunNeeded = false }: { value: boolean | null | 
 
 function InfoItem({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
     return (
-        <div className={cn('min-w-0 rounded-xl border border-border/70 bg-background/70 px-3 py-2', className)}>
+        <div className={cn('min-w-0 rounded-md border border-border bg-background px-3 py-2', className)}>
             <dt className="text-2xs font-semibold text-muted-foreground">{label}</dt>
             <dd className="mt-1 overflow-wrap-anywhere text-sm leading-5 text-foreground">{children}</dd>
         </div>
@@ -217,7 +203,7 @@ function InfoItem({ label, children, className }: { label: string; children: Rea
 
 function EvidenceNote({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <div className="rounded-xl border border-border/80 bg-muted/30 p-3">
+        <div className="rounded-md border border-border bg-background p-3">
             <h4 className="text-xs font-bold tracking-[-0.01em] text-foreground">{title}</h4>
             <p className="mt-1 whitespace-pre-wrap break-keep text-xs leading-5 text-muted-foreground">
                 {children}
@@ -315,8 +301,8 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
 
     if (!record) {
         return (
-            <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
-                <span className="text-4xl mb-4" aria-hidden="true">⚠️</span>
+            <div className="admin-empty-state flex flex-col items-center justify-center p-8 text-muted-foreground">
+                <AlertTriangle className="mb-4 h-8 w-8" aria-hidden="true" />
                 <p className="text-lg">표시할 데이터가 없습니다.</p>
             </div>
         );
@@ -358,7 +344,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
     ].filter(Boolean) as string[];
 
     const RightContent = () => (
-        <div className="space-y-4 p-3 text-sm sm:p-4">
+        <div className="space-y-2 p-3 text-sm">
             <SectionPanel title="판정 요약" description="검토 → 결정 기록 → 안전 적용 → 재확인 순서로 처리합니다." className={cn(needsAddressReview || isDeleted ? 'border-primary/25 bg-primary/5' : 'border-emerald-200 bg-emerald-50/40')}>
                 <div className="space-y-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -376,10 +362,10 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                         <InfoItem label="안전 적용">적용 후 재확인·감사 기록</InfoItem>
                     </div>
                     {decisionReasons.length > 0 && (
-                        <ul className="space-y-1 rounded-xl border border-primary/15 bg-background/75 p-3 text-xs leading-5 text-foreground">
+                        <ul className="space-y-1 rounded-md border border-primary/20 bg-background p-3 text-xs leading-5 text-foreground">
                             {decisionReasons.slice(0, 3).map((reason, index) => (
                                 <li key={`${record.id}-decision-reason-${index}`} className="flex gap-2 break-keep">
-                                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                                    <span className="mt-2 h-1.5 w-1.5 shrink-0 bg-primary" aria-hidden="true" />
                                     <span>{reason}</span>
                                 </li>
                             ))}
@@ -406,13 +392,13 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                         ? locationMatchResult.name
                                         : '-')}
                                 provider="지도 규칙"
-                                valueClassName="text-blue-700"
+                                valueClassName="text-foreground"
                             />
                             <SourceNameRow
                                 label="구글"
                                 value={record.google_name || locationMatchResult?.google_name || '-'}
                                 provider="지도 규칙"
-                                valueClassName="text-orange-700"
+                                valueClassName="text-foreground"
                             />
                         </div>
                     </EvalItem>
@@ -597,13 +583,11 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                     </InfoItem>
                     {record.phone && <InfoItem label="전화번호">{record.phone}</InfoItem>}
                     <InfoItem label="좌표">
-                        <span className="font-mono text-xs text-muted-foreground">{record.lat ?? '-'}, {record.lng ?? '-'}</span>
+                        <span className="tabular-nums text-xs text-muted-foreground">{record.lat ?? '-'}, {record.lng ?? '-'}</span>
                     </InfoItem>
                 </dl>
 
-                <div className="my-4 h-px bg-border" role="none" />
-
-                <div className="grid gap-3 lg:grid-cols-2">
+                <div className="mt-4 grid gap-3 lg:grid-cols-2">
                     <EvidenceNote title="추론 근거">
                         {record.reasoning_basis || '-'}
                     </EvidenceNote>
@@ -618,13 +602,13 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
     );
 
     return (
-        <div className={cn('flex flex-col bg-background lg:flex-row', autoHeight ? 'h-auto' : 'h-full overflow-hidden', className)}>
+        <div className={cn('admin-surface flex flex-col bg-background lg:flex-row', autoHeight ? 'h-auto' : 'h-full overflow-hidden', className)}>
             {/* 좌측: 영상 근거 */}
-            <aside className={cn('flex w-full flex-col border-b bg-muted/25 lg:border-b-0 lg:border-r', autoHeight ? 'lg:w-[42%]' : 'lg:w-[48%] lg:overflow-hidden')} aria-label="영상 근거와 메타 정보">
-                <div className="p-3 pb-0 sm:p-4 sm:pb-0">
+            <aside className={cn('flex w-full flex-col border-b bg-background lg:border-b-0 lg:border-r', autoHeight ? 'lg:w-[42%]' : 'lg:w-[48%] lg:overflow-hidden')} aria-label="영상 근거와 메타 정보">
+                <div className="p-3 pb-0">
                     <SectionPanel title="영상 근거" description="썸네일을 눌러 원본 YouTube 영상을 새 탭에서 확인합니다." className="p-3">
                         {videoUrl && !embedError ? (
-                            <div className="aspect-video w-full overflow-hidden rounded-xl border border-border bg-black">
+                            <div className="aspect-video w-full overflow-hidden rounded-md border border-border bg-black">
                                 <iframe
                                     ref={iframeRef}
                                     width="100%"
@@ -640,7 +624,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                             /* Facade Pattern: 썸네일 표시 (클릭 시 새 탭) */
                             <button
                                 type="button"
-                                className="group relative aspect-video w-full cursor-pointer overflow-hidden rounded-xl border border-border bg-muted text-left shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                                className="group relative aspect-video w-full cursor-pointer overflow-hidden rounded-md border border-border bg-muted text-left outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                                 onClick={openYoutubeLink}
                                 aria-label={`${title} 유튜브 영상 새 탭에서 열기`}
                             >
@@ -675,7 +659,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                         <p className="text-sm">썸네일 없음</p>
                                     </div>
                                 )}
-                                <span className="absolute bottom-3 left-3 rounded-full bg-background/90 px-3 py-1 text-xs font-bold text-foreground shadow-sm backdrop-blur">
+                                <span className="absolute bottom-3 left-3 bg-background px-3 py-1 text-xs font-bold text-foreground">
                                     원본 영상 열기
                                 </span>
                             </button>
@@ -683,7 +667,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                     </SectionPanel>
                 </div>
 
-                <div className={cn('w-full flex-1 min-h-0 p-3 sm:p-4', autoHeight ? '' : 'overflow-y-auto')}>
+                <div className={cn('min-h-0 w-full flex-1 p-3', autoHeight ? '' : 'overflow-y-auto')}>
                     <SectionPanel title="영상 정보" description="검수 근거가 되는 원본 영상의 기본 정보입니다." className="p-3">
                         <dl className="grid grid-cols-1 gap-2 text-sm">
                             <InfoItem label="제목">
@@ -718,11 +702,11 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
 
             {/* 우측: 평가 및 상세 정보 */}
             {autoHeight ? (
-                <div className="h-auto w-full bg-muted/25 lg:w-[58%]">
+                <div className="h-auto w-full bg-background lg:w-[58%]">
                     <RightContent />
                 </div>
             ) : (
-                <ScrollArea className="h-full w-full bg-muted/25 lg:w-[52%]">
+                <ScrollArea className="h-full w-full bg-background lg:w-[52%]">
                     <RightContent />
                 </ScrollArea>
             )}

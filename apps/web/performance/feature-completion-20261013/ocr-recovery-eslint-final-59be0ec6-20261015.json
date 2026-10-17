@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "kind": "targeted-eslint-verification",
+  "sourceHead": "59be0ec683642a3f26c759fc54589229ca16f7d6",
+  "command": "eslint changed app source/tests since ade10447 --max-warnings=0 --format json",
+  "fileCount": 51,
+  "exitCode": 0,
+  "errors": 0,
+  "warnings": 0,
+  "bindings": [
+    {
+      "path": "apps/web/app/api/admin/ocr-receipts/process/route.ts",
+      "sha256": "4f9478215202db28069c163ca5d871fb55b6717225aaa2fd2a65125dcbbaaea3"
+    },
+    {
+      "path": "apps/web/app/api/admin/operating-readback/storyboard-policy/readback-response.ts",
+      "sha256": "6ef472bbfd97510e3958c859752c9c736580473eddd8f9107fb774e60071bfcb"
+    },
+    {
+      "path": "apps/web/app/api/ocr/extract/route.ts",
+      "sha256": "808bb3c558301c1f0d0bbd7224495e770f7ab81b7c3ab9f17c162e2cb17c5622"
+    },
+    {
+      "path": "apps/web/app/api/ocr/extract/stream/route.ts",
+      "sha256": "cf8ec1bdb833bb3da0de57d1b58335929d9454ab2abccea3dd0ef27ce05a33a4"
+    },
+    {
+      "path": "apps/web/app/api/ocr/results/status/route.ts",
+      "sha256": "725cc7452b9a5cf54f7bb01486ae2664f923c2725bfd477eaf8edca7a4699892"
+    },
+    {
+      "path": "apps/web/app/api/ocr/reviews/save/route.ts",
+      "sha256": "535390e92d8a1eefbdb64486db4d093a92b1c29e6bf77278a3f80a779792a6ad"
+    },
+    {
+      "path": "apps/web/app/api/runtime-compatibility/features/route.ts",
+      "sha256": "8a84b98dae20a5e876ba27a294ee9f6f3ac0ee33cde17685f4020bd19117908f"
+    },
+    {
+      "path": "apps/web/app/mypage/reviews/page.tsx",
+      "sha256": "9bfb6325d5d15e61acc26012e3037c9db96f6eb496e05910e2ca9b1111a27b84"
+    },
+    {
+      "path": "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+      "sha256": "5841f0fb2840abf65d4f5a1be43242eff222c7cdb9317d0e7862603edf33cfe4"
+    },
+    {
+      "path": "apps/web/components/reviews/ReviewEditModal.tsx",
+      "sha256": "ede84dfcfc83a23e0b4e5602a02ddb95b70119a730e65554ed273b32287153cb"
+    },
+    {
+      "path": "apps/web/components/reviews/ReviewModal.tsx",
+      "sha256": "41ddb30fb975f4a1dcf684ab7cd763f462f8ed26353afeee0056646d4a185b93"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/outbound-worker-contract.ts",
+      "sha256": "3424e2142f4b6d7207824109f01be4ed119844db10f45a3f7495694a203a1820"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/outbound-worker.ts",
+      "sha256": "916215739a58085eddea3e2ef7b2356678d9107908e76c5bf018465835ddca55"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/production-api.ts",
+      "sha256": "ee3d49b3a683f1639cfe29173319d0cad1342d3f6fce306ad1fc66d48188ab06"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/production-contract.ts",
+      "sha256": "f7888302353796e1dc3c0d5e473b9e5f4f0a9b22c1688cfd68b466317b1d98d6"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/production-store.ts",
+      "sha256": "481b653e0a257e1c7b44fad382998db3c41ef01eba26210c654225597cf526ce"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/production-worker-auth.ts",
+      "sha256": "e5355bcbe810f3081b048024e75bf7b6eac7793294dcf26866fb092c6e0b0b2d"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/runtime-policy.ts",
+      "sha256": "8459ee7a697c818cd8426d413d07655747b5aabfb6f9573f05526f48266ed063"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/runtime-source-binding.ts",
+      "sha256": "9201144ed972f822ddcad286a07df7a50511133d65ea855fa130dfb7323a4b84"
+    },
+    {
+      "path": "apps/web/lib/ocr/durable-result.ts",
+      "sha256": "ed1169709849f7a844cf996d4ec9f2138d110cc56db4c1033d52953df0833d67"
+    },
+    {
+      "path": "apps/web/lib/ocr/gemini.ts",
+      "sha256": "0499e452c09e3c02108469edff7f67cb95608aa48743574b1912f6de53121849"
+    },
+    {
+      "path": "apps/web/lib/ocr/latest-selection.ts",
+      "sha256": "b15959ffd75681675c9cfcac870b92a8ea455d8206aa141cec7bf1da9bf4790c"
+    },
+    {
+      "path": "apps/web/lib/ocr/runtime-config.ts",
+      "sha256": "1d66d64b14707cd9f74a3f585ff9686ed2d052d0c783b903befbb7e8295d759d"
+    },
+    {
+      "path": "apps/web/lib/reviews/review-media-mutation.ts",
+      "sha256": "4ec50663a990f5de18dcc334bb58cd46df865bd6ea5748304024f67268644dd9"
+    },
+    {
+      "path": "apps/web/lib/runtime-feature-readiness-contract.ts",
+      "sha256": "83761d3ae754f4ebfc7b2be23b4bdf0788f3b7dd3f1bfac03f3801859e0b3bba"
+    },
+    {
+      "path": "apps/web/lib/server/runtime-feature-readiness.ts",
+      "sha256": "a724b02debcf3c19a26ddd15f45f0711a81d7ef2cfcad23d5c432a13b4213fa5"
+    },
+    {
+      "path": "apps/web/performance/feature-sql-integration-20261013/verify-feature-migrations.mjs",
+      "sha256": "c869de619bd07d2743d2f951670b0a18fc0f3104699f31a4cefe678263e6a455"
+    },
+    {
+      "path": "apps/web/scripts/preview-design-fixtures.mjs",
+      "sha256": "a4b2eac5cde5b5b48edb4e3a4d5e7adbf232defaa3b2317edd48ff251d672906"
+    },
+    {
+      "path": "apps/web/scripts/review-media-feature-sql-successor.mjs",
+      "sha256": "95efd6eee191aad38b46693ccb240768c6695af4cb3037e0fcf003917fda58ee"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+      "sha256": "ea2afef39e23dba30d8332381af771482830e14bdcbc04cda624e829f952f486"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-storyboard-policy-readback.test.ts",
+      "sha256": "6c894813674cfd15ec0f7531f72bd2f046a3d6110429796427902b0028e39aee"
+    },
+    {
+      "path": "apps/web/tests-unit/durable-receipt-ocr.test.ts",
+      "sha256": "3615d62bdecbeda21057446cdd515b58699cdb05284c74c1bd25e0024b280007"
+    },
+    {
+      "path": "apps/web/tests-unit/g014-feature-rpc-catalog-contract.test.ts",
+      "sha256": "c8d39e2f148f11161e403e8231219f02c5ddfe826b61cb28cecac78c12a5043c"
+    },
+    {
+      "path": "apps/web/tests-unit/gemini-ocr.test.ts",
+      "sha256": "6566c012df8ec4f6c220492e211dedbd4d7148905e91f0ea1be46e32f4944657"
+    },
+    {
+      "path": "apps/web/tests-unit/latest-selection.test.ts",
+      "sha256": "07d250a874a3154eba91e3fbaae7e8032f8ed7013f281d28cab532f89dd25acd"
+    },
+    {
+      "path": "apps/web/tests-unit/local-storyboard-departure-browser.test.ts",
+      "sha256": "7e8bf056e54c663bf785b75ab6449c2e3d7738984081d82d449e7f6092660fc8"
+    },
+    {
+      "path": "apps/web/tests-unit/review-close-revision-browser.test.ts",
+      "sha256": "20fe63b5b1d035117fa6a0ce093fb8ba3211deaf38c799b260b69ec6dca9c03a"
+    },
+    {
+      "path": "apps/web/tests-unit/review-draft-revision-browser.test.ts",
+      "sha256": "0d1ef99d419c63c52dd737fc4f067ac8002e6cb12450c05cf36e8322269cca0c"
+    },
+    {
+      "path": "apps/web/tests-unit/review-edit-modal-photo-cleanup.test.ts",
+      "sha256": "094921fc9c33f72d9ea4d3f77a1306cdc21f785db710da03cde387c8c87b894d"
+    },
+    {
+      "path": "apps/web/tests-unit/review-media-feature-sql-successor.test.ts",
+      "sha256": "8302ac55107fda8b1d4cdfb9f4a5bd0c67583f8ee2bb1ed64c51e5b02cd7e088"
+    },
+    {
+      "path": "apps/web/tests-unit/review-media-mutation.test.ts",
+      "sha256": "7b1d4a294e1ea324dfdec033bf5c9f1295ce0d2699751a3ded6c44562a941b35"
+    },
+    {
+      "path": "apps/web/tests-unit/review-modal-ocr-ux.test.ts",
+      "sha256": "16d2a2d749a78ad477d02faf895d322d4305941214563a858c049313087470b5"
+    },
+    {
+      "path": "apps/web/tests-unit/review-save-owner-lifecycle.test.ts",
+      "sha256": "7dfe46feaccb50e4f93f7cd779b73e7cb7992d605a326e7ee0b594f1c0084d32"
+    },
+    {
+      "path": "apps/web/tests-unit/review-save-submit.test.ts",
+      "sha256": "cfb79a774b3bad40de9943e41674951c30761e5de81b266a076f696ce7b73948"
+    },
+    {
+      "path": "apps/web/tests-unit/review-storage-verification.test.ts",
+      "sha256": "b1437c781e5fbd1081005e8d065ee021bfb679e152a1e6f37d8cec9a38d3b445"
+    },
+    {
+      "path": "apps/web/tests-unit/review-verification-immutable-storage.test.ts",
+      "sha256": "bf832cfbfa956a76882cc450352b06cd742dee03c2105e823b60adeb76c31b43"
+    },
+    {
+      "path": "apps/web/tests-unit/runtime-feature-readiness.test.ts",
+      "sha256": "8fd2b93899858ca8e12888ec81ab943a0d7e0987208091e010383edf650c1dff"
+    },
+    {
+      "path": "apps/web/tests-unit/storyboard-outbound-worker.test.ts",
+      "sha256": "7e825d2df896437ec83181ae03ef4c897ff8cbdac114c7dfe26cde5c00d13246"
+    },
+    {
+      "path": "apps/web/tests-unit/storyboard-production-api.test.ts",
+      "sha256": "125a89686e2174b6bbd3eb0874934917534038dea6f8d1ca415c50cf5bed4330"
+    },
+    {
+      "path": "apps/web/tests-unit/storyboard-project-library-browser.test.ts",
+      "sha256": "5a91340ed6ead5716da2a01285c18c87adf427461b221863016af5a591722756"
+    },
+    {
+      "path": "apps/web/tests-unit/zz-ocr-route-contract.test.ts",
+      "sha256": "31406af7275f11174a78009cfdee298c466b463008af367575c377a15914b10c"
+    }
+  ],
+  "messages": []
+}

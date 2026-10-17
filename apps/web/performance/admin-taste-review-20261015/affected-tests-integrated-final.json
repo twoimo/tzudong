@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T15:06:04.790099+00:00",
+  "baseCommit": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "command": "Bun1.4.0 --no-env-file test <13 affected files> --timeout 30000",
+  "exitCode": 0,
+  "elapsedSeconds": 4.326520625000001,
+  "counts": {
+    "pass": 196,
+    "fail": 0,
+    "skip": 0
+  },
+  "files": [
+    "tests-unit/admin-receipt-ocr-workflow.test.ts",
+    "tests-unit/durable-receipt-ocr.test.ts",
+    "tests-unit/gemini-ocr.test.ts",
+    "tests-unit/latest-selection.test.ts",
+    "tests-unit/review-close-revision-browser.test.ts",
+    "tests-unit/review-draft-revision-browser.test.ts",
+    "tests-unit/review-modal-ocr-ux.test.ts",
+    "tests-unit/review-save-submit.test.ts",
+    "tests-unit/review-storage-verification.test.ts",
+    "tests-unit/storyboard-gemini-client.test.ts",
+    "tests-unit/storyboard-gemini-execution-contract.test.ts",
+    "tests-unit/storyboard-outbound-worker.test.ts",
+    "tests-unit/zz-ocr-route-contract.test.ts"
+  ],
+  "failedTests": [],
+  "testInputSha256": {
+    "apps/web/tests-unit/admin-receipt-ocr-workflow.test.ts": {
+      "bytes": 16136,
+      "sha256": "59efd57eb7fff6e5c5d08b24cdb19317b5d8c3e14d6d72cbd769a8ed0bd6eaef"
+    },
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": {
+      "bytes": 33984,
+      "sha256": "1e422d7e70b4dd69449dcc5ed59e45a5763d8b6da08bd3675b288179a8fb442c"
+    },
+    "apps/web/tests-unit/gemini-ocr.test.ts": {
+      "bytes": 13650,
+      "sha256": "ca24fcc6c305388bf1b7c779d8d7f0846d87f037f1e9fe926d27eb60d649e86f"
+    },
+    "apps/web/tests-unit/latest-selection.test.ts": {
+      "bytes": 2157,
+      "sha256": "5a0e9d17ca5565ef7c6d695a21ea86f20719d5c4f01e1cf442e3f4c4f644ac7d"
+    },
+    "apps/web/tests-unit/review-close-revision-browser.test.ts": {
+      "bytes": 20368,
+      "sha256": "964142f1a8c115c84000847129d84c1c48fea45a4e7d3f030419ba400e4618b9"
+    },
+    "apps/web/tests-unit/review-draft-revision-browser.test.ts": {
+      "bytes": 16192,
+      "sha256": "8f033e7fa4193ccab4788faa7c0ee9de942562315e36f0a17e0690a0437266ab"
+    },
+    "apps/web/tests-unit/review-modal-ocr-ux.test.ts": {
+      "bytes": 9407,
+      "sha256": "7ace244b148f6ff13c625f980d8f4893dc5aab1e3242c580ba52e078fb22f94f"
+    },
+    "apps/web/tests-unit/review-save-submit.test.ts": {
+      "bytes": 54335,
+      "sha256": "ab1ff1a3bfeb1b5c1a8c01066505de621939aa0d5913187709e3f090dc8ba686"
+    },
+    "apps/web/tests-unit/review-storage-verification.test.ts": {
+      "bytes": 9647,
+      "sha256": "a3a4e112186824193a1598faa82320da7c33c5fd074908266fdf68baca47f355"
+    },
+    "apps/web/tests-unit/storyboard-gemini-client.test.ts": {
+      "bytes": 10082,
+      "sha256": "b5708bb1d73bdbdc68895f782f80cccb25edadeb27204b76bb75c0ecb4d3d4e9"
+    },
+    "apps/web/tests-unit/storyboard-gemini-execution-contract.test.ts": {
+      "bytes": 9084,
+      "sha256": "c08a4f451f98dda82c22ca9795b2ebd367e582139991fc40b8d93a452737f864"
+    },
+    "apps/web/tests-unit/storyboard-outbound-worker.test.ts": {
+      "bytes": 39234,
+      "sha256": "05930248998fad5370da856addb95b3ff1acaf9f3c13b6c061217347cd8fb2c7"
+    },
+    "apps/web/tests-unit/zz-ocr-route-contract.test.ts": {
+      "bytes": 40290,
+      "sha256": "91c5cd26b9184e10c405b4154c9c4ffa7c4d363a761124d59bd8f7fe822d8814"
+    }
+  },
+  "productTestSha256": {
+    "apps/web/components/reviews/ReviewModal.tsx": {
+      "bytes": 215485,
+      "sha256": "dd1fdc477cee76d47f6dd4da857b83f1bcf794c5851bc57d329d08eb65e7787c"
+    },
+    "apps/web/lib/admin/storyboard/outbound-worker.ts": {
+      "bytes": 23652,
+      "sha256": "2d6071fcbd3272bcf8cc071ad489e3c2222e4a24d81f5d6be97c1003f64211f5"
+    },
+    "apps/web/lib/ocr/latest-selection.ts": {
+      "bytes": 1288,
+      "sha256": "109fc4dc6ba16a24433fa698c7497ac9968dfb2cb003cbe799cdf79663825179"
+    },
+    "apps/web/lib/ocr/receipt-upload-preparation.ts": {
+      "bytes": 1996,
+      "sha256": "14a011d50aa019157770bca7705bf9582a6b1a48a48e334acd8e19ba0b4bc7cd"
+    },
+    "apps/web/lib/ocr/review-modal-ocr-ux.ts": {
+      "bytes": 4115,
+      "sha256": "285a0019e50cd6d73bfeb667143a0168f2f08abe36a38cb63b9c660b8372db72"
+    },
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": {
+      "bytes": 33984,
+      "sha256": "1e422d7e70b4dd69449dcc5ed59e45a5763d8b6da08bd3675b288179a8fb442c"
+    },
+    "apps/web/tests-unit/latest-selection.test.ts": {
+      "bytes": 2157,
+      "sha256": "5a0e9d17ca5565ef7c6d695a21ea86f20719d5c4f01e1cf442e3f4c4f644ac7d"
+    },
+    "apps/web/tests-unit/review-close-revision-browser.test.ts": {
+      "bytes": 20368,
+      "sha256": "964142f1a8c115c84000847129d84c1c48fea45a4e7d3f030419ba400e4618b9"
+    },
+    "apps/web/tests-unit/review-draft-revision-browser.test.ts": {
+      "bytes": 16192,
+      "sha256": "8f033e7fa4193ccab4788faa7c0ee9de942562315e36f0a17e0690a0437266ab"
+    },
+    "apps/web/tests-unit/review-modal-ocr-ux.test.ts": {
+      "bytes": 9407,
+      "sha256": "7ace244b148f6ff13c625f980d8f4893dc5aab1e3242c580ba52e078fb22f94f"
+    },
+    "apps/web/tests-unit/review-save-submit.test.ts": {
+      "bytes": 54335,
+      "sha256": "ab1ff1a3bfeb1b5c1a8c01066505de621939aa0d5913187709e3f090dc8ba686"
+    },
+    "apps/web/tests-unit/review-storage-verification.test.ts": {
+      "bytes": 9647,
+      "sha256": "a3a4e112186824193a1598faa82320da7c33c5fd074908266fdf68baca47f355"
+    },
+    "apps/web/tests-unit/storyboard-outbound-worker.test.ts": {
+      "bytes": 39234,
+      "sha256": "05930248998fad5370da856addb95b3ff1acaf9f3c13b6c061217347cd8fb2c7"
+    },
+    "apps/web/tests-unit/zz-ocr-route-contract.test.ts": {
+      "bytes": 40290,
+      "sha256": "91c5cd26b9184e10c405b4154c9c4ffa7c4d363a761124d59bd8f7fe822d8814"
+    },
+    "backend/knowledge_graph/longform_inventory.py": {
+      "bytes": 22271,
+      "sha256": "4ed3c17e123754e968f48ddd47eae9a17f97679086952f955be5691aa939c906"
+    },
+    "backend/knowledge_graph/tests/test_longform_inventory.py": {
+      "bytes": 21509,
+      "sha256": "0efe218de229dc5748e9e71b91f3d6a0becbda3c4c03c84ae24f440dece137cf"
+    }
+  },
+  "drift": [],
+  "rawOutputSha256": "e7451154e631ec2f9eab6e59a14a5199240ef24837f57b9efc7bc86364c811cd",
+  "rawLogsPersisted": false,
+  "boundary": "Local combined affected tests. Includes prior test cases; do not add these counts to older overlapping suites or infer production success."
+}

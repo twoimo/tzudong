@@ -1,0 +1,168 @@
+{
+  "schema": "tzudong-caption-bounded-preparation-verification/v3",
+  "verifiedAtUtc": "2026-10-13T10:12:32Z",
+  "scope": "immutable captured-source contract after remaining check-to-OSK-commit race review",
+  "preservedPriorReceipts": [
+    {
+      "path": "apps/web/performance/longform-followthrough-20261009/caption-adapter/bounded-preparation-verification-20261013.json",
+      "sha256": "b1dc04b83679281fc6283814cfe3dd2507f72eefd6d8d9e4b86fce73a83b24b8",
+      "preservedByteExact": true
+    },
+    {
+      "path": "apps/web/performance/longform-followthrough-20261009/caption-adapter/bounded-preparation-verification-20261013-v2.json",
+      "sha256": "9100cfda8b7d0af01d4b868e068724d3c7349f8043dfe0691edf91ac8602b18b",
+      "preservedByteExact": true
+    }
+  ],
+  "canonicalCoverage": {
+    "membershipRereadAtUtc": "2026-10-13T10:12:32Z",
+    "eligibleLongformCount": 1071,
+    "shortsExcludedCount": 81,
+    "captionReviewCount": 9,
+    "eligibleCaptionReviewCount": 9,
+    "eligibleWithoutCaptionReviewCount": 1062,
+    "excludedCaptionReviewCount": 0,
+    "eligibleSetSha256": "9c2564ae7feba097dbf32caf85a2af43ebbac95e28faae8cc8360abd08c2c705",
+    "captionReviewSetSha256": "162f038007dea3f9d940572d2ef4ba66f01126ef97cff5878c21afed7b3487ae",
+    "captionSourceSetSha256": "9e011f3b5b05c3f8756fcc34a88b941fa854bb77e2b3e09df59fda834c095141",
+    "coverageRevision": "4e0f93909c6d2ea28f93563702ca1a20454d1014cca3dbde7e8e166804325de4",
+    "basis": "1071/81 membership and exact membership hashes reread from canonical repository inputs; 9/1062 caption coverage and caption source hashes retained from both immutable prior raw receipts"
+  },
+  "membershipSources": [
+    {
+      "tab": "videos",
+      "bytes": 120120,
+      "entryCount": 1053,
+      "sha256": "0bfc95e7dbcd45f02205ca4bd61b69145fb7196ab52052178a8c01006bfe7cbb",
+      "idSetSha256": "242f2b42106376e59f43648b2a7a1952f00ef29b3f0b443e528356e4a24564ca"
+    },
+    {
+      "tab": "streams",
+      "bytes": 2746,
+      "entryCount": 18,
+      "sha256": "619512bd137e62318ad443d9357efbfd6829c9bbe0acc4374fa473c812e5bfc5",
+      "idSetSha256": "21eded1e1b09c36b894e0e1e0075015b6167bfb699b05d5b04088c0441f5262d"
+    },
+    {
+      "tab": "shorts",
+      "bytes": 9815,
+      "entryCount": 81,
+      "sha256": "b8eea784e4953a80e743dca5b5f30b05a8752a50585a2840940183eee3640d2f",
+      "idSetSha256": "866bbcd5d5d81fce8b1f3c9977bf42c50ee8b85a7858bf40086559e3a27c456f"
+    }
+  ],
+  "capturedSourceContract": {
+    "planSchema": "tzudong-caption-plan/v3",
+    "checkpointSchema": "tzudong-caption-checkpoint/v2",
+    "snapshotSchema": "tzudong-caption-source-snapshot/v1",
+    "maxRawSnapshotBytes": 134217728,
+    "guarantee": "Each first apply captures exact membership/review/subtitle/transcript bytes once, validates them against the reviewed plan, publishes a hash-bound snapshot inside the anchored private checkpoint directory, and uses only that captured version through graph CAS/readback and exact resume.",
+    "concurrencyLimit": "The mutable source corpus and OSK graph store do not share an atomic transaction. A source mutation after capture may coexist with a successful captured-version graph write; readback marks status captured and currentMutableSourcesCheckedAfterCapture false. A new plan against changed sources does not count that receipt current.",
+    "originalSourceWritesByAdapter": 0,
+    "externalFilesChangedInRaceRegression": 0,
+    "snapshotCorruptionAccepted": false
+  },
+  "deterministicWorkCounts": {
+    "fixtureTargetCount": 2,
+    "firstApplyMutableSourceReads": 13,
+    "uniqueMutableSourceFilesRead": 13,
+    "snapshotManifestFileSha256Bindings": 13,
+    "resumeMutableSourceReads": 0,
+    "algorithmicWork": "O(N+C+K): one bounded membership/caption capture and validation plus K graph CAS/readbacks",
+    "replacedPath": "O(K*(N+C)) per-target full mutable-source revalidation",
+    "pairedWallClockBenchmarkRun": false,
+    "observedSpeedupClaimed": false
+  },
+  "regressions": [
+    {
+      "test": "test_update_entry_change_keeps_captured_snapshot_and_does_not_touch_external_files",
+      "checks": [
+        "captured revision survives update-entry membership mutation",
+        "mutated original membership remains untouched",
+        "new plan classifies registration stale",
+        "snapshot wrapper and manifest corruption fail closed",
+        "external sentinel unchanged"
+      ]
+    },
+    {
+      "test": "test_snapshot_survives_membership_change_and_resumes_once",
+      "checks": [
+        "snapshot survives interruption",
+        "resume does not reread changed mutable membership",
+        "each graph target updated at most once"
+      ]
+    },
+    {
+      "test": "test_apply_reads_each_mutable_source_once_then_resumes_from_snapshot",
+      "checks": [
+        "13 unique first-apply mutable reads for 2 targets",
+        "13 manifest file hashes",
+        "0 resume mutable reads"
+      ]
+    },
+    {
+      "test": "test_membership_parse_and_hash_use_one_byte_snapshot",
+      "checks": [
+        "membership parse and SHA use identical captured bytes"
+      ]
+    },
+    {
+      "test": "test_title_hash_and_parse_share_the_captured_bytes",
+      "checks": [
+        "title parse and receipt SHA use identical captured bytes"
+      ]
+    }
+  ],
+  "sourceFreeze": [
+    {
+      "path": "backend/knowledge_graph/caption_osk_adapter.py",
+      "sha256": "5d29c6f43c10bf014c777cff64e97e7ed8253fc1ebcde116752cab64743810e7"
+    },
+    {
+      "path": "backend/knowledge_graph/caption_title_enrichment.py",
+      "sha256": "565348b29ce28b3c08ca5f0913a3cfeb543ae48755af94b7b2ea71c74757924b"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_caption_osk_adapter.py",
+      "sha256": "aa108e9714cdb31ccbbfd8c1beca352407b0687cc7daf0c50659b767c0c1feab"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_caption_title_enrichment.py",
+      "sha256": "7e29cb9d97ad607b4ba337d3b47bc2d11bf7df3ea45fbd7174cba11e0fb3368c"
+    },
+    {
+      "path": "backend/knowledge_graph/CAPTION_OSK_ADAPTER.md",
+      "sha256": "fa2a99d779c7ebdf980fb2fe60eb777cd1bba9dd7ebfa32331daa27392f1cf9b"
+    }
+  ],
+  "disposableOskVerification": {
+    "python": "/Users/twoimo/Documents/osk-vault/.venv/bin/python",
+    "pythonVersion": "3.13.16",
+    "engineRoot": "/Users/twoimo/Documents/osk-vault/_governance/_engine",
+    "expectedEngineSha256": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358",
+    "actualEngineSha256": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358",
+    "enginePinMatched": true,
+    "testsRun": 23,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "result": "passed",
+    "vault": "owned tempfile created and removed by the test"
+  },
+  "checks": {
+    "pyCompile": "passed",
+    "gitDiffCheck": "passed"
+  },
+  "boundaries": {
+    "providerCalls": 0,
+    "downloads": 0,
+    "sharedOskWrites": false,
+    "hostedDatabaseWrites": false,
+    "canonicalInputWrites": false,
+    "commits": 0,
+    "pushes": 0,
+    "independentFullVisualVerified": false,
+    "independentAudioVerified": false,
+    "meaning": "Captured caption-source registration and disposable OSK API verification only. No full-video claude-video analysis, independent viewing/listening, shared graph materialization, Admin readback, deployment or release is established."
+  }
+}

@@ -95,6 +95,22 @@
       "vcsTracked": true
     },
     {
+      "path": ".taste-skill",
+      "depth": 1,
+      "ownership": "taste-skill이 프로젝트별로 생성한 선택된 아트 방향 원장",
+      "allowedContents": [
+        "draw.mjs가 생성한 direction.json",
+        "선택된 방향·seed·브리프·구성 제약"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값 리터럴",
+        "원시 이미지·브라우저 캡처"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
       "path": "apps",
       "depth": 1,
       "ownership": "모노레포 애플리케이션 컨테이너",

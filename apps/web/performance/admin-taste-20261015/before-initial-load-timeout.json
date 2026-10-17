@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "phase": "before",
+  "environment": "Node 24 / Playwright 1.63 / Chrome; synthetic loopback fixture; no hosted API or provider calls",
+  "cases": [],
+  "source": {
+    "styles/admin-ui.css": "b0741acb28a35b16f4bcab415b5549bf30924c19efba86a8048ced2456d4c307",
+    "components/admin/AdminPageHeader.tsx": "ac2621a32fbed7b801798675683a439b8900621ef86e6116034d71a1cfb40a73",
+    "components/admin/AdminConsoleOverview.tsx": "e3ea987a737af697a5d7ea155a474ed448f1d539fe46178914bb5abc419ac4d1"
+  }
+}

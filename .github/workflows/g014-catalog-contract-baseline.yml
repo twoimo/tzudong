@@ -112,6 +112,7 @@ jobs:
           backend.supabase.tests.test_g014_catalog_baseline_generator
           backend.supabase.tests.test_storyboard_owner_replay
           backend.supabase.tests.test_review_storage_pg15_replay
+          backend.supabase.tests.test_feature_rpc_catalog_pg15_replay
           backend.supabase.tests.test_reconstruction_source_archive
           backend.supabase.tests.test_g024_source_reconstruction
           backend.supabase.tests.test_compare_g024_clean_replays

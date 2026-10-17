@@ -97,6 +97,10 @@ class TrackedDirectoriesTest(unittest.TestCase):
         self.assertIn("docs", dirs)
         self.assertIn("docs/product", dirs)
 
+    def test_project_taste_direction_is_an_in_scope_source_directory(self):
+        dirs = clm.tracked_directories([".taste-skill/direction.json"])
+        self.assertEqual(dirs, {".taste-skill"})
+
 
 class ValidateEntriesTest(unittest.TestCase):
     def test_valid_manifest_accepted(self):
@@ -415,7 +419,7 @@ class RealTreeTest(unittest.TestCase):
         self.assertTrue(result["ok"], result)
         self.assertIsNone(result["errorCode"])
         self.assertIn(result["errorCode"], clm.LAYOUT_CHECK_RESULT_CODES)
-        self.assertEqual(result["trackedDirectoryCount"], 39)
+        self.assertEqual(result["trackedDirectoryCount"], 40)
         self.assertEqual(result["checks"]["staleReferences"]["unresolvedCount"], 0)
         self.assertEqual(result["checks"]["moves"], [])
         paths = {entry["path"] for entry in clm.load_manifest(_MANIFEST_PATH)["entries"]}

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T15:19:40.939029+00:00",
+  "baseCommit": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "change": "Add one exact artifact-bound standalone Node script to the pre-existing Next-only module-variable exception. Keep the file linted and retain other Next rules.",
+  "regression": {
+    "file": "tests-unit/eslint-generated-dist-dir.test.ts",
+    "pass": 1,
+    "fail": 0,
+    "assertions": 10,
+    "observedRule": "@next/next/no-img-element",
+    "ordinaryAuthoredRunnerRuleStillEnforced": true,
+    "frozenRunnerStillLinted": true
+  },
+  "fullEslint": {
+    "receipt": "ci-lint-review.json",
+    "exitCode": 0,
+    "laterDifference": "Only the corrected regression assertion changed after that full lint. It passed a subsequent targeted ESLint run."
+  },
+  "targetedEslint": {
+    "files": [
+      "apps/web/eslint.config.mjs",
+      "apps/web/tests-unit/eslint-generated-dist-dir.test.ts",
+      "apps/web/performance/admin-taste-20261015/browser-audit.mjs"
+    ],
+    "exitCode": 0,
+    "warnings": 0
+  },
+  "sourceSha256": {
+    "apps/web/eslint.config.mjs": "fd251867d5c89bcb3c353284354562985d66931a4e47893071cc208c3a25874f",
+    "apps/web/tests-unit/eslint-generated-dist-dir.test.ts": "9de120746c821e173befa145d9c0d486c1b72b30ba0df58c54625a288a94f8d0",
+    "apps/web/performance/admin-taste-20261015/browser-audit.mjs": "f000e677604fdbad992ac378264ecea2095aabb05026ad18a597100be997697d"
+  },
+  "frozenRunnerExactBaseBytes": true,
+  "historicalFailure": "First regression assertion incorrectly assumed no-debugger was enabled. Failed result and metadata correction remain in ci-lint-review.json.",
+  "boundaries": [
+    "No frozen measurement source or artifact map modified.",
+    "No scanner rule/config changes.",
+    "Local verification does not prove the next GitHub attempt."
+  ]
+}

@@ -16,6 +16,14 @@ import {
 } from '@/lib/admin/guarded-mutation-contract';
 import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
+import { FEATURE_DATABASE_HELD_CODE, FEATURE_DATABASE_HELD_MESSAGE } from '@/lib/runtime-feature-readiness-contract';
+import { readFeatureDatabaseReadiness } from '@/lib/server/runtime-feature-readiness';
+import {
+    buildReceiptOcrWorkflowInputs,
+    dispatchReceiptOcrWorkflow,
+    RECEIPT_OCR_WORKFLOW_FILE,
+    RECEIPT_OCR_WORKFLOW_REF,
+} from '@/lib/ocr/workflow-dispatch';
 
 export const runtime = 'nodejs';
 
@@ -51,6 +59,13 @@ export async function POST(request: Request) {
             return auth.response;
         }
 
+        if ((await readFeatureDatabaseReadiness({ ownerId: auth.userId })).status !== 'ready') {
+            return noStoreJson(
+                { code: FEATURE_DATABASE_HELD_CODE, error: FEATURE_DATABASE_HELD_MESSAGE },
+                { status: 409 },
+            );
+        }
+
         if (!isTrustedSameOriginMutation(request)) {
             return noStoreJson(
                 { error: '요청을 처리할 수 없습니다.' },
@@ -82,54 +97,64 @@ export async function POST(request: Request) {
         }
 
         if (!GITHUB_TOKEN || !GITHUB_OWNER || !GITHUB_REPO) {
-            return NextResponse.json(
+            return noStoreJson(
                 { error: 'GitHub 환경 변수가 설정되지 않았습니다.' },
-                { status: 500 }
+                { status: 503 }
             );
         }
 
         const correlationId = `ocr-dispatch-${Date.now()}`;
+        let workflowInputs: Record<string, string>;
+        try {
+            workflowInputs = await buildReceiptOcrWorkflowInputs();
+        } catch (error) {
+            console.error('[admin/ocr-receipts] guarded mutation workflow config failed', {
+                domain: 'ocr_receipt',
+                action: 'dispatch_workflow',
+                step: 'workflow-config',
+                correlationId,
+                errorName: getGuardedMutationErrorName(error),
+            });
+            return noStoreJson(
+                { error: 'OCR 워크플로 설정을 확인할 수 없습니다.' },
+                { status: 503 },
+            );
+        }
 
         // GitHub Actions workflow_dispatch 트리거
-        const response = await fetch(
-            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/ocr-review-receipts.yml/dispatches`,
-            {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${GITHUB_TOKEN}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ ref: 'main' }),
-            }
-        );
+        const dispatch = await dispatchReceiptOcrWorkflow({
+            url: `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/${RECEIPT_OCR_WORKFLOW_FILE}/dispatches`,
+            token: GITHUB_TOKEN,
+            inputs: workflowInputs,
+        });
 
-        if (!response.ok) {
-            await response.text().catch(() => null);
+        if (dispatch.status !== 'accepted') {
             console.error('[admin/ocr-receipts] guarded mutation dispatch failed', {
                 domain: 'ocr_receipt',
                 action: 'dispatch_workflow',
                 step: 'workflow-dispatch',
-                status: response.status,
+                status: dispatch.httpStatus,
                 correlationId,
             });
-            return NextResponse.json(
-                { error: `GitHub Actions 트리거 실패: ${response.status}` },
-                { status: response.status }
+            return noStoreJson(
+                { error: 'OCR 워크플로 접수 여부를 확인하지 못했습니다.', dispatchIndeterminate: true },
+                { status: dispatch.httpStatus === 401 || dispatch.httpStatus === 403 ? 502 : 503 }
             );
         }
 
-        return NextResponse.json({
+        return noStoreJson({
             success: true,
-            message: 'OCR 처리가 시작되었습니다.',
+            message: 'OCR 워크플로 요청이 접수되었습니다.',
             guardedMutation: {
                 domain: 'ocr_receipt',
                 action: 'dispatch_workflow',
                 confirmation: GUARDED_MUTATION_CONFIRMATION,
                 readback: {
                     workflowDispatched: true,
-                    workflow: 'ocr-review-receipts.yml',
-                    ref: 'main',
+                    accepted: true,
+                    workflowDeliveryVerified: false,
+                    workflow: RECEIPT_OCR_WORKFLOW_FILE,
+                    ref: RECEIPT_OCR_WORKFLOW_REF,
                 },
                 audit: {
                     source: 'github-actions-workflow-dispatch',
@@ -145,7 +170,7 @@ export async function POST(request: Request) {
             step: 'unexpected',
             errorName: getGuardedMutationErrorName(err),
         });
-        return NextResponse.json(
+        return noStoreJson(
             { error: 'OCR 처리를 시작하지 못했습니다.' },
             { status: 500 }
         );
@@ -156,7 +181,15 @@ export async function POST(request: Request) {
 export async function GET() {
     try {
         const auth = await requireAdmin();
-        if (!auth.ok) return auth.response;
+        if (!auth.ok) {
+            auth.response.headers.set('Cache-Control', 'no-store');
+            return auth.response;
+        }
+
+        const readiness = await readFeatureDatabaseReadiness({ ownerId: auth.userId });
+        if (readiness.status !== 'ready') {
+            return noStoreJson({ readiness, pending: 0, duplicate: 0, processed: 0 });
+        }
 
         const supabase = createSupabaseServiceRoleClient();
 
@@ -176,7 +209,8 @@ export async function GET() {
             .select('id', { count: 'exact', head: true })
             .not('ocr_processed_at', 'is', null);
 
-        return NextResponse.json({
+        return noStoreJson({
+            readiness,
             pending: pending || 0,
             duplicate: duplicate || 0,
             processed: processed || 0
@@ -189,7 +223,7 @@ export async function GET() {
             step: 'status-read',
             errorName: getGuardedMutationErrorName(err),
         });
-        return NextResponse.json(
+        return noStoreJson(
             { error: 'OCR 처리 상태를 조회하지 못했습니다.' },
             { status: 500 }
         );

@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T15:21:58.377378+00:00",
+  "baseCommit": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "sourceFreeze": "source-freeze-delivery.json",
+  "sourceFiles": 21,
+  "skill": {
+    "requested": "taste-skill",
+    "officialCommit": "f624f37a8c650b9cc550253104925efe4c8de246",
+    "direction": "dense-tiles / The well-kept board",
+    "seed": 331628995,
+    "otherDesignSkillsUsedAfterCorrection": false
+  },
+  "checks": {
+    "webAffected": {
+      "receipt": "affected-tests-integrated-final.json",
+      "files": 13,
+      "pass": 196,
+      "fail": 0,
+      "skip": 0,
+      "sourceDrift": 0
+    },
+    "lintBoundary": {
+      "receipt": "ci-lint-review2.json",
+      "regressionPass": 1,
+      "regressionFail": 0,
+      "fullEslintExitCode": 0,
+      "targetedEslintExitCode": 0
+    },
+    "longform": {
+      "receipt": "longform-inventory-review2.json",
+      "python": "3.14.8",
+      "pass": 50,
+      "fail": 0
+    },
+    "layout": {
+      "receipt": "ci-layout-review.json",
+      "pass": 82,
+      "fail": 0,
+      "trackedDirectories": 40,
+      "missing": 0
+    },
+    "typecheckParity": {
+      "receipt": "ocr-user-intent-review2.json",
+      "logicalInputs": 3324,
+      "diagnostics": 0
+    },
+    "build": {
+      "receipt": "build-report-review3.json",
+      "node": "v24.21.0",
+      "exitCode": 0,
+      "manifestInputs": 1593,
+      "executionDrift": 0,
+      "currentMismatch": 0,
+      "cleanupFailures": 0,
+      "routeCssBoundary": "passed"
+    }
+  },
+  "security": {
+    "receipt": "gitguardian-false-positive-readback.json",
+    "caseIds": [
+      38246983,
+      38246985,
+      38246984
+    ],
+    "operatorAuthorized": true,
+    "verifiedIgnoredFalsePositive": 3,
+    "otherIncidentsModified": 0,
+    "scannerConfigurationModified": false,
+    "originalEvidenceModified": false
+  },
+  "historicalSnapshots": {
+    "designCommit": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+    "canonicalUnit": {
+      "pass": 3815,
+      "fail": 0,
+      "skip": 11,
+      "files": 466,
+      "currentFullSuite": false
+    },
+    "designArtifactMapSha256": "c087e1873d92c38d1b5bc47b37eddc0fc03c1e829754b258f36a7f3633da5d0e",
+    "earlierFollowup": "verification-summary.json",
+    "oldReceiptsPreserved": true
+  },
+  "pending": [
+    "Normal branch push and fresh remote CI/review readback.",
+    "Protected promotion, deployment, fresh hosted evidence and real provider/Storage/admin workflow readback remain separate.",
+    "Entire longform collection and independent video validation remain incomplete."
+  ],
+  "notClaimed": [
+    "No new production performance, usability-time, cost or calibrated model-accuracy improvement.",
+    "No G003 scorer admission or world ranking.",
+    "No live provider call, hosted DB write, Storage mutation, billing or model-limit change."
+  ],
+  "countRule": "Do not add overlapping suites or historical attempts. Deterministic bounds and geometry have no statistical CI."
+}

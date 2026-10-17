@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "kind": "held-feature-database-admission-delta",
+  "observedAt": "2026-10-15T08:14:21Z",
+  "requestedStartingRevision": "ade10447bbe43e66eeb21a716d9ef7d945d858d9",
+  "observedBaseRevision": "f6a8e08b143c78ffaa33009e6315cbfc92aa9694",
+  "candidateWorkingTree": true,
+  "previousReceipt": {
+    "path": "apps/web/performance/feature-completion-20261013/storyboard-runtime-source-alias-binding-20261015.json",
+    "sha256": "a57919e55aa18f6de89a88583835287d0bf6fb9827118b9d15752450b58dcffe",
+    "sourceBindingSha256": "9ddbba0c54dae67b70a2301168034b633f2c0cf1e4b2ae5c3a2a3d548c389cd8",
+    "canonicalPolicySha256": "3426d02d2cad6c690030b6002d801361224045f7cc60d69e515e1a196cec4a8c",
+    "preservedUnchanged": true,
+    "relabeled": false
+  },
+  "currentRuntimeBinding": {
+    "algorithm": "storyboard-runtime-source-binding/v1",
+    "schemaVersion": 1,
+    "sourceCount": 23,
+    "sourceBindingSha256": "45a9594b6bf6858802b71b594be1856f9671ebb344b2fab034ac7b05e62fef22",
+    "canonicalPolicySha256": "118fff9f3a51a1bb64467b742b0e1f76d6d97055b62f0ce9c70112b470a2bac3",
+    "policyDelta": {
+      "featureDatabaseAdmission": "required"
+    },
+    "addedExecutionSources": [
+      "apps/web/lib/runtime-feature-readiness-contract.ts",
+      "apps/web/lib/server/runtime-feature-readiness.ts",
+      "apps/web/app/api/runtime-compatibility/features/route.ts"
+    ],
+    "postBuildRecalculated": true,
+    "postBuildDrift": false
+  },
+  "heldCompatibility": {
+    "readinessProbe": "authenticated owner-scoped get_owned_review_storage_objects read with a canonical nonexistent verification path",
+    "db86Outcome": "held",
+    "readyChainOutcome": "ready only after the feature RPC contract is present",
+    "reviewMutations": "held before Storage upload, review RPC, or cleanup mutation",
+    "ocrMutations": "held before multipart parsing, quota reservation, provider dispatch, durable claim, or review save",
+    "storyboardMutations": "held before create/apply, worker claim, provider catalog read, generation, or image upload",
+    "legacyReads": "review lists, existing storyboard archive reads, and storyboard catalog reads remain available",
+    "userMessage": "fixed short Korean hold copy without RPC, SQL, migration, or provider details"
+  },
+  "reviewFindings": {
+    "adminExplicitRefresh": "inline admin OCR accepts forceRefresh only as an explicit bounded boolean; ordinary restart preserves existing durable review state and explicit refresh requests a new durable result revision",
+    "workerCatalogCache": {
+      "change": "idle polling uses GeminiStoryboardClient's existing five-minute verified catalog cache",
+      "deterministicTrace": {
+        "pollIntervalSeconds": 5,
+        "pollCount": 120,
+        "declaredModelCount": 3,
+        "providerCatalogReadsBefore": 360,
+        "providerCatalogReadsAfter": 6,
+        "classification": "fixed mock trace, not elapsed-time, provider-performance, or cost evidence"
+      }
+    },
+    "receiptSelectionRace": "a monotonic selection generation rejects stale compression completion and aborts the superseded OCR run",
+    "streamDisconnect": "the client no longer resends the receipt to the non-streaming provider route; processing, indeterminate, and dropped-stream outcomes keep the photo and manual inputs without a duplicate retry control"
+  },
+  "openBoundaries": [
+    {
+      "boundary": "durable OCR status readback after SSE disconnect",
+      "reason": "the current durable SQL contract exposes claim, dispatch, complete, indeterminate, release, and review-save RPCs but no owner-scoped read-only status RPC; the private schema is not a browser read surface",
+      "currentSafeBehavior": "no provider request is replayed and the UI reports a pending state",
+      "requiredFollowUp": "add and prove a bounded owner-scoped read-only status RPC in a separately authorized SQL change before automatic status polling"
+    },
+    {
+      "boundary": "GEMINI_OCR_MODEL CSV fallback",
+      "reason": "the immutable durable completion contract requires result_payload.model to equal the claimed model; passing a multi-model CSV can call a fallback model but cannot commit that different model without a SQL contract change",
+      "currentSafeBehavior": "the first selected model remains the only durable execution model; no new provider retry or fallback write was added",
+      "requiredFollowUp": "design a versioned durable model-set binding and replay it in PostgreSQL before restoring multi-model fallback"
+    },
+    {
+      "boundary": "explicit admin reset workflow forwarding",
+      "reason": "the repository does not contain the referenced ocr-review-receipts.yml workflow, so this change proves the process endpoint contract but cannot prove an external workflow forwards forceRefresh=true",
+      "requiredFollowUp": "verify the separately owned workflow request body before calling reset rerun complete"
+    }
+  ],
+  "verification": {
+    "targetedRuntimeTests": {
+      "passed": 180,
+      "failed": 0,
+      "assertions": 1460
+    },
+    "sourcePolicyAuthAndRouteTests": {
+      "passed": 40,
+      "failed": 0,
+      "assertions": 1509
+    },
+    "reviewUiStorageAndSecurityTests": {
+      "passed": 62,
+      "failed": 0,
+      "assertions": 1223
+    },
+    "typescriptParity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3165,
+      "logicalInputNamesSha256": "3f10183d5edcbcf99b55c5403f28ccc345447a9a8bd390468306c22f64f72149"
+    },
+    "targetedEslint": {
+      "status": "passed",
+      "warnings": 0,
+      "errors": 0
+    },
+    "productionBuild": {
+      "status": "passed",
+      "nextVersion": "16.3.8",
+      "staticAndDynamicRouteCount": 52,
+      "routeCssBoundaryVerification": "passed"
+    }
+  },
+  "retainedPostgresEvidence": {
+    "path": "apps/web/performance/feature-completion-20261013/review-media-runtime-admission-retained-proof-20261015.json",
+    "receiptSha256": "9c34f9dc7159e49892842f9cf71f882a7790aeede7bc2857b22a39536c262254",
+    "proofSha256": "6bd946be5b9e0a9a9ef1523112f535456955bc424eaf278c1e23812ce8efc75e",
+    "parentManifestSha256": "ad1da2db884229ea4b1fbcf6e4caaa04c30c6df7562e94fff01341736ee689d6",
+    "parentControllerSha256": "4f3dacb6f51a669bf64209b380b19e8274d2703101fc50f815153237f4a99d93",
+    "sqlSourceRoot": "61f9d7637c0714a7b0d9108c6f7959ea820175a7870dba681498b570296a1544",
+    "compiledSqlSha256": "285d0c859117006646389dbd2a22de9aef1c0b97bc796a9e4d4448a8a232b093",
+    "workflowSha256": "98d77342a8dac80729bf03e2d9fe0b826d1417c106836947558c73045e5f945b",
+    "migrationSourceChanges": 0,
+    "replayedForThisDelta": false,
+    "relabeled": false,
+    "readyReleaseReplayScope": "new ready manifest/controller/selector binding plus the retained PostgreSQL 17.6 scope of 11 migrations, 112 statements, 12 rollback stages, forced rollback, lost-response recovery, lock contention, terminal readback, and full rollback"
+  },
+  "externalEffects": {
+    "hostedDatabaseCalls": 0,
+    "providerCalls": 0,
+    "deployments": 0,
+    "remoteMutations": 0
+  },
+  "limits": [
+    "This is local source, contract-test, typecheck, and build evidence. It does not prove the DB86 hosted readback, a protected deployment, a ready release, PostgreSQL 17.6 replay for ready bytes, migration apply, live Gemini execution, Storage behavior, or user-device behavior.",
+    "The held release must be deployed first and its new private policy/readiness readback must be observed before a separate ready release and fresh PostgreSQL 17.6 proof.",
+    "No Git commit, push, deployment, database write, provider call, or configuration change was performed by this task."
+  ]
+}

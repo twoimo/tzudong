@@ -38,10 +38,20 @@ const MAX_PRIVATE_FILE_BYTES = 1024 * 1024;
 const HEX_SHA256 = /^[0-9a-f]{64}$/;
 const REVISION = /^[0-9a-f]{40}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const DECIMAL_ID = /^[1-9][0-9]*$/;
+const QUIESCENCE_RELATIONS = Object.freeze([
+  'pipeline_control.admin_record_media_cleanup',
+  'pipeline_control.admin_record_operations',
+  'public.reviews',
+  'storage.objects',
+]);
 
 const FILES = Object.freeze({
   applyAdmission: 'apply-admission.json',
+  applyEvidenceMap: 'apply-operating-evidence-map.json',
   applyJournal: 'apply-journal.jsonl',
+  applyMachine: 'apply-machine-operating-observations.json',
+  applyQuiescence: 'apply-quiescence-readback.json',
   checkout: 'checkout-readback.json',
   protectedMain: 'protected-main-receipt.json',
   rehearsalAdmission: 'rehearsal-admission.json',
@@ -50,6 +60,7 @@ const FILES = Object.freeze({
   rollback: 'rollback-readback-receipt.json',
   source: 'source-receipt.json',
 });
+const applyWriterFenceFile = fence => `apply-writer-fence-${fence}.json`;
 
 const PUBLIC_CODES = new Set([
   'SUCCESSOR_OPERATING_ADMISSION_ARGUMENT_INVALID',
@@ -536,6 +547,7 @@ function readCanonicalCustodyJournal(custody, name) {
 
 function validateApplyInput(input, rehearsal, manifestRecord, now) {
   exactKeys(input, [
+    'applyEvidenceMapSha256', 'applyQuiescenceReadbackSha256',
     'attemptId', 'expiresAt', 'kind', 'manifestSha256', 'observedAt',
     'rehearsalAdmissionSha256', 'rehearsalJournalSha256', 'rehearsalReceiptSha256',
     'schemaVersion', 'sourceRevision',
@@ -548,6 +560,8 @@ function validateApplyInput(input, rehearsal, manifestRecord, now) {
     fail('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
   }
   assertUuid(input.attemptId);
+  assertHex(input.applyEvidenceMapSha256);
+  assertHex(input.applyQuiescenceReadbackSha256);
   assertHex(input.rehearsalAdmissionSha256);
   assertHex(input.rehearsalJournalSha256);
   assertHex(input.rehearsalReceiptSha256);
@@ -560,6 +574,216 @@ function validateApplyInput(input, rehearsal, manifestRecord, now) {
     fail('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
   }
   return Object.freeze({ ...window, observedAt });
+}
+
+function validateApplyOperatingEvidence({
+  custody,
+  input,
+  manifestRecord,
+  minimumObservedAt,
+  rehearsal,
+  window,
+}) {
+  const { manifest, manifestSha256 } = manifestRecord;
+  const attestationRecord = readCanonicalCustodyFile(custody, 'operator-custody-attestation.json');
+  const bundleRecord = readCanonicalCustodyFile(custody, 'vercel-operating-bundle.json');
+  const machineRecord = readCanonicalCustodyFile(custody, FILES.applyMachine);
+  const mapRecord = readCanonicalCustodyFile(custody, FILES.applyEvidenceMap);
+  const quiescenceRecord = readCanonicalCustodyFile(custody, FILES.applyQuiescence);
+  if (sha256(mapRecord.bytes) !== input.applyEvidenceMapSha256
+    || sha256(quiescenceRecord.bytes) !== input.applyQuiescenceReadbackSha256) {
+    fail('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
+  }
+
+  const map = mapRecord.value;
+  exactKeys(map, [
+    'attestationSha256', 'bundleSha256', 'kind', 'machineSha256', 'quiescenceSha256',
+    'receiptProvenance', 'schemaVersion', 'sourceRevision',
+  ]);
+  if (map.schemaVersion !== 1
+    || map.kind !== 'review-media-successor-apply-operating-evidence-map'
+    || map.sourceRevision !== rehearsal.sourceRevision
+    || map.attestationSha256 !== sha256(attestationRecord.bytes)
+    || map.bundleSha256 !== sha256(bundleRecord.bytes)
+    || map.machineSha256 !== sha256(machineRecord.bytes)
+    || map.quiescenceSha256 !== sha256(quiescenceRecord.bytes)) {
+    fail('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
+  }
+
+  const attestation = attestationRecord.value;
+  exactKeys(attestation, [
+    'assertedAt', 'authority', 'basis', 'event', 'fences', 'kind', 'noticeState',
+    'operatorRole', 'repository', 'runAttempt', 'runId', 'schemaVersion', 'scope',
+    'sourceRevision', 'workflowRef',
+  ]);
+  exactKeys(attestation.fences, ['browserRpc', 'dashboard', 'directSql', 'providerIngress']);
+  if (attestation.schemaVersion !== 1
+    || attestation.kind !== 'review-media-successor-operator-custody-attestation'
+    || attestation.authority !== 'authenticated-repository-owner-workflow-dispatch'
+    || attestation.basis !== 'standing-custody-confirmation-bound-by-owner-dispatch'
+    || attestation.event !== 'workflow_dispatch'
+    || attestation.noticeState !== 'not-issued'
+    || attestation.operatorRole !== 'repository-owner'
+    || attestation.repository !== TZUDONG_GITHUB_REPOSITORY
+    || !DECIMAL_ID.test(attestation.runAttempt ?? '')
+    || !DECIMAL_ID.test(attestation.runId ?? '')
+    || attestation.scope !== 'stopped-until-application-result'
+    || attestation.sourceRevision !== rehearsal.sourceRevision
+    || typeof attestation.workflowRef !== 'string'
+    || !attestation.workflowRef.startsWith(`${TZUDONG_GITHUB_REPOSITORY}/.github/workflows/`)
+    || !attestation.workflowRef.endsWith('@refs/heads/main')
+    || Object.values(attestation.fences).some(state => state !== 'stopped')) {
+    fail('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
+  }
+
+  const bundle = bundleRecord.value;
+  exactKeys(bundle, [
+    'adminRecordMutationsHold', 'createdAt', 'expiresAt', 'kind', 'manifestSha256',
+    'protectedMain', 'rollbackPolicy', 'rollbackReadback', 'schemaVersion',
+    'sourceRevision', 'sourceRoot', 'storyboardPolicy',
+  ]);
+  exactKeys(bundle.adminRecordMutationsHold, [
+    'commit', 'deploymentId', 'holdActive', 'observedAt',
+  ]);
+  exactKeys(bundle.storyboardPolicy, ['deployment', 'policy', 'schemaVersion']);
+  exactKeys(bundle.storyboardPolicy.deployment, [
+    'branch', 'deploymentId', 'sourceCommit',
+  ]);
+  exactKeys(bundle.storyboardPolicy.policy, ['canonicalPolicySha256']);
+  if (bundle.schemaVersion !== 1
+    || bundle.kind !== 'review-media-successor-vercel-operating-bundle'
+    || bundle.manifestSha256 !== manifestSha256
+    || bundle.sourceRevision !== rehearsal.sourceRevision
+    || bundle.sourceRoot !== manifest.sourceRoot
+    || bundle.createdAt !== rehearsal.createdAt
+    || bundle.expiresAt !== rehearsal.expiresAt
+    || bundle.adminRecordMutationsHold.holdActive !== true
+    || bundle.adminRecordMutationsHold.deploymentId !== rehearsal.rollback.deploymentId
+    || bundle.adminRecordMutationsHold.commit !== rehearsal.sourceRevision
+    || bundle.rollbackReadback?.deploymentId !== rehearsal.rollback.deploymentId
+    || bundle.rollbackReadback?.gitSha !== rehearsal.rollback.deploymentSha
+    || bundle.storyboardPolicy.schemaVersion !== 1
+    || bundle.storyboardPolicy.deployment.branch !== 'main'
+    || bundle.storyboardPolicy.deployment.deploymentId !== rehearsal.rollback.deploymentId
+    || bundle.storyboardPolicy.deployment.sourceCommit !== rehearsal.sourceRevision
+    || !HEX_SHA256.test(bundle.storyboardPolicy.policy.canonicalPolicySha256 ?? '')) {
+    fail('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
+  }
+
+  const machine = machineRecord.value;
+  exactKeys(machine, [
+    'adminRuntimeHold', 'automaticReviewer', 'g037WriteFreeze', 'inFlightQuiescence',
+    'kind', 'schemaVersion', 'sourceRevision',
+  ]);
+  exactKeys(machine.adminRuntimeHold, ['deploymentId', 'holdActive', 'observedAt']);
+  exactKeys(machine.automaticReviewer, ['observedAt', 'state']);
+  exactKeys(machine.g037WriteFreeze, ['observedAt', 'state']);
+  exactKeys(machine.inFlightQuiescence, [
+    'coverage', 'inFlightWriters', 'lockMode', 'observedAt',
+  ]);
+  if (machine.schemaVersion !== 1
+    || machine.kind !== 'review-media-successor-machine-operating-observations'
+    || machine.sourceRevision !== rehearsal.sourceRevision
+    || machine.adminRuntimeHold.holdActive !== true
+    || machine.adminRuntimeHold.deploymentId !== rehearsal.rollback.deploymentId
+    || machine.adminRuntimeHold.observedAt !== bundle.adminRecordMutationsHold.observedAt
+    || machine.automaticReviewer.state !== 'stopped'
+    || machine.g037WriteFreeze.state !== 'active') {
+    fail('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
+  }
+
+  const quiescence = quiescenceRecord.value;
+  exactKeys(quiescence, [
+    'coverage', 'expiresAt', 'id', 'inFlightWriters', 'kind', 'lockMode',
+    'manifestSha256', 'observedAt', 'projectRef', 'purpose', 'schemaVersion',
+    'sourceRevision',
+  ]);
+  if (quiescence.schemaVersion !== 1
+    || quiescence.kind !== 'apply-in-flight-quiescence-readback'
+    || quiescence.id !== manifest.id
+    || quiescence.projectRef !== manifest.projectRef
+    || quiescence.purpose !== manifest.purpose
+    || quiescence.manifestSha256 !== manifestSha256
+    || quiescence.sourceRevision !== rehearsal.sourceRevision
+    || quiescence.expiresAt !== rehearsal.expiresAt
+    || !equal(quiescence.coverage, QUIESCENCE_RELATIONS)
+    || !equal(quiescence.coverage, machine.inFlightQuiescence.coverage)
+    || quiescence.inFlightWriters !== machine.inFlightQuiescence.inFlightWriters
+    || quiescence.lockMode !== machine.inFlightQuiescence.lockMode
+    || quiescence.observedAt !== machine.inFlightQuiescence.observedAt
+    || quiescence.inFlightWriters !== 0
+    || quiescence.lockMode !== 'SHARE') {
+    fail('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
+  }
+
+  const freshTimes = [
+    machine.automaticReviewer.observedAt,
+    machine.g037WriteFreeze.observedAt,
+    machine.inFlightQuiescence.observedAt,
+    quiescence.observedAt,
+  ].map(value => Date.parse(value));
+  if (freshTimes.some(value => !Number.isFinite(value)
+    || value < minimumObservedAt
+    || value >= window.expiresAt
+    || value > window.nowMs + CLOCK_SKEW_MS)) {
+    fail('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
+  }
+
+  const fenceKeys = Object.keys(manifest.requiredWriterFences).sort();
+  exactKeys(map.receiptProvenance, fenceKeys);
+  const writerFences = {};
+  for (const key of fenceKeys) {
+    const receiptRecord = readCanonicalCustodyFile(custody, applyWriterFenceFile(key));
+    const receipt = receiptRecord.value;
+    exactKeys(receipt, [
+      'expiresAt', 'fence', 'id', 'kind', 'manifestSha256', 'observedAt', 'projectRef',
+      'purpose', 'schemaVersion', 'sourceRevision', 'state',
+    ]);
+    exactKeys(map.receiptProvenance[key], ['evidenceSha256', 'provenance', 'receiptSha256']);
+    const operator = ['browserRpc', 'dashboard', 'directSql', 'providerIngress'].includes(key);
+    const expectedProvenance = operator
+      ? 'authenticated-owner-custody-commitment'
+      : key === 'adminRecordMutationsHold'
+        ? 'immutable-deployment-machine-observation'
+        : 'fresh-machine-observation';
+    const expectedEvidenceSha256 = operator
+      ? map.attestationSha256
+      : key === 'adminRecordMutationsHold'
+        ? map.bundleSha256
+        : map.machineSha256;
+    const expectedObservedAt = operator
+      ? attestation.assertedAt
+      : key === 'adminRecordMutationsHold'
+        ? bundle.adminRecordMutationsHold.observedAt
+        : key === 'automaticReviewer'
+          ? machine.automaticReviewer.observedAt
+          : machine.g037WriteFreeze.observedAt;
+    if (receipt.schemaVersion !== 1
+      || receipt.kind !== 'writer-fence-readback-receipt'
+      || receipt.id !== manifest.id
+      || receipt.projectRef !== manifest.projectRef
+      || receipt.purpose !== manifest.purpose
+      || receipt.manifestSha256 !== manifestSha256
+      || receipt.sourceRevision !== rehearsal.sourceRevision
+      || receipt.expiresAt !== rehearsal.expiresAt
+      || receipt.fence !== key
+      || receipt.state !== manifest.requiredWriterFences[key]
+      || receipt.observedAt !== expectedObservedAt
+      || map.receiptProvenance[key].provenance !== expectedProvenance
+      || map.receiptProvenance[key].evidenceSha256 !== expectedEvidenceSha256
+      || map.receiptProvenance[key].receiptSha256 !== sha256(receiptRecord.bytes)) {
+      fail('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
+    }
+    if (['automaticReviewer', 'g037WriteFreeze'].includes(key)
+      && Date.parse(receipt.observedAt) < minimumObservedAt) {
+      fail('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
+    }
+    writerFences[key] = Object.freeze({
+      evidenceSha256: sha256(receiptRecord.bytes),
+      state: receipt.state,
+    });
+  }
+  return Object.freeze({ writerFences });
 }
 
 export function prepareReviewMediaApplyAdmission({
@@ -624,6 +848,14 @@ export function prepareReviewMediaApplyAdmission({
   if (!Number.isFinite(publishedAt) || window.observedAt < publishedAt) {
     fail('SUCCESSOR_OPERATING_ADMISSION_EVIDENCE_INVALID');
   }
+  const applyOperatingEvidence = validateApplyOperatingEvidence({
+    custody,
+    input: inputRecord.value,
+    manifestRecord,
+    minimumObservedAt: publishedAt,
+    rehearsal,
+    window,
+  });
 
   const applyAdmissionPath = join(custody, FILES.applyAdmission);
   const applyJournalPath = join(custody, FILES.applyJournal);
@@ -631,6 +863,8 @@ export function prepareReviewMediaApplyAdmission({
     fail('SUCCESSOR_OPERATING_ADMISSION_OUTPUT_EXISTS');
   }
   const admission = {
+    applyEvidenceMapSha256: inputRecord.value.applyEvidenceMapSha256,
+    applyQuiescenceReadbackSha256: inputRecord.value.applyQuiescenceReadbackSha256,
     attemptId: inputRecord.value.attemptId,
     createdAt: rehearsal.createdAt,
     expiresAt: rehearsal.expiresAt,
@@ -649,7 +883,7 @@ export function prepareReviewMediaApplyAdmission({
     sourceRevision: rehearsal.sourceRevision,
     sourceRoot: rehearsal.sourceRoot,
     stageStates: receipt.stageStates,
-    writerFences: structuredClone(rehearsal.writerFences),
+    writerFences: structuredClone(applyOperatingEvidence.writerFences),
   };
   validateSuccessorAdmission(admission, manifestRecord, { now, receiptDirectory: custody });
   const admissionBytes = writeExclusiveCanonical(applyAdmissionPath, admission, fsyncImpl);

@@ -50,11 +50,11 @@ export function AdminSystemStatusCenter({
 
   return (
     <Card
-      className={cn('flex min-h-[220px] flex-col overflow-hidden border border-border/70 bg-card/90 shadow-sm', className)}
+      className={cn('admin-surface flex min-h-[220px] flex-col overflow-hidden rounded-lg border border-border bg-card shadow-none', className)}
       data-admin-system-status-center="true"
       data-admin-system-status-state={viewModel.overallState}
     >
-      <CardHeader className="space-y-2 pb-3">
+      <CardHeader className="space-y-2 bg-muted/30 px-3 py-2.5">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             <CardTitle className="text-sm font-semibold">운영 상태 센터</CardTitle>
@@ -62,13 +62,13 @@ export function AdminSystemStatusCenter({
               run_daily, 나이틀리 회귀, GDrive 후속, 검수 대기 상태를 한 곳에서 fail-closed로 봅니다.
             </p>
           </div>
-          <Badge className={cn('rounded-full px-2 py-1 text-2xs font-semibold', tone.badge)}>
+          <Badge className={cn('rounded-md px-2 py-1 text-2xs font-semibold', tone.badge)}>
             <StatusIcon className="mr-1 h-3.5 w-3.5" />
             {viewModel.overallLabel}
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3">
+      <CardContent className="flex flex-1 flex-col gap-2 p-3">
         {isLoading ? (
           <div data-admin-system-status-loading="true" className="space-y-2">
             <Skeleton className="h-5 w-28" />
@@ -79,7 +79,7 @@ export function AdminSystemStatusCenter({
         ) : (
           <>
             <div
-              className={cn('rounded-2xl border px-3 py-2.5', tone.panel)}
+              className={cn('admin-detail-section px-3 py-2.5', tone.panel)}
               data-admin-system-status-summary="true"
             >
               <p className="text-xs font-semibold">{viewModel.summary}</p>
@@ -89,13 +89,13 @@ export function AdminSystemStatusCenter({
                 </p>
               ) : null}
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <dl className="space-y-1" aria-label="운영 상태 지표">
               {viewModel.metrics.map((metric) => {
                 const metricTone = getStateTone(metric.state);
                 return (
                   <div
                     key={metric.id}
-                    className={cn('rounded-2xl border px-3 py-2.5', metricTone.panel)}
+                    className="grid gap-x-3 gap-y-1 rounded-md bg-muted/20 px-2 py-2 sm:grid-cols-[minmax(8rem,0.7fr)_minmax(0,1.3fr)_auto] sm:items-center"
                     data-admin-system-status-metric={metric.id}
                     data-admin-system-status-metric-state={metric.state}
                     data-admin-run-daily-state={metric.id === 'run_daily' ? metric.state : undefined}
@@ -103,37 +103,30 @@ export function AdminSystemStatusCenter({
                     data-admin-run-daily-artifact-state={metric.id === 'artifacts' ? metric.state : undefined}
                     data-admin-system-status-pending-counts={metric.id === 'pending' ? 'true' : undefined}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-2xs font-semibold text-muted-foreground">{metric.label}</p>
-                      <Badge className={cn('rounded-full px-2 py-0.5 text-2xs', metricTone.badge)}>
-                        {metric.value}
-                      </Badge>
-                    </div>
-                    <p className="mt-1.5 text-xs leading-5">{metric.detail}</p>
+                    <dt className="text-xs font-semibold text-foreground">{metric.label}</dt>
+                    <dd className="text-xs leading-5 text-muted-foreground">{metric.detail}</dd>
+                    <dd><Badge className={cn('rounded-md px-2 py-0.5 text-2xs', metricTone.badge)}>{metric.value}</Badge></dd>
                   </div>
                 );
               })}
-            </div>
-            <div className="rounded-2xl border border-border/70 bg-muted/20 px-3 py-2.5" data-admin-system-status-checklist="true">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-2xs font-semibold text-muted-foreground">즉시 확인할 체크리스트</p>
+            </dl>
+            <details className="admin-detail-section px-3 py-2.5" data-admin-system-status-checklist="true">
+              <summary className="flex cursor-pointer items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-foreground">즉시 확인할 체크리스트</span>
                 <span className="text-2xs text-muted-foreground">
-                  as of {systemStatusQuery.data?.asOf ?? '—'}
+                  as of {systemStatusQuery.data?.asOf ?? '시각 미확인'}
                 </span>
-              </div>
+              </summary>
               {viewModel.checklist.length > 0 ? (
                 <ul className="mt-2 space-y-1.5 text-xs leading-5">
                   {viewModel.checklist.map((item) => (
-                    <li key={item.id} className="flex gap-2" data-admin-system-status-checklist-item={item.id}>
-                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-70" />
-                      <span>{item.action}</span>
-                    </li>
+                    <li key={item.id} data-admin-system-status-checklist-item={item.id}>{item.action}</li>
                   ))}
                 </ul>
               ) : (
                 <p className="mt-2 text-xs text-muted-foreground">run_daily와 나이틀리 회귀 기준으로 즉시 튀는 경고는 없습니다.</p>
               )}
-            </div>
+            </details>
           </>
         )}
       </CardContent>

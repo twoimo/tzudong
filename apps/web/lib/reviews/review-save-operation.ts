@@ -9,6 +9,8 @@ export interface ReviewSaveDraft {
     categories: string[];
     verificationPhoto: File;
     foodPhotos: File[];
+    ocrResultRef?: string | null;
+    ocrResultRevision?: string | null;
 }
 
 export interface ReviewSaveUpload {
@@ -23,6 +25,8 @@ export interface SavedReviewReadback {
     restaurant_id: string | null;
     verification_photo: string | null;
     food_photos: string[] | null;
+    receipt_data?: unknown;
+    ocr_processed_at?: string | null;
 }
 
 export interface ReviewSaveDependencies {
@@ -56,7 +60,9 @@ function sameDraft(a: ReviewSaveDraft, b: ReviewSaveDraft): boolean {
         && a.content === b.content && a.visitedAt === b.visitedAt
         && a.categories.length === b.categories.length && a.categories.every((value, i) => value === b.categories[i])
         && a.verificationPhoto === b.verificationPhoto
-        && a.foodPhotos.length === b.foodPhotos.length && a.foodPhotos.every((file, i) => file === b.foodPhotos[i]);
+        && a.foodPhotos.length === b.foodPhotos.length && a.foodPhotos.every((file, i) => file === b.foodPhotos[i])
+        && (a.ocrResultRef ?? null) === (b.ocrResultRef ?? null)
+        && (a.ocrResultRevision ?? null) === (b.ocrResultRevision ?? null);
 }
 
 // Only explicit transaction rejections are definite. In particular, a duplicate
@@ -139,6 +145,14 @@ export class ReviewSaveOperation {
                 || data.restaurant_id !== op.draft.restaurantId || data.verification_photo !== verification
                 || !data.food_photos || data.food_photos.length !== food.length
                 || !data.food_photos.every((path, i) => path === food[i])) return 'blocked';
+            if (op.draft.ocrResultRef || op.draft.ocrResultRevision) {
+                const receiptData = data.receipt_data;
+                if (!op.draft.ocrResultRef || !op.draft.ocrResultRevision
+                    || !receiptData || typeof receiptData !== 'object' || Array.isArray(receiptData)
+                    || (receiptData as Record<string, unknown>).ocr_result_id !== op.draft.ocrResultRef
+                    || (receiptData as Record<string, unknown>).ocr_result_revision !== op.draft.ocrResultRevision
+                    || typeof data.ocr_processed_at !== 'string') return 'blocked';
+            }
             op.write = 'saved';
             return 'saved';
         } catch { return 'blocked'; }

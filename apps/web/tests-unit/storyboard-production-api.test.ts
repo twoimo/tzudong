@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import {
@@ -8,15 +8,22 @@ import {
 } from '../lib/admin/storyboard/production-contract';
 import { prepareStoryboardAsset, storyboardHash } from '../lib/admin/storyboard/production-assets';
 import {
-  StoryboardProductionStore, productionActionSchema, manualStoryboardProvenance, validateLocalStoryboardProvenance,
+  StoryboardProductionStore, productionActionSchema, validateGeminiStoryboardProvenance,
   type ProductionDatabase, type ProductionProject, type ProductionStorage,
 } from '../lib/admin/storyboard/production-store';
 import {
   authenticateStoryboardWorker, storyboardWorkerTokenHash, workerOperationSchema,
   type ProductionWorkerIdentity,
 } from '../lib/admin/storyboard/production-worker-auth';
-import { storyboardGeminiDeclaredModels } from '../lib/admin/storyboard/gemini-models';
-import { createStoryboardProductionApi, productionApiFailure, readStoryboardMultipart } from '../lib/admin/storyboard/production-api';
+import {
+  STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL, STORYBOARD_GEMINI_TEXT_MODEL, storyboardGeminiDeclaredModels,
+} from '../lib/admin/storyboard/gemini-models';
+import {
+  FEATURE_DATABASE_HELD, FEATURE_DATABASE_READY, type FeatureDatabaseReadiness,
+} from '../lib/runtime-feature-readiness-contract';
+
+mock.module('server-only', () => ({}));
+const { createStoryboardProductionApi, productionApiFailure, readStoryboardMultipart } = await import('../lib/admin/storyboard/production-api');
 
 // These are unit boundary doubles. The separate PostgreSQL suite exercises real persistence/locks.
 const ownerId = randomUUID();
@@ -24,22 +31,22 @@ const workerId = randomUUID();
 const jobId = randomUUID();
 const leaseToken = randomUUID();
 const site = new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:8080').origin;
-const models = [
-  { id: 'installed-text', capabilities: ['chat'], loaded: false, bytes_on_disk: 1000, bytes_resident: 0 },
-  { id: 'installed-image', capabilities: ['image'], loaded: true, bytes_on_disk: 1000, bytes_resident: 1000 },
-];
+const models = storyboardGeminiDeclaredModels();
 const identity: ProductionWorkerIdentity = { id: workerId, ownerId, models };
 const req = () => storyboardProductionRequestSchema.parse({ workflow: STORYBOARD_WORKFLOW,
   requestId: randomUUID(), prompt: 'unit fixture', sceneCount: 5,
-  providers: { text: { id: 'local-mlx', model: 'installed-text' }, image: { id: 'local-mlx', model: 'installed-image' } },
+  providers: { externalAI: true, text: { id: 'gemini-api', model: STORYBOARD_GEMINI_TEXT_MODEL },
+    image: { id: 'gemini-api', model: STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL } },
 });
 const draft = () => ({ title: 'Unit fixture', logline: 'Contract tests', scenes: Array.from({ length: 5 }, (_, index) => ({
   sceneNo: index + 1, title: `Scene ${index + 1}`, durationSec: 10, description: 'A scene', visualDirection: 'Static frame',
   narration: '', caption: '', productionNotes: ['Unit fixture'], imagePrompt: 'An empty table', sourceIds: [] as string[],
 })) });
-const proof = (modality = 'image'): StoryboardProductionProvenance => ({ providerId: 'local-mlx', model: `installed-${modality}`,
-  verification: 'local-worker', generatedAt: new Date().toISOString(), requestId: randomUUID(), responseId: null,
-  responseModel: null, modelEvidence: 'installed-catalog-and-request' });
+const proof = (modality: 'text' | 'image' = 'image'): StoryboardProductionProvenance => {
+  const model = modality === 'text' ? STORYBOARD_GEMINI_TEXT_MODEL : STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL;
+  return { providerId: 'gemini-api', model, verification: 'official-api', generatedAt: new Date().toISOString(),
+    requestId: randomUUID(), responseId: randomUUID(), responseModel: model, modelEvidence: 'response' };
+};
 function project(): ProductionProject {
   const id = randomUUID();
   const document: StoryboardProductionDocument = { ...draft(), schema: STORYBOARD_WORKFLOW, projectId: id, revision: 0,
@@ -95,15 +102,17 @@ function jsonRequest(value: unknown, origin: string = site) {
   return new Request(`${site}/api/admin/storyboard/production`, { method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: origin }, body: JSON.stringify(value) });
 }
-function api(store = new StoryboardProductionStore({ database: unusedDb }), userId = ownerId) {
+function api(
+  store = new StoryboardProductionStore({ database: unusedDb }),
+  userId = ownerId,
+  readiness: FeatureDatabaseReadiness = FEATURE_DATABASE_READY,
+) {
   return createStoryboardProductionApi({ store, requireAdmin: async () => ({ ok: true, userId }),
-    authenticateWorker: async () => identity });
+    authenticateWorker: async () => identity, readFeatureReadiness: async () => readiness });
 }
 async function exportFixture() {
   const p = project();
-  p.request.providers.image = { id: 'manual', model: '' };
-  p.status = 'awaiting_import';
-  const prepared = await prepareStoryboardAsset(await png(), p.id, manualStoryboardProvenance(p.request.providers.image));
+  const prepared = await prepareStoryboardAsset(await png(), p.id, proof());
   p.document!.scenes[0].image = prepared.asset;
   p.document!.scenes[0].revision = 1;
   const storage = new UnitStorage();
@@ -141,35 +150,72 @@ describe('worker authentication and proof boundary', () => {
   });
   test('requires paired heartbeat job and lease and forbids full document or diagnostic fields', () => {
     const geminiModels = storyboardGeminiDeclaredModels();
+    const legacyModels = [{ id: 'legacy-model', owned_by: 'mlx-serve' as const, capabilities: ['image'],
+      loaded: true, bytes_on_disk: 1000, bytes_resident: 1000 }];
     expect(workerOperationSchema.safeParse({ action: 'heartbeat', models: geminiModels, jobId }).success).toBe(false);
     expect(workerOperationSchema.safeParse({ action: 'heartbeat', models: geminiModels, jobId, leaseToken }).success).toBe(true);
-    expect(workerOperationSchema.safeParse({ action: 'heartbeat', models, jobId, leaseToken }).success).toBe(false);
+    expect(workerOperationSchema.safeParse({ action: 'heartbeat', models: legacyModels, jobId, leaseToken }).success).toBe(false);
     expect(workerOperationSchema.safeParse({ action: 'heartbeat', models: [{ ...geminiModels[0], id: 'other-model' }] }).success).toBe(false);
     expect(workerOperationSchema.safeParse({ action: 'draft', jobId, leaseToken, document: project().document }).success).toBe(false);
     expect(workerOperationSchema.safeParse({ action: 'scene-error', jobId, leaseToken, sceneNo: 1, errorCode: 'raw provider response' }).success).toBe(false);
     expect(workerOperationSchema.safeParse({ action: 'claim', serviceRoleKey: 'not-accepted' }).success).toBe(false);
   });
-  test('requires configured local model, installed catalog capability and consistent evidence', () => {
-    expect(validateLocalStoryboardProvenance(proof(), req(), models, 'image').verification).toBe('local-worker');
-    for (const changed of [{ model: 'other' }, { responseModel: 'other' }, { verification: 'official-api' },
+  test('requires the configured Gemini model, declared catalog capability and response evidence', () => {
+    expect(validateGeminiStoryboardProvenance(proof(), req(), models, 'image').verification).toBe('official-api');
+    for (const changed of [{ model: 'other' }, { responseModel: 'other' },
       { modelEvidence: 'unverified' }, { modelEvidence: 'response', responseModel: null }]) {
-      expect(() => validateLocalStoryboardProvenance({ ...proof(), ...changed }, req(), models, 'image')).toThrow('model_identity_mismatch');
+      expect(() => validateGeminiStoryboardProvenance({ ...proof(), ...changed }, req(), models, 'image'))
+        .toThrow('model_identity_mismatch');
     }
-    expect(() => validateLocalStoryboardProvenance(proof(), req(), [], 'image')).toThrow('model_not_installed');
-    expect(() => validateLocalStoryboardProvenance(proof(), req(), models.map((model) => ({ ...model, capabilities: ['chat'] })), 'image'))
+    expect(() => validateGeminiStoryboardProvenance(proof(), req(), [], 'image')).toThrow('model_capability_mismatch');
+    expect(() => validateGeminiStoryboardProvenance(proof(), req(), models.map((model) => ({ ...model, capabilities: ['chat'] })), 'image'))
       .toThrow('model_capability_mismatch');
-    expect(validateLocalStoryboardProvenance({ ...proof(), responseModel: 'installed-image', modelEvidence: 'response' }, req(), models, 'image').modelEvidence).toBe('response');
-  });
-  test('manual proof is always generated as unverified user import', () => {
-    const imported = manualStoryboardProvenance({ id: 'grok-manual', model: 'chosen-model' });
-    expect(imported).toMatchObject({ providerId: 'grok-manual', model: 'chosen-model', verification: 'user-import',
-      responseId: null, responseModel: null, modelEvidence: 'unverified' });
-    expect(imported.requestId).not.toBe(manualStoryboardProvenance({ id: 'manual', model: '' }).requestId);
-    expect(() => manualStoryboardProvenance({ id: 'local-mlx', model: 'installed-image' })).toThrow('invalid_request');
+    expect(validateGeminiStoryboardProvenance(proof(), req(), models, 'image').modelEvidence).toBe('response');
   });
 });
 
 describe('admin/API contracts and bounded failures', () => {
+  test('held database keeps catalog reads available and blocks every mutation before store or multipart work', async () => {
+    const calls: string[] = [];
+    const store = {
+      async list() { calls.push('list'); return { ok: true, projects: [], workers: [] }; },
+      async get() { throw new Error('unexpected_get'); },
+      async create() { calls.push('create'); throw new Error('unexpected_create'); },
+      async apply() { calls.push('apply'); throw new Error('unexpected_apply'); },
+      async downloadAsset() { throw new Error('unexpected_download'); },
+      async exportProject() { throw new Error('unexpected_export'); },
+      async workerOperation() { calls.push('worker-operation'); throw new Error('unexpected_worker_operation'); },
+      async workerImage() { calls.push('worker-image'); throw new Error('unexpected_worker_image'); },
+      async versions() { throw new Error('unexpected_versions'); },
+    } as unknown as StoryboardProductionStore;
+    const handlers = api(store, ownerId, FEATURE_DATABASE_HELD);
+
+    const catalog = await handlers.listGET(new Request(site));
+    expect(catalog.status).toBe(200);
+    expect(await catalog.json()).toEqual({ ok: true, projects: [], workers: [], readiness: FEATURE_DATABASE_HELD });
+
+    const createRequest = jsonRequest(req());
+    const createResponse = await handlers.listPOST(createRequest);
+    expect(createResponse.status).toBe(409);
+    expect(await createResponse.json()).toEqual({ ok: false, error: 'feature_database_held' });
+    expect(createRequest.bodyUsed).toBe(false);
+
+    const readinessResponse = await handlers.workerPOST(jsonRequest({ action: 'readiness' }));
+    expect(readinessResponse.status).toBe(200);
+    expect(await readinessResponse.json()).toEqual(FEATURE_DATABASE_HELD);
+    const claimResponse = await handlers.workerPOST(jsonRequest({ action: 'claim' }));
+    expect(claimResponse.status).toBe(409);
+    expect(await claimResponse.json()).toEqual({ ok: false, error: 'feature_database_held' });
+
+    const imageForm = new FormData();
+    imageForm.set('file', new File([await png()], 'scene.png', { type: 'image/png' }));
+    const imageRequest = new Request(site, { method: 'POST', body: imageForm });
+    const imageResponse = await handlers.workerImagePOST(imageRequest);
+    expect(imageResponse.status).toBe(409);
+    expect(imageRequest.bodyUsed).toBe(false);
+    expect(calls).toEqual(['list']);
+  });
+
   test('reads a recovered uncertain job without dropping the project snapshot', async () => {
     const selected=project();
     const uncertain={id:jobId,status:'failed',stage:'uncertain',sceneNo:null,errorCode:'worker_lease_lost',attempts:1,lastHeartbeat:new Date().toISOString()};
@@ -182,7 +228,7 @@ describe('admin/API contracts and bounded failures', () => {
     expect(productionActionSchema.safeParse(value).success).toBe(true);
     expect(productionActionSchema.safeParse({ ...value, sceneNo: 2 }).success).toBe(true);
     expect(productionActionSchema.safeParse({ ...value, targetRevision: undefined }).success).toBe(false);
-    expect(productionActionSchema.safeParse({ ...value, provider: 'local-mlx' }).success).toBe(false);
+    expect(productionActionSchema.safeParse({ ...value, provider: 'legacy-provider' }).success).toBe(false);
   });
   test('restore goes through the atomic admin RPC without worker or model calls', async () => {
     const p = project(); p.status = 'ready'; p.revision = 13;
@@ -289,10 +335,10 @@ describe('admin/API contracts and bounded failures', () => {
     const denied = await Promise.all([
       handlers.listGET(new Request(site)), handlers.listPOST(jsonRequest({})),
       handlers.projectGET(new Request(site), context), handlers.projectPOST(jsonRequest({}), context),
-      handlers.imagePOST(jsonRequest({}), context), handlers.assetGET(new Request(site), context),
+      handlers.assetGET(new Request(site), context),
       handlers.exportGET(new Request(site), context),
     ]);
-    expect(authCalls).toBe(7);
+    expect(authCalls).toBe(6);
     for (const response of denied) {
       expect(response.status).toBe(401);
       expect(await response.json()).toEqual({ ok: false, error: 'unauthorized' });
@@ -321,15 +367,21 @@ describe('admin/API contracts and bounded failures', () => {
     expect(productionActionSchema.safeParse({ action: 'import-text', revision: 0, projectId: randomUUID(),
       schema: STORYBOARD_WORKFLOW, draft: draft(), provenance: proof() }).success).toBe(false);
   });
-  test('external providers need consent and configured official APIs never dispatch', async () => {
+  test('non-Gemini providers are rejected before any persistence dispatch', async () => {
+    let calls = 0;
+    const handlers = api(new StoryboardProductionStore({ database: { ...unusedDb, async rpc() {
+      calls++; return { data: null, error: null };
+    } } }));
     for (const modality of ['text', 'image'] as const) {
-      const request = req(); request.providers[modality] = { id: 'openai-api', model: 'selected' };
-      expect(await (await api().listPOST(jsonRequest(request))).json()).toEqual({ ok: false, error: 'external_ai_disabled' });
-      request.providers.externalAI = true; request.providers[modality] = { id: 'openai-api', model: 'selected' };
-      const response = await api().listPOST(jsonRequest(request));
-      expect(response.status).toBe(503);
-      expect(await response.json()).toEqual({ ok: false, error: 'provider_not_configured' });
+      const request = req() as unknown as Record<string, unknown>;
+      const providers = structuredClone((request.providers as Record<string, unknown>));
+      providers[modality] = { id: 'forbidden-provider', model: 'selected' };
+      request.providers = providers;
+      const response = await handlers.listPOST(jsonRequest(request));
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ ok: false, error: 'invalid_request' });
     }
+    expect(calls).toBe(0);
   });
   test('actual JSON size is bounded even with a false content-length', async () => {
     const request = new Request(site, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: site, 'Content-Length': '0' },
@@ -367,15 +419,6 @@ describe('multipart and transactional image checkpoints', () => {
     const request = new Request(site, { method: 'POST', headers: { 'Content-Type': 'multipart/form-data; boundary=fixture' },
       body, duplex: 'half' } as RequestInit);
     await expect(readStoryboardMultipart(request, ['file'])).rejects.toThrow('request_too_large');
-  });
-  test('manual image import rejects projectId mismatch and provenance metadata', async () => {
-    const id = randomUUID();
-    const form = new FormData(); form.set('revision', '0'); form.set('sceneNo', '1'); form.set('projectId', randomUUID());
-    form.set('schema', STORYBOARD_WORKFLOW); form.set('file', new File([await png()], 'input.png', { type: 'image/png' }));
-    const post = () => new Request(site, { method: 'POST', headers: { Origin: site }, body: form });
-    expect((await api().imagePOST(post(), { params: Promise.resolve({ id }) })).status).toBe(400);
-    form.set('projectId', id); form.set('provenance', JSON.stringify(proof()));
-    expect((await api().imagePOST(post(), { params: Promise.resolve({ id }) })).status).toBe(400);
   });
   test('rechecks lease after upload and removes unreferenced variants after cancellation', async () => {
     const p = project();

@@ -21,6 +21,7 @@ async function bundle(sourceRoot: string) {
     }
     visit(tree);
     expect(lifecycle).toHaveLength(2);
+    const handlesFeatureAdmission = nodes.get('handleSubmit')?.includes('fetchFeatureDatabaseReadiness') ?? false;
     const handlers = ['autoSave', 'loadDraft', 'clearDraft', 'notifySavedReview', 'handleSubmit']
         .map(name => { expect(nodes.has(name)).toBe(true); return `const ${name} = ${nodes.get(name)};`; }).join('\n');
     const script = `
@@ -30,18 +31,23 @@ async function bundle(sourceRoot: string) {
         import * as db from '@revision/db';
         import { ReviewSaveOperation } from '@revision/operation';
         import { buildReviewPhotoObjectPath, normalizeReviewPhotoFilename, cleanupCanonicalReviewPhotoObjects } from './lib/review-photo-url';
+        import { FEATURE_DATABASE_HELD, FEATURE_DATABASE_HELD_MESSAGE, FEATURE_DATABASE_READY } from './lib/runtime-feature-readiness-contract';
         const { prepareDraftDeletion } = db;
         let heldSave = null, heldLoad = null;
         const saveDraft = async value => { const result = await db.saveDraft(value); if (heldSave) { heldSave.enter(); await heldSave.wait; } return result; };
         const getDraft = async (...args) => { const result = await db.getDraft(...args); if (heldLoad) { heldLoad.enter(); await heldLoad.wait; } return result; };
         const prepareReceiptImage = async file => file, compressFoodImage = async file => file;
-        let owner = 'fixture-owner', mode = 'normal', now = Date.now(), nextRestaurant = 0;
+        let owner = 'fixture-owner', mode = 'normal', now = Date.now(), nextRestaurant = 0, featureReadiness = FEATURE_DATABASE_READY;
+        const handlesFeatureAdmission = ${JSON.stringify(handlesFeatureAdmission)};
         Date.now = () => now;
-        const rows = new Map(), objects = new Set(), registry = new Map();
-        const counts = { uploads: 0, inserts: 0, removes: 0, success: 0, closes: 0 };
+        const rows = new Map(), objects = new Set(), objectMeta = new Map(), registry = new Map();
+        const counts = { readinessChecks: 0, uploads: 0, inserts: 0, removes: 0, success: 0, closes: 0 };
+        const fetchFeatureDatabaseReadiness = async () => { counts.readinessChecks++; return featureReadiness; };
+        const mutateFeatureReadiness = async () => {};
         const storage = {
-            async upload(path) { counts.uploads++; if (mode === 'upload-denied') return { error: { statusCode: '403' } }; objects.add(path); return { error: null }; },
-            async remove(paths) { counts.removes++; paths.forEach(path => objects.delete(path)); return { error: null }; },
+            async upload(path, file) { counts.uploads++; if (mode === 'upload-denied') return { error: { statusCode: '403' } }; objects.add(path); objectMeta.set(path, { size: file.size, contentType: file.type }); return { error: null }; },
+            async info(path) { return objects.has(path) ? { data: objectMeta.get(path), error: null } : { data: null, error: null }; },
+            async remove(paths) { counts.removes++; paths.forEach(path => { objects.delete(path); objectMeta.delete(path); }); return { error: null }; },
             async list(directory, { search }) { return { data: objects.has(directory + '/' + search) ? [{ name: search }] : [], error: null }; },
         };
         const supabase = {
@@ -63,14 +69,17 @@ async function bundle(sourceRoot: string) {
             const [visitedTime, setVisitedTime] = useState('12:00');
             const [categories, setCategories] = useState(['한식']);
             const [content, setContent] = useState(initialContent);
-            const [verificationPhoto, replaceVerificationPhoto] = useState(() => new File(['synthetic'], 'receipt.jpg'));
-            const [foodPhotos, setFoodPhotos] = useState(() => [new File(['synthetic'], 'food.jpg')]);
+            const [verificationPhoto, replaceVerificationPhoto] = useState(() => new File(['synthetic'], 'receipt.jpg', { type: 'image/jpeg' }));
+            const [foodPhotos, setFoodPhotos] = useState(() => [new File(['synthetic'], 'food.webp', { type: 'image/webp' })]);
+            const ocrResultRef = null, ocrResultRevision = null;
             const [currentStep, setCurrentStep] = useState(3);
             const [, setIsSubmitting] = useState(false), [, setIsSaving] = useState(false), [, setLastSavedAt] = useState(null), [, setSaveRecovery] = useState(null);
             const saveOwnerRef = useRef(user.id), saveOperationRef = useRef(null), submitInFlightRef = useRef(false);
             const closeRequestedRef = useRef(false), composerOpenRef = useRef(isOpen), consumerNotifiedRef = useRef(false), autoSaveInFlightRef = useRef(null);
+            const ocrRunGenerationRef = useRef(0), ocrAbortControllerRef = useRef(null), ocrRecoveryContextRef = useRef(null);
+            const verificationSelectionRef = useRef({ invalidate() {} }), receiptOcrPreparationRef = useRef({ invalidate() {} });
             const draftScopeRef = useRef({ ownerId: user.id, restaurantId: restaurant.id, revision: null });
-            const latestSaveInputsRef = useRef({ visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: restaurant.id });
+            const latestSaveInputsRef = useRef({ visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: restaurant.id, ocrResultRef, ocrResultRevision });
             ${lifecycle.join(';\n')};
             const onSuccess = () => { counts.success++; };
             const handleClose = async () => { counts.closes++; };
@@ -88,6 +97,17 @@ async function bundle(sourceRoot: string) {
         window.run = async () => {
             const result = {};
             const id = () => 'fixture-restaurant-' + (++nextRestaurant);
+            if (handlesFeatureAdmission) {
+                const held = mount('feature-held', id());
+                const before = { ...counts, readinessChecks: 0 };
+                featureReadiness = FEATURE_DATABASE_HELD;
+                await held.current.handleSubmit();
+                result.featureHeldBlocksProviderUploadAndWrite = counts.readinessChecks === 1
+                    && counts.uploads === before.uploads && counts.inserts === before.inserts
+                    && counts.removes === before.removes && counts.success === before.success;
+                featureReadiness = FEATURE_DATABASE_READY;
+                held.close();
+            } else result.featureHeldBlocksProviderUploadAndWrite = false;
             const firstId = id(); const a = mount('a', firstId); const b = mount('b', firstId, 'Independent composer B synthetic bounded text.');
             await a.current.autoSave(); now++; await b.current.autoSave();
             const beforeB = await db.getDraft(owner, firstId); await a.current.handleSubmit();
@@ -167,8 +187,9 @@ async function bundle(sourceRoot: string) {
             const report = await page.evaluate(async () => (window as unknown as { run(): Promise<{ result: Record<string, boolean>; cases: number }> }).run());
             reports.push({ phase: entry.phase, ...report, externalRequests, pageErrors });
             expect(externalRequests).toBe(0); expect(pageErrors).toBe(0);
-            expect(report.cases).toBe(7);
+            expect(report.cases).toBe(8);
             if (entry.phase === 'baseline') {
+                expect(report.result.featureHeldBlocksProviderUploadAndWrite).toBe(false);
                 expect(report.result.preCaptureBPreserved).toBe(false);
                 expect(report.result.uploadRetryClearsOwnRevision).toBe(false);
                 expect(report.result.insertRetryClearsOwnRevision).toBe(false);

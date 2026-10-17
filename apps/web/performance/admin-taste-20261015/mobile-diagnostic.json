@@ -1,0 +1,273 @@
+{
+  "active": "overview",
+  "busy": [
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 absolute bottom-0 h-2 w-2 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 absolute bottom-0 h-2 w-2 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 absolute bottom-0 h-2 w-2 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 absolute bottom-0 h-2 w-2 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 absolute bottom-0 h-2 w-2 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-16 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-24 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-16 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-24 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-16 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-24 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-full rounded-none motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-4 w-20 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-full rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-3/4 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-1.5 w-full rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-4 w-20 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-full rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-3/4 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-1.5 w-full rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-4 w-20 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-full rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-3/4 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-1.5 w-full rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-4 w-20 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-full rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-3 w-3/4 rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    },
+    {
+      "tag": "SPAN",
+      "c": "block bg-muted/40 h-1.5 w-full rounded-full motion-reduce:animate-none",
+      "aria": null,
+      "text": ""
+    }
+  ],
+  "headers": [
+    {
+      "title": "대시보드 (KPI)",
+      "rect": {
+        "x": 10,
+        "y": 66,
+        "width": 370,
+        "height": 121,
+        "top": 66,
+        "right": 380,
+        "bottom": 187,
+        "left": 10
+      },
+      "display": "grid"
+    }
+  ]
+}

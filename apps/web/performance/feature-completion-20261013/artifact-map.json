@@ -1,0 +1,66 @@
+{
+  "schema": "tzudong-feature-local-artifact-map/v1",
+  "artifacts": [
+    {
+      "path": "post-build-source-reconciliation.json",
+      "bytes": 1974,
+      "sha256": "f30b90ed8aec6f063f046562ccb0d9ef333c4b11f9383971c15c0cf58bf3b4d1",
+      "classification": "historical post-failure reconciliation"
+    },
+    {
+      "path": "production-build-source-inventory-20261013.json",
+      "bytes": 187221,
+      "sha256": "7fbe352817f033ef119081996c5bfef0504f5ad4bea3abc2ce6968d7d9b76890",
+      "classification": "local current production build evidence"
+    },
+    {
+      "path": "production-build-source-inventory-20261013.json.sha256",
+      "bytes": 114,
+      "sha256": "c3c4331b18a3b7142574d4e1816f95dfd6af7bc501422d5adaffd9919c59db60",
+      "classification": "local current production build evidence"
+    },
+    {
+      "path": "production-build-success-20261013.json",
+      "bytes": 6018,
+      "sha256": "cbd91c8b6ce762a350d8c84ed7c2bf9d217a9af9cd0f6bc03b142fa59dcedf0b",
+      "classification": "local current production build evidence"
+    },
+    {
+      "path": "production-build-success-20261013.json.sha256",
+      "bytes": 105,
+      "sha256": "53cc708dbe45629414a0de12a0f9785f3c39ca927d52724a4f290129ff197233",
+      "classification": "local current production build evidence"
+    },
+    {
+      "path": "unit-suite-20261013.json",
+      "bytes": 89493,
+      "sha256": "e145cc0b6ba229172787d65a45cd71924ff34639d8365f6a3b190f2d5c15627a",
+      "classification": "earlier local unit execution; later route and workflow checks are separate"
+    },
+    {
+      "path": "unit-suite-20261013.json.sha256",
+      "bytes": 91,
+      "sha256": "e255722b61d90a15328d45b66edba8aef554ad1627ef240bc4d94e4fad2720f7",
+      "classification": "earlier local unit execution; later route and workflow checks are separate"
+    },
+    {
+      "path": "verification-receipt.json",
+      "bytes": 25052,
+      "sha256": "89018914ab4cb6751a0d2e7d3ad10591565b08f29c14bed91354afd739862e59",
+      "classification": "historical failed build evidence"
+    }
+  ],
+  "artifactCount": 8,
+  "artifactBytes": 310068,
+  "sourceInventory": "production-build-source-inventory-20261013.json",
+  "inventoryReadback": {
+    "fileCount": 1033,
+    "driftCount": 0
+  },
+  "limits": [
+    "All retained evidence is local. Hosted DB, Storage, provider and deployment behavior are unverified.",
+    "The whole unit runner predates route helper extraction and operating workflow additions. Later affected checks are separate.",
+    "No performance, monetary, completeness or world-ranking claim.",
+    "Map and detached checksum exclude themselves."
+  ]
+}

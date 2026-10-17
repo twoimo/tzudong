@@ -179,19 +179,19 @@ const g003SourceCoverageMatrix = {
   storyboardAdmin: {
     files: [
       {
-        path: 'components/admin/storyboard/LegacyStoryboardReference.tsx',
+        path: 'components/admin/storyboard/LocalStoryboardWorkspace.tsx',
         contains: [
-          'data-layout-primitives="split-sidebar panel-layout list-detail frame step-nav stack"',
-          'data-storyboard-job-status',
-          'data-scroll-owner="storyboard-chat"',
+          'data-local-storyboard-workspace="true"',
+          'data-admin-storyboard-toolbar="true"',
+          'aria-label="프로젝트 설정과 기록"',
         ],
       },
       {
-        path: 'components/admin/storyboard/StoryboardCanvasShell.tsx',
+        path: 'components/admin/storyboard/AdminStoryboardGenerator.tsx',
         contains: [
-          'data-layout-primitives="panel-layout frame stack"',
-          'data-scroll-owner="storyboard-canvas"',
-          'data-scroll-owner="storyboard-readback"',
+          'data-admin-storyboard-workspace="true"',
+          'data-storyboard-archive="read-only"',
+          'getTrustedStoryboardGeneratedImage',
         ],
       },
     ],

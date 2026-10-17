@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-13T14:46:38Z",
+  "evidenceClass": "local-source-bound-production-build-recovery",
+  "status": "passed",
+  "repository": {
+    "worktree": "/Users/twoimo/.codex/worktrees/feature-completion-20261013/tzudong",
+    "head": "9cd8b89a35a2c42f10d8444e71d07a40509a21dd",
+    "dirtyCandidatePreserved": true
+  },
+  "recovery": {
+    "immutableFailedReceipt": {
+      "path": "verification-receipt.json",
+      "sha256": "89018914ab4cb6751a0d2e7d3ad10591565b08f29c14bed91354afd739862e59",
+      "status": "rejected-production-build-typescript-route-export"
+    },
+    "priorCompletedOutputInspectedBeforeRestart": ".next-feature-completion-fixed-20261013",
+    "ownedBuildProcessWasLiveBeforeRestart": false,
+    "newBuildOutput": ".next-feature-completion-recovery-20261013"
+  },
+  "sourceBinding": {
+    "inventory": {
+      "path": "production-build-source-inventory-20261013.json",
+      "sha256": "7fbe352817f033ef119081996c5bfef0504f5ad4bea3abc2ce6968d7d9b76890",
+      "fileCount": 1033,
+      "manifestSha256": "e3361b4c4f3689b5fb5b4a1694158de0ef9cc4ac7e5d4207aa99e0f4ec1874ff",
+      "postBuildExactReadbackCount": 1033
+    },
+    "route": {
+      "path": "apps/web/app/api/admin/operating-readback/record-mutations-hold/route.ts",
+      "bytes": 202,
+      "sha256": "ae470f7e9ee26c4a4cc55f57a00d695cb94343c21fe4df06bcbfe89e5d70ba61"
+    },
+    "helper": {
+      "path": "apps/web/app/api/admin/operating-readback/record-mutations-hold/readback-response.ts",
+      "bytes": 2357,
+      "sha256": "199988711df39cf256ee5c7d9b686c9d0b320bd7c74394fbeecd68646dc6395d"
+    },
+    "packageJsonSha256": "769833dbc4cf52e21f70c7b9d826f34a9f5fd09c5be87574dbb7485366c75485",
+    "packageLockSha256": "607175eda02d7746caf5593d34835cef317bf197ca6d5428fa1266cdb2aae5f4",
+    "nextConfigSha256": "c3ae70ee133d35dd02a12a3690e97e9f82f1d2509fe3e341c230a7b9e77b43e5",
+    "tsconfigSha256": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17",
+    "nextEnvPresentBeforeBuild": false,
+    "nextEnvPresentAfterCleanup": false,
+    "generatedTsconfigIncludesRemoved": 2,
+    "postBuildSourceExact": true
+  },
+  "runtime": {
+    "node": "24.21.0",
+    "npm": "11.6.2",
+    "next": "16.3.8",
+    "bun": "1.4.0",
+    "nodeModulesOwnedRealDirectory": true
+  },
+  "productionBuild": {
+    "sanitizedCommand": "TZUDONG_NEXT_DIST_DIR=.next-feature-completion-recovery-20261013 node@24 npm@11.6.2 run build",
+    "resolvedPackageScript": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next build --webpack && node scripts/verify-route-css-boundaries.mjs",
+    "attemptCount": 1,
+    "exitCode": 0,
+    "observedWallSeconds": 67.32,
+    "webpack": {
+      "passed": true,
+      "seconds": 33.3
+    },
+    "typescript": {
+      "passed": true,
+      "seconds": 24.6
+    },
+    "staticGeneration": {
+      "passed": true,
+      "pages": 52,
+      "workers": 17,
+      "seconds": 1.462
+    },
+    "buildId": "-Esqi1vxuv6BhjTpVP3Ug",
+    "buildIdSha256": "c5893cbc9bd6a714dac3c59b1f4a4c28a4e8dc3470740c033b8ad7406c0d07f4",
+    "appPathsManifestSha256": "54a0c922f78262b6bcbbb7d0f88343c613a1df7ac1e4c86b1fc8af7e404c04f5",
+    "requiredServerFilesSha256": "a8e87dc446a1394f7c58ca3a983e0a71ffbb60d2d869df68c0a68716c77c4519",
+    "compiledOperatingReadbackRouteSha256": "bb91fadde9c3b7aeeab370d57ef5904387ca94b90720ce032903fe37224be595",
+    "compiledFixedCodes": [
+      "OPERATING_READBACK_AUTH_UNAVAILABLE",
+      "OPERATING_READBACK_FORBIDDEN",
+      "OPERATING_READBACK_RUNTIME_UNAVAILABLE",
+      "OPERATING_READBACK_UNAUTHORIZED"
+    ]
+  },
+  "cssBoundary": {
+    "passed": true,
+    "homeBytes": 195887,
+    "generalAppBytes": 361798,
+    "adminBytes": 375648,
+    "deferredBytes": 195887
+  },
+  "affectedVerification": {
+    "bun": {
+      "files": [
+        "tests-unit/admin-operating-readback-route.test.ts",
+        "tests-unit/admin-route-auth-contract.test.ts"
+      ],
+      "passed": 9,
+      "failed": 0,
+      "assertions": 1193,
+      "routeTestSha256": "26cf7f3b6c53cb74ecd957b9a3b5a2b6454a06ca3fccc6cb2c3d4a9cf91fb864",
+      "authContractTestSha256": "dc24b7985f07ea443f31a4b62f0a7ccb0164f5ee3cc46ab57cdc9ff675716aef"
+    },
+    "eslint": {
+      "passed": true,
+      "files": 4,
+      "warnings": 0,
+      "errors": 0
+    },
+    "typescriptParity": {
+      "passed": true,
+      "diagnostics": 0,
+      "logicalInputs": 3148,
+      "logicalInputNamesSha256": "ea51a16fe29dd5d476e6821cca7efe211edf6648029ad53296192e457cbd5689",
+      "nonLibraryContentSha256": "6da29469929ea126e1de7fe798eb71222670b6fce1e6ea8c0288b9151a990f27",
+      "nativeStandardLibraryContentSha256": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+      "compatStandardLibraryContentSha256": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+    }
+  },
+  "localRender": {
+    "distDir": ".next-feature-completion-recovery-20261013",
+    "ownedPort": 19014,
+    "path": "/privacy",
+    "status": 200,
+    "contentType": "text/html; charset=utf-8",
+    "responseBytes": 46516,
+    "durationSeconds": 0.146362,
+    "serverStopped": true,
+    "remainingOwnedProcesses": 0
+  },
+  "networkAndDataBoundary": {
+    "hostedDatabaseCalls": 0,
+    "storageWrites": 0,
+    "providerCalls": 0,
+    "deploymentWrites": 0,
+    "localHttpRequests": 1,
+    "rawPageBodiesStored": false,
+    "rawBuildLogStored": false
+  },
+  "cleanup": {
+    "tsconfigRestoredExact": true,
+    "nextEnvRemoved": true,
+    "sourceInventoryExactAfterBuild": true,
+    "ownedRenderProcessStopped": true,
+    "buildOutputPreservedForReadback": true
+  },
+  "limitations": [
+    "This is local source, compile, bundle, CSS and one static-route HTTP evidence; it does not prove a hosted deployment or authenticated admin flow.",
+    "The local render used a static privacy page and did not exercise Supabase, Storage, Gemini or other providers.",
+    "No performance improvement, cost reduction, provider behavior or production availability is inferred from this single build."
+  ]
+}

@@ -9,9 +9,16 @@ import {
 
 export const GEMINI_OCR_FALLBACK_MODEL = 'gemini-3.6-flash';
 export const GEMINI_OCR_DEFAULT_THINKING_LEVEL = 'MEDIUM';
+export const GEMINI_OCR_INFERENCE_CONFIG_VERSION = 'gemini-receipt-ocr-inference-v1';
 export type GeminiOcrThinkingLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+export type GeminiOcrInferenceConfigSnapshot = Readonly<{
+  version: typeof GEMINI_OCR_INFERENCE_CONFIG_VERSION;
+  thinkingLevel: GeminiOcrThinkingLevel;
+  responseMimeType: 'application/json';
+  samplingPolicy: 'omit-modern-zero-legacy-v1';
+}>;
 
-function normalizeGeminiOcrModel(model: string): string {
+export function normalizeGeminiOcrModel(model: string): string {
   return model === 'gemini-3.7-flash' || model === 'models/gemini-3.7-flash'
     ? 'gemini-3.8-flash'
     : model;
@@ -50,6 +57,18 @@ export function getGeminiOcrThinkingLevel(env: NodeJS.ProcessEnv = process.env):
     ? configured
     : GEMINI_OCR_DEFAULT_THINKING_LEVEL;
 }
+
+export function getGeminiOcrInferenceConfigSnapshot(
+  env: NodeJS.ProcessEnv = process.env,
+): GeminiOcrInferenceConfigSnapshot {
+  return Object.freeze({
+    version: GEMINI_OCR_INFERENCE_CONFIG_VERSION,
+    thinkingLevel: getGeminiOcrThinkingLevel(env),
+    responseMimeType: 'application/json',
+    samplingPolicy: 'omit-modern-zero-legacy-v1',
+  });
+}
+
 export function toGeminiThinkingLevel(thinkingLevel: GeminiOcrThinkingLevel): ThinkingLevel {
   return thinkingLevel as ThinkingLevel;
 }
@@ -68,6 +87,7 @@ export function buildGeminiReceiptOcrParts(input: {
 type GeminiGenerateContentImpl = (input: {
   model: string;
   thinkingLevel: GeminiOcrThinkingLevel;
+  inferenceConfig: GeminiOcrInferenceConfigSnapshot;
   parts: ReturnType<typeof buildGeminiReceiptOcrParts>;
   signal?: AbortSignal;
 }) => Promise<string>;
@@ -80,11 +100,16 @@ function parseTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
 
 export function buildGeminiReceiptOcrRequest(input: {
   model: string;
-  thinkingLevel: GeminiOcrThinkingLevel;
+  thinkingLevel?: GeminiOcrThinkingLevel;
+  inferenceConfig?: GeminiOcrInferenceConfigSnapshot;
   parts: ReturnType<typeof buildGeminiReceiptOcrParts>;
   signal?: AbortSignal;
   timeoutMs?: number;
 }) {
+  const inferenceConfig: GeminiOcrInferenceConfigSnapshot = input.inferenceConfig ?? Object.freeze({
+    ...getGeminiOcrInferenceConfigSnapshot({} as NodeJS.ProcessEnv),
+    ...(input.thinkingLevel ? { thinkingLevel: input.thinkingLevel } : {}),
+  });
   // Google removed sampling controls starting with 3.6 Flash and 3.5
   // Flash-Lite, including later releases. Preserve older explicit models.
   const requestModel = normalizeGeminiOcrModel(input.model);
@@ -98,8 +123,8 @@ export function buildGeminiReceiptOcrRequest(input: {
     contents: [{ role: 'user' as const, parts: input.parts }],
     config: {
       ...(modern ? {} : { temperature: 0 }),
-      responseMimeType: 'application/json',
-      thinkingConfig: { thinkingLevel: toGeminiThinkingLevel(input.thinkingLevel) },
+      responseMimeType: inferenceConfig.responseMimeType,
+      thinkingConfig: { thinkingLevel: toGeminiThinkingLevel(inferenceConfig.thinkingLevel) },
       abortSignal: input.signal,
       httpOptions: { timeout: input.timeoutMs ?? 12_000, retryOptions: { attempts: 1 } },
     },
@@ -109,7 +134,7 @@ export function buildGeminiReceiptOcrRequest(input: {
 async function generateWithSdk(input: {
   apiKey: string;
   model: string;
-  thinkingLevel: GeminiOcrThinkingLevel;
+  inferenceConfig: GeminiOcrInferenceConfigSnapshot;
   parts: ReturnType<typeof buildGeminiReceiptOcrParts>;
   signal?: AbortSignal;
   timeoutMs?: number;
@@ -128,6 +153,7 @@ export async function callGeminiReceiptOcr(input: {
   mimeType: string;
   prompt: string;
   env?: NodeJS.ProcessEnv;
+  inferenceConfig?: GeminiOcrInferenceConfigSnapshot;
   signal?: AbortSignal;
   generateContentImpl?: GeminiGenerateContentImpl;
 }): Promise<ReceiptOcrResult> {
@@ -136,7 +162,7 @@ export async function callGeminiReceiptOcr(input: {
 
   const env = input.env ?? process.env;
   const timeoutMs = parseTimeoutMs(env);
-  const thinkingLevel = getGeminiOcrThinkingLevel(env);
+  const inferenceConfig = input.inferenceConfig ?? getGeminiOcrInferenceConfigSnapshot(env);
   const attempts: ReceiptOcrAttempt[] = [];
   const deadline = Date.now() + timeoutMs;
 
@@ -148,6 +174,7 @@ export async function callGeminiReceiptOcr(input: {
     const timeout = setTimeout(() => controller.abort(), remainingMs);
     const abortFromCaller = () => controller.abort();
     input.signal?.addEventListener('abort', abortFromCaller, { once: true });
+    let providerResponseReceived = false;
 
     try {
       if (input.signal?.aborted) controller.abort();
@@ -157,13 +184,23 @@ export async function callGeminiReceiptOcr(input: {
         mimeType: input.mimeType,
       });
       const text = await (input.generateContentImpl
-        ? input.generateContentImpl({ model, thinkingLevel, parts, signal: controller.signal })
-        : generateWithSdk({ apiKey, model, thinkingLevel, parts, signal: controller.signal, timeoutMs: remainingMs }));
+        ? input.generateContentImpl({
+            model,
+            thinkingLevel: inferenceConfig.thinkingLevel,
+            inferenceConfig,
+            parts,
+            signal: controller.signal,
+          })
+        : generateWithSdk({ apiKey, model, inferenceConfig, parts, signal: controller.signal, timeoutMs: remainingMs }));
+      providerResponseReceived = true;
       controller.signal.throwIfAborted();
       const data: ReceiptOcrData = normalizeReceiptOcrData(extractJsonObject(text));
       attempts.push({ model, ok: true, elapsedMs: Date.now() - startedAt });
       return { data, model, attempts };
     } catch (error) {
+      const providerStatus = error && typeof error === 'object' && 'status' in error
+        ? Number(error.status)
+        : null;
       attempts.push({
         model,
         ok: false,
@@ -172,6 +209,12 @@ export async function callGeminiReceiptOcr(input: {
           : error instanceof Error && error.name === 'AbortError' ? `timeout ${timeoutMs}ms`
           : 'provider_request_failed',
       });
+      // A returned but invalid response, or a definitive unsupported-model
+      // response, may try the next declared model. Timeouts, cancellation and
+      // transport/server failures have an uncertain provider outcome and must
+      // not dispatch another model automatically.
+      const fallbackSafe = providerResponseReceived || providerStatus === 400 || providerStatus === 404;
+      if (!fallbackSafe) break;
     } finally {
       clearTimeout(timeout);
       input.signal?.removeEventListener('abort', abortFromCaller);

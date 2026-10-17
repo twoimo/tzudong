@@ -7,7 +7,7 @@ import {
   storyboardMemoryReserveBytes,
 } from "../lib/admin/storyboard/resource-invariants";
 import {
-  DEFAULT_STORYBOARD_MLX_INFERENCE_PEAK_BYTES,
+  DEFAULT_STORYBOARD_GEMINI_CLIENT_PEAK_BYTES,
   admitStoryboardWorkerMemory,
 } from "../lib/admin/storyboard/outbound-worker";
 
@@ -36,24 +36,22 @@ describe("storyboard resource invariants", () => {
     expect(80 * GIB + 32 * GIB + reserve).toBe(physicalBytes);
   });
 
-  test("worker admission adds resident model bytes before claim", () => {
+  test("worker admission reserves bounded Gemini client and image processing memory before claim", () => {
     const physicalBytes = 128 * GIB;
     expect(admitStoryboardWorkerMemory(
-      [{ bytes_resident: 1 * GIB }],
+      [],
       { physicalBytes, usedBytes: 80 * GIB },
     )).toBe(true);
     expect(admitStoryboardWorkerMemory(
-      [{ bytes_resident: 10 * GIB }],
-      { physicalBytes, usedBytes: 110 * GIB },
+      [],
+      { physicalBytes, usedBytes: 112 * GIB },
     )).toBe(false);
   });
 
-  test("host-wide available memory includes external model residency once", () => {
+  test("host-wide available memory does not add remote Gemini model residency", () => {
     const physicalBytes = 128 * GIB;
 
-    // The model server is a separate process. Its resident bytes are already
-    // reflected by the host-wide availability sample and must not be added a
-    // second time to the worker RSS.
+    // Gemini runs remotely; only the local client and image buffers are admitted.
     expect(admitStoryboardWorkerMemory(
       [{ bytes_resident: 10 * GIB }],
       { physicalBytes, availableBytes: 32 * GIB },
@@ -66,32 +64,16 @@ describe("storyboard resource invariants", () => {
     )).toBe(false);
   });
 
-  test("worker admission reserves a configurable MLX inference peak and fails closed on invalid values", () => {
-    const envName = "STORYBOARD_MLX_INFERENCE_PEAK_BYTES";
-    const previous = process.env[envName];
-    try {
-      delete process.env[envName];
-      expect(DEFAULT_STORYBOARD_MLX_INFERENCE_PEAK_BYTES).toBe(8 * GIB);
-      expect(admitStoryboardWorkerMemory([], {
-        physicalBytes: 64 * GIB,
-        usedBytes: 40 * GIB,
-      })).toBe(false);
-
-      process.env[envName] = String(1 * GIB);
-      expect(admitStoryboardWorkerMemory([], {
-        physicalBytes: 64 * GIB,
-        usedBytes: 40 * GIB,
-      })).toBe(true);
-
-      process.env[envName] = "unknown";
-      expect(() => admitStoryboardWorkerMemory([], {
-        physicalBytes: 64 * GIB,
-        usedBytes: 40 * GIB,
-      })).toThrow(RangeError);
-    } finally {
-      if (previous === undefined) delete process.env[envName];
-      else process.env[envName] = previous;
-    }
+  test("worker admission uses a fixed Gemini client peak without a provider selector", () => {
+    expect(DEFAULT_STORYBOARD_GEMINI_CLIENT_PEAK_BYTES).toBe(128 * 1024 ** 2);
+    expect(admitStoryboardWorkerMemory([], {
+      physicalBytes: 64 * GIB,
+      usedBytes: 47 * GIB,
+    })).toBe(true);
+    expect(admitStoryboardWorkerMemory([], {
+      physicalBytes: 64 * GIB,
+      usedBytes: 48 * GIB,
+    })).toBe(false);
   });
 
   test("queue wait follows W[i+1] = max(0, W[i] + S[i] - A[i])", () => {

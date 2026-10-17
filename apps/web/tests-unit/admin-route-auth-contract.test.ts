@@ -22,7 +22,6 @@ const delegatedProductionApiRoutes: ReadonlyArray<readonly [string, readonly str
   ['app/api/admin/storyboard/production/route.ts', ['GET', 'POST']],
   ['app/api/admin/storyboard/production/[id]/route.ts', ['GET', 'POST']],
   ['app/api/admin/storyboard/production/[id]/export/route.ts', ['GET']],
-  ['app/api/admin/storyboard/production/[id]/images/route.ts', ['POST']],
   ['app/api/admin/storyboard/production/[id]/assets/[assetId]/route.ts', ['GET']],
 ];
 
@@ -30,6 +29,10 @@ const delegatedOperatingReadbackRoute =
   'app/api/admin/operating-readback/record-mutations-hold/route.ts';
 const delegatedOperatingReadbackModule =
   'app/api/admin/operating-readback/record-mutations-hold/readback-response.ts';
+const delegatedStoryboardPolicyReadbackRoute =
+  'app/api/admin/operating-readback/storyboard-policy/route.ts';
+const delegatedStoryboardPolicyReadbackModule =
+  'app/api/admin/operating-readback/storyboard-policy/readback-response.ts';
 
 const publicHomeMapSources = [
   'app/home-client.tsx',
@@ -245,6 +248,35 @@ describe('admin route auth source contract', () => {
         );
         expect(moduleSource.slice(moduleAuthIndex)).toMatch(
           /await\s+requireAdminImpl\s*\(\s*\)\s*;[\s\S]*catch\s*\{\s*return\s+fixedResponse\s*\(\s*'OPERATING_READBACK_AUTH_UNAVAILABLE'\s*,\s*503\s*\)\s*;\s*\}[\s\S]*return\s+responseAfterAuthentication\s*\(\s*auth\s*,\s*environment\s*\)\s*;/,
+        );
+        expect(moduleSource).toMatch(
+          /if\s*\(\s*!auth\.ok\s*\)\s*return\s+fixedAuthFailure\s*\(\s*auth\.response\s*\)\s*;/,
+        );
+        expect(moduleSource).not.toContain('Bearer');
+        expect(moduleSource).not.toContain('supabase.auth.getUser');
+        continue;
+      }
+
+      if (file === delegatedStoryboardPolicyReadbackRoute) {
+        const moduleSource = appSource(delegatedStoryboardPolicyReadbackModule);
+        const moduleAuthIndex = firstCallIndex(moduleSource, 'requireAdminImpl');
+        const preAuthSource = stripCommentsAndStringLiterals(moduleSource).slice(0, moduleAuthIndex);
+
+        expect(source).toContain("import { createStoryboardPolicyReadbackResponse } from './readback-response';");
+        expect(source).toMatch(
+          /export\s+async\s+function\s+GET\s*\(\s*\)\s*\{\s*return\s+createStoryboardPolicyReadbackResponse\s*\(\s*\)\s*;\s*\}/,
+        );
+        expect(moduleSource).toContain("import 'server-only';");
+        expect(moduleSource).toMatch(/requireAdminImpl\s*=\s*requireAdmin/);
+        expect(moduleAuthIndex, `${delegatedStoryboardPolicyReadbackModule} must call its requireAdmin-bound gate`).toBeGreaterThanOrEqual(0);
+        expect(preAuthSource, `${delegatedStoryboardPolicyReadbackModule} must not await work before admin auth`).not.toMatch(
+          /await\s+(?!requireAdmin)/,
+        );
+        expect(preAuthSource, `${delegatedStoryboardPolicyReadbackModule} must not start privileged work before admin auth`).not.toMatch(
+          /createSupabaseServiceRoleClient\s*\(|fetch\s*\(|\.from\s*\(|\.rpc\s*\(|request\.json\s*\(/,
+        );
+        expect(moduleSource.slice(moduleAuthIndex)).toMatch(
+          /await\s+requireAdminImpl\s*\(\s*\)\s*;[\s\S]*catch\s*\{\s*return\s+fixedResponse\s*\(\s*'STORYBOARD_POLICY_READBACK_AUTH_UNAVAILABLE'\s*,\s*503\s*\)\s*;\s*\}[\s\S]*return\s+responseAfterAuthentication\s*\(\s*auth\s*,\s*environment\s*,\s*evaluatePolicy\s*,\s*sourceBindingSha256\s*\)\s*;/,
         );
         expect(moduleSource).toMatch(
           /if\s*\(\s*!auth\.ok\s*\)\s*return\s+fixedAuthFailure\s*\(\s*auth\.response\s*\)\s*;/,

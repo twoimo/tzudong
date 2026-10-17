@@ -12,7 +12,7 @@ const storyboardProjects = ['gemini-api','manual'].map((provider,index) => {
   return {id,revision:0,status:'partial',createdAt:stamp,updatedAt:stamp,
     request:{workflow:'storyboard-mlx-v1',requestId:id,prompt:'합성 검증용 맛집 촬영안',sceneCount:5,
       providers:{externalAI:provider==='gemini-api',text:{id:provider,model:textModel},image:{id:provider,model:imageModel}},retrieval:'none',sources:[],imageWidth:1024,imageHeight:576},
-    document:{schema:'storyboard-mlx-v1',projectId:id,revision:0,generatedAt:stamp,title:provider==='gemini-api'?'Gemini 합성 프로젝트':'수동 합성 프로젝트',logline:'실제 모델 호출 없이 입력 경로를 검증합니다.',
+    document:{schema:'storyboard-mlx-v1',projectId:id,revision:0,generatedAt:stamp,title:provider==='gemini-api'?'Gemini 합성 프로젝트':'이전 기록 프로젝트',logline:'실제 모델 호출 없이 입력 경로를 검증합니다.',
       textProvenance:{providerId:provider,model:textModel,verification:'user-import',generatedAt:stamp,requestId:id,responseId:null,responseModel:null,modelEvidence:'unverified'},
       scenes:Array.from({length:5},(_,scene)=>({sceneNo:scene+1,title:`검증 장면 ${scene+1}`,durationSec:10,description:'합성 식당 장면',visualDirection:'정면 촬영',narration:'',caption:'',productionNotes:['합성 검증용'],imagePrompt:'합성 식당',sourceIds:[],revision:0,image:null,imageError:null}))}};
 });

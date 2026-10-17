@@ -204,7 +204,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
     expect(tableSource).toContain('aria-label="필터 초기화"');
     expect(tableSource).toContain('{hasActiveFilters && (');
     expect(tableSource).toContain('variant="ghost"');
-    expect(tableSource).toContain('h-8 min-w-0 rounded-full px-2 text-xs font-medium');
+    expect(tableSource).toContain('h-11 min-w-0 rounded-md px-2 text-xs font-medium');
     expect(tableSource).toContain('data-admin-evaluation-mobile-card="true"');
     expect(tableSource).toContain('data-layout-primitives="stack frame"');
     expect(tableSource).toContain('<article');

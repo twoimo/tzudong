@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "kind": "ocr-recovery-race-verification",
+  "createdAt": "2026-10-15T09:45:11.044654+00:00",
+  "sourceHeadLocator": "392398a943494624cfdde0ec44aa75af65baa449",
+  "sourceState": "working-tree-delta",
+  "status": "targeted-passed-canonical-repairs-pending",
+  "environment": {
+    "node": "24.21.0",
+    "bun": "1.4.0",
+    "next": "16.3.8",
+    "realProviderCalls": 0,
+    "hostedWrites": 0
+  },
+  "bindings": [
+    {
+      "path": "apps/web/components/reviews/ReviewModal.tsx",
+      "sha256": "41ddb30fb975f4a1dcf684ab7cd763f462f8ed26353afeee0056646d4a185b93",
+      "bytes": 213188
+    },
+    {
+      "path": "apps/web/tests-unit/review-save-submit.test.ts",
+      "sha256": "cfb79a774b3bad40de9943e41674951c30761e5de81b266a076f696ce7b73948",
+      "bytes": 45350
+    }
+  ],
+  "targeted": {
+    "command": "bun test tests-unit/review-save-submit.test.ts tests-unit/review-modal-ocr-ux.test.ts --timeout 30000",
+    "passed": 51,
+    "failed": 0,
+    "assertions": 492
+  },
+  "demonstratedRegressions": [
+    {
+      "case": "late stored result after replacement",
+      "before": {
+        "resultWrites": 2,
+        "fieldEffects": 2,
+        "notices": 1
+      },
+      "after": {
+        "resultWrites": 0,
+        "fieldEffects": 0,
+        "notices": 0
+      }
+    },
+    {
+      "case": "readback after restaurant edit",
+      "before": "edited context used instead of original request",
+      "after": "original context retained; another photo uses current context"
+    },
+    {
+      "case": "remove receipt while analyzing",
+      "before": {
+        "analyzing": true
+      },
+      "after": {
+        "analyzing": false,
+        "progress": null,
+        "requestAborted": true
+      }
+    }
+  ],
+  "additionalCases": [
+    "buffered stream patch ignored after abort",
+    "status-only read preserves manual edits and navigation"
+  ],
+  "buildEvidence": "ocr-recovery-build-final-20261015.json",
+  "interimCanonicalEvidence": "ocr-recovery-canonical-interim-20261015.json",
+  "typescriptParity": {
+    "native": "7.0.2",
+    "compat": "6.0.2",
+    "diagnostics": 0,
+    "logicalInputs": 3316,
+    "nonLibraryContentSha256": "2df574049917ee673ed97960f65015ccd63e29de1d3b51d4f36c7dd4efe55532"
+  },
+  "eslint": {
+    "files": 2,
+    "errors": 0,
+    "warnings": 0
+  },
+  "performanceClaim": {
+    "admitted": false,
+    "confidenceInterval": null,
+    "reason": "Deterministic offline regression fixtures, not a latency, cost, or population estimate."
+  },
+  "remaining": [
+    "Final canonical unit after fixture admission repairs",
+    "Current-source PG15 dual database replay",
+    "Protected promotion, operating DB application, deployed/live readback"
+  ]
+}

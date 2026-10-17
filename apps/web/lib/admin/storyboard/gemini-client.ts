@@ -7,7 +7,14 @@ import {
 import { STORYBOARD_GEMINI_TEXT_MODEL, STORYBOARD_GEMINI_IMAGE_MODELS, isAllowedStoryboardGeminiModel } from './gemini-models';
 
 type Usage = { model: string; promptTokens: number | null; outputTokens: number | null; thoughtTokens: number | null; totalTokens: number | null };
+type ProjectBudgetOptions = { env?: NodeJS.ProcessEnv; signal?: AbortSignal };
+type ProjectBudget = <T>(work: () => Promise<T>, options?: ProjectBudgetOptions) => Promise<T>;
 const count = (value: unknown) => Number.isSafeInteger(value) && Number(value) >= 0 ? Number(value) : null;
+
+async function sharedGeminiProjectBudget<T>(work: () => Promise<T>, options?: ProjectBudgetOptions): Promise<T> {
+  const budget = await import('../../../../../backend/utils/provider-budget.mjs');
+  return await budget.withProjectBudget(work, options);
+}
 
 export function resolveStoryboardGeminiKey(env: NodeJS.ProcessEnv = process.env): string | null {
   if (typeof window !== 'undefined') throw new StoryboardProductionError('provider_not_configured');
@@ -24,19 +31,23 @@ function providerError(error: unknown): StoryboardProductionError {
 export class GeminiStoryboardClient {
   private readonly client: { models: Pick<GoogleGenAI['models'], 'get' | 'generateContent'> };
   constructor(options: { apiKey?: string; env?: NodeJS.ProcessEnv; onUsage?: (usage: Usage) => void;
-    client?: { models: Pick<GoogleGenAI['models'], 'get' | 'generateContent'> } } = {}) {
+    client?: { models: Pick<GoogleGenAI['models'], 'get' | 'generateContent'> }; budget?: ProjectBudget } = {}) {
     if (typeof window !== 'undefined') throw new StoryboardProductionError('provider_not_configured');
     const apiKey = options.apiKey ?? resolveStoryboardGeminiKey(options.env);
     if (!apiKey && !options.client) throw new StoryboardProductionError('provider_not_configured');
     this.client = options.client ?? new GoogleGenAI({ apiKey: apiKey!, httpOptions: { timeout: 120_000, retryOptions: { attempts: 1 } } });
     this.onUsage = options.onUsage;
+    this.budget = options.budget ?? sharedGeminiProjectBudget;
+    this.budgetEnv = options.env ? { ...options.env } : undefined;
   }
   private readonly onUsage?: (usage: Usage) => void;
+  private readonly budget: ProjectBudget;
+  private readonly budgetEnv?: NodeJS.ProcessEnv;
   private catalog?: { expiresAt: number; models: Awaited<ReturnType<GeminiStoryboardClient['readModels']>> };
 
-  async models(signal?: AbortSignal) {
+  async models(signal?: AbortSignal, refresh = false) {
     signal?.throwIfAborted();
-    if (this.catalog && this.catalog.expiresAt > Date.now()) return this.catalog.models.map((entry) => ({ ...entry, capabilities: [...entry.capabilities] }));
+    if (!refresh && this.catalog && this.catalog.expiresAt > Date.now()) return this.catalog.models.map((entry) => ({ ...entry, capabilities: [...entry.capabilities] }));
     const models = await this.readModels(signal);
     this.catalog = { models, expiresAt: Date.now() + 300_000 };
     return models.map((entry) => ({ ...entry, capabilities: [...entry.capabilities] }));
@@ -49,7 +60,9 @@ export class GeminiStoryboardClient {
     for (const id of ids) {
       signal?.throwIfAborted();
       try {
-        const model = await this.client.models.get({ model: id, config: { httpOptions: { timeout: 15_000 }, abortSignal: signal } });
+        const model = await this.budget(() => this.client.models.get({
+          model: id, config: { httpOptions: { timeout: 15_000 }, abortSignal: signal },
+        }), { env: this.budgetEnv, signal });
         if (model.name?.replace(/^models\//, '') !== id) throw new StoryboardProductionError('model_identity_mismatch');
         results.push({ id, capabilities: [id === STORYBOARD_GEMINI_TEXT_MODEL ? 'chat' : 'image'],
           loaded: false, bytes_on_disk: 0, bytes_resident: 0, owned_by: 'gemini-api' as const });
@@ -86,12 +99,13 @@ export class GeminiStoryboardClient {
     signal?.throwIfAborted();
     let response;
     try {
-      response = await this.client.models.generateContent({ model, contents: buildStoryboardDraftPrompt(request), config: {
-        // Gemini 3.8 Flash no longer accepts sampling overrides.
+      response = await this.budget(() => this.client.models.generateContent({ model, contents: buildStoryboardDraftPrompt(request), config: {
+        // Gemini 3.8 Flash accepts LOW/MEDIUM/HIGH thinking. Keep MEDIUM explicit;
+        // MINIMAL is rejected and must never become an SDK or caller default here.
         thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM }, maxOutputTokens: 8192,
         responseMimeType: 'application/json', abortSignal: signal,
         httpOptions: { timeout: 120_000, retryOptions: { attempts: 1 } },
-      } });
+      } }), { env: this.budgetEnv, signal });
     } catch (error) { signal?.throwIfAborted(); throw providerError(error); }
     signal?.throwIfAborted();
     this.recordUsage(model, response.usageMetadata);
@@ -110,10 +124,10 @@ export class GeminiStoryboardClient {
     if (!aspectRatio) throw new StoryboardProductionError('invalid_request');
     let response;
     try {
-      response = await this.client.models.generateContent({ model, contents: prompt, config: {
+      response = await this.budget(() => this.client.models.generateContent({ model, contents: prompt, config: {
         responseModalities: ['IMAGE'], imageConfig: { aspectRatio, imageSize: '1K' },
         abortSignal: signal, httpOptions: { timeout: 120_000, retryOptions: { attempts: 1 } },
-      } });
+      } }), { env: this.budgetEnv, signal });
     } catch (error) { signal?.throwIfAborted(); throw providerError(error); }
     signal?.throwIfAborted();
     this.recordUsage(model, response.usageMetadata);

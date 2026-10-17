@@ -1,0 +1,645 @@
+{
+  "schemaVersion": 1,
+  "phase": "after",
+  "environment": "Node 24 / Playwright 1.63 / Chrome; synthetic loopback fixture; no hosted API or provider calls",
+  "cases": [
+    {
+      "module": "overview",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "대시보드 (KPI)",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 57
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 1232,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "text-shadow"
+          },
+          {
+            "level": "WARN",
+            "id": "hairline"
+          },
+          {
+            "level": "FAIL",
+            "id": "outlined-box"
+          },
+          {
+            "level": "FAIL",
+            "id": "icon-cards"
+          },
+          {
+            "level": "FAIL",
+            "id": "few-pictures"
+          },
+          {
+            "level": "WARN",
+            "id": "no-footage"
+          },
+          {
+            "level": "FAIL",
+            "id": "small-text"
+          },
+          {
+            "level": "FAIL",
+            "id": "focal-point"
+          }
+        ],
+        "smallTextBlocks": 4,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "overview-1440.png"
+    },
+    {
+      "module": "restaurants",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "맛집 관리",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 1232,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 25,
+      "visibleTableRows": 11,
+      "rowHeight": 70.328125,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "FAIL",
+            "id": "few-pictures"
+          },
+          {
+            "level": "WARN",
+            "id": "no-footage"
+          },
+          {
+            "level": "WARN",
+            "id": "side-scroll"
+          },
+          {
+            "level": "FAIL",
+            "id": "focal-point"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "restaurants-1440.png"
+    },
+    {
+      "module": "submissions",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "제보 관리",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 1232,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "FAIL",
+            "id": "few-pictures"
+          },
+          {
+            "level": "WARN",
+            "id": "no-footage"
+          },
+          {
+            "level": "FAIL",
+            "id": "focal-point"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "submissions-1440.png"
+    },
+    {
+      "module": "reviews",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "리뷰 관리",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 1232,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "shadow"
+          },
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "WARN",
+            "id": "outlined-box"
+          },
+          {
+            "level": "FAIL",
+            "id": "few-pictures"
+          },
+          {
+            "level": "WARN",
+            "id": "no-footage"
+          },
+          {
+            "level": "FAIL",
+            "id": "focal-point"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "reviews-1440.png"
+    },
+    {
+      "module": "users",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "사용자 관리",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 1232,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 3,
+      "visibleTableRows": 3,
+      "rowHeight": 52.390625,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "FAIL",
+            "id": "body-size"
+          },
+          {
+            "level": "WARN",
+            "id": "grey-body"
+          },
+          {
+            "level": "FAIL",
+            "id": "few-pictures"
+          },
+          {
+            "level": "WARN",
+            "id": "no-footage"
+          },
+          {
+            "level": "WARN",
+            "id": "small-text"
+          },
+          {
+            "level": "FAIL",
+            "id": "focal-point"
+          }
+        ],
+        "smallTextBlocks": 1,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "users-1440.png"
+    },
+    {
+      "module": "banners",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "배너 관리",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 1232,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "WARN",
+            "id": "dashed"
+          },
+          {
+            "level": "FAIL",
+            "id": "few-pictures"
+          },
+          {
+            "level": "WARN",
+            "id": "no-footage"
+          },
+          {
+            "level": "FAIL",
+            "id": "focal-point"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "banners-1440.png"
+    },
+    {
+      "module": "insights",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "영상 성과 분석",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 1232,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "FAIL",
+            "id": "outlined-box"
+          },
+          {
+            "level": "WARN",
+            "id": "size-count"
+          },
+          {
+            "level": "FAIL",
+            "id": "body-size"
+          },
+          {
+            "level": "WARN",
+            "id": "grey-body"
+          },
+          {
+            "level": "FAIL",
+            "id": "few-pictures"
+          },
+          {
+            "level": "WARN",
+            "id": "no-footage"
+          },
+          {
+            "level": "FAIL",
+            "id": "focal-point"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "insights-1440.png"
+    },
+    {
+      "module": "pipeline",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "크롤러 파이프라인",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 1232,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "WARN",
+            "id": "outlined-box"
+          },
+          {
+            "level": "FAIL",
+            "id": "few-pictures"
+          },
+          {
+            "level": "WARN",
+            "id": "no-footage"
+          },
+          {
+            "level": "WARN",
+            "id": "small-text"
+          }
+        ],
+        "smallTextBlocks": 1,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "pipeline-1440.png"
+    },
+    {
+      "module": "knowledge-graph",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "지식 그래프",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 1232,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "WARN",
+            "id": "outlined-box"
+          },
+          {
+            "level": "FAIL",
+            "id": "few-pictures"
+          },
+          {
+            "level": "WARN",
+            "id": "no-footage"
+          },
+          {
+            "level": "FAIL",
+            "id": "focal-point"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "knowledge-graph-1440.png"
+    },
+    {
+      "module": "sentry",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "오류 모니터링",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 56
+      },
+      "titleStyle": {
+        "size": "18px",
+        "weight": "650",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasRect": {
+        "x": 208,
+        "y": 0,
+        "width": 1232,
+        "height": 960
+      },
+      "mainLandmarks": 1,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "renderedPath": "/admin",
+      "taste": {
+        "findings": [
+          {
+            "level": "FAIL",
+            "id": "hairline"
+          },
+          {
+            "level": "FAIL",
+            "id": "few-pictures"
+          },
+          {
+            "level": "WARN",
+            "id": "no-footage"
+          },
+          {
+            "level": "FAIL",
+            "id": "focal-point"
+          }
+        ],
+        "smallTextBlocks": 0,
+        "lowContrastSamples": []
+      },
+      "pageErrors": 0,
+      "screenshot": "sentry-1440.png"
+    }
+  ],
+  "source": {
+    "styles/admin-ui.css": "a42216e19842a9d771b3f8d1c49c26f6504a473e28b8c7e548908caa76e8af45",
+    "components/admin/AdminPageHeader.tsx": "ac2621a32fbed7b801798675683a439b8900621ef86e6116034d71a1cfb40a73",
+    "components/admin/AdminConsoleOverview.tsx": "35bfe60a0284d51ad78bb0c1ad8b1c86c86dbe13e0b1be51ff102d244965bc9c"
+  },
+  "tasteSkill": {
+    "repository": "Leonxlnx/taste-skill",
+    "commit": "f624f37a8c650b9cc550253104925efe4c8de246",
+    "files": {
+      "SKILL.md": "ee847084e58f5a81a46120912be9cd15f083570a6ca8f3d1a30372a720633043",
+      "scripts/lib/probe.mjs": "5c5148893414ce7eeca4aaa0c476cf196cd8c22cfc514b737c2a614fac77fc1c",
+      "scripts/lib/rules.mjs": "71435cdac327b71f2ff8b79b8bbb26ff6023c40fb21eab8cce2ef71af4a3812a"
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "pg15-clean-replay-terminal-failure",
+  "status": "failed",
+  "phase": "migration-replay",
+  "sourceHead": "392398a943494624cfdde0ec44aa75af65baa449",
+  "migration": {
+    "path": "backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql",
+    "bytes": 47450,
+    "sha256": "fb80c266cfbede8141da0c8adfc2b099ed835673684aa1f17af0d7e1439526e0"
+  },
+  "generator": {
+    "path": "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+    "bytes": 123471,
+    "sha256": "3d6daa708e9eafba2cf59ddf08d71201afd3c7b7980e5456e96d2cc4772a3f53"
+  },
+  "environment": {
+    "dockerContext": "colima-tzudong-catalog-20261007",
+    "databaseImage": "supabase/postgres@sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b",
+    "projectPython": "3.14.8"
+  },
+  "failure": {
+    "code": "FEATURE_PG15_RECONSTRUCTION_REVIEW_OCR_COLUMNS_MISSING",
+    "databaseCode": "42703",
+    "message": "review_ocr_generation_on_reset could not be created because the reconstructed public.reviews relation had no receipt_hash column",
+    "firstMissingColumn": "receipt_hash"
+  },
+  "readback": {
+    "relatedSourcesCleanBeforeRun": true,
+    "runAOutputPublished": false,
+    "runBStarted": false,
+    "ownedContainersRemaining": 0,
+    "ownedVolumesRemaining": 0,
+    "ownedNetworksRemaining": 0,
+    "cleanupVerified": true
+  },
+  "effects": {
+    "hostedWrites": false,
+    "providerCalls": 0,
+    "storageNetworkWrites": 0,
+    "operatingDataRead": false
+  },
+  "classification": "Retained local terminal failure for the pre-completeness source. It is not relabeled as evidence for later SQL bytes.",
+  "limitations": [
+    "The run stopped before an immutable run-a evidence directory was published.",
+    "This receipt records a source-reconstruction gap, not an operating PostgreSQL failure.",
+    "No performance, production, deployment, or monetary claim is supported."
+  ]
+}

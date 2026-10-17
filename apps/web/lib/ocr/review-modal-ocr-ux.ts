@@ -12,6 +12,65 @@ export type OcrProgressStage =
 
 export type ReviewOcrFieldKey = 'restaurant' | 'date' | 'time' | 'category' | 'review';
 
+export const INTERRUPTED_OCR_READBACK_ATTEMPTS = 4;
+export const INTERRUPTED_OCR_READBACK_DELAY_MS = 750;
+
+type InterruptedOcrReadbackInput<T> = {
+  signal: AbortSignal;
+  readStatus: () => Promise<T>;
+  isProcessingError: (error: unknown) => boolean;
+  attempts?: number;
+  delayMs?: number;
+  wait?: (delayMs: number, signal: AbortSignal) => Promise<void>;
+};
+
+function waitForOcrReadbackRetry(delayMs: number, signal: AbortSignal): Promise<void> {
+  signal.throwIfAborted();
+  return new Promise((resolve, reject) => {
+    const timeout = globalThis.setTimeout(() => {
+      signal.removeEventListener('abort', abort);
+      resolve();
+    }, delayMs);
+    const abort = () => {
+      globalThis.clearTimeout(timeout);
+      reject(signal.reason ?? new DOMException('OCR result readback cancelled', 'AbortError'));
+    };
+    signal.addEventListener('abort', abort, { once: true });
+    if (signal.aborted) abort();
+  });
+}
+
+export async function reconcileInterruptedOcrReadback<T>(
+  input: InterruptedOcrReadbackInput<T>,
+): Promise<T> {
+  const attempts = Math.max(1, Math.min(
+    input.attempts ?? INTERRUPTED_OCR_READBACK_ATTEMPTS,
+    INTERRUPTED_OCR_READBACK_ATTEMPTS,
+  ));
+  const delayMs = Math.max(0, Math.min(
+    input.delayMs ?? INTERRUPTED_OCR_READBACK_DELAY_MS,
+    INTERRUPTED_OCR_READBACK_DELAY_MS,
+  ));
+  const wait = input.wait ?? waitForOcrReadbackRetry;
+  let lastProcessingError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    input.signal.throwIfAborted();
+    try {
+      const result = await input.readStatus();
+      input.signal.throwIfAborted();
+      return result;
+    } catch (error) {
+      input.signal.throwIfAborted();
+      if (!input.isProcessingError(error)) throw error;
+      lastProcessingError = error;
+      if (attempt + 1 < attempts) await wait(delayMs, input.signal);
+    }
+  }
+
+  throw lastProcessingError;
+}
+
 export const OCR_PROGRESS_STEPS: Array<{ stage: OcrProgressStage; label: string }> = [
   { stage: 'prepare', label: '준비' },
   { stage: 'preprocess', label: '이미지' },

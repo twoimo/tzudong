@@ -1,0 +1,1573 @@
+{
+ "files": 39,
+ "findings": [
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 844,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 851,
+   "match": "divide-y",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 3093,
+   "match": "shadow-xl",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 3117,
+   "match": "shadow-2xl",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 3218,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 3629,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 3646,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 3660,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 3660,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 3748,
+   "match": "h-px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 3749,
+   "match": "w-px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 3787,
+   "match": "h-px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 3788,
+   "match": "h-px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 3789,
+   "match": "h-px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 4291,
+   "match": "h-px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 4482,
+   "match": "h-px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 5854,
+   "match": "shadow-xl",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 5857,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 7509,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 8819,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 8871,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 8927,
+   "match": "border-r",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 8939,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 9060,
+   "match": "h-px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 9648,
+   "match": "divide-y",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 9691,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 9717,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 9750,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 9787,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 9847,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 9898,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 10012,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 10080,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminConsoleOverview.tsx",
+   "line": 10249,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "purple",
+   "file": "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx",
+   "line": 14,
+   "match": "#7c3aed",
+   "message": "Indigo / violet — the generated-page accent."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminKnowledgeGraphPanel.tsx",
+   "line": 95,
+   "match": "divide-y",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminOperationsPanel.tsx",
+   "line": 90,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 476,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 837,
+   "match": "box-shadow:",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 932,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 955,
+   "match": "shadow-lg",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 955,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 971,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 971,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 994,
+   "match": "shadow-lg",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 994,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1033,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1046,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1171,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1213,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1213,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1238,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1241,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "FAIL",
+   "id": "mono",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1244,
+   "match": "font-mono",
+   "message": "Monospace type. Only literal code may be monospace."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1244,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "FAIL",
+   "id": "mono",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1247,
+   "match": "font-mono",
+   "message": "Monospace type. Only literal code may be monospace."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1247,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1287,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1349,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminOverviewDashboard.tsx",
+   "line": 1563,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "gradient",
+   "file": "apps/web/components/admin/AdminRestaurantModal.tsx",
+   "line": 909,
+   "match": "bg-gradient-",
+   "message": "Gradient fill. Use a flat colour or a real image (a neutral scrim over a photo is the one exception)."
+  },
+  {
+   "level": "FAIL",
+   "id": "gradient-text",
+   "file": "apps/web/components/admin/AdminRestaurantModal.tsx",
+   "line": 909,
+   "match": "bg-clip-text",
+   "message": "Gradient / clipped text. Use solid colour."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminRestaurantModal.tsx",
+   "line": 951,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminRestaurantModal.tsx",
+   "line": 976,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminRestaurantModal.tsx",
+   "line": 1040,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminRestaurantModal.tsx",
+   "line": 1109,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/AdminRestaurantModal.tsx",
+   "line": 1185,
+   "match": "✓",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "WARN",
+   "id": "transition-all",
+   "file": "apps/web/components/admin/AdminRestaurantModal.tsx",
+   "line": 1197,
+   "match": "transition-all",
+   "message": "transition: all. Name the properties (transform, opacity)."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminRestaurantModal.tsx",
+   "line": 1199,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/AdminRestaurantModal.tsx",
+   "line": 1231,
+   "match": "✓",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "FAIL",
+   "id": "gradient",
+   "file": "apps/web/components/admin/AdminRestaurantModal.tsx",
+   "line": 1380,
+   "match": "bg-gradient-",
+   "message": "Gradient fill. Use a flat colour or a real image (a neutral scrim over a photo is the one exception)."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminRestaurantModal.tsx",
+   "line": 1502,
+   "match": "shadow-2xl",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "purple",
+   "file": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+   "line": 89,
+   "match": "border-violet-200",
+   "message": "Indigo / violet — the generated-page accent."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+   "line": 237,
+   "match": "divide-y",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+   "line": 257,
+   "match": "divide-y",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+   "line": 324,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+   "line": 487,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+   "line": 490,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+   "line": 750,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+   "line": 758,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+   "line": 759,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+   "line": 760,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+   "line": 783,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/AdminReviewPanel.tsx",
+   "line": 387,
+   "match": "🔒",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminReviewPanel.tsx",
+   "line": 397,
+   "match": "border-l",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminReviewPanel.tsx",
+   "line": 402,
+   "match": "shadow-md",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/AdminReviewPanel.tsx",
+   "line": 402,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminReviewPanel.tsx",
+   "line": 423,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "WARN",
+   "id": "bounce",
+   "file": "apps/web/components/admin/AdminReviewPanel.tsx",
+   "line": 449,
+   "match": "animate-pulse",
+   "message": "Looping attention animation (bounce / ping / pulse dot)."
+  },
+  {
+   "level": "WARN",
+   "id": "bounce",
+   "file": "apps/web/components/admin/AdminReviewPanel.tsx",
+   "line": 450,
+   "match": "animate-pulse",
+   "message": "Looping attention animation (bounce / ping / pulse dot)."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminReviewPanel.tsx",
+   "line": 477,
+   "match": "h-px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/AdminReviewPanel.tsx",
+   "line": 613,
+   "match": "📷",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/AdminReviewPanel.tsx",
+   "line": 618,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "WARN",
+   "id": "bounce",
+   "file": "apps/web/components/admin/AdminUsersPanel.tsx",
+   "line": 169,
+   "match": "animate-pulse",
+   "message": "Looping attention animation (bounce / ping / pulse dot)."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/AdminUsersPanel.tsx",
+   "line": 183,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminUsersPanel.tsx",
+   "line": 209,
+   "match": "divide-y",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminUsersPanel.tsx",
+   "line": 510,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminUsersPanel.tsx",
+   "line": 516,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminUsersPanel.tsx",
+   "line": 522,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminUsersPanel.tsx",
+   "line": 545,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "mono",
+   "file": "apps/web/components/admin/AdminUsersPanel.tsx",
+   "line": 548,
+   "match": "font-mono",
+   "message": "Monospace type. Only literal code may be monospace."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminUsersPanel.tsx",
+   "line": 636,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminUsersPanel.tsx",
+   "line": 665,
+   "match": "border-r",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminUsersPanel.tsx",
+   "line": 713,
+   "match": "divide-y",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/AdminUsersPanel.tsx",
+   "line": 755,
+   "match": "divide-y",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/DbConflictResolutionPanel.tsx",
+   "line": 127,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "WARN",
+   "id": "transition-all",
+   "file": "apps/web/components/admin/EditRestaurantModal.tsx",
+   "line": 856,
+   "match": "transition-all",
+   "message": "transition: all. Name the properties (transform, opacity)."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/EditRestaurantModal.tsx",
+   "line": 1036,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/EvaluationDetailView.tsx",
+   "line": 304,
+   "match": "⚠",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "FAIL",
+   "id": "mono",
+   "file": "apps/web/components/admin/EvaluationDetailView.tsx",
+   "line": 585,
+   "match": "font-mono",
+   "message": "Monospace type. Only literal code may be monospace."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/EvaluationDetailView.tsx",
+   "line": 589,
+   "match": "h-px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/EvaluationDetailView.tsx",
+   "line": 608,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/EvaluationRowDetails.tsx",
+   "line": 158,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/EvaluationRowDetails.tsx",
+   "line": 159,
+   "match": "🔄",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/EvaluationRowDetails.tsx",
+   "line": 164,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/EvaluationRowDetails.tsx",
+   "line": 165,
+   "match": "📍",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/EvaluationRowDetails.tsx",
+   "line": 172,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/EvaluationRowDetails.tsx",
+   "line": 173,
+   "match": "🏢",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/EvaluationRowDetails.tsx",
+   "line": 183,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/EvaluationRowDetails.tsx",
+   "line": 204,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/EvaluationRowDetails.tsx",
+   "line": 205,
+   "match": "🔥",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/EvaluationSlideView.tsx",
+   "line": 244,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/EvaluationSlideView.tsx",
+   "line": 309,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/EvaluationSlideView.tsx",
+   "line": 309,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/EvaluationTableNew.tsx",
+   "line": 900,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "FAIL",
+   "id": "mono",
+   "file": "apps/web/components/admin/EvaluationTableNew.tsx",
+   "line": 1378,
+   "match": "font-mono",
+   "message": "Monospace type. Only literal code may be monospace."
+  },
+  {
+   "level": "FAIL",
+   "id": "mono",
+   "file": "apps/web/components/admin/EvaluationTableNew.tsx",
+   "line": 1409,
+   "match": "font-mono",
+   "message": "Monospace type. Only literal code may be monospace."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/MissingRestaurantForm.tsx",
+   "line": 472,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/MissingRestaurantForm.tsx",
+   "line": 500,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/MissingRestaurantForm.tsx",
+   "line": 584,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/MissingRestaurantForm.tsx",
+   "line": 593,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/RestaurantErrorAlert.tsx",
+   "line": 36,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/RestaurantErrorAlert.tsx",
+   "line": 67,
+   "match": "⚠",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/RestaurantErrorAlert.tsx",
+   "line": 70,
+   "match": "✅",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/RestaurantErrorAlert.tsx",
+   "line": 71,
+   "match": "❌",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/RestaurantReviewAutomation.tsx",
+   "line": 126,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/RestaurantReviewAutomation.tsx",
+   "line": 129,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/SubmissionDetailView.tsx",
+   "line": 242,
+   "match": "❌",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/SubmissionDetailView.tsx",
+   "line": 249,
+   "match": "❌",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/SubmissionDetailView.tsx",
+   "line": 254,
+   "match": "❌",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "file": "apps/web/components/admin/SubmissionDetailView.tsx",
+   "line": 259,
+   "match": "⚠",
+   "message": "Emoji used as UI."
+  },
+  {
+   "level": "WARN",
+   "id": "numbering",
+   "file": "apps/web/components/admin/SubmissionDetailView.tsx",
+   "line": 301,
+   "match": "padStart(2, '0')",
+   "message": "Zero-padding in script. Fine for a clock, a date or a price; if it builds 01 / 02 / 03 labels, remove it."
+  },
+  {
+   "level": "WARN",
+   "id": "numbering",
+   "file": "apps/web/components/admin/SubmissionDetailView.tsx",
+   "line": 302,
+   "match": "padStart(2, '0')",
+   "message": "Zero-padding in script. Fine for a clock, a date or a price; if it builds 01 / 02 / 03 labels, remove it."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/SubmissionDetailView.tsx",
+   "line": 580,
+   "match": "divide-y",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/SubmissionListView.tsx",
+   "line": 201,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "WARN",
+   "id": "transition-all",
+   "file": "apps/web/components/admin/SubmissionListView.tsx",
+   "line": 201,
+   "match": "transition-all",
+   "message": "transition: all. Name the properties (transform, opacity)."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/SubmissionListView.tsx",
+   "line": 2039,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/SubmissionListView.tsx",
+   "line": 2157,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/SubmissionListView.tsx",
+   "line": 2243,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/SubmissionListView.tsx",
+   "line": 2251,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/SubmissionListView.tsx",
+   "line": 2275,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/SubmissionListView.tsx",
+   "line": 2349,
+   "match": "shadow-md",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/SubmissionListView.tsx",
+   "line": 2462,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/SubmissionListView.tsx",
+   "line": 2542,
+   "match": "shadow-md",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/TrendProposalQueue.tsx",
+   "line": 214,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/TrendProposalQueue.tsx",
+   "line": 242,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "mono",
+   "file": "apps/web/components/admin/TrendProposalQueue.tsx",
+   "line": 303,
+   "match": "font-mono",
+   "message": "Monospace type. Only literal code may be monospace."
+  },
+  {
+   "level": "FAIL",
+   "id": "mono",
+   "file": "apps/web/components/admin/TrendProposalQueue.tsx",
+   "line": 307,
+   "match": "font-mono",
+   "message": "Monospace type. Only literal code may be monospace."
+  },
+  {
+   "level": "WARN",
+   "id": "glass",
+   "file": "apps/web/components/admin/admin-map-load-error-state.tsx",
+   "line": 5,
+   "match": "backdrop-blur",
+   "message": "Backdrop blur. One sticky bar at most; glass cards are a tell."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/admin-map-load-error-state.tsx",
+   "line": 6,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/admin-modal-styles.ts",
+   "line": 15,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+   "line": 131,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+   "line": 132,
+   "match": "divide-y",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+   "line": 139,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+   "line": 183,
+   "match": "divide-y",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/pipeline/AdminPipelineDashboard.tsx",
+   "line": 183,
+   "match": "border",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "WARN",
+   "id": "outlined-box",
+   "file": "apps/web/components/admin/pipeline/PipelineFlowDiagram.module.css",
+   "line": 2,
+   "match": "border: 1px solid",
+   "message": "A 1px outlined box. Prefer a filled surface or no box."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+   "line": 656,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "WARN",
+   "id": "numbering",
+   "file": "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+   "line": 676,
+   "match": "padStart(2, \"0\")",
+   "message": "Zero-padding in script. Fine for a clock, a date or a price; if it builds 01 / 02 / 03 labels, remove it."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/storyboard/StoryboardProjectLibrary.tsx",
+   "line": 65,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/storyboard/StoryboardProjectLibrary.tsx",
+   "line": 66,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/system-status/AdminSystemStatusCenter.tsx",
+   "line": 57,
+   "match": "border-b",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/system-status/AdminSystemStatusCenter.tsx",
+   "line": 92,
+   "match": "divide-y",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+   "line": 3476,
+   "match": "shadow",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+   "line": 4164,
+   "match": "shadow",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+   "line": 5331,
+   "match": "shadow-[0_2px_8px_rgba(2,132,199,0.35)]",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+   "line": 5347,
+   "match": "shadow-[0_2px_8px_rgba(2,132,199,0.35)]",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+   "line": 5751,
+   "match": "shadow",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+   "line": 6399,
+   "match": "divide-y",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+   "line": 6779,
+   "match": "border-t",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+   "line": 6980,
+   "match": "shadow-[0_0_0_1px_rgba(255,255,255,0.55),0_0_18px_rgba(56,189,248,0.18",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+   "line": 6989,
+   "match": "shadow-sm",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+   "line": 7077,
+   "match": "shadow",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/styles/admin-ui.css",
+   "line": 36,
+   "match": "box-shadow:",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/styles/admin-ui.css",
+   "line": 45,
+   "match": "box-shadow:",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/styles/admin-ui.css",
+   "line": 49,
+   "match": "box-shadow:",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/styles/admin-ui.css",
+   "line": 63,
+   "match": "box-shadow:",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/styles/admin-ui.css",
+   "line": 162,
+   "match": "border-bottom: 1px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/styles/admin-ui.css",
+   "line": 169,
+   "match": "box-shadow:",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/styles/admin-ui.css",
+   "line": 170,
+   "match": "border-left: 1px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/styles/admin-ui.css",
+   "line": 171,
+   "match": "border-top: 1px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/styles/admin-ui.css",
+   "line": 192,
+   "match": "box-shadow:",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "file": "apps/web/styles/admin-ui.css",
+   "line": 195,
+   "match": "box-shadow:",
+   "message": "Shadow. Elements at rest carry none; only real overlays (menu, dialog, sticky bar) may."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/styles/admin-ui.css",
+   "line": 196,
+   "match": "border-bottom: 1px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "file": "apps/web/styles/admin-ui.css",
+   "line": 200,
+   "match": "border-top: 1px",
+   "message": "Thin rule / divider line. Separate with space, tone or scale; lines belong to real tables and form fields."
+  },
+  {
+   "level": "WARN",
+   "id": "em-dash",
+   "file": "(all files)",
+   "line": 0,
+   "match": "49 em dashes",
+   "message": "Em-dash habit. Use a full stop or a comma; keep at most one or two on a page."
+  }
+ ]
+}

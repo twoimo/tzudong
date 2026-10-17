@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "kind": "pr-3215-ci-failure-readonly-diagnosis-and-layout-followthrough",
+  "reviewedRevision": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "jobs": [
+    {
+      "jobId": 116477507309,
+      "runId": 38751128879,
+      "name": "Ubuntu npm",
+      "firstFailedStep": "Run npm run lint",
+      "fixedFailure": "next/no-assign-module-variable",
+      "location": "apps/web/performance/admin-taste-20261015/browser-audit.mjs:108:10",
+      "resolutionOwner": "root lint-scope followthrough",
+      "frozenAuditModifiedHere": false
+    },
+    {
+      "jobId": 116477507702,
+      "runId": 38751128879,
+      "name": "Windows npm",
+      "firstFailedStep": "Run npm run lint",
+      "fixedFailure": "next/no-assign-module-variable",
+      "location": "apps/web/performance/admin-taste-20261015/browser-audit.mjs:108:10",
+      "downstreamFailure": "benchmark artifact path absent because lint stopped the job before benchmark generation",
+      "resolutionOwner": "root lint-scope followthrough",
+      "frozenAuditModifiedHere": false
+    },
+    {
+      "jobId": 116477506729,
+      "runId": 38751129004,
+      "name": "orchestration-readiness",
+      "firstFailedStep": "Verify current layout and rename ledger",
+      "fixedFailure": "layout_manifest_missing_entry",
+      "missingPath": ".taste-skill",
+      "resolution": "Added an owned source entry for the generated project direction ledger and two focused regressions."
+    }
+  ],
+  "tasteSkillRole": {
+    "trackedFile": ".taste-skill/direction.json",
+    "generator": "taste-skill scripts/draw.mjs",
+    "defaultOutputDirectory": ".taste-skill",
+    "role": "Project-scoped selected art-direction ledger containing the draw seed, brief and composition constraints.",
+    "classification": "source",
+    "vcsTracked": true
+  },
+  "sourceSha256": {
+    ".taste-skill/direction.json": "2404684e6cbcda1de090f8db6de6c2509ec204cc8b4ec902aab2a36dbc79e0d2",
+    "backend/layout-manifest.v1.json": "228fd9ccf8c9fdab3260a43683a9a4eda8ab39828c59d5c80943c34f01ad5851",
+    "backend/bin/tests/test_check_layout_manifest_unittest.py": "12b38cd922d3e772424833eae9f651e023c454452af3224b85831c4b6b4d232f",
+    "backend/utils/tests/test_layout_naming_source_recovery.py": "13a6da9fe020c74e4f73a4d90435c314f17c0c1aa2d57269cf95581783acf041",
+    "apps/web/performance/admin-taste-20261015/browser-audit.mjs": "f000e677604fdbad992ac378264ecea2095aabb05026ad18a597100be997697d"
+  },
+  "checks": {
+    "layoutChecker": {
+      "status": "passed",
+      "errorCode": null,
+      "trackedDirectoryCount": 40,
+      "missingEntries": 0
+    },
+    "failedStepReplay": {
+      "runtime": "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3",
+      "modules": [
+        "backend.utils.tests.test_layout_naming_source_recovery",
+        "backend.bin.tests.test_check_layout_manifest_unittest",
+        "backend.bin.tests.test_check_rename_ledger_unittest",
+        "backend.bin.tests.test_layout_move_pbt",
+        "backend.bin.tests.test_rename_scope_pbt"
+      ],
+      "passed": 82,
+      "failed": 0
+    },
+    "jsonValidation": "passed",
+    "pyCompile": "passed",
+    "diffCheck": "passed",
+    "frozenBrowserAuditMatchesReviewedRevision": true
+  },
+  "evidenceHandling": {
+    "jobStepMetadataRead": true,
+    "checkAnnotationsRead": true,
+    "artifactMetadataRead": true,
+    "rawLogsPersisted": false,
+    "rawLogsIncluded": false,
+    "sanitizedFailureOnly": true
+  },
+  "boundaries": {
+    "sourceBuilds": 0,
+    "ciReruns": 0,
+    "externalWrites": 0,
+    "gitMutations": 0,
+    "reviewThreadMutations": 0
+  }
+}

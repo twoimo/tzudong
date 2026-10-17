@@ -76,6 +76,18 @@ describe('public insights treemap route support', () => {
     expect(insightsSource).toContain('작은 칸 안내: 공간이 좁으면 지표나 …만 표시되고');
   });
 
+  test('chooses treemap label foreground from measured color contrast', () => {
+    const insightsSource = source('app/insights/insights-client.tsx');
+
+    expect(insightsSource).toContain("const TREEMAP_DARK_FOREGROUND = '#17202f';");
+    expect(insightsSource).toContain('function getHexColorRelativeLuminance(color: string): number');
+    expect(insightsSource).toContain('function getColorContrastRatio(firstColor: string, secondColor: string): number');
+    expect(insightsSource).toContain('const foregroundColor = getTreemapTextColor(leaf.color);');
+    expect(insightsSource).toContain('color: tile.foregroundColor');
+    expect(insightsSource).not.toContain("color: '#ffffff'");
+    expect(insightsSource).not.toContain("textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px'");
+  });
+
   test('builds the exact public treemap CDN cache header', () => {
     expect(buildTreemapApiCacheControl()).toBe('public, max-age=0, s-maxage=60, stale-while-revalidate=300, must-revalidate');
   });

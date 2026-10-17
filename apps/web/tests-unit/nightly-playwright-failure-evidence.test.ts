@@ -98,6 +98,9 @@ function privateFailureReport() {
 
 const adminSourceFile = resolve(import.meta.dir, "../tests/local-supabase-admin.spec.ts");
 const adminErrorLocation = { file: adminSourceFile, line: 693, column: 43 };
+// CLI admission runs on the pinned Node runtime and installed dependencies.
+// Temporary failure fixtures must not resolve or install missing packages.
+const nightlyCliNode = process.env.TZUDONG_NODE24_BIN || "node";
 
 test('keeps all 64 located failure classifications inside the immutable 8 KiB bound', () => {
   const report = {
@@ -618,6 +621,7 @@ describe("nightly Playwright failure evidence", () => {
     const privateReport = join(fixtureApp, "playwright-report/nightly-playwright-private-report.json");
     try {
       mkdirSync(fixtureScripts, { recursive: true });
+      symlinkSync(join(appRoot, "node_modules"), join(fixtureApp, "node_modules"), "dir");
       mkdirSync(join(fixtureApp, "test-results"), { recursive: true });
       mkdirSync(join(fixtureApp, "playwright-report"), { recursive: true });
       copyFileSync(
@@ -630,7 +634,7 @@ describe("nightly Playwright failure evidence", () => {
       );
       writeFileSync(evidence, "stale-evidence", { mode: 0o600 });
       writeFileSync(privateReport, "stale-private-report", { mode: 0o600 });
-      const result = spawnSync(process.execPath, ["scripts/run-nightly-regression.mjs"], {
+      const result = spawnSync(nightlyCliNode, ["scripts/run-nightly-regression.mjs"], {
         cwd: fixtureApp,
         encoding: "utf8",
         env: {
@@ -654,6 +658,7 @@ describe("nightly Playwright failure evidence", () => {
     const evidence = join(fixtureApp, "test-results/nightly-playwright-failure-evidence.json");
     try {
       mkdirSync(fixtureScripts, { recursive: true });
+      symlinkSync(join(appRoot, "node_modules"), join(fixtureApp, "node_modules"), "dir");
       copyFileSync(
         join(appRoot, "scripts/run-nightly-regression.mjs"),
         join(fixtureScripts, "run-nightly-regression.mjs"),
@@ -665,7 +670,7 @@ describe("nightly Playwright failure evidence", () => {
       const environment = { ...process.env };
       delete environment.NIGHTLY_ENV_FILE;
       delete environment.NIGHTLY_ENV_PROVENANCE_FILE;
-      const result = spawnSync(process.execPath, [
+      const result = spawnSync(nightlyCliNode, [
         "scripts/run-nightly-regression.mjs",
         "--mode", "local",
         "--suite", "e2e",
@@ -698,6 +703,7 @@ describe("nightly Playwright failure evidence", () => {
     const privateReport = join(fixtureApp, "playwright-report/nightly-playwright-private-report.json");
     try {
       mkdirSync(fixtureScripts, { recursive: true });
+      symlinkSync(join(appRoot, "node_modules"), join(fixtureApp, "node_modules"), "dir");
       mkdirSync(join(fixtureApp, "test-results"), { recursive: true });
       mkdirSync(join(fixtureApp, "playwright-report"), { recursive: true });
       copyFileSync(
@@ -711,7 +717,7 @@ describe("nightly Playwright failure evidence", () => {
       writeFileSync(evidence, JSON.stringify({ stale: "previously-approved" }), { mode: 0o600 });
       writeFileSync(privateReport, "stale-private-report", { mode: 0o644 });
       chmodSync(privateReport, 0o644);
-      const result = spawnSync(process.execPath, ["scripts/run-nightly-regression.mjs"], {
+      const result = spawnSync(nightlyCliNode, ["scripts/run-nightly-regression.mjs"], {
         cwd: fixtureApp,
         encoding: "utf8",
         env: { ...process.env },

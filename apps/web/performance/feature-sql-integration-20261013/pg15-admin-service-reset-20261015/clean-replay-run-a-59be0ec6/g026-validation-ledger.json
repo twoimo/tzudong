@@ -1,0 +1,1 @@
+{"validationLedger":[{"ordinal":0,"mode":"off","kind":"preexisting_ordinal0_body_deferral"},{"ordinal":6,"mode":"off","kind":"g026_ordinal6_quarantine"}],"slots":{"phaseAAfterOrdinal":2,"phaseBBeforeMigration":"20260713002000_g014_public_api_private_boundary.sql"}}

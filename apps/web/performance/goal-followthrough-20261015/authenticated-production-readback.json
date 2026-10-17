@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "kind": "authenticated-production-admin-observation",
+  "observedAt": "2026-10-15T06:12:29.492162+00:00",
+  "origin": "https://www.tzudong.app",
+  "route": "/admin?module=restaurants",
+  "surface": "existing authenticated Aside browser session",
+  "observedHeading": "맛집 관리",
+  "visibleSidebarMenuCount": 15,
+  "displayedHeaderCounts": {
+    "total": 1659,
+    "deleted": 890,
+    "basis": "UI header display only; not an independent complete database count"
+  },
+  "displayedAutomationStatus": "중지됨",
+  "mutationActionsInvoked": 0,
+  "runtimeEndpointReads": [
+    {
+      "path": "/api/admin/operating-readback/record-mutations-hold",
+      "httpStatus": 404
+    },
+    {
+      "path": "/api/admin/operating-readback/storyboard-policy",
+      "httpStatus": 404
+    },
+    {
+      "path": "/api/runtime-compatibility/storyboard",
+      "httpStatus": 404
+    }
+  ],
+  "deploymentShaObservedSeparately": "1884f87e53c4567ead7c9a0fb394b09b91a70396",
+  "limitations": [
+    "Existing administrator page access is confirmed; new readback endpoints are not deployed.",
+    "No write, approval, OCR, storyboard generation, stop, SQL or complete sidebar flow is proved by this observation.",
+    "No raw DOM, personal account text, tokens, cookies, provider body or database rows are persisted."
+  ]
+}

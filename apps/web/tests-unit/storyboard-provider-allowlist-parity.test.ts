@@ -1,28 +1,40 @@
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import {
-  STORYBOARD_OFFICIAL_API_PROVIDER_IDS, STORYBOARD_USER_IMPORT_PROVIDER_IDS,
+  STORYBOARD_ARCHIVE_WORKFLOW, STORYBOARD_WORKFLOW,
+  storyboardProductionRequestSchema, storyboardStoredProductionRequestSchema,
 } from '../lib/admin/storyboard/production-contract';
+import { storyboardModelsFor, storyboardWorkerSupportsPair } from '../lib/admin/storyboard/production-model-catalog';
 
-const appRoot = join(import.meta.dir, '..');
-const migration = readFileSync(
-  join(appRoot, '../../backend/supabase/applied-receipts/storyboard-20261003/20261003000811_storyboard_historical_restore.sql'), 'utf8',
-).replace(/\r\n/g, '\n');
+const base = { requestId: crypto.randomUUID(), prompt: 'provider boundary', sceneCount: 5 };
 
-describe('historical storyboard provider receipt parity (not the active Gemini worker)', () => {
-  test('the external-AI-off SQL gate admits every loopback provider the client advertises', () => {
-    const start = migration.indexOf("providers,externalAI}')::boolean");
-    const end = migration.indexOf("'external_ai_disabled'");
-    expect(start).toBeGreaterThanOrEqual(0);
-    expect(end).toBeGreaterThan(start);
-    const allowed = [...new Set([...migration.slice(start, end).matchAll(/'([a-z-]+)'/g)].map((match) => match[1]))];
-    expect(allowed.sort()).toEqual(['local-mlx', ...STORYBOARD_USER_IMPORT_PROVIDER_IDS].sort());
-    for (const official of STORYBOARD_OFFICIAL_API_PROVIDER_IDS) expect(allowed).not.toContain(official);
+describe('storyboard executable and archived provider allowlists', () => {
+  test('keeps historical provider identifiers decode-only under the archived workflow', () => {
+    for (const id of ['local-mlx', 'chatgpt-manual', 'grok-manual', 'manual', 'openai-api', 'xai-api'] as const) {
+      const value = { ...base, workflow: STORYBOARD_ARCHIVE_WORKFLOW,
+        providers: { externalAI: true, text: { id, model: 'historical-text' }, image: { id, model: 'historical-image' } } };
+      expect(storyboardStoredProductionRequestSchema.safeParse(value).success).toBe(true);
+      expect(storyboardProductionRequestSchema.safeParse(value).success).toBe(false);
+    }
   });
-  test('official API providers stay refused before the external-AI gate', () => {
-    expect(migration).toContain("x.value->>'id' IN ('openai-api','xai-api')");
-    expect(migration.indexOf("'provider_not_configured'"))
-      .toBeLessThan(migration.indexOf("'external_ai_disabled'"));
+  test('admits only the fixed Gemini provider for executable requests', () => {
+    const value = { ...base, workflow: STORYBOARD_WORKFLOW, providers: { externalAI: true,
+      text: { id: 'gemini-api', model: 'gemini-3.8-flash' },
+      image: { id: 'gemini-api', model: 'gemini-3.1-flash-image' } } };
+    expect(storyboardProductionRequestSchema.safeParse(value).success).toBe(true);
+    expect(storyboardProductionRequestSchema.safeParse({ ...value, providers: { ...value.providers,
+      image: { id: 'openai-api', model: 'other' } } }).success).toBe(false);
+  });
+  test('requires the selected text and image models on the same fresh exact worker', () => {
+    const text = { id: 'gemini-3.8-flash', owned_by: 'gemini-api' as const, capabilities: ['chat'],
+      loaded: false, bytes_on_disk: 0, bytes_resident: 0 };
+    const image = { id: 'gemini-3.1-flash-image', owned_by: 'gemini-api' as const, capabilities: ['image'],
+      loaded: false, bytes_on_disk: 0, bytes_resident: 0 };
+    const split = [{ online: true, models: [text] }, { online: true, models: [image] }];
+    expect(storyboardModelsFor(split, 'chat').map((model) => model.id)).toEqual([text.id]);
+    expect(storyboardModelsFor(split, 'image').map((model) => model.id)).toEqual([image.id]);
+    expect(storyboardWorkerSupportsPair(split, text.id, image.id)).toBe(false);
+    expect(storyboardWorkerSupportsPair([{ online: true, models: [text, image] }], text.id, image.id)).toBe(true);
+    expect(storyboardWorkerSupportsPair([{ online: false, models: [text, image] }], text.id, image.id)).toBe(false);
+    expect(storyboardWorkerSupportsPair([{ online: true, models: [{ ...text, loaded: true }, image] }], text.id, image.id)).toBe(false);
   });
 });

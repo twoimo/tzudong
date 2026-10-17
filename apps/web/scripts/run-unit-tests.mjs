@@ -15,7 +15,6 @@ const isolated = new Set([
   'admin-storyboard-generator.test.ts',
   'admin-storyboard-langgraph.test.ts',
   'admin-storyboard-caption-provenance.test.ts',
-  'admin-storyboard-local-bridge.test.ts',
   // Its authenticated worker and Supabase transport mocks must stay in one process.
   'storyboard-gemini-rag.test.ts',
   'admin-youtube-thumbnail-readiness-gate.test.ts',
@@ -31,6 +30,10 @@ const isolated = new Set([
   // for later image-boundary tests. Keep this route's mocks in their own process.
   'short-url-page-runtime.test.ts',
   'local-loopback-mutation-origin.test.ts',
+  // These child-process contracts fail in the mock-heavy combined process
+  // and pass unchanged alone. Keep their real runtime checks intact.
+  'local-supabase-runtime.test.ts',
+  'review-media-sql-successor-workflow-contract.test.ts',
 ]);
 
 const files = readdirSync(root, { recursive: true, withFileTypes: true })

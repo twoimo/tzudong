@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
+import useSWR from "swr";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/review-photo-url";
 import { getEditableFoodPhotoValues, restoreEditableFoodPhotoValues } from "@/lib/reviews/review-edit-food-values";
 import { ReviewMediaMutation, createReviewMediaDependencies, reviewMutationMessage } from "@/lib/reviews/review-media-mutation";
+import { FEATURE_DATABASE_HELD_MESSAGE, fetchFeatureDatabaseReadiness } from "@/lib/runtime-feature-readiness-contract";
 import imageCompression from "browser-image-compression";
 import {
     Dialog,
@@ -163,6 +165,12 @@ function ExistingFoodPhoto({ url, index, disabled, onRemove }: {
 
 export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEditModalProps) {
     const { user } = useAuth();
+    const { data: featureReadiness } = useSWR(
+        isOpen && user ? '/api/runtime-compatibility/features' : null,
+        () => fetchFeatureDatabaseReadiness(),
+        { revalidateOnFocus: false, dedupingInterval: 60_000, shouldRetryOnError: false },
+    );
+    const featureHeld = featureReadiness?.status !== 'ready';
     const ownerRef = useRef(user?.id);
     useLayoutEffect(() => { ownerRef.current = user?.id; }, [user?.id]);
     const mutationRef = useRef<ReviewMediaMutation | null>(null);
@@ -544,6 +552,12 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <span>승인 전까지 리뷰가 비공개 처리됩니다.</span>
                                     </AlertDescription>
                                 </Alert>
+                                {featureHeld && (
+                                    <Alert className="border-amber-300 bg-amber-50" role="status">
+                                        <Info className="h-4 w-4 text-amber-700" />
+                                        <AlertDescription className="text-sm text-amber-900">{FEATURE_DATABASE_HELD_MESSAGE}</AlertDescription>
+                                    </Alert>
+                                )}
                                 {cleanupFailureMessage && (
                                     <Alert role="alert" aria-live="assertive" className="border-destructive/40 bg-destructive/5">
                                         <AlertCircle className="h-4 w-4 text-destructive" />
@@ -769,7 +783,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <Button
                                             variant="destructive"
                                             size="icon"
-                                            disabled={isSubmitting || isDeleting || retryKind !== null}
+                                            disabled={featureHeld || isSubmitting || isDeleting || retryKind !== null}
                                             title="리뷰 삭제"
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -804,7 +818,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                 <Button
                                     onClick={handleSubmit}
                                     className={`${mobileSheetStyles.primaryAction} flex-1`}
-                                    disabled={!isFormValid || isSubmitting || isDeleting || retryKind !== null}
+                                    disabled={featureHeld || !isFormValid || isSubmitting || isDeleting || retryKind !== null}
                                 >
                                     {isSubmitting ? (
                                         <>
@@ -879,6 +893,12 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <span>승인 전까지 리뷰가 비공개 처리됩니다.</span>
                                     </AlertDescription>
                                 </Alert>
+                                {featureHeld && (
+                                    <Alert className="border-amber-300 bg-amber-50" role="status">
+                                        <Info className="h-4 w-4 text-amber-700" />
+                                        <AlertDescription className="text-sm text-amber-900">{FEATURE_DATABASE_HELD_MESSAGE}</AlertDescription>
+                                    </Alert>
+                                )}
                                 {cleanupFailureMessage && (
                                     <Alert role="alert" aria-live="assertive" className="border-destructive/40 bg-destructive/5">
                                         <AlertCircle className="h-4 w-4 text-destructive" />
@@ -1104,7 +1124,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <Button
                                             variant="destructive"
                                             size="icon"
-                                            disabled={isSubmitting || isDeleting || retryKind !== null}
+                                            disabled={featureHeld || isSubmitting || isDeleting || retryKind !== null}
                                             title="리뷰 삭제"
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -1139,7 +1159,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                 <Button
                                     onClick={handleSubmit}
                                     className="flex-1"
-                                    disabled={!isFormValid || isSubmitting || isDeleting || retryKind !== null}
+                                    disabled={featureHeld || !isFormValid || isSubmitting || isDeleting || retryKind !== null}
                                 >
                                     {isSubmitting ? (
                                         <>

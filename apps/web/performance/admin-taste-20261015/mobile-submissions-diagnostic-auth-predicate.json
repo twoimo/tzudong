@@ -1,0 +1,33 @@
+{
+  "syntheticOnly": true,
+  "settled": false,
+  "metrics": {
+    "title": "관리자 콘솔 - 쯔동여지도",
+    "url": "/admin",
+    "theme": "light",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "activeModules": [],
+    "headers": [],
+    "busy": []
+  },
+  "responses": [
+    {
+      "method": "GET",
+      "path": "/api/admin/preferences/sidebar-order",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/pending-counts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/summary",
+      "status": 200
+    }
+  ]
+}

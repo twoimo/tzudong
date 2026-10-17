@@ -39,7 +39,7 @@ import { isRecordActionCancelled, recordActionErrorMessage, type RecordActionInp
 import type { RecordActionReceipt, RestaurantRecordChanges } from '@/lib/admin/record-action-contract';
 import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { RESTAURANT_DESTRUCTIVE_ACTION_CONFIRMATIONS } from "@/lib/admin/restaurant-destructive-action-contract";
-import { Loader2, ChevronDown, X } from "lucide-react";
+import { Check, Loader2, ChevronDown, X } from "lucide-react";
 import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import { cn } from "@/lib/utils";
@@ -906,7 +906,7 @@ function AdminRestaurantEditor({
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                     <p className="text-xs font-medium text-red-700 dark:text-red-300">관리자 편집</p>
-                    <h2 id={adminRestaurantTitleId} className="truncate text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                    <h2 id={adminRestaurantTitleId} className="truncate text-lg font-semibold tracking-tight text-foreground">
                         {adminRestaurantTitle}
                     </h2>
                     <p id={adminRestaurantDescriptionId} className="mt-1 text-sm text-muted-foreground">
@@ -948,7 +948,7 @@ function AdminRestaurantEditor({
         badge?: string;
         children: ReactNode;
     }) => (
-        <section className="rounded-2xl border border-border bg-card/95 p-4 shadow-sm" aria-label={title}>
+        <section className="admin-detail-section bg-card" aria-label={title}>
             <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-foreground">{title}</h3>
@@ -973,8 +973,8 @@ function AdminRestaurantEditor({
             {shouldRenderSheetFrame && adminRestaurantSheetHeader}
             <fieldset disabled={isSubmitting || isGeocodingNaver} className={adminRestaurantBodyClass}>
                 <div className="space-y-4">
-                    <div className="rounded-2xl border border-red-200/70 bg-red-50/70 p-3 text-sm leading-6 text-red-950 shadow-sm dark:border-red-950/70 dark:bg-red-950/25 dark:text-red-100">
-                        지도에 바로 반영되는 관리자 편집 화면입니다. 제보하기와 같은 흐름으로 기본 정보, 주소/좌표, 영상 리뷰를 순서대로 확인하세요.
+                    <div className="rounded-md bg-primary/5 px-3 py-2 text-sm text-foreground">
+                        저장하면 지도에 반영됩니다.
                     </div>
 
                     {renderAdminRestaurantSection({
@@ -1182,7 +1182,7 @@ function AdminRestaurantEditor({
                                         </Button>
                                     </div>
                                     {isGeocoded && selectedGeocodingIndex !== null && (
-                                        <p className="text-xs font-medium text-green-600">✓ 주소와 좌표를 선택했습니다</p>
+                                        <p className="flex items-center gap-1.5 text-sm font-medium text-green-700 dark:text-green-300"><Check className="h-4 w-4" aria-hidden="true" />주소와 좌표를 선택했습니다</p>
                                     )}
                                 </div>
 
@@ -1194,9 +1194,9 @@ function AdminRestaurantEditor({
                                                 <Card
                                                     key={index}
                                                     className={cn(
-                                                        "cursor-pointer space-y-1 rounded-xl p-3 text-sm transition-all",
+                                                        "cursor-pointer space-y-1 rounded-md p-3 text-sm transition-colors",
                                                         selectedGeocodingIndex === index
-                                                            ? 'border-primary bg-primary/5 shadow-sm'
+                                                            ? 'border-primary bg-primary/5'
                                                             : 'hover:border-primary/50',
                                                     )}
                                                     role="button"
@@ -1228,7 +1228,7 @@ function AdminRestaurantEditor({
 
                                 {isGeocoded && selectedGeocodingIndex !== null && (
                                     <div className="space-y-2 rounded-xl border border-green-200 bg-green-50 p-3 text-sm dark:border-green-800 dark:bg-green-950/20">
-                                        <p className="font-semibold text-green-700 dark:text-green-300">✓ 선택된 주소</p>
+                                        <p className="flex items-center gap-1.5 font-semibold text-green-700 dark:text-green-300"><Check className="h-4 w-4" aria-hidden="true" />선택된 주소</p>
                                         <div className="space-y-2">
                                             <div>
                                                 <Label className="text-xs text-muted-foreground">도로명 주소</Label>
@@ -1377,7 +1377,7 @@ function AdminRestaurantEditor({
                         </Button>
                         <Button
                             type="submit"
-                            className={`${ADMIN_MODAL_ACTION} bg-gradient-primary hover:opacity-90`}
+                            className={`${ADMIN_MODAL_ACTION} bg-primary text-primary-foreground hover:bg-primary/90`}
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? (

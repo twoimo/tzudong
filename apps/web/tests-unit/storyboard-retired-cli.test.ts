@@ -1,32 +1,28 @@
 import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, existsSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 describe('retired storyboard producer entrypoints', () => {
-  test('refuses old producers even when the former manual gates are enabled', () => {
-    const directory = mkdtempSync(join(tmpdir(),'storyboard-retired-'));
-    const marker=join(directory,'unexpected-provider-start');
-    const commands = [
-      [process.execPath,'scripts/storyboard-eight-real-provider-smoke.ts','--all'],
-      ['node','scripts/storyboard-rag-ollama-pull.mjs','--yes'],
-      [process.execPath,'scripts/storyboard-mlx-live.ts','--run-local-models'],
-      ['python3','../../scripts/codex-imagegen-storyboard-provider.py','--prompt-file',join(directory,'unreadable-prompt'),'--codex-bin',join(directory,'unreadable-codex'),'--output',join(directory,'unexpected.png'),'--json-output',join(directory,'unexpected.json')],
-      ...['run-storyboard-agent.py','01-bge-embed-and-store-supabase.py','99-openai-embed-and-store-supabase.py'].map(name => ['python3',`../../backend/storyboard-agent/scripts/${name}`,'--yes']),
-      ['python3','scripts/codex-imagegen-storyboard-provider.py','--prove','--auth-file',join(directory,'unreadable-auth')],
+  test('removes former executable provider scripts and keeps old backend entrypoints fail closed', () => {
+    const root = resolve(import.meta.dir, '..');
+    const removed = [
+      'scripts/storyboard-eight-real-provider-smoke.ts',
+      'scripts/storyboard-rag-ollama-pull.mjs',
+      'scripts/storyboard-mlx-live.ts',
+      'scripts/storyboard-mlx-worker.ts',
+      'scripts/storyboard-local-bridge.ts',
+      'scripts/codex-imagegen-storyboard-provider.py',
+      '../../scripts/codex-imagegen-storyboard-provider.py',
     ];
-    try {
-      for (const command of commands) {
-        const result=spawnSync(command[0],command.slice(1),{cwd:resolve(import.meta.dir,'..'),encoding:'utf8',timeout:5000,
-          env:{...process.env,STORYBOARD_EIGHT_PRESET_REAL_PROVIDER_SMOKE:'1',STORYBOARD_RAG_PULL_OLLAMA_MODELS:'1',
-            STORYBOARD_LOCAL_CODEX_COMMAND:`touch ${marker}`,STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE:join(directory,'unreadable-proof')}});
-        expect(result.status).toBe(2);
-        expect(JSON.parse(result.stdout.trim())).toMatchObject({code:'storyboard_gemini_only'});
-        expect(existsSync(marker)).toBe(false);
-        expect(existsSync(join(directory,'unexpected.png'))).toBe(false);
-        expect(existsSync(join(directory,'unexpected.json'))).toBe(false);
-      }
-    } finally { rmSync(directory,{recursive:true,force:true}); }
+    for (const path of removed) expect(existsSync(join(root, path))).toBe(false);
+
+    for (const name of ['run-storyboard-agent.py','01-bge-embed-and-store-supabase.py','99-openai-embed-and-store-supabase.py']) {
+      const result = spawnSync('python3', [`../../backend/storyboard-agent/scripts/${name}`], {
+        cwd: root, encoding: 'utf8', timeout: 5000,
+      });
+      expect(result.status).toBe(2);
+      expect(JSON.parse(result.stdout.trim())).toMatchObject({ code: 'storyboard_gemini_only' });
+    }
   });
 });

@@ -49,7 +49,7 @@ describe('server-only privileged Storage boundary', () => {
   });
 
   test('routes thumbnail Storage only through the dedicated client', () => {
-    const ocr = source('app/api/admin/ocr-receipts/process/route.ts');
+    const ocr = source('lib/ocr/admin-receipt-processor.ts');
     const registry = source('lib/admin/youtube-thumbnail-generator/release-registry.ts');
     expect(ocr).toContain('createSupabaseStorageServerClient');
     expect(ocr).toContain('storageAdmin.from(REVIEW_VERIFICATION_BUCKET)');

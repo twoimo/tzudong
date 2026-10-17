@@ -259,12 +259,13 @@ class RejectedRepairTests(unittest.TestCase):
         self.assertEqual(self.snapshot(), before)
 
     def test_cli_targets_only_requested_video_and_plan_is_offline(self):
-        args = ["--inventory", "unused", "--state-dir", str(self.state), "--model", self.config.model,
+        args = ["--inventory", "unused", "--inventory-sha256", "a" * 64,
+                "--state-dir", str(self.state), "--model", self.config.model,
                 "--model-evidence", "unused", "--segment-seconds", "30", "--max-videos", "1", "--max-calls", "2",
                 "--max-input-tokens", "1048576", "--batch-id", "repair-plan", "--repair-rejected-video-id", self.row["videoId"],
                 "--repair-source-batch-id", self.source_batch, "--repair-receipt-sha256", self.repair.source_receipt_sha256,
                 "--repair-producer-commit", m.LEGACY_REJECTION_PRODUCER]
-        with patch.object(m, "load_inventory", return_value=([self.row, self.other], self.info)), \
+        with patch.object(m, "_inventory_from_args", return_value=([self.row, self.other], self.info)), \
                 patch.object(m, "load_model_evidence", return_value=self.config), contextlib.redirect_stdout(io.StringIO()) as out:
             self.assertEqual(m.main(args), 0)
         result = json.loads(out.getvalue())
