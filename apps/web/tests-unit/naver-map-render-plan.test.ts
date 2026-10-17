@@ -239,6 +239,52 @@ describe('naver map render plan helpers', () => {
         expect(ids[0]).toContain('restaurant-multi-visit:37.500000:127.000000:한식:2');
     });
 
+    test('invalidates every role token after in-place coordinate, category and nested visit edits', () => {
+        const row = makeRestaurant({ id: 'mutable', youtube_link: 'one' });
+        const searched = makeRestaurant({ id: 'searched', youtube_link: 'one' });
+        const selected = makeRestaurant({ id: 'selected', youtube_link: 'one' });
+        const args = {
+            activeSearchedRestaurant: searched,
+            selectedRestaurant: selected,
+            clusters: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [127, 37.5] },
+                properties: { restaurantId: row.id, category: '한식' } }],
+            displayRestaurantIds: new Set([row.id]),
+            displayRestaurants: [row],
+            mergedRestaurantById: new Map<string, Restaurant>(),
+            nextIsClusterMode: true,
+            nextIsRegionalClusterMode: false,
+            nextIsSeoulDistrictMode: false,
+            regionalClusters: [],
+            restaurantById: new Map([[row.id, row]]),
+            seoulClustersToRender: [],
+            seoulIndividualIds: [row.id],
+        } as Parameters<typeof buildRenderTargetIdsForSignature>[0];
+        const first = buildRenderTargetIdsForSignature(args);
+        expect(buildRenderTargetIdsForSignature(args)).toBe(first);
+
+        row.lat = 38;
+        row.categories![0] = '분식';
+        row.mergedYoutubeLinks = ['one', 'two'];
+        searched.mergedTzuyangReviews = ['visit one', 'visit two', 'visit three'];
+        selected.lng = 128;
+        const changed = buildRenderTargetIdsForSignature(args);
+        expect(changed).not.toBe(first);
+        expect(changed[0]).toBe('restaurant-mutable:38.000000:127.000000:분식:2');
+        expect(changed[1]).toBe('searched-searched:37.500000:127.000000:한식:3');
+        expect(changed[2]).toBe('selected-selected:37.500000:128.000000:한식:1');
+        expect(changed[3]).toBe('seoul-individual-mutable:38.000000:127.000000:분식:2');
+        expect(changed[4]).toBe('cluster-restaurant-mutable:38.000000:127.000000:분식:2');
+        expect(first[0]).toBe('restaurant-mutable:37.500000:127.000000:한식:1');
+
+        row.mergedYoutubeLinks[1] = 'one';
+        const deduplicated = buildRenderTargetIdsForSignature(args);
+        expect(deduplicated[0]).toEndWith(':분식:1');
+        expect(deduplicated[3]).toEndWith(':분식:1');
+        expect(deduplicated[4]).toEndWith(':분식:1');
+        expect(buildRenderTargetIdsForSignature({ ...args,
+            displayRestaurants: [...args.displayRestaurants] })).not.toBe(deduplicated);
+    });
+
     test('includes selected restaurant outside display data in marker render signature', () => {
         const ids = buildRenderTargetIdsForSignature({
             activeSearchedRestaurant: null,

@@ -54,6 +54,21 @@ describe('naver map marker visuals', () => {
         expect(visual.content).not.toContain('tzuyang-visit-count-badge');
     });
 
+    test('refreshes both badge slots when duplicate history changes without a length change', () => {
+        const restaurant = { id: 'mutable-history', categories: ['한식'], category: [],
+            mergedYoutubeLinks: ['one', 'two'] };
+        expect(getNaverIndividualMarkerVisual(restaurant, false).content).toContain('쯔양 2회 방문');
+        expect(getNaverIndividualMarkerVisual(restaurant, true).content).toContain('쯔양 2회 방문');
+        restaurant.mergedYoutubeLinks[1] = 'one';
+        expect(getNaverIndividualMarkerVisual(restaurant, false).content).not.toContain('tzuyang-visit-count-badge');
+        expect(getNaverIndividualMarkerVisual(restaurant, true).content).not.toContain('tzuyang-visit-count-badge');
+        restaurant.mergedYoutubeLinks[1] = 'three';
+        expect(getNaverIndividualMarkerVisual({ ...restaurant }, false).content).toContain('쯔양 2회 방문');
+        expect(getNaverIndividualMarkerVisual(restaurant, true).content).toContain('쯔양 2회 방문');
+        restaurant.id = 'mutable-history-updated';
+        expect(getNaverIndividualMarkerVisual(restaurant, true).content).toContain('data-restaurant-id="mutable-history-updated"');
+    });
+
     test('marks user-submitted restaurants with a distinct marker wrapper without changing category asset', () => {
         const visual = getNaverIndividualMarkerVisual({
             id: 'user-rest-1',

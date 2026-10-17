@@ -13,8 +13,33 @@ const formatCoordForSignature = (value: number | string | null | undefined): str
     return 'na';
 };
 
-const toRestaurantRenderToken = (restaurant: Restaurant, prefix = 'restaurant'): string =>
-    `${prefix}-${restaurant.id}:${formatCoordForSignature(restaurant.lat)}:${formatCoordForSignature(restaurant.lng)}:${getPrimaryCategory(restaurant)}:${getTzuyangVisitCount(restaurant)}`;
+type RestaurantTokenPrefix = 'restaurant' | 'searched' | 'selected' | 'seoul-individual' | 'cluster-restaurant';
+const restaurantTokenCache = new WeakMap<Restaurant, {
+    id: string;
+    lat: Restaurant['lat'];
+    lng: Restaurant['lng'];
+    category: string;
+    visits: number;
+    tokens: Partial<Record<RestaurantTokenPrefix, string>>;
+}>();
+
+const toRestaurantRenderToken = (restaurant: Restaurant, prefix: RestaurantTokenPrefix = 'restaurant'): string => {
+    // Read derived values on every call: category/visit arrays can be edited in
+    // place. Weak keys retain no source rows; each row has only five role slots.
+    const category = getPrimaryCategory(restaurant);
+    const visits = getTzuyangVisitCount(restaurant);
+    let cached = restaurantTokenCache.get(restaurant);
+    if (!cached || cached.id !== restaurant.id || cached.lat !== restaurant.lat
+        || cached.lng !== restaurant.lng || cached.category !== category || cached.visits !== visits) {
+        cached = { id: restaurant.id, lat: restaurant.lat, lng: restaurant.lng, category, visits, tokens: {} };
+        restaurantTokenCache.set(restaurant, cached);
+    }
+    const token = cached.tokens[prefix];
+    if (token !== undefined) return token;
+    const next = `${prefix}-${restaurant.id}:${formatCoordForSignature(restaurant.lat)}:${formatCoordForSignature(restaurant.lng)}:${category}:${visits}`;
+    cached.tokens[prefix] = next;
+    return next;
+};
 
 type RestaurantWithRenderableCoordinates = Restaurant & { lat: number; lng: number };
 
@@ -312,6 +337,7 @@ const lastRenderTargetKey = {
     mergedRestaurantById: null as Map<string, Restaurant> | null,
 };
 
+
 export function buildRenderTargetIdsForSignature({
     activeSearchedRestaurant,
     selectedRestaurant,
@@ -341,27 +367,6 @@ export function buildRenderTargetIdsForSignature({
     seoulClustersToRender: SeoulDistrictCluster[];
     seoulIndividualIds: string[];
 }) {
-    const searchedId = activeSearchedRestaurant?.id ?? '';
-    const selectedId = selectedRestaurant?.id ?? '';
-    if (
-        lastRenderTargetIds &&
-        lastRenderTargetKey.searchedId === searchedId &&
-        lastRenderTargetKey.selectedId === selectedId &&
-        lastRenderTargetKey.clusterMode === nextIsClusterMode &&
-        lastRenderTargetKey.regionalMode === nextIsRegionalClusterMode &&
-        lastRenderTargetKey.seoulMode === nextIsSeoulDistrictMode &&
-        lastRenderTargetKey.displayRestaurants === displayRestaurants &&
-        lastRenderTargetKey.displayRestaurantIds === displayRestaurantIds &&
-        lastRenderTargetKey.clusters === clusters &&
-        lastRenderTargetKey.regionalClusters === regionalClusters &&
-        lastRenderTargetKey.seoulClustersToRender === seoulClustersToRender &&
-        lastRenderTargetKey.seoulIndividualIds === seoulIndividualIds &&
-        lastRenderTargetKey.restaurantById === restaurantById &&
-        lastRenderTargetKey.mergedRestaurantById === mergedRestaurantById
-    ) {
-        return lastRenderTargetIds;
-    }
-
     const renderTargetIdsForSignature: string[] = displayRestaurants.map((restaurant) =>
         toRestaurantRenderToken(restaurant)
     );
@@ -422,6 +427,29 @@ export function buildRenderTargetIdsForSignature({
                 `cluster-restaurant-${restaurantId}:${formatCoordForSignature(lat)}:${formatCoordForSignature(lng)}:${feature.properties.category || '기타'}`
             );
         });
+    }
+
+    const searchedId = activeSearchedRestaurant?.id ?? '';
+    const selectedId = selectedRestaurant?.id ?? '';
+    if (
+        lastRenderTargetIds &&
+        lastRenderTargetKey.searchedId === searchedId &&
+        lastRenderTargetKey.selectedId === selectedId &&
+        lastRenderTargetKey.clusterMode === nextIsClusterMode &&
+        lastRenderTargetKey.regionalMode === nextIsRegionalClusterMode &&
+        lastRenderTargetKey.seoulMode === nextIsSeoulDistrictMode &&
+        lastRenderTargetKey.displayRestaurants === displayRestaurants &&
+        lastRenderTargetKey.displayRestaurantIds === displayRestaurantIds &&
+        lastRenderTargetKey.clusters === clusters &&
+        lastRenderTargetKey.regionalClusters === regionalClusters &&
+        lastRenderTargetKey.seoulClustersToRender === seoulClustersToRender &&
+        lastRenderTargetKey.seoulIndividualIds === seoulIndividualIds &&
+        lastRenderTargetKey.restaurantById === restaurantById &&
+        lastRenderTargetKey.mergedRestaurantById === mergedRestaurantById &&
+        lastRenderTargetIds.length === renderTargetIdsForSignature.length &&
+        lastRenderTargetIds.every((token, index) => token === renderTargetIdsForSignature[index])
+    ) {
+        return lastRenderTargetIds;
     }
 
     lastRenderTargetIds = renderTargetIdsForSignature;
