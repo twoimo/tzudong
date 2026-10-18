@@ -1,0 +1,50 @@
+{
+  "observedAt": "2026-10-18T12:23:34.318848+00:00",
+  "automation": {
+    "id": "tzudong",
+    "kind": "heartbeat",
+    "name": "Tzudong 반대 감사·역검증 마무리",
+    "status": "ACTIVE",
+    "rrule": "FREQ=MINUTELY;INTERVAL=5",
+    "target_thread_id": "01a14e99-77bf-7531-b29e-a612bd99b540"
+  },
+  "automationPromptSha256": "e59b754f374a1c13adf5df40dbe272dd09527195cee56645cae17942b76d9b80",
+  "registrationReadBack": true,
+  "firstScheduledTriggerObserved": false,
+  "admissionAtLastCheck": {
+    "provider": "gemini",
+    "status": "queued",
+    "requestId": "cc4ed397fc5b793aad315375",
+    "otherOwnerReservationPreserved": true
+  },
+  "canonicalInputs": [
+    {
+      "path": "MASTER-PLAN-v3.md",
+      "sha256": "f27da98869ce41ec42ba464d324fe408d985aa7c667504fc00900fe2582483e5",
+      "bytes": 75340,
+      "matchesCanonical": true
+    },
+    {
+      "path": "source_bundle_v2.txt",
+      "sha256": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+      "bytes": 146510,
+      "matchesCanonical": true
+    }
+  ],
+  "dispatchPrompt": {
+    "path": "ANTITHESIS-PROMPT-v1.md",
+    "sha256": "55a8d03c6a676181f4f8b8f1cd8cb6e9d1d25001a68748e853765667205686d4",
+    "bytes": 5242,
+    "dispatched": false,
+    "thirdAttachmentAllowed": false
+  },
+  "existingPassingSuitesRepeated": false,
+  "productSourceChanged": false,
+  "externalReportsAdded": 0,
+  "nativeGoalStatusObserved": "blocked",
+  "limits": [
+    "Registration is not an observed trigger or completed research.",
+    "Local scheduled work requires the computer awake and desktop app running.",
+    "Shared reservation state grants admission; it does not prove the remote research is live."
+  ]
+}
