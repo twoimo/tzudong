@@ -41,4 +41,4 @@ publish = false
 # Pinned to the exact design C1 versions using `=` so a bump surfaces as a
 # deliberate Dependency_Freshness_Workflow candidate rather than a silent drift.
 pyo3 = { version = "=0.29.2", features = ["extension-module"] }
-proptest = "=1.11.0"
+proptest = "=1.12.0"
