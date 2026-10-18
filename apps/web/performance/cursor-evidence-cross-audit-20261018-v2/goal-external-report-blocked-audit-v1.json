@@ -1,0 +1,84 @@
+{
+  "recordedAt": "2026-10-18T16:25:42.632227+00:00",
+  "threadId": "01a14e99-77bf-7531-b29e-a612bd99b540",
+  "sameBlockerAcrossThreeDistinctGoalContinuations": true,
+  "observations": [
+    {
+      "title": "같은 연구의 대기 후 완료 상태 재확인",
+      "call_id": "call_fabf88e1d0b94521bddb50238be95f83",
+      "call_timestamp": "2026-10-18T16:16:44.673Z",
+      "goal_trigger": {
+        "timestamp": "2026-10-18T16:14:37.672Z",
+        "raw_line_sha256": "4648aff180744b4401d216039b7b7cd9911e8c7dddeaf3432046be5af92f3723"
+      },
+      "call_raw_line_sha256": "dd00b0f0aaf57a9ca70f3ac60799f032487c446f3dbf67341811643132ba3f4d",
+      "output_timestamp": "2026-10-18T16:16:44.861Z",
+      "output_raw_line_sha256": "4821119307ea6f7db322bb74557c4a211354accb6caba730330e7df2fe1997ec",
+      "selected_output_lines": [
+        "  originalUrlConfirmed: true,",
+        "  stopControlPresent: true,",
+        "}\t\t\t\t\t\t\t\t\t\t80 text Tzudong 계획 및 소스 반대 감사 보고서 작성 중..."
+      ]
+    },
+    {
+      "title": "원래 연구 대기 후 완료 상태와 탭 보존",
+      "call_id": "call_6bc2c92c8a6f44439d0990363b38194e",
+      "call_timestamp": "2026-10-18T16:18:37.180Z",
+      "goal_trigger": {
+        "timestamp": "2026-10-18T16:16:55.562Z",
+        "raw_line_sha256": "09d7683adb6d802e1763ee30dd1ef14f51aeb721c4ee88e3ee69575cc2a9a056"
+      },
+      "call_raw_line_sha256": "ca035a6ce5b8ed5b20efc0cf36f28ce1bfcf1157d6564ea3a8750d9ca599466b",
+      "output_timestamp": "2026-10-18T16:18:37.380Z",
+      "output_raw_line_sha256": "245af1bf64ab3d2eb0362c1525b5ac2808901efacb0159638908fb26037c4f5e",
+      "selected_output_lines": [
+        "\t\t\t\t\t\t\t\t\t\t80 text Tzudong 계획 및 소스 반대 감사 보고서 작성 중...",
+        "\t\t\t\t\t\t\t\t90 button 대답 생성 중지"
+      ]
+    },
+    {
+      "title": "Gemini 원래 연구의 간격을 둔 완료 확인",
+      "call_id": "call_d1623814207c453bb087eb5670145e67",
+      "call_timestamp": "2026-10-18T16:19:56.957Z",
+      "goal_trigger": {
+        "timestamp": "2026-10-18T16:18:45.116Z",
+        "raw_line_sha256": "7130c984374fa1e130fde4d3c646e7183458d3498cb18f68aee224ce363b2f48"
+      },
+      "call_raw_line_sha256": "e437a85008a22559296417bb696b3e166f2397538126dcf9ec1e7a123e52e6b6",
+      "output_timestamp": "2026-10-18T16:19:57.247Z",
+      "output_raw_line_sha256": "e6683b464d3232953dd15cf1ce2bfecaa9f4fe9492e1e86a5e80bd64c6c793c5",
+      "selected_output_lines": [
+        "  originalUrlConfirmed: true,",
+        "  stopControlPresent: true",
+        "}\t\t\t\t\t\t\t\t\t\t80 text Tzudong 계획 및 소스 반대 감사 보고서 작성 중..."
+      ]
+    }
+  ],
+  "classificationCorrection": "Earlier verified-wait labels confirmed only live browser UI and an unchanged writing card. They did not attest the provider research job liveness. For the native no-progress audit, these three continuations yielded no new completed artifact or next executable action.",
+  "blocker": "Mandatory Gemini antithesis full report not published/exportable or saved; cannot adjudicate complete findings and bind final-source GPT reverse audit without it.",
+  "notBasedOn": "Elapsed time, another owner reservation, or an assumption that the research stopped.",
+  "currentUi": "Original URL still shows report writing and stop-generation control; no export label observed.",
+  "supportedAdditionalStatusCheck": "Current document WebMCP fetchTools returned no tools. No undocumented network or hidden state used.",
+  "independentWorkComplete": [
+    "Canonical source inputs and first report preserved",
+    "Native boundary and manifest integrity checks passed",
+    "Reverse text/table/code-only input draft prepared",
+    "Protected-source and remote evidence checkpoints preserved"
+  ],
+  "completedReports": 1,
+  "missingStages": [
+    "antithesis",
+    "reverse"
+  ],
+  "nativeGoalStatusAtAudit": "active",
+  "nextNativeStatusAction": "blocked only if final UI recheck still lacks terminal report",
+  "heartbeat": {
+    "id": "tzudong",
+    "status": "ACTIVE",
+    "rrule": "FREQ=MINUTELY;INTERVAL=5",
+    "target_thread_id": "01a14e99-77bf-7531-b29e-a612bd99b540"
+  },
+  "resumptionCondition": "Observe terminal full report in original https://gemini.google.com/app/d33ca8e24b4acf9d, save verbatim and hash, then adjudicate/fix/verify and execute final-source Pro reverse audit.",
+  "originalResearchCanceledOrResent": false,
+  "otherOwnerReservationChanged": false
+}
