@@ -2059,7 +2059,7 @@ class PsqlExecutor:
             fd = os.open(state / PSQL_STDERR_TAIL_NAME, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
             with os.fdopen(fd, "wb") as handle:
                 handle.write(data)
-        except (LocalMigrationError, OSError):
+        except Exception:
             pass
 
 
