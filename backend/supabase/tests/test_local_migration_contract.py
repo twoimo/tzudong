@@ -48,6 +48,35 @@ class LocalMigrationContractTests(unittest.TestCase):
                 executor.capture(b"SELECT 4;", role="service_role")
         self.assertEqual(calls, [("postgres", b"SELECT 1;"), ("supabase_admin", b"SELECT 2;"), ("supabase_admin", b"SELECT 3;")])
 
+    def test_psql_failure_keeps_a_redacted_diagnostic_tail(self) -> None:
+        stderr = (
+            b"noise\n" * 500
+            + b"psql:<stdin>:12: ERROR:  REVIEW_DEFERRED_METADATA_DRIFT owner=ops@example.com\n"
+            + b"DETAIL:  Key (id)=(1) already exists.\nHINT:  unrelated\n"
+            + b"CONTEXT:  PL/pgSQL function inline_code_block line 46 at RAISE\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            executor = local_migrate.PsqlExecutor("docker", "fixture-db", "postgres")
+            with patch.object(local_migrate.PsqlExecutor, "_admit_container"), \
+                 patch.object(local_migrate.PsqlExecutor, "_inspect"), \
+                 patch.object(local_migrate.PsqlExecutor, "_binding", return_value=("fixture", state, {})), \
+                 patch.object(local_migrate.PsqlExecutor, "_docker_env", return_value={}), \
+                 patch.object(local_migrate.shutil, "which", return_value="/usr/bin/docker"), \
+                 patch.object(local_migrate.subprocess, "run", return_value=SimpleNamespace(returncode=3, stdout=b"", stderr=stderr)):
+                with self.assertRaisesRegex(local_migrate.LocalMigrationError, "^psql_failed$"):
+                    executor.run(b"SELECT 1;")
+                tail = (state / local_migrate.PSQL_STDERR_TAIL_NAME).read_text(encoding="utf-8")
+                self.assertEqual(stat.S_IMODE((state / local_migrate.PSQL_STDERR_TAIL_NAME).stat().st_mode), 0o600)
+                self.assertEqual(tail.splitlines(), [
+                    "psql:<stdin>:12: ERROR:  REVIEW_DEFERRED_METADATA_DRIFT owner=[REDACTED]",
+                    "DETAIL:  Key (id)=(1) already exists.",
+                    "CONTEXT:  PL/pgSQL function inline_code_block line 46 at RAISE",
+                ])
+                with self.assertRaisesRegex(local_migrate.LocalMigrationError, "^psql_ambiguous$"):
+                    executor.capture(b"SELECT 2;")
+                self.assertIn("REVIEW_DEFERRED_METADATA_DRIFT", (state / local_migrate.PSQL_STDERR_TAIL_NAME).read_text(encoding="utf-8"))
+
     def test_function_source_evidence_binds_both_exact_edge_functions(self) -> None:
         functions = {
             "root": "functions",
