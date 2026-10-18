@@ -4,6 +4,7 @@ import {
     buildPostSearchSwipeCandidates,
     getLastSwipeOrderBuildCount,
     getNearestFallbackScanCount,
+    getSwipeListSnapshotCreationCount,
     isSameRestaurantSelection,
 } from '../lib/mobile-home-search-selection';
 
@@ -16,6 +17,90 @@ const order = (visible: Restaurant[], searched: Restaurant, all = visible) =>
     buildPostSearchSwipeCandidates({ visibleRestaurants: visible, allRestaurants: all, activeSearchedRestaurant: searched });
 
 describe('swipe render cache correctness and capacity', () => {
+    test('shares unchanged row snapshots across separately retained result lists', () => {
+        const rows = [restaurant('shared-a'), restaurant('shared-b'), restaurant('shared-c')];
+        const before = getSwipeListSnapshotCreationCount();
+        const lists = Array.from({ length: 128 }, () => [...rows]);
+        for (const visible of lists) {
+            expect(buildPostSearchSwipeCandidates({
+                visibleRestaurants: visible, allRestaurants: visible, activeSearchedRestaurant: null,
+            })).toBe(visible);
+        }
+        expect(getSwipeListSnapshotCreationCount() - before).toBe(rows.length);
+    });
+
+    test('invalidates each older list after a shared row changes and another list observes it', () => {
+        const a = restaurant('shared-before', { lat: 38 });
+        const b = restaurant('shared-after', { lat: 39, mergedRestaurants: merged('old-alias') });
+        const searched = restaurant('shared-search');
+        const lists = [[a, b], [a, b], [a, b]];
+        const previous = lists.map(visible => order(visible, searched));
+        const count = getSwipeListSnapshotCreationCount();
+        b.mergedRestaurants![0].id = searched.id;
+        lists.forEach((visible, index) => {
+            const updated = order(visible, searched);
+            expect(updated).not.toBe(previous[index]);
+            expect(updated).toEqual([b, a]);
+            expect(order(visible, searched)).toBe(updated);
+        });
+        expect(getSwipeListSnapshotCreationCount() - count).toBe(1);
+    });
+
+    test('deduplicates a previously unique array after an in-place duplicate append', () => {
+        const visible = [restaurant('a'), restaurant('b')];
+        const input = { visibleRestaurants: visible, allRestaurants: visible, activeSearchedRestaurant: null };
+        expect(ids(buildPostSearchSwipeCandidates(input))).toEqual(['a', 'b']);
+        visible.push(visible[0]);
+        expect(ids(buildPostSearchSwipeCandidates(input))).toEqual(['a', 'b']);
+    });
+
+    test.each(['id', 'name-coordinate', 'merged-id'] as const)('invalidates ordering after an in-place visible %s edit', field => {
+        const searched = restaurant('search', { name: 'needle' });
+        const a = restaurant('a', { lat: 37.6 });
+        const b = restaurant('b', { lat: 37.7, mergedRestaurants: merged('previous-alias') });
+        const visible = [a, b];
+        expect(ids(order(visible, searched))).toEqual(['a', 'b']);
+        if (field === 'id') b.id = searched.id;
+        else if (field === 'merged-id') b.mergedRestaurants![0].id = searched.id;
+        else { b.name = searched.name; b.lat = searched.lat; }
+        const updated = order(visible, searched);
+        expect(updated).toEqual([b, a]);
+        expect(order(visible, searched)).toBe(updated);
+    });
+
+    test.each(['coordinates', 'removal'] as const)('invalidates a cached nearest result after catalog %s changes in place', mutation => {
+        const searched = restaurant('search');
+        const visible = [restaurant('visible')];
+        const near = restaurant('near', { lat: 37.501 });
+        const far = restaurant('far', { lat: 37.8 });
+        const all = [...visible, near, far];
+        expect(ids(order(visible, searched, all))).toEqual(['visible', 'near']);
+        if (mutation === 'coordinates') { near.lat = 38; far.lat = 37.502; }
+        else all.splice(1, 1);
+        expect(ids(order(visible, searched, all))).toEqual(['visible', 'far']);
+        expect(ids(order(visible, searched, all))).toEqual(['visible', 'far']);
+    });
+
+    test('replaces cached row references when an array element is replaced with the same selection fields', () => {
+        const visible = [restaurant('a'), restaurant('b')];
+        const searched = restaurant('search');
+        const previous = order(visible, searched);
+        const replacement = { ...visible[1], road_address: 'updated address' };
+        visible[1] = replacement;
+        const updated = order(visible, searched);
+        expect(updated).not.toBe(previous);
+        expect(updated[1]).toBe(replacement);
+        expect(updated[1].road_address).toBe('updated address');
+    });
+
+    test('preserves the new stable order when the visible array is reordered in place', () => {
+        const visible = [restaurant('a'), restaurant('b')];
+        const searched = restaurant('search');
+        expect(ids(order(visible, searched))).toEqual(['a', 'b']);
+        visible.reverse();
+        expect(ids(order(visible, searched))).toEqual(['b', 'a']);
+    });
+
     test('invalidates search ordering when the same search id gets different merged ids', () => {
         const visible = [restaurant('a'), restaurant('b')];
         expect(ids(order(visible, restaurant('search', { mergedRestaurants: merged('a') })))).toEqual(['a', 'b']);

@@ -291,7 +291,6 @@ export const buildRestaurantsForSwipe = ({
     return [...displayRestaurants, ...restaurantsToAdd];
 };
 
-// List-reference caches require replacing catalog/visible arrays on edits.
 // Bound query history while retaining common back-and-forth searches.
 const MAX_SEARCH_CACHE_ENTRIES = 64;
 const rememberSelectionResult = <T>(cache: Map<string, T>, id: string, value: T) => {
@@ -318,6 +317,42 @@ const orderedVisibleCache = new WeakMap<readonly Restaurant[], Map<string, {
     searched: SelectionCacheKey;
     restaurants: Restaurant[];
 }>>();
+type SwipeListEntrySnapshot = {
+    restaurant: Restaurant;
+    key: SelectionCacheKey;
+};
+const swipeListSnapshots = new WeakMap<readonly Restaurant[], SwipeListEntrySnapshot[]>();
+const swipeRestaurantSnapshots = new WeakMap<Restaurant, SwipeListEntrySnapshot>();
+let swipeListSnapshotCreationCount = 0;
+
+export function getSwipeListSnapshotCreationCount() {
+    return swipeListSnapshotCreationCount;
+}
+
+const snapshotSwipeRestaurant = (restaurant: Restaurant): SwipeListEntrySnapshot => {
+    const previous = swipeRestaurantSnapshots.get(restaurant);
+    if (previous && matchesSelectionCacheKey(previous.key, restaurant)) return previous;
+    const snapshot = { restaurant, key: selectionCacheKey(restaurant) };
+    swipeRestaurantSnapshots.set(restaurant, snapshot);
+    swipeListSnapshotCreationCount += 1;
+    return snapshot;
+};
+
+// React callers normally replace lists, but mutable inputs are also supported.
+// Lists retain their own membership/order snapshot but share unchanged row
+// snapshots. Older lists keep their previous row version, so revisiting one
+// still detects in-place edits even if a different list saw the edit first.
+const refreshSwipeListCaches = (restaurants: Restaurant[]): void => {
+    const previous = swipeListSnapshots.get(restaurants);
+    if (previous && previous.length === restaurants.length && previous.every((entry, index) =>
+        entry.restaurant === restaurants[index] && matchesSelectionCacheKey(entry.key, restaurants[index]))) {
+        return;
+    }
+    rememberedUniqueSwipeLists.delete(restaurants);
+    orderedVisibleCache.delete(restaurants);
+    nearestSwipeFallbackCache.delete(restaurants);
+    swipeListSnapshots.set(restaurants, restaurants.map(snapshotSwipeRestaurant));
+};
 let lastSwipeOrderBuildCount = 0;
 
 export function getLastSwipeOrderBuildCount() {
@@ -329,6 +364,7 @@ export const buildPostSearchSwipeCandidates = ({
     allRestaurants,
     activeSearchedRestaurant,
 }: BuildPostSearchSwipeCandidatesInput): Restaurant[] => {
+    refreshSwipeListCaches(visibleRestaurants);
     const dedupedVisibleRestaurants = dedupeRestaurants(visibleRestaurants);
     let orderedVisibleRestaurants = dedupedVisibleRestaurants;
     if (activeSearchedRestaurant) {
@@ -370,6 +406,7 @@ export const buildPostSearchSwipeCandidates = ({
     }
 
     const visibleRestaurant = orderedVisibleRestaurants[0];
+    if (allRestaurants !== visibleRestaurants) refreshSwipeListCaches(allRestaurants);
     let fallbacks = nearestSwipeFallbackCache.get(allRestaurants);
     if (!fallbacks) {
         fallbacks = new Map();

@@ -33,9 +33,10 @@ interface MarkerPositionLike {
 }
 
 const MARKER_NODE_SELECTOR = '[data-testid="marker"]';
+const MARKER_KIND_SELECTOR = '[data-restaurant-marker-kind]';
 const REVIEW_BUBBLE_SELECTOR = '[data-visible-marker-review-bubble="true"]';
 
-function patchStableMarkerReviewBubble(element: HTMLElement, nextContent: unknown): boolean {
+function patchStableMarkerReviewBubble(element: HTMLElement, nextContent: unknown, currentContent: unknown): boolean {
     if (typeof nextContent !== 'string' || typeof document === 'undefined') return false;
     if (!nextContent.includes('data-testid="marker"') && !element.querySelector(MARKER_NODE_SELECTOR)) {
         return false;
@@ -49,6 +50,48 @@ function patchStableMarkerReviewBubble(element: HTMLElement, nextContent: unknow
     const nextMarker = template.content.querySelector(MARKER_NODE_SELECTOR);
     if (!nextMarker) return false;
     if (currentMarker.getAttribute('style') !== nextMarker.getAttribute('style')) return false;
+
+    // Ordinary category markers can reuse the same image and SDK event target
+    // when the serialized content changes only its restaurant UUID. Require the
+    // complete live app-owned category/overlay root to match its parsed content. Changed wrappers,
+    // badges, bubbles and externally changed nodes retain full replacement.
+    if (typeof currentContent === 'string'
+        && currentContent.includes('class="tzudong-individual-marker"')
+        && (!currentContent.includes('data-restaurant-marker-kind=')
+            || currentMarker.closest?.(MARKER_KIND_SELECTOR)?.getAttribute('data-restaurant-marker-kind') === 'category')) {
+        const currentId = currentMarker.getAttribute('data-restaurant-id');
+        const nextId = nextMarker.getAttribute('data-restaurant-id');
+        const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+        if (currentId && nextId && currentId !== nextId && uuid.test(currentId) && uuid.test(nextId)) {
+            const attribute = ` data-restaurant-id="${currentId}"`;
+            const nextAttribute = ` data-restaurant-id="${nextId}"`;
+            if (currentContent.indexOf(attribute) === currentContent.lastIndexOf(attribute)
+                && currentContent.includes(attribute)
+                && currentContent.replace(attribute, nextAttribute) === nextContent) {
+                const overlay = '[data-visible-marker-review-bubble-anchor="true"]';
+                const currentRoot = currentMarker.closest?.(overlay)
+                    ?? currentMarker.closest?.(MARKER_KIND_SELECTOR) ?? currentMarker;
+                const nextRoot = nextMarker.closest?.(overlay)
+                    ?? nextMarker.closest?.(MARKER_KIND_SELECTOR) ?? nextMarker;
+                // The SDK adds its documented default cursor to the category
+                // wrapper. Admit only that exact addition; all other attributes,
+                // styles and children must match the app-generated root.
+                const rootsMatch = currentRoot.outerHTML.replace(attribute, nextAttribute) === nextRoot.outerHTML
+                    || (currentRoot.getAttribute('data-restaurant-marker-kind') === 'category'
+                        && nextRoot.getAttribute('data-restaurant-marker-kind') === 'category'
+                        && currentRoot.getAttribute('style') === 'cursor: pointer;'
+                        && !nextRoot.hasAttribute('style')
+                        && currentRoot.attributes.length === nextRoot.attributes.length + 1
+                        && Array.from(nextRoot.attributes).every(({ name, value }) => currentRoot.getAttribute(name) === value)
+                        && currentRoot.innerHTML.replace(attribute, nextAttribute) === nextRoot.innerHTML);
+                if (rootsMatch) {
+                    currentMarker.setAttribute('data-restaurant-id', nextId);
+                    return true;
+                }
+            }
+        }
+    }
+
     // A pooled SDK object may now represent a different restaurant. Keeping its
     // image is safe only when the marker identity and fixed badge are unchanged.
     for (const attribute of ['data-restaurant-id', 'role', 'tabindex', 'aria-label', 'title']) {
@@ -206,7 +249,7 @@ export class MarkerPool {
                 const element = marker.getElement();
                 const patched = !isAnchorDifferent
                     && typeof element?.querySelector === 'function'
-                    && patchStableMarkerReviewBubble(element, icon.content);
+                    && patchStableMarkerReviewBubble(element, icon.content, currentIcon?.content);
                 if (patched && currentIcon) {
                     currentIcon.content = icon.content;
                 } else if (!patched) {
