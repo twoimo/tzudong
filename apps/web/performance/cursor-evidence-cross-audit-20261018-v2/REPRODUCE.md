@@ -18,7 +18,7 @@ cd apps/web
 bun test performance/cursor-evidence-cross-audit-20261018-v2/capability-boundaries.test.mjs performance/cursor-evidence-cross-audit-20261018-v2/manifest-integrity.test.mjs
 ```
 
-첫 검사는 JSON 구조, source bundle 및 보고서·검증 파일의 SHA256/bytes, finding ID 중복과 증거 참조를 실제 파일에서 확인한다. 현재 보고서1건/지적20건/검증파일55건을 확인하고 `missingStages: [antithesis, reverse]`, `completionEligible: false`를 출력해야 한다. 이 값은 저장 증거의 구조적 조건이며 실제 리서치 완료·모델 backend·동작 수정·현장 성과를 인증하지 않는다. 완료 상태는 실제 UI terminal receipt, 세 단계 전문, 현재 소스와 실제 조치까지 별도로 검토해야 한다.
+첫 검사는 JSON 구조, source bundle 및 보고서·검증 파일의 SHA256/bytes, finding ID 중복과 증거 참조를 실제 파일에서 확인하고 저장된 manifest의 실제 항목 수를 출력한다. readback-v4 시점에는 보고서1건/지적20건/검증파일60건, `missingStages: [antithesis, reverse]`, `completionEligible: false`였다. 이 값은 저장 증거의 구조적 조건이며 실제 리서치 완료·모델 backend·동작 수정·현장 성과를 인증하지 않는다. 완료 상태는 실제 UI terminal receipt, 세 단계 전문, 현재 소스와 실제 조치까지 별도로 검토해야 한다.
 
 manifest-integrity 검사는 실제 별도 Node 프로세스와 임시 파일로 premature complete, 보고서 바꿔치기, source bundle 바꿔치기, 중복 finding을 거부한다. 실행 결과5pass/11assertions/0fail을 보존했다. 임시 negative fixture는 테스트가 만든 고유 디렉터리만 정리하며 사용자 파일은 건드리지 않는다.
 
