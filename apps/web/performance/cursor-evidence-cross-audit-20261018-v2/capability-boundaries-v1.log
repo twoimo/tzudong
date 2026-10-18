@@ -1,0 +1,19 @@
+bun test v1.4.0 (34cbb9a40)
+
+performance/cursor-evidence-cross-audit-20261018-v2/capability-boundaries.test.ts:
+(pass) W001-F3: mint fails closed at NaN [6.19ms]
+(pass) W001-F3: NaN during use revokes rather than revives the capability [0.74ms]
+(pass) W001-F3: mint fails closed at positive infinity [0.35ms]
+(pass) W001-F3: positive infinity during use revokes rather than revives the capability [0.36ms]
+(pass) W001-F3: mint fails closed at negative infinity [0.30ms]
+(pass) W001-F3: negative infinity during use revokes rather than revives the capability [0.45ms]
+(pass) W001-F3: mint fails closed at above safe magnitude [0.38ms]
+(pass) W001-F3: above safe magnitude during use revokes rather than revives the capability [0.59ms]
+(pass) W001-F3: mint fails closed at below safe magnitude [0.55ms]
+(pass) W001-F3: below safe magnitude during use revokes rather than revives the capability [0.36ms]
+(pass) W001-F1: stored deadline remains a strict half-open boundary at fractional uptime [0.66ms]
+
+ 11 pass
+ 0 fail
+ 31 expect() calls
+Ran 11 tests across 1 file. [149.00ms]

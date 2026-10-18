@@ -1,0 +1,15 @@
+{
+  "prepared_at": "2026-10-18T11:51:12.750817+00:00",
+  "canonical_plan": "MASTER-PLAN-v3.md",
+  "plan_sha256": "f27da98869ce41ec42ba464d324fe408d985aa7c667504fc00900fe2582483e5",
+  "plan_bytes": 75340,
+  "source_bundle": "source_bundle_v2.txt",
+  "source_bundle_sha256": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+  "source_revision": "9228c1454393560bcd37240f793065e450f85683",
+  "equivalent_main": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "original_thesis_unchanged": true,
+  "source_code_changes_since_delivery": false,
+  "stable_job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+  "only_upload_two_canonical_files": true,
+  "no_other_attachments_needed": true
+}

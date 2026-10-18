@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-18T11:47:56.599523+00:00",
+  "failure": "App TypeScript project includes performance .ts and has no bun:test module types; tests-unit is deliberately excluded, this new fixture was outside it.",
+  "diagnostic": "typecheck-native-diagnosis-v1.log TS2307 at fixture import only",
+  "originalFixturePreserved": "capability-boundaries-v1.ts.txt",
+  "fix": "Use native Bun JavaScript fixture .test.mjs with same11cases/31assertions. No product code, compiler exclusions, package dependencies or thresholds changed.",
+  "verificationPending": [
+    "Bun11cases",
+    "native/compat project parity"
+  ]
+}

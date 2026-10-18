@@ -1,0 +1,12 @@
+{
+  "createdAt": "2026-10-18T11:34:57.197470+00:00",
+  "phase": "Gemini adversarial; prepared not dispatched",
+  "job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+  "sourceRevision": "9228c1454393560bcd37240f793065e450f85683",
+  "sourceBundleRelativePath": "../cursor-evidence-delivery-20261018-v1/cross-audit-v1/source_bundle.txt",
+  "sourceBundleSha256": "9420e4c1a47230c305c98e9f739571f9a3c188919fac750ee0fd45635902a6ee",
+  "planSha256": "e2eb3f813c50ee60b7d0253dc5f441bf683b79b3246b2f774d389d4ec35227b5",
+  "includedThesisSha256": "c8b70ca937c33214dae131f269986462f249d9cf63500a1c196cb0863d22b838",
+  "canonicalPlanOnly": true,
+  "additionalThesisAttachmentNeeded": false
+}

@@ -1,0 +1,1 @@
+performance/cursor-evidence-cross-audit-20261018-v2/capability-boundaries.test.ts(1,30): error TS2307: Cannot find module 'bun:test' or its corresponding type declarations.

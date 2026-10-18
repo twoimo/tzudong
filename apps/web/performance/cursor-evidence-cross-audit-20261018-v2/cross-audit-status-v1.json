@@ -1,0 +1,28 @@
+{
+  "observed_at": "2026-10-18T11:51:12.750817+00:00",
+  "phase1": {
+    "complete": true,
+    "reservation_released": true,
+    "next_owner_after_release": "01a14e9a-ebaf-7a11-8049-0a8c4ad6b6fe",
+    "report_sha256": "c8b70ca937c33214dae131f269986462f249d9cf63500a1c196cb0863d22b838"
+  },
+  "phase2": {
+    "complete": false,
+    "dispatched": false,
+    "stable_job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+    "reservation_request": "cc4ed397fc5b793aad315375",
+    "status": "queued",
+    "prior_never_dispatched_request": "dc587dfb60c68b02753996bf",
+    "prior_request_withdrawn": true,
+    "why_input_hash_changed": "Add available source closure after valid thesis finding, not duplicate research/queue evasion",
+    "last_observed_holder": "01a14e9b-2552-7273-8f1a-7d5ccedb559f",
+    "new_bundle_sha256": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203"
+  },
+  "phase3": {
+    "complete": false,
+    "dispatched": false
+  },
+  "canonical_input_manifest": "plan-source-manifest-v3.json",
+  "goal_complete": false,
+  "no_user_action_required_to_wait": true
+}

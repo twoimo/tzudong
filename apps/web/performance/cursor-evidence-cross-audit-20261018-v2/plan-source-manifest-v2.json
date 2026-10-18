@@ -1,0 +1,14 @@
+{
+  "preparedAt": "2026-10-18T11:42:56.317576+00:00",
+  "canonicalPlan": "MASTER-PLAN-v2.md",
+  "planSha256": "e9dfe1c7ca3be85267cc6fe04435440a562e722fe92800decb3aada0a5001952",
+  "planBytes": 72139,
+  "sourceBundle": "source_bundle_v2.txt",
+  "sourceBundleSha256": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+  "sourceRevision": "9228c1454393560bcd37240f793065e450f85683",
+  "equivalentDeliveredMain": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "priorInputPlanPreserved": "MASTER-PLAN.md",
+  "sameStableJob": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+  "reasonForNewInputHash": "First completed thesis identified missing local source closure; add existing public source rather than falsely defer available evidence. Old queued input never uploaded/dispatched.",
+  "originalThesisReportSha256": "c8b70ca937c33214dae131f269986462f249d9cf63500a1c196cb0863d22b838"
+}

@@ -1,0 +1,9 @@
+{
+  "rawArtifact": "apps/web/performance/cursor-evidence-cross-audit-20261018-v2/source_bundle_v2.txt",
+  "sha256": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+  "initialWholeDiffCheckExit": 2,
+  "cause": "Byte-exact committed source excerpts preserve four pre-existing trailing whitespace lines and a delimiter final blank line. No source code was edited to manufacture them.",
+  "rawSourceNotRewrittenOrNormalized": true,
+  "newlyAuthoredFilesDiffCheckExit": 0,
+  "method": "scoped git diff --cached --check excludes only this indexed raw artifact after independent bundle SHA check; no Git/config/compiler/CI thresholds changed"
+}

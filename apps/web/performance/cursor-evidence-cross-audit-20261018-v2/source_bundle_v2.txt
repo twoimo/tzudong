@@ -1,0 +1,4118 @@
+Tzudong public committed source closure. Revision 9228c1454393560bcd37240f793065e450f85683; equivalent delivered code b4eb780c532c9ba02a1af456b17459debc59a757.
+NaverMapView is explicitly scoped line excerpts, not full SDK/application certification. No secrets/private runtime/account/location data.
+
+===== apps/web/lib/privacy/location-gate.ts | whole-file SHA256 845c387c1a165a015e2369b4759d7ed0017faee9da93216932ad84988fa4ff64 =====
+import { isPublicRestrictedMode } from "@/lib/site-config";
+export type LocationDestination =
+  | "memory"
+  | "network"
+  | "url"
+  | "analytics"
+  | "log"
+  | "localStorage"
+  | "indexedDB"
+  | "notification"
+  | "supabase";
+
+export const DEVICE_LOCATION_NETWORK_SINK = "naver-maps-javascript" as const;
+const DEVICE_LOCATION_MAP_PURPOSE = "home-map-device-marker";
+const DEVICE_LOCATION_READINESS_PATH = "/api/privacy/location-readiness";
+const DEVICE_LOCATION_READINESS_TIMEOUT_MS = 3000;
+
+export type DeviceLocationUseAuthorization = Readonly<{
+  grantedAt: number;
+  expiresAt: number;
+}>;
+
+export type LocationUse = Readonly<{
+  purpose: string;
+  destination: LocationDestination;
+  networkSink?: string;
+  authorization?: DeviceLocationUseAuthorization | null;
+}>;
+
+export type LocationUseDecision = Readonly<{
+  allowed: boolean;
+  reasonCode:
+    | "DEVICE_LOCATION_MEMORY_ONLY"
+    | "DEVICE_LOCATION_MAP_PROVIDER_NETWORK_ALLOWED"
+    | "DEVICE_LOCATION_DESTINATION_DENIED";
+}>;
+
+export const DEVICE_LOCATION_DENIED_DESTINATIONS = [
+  "network",
+  "url",
+  "analytics",
+  "log",
+  "localStorage",
+  "indexedDB",
+  "notification",
+  "supabase",
+] as const satisfies readonly LocationDestination[];
+const LOCATION_DESTINATIONS = new Set<LocationDestination>([
+  "memory",
+  ...DEVICE_LOCATION_DENIED_DESTINATIONS,
+]);
+const LOCATION_USE_FIELDS = new Set([
+  "purpose",
+  "destination",
+  "networkSink",
+  "authorization",
+]);
+const DEVICE_LOCATION_AUTHORIZATION_LIFETIME_MS = 5 * 60 * 1000;
+const capturedMonotonicNow = globalThis.performance.now.bind(globalThis.performance);
+
+type DeviceLocationAuthorizationState = Readonly<{
+  grantedAt: number;
+  expiresAt: number;
+}>;
+
+const deviceLocationAuthorizationRegistry = new WeakMap<
+  DeviceLocationUseAuthorization,
+  DeviceLocationAuthorizationState
+>();
+
+const isSafeTimestamp = (value: unknown): value is number =>
+  typeof value === "number"
+  && Number.isFinite(value)
+  && Math.abs(value) <= Number.MAX_SAFE_INTEGER;
+
+const hasFixedAuthorizationLifetime = (
+  grantedAt: number,
+  expiresAt: number,
+): boolean =>
+  isSafeTimestamp(grantedAt)
+  && isSafeTimestamp(expiresAt)
+  && expiresAt > grantedAt
+  // Compare the minted sum directly: subtracting fractional monotonic timestamps
+  // can round to either side of the fixed lifetime after a long-running session.
+  && expiresAt === grantedAt + DEVICE_LOCATION_AUTHORIZATION_LIFETIME_MS;
+
+const isActiveAuthorization = (
+  authorization: DeviceLocationUseAuthorization | null | undefined,
+): boolean => {
+  if (!authorization || typeof authorization !== "object") return false;
+
+  const state = deviceLocationAuthorizationRegistry.get(authorization);
+  if (!state) return false;
+
+  const now = capturedMonotonicNow();
+  const isValid = isSafeTimestamp(now)
+    && hasFixedAuthorizationLifetime(state.grantedAt, state.expiresAt)
+    && authorization.grantedAt === state.grantedAt
+    && authorization.expiresAt === state.expiresAt
+    && state.grantedAt <= now
+    && now < state.expiresAt;
+
+  if (!isValid) deviceLocationAuthorizationRegistry.delete(authorization);
+  return isValid;
+};
+
+const mintDeviceLocationUseAuthorization = (): DeviceLocationUseAuthorization | null => {
+  const grantedAt = capturedMonotonicNow();
+  const expiresAt = grantedAt + DEVICE_LOCATION_AUTHORIZATION_LIFETIME_MS;
+  if (!hasFixedAuthorizationLifetime(grantedAt, expiresAt)) return null;
+
+  const authorization = Object.freeze({ grantedAt, expiresAt });
+  deviceLocationAuthorizationRegistry.set(authorization, { grantedAt, expiresAt });
+  return authorization;
+};
+
+const isExactReadinessPayload = (payload: unknown): boolean => {
+  if (
+    !payload
+    || typeof payload !== "object"
+    || Array.isArray(payload)
+    || Object.getPrototypeOf(payload) !== Object.prototype
+    || Object.keys(payload).length !== 2
+  ) {
+    return false;
+  }
+
+  const readiness = payload as Record<string, unknown>;
+  return Object.hasOwn(readiness, "status")
+    && Object.hasOwn(readiness, "reasonCode")
+    && readiness.status === "available"
+    && (
+      readiness.reasonCode === "DEVICE_LOCATION_AVAILABLE"
+      || readiness.reasonCode === "DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED"
+    );
+};
+
+/**
+ * Reads the server-owned readiness result and privately mints a short-lived
+ * capability only for the approved home-map Naver renderer boundary.
+ */
+export const acquireDeviceLocationUseAuthorization = async (): Promise<
+  DeviceLocationUseAuthorization | null
+> => {
+  if (isPublicRestrictedMode) return null;
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(
+    () => controller.abort(),
+    DEVICE_LOCATION_READINESS_TIMEOUT_MS,
+  );
+
+  try {
+    const response = await globalThis.fetch(DEVICE_LOCATION_READINESS_PATH, {
+      method: "GET",
+      credentials: "same-origin",
+      mode: "same-origin",
+      redirect: "error",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+
+    const payload: unknown = await response.json();
+    if (!isExactReadinessPayload(payload)) return null;
+
+    return mintDeviceLocationUseAuthorization();
+  } catch {
+    return null;
+  } finally {
+    globalThis.clearTimeout(timeoutId);
+  }
+};
+
+/** Explicitly invalidates a capability. Calling it again is safe. */
+export const revokeDeviceLocationUseAuthorization = (
+  authorization: DeviceLocationUseAuthorization | null | undefined,
+): void => {
+  if (authorization && typeof authorization === "object") {
+    deviceLocationAuthorizationRegistry.delete(authorization);
+  }
+};
+
+/**
+ * Device coordinates stay in current React memory. The browser map-provider
+ * boundary is limited to the approved Naver JavaScript renderer.
+ */
+export const evaluateLocationUse = (
+  locationUse: LocationUse,
+): LocationUseDecision => {
+  if (isPublicRestrictedMode) {
+    return {
+      allowed: false,
+      reasonCode: "DEVICE_LOCATION_DESTINATION_DENIED",
+    };
+  }
+  const {
+    purpose,
+    destination,
+    networkSink,
+    authorization,
+  } = locationUse;
+  if (
+    Object.getPrototypeOf(locationUse) !== Object.prototype
+    || Object.keys(locationUse).some((key) => !LOCATION_USE_FIELDS.has(key))
+    || purpose !== DEVICE_LOCATION_MAP_PURPOSE
+    || !LOCATION_DESTINATIONS.has(destination)
+  ) {
+    return {
+      allowed: false,
+      reasonCode: "DEVICE_LOCATION_DESTINATION_DENIED",
+    };
+  }
+
+  if (destination === "memory") {
+    return {
+      allowed: true,
+      reasonCode: "DEVICE_LOCATION_MEMORY_ONLY",
+    };
+  }
+
+  if (
+    destination === "network"
+    && networkSink === DEVICE_LOCATION_NETWORK_SINK
+    && isActiveAuthorization(authorization)
+  ) {
+    return {
+      allowed: true,
+      reasonCode: "DEVICE_LOCATION_MAP_PROVIDER_NETWORK_ALLOWED",
+    };
+  }
+
+  return {
+    allowed: false,
+    reasonCode: "DEVICE_LOCATION_DESTINATION_DENIED",
+  };
+};
+
+export class DeviceLocationDestinationError extends Error {
+  readonly code = "DEVICE_LOCATION_DESTINATION_DENIED" as const;
+  readonly destination: Exclude<LocationDestination, "memory">;
+
+  constructor(destination: Exclude<LocationDestination, "memory">) {
+    super("기기 위치 좌표는 이 대상에 사용할 수 없습니다.");
+    this.name = "DeviceLocationDestinationError";
+    this.destination = destination;
+  }
+}
+
+/**
+ * Use before a device-location sink. It deliberately accepts no coordinates so
+ * rejected paths cannot retain a precise value in an error or audit record.
+ */
+export const assertDeviceLocationDestination = (
+  destination: LocationDestination,
+  purpose: string,
+): void => {
+  const decision = evaluateLocationUse({
+    destination,
+    purpose,
+  });
+
+  if (!decision.allowed) {
+    throw new DeviceLocationDestinationError(
+      destination as Exclude<LocationDestination, "memory">,
+    );
+  }
+};
+
+export type DeviceLocationTrackingLifecycle = Readonly<{
+  onModeChange: (enabled: boolean) => void;
+  onVisibilityChange: (visibilityState: DocumentVisibilityState) => void;
+  dispose: () => void;
+}>;
+
+/**
+ * Keeps watcher cleanup testable and makes mode-off, hidden-page, and unmount
+ * shutdown paths revoke the capability through the same idempotent stop.
+ */
+export const createDeviceLocationTrackingLifecycle = (
+  stopTracking: () => void,
+  authorization?: DeviceLocationUseAuthorization | null,
+): DeviceLocationTrackingLifecycle => {
+  let stopped = false;
+  const stopOnce = () => {
+    if (stopped) return;
+    stopped = true;
+    revokeDeviceLocationUseAuthorization(authorization);
+    stopTracking();
+  };
+
+  return {
+    onModeChange: (enabled) => {
+      if (!enabled) stopOnce();
+    },
+    onVisibilityChange: (visibilityState) => {
+      if (visibilityState === "hidden") stopOnce();
+    },
+    dispose: stopOnce,
+  };
+};
+
+
+===== apps/web/tests-unit/device-location-privacy.test.ts | whole-file SHA256 ffe99d65979a45a6e9a4c310f189386afbf329362af049b8feed0a39955bdd21 =====
+import { expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
+import * as locationGate from '../lib/privacy/location-gate';
+import {
+  DEVICE_LOCATION_DENIED_DESTINATIONS,
+  DEVICE_LOCATION_NETWORK_SINK,
+  DeviceLocationDestinationError,
+  acquireDeviceLocationUseAuthorization,
+  assertDeviceLocationDestination,
+  createDeviceLocationTrackingLifecycle,
+  evaluateLocationUse,
+  revokeDeviceLocationUseAuthorization,
+  type DeviceLocationUseAuthorization,
+  type LocationDestination,
+} from '../lib/privacy/location-gate';
+import { isPublicRestrictedMode } from '../lib/site-config';
+
+const webRoot = path.resolve(import.meta.dir, '..');
+const homeClientSource = readFileSync(
+  path.join(webRoot, 'app/home-client.tsx'),
+  'utf8',
+);
+const locationGateSource = readFileSync(
+  path.join(webRoot, 'lib/privacy/location-gate.ts'),
+  'utf8',
+);
+const naverMapSource = readFileSync(
+  path.join(webRoot, 'components/map/NaverMapView.tsx'),
+  'utf8',
+);
+const READY_AVAILABLE = {
+  status: 'available',
+  reasonCode: 'DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED',
+} as const;
+const READY_UNAVAILABLE = {
+  status: 'unavailable',
+  reasonCode: 'DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED',
+} as const;
+
+type FetchCall = Readonly<{
+  input: RequestInfo | URL;
+  init?: RequestInit;
+}>;
+
+async function withReadinessResponse<T>(
+  payload: unknown,
+  callback: (calls: FetchCall[]) => Promise<T>,
+  status = 200,
+): Promise<T> {
+  const originalFetch = globalThis.fetch;
+  const calls: FetchCall[] = [];
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return new Response(JSON.stringify(payload) ?? '', { status });
+  };
+
+  try {
+    return await callback(calls);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+const networkUse = (authorization: DeviceLocationUseAuthorization | null) =>
+  evaluateLocationUse({
+    purpose: 'home-map-device-marker',
+    destination: 'network',
+    networkSink: DEVICE_LOCATION_NETWORK_SINK,
+    authorization,
+  });
+
+test('readback acquisition is the only mint boundary and validates the exact response schema', async () => {
+  expect(acquireDeviceLocationUseAuthorization.length).toBe(0);
+
+  await withReadinessResponse(READY_AVAILABLE, async (calls) => {
+    const authorization = await acquireDeviceLocationUseAuthorization();
+    if (isPublicRestrictedMode) {
+      expect(authorization).toBeNull();
+      expect(calls).toHaveLength(0);
+      return;
+    }
+
+    expect(authorization).not.toBeNull();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe('/api/privacy/location-readiness');
+    expect(calls[0]?.init).toMatchObject({
+      method: 'GET',
+      credentials: 'same-origin',
+      mode: 'same-origin',
+      redirect: 'error',
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    });
+    expect(calls[0]?.init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  for (const payload of [
+    READY_UNAVAILABLE,
+    { ...READY_AVAILABLE, unexpected: true },
+    { status: 'available' },
+    { reasonCode: 'DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED' },
+    ['available', 'DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED'],
+    null,
+  ]) {
+    await withReadinessResponse(payload, async () => {
+      expect(await acquireDeviceLocationUseAuthorization()).toBeNull();
+    });
+  }
+
+  await withReadinessResponse(READY_AVAILABLE, async () => {
+    expect(await acquireDeviceLocationUseAuthorization()).toBeNull();
+  }, 503);
+});
+
+test('readiness literals, spreads, clones, and JSON cannot mint a capability without the removed factory API', async () => {
+  const readinessForms = [
+    READY_AVAILABLE,
+    { ...READY_AVAILABLE },
+    structuredClone(READY_AVAILABLE),
+    JSON.parse(JSON.stringify(READY_AVAILABLE)),
+  ];
+  const gateApi = locationGate as unknown as Record<string, unknown>;
+
+  for (const readiness of readinessForms) {
+    expect(readiness).toEqual(READY_AVAILABLE);
+    expect(Object.hasOwn(gateApi, 'createDeviceLocationUseAuthorization')).toBe(false);
+    expect(gateApi.createDeviceLocationUseAuthorization).toBeUndefined();
+  }
+
+  await withReadinessResponse(READY_UNAVAILABLE, async () => {
+    const acquireWithIgnoredArgument =
+      acquireDeviceLocationUseAuthorization as unknown as (
+        readiness: typeof READY_AVAILABLE,
+      ) => Promise<DeviceLocationUseAuthorization | null>;
+
+    for (const readiness of readinessForms) {
+      expect(await acquireWithIgnoredArgument(readiness)).toBeNull();
+    }
+  });
+});
+
+test('device coordinates use only approved memory and the exact Naver network sink', async () => {
+  const devicePosition = { latitude: 37.5665, longitude: 126.978 };
+  const sinkCalls: Array<{ destination: LocationDestination; value: unknown }> = [];
+
+  const sendToSink = (destination: LocationDestination) => {
+    assertDeviceLocationDestination(destination, 'home-map-device-marker');
+    sinkCalls.push({ destination, value: devicePosition });
+  };
+
+  await withReadinessResponse(READY_AVAILABLE, async () => {
+    const authorization = await acquireDeviceLocationUseAuthorization();
+    if (isPublicRestrictedMode) {
+      expect(authorization).toBeNull();
+      return;
+    }
+    expect(authorization).not.toBeNull();
+
+    expect(evaluateLocationUse({
+      purpose: 'home-map-device-marker',
+      destination: 'memory',
+      authorization,
+    })).toEqual({
+      allowed: true,
+      reasonCode: 'DEVICE_LOCATION_MEMORY_ONLY',
+    });
+    expect(networkUse(authorization)).toEqual({
+      allowed: true,
+      reasonCode: 'DEVICE_LOCATION_MAP_PROVIDER_NETWORK_ALLOWED',
+    });
+
+    for (const deniedUse of [
+      {
+        purpose: 'restaurant-map-marker',
+        destination: 'network',
+        networkSink: DEVICE_LOCATION_NETWORK_SINK,
+      },
+      {
+        purpose: 'home-map-device-marker',
+        destination: 'network',
+        networkSink: 'maplibre-overseas',
+      },
+      {
+        purpose: 'home-map-device-marker',
+        destination: 'network',
+        networkSink: '/api/location',
+      },
+      {
+        purpose: 'home-map-device-marker',
+        destination: 'network',
+        networkSink: DEVICE_LOCATION_NETWORK_SINK,
+        endpoint: '/api/location',
+      },
+      {
+        purpose: 'home-map-device-marker',
+        destination: 'url',
+      },
+    ] as const) {
+      expect(evaluateLocationUse({
+        ...deniedUse,
+        authorization,
+      })).toEqual({
+        allowed: false,
+        reasonCode: 'DEVICE_LOCATION_DESTINATION_DENIED',
+      });
+    }
+
+    for (const destination of DEVICE_LOCATION_DENIED_DESTINATIONS) {
+      if (destination !== 'network') {
+        expect(evaluateLocationUse({
+          purpose: 'home-map-device-marker',
+          destination,
+          authorization,
+        })).toEqual({
+          allowed: false,
+          reasonCode: 'DEVICE_LOCATION_DESTINATION_DENIED',
+        });
+      }
+      expect(() => sendToSink(destination)).toThrow(DeviceLocationDestinationError);
+    }
+  });
+
+  expect(devicePosition).toEqual({ latitude: 37.5665, longitude: 126.978 });
+  expect(sinkCalls).toEqual([]);
+});
+
+test('business source relabels do not bypass the device coordinate gate', async () => {
+  await withReadinessResponse(READY_AVAILABLE, async () => {
+    const authorization = await acquireDeviceLocationUseAuthorization();
+    const businessRelabel = {
+      source: 'business',
+      purpose: 'home-map-device-marker',
+      destination: 'network',
+      networkSink: DEVICE_LOCATION_NETWORK_SINK,
+      authorization,
+    } as unknown as Parameters<typeof evaluateLocationUse>[0];
+
+    expect(evaluateLocationUse(businessRelabel)).toEqual({
+      allowed: false,
+      reasonCode: 'DEVICE_LOCATION_DESTINATION_DENIED',
+    });
+    expect(locationGateSource).not.toContain('LocationSource');
+    expect(locationGateSource).not.toContain('BUSINESS_LOCATION_DESTINATION_ALLOWED');
+    expect(locationGateSource).not.toContain('source === "business"');
+  });
+});
+
+test('capabilities are opaque, revocable, and reject clone or relabel attempts', async () => {
+  await withReadinessResponse(READY_AVAILABLE, async () => {
+    const authorization = await acquireDeviceLocationUseAuthorization();
+    if (isPublicRestrictedMode) {
+      expect(authorization).toBeNull();
+      return;
+    }
+    expect(authorization).not.toBeNull();
+    if (!authorization) throw new Error('Expected ready authorization.');
+    expect(Object.isFrozen(authorization)).toBe(true);
+
+    const mutatedCopy = { ...authorization };
+    mutatedCopy.expiresAt += 5 * 60 * 1000;
+    const forgedAuthorizations = [
+      { ...authorization },
+      structuredClone(authorization),
+      JSON.parse(JSON.stringify(authorization)),
+      mutatedCopy,
+      Object.freeze({ ...authorization }),
+    ];
+
+    for (const forgedAuthorization of forgedAuthorizations) {
+      expect(networkUse(forgedAuthorization)).toEqual({
+        allowed: false,
+        reasonCode: 'DEVICE_LOCATION_DESTINATION_DENIED',
+      });
+    }
+    expect(() => {
+      (authorization as { grantedAt: number }).grantedAt += 1;
+    }).toThrow();
+
+    const retainedReference = authorization;
+    revokeDeviceLocationUseAuthorization(authorization);
+    revokeDeviceLocationUseAuthorization(authorization);
+    expect(networkUse(retainedReference)).toEqual({
+      allowed: false,
+      reasonCode: 'DEVICE_LOCATION_DESTINATION_DENIED',
+    });
+  });
+});
+
+test('monotonic expiry cannot be revived by replaying an earlier clock value', async () => {
+  const clock = { value: 1_000 };
+  const originalNowDescriptor = Object.getOwnPropertyDescriptor(
+    globalThis.performance,
+    'now',
+  );
+  Object.defineProperty(globalThis.performance, 'now', {
+    configurable: true,
+    value: () => clock.value,
+  });
+
+  let clockedGate: typeof import('../lib/privacy/location-gate');
+  try {
+    clockedGate = await import(
+      `../lib/privacy/location-gate.ts?monotonic-clock=${Math.random()}`,
+    );
+  } finally {
+    if (originalNowDescriptor) {
+      Object.defineProperty(globalThis.performance, 'now', originalNowDescriptor);
+    } else {
+      delete (globalThis.performance as { now?: () => number }).now;
+    }
+  }
+
+  await withReadinessResponse(READY_AVAILABLE, async () => {
+    const authorization = await clockedGate.acquireDeviceLocationUseAuthorization();
+    if (isPublicRestrictedMode) {
+      expect(authorization).toBeNull();
+      return;
+    }
+    expect(authorization).not.toBeNull();
+    if (!authorization) throw new Error('Expected ready authorization.');
+
+    expect(clockedGate.evaluateLocationUse({
+      purpose: 'home-map-device-marker',
+      destination: 'network',
+      networkSink: 'naver-maps-javascript',
+      authorization,
+    })).toMatchObject({ allowed: true });
+
+    clock.value = authorization.expiresAt;
+    expect(clockedGate.evaluateLocationUse({
+      purpose: 'home-map-device-marker',
+      destination: 'network',
+      networkSink: 'naver-maps-javascript',
+      authorization,
+    })).toMatchObject({ allowed: false });
+
+    clock.value = authorization.grantedAt + 1;
+    expect(clockedGate.evaluateLocationUse({
+      purpose: 'home-map-device-marker',
+      destination: 'network',
+      networkSink: 'naver-maps-javascript',
+      authorization,
+    })).toMatchObject({ allowed: false });
+  });
+
+  expect(locationGateSource).toContain(
+    'const capturedMonotonicNow = globalThis.performance.now.bind(globalThis.performance);',
+  );
+  expect(locationGateSource).not.toContain('now?:');
+  expect(locationGateSource).not.toContain('Date.now()');
+});
+
+test('fractional monotonic timestamps retain authorization until exact expiry and never revive it', async () => {
+  const grantedTimes = [262144.02702702704, 262144.1081081081, 262144.1621621622];
+  for (const [index, grantedAt] of grantedTimes.entries()) {
+    const clock = { value: grantedAt };
+    const original = Object.getOwnPropertyDescriptor(globalThis.performance, 'now');
+    let gate: typeof import('../lib/privacy/location-gate');
+    Object.defineProperty(globalThis.performance, 'now', {
+      configurable: true,
+      value: () => clock.value,
+    });
+    try {
+      gate = await import(`../lib/privacy/location-gate.ts?fractional-clock=${index}`);
+    } finally {
+      if (original) Object.defineProperty(globalThis.performance, 'now', original);
+      else delete (globalThis.performance as { now?: () => number }).now;
+    }
+
+    await withReadinessResponse(READY_AVAILABLE, async () => {
+      const authorization = await gate.acquireDeviceLocationUseAuthorization();
+      if (isPublicRestrictedMode) {
+        expect(authorization).toBeNull();
+        return;
+      }
+      expect(authorization).not.toBeNull();
+      if (!authorization) throw new Error('Expected ready authorization.');
+      const use = () => gate.evaluateLocationUse({
+        purpose: 'home-map-device-marker',
+        destination: 'network',
+        networkSink: DEVICE_LOCATION_NETWORK_SINK,
+        authorization,
+      });
+      expect(use().allowed).toBe(true);
+      clock.value = authorization.expiresAt - 0.001;
+      expect(use().allowed).toBe(true);
+      clock.value = authorization.expiresAt;
+      expect(use().allowed).toBe(false);
+      clock.value = grantedAt;
+      expect(use().allowed).toBe(false);
+    });
+  }
+});
+
+test('tracking lifecycle revokes the genuine capability exactly once on every stop path', async () => {
+  await withReadinessResponse(READY_AVAILABLE, async () => {
+    const stopFor = async (
+      invoke: (
+        lifecycle: ReturnType<typeof createDeviceLocationTrackingLifecycle>,
+      ) => void,
+    ) => {
+      const authorization = await acquireDeviceLocationUseAuthorization();
+      if (isPublicRestrictedMode) {
+        expect(authorization).toBeNull();
+        return;
+      }
+      expect(authorization).not.toBeNull();
+      if (!authorization) throw new Error('Expected ready authorization.');
+
+      let stopCount = 0;
+      const lifecycle = createDeviceLocationTrackingLifecycle(
+        () => {
+          stopCount += 1;
+        },
+        authorization,
+      );
+
+      invoke(lifecycle);
+      lifecycle.onModeChange(false);
+      lifecycle.onVisibilityChange('hidden');
+      lifecycle.dispose();
+
+      expect(stopCount).toBe(1);
+      expect(networkUse(authorization)).toEqual({
+        allowed: false,
+        reasonCode: 'DEVICE_LOCATION_DESTINATION_DENIED',
+      });
+    };
+
+    await stopFor((lifecycle) => lifecycle.onModeChange(false));
+    await stopFor((lifecycle) => lifecycle.onVisibilityChange('hidden'));
+    await stopFor((lifecycle) => lifecycle.dispose());
+  });
+});
+
+test('home client revokes retained capabilities on readiness failure, lifecycle cleanup, and errors', () => {
+  const clearStart = homeClientSource.indexOf(
+    'const clearDeviceLocationState = useCallback',
+  );
+  const clearEnd = homeClientSource.indexOf(
+    'const startDeviceOrientationTracking',
+    clearStart,
+  );
+  const handlerStart = homeClientSource.indexOf(
+    'const handleDeviceLocationClick = useCallback',
+  );
+  const visibilityStart = homeClientSource.indexOf(
+    'const handleVisibilityChange = () =>',
+  );
+  const renderStart = homeClientSource.indexOf(
+    'const shouldRenderSidePanels',
+    visibilityStart,
+  );
+  const watchStart = homeClientSource.indexOf(
+    'const startDeviceLocationWatch = useCallback',
+  );
+  const handlerSource = homeClientSource.slice(handlerStart, visibilityStart);
+  const clearSource = homeClientSource.slice(clearStart, clearEnd);
+  const visibilitySource = homeClientSource.slice(visibilityStart, renderStart);
+  const watchSource = homeClientSource.slice(watchStart, handlerStart);
+
+  expect(clearSource).toContain('revokeDeviceLocationUseAuthorization(authorization);');
+  expect(clearSource).toContain('deviceLocationAuthorizationRef.current = null;');
+  expect(clearSource).toContain('setDeviceLocation(null);');
+  expect(clearSource).toContain('setIsDeviceHeadingMode(false);');
+  expect(handlerSource).toContain(
+    'const authorization = await acquireDeviceLocationUseAuthorization();',
+  );
+  expect(handlerSource).toContain('if (!authorization)');
+  expect(handlerSource).toContain('clearDeviceLocationState();');
+  expect(handlerSource).toContain('revokeDeviceLocationUseAuthorization(authorization);');
+  expect(handlerSource).toContain('deviceLocationAuthorizationExpiryTimerRef');
+  expect(watchSource).toContain(
+    'createDeviceLocationTrackingLifecycle(\n        stopDeviceHeadingWatchers,\n        authorization,',
+  );
+  expect(watchSource).toContain('clearDeviceLocationState();');
+  expect(visibilitySource).toContain('onVisibilityChange(');
+  expect(visibilitySource).toContain(
+    'document.removeEventListener("visibilitychange", handleVisibilityChange)',
+  );
+  expect(visibilitySource).toContain('deviceLocationMountedRef.current = false;');
+  expect(visibilitySource).toContain('clearDeviceLocationState();');
+});
+
+test('home client keeps the capability boundary before disclosure and confines rendering to Naver', () => {
+  const handlerStart = homeClientSource.indexOf(
+    'const handleDeviceLocationClick = useCallback',
+  );
+  const handlerEnd = homeClientSource.indexOf(
+    'const shouldRenderSidePanels',
+    handlerStart,
+  );
+  const handlerSource = homeClientSource.slice(handlerStart, handlerEnd);
+  const authorizationIndex = handlerSource.indexOf(
+    'const authorization = await acquireDeviceLocationUseAuthorization()',
+  );
+  const deniedGuardIndex = handlerSource.indexOf('if (!authorization)');
+  const disclosureIndex = handlerSource.indexOf(
+    'window.confirm(DEVICE_LOCATION_DISCLOSURE)',
+  );
+  const geolocationIndex = handlerSource.indexOf(
+    'navigator.geolocation.getCurrentPosition',
+  );
+
+  expect(authorizationIndex).toBeGreaterThan(-1);
+  expect(deniedGuardIndex).toBeGreaterThan(authorizationIndex);
+  expect(disclosureIndex).toBeGreaterThan(deniedGuardIndex);
+  expect(geolocationIndex).toBeGreaterThan(disclosureIndex);
+  expect(homeClientSource).toContain('networkSink: DEVICE_LOCATION_NETWORK_SINK');
+  expect(homeClientSource).toContain(
+    'deviceLocation={mapMode === "domestic" ? deviceLocation : null}',
+  );
+  expect(homeClientSource).toContain(
+    'if (mapMode === "overseas") {\n      clearDeviceLocationState();',
+  );
+  expect(homeClientSource).toContain(
+    '현재 위치 좌표는 현재 React 메모리에만 보관되며 Tzudong에 저장되지 않습니다. 브라우저 지도 렌더링 및 화면 이동은 승인된 지도 제공자 경계를 통과할 수 있습니다.',
+  );
+  expect(homeClientSource).toContain(
+    '현재 위치를 지금 표시하지 못했어요. 잠시 후 다시 시도해 주세요.',
+  );
+  expect(homeClientSource).toContain('function describeDeviceLocationFailure');
+  expect(homeClientSource).toContain('위치 권한이 거부됐어요');
+  expect(homeClientSource).toContain('현재 위치를 찾는 시간이 초과됐어요');
+  expect(homeClientSource).toContain('현재 위치를 확인할 수 없어요');
+  expect(homeClientSource).toContain('toast.error(describeDeviceLocationFailure(error));');
+  expect(naverMapSource).toContain(
+    '// Renders authorized device coordinates at the approved map-provider boundary.',
+  );
+});
+
+
+===== apps/web/lib/evidence-engineering/badge-device-capability.ts | whole-file SHA256 d3d0f575f0e483dfbb5ab465379f0f65c95d28ec97b0190335710cd840125b68 =====
+import { getTierFromHardware, type DevicePerformance } from "@/hooks/useDevicePerformance";
+
+/** Conservative policy for the optional viewer, not a physical device/model detector. */
+export function shouldUseStaticBadgeViewer(
+  performance: Pick<DevicePerformance, "isLowEndDevice" | "cpuCores" | "memoryGB">,
+  browser: { userAgent: string; maxTouchPoints: number } | null,
+): boolean {
+  if (performance.isLowEndDevice || !browser) return true;
+  const mobileOrTouch = /Android|iPhone|iPad|iPod|Mobile/i.test(browser.userAgent)
+    || browser.maxTouchPoints > 0;
+  if (!mobileOrTouch) return false;
+
+  // OS versions cannot identify iPhone hardware. Missing/coarse memory data is
+  // deliberately insufficient to opt a touch/mobile device into experimental 3D.
+  const { memoryGB, cpuCores } = performance;
+  return memoryGB === null || !Number.isFinite(memoryGB)
+    || getTierFromHardware(cpuCores, memoryGB) !== "HIGH";
+}
+
+
+===== apps/web/hooks/useDevicePerformance.ts | whole-file SHA256 db9f8cfeecf7d7086482752e48455a4d9fd1150412a1a360cd28715d9d05f5ca =====
+'use client';
+
+import { useMemo } from 'react';
+
+/**
+ * 디바이스 성능 티어
+ * - HIGH: iPhone 14 Pro+, iPad Pro, Galaxy S23+, Pixel 7+ (6GB+ RAM, 8코어+)
+ * - MEDIUM: iPhone 12/13, iPad Air, Galaxy S21, Pixel 5 (4-6GB RAM, 6코어)
+ * - LOW: iPhone SE, iPhone 11 이하, Galaxy A 시리즈, 저가 Android (<4GB RAM)
+ */
+export type PerformanceTier = 'HIGH' | 'MEDIUM' | 'LOW';
+
+export interface DevicePerformance {
+    /** 성능 티어 */
+    tier: PerformanceTier;
+    /** CPU 논리 코어 수 */
+    cpuCores: number;
+    /** RAM 용량 (GB), Chrome/Edge에서만 사용 가능, Safari는 null */
+    memoryGB: number | null;
+    /** 감지된 디바이스 모델 (예: "iPhone 12", "Galaxy S21") */
+    deviceModel: string | null;
+    /** 저성능 디바이스 여부 (LOW 티어) */
+    isLowEndDevice: boolean;
+    /** 고성능 디바이스 여부 (HIGH 티어) */
+    isHighEndDevice: boolean;
+}
+
+type NavigatorWithDeviceMemory = Navigator & {
+    deviceMemory?: number;
+};
+
+/**
+ * iPhone 모델별 성능 티어 매핑
+ * User-Agent에서 iPhone 버전 추출 후 매핑
+ */
+const IPHONE_TIER_MAP: Record<string, PerformanceTier> = {
+    // LOW 티어 (A13 이하, 4GB 미만)
+    'iPhone SE': 'LOW',
+    'iPhone 6': 'LOW',
+    'iPhone 7': 'LOW',
+    'iPhone 8': 'LOW',
+    'iPhone X': 'LOW',
+    'iPhone XR': 'LOW',
+    'iPhone XS': 'LOW',
+    'iPhone 11': 'LOW',
+
+    // MEDIUM 티어 (A14-A15, 4-6GB)
+    'iPhone 12': 'MEDIUM',
+    'iPhone 12 mini': 'MEDIUM',
+    'iPhone 12 Pro': 'MEDIUM',
+    'iPhone 12 Pro Max': 'MEDIUM',
+    'iPhone 13': 'MEDIUM',
+    'iPhone 13 mini': 'MEDIUM',
+    'iPhone 13 Pro': 'MEDIUM',
+    'iPhone 13 Pro Max': 'MEDIUM',
+    'iPhone 14': 'MEDIUM',
+    'iPhone 14 Plus': 'MEDIUM',
+
+    // HIGH 티어 (A16-A17 Pro, 6GB+)
+    'iPhone 14 Pro': 'HIGH',
+    'iPhone 14 Pro Max': 'HIGH',
+    'iPhone 15': 'HIGH',
+    'iPhone 15 Plus': 'HIGH',
+    'iPhone 15 Pro': 'HIGH',
+    'iPhone 15 Pro Max': 'HIGH',
+    'iPhone 16': 'HIGH',
+    'iPhone 16 Plus': 'HIGH',
+    'iPhone 16 Pro': 'HIGH',
+    'iPhone 16 Pro Max': 'HIGH',
+};
+
+/**
+ * iPad 모델별 성능 티어 매핑
+ */
+const IPAD_TIER_MAP: Record<string, PerformanceTier> = {
+    'iPad': 'MEDIUM',
+    'iPad mini': 'MEDIUM',
+    'iPad Air': 'MEDIUM',
+    'iPad Pro': 'HIGH',
+};
+
+/**
+ * User-Agent에서 디바이스 모델 추출
+ */
+function detectDeviceModel(userAgent: string): string | null {
+    // iOS 디바이스 (iPhone/iPad)
+    // iOS Safari는 정확한 모델을 노출하지 않음, 대신 iOS 버전으로 추정
+    if (/iPhone/.test(userAgent)) {
+        // iOS 버전으로 iPhone 세대 추정
+        const iosVersionMatch = userAgent.match(/OS (\d+)_/);
+        if (iosVersionMatch) {
+            const iosVersion = parseInt(iosVersionMatch[1], 10);
+            // iOS 18+ → iPhone 16 시리즈 (또는 최신)
+            if (iosVersion >= 18) return 'iPhone 15'; // 최신 추정
+            // iOS 17 → iPhone 14/15 시리즈
+            if (iosVersion >= 17) return 'iPhone 14 Pro';
+            // iOS 16 → iPhone 13/14 시리즈
+            if (iosVersion >= 16) return 'iPhone 13';
+            // iOS 15 → iPhone 12/13 시리즈
+            if (iosVersion >= 15) return 'iPhone 12';
+            // iOS 14 이하 → 구형 기기
+            return 'iPhone 11';
+        }
+        return 'iPhone 12'; // 기본값
+    }
+
+    if (/iPad/.test(userAgent)) {
+        if (/iPad Pro/.test(userAgent)) return 'iPad Pro';
+        if (/iPad Air/.test(userAgent)) return 'iPad Air';
+        if (/iPad mini/.test(userAgent)) return 'iPad mini';
+        return 'iPad';
+    }
+
+    // Samsung Galaxy
+    const galaxyMatch = userAgent.match(/SM-([A-Z])(\d{3})/);
+    if (galaxyMatch) {
+        const series = galaxyMatch[1];
+        const model = parseInt(galaxyMatch[2], 10);
+
+        // S 시리즈 (플래그십)
+        if (series === 'S' || series === 'G') {
+            if (model >= 900) return 'Galaxy S23'; // HIGH
+            if (model >= 800) return 'Galaxy S21'; // MEDIUM
+            return 'Galaxy S20'; // MEDIUM
+        }
+        // A 시리즈 (중저가)
+        if (series === 'A') {
+            if (model >= 50) return 'Galaxy A53'; // MEDIUM
+            return 'Galaxy A33'; // LOW
+        }
+    }
+
+    // Google Pixel
+    const pixelMatch = userAgent.match(/Pixel (\d+)/);
+    if (pixelMatch) {
+        const pixelVersion = parseInt(pixelMatch[1], 10);
+        if (pixelVersion >= 7) return 'Pixel 7'; // HIGH
+        if (pixelVersion >= 5) return 'Pixel 5'; // MEDIUM
+        return 'Pixel 4'; // LOW
+    }
+
+    return null;
+}
+
+/**
+ * 디바이스 모델에서 성능 티어 결정
+ */
+function getTierFromModel(model: string | null): PerformanceTier | null {
+    if (!model) return null;
+
+    // iPhone 매핑
+    for (const [key, tier] of Object.entries(IPHONE_TIER_MAP)) {
+        if (model.includes(key)) return tier;
+    }
+
+    // iPad 매핑
+    for (const [key, tier] of Object.entries(IPAD_TIER_MAP)) {
+        if (model.includes(key)) return tier;
+    }
+
+    // Galaxy/Pixel 매핑
+    if (model.includes('Galaxy S23') || model.includes('Galaxy S24')) return 'HIGH';
+    if (model.includes('Galaxy S2') || model.includes('Galaxy A5')) return 'MEDIUM';
+    if (model.includes('Galaxy A3')) return 'LOW';
+    if (model.includes('Pixel 7') || model.includes('Pixel 8')) return 'HIGH';
+    if (model.includes('Pixel 5') || model.includes('Pixel 6')) return 'MEDIUM';
+    if (model.includes('Pixel 4') || model.includes('Pixel 3')) return 'LOW';
+
+    return null;
+}
+
+/**
+ * CPU 코어 수와 메모리로 성능 티어 추정
+ */
+export function getTierFromHardware(cpuCores: number, memoryGB: number | null): PerformanceTier {
+    // 메모리 기반 (Chrome/Edge)
+    if (memoryGB !== null) {
+        if (memoryGB >= 6) return 'HIGH';
+        if (memoryGB >= 4) return 'MEDIUM';
+        return 'LOW';
+    }
+
+    // CPU 코어 기반 (Safari 등 메모리 API 미지원)
+    if (cpuCores >= 8) return 'HIGH';
+    if (cpuCores >= 4) return 'MEDIUM';
+    return 'LOW';
+}
+
+/**
+ * [OPTIMIZATION] 디바이스 성능 정보를 한 번만 계산하는 헬퍼 함수
+ * SSR에서는 기본값 반환, 브라우저에서는 즉시 계산
+ */
+function calculateDevicePerformance(): DevicePerformance {
+    // SSR 환경
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+        return {
+            tier: 'MEDIUM',
+            cpuCores: 4,
+            memoryGB: null,
+            deviceModel: null,
+            isLowEndDevice: false,
+            isHighEndDevice: false,
+        };
+    }
+
+    // 브라우저 환경 - 즉시 계산
+    const userAgent = navigator.userAgent;
+    const cpuCores = navigator.hardwareConcurrency || 4;
+    const memoryGB = (navigator as NavigatorWithDeviceMemory).deviceMemory ?? null;
+    const deviceModel = detectDeviceModel(userAgent);
+
+    // 1순위: 디바이스 모델 기반 티어
+    let tier = getTierFromModel(deviceModel);
+
+    // 2순위: 하드웨어 스펙 기반 티어
+    if (!tier) {
+        tier = getTierFromHardware(cpuCores, memoryGB);
+    }
+
+    return {
+        tier,
+        cpuCores,
+        memoryGB,
+        deviceModel,
+        isLowEndDevice: tier === 'LOW',
+        isHighEndDevice: tier === 'HIGH',
+    };
+}
+
+/**
+ * [OPTIMIZATION] 계산된 성능 정보를 캐싱하여 여러 컴포넌트에서 재사용
+ * 모듈 레벨 캐시로 중복 계산 방지
+ */
+let cachedPerformance: DevicePerformance | null = null;
+
+function getOrCalculatePerformance(): DevicePerformance {
+    if (cachedPerformance === null) {
+        cachedPerformance = calculateDevicePerformance();
+    }
+    return cachedPerformance;
+}
+
+/**
+ * 디바이스 성능 티어를 감지하는 훅
+ * 
+ * [OPTIMIZATION] 
+ * - 초기 렌더링에서 바로 올바른 성능 티어 사용
+ * - useEffect 없이 동기적 계산으로 리렌더링 제거
+ * - 모듈 레벨 캐시로 중복 계산 방지
+ * 
+ * @example
+ * const { tier, isLowEndDevice } = useDevicePerformance();
+ * 
+ * if (isLowEndDevice) {
+ *     // 애니메이션 비활성화
+ * }
+ */
+export function useDevicePerformance(): DevicePerformance {
+    // [OPTIMIZATION] useMemo 대신 모듈 레벨 캐시 사용
+    // - useState/useEffect 없이 동기적 반환
+    // - 여러 컴포넌트에서 호출해도 1회만 계산
+    const performance = useMemo(() => getOrCalculatePerformance(), []);
+
+    return performance;
+}
+
+
+===== apps/web/components/restaurant/PopularityBadge.tsx | whole-file SHA256 3e002ca1aefa4e55a52a1b25624c24ce1d084b0084aace15e7ecd04ebeeec710 =====
+"use client";
+
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+
+import { useDevicePerformance } from "@/hooks/useDevicePerformance";
+import { shouldUseStaticBadgeViewer } from "@/lib/evidence-engineering/badge-device-capability";
+import { handleBadgeViewerCloseKey, restoreBadgeViewerFocus } from "@/lib/evidence-engineering/badge-viewer-lifecycle";
+
+const Badge3DViewer = dynamic(
+  () => import("./Badge3DViewer"),
+  { ssr: false, loading: () => null },
+);
+
+export const POPULARITY_BADGE_KINDS = ["fire", "rainbow"] as const;
+export const BADGE_BYTE_COUNT_IS_PASS_THRESHOLD = false;
+const BADGE_SRC = {
+  fire: "/assets/badges/badge_popular_fire_40.webp",
+  rainbow: "/assets/badges/badge_popular_rainbow_40.webp",
+} as const satisfies Record<(typeof POPULARITY_BADGE_KINDS)[number], string>;
+
+export type BadgeViewerPhase = "off" | "offer" | "open";
+
+export function badgeViewerPhase(experimental3D: boolean, open: boolean): BadgeViewerPhase {
+  if (!experimental3D) return "off";
+  return open ? "open" : "offer";
+}
+
+function StaticBadgeViewer({ tier, onClose }: { tier: "fire" | "rainbow"; onClose: () => void }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { rootRef.current?.focus(); }, []);
+  return (
+    <div
+      ref={rootRef}
+      role="dialog"
+      aria-label="3D 배지"
+      tabIndex={0}
+      data-badge-3d={tier}
+      data-badge-viewer="fallback"
+      onKeyDown={(event) => handleBadgeViewerCloseKey(event, onClose)}
+    >
+      <p>정적 배지로 표시합니다.</p>
+      <button type="button" onClick={onClose}>닫기</button>
+    </div>
+  );
+}
+
+export function PopularityBadge({
+  tier,
+  experimental3D = false,
+}: {
+  tier: "fire" | "rainbow" | "standard";
+  experimental3D?: boolean;
+}) {
+  const performance = useDevicePerformance();
+  const useStaticViewer = shouldUseStaticBadgeViewer(
+    performance,
+    typeof navigator === "undefined" ? null : navigator,
+  );
+  const [open, setOpen] = useState(false);
+  const [assetFailed, setAssetFailed] = useState(false);
+  const openerRef = useRef<HTMLButtonElement>(null);
+  const shouldRestoreFocusRef = useRef(false);
+  const closeViewer = useCallback(() => {
+    shouldRestoreFocusRef.current = true;
+    setOpen(false);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (open || !shouldRestoreFocusRef.current) return;
+    shouldRestoreFocusRef.current = false;
+    restoreBadgeViewerFocus(openerRef.current);
+  }, [open]);
+
+  if (tier === "standard" || assetFailed) return null;
+  const phase = badgeViewerPhase(experimental3D, open);
+  return (
+    <section aria-label="인기 맛집 배지" className="tz-popularity-badge">
+      <style>{`
+        .tz-popularity-badge img { transform: scale(1); }
+        @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+          .tz-popularity-badge img { transition: transform var(--duration-quick, 150ms) var(--ease-smooth-out, cubic-bezier(0.22, 1, 0.36, 1)); }
+          .tz-popularity-badge:hover img { transform: scale(1.15); }
+        }
+      `}</style>
+      {/* eslint-disable-next-line @next/next/no-img-element -- Static badge WebP hides itself when the file is missing, and the hover scale targets this img. */}
+      <img
+        src={BADGE_SRC[tier]}
+        srcSet={`${BADGE_SRC[tier]} 1x, /assets/badges/badge_popular_${tier}_80.webp 2x`}
+        alt={tier === "fire" ? "인기 맛집 불꽃 배지" : "인기 맛집 무지개 배지"}
+        width={40}
+        height={40}
+        onError={() => setAssetFailed(true)}
+      />
+      {phase !== "off" ? (
+        <button
+          ref={openerRef}
+          type="button"
+          aria-haspopup="dialog"
+          aria-expanded={phase === "open"}
+          hidden={phase === "open"}
+          onClick={() => {
+            shouldRestoreFocusRef.current = false;
+            setOpen(true);
+          }}
+        >
+          3D 보기
+        </button>
+      ) : null}
+      {phase === "open" ? (
+        useStaticViewer
+          ? <StaticBadgeViewer tier={tier} onClose={closeViewer} />
+          : <Badge3DViewer tier={tier} onClose={closeViewer} lowPower={useStaticViewer} />
+      ) : null}
+    </section>
+  );
+}
+
+
+===== apps/web/components/restaurant/Badge3DViewer.tsx | whole-file SHA256 a54439aa7e2046f7ab96c8cedf9963d7fb0abd258e5a0fb21080581ba58ed760 =====
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import {
+  AmbientLight,
+  CylinderGeometry,
+  DirectionalLight,
+  Mesh,
+  MeshStandardMaterial,
+  PerspectiveCamera,
+  Scene,
+  WebGLRenderer,
+} from "three";
+
+import { createBadgeViewerSession } from "@/lib/evidence-engineering/badge-viewer-session";
+import {
+  createBadgeContextLossHandler,
+  createBadgeContextRecoveryLimit,
+  handleBadgeViewerCloseKey,
+  releaseBadgeRendererResources,
+  sizeBadgeCanvas,
+  startBadgeRenderLoop,
+} from "@/lib/evidence-engineering/badge-viewer-lifecycle";
+
+const TIER_COLOR = { fire: 0xff6a00, rainbow: 0x7c5cff } as const;
+
+export default function Badge3DViewer({
+  tier,
+  onClose,
+  lowPower = false,
+}: {
+  tier: "fire" | "rainbow";
+  onClose: () => void;
+  lowPower: boolean;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [staticFallback, setStaticFallback] = useState(lowPower);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    const host = hostRef.current;
+    if (!root || !host) return;
+    const session = createBadgeViewerSession();
+    let disposed = false;
+    let renderer: WebGLRenderer | null = null;
+    let geometry: CylinderGeometry | null = null;
+    let material: MeshStandardMaterial | null = null;
+    let canvas: HTMLCanvasElement | null = null;
+    let contextLossListener: EventListener | null = null;
+    let stopAnimation: (() => void) | null = null;
+    const tryContextRecovery = createBadgeContextRecoveryLimit();
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const teardownRenderer = () => {
+      releaseBadgeRendererResources({
+        canvas,
+        contextLossListener,
+        stopAnimation,
+        disposeGeometry: () => geometry?.dispose(),
+        disposeMaterial: () => material?.dispose(),
+        disposeRenderer: () => renderer?.dispose(),
+        forceContextLoss: () => renderer?.forceContextLoss(),
+      });
+      stopAnimation = null;
+      contextLossListener = null;
+      geometry = null;
+      material = null;
+      renderer = null;
+      canvas = null;
+    };
+
+    const showStaticFallback = () => {
+      root.setAttribute("data-badge-viewer", "fallback");
+      setStaticFallback(true);
+    };
+
+    const mount = () => {
+      if (disposed) return;
+      if (lowPower) {
+        root.setAttribute("data-badge-viewer", session.open(true));
+        showStaticFallback();
+        return;
+      }
+      try {
+        root.setAttribute("data-badge-viewer", session.open(false));
+      } catch (error) {
+        if (error instanceof Error && error.message === "duplicate_badge_renderer") {
+          showStaticFallback();
+          return;
+        }
+        throw error;
+      }
+      canvas = document.createElement("canvas");
+      canvas.setAttribute("aria-hidden", "true");
+      host.appendChild(canvas);
+      try {
+        renderer = new WebGLRenderer({ canvas, alpha: true, antialias: false });
+        if (renderer.getContext() == null) throw new Error("webgl_unavailable");
+      } catch {
+        session.loseContext();
+        teardownRenderer();
+        showStaticFallback();
+        return;
+      }
+      sizeBadgeCanvas(canvas, renderer, window.devicePixelRatio);
+      const scene = new Scene();
+      const camera = new PerspectiveCamera(40, 1, 0.1, 10);
+      camera.position.z = 2.8;
+      geometry = new CylinderGeometry(0.66, 0.5, 0.24, 7, 1, false);
+      material = new MeshStandardMaterial({
+        color: TIER_COLOR[tier],
+        flatShading: true,
+        metalness: 0.3,
+        roughness: 0.34,
+      });
+      const mesh = new Mesh(geometry, material);
+      mesh.rotation.x = Math.PI / 2 - 0.22;
+      mesh.rotation.y = 0.36;
+      mesh.rotation.z = -0.14;
+      const ambientLight = new AmbientLight(0xffffff, 1.15);
+      const keyLight = new DirectionalLight(0xffffff, 3.2);
+      keyLight.position.set(2.5, 3.5, 4);
+      const fillLight = new DirectionalLight(0x8fb8ff, 1.1);
+      fillLight.position.set(-3, -1.5, 2.5);
+      scene.add(mesh, ambientLight, keyLight, fillLight);
+      stopAnimation = startBadgeRenderLoop({
+        reducedMotion,
+        rotate: () => {
+          mesh.rotation.y += 0.015;
+          mesh.rotation.z += 0.0025;
+        },
+        render: () => renderer?.render(scene, camera),
+        requestFrame: (callback) => window.requestAnimationFrame(callback),
+        cancelFrame: (handle) => window.cancelAnimationFrame(handle),
+      });
+      contextLossListener = createBadgeContextLossHandler({
+        releaseLostContext: () => {
+          session.loseContext();
+          teardownRenderer();
+        },
+        tryRecover: tryContextRecovery,
+        recover: mount,
+        fallback: showStaticFallback,
+      });
+      canvas.addEventListener("webglcontextlost", contextLossListener);
+    };
+
+    mount();
+    root.focus();
+    return () => {
+      disposed = true;
+      teardownRenderer();
+      session.release();
+    };
+  }, [lowPower, tier]);
+
+  return (
+    <div
+      ref={rootRef}
+      role="dialog"
+      aria-label="3D 배지"
+      tabIndex={0}
+      data-badge-3d={tier}
+      data-badge-viewer={lowPower ? "fallback" : "viewer"}
+      onKeyDown={(event) => {
+        handleBadgeViewerCloseKey(event, onClose);
+      }}
+    >
+      <div ref={hostRef} />
+      {staticFallback ? <p>정적 배지로 표시합니다.</p> : null}
+      <button type="button" onClick={onClose}>닫기</button>
+    </div>
+  );
+}
+
+
+===== apps/web/lib/evidence-engineering/badge-viewer-lifecycle.ts | whole-file SHA256 b470fe9fb3c3a8c9984cc075f3be1004f394c6732872b6c6b94e67310372dfd0 =====
+import { badgeViewerClosesOnKey } from "./badge-viewer-session";
+
+type BadgeCanvasSurface = {
+  style: {
+    display: string;
+    height: string;
+    width: string;
+  };
+  remove(): void;
+  removeEventListener(type: "webglcontextlost", listener: EventListener): void;
+};
+
+type BadgeRendererSurface = {
+  setPixelRatio(value: number): void;
+  setSize(width: number, height: number, updateStyle?: boolean): void;
+};
+
+export function sizeBadgeCanvas(
+  canvas: BadgeCanvasSurface,
+  renderer: Pick<BadgeRendererSurface, "setPixelRatio" | "setSize">,
+  devicePixelRatio: number,
+  logicalSize = 120,
+): void {
+  canvas.style.display = "block";
+  canvas.style.width = `${logicalSize}px`;
+  canvas.style.height = `${logicalSize}px`;
+  renderer.setPixelRatio(Math.min(Math.max(devicePixelRatio || 1, 1), 2));
+  renderer.setSize(logicalSize, logicalSize, false);
+}
+
+export function startBadgeRenderLoop({
+  reducedMotion,
+  rotate,
+  render,
+  requestFrame,
+  cancelFrame,
+}: {
+  reducedMotion: boolean;
+  rotate: () => void;
+  render: () => void;
+  requestFrame: (callback: FrameRequestCallback) => number;
+  cancelFrame: (handle: number) => void;
+}): () => void {
+  let stopped = false;
+  let frame: number | null = null;
+
+  const draw: FrameRequestCallback = () => {
+    if (stopped) return;
+    if (!reducedMotion) rotate();
+    render();
+    if (!reducedMotion) frame = requestFrame(draw);
+  };
+
+  draw(0);
+
+  return () => {
+    stopped = true;
+    if (frame !== null) cancelFrame(frame);
+    frame = null;
+  };
+}
+
+export function releaseBadgeRendererResources({
+  canvas,
+  contextLossListener,
+  stopAnimation,
+  disposeGeometry,
+  disposeMaterial,
+  disposeRenderer,
+  forceContextLoss,
+}: {
+  canvas: BadgeCanvasSurface | null;
+  contextLossListener: EventListener | null;
+  stopAnimation: (() => void) | null;
+  disposeGeometry: () => void;
+  disposeMaterial: () => void;
+  disposeRenderer: () => void;
+  forceContextLoss: () => void;
+}): void {
+  stopAnimation?.();
+  if (canvas && contextLossListener) {
+    canvas.removeEventListener("webglcontextlost", contextLossListener);
+  }
+  disposeGeometry();
+  disposeMaterial();
+  disposeRenderer();
+  forceContextLoss();
+  canvas?.remove();
+}
+
+export function createBadgeContextLossHandler({
+  releaseLostContext,
+  tryRecover,
+  recover,
+  fallback,
+}: {
+  releaseLostContext: () => void;
+  tryRecover: () => boolean;
+  recover: () => void;
+  fallback: () => void;
+}): EventListener {
+  return (event) => {
+    event.preventDefault();
+    releaseLostContext();
+    if (tryRecover()) {
+      recover();
+      return;
+    }
+    fallback();
+  };
+}
+
+export function createBadgeContextRecoveryLimit(maxRecoveries = 1): () => boolean {
+  let recoveryCount = 0;
+  return () => {
+    if (recoveryCount >= maxRecoveries) return false;
+    recoveryCount += 1;
+    return true;
+  };
+}
+
+export function handleBadgeViewerCloseKey(
+  event: Pick<KeyboardEvent, "key" | "preventDefault" | "stopPropagation">,
+  onClose: () => void,
+): boolean {
+  if (!badgeViewerClosesOnKey(event.key)) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  onClose();
+  return true;
+}
+
+export function restoreBadgeViewerFocus(
+  opener: Pick<HTMLElement, "focus"> | null,
+): boolean {
+  if (!opener) return false;
+  opener.focus({ preventScroll: true });
+  return true;
+}
+
+
+===== apps/web/tests-unit/badge-device-capability.test.ts | whole-file SHA256 b20c2e115f4840dc393a90f9a301fa26ec6e31a195c81f07a2531aad8b9b5379 =====
+import { describe, expect, it } from "bun:test";
+import { shouldUseStaticBadgeViewer } from "@/lib/evidence-engineering/badge-device-capability";
+
+const high = { isLowEndDevice: false, cpuCores: 8, memoryGB: 8 };
+const desktop = { userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", maxTouchPoints: 0 };
+
+describe("optional badge viewer capability policy", () => {
+  it("does not let an OS-derived model override unknown mobile hardware", () => {
+    for (const os of [15, 16, 17, 18, 26]) {
+      for (const cpuCores of [2, 6, 8]) {
+        const browser = { userAgent: `Mozilla/5.0 (iPhone; CPU iPhone OS ${os}_0 like Mac OS X)`, maxTouchPoints: 1 };
+        expect(shouldUseStaticBadgeViewer({ ...high, cpuCores, memoryGB: null }, browser)).toBe(true);
+      }
+    }
+  });
+
+  it("uses a static preview for desktop-UA iPads and unknown Android memory", () => {
+    expect(shouldUseStaticBadgeViewer({ ...high, memoryGB: null }, { ...desktop, maxTouchPoints: 5 })).toBe(true);
+    expect(shouldUseStaticBadgeViewer({ ...high, memoryGB: null }, { userAgent: "Android", maxTouchPoints: 0 })).toBe(true);
+  });
+
+  it("reuses existing hardware tiers, rejecting invalid or mid/low mobile memory", () => {
+    const mobile = { userAgent: "Android", maxTouchPoints: 1 };
+    for (const memoryGB of [null, -1, 0, 2, 4, NaN, Infinity]) {
+      expect(shouldUseStaticBadgeViewer({ ...high, memoryGB }, mobile)).toBe(true);
+    }
+    for (const memoryGB of [6, 8]) {
+      expect(shouldUseStaticBadgeViewer({ ...high, memoryGB }, mobile)).toBe(false);
+    }
+    expect(shouldUseStaticBadgeViewer({ ...high, isLowEndDevice: true }, mobile)).toBe(true);
+  });
+
+  it("preserves normal desktop opt-in and handles SSR without navigator", () => {
+    expect(shouldUseStaticBadgeViewer({ ...high, memoryGB: null }, desktop)).toBe(false);
+    expect(shouldUseStaticBadgeViewer({ ...high, isLowEndDevice: true }, desktop)).toBe(true);
+    expect(shouldUseStaticBadgeViewer(high, null)).toBe(true);
+  });
+});
+
+
+===== apps/web/tests-unit/badge-ui-lifecycle.test.ts | whole-file SHA256 ad7d985682fcc893ed3f82a41fd5f41fca85ed7ab824463fa00496d0df6e7d5a =====
+import { describe, expect, test } from "bun:test";
+
+import {
+  createBadgeContextLossHandler,
+  createBadgeContextRecoveryLimit,
+  handleBadgeViewerCloseKey,
+  releaseBadgeRendererResources,
+  restoreBadgeViewerFocus,
+  sizeBadgeCanvas,
+  startBadgeRenderLoop,
+} from "../lib/evidence-engineering/badge-viewer-lifecycle";
+
+describe("badge UI lifecycle", () => {
+  test("keeps a 120px CSS canvas while sizing the DPR2 drawing buffer", () => {
+    const canvas = {
+      style: { display: "", height: "", width: "" },
+      remove() {},
+      removeEventListener() {},
+    };
+    const calls: unknown[][] = [];
+    let pixelRatio = 1;
+    let drawingBuffer = { height: 0, width: 0 };
+    const renderer = {
+      setPixelRatio(value: number) {
+        pixelRatio = value;
+        calls.push(["pixelRatio", value]);
+      },
+      setSize(width: number, height: number, updateStyle?: boolean) {
+        drawingBuffer = { height: height * pixelRatio, width: width * pixelRatio };
+        calls.push(["size", width, height, updateStyle]);
+      },
+    };
+
+    sizeBadgeCanvas(canvas, renderer, 2);
+
+    expect(canvas.style).toEqual({ display: "block", height: "120px", width: "120px" });
+    expect(drawingBuffer).toEqual({ height: 240, width: 240 });
+    expect(calls).toEqual([
+      ["pixelRatio", 2],
+      ["size", 120, 120, false],
+    ]);
+  });
+
+  test("renders reduced motion once without scheduling RAF", () => {
+    let renders = 0;
+    let rotations = 0;
+    let requests = 0;
+    let cancels = 0;
+
+    const stop = startBadgeRenderLoop({
+      reducedMotion: true,
+      rotate: () => rotations++,
+      render: () => renders++,
+      requestFrame: () => {
+        requests++;
+        return 1;
+      },
+      cancelFrame: () => cancels++,
+    });
+    stop();
+
+    expect({ renders, rotations, requests, cancels }).toEqual({
+      renders: 1,
+      rotations: 0,
+      requests: 0,
+      cancels: 0,
+    });
+  });
+
+  test("runs one animated RAF chain and cancels its pending frame", () => {
+    const callbacks = new Map<number, FrameRequestCallback>();
+    const cancelled: number[] = [];
+    let nextFrame = 0;
+    let renders = 0;
+    let rotations = 0;
+    const stop = startBadgeRenderLoop({
+      reducedMotion: false,
+      rotate: () => rotations++,
+      render: () => renders++,
+      requestFrame: (callback) => {
+        const handle = ++nextFrame;
+        callbacks.set(handle, callback);
+        return handle;
+      },
+      cancelFrame: (handle) => cancelled.push(handle),
+    });
+
+    expect({ renders, rotations, pending: callbacks.size }).toEqual({
+      renders: 1,
+      rotations: 1,
+      pending: 1,
+    });
+    callbacks.get(1)?.(16);
+    expect({ renders, rotations, pending: callbacks.size }).toEqual({
+      renders: 2,
+      rotations: 2,
+      pending: 2,
+    });
+    stop();
+    expect(cancelled).toEqual([2]);
+    callbacks.get(2)?.(32);
+    expect(renders).toBe(2);
+  });
+
+  test("allows one real context-loss recreation, then falls back", () => {
+    const calls: string[] = [];
+    const tryRecover = createBadgeContextRecoveryLimit();
+    const createHandler = () =>
+      createBadgeContextLossHandler({
+        releaseLostContext: () => calls.push("release"),
+        tryRecover,
+        recover: () => calls.push("recover"),
+        fallback: () => calls.push("fallback"),
+      });
+    const event = {
+      preventDefault: () => calls.push("preventDefault"),
+    } as unknown as Event;
+
+    createHandler()(event);
+    createHandler()(event);
+
+    expect(calls).toEqual([
+      "preventDefault",
+      "release",
+      "recover",
+      "preventDefault",
+      "release",
+      "fallback",
+    ]);
+  });
+
+  test("removes the loss listener before disposal and intentional context loss", () => {
+    const calls: string[] = [];
+    const listener = () => calls.push("unexpected-recovery");
+    let listenerAttached = true;
+    const canvas = {
+      style: { display: "", height: "", width: "" },
+      removeEventListener(type: string, candidate: EventListener) {
+        expect(type).toBe("webglcontextlost");
+        expect(candidate).toBe(listener);
+        listenerAttached = false;
+        calls.push("remove-listener");
+      },
+      remove: () => calls.push("remove-canvas"),
+    };
+    const forceContextLoss = () => {
+        calls.push("force-context-loss");
+        if (listenerAttached) listener(new Event("webglcontextlost"));
+    };
+
+    releaseBadgeRendererResources({
+      canvas,
+      contextLossListener: listener,
+      stopAnimation: () => calls.push("stop-animation"),
+      disposeGeometry: () => calls.push("dispose-geometry"),
+      disposeMaterial: () => calls.push("dispose-material"),
+      disposeRenderer: () => calls.push("dispose-renderer"),
+      forceContextLoss,
+    });
+
+    expect(calls).toEqual([
+      "stop-animation",
+      "remove-listener",
+      "dispose-geometry",
+      "dispose-material",
+      "dispose-renderer",
+      "force-context-loss",
+      "remove-canvas",
+    ]);
+  });
+
+  test("consumes Escape and restores focus to the captured opener", () => {
+    const calls: unknown[] = [];
+    const escape = {
+      key: "Escape",
+      preventDefault: () => calls.push("preventDefault"),
+      stopPropagation: () => calls.push("stopPropagation"),
+    };
+    expect(handleBadgeViewerCloseKey(escape, () => calls.push("close"))).toBe(true);
+    expect(calls).toEqual(["preventDefault", "stopPropagation", "close"]);
+
+    const opener = {
+      focus: (options?: FocusOptions) => calls.push(["focus", options]),
+    };
+    expect(restoreBadgeViewerFocus(opener)).toBe(true);
+    expect(calls.at(-1)).toEqual(["focus", { preventScroll: true }]);
+
+    calls.length = 0;
+    expect(handleBadgeViewerCloseKey({ ...escape, key: "Enter" }, () => calls.push("close"))).toBe(false);
+    expect(restoreBadgeViewerFocus(null)).toBe(false);
+    expect(calls).toEqual([]);
+  });
+});
+
+
+===== apps/web/lib/site-config.ts | whole-file SHA256 8f60ba314f8fa3193fbae5deb330477902db5ad4d5a183755ae9bcb1885af927 =====
+export const siteConfig = {
+  name: '쯔동여지도',
+  productionUrl: (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.tzudong.app').replace(/\/$/, ''),
+  contact: {
+    email: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'cs@tzudong.app',
+    mailtoSubject: '쯔동여지도 문의',
+  },
+  operator: {
+    companyName: process.env.NEXT_PUBLIC_OPERATOR_COMPANY_NAME || '타이니번 데이터랩',
+    representative: process.env.NEXT_PUBLIC_OPERATOR_REPRESENTATIVE || '최연우',
+    businessRegistrationNumber:
+      process.env.NEXT_PUBLIC_OPERATOR_BUSINESS_REGISTRATION_NUMBER || '601-09-04613',
+    copyrightLabel: process.env.NEXT_PUBLIC_COPYRIGHT_LABEL || 'v1.2.1 © Tzudong Map',
+  },
+  legal: {
+    privacyPath: '/privacy',
+    dataDeletionPath: '/data-deletion',
+    myPageProfilePath: '/mypage/profile',
+  },
+} as const;
+
+const STRICT_BUILD_FLAG_VALUES = new Set(['true', '1']);
+
+export const parseStrictBuildFlag = (value: unknown): boolean =>
+  typeof value === 'string' && STRICT_BUILD_FLAG_VALUES.has(value.trim().toLowerCase());
+
+export const isPublicDemoMode = parseStrictBuildFlag(
+  process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE,
+);
+
+export const isLimitedPublicMode = parseStrictBuildFlag(
+  process.env.NEXT_PUBLIC_LIMITED_PUBLIC_MODE,
+);
+export const isLimitedPublicModeAllowAuth = parseStrictBuildFlag(
+  process.env.NEXT_PUBLIC_LIMITED_PUBLIC_MODE_ALLOW_AUTH,
+);
+
+export const isPublicRestrictedMode =
+  isPublicDemoMode || (isLimitedPublicMode && !isLimitedPublicModeAllowAuth);
+export const supportMailto = (subject: string = siteConfig.contact.mailtoSubject) =>
+  `mailto:${siteConfig.contact.email}?subject=${encodeURIComponent(subject)}`;
+
+
+===== apps/web/lib/evidence-engineering/badge-viewer-session.ts | whole-file SHA256 a91586c89ded779c3ab47995696a98e5e19502c81f7b1751e1fd9d750cc822a6 =====
+export type BadgeViewerMode = "viewer" | "fallback" | "recovering";
+
+let activeRenderers = 0;
+
+export function resetBadgeViewerSessionsForTests(): void {
+  activeRenderers = 0;
+}
+
+export function badgeViewerClosesOnKey(key: string): boolean {
+  return key === "Escape";
+}
+
+export function createBadgeViewerSession() {
+  let released = false;
+  let holdsRenderer = false;
+  let contextLost = false;
+
+  return {
+    open(lowPower: boolean): BadgeViewerMode {
+      if (released) {
+        throw new Error("badge_viewer_released");
+      }
+      if (lowPower) {
+        return "fallback";
+      }
+      if (contextLost) {
+        contextLost = false;
+      }
+      if (holdsRenderer || activeRenderers >= 1) {
+        throw new Error("duplicate_badge_renderer");
+      }
+      holdsRenderer = true;
+      activeRenderers += 1;
+      return "viewer";
+    },
+    loseContext(): BadgeViewerMode {
+      if (released) {
+        throw new Error("badge_viewer_released");
+      }
+      if (holdsRenderer) {
+        holdsRenderer = false;
+        activeRenderers = Math.max(0, activeRenderers - 1);
+      }
+      contextLost = true;
+      return "recovering";
+    },
+    release(): void {
+      if (holdsRenderer) {
+        holdsRenderer = false;
+        activeRenderers = Math.max(0, activeRenderers - 1);
+      }
+      released = true;
+      contextLost = false;
+    },
+  };
+}
+
+
+===== apps/web/tests-unit/evidence-badge-viewer-session.test.ts | whole-file SHA256 ada14a1b977b97adc6f9d4d40b13b496d4dda40258fd4cbf011d80fac0d554c4 =====
+import { describe, expect, test } from "bun:test";
+
+import {
+  badgeViewerClosesOnKey,
+  createBadgeViewerSession,
+  resetBadgeViewerSessionsForTests,
+} from "../lib/evidence-engineering/badge-viewer-session";
+
+describe("badge viewer session", () => {
+  test("releases on close, recovers one renderer after context loss, and falls back on low power", () => {
+    resetBadgeViewerSessionsForTests();
+    const session = createBadgeViewerSession();
+    expect(session.open(false)).toBe("viewer");
+    expect(() => createBadgeViewerSession().open(false)).toThrow("duplicate_badge_renderer");
+    expect(session.loseContext()).toBe("recovering");
+    expect(session.open(false)).toBe("viewer");
+    expect(() => createBadgeViewerSession().open(false)).toThrow("duplicate_badge_renderer");
+    session.release();
+    expect(() => session.open(false)).toThrow("badge_viewer_released");
+
+    const lowPower = createBadgeViewerSession();
+    expect(lowPower.open(true)).toBe("fallback");
+    const afterFallback = createBadgeViewerSession();
+    expect(afterFallback.open(false)).toBe("viewer");
+    afterFallback.release();
+    lowPower.release();
+
+    expect(badgeViewerClosesOnKey("Escape")).toBe(true);
+    expect(badgeViewerClosesOnKey("Enter")).toBe(false);
+  });
+});
+
+
+===== apps/web/app/home-client.tsx | whole-file SHA256 eda61b97da7173d53f71a76dfcdf0b219c826c1e3069afd787ad116a3be963a5 =====
+"use client";
+
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import dynamic from "next/dynamic";
+import { Maximize2, UserRound } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContextBase";
+import { useLayout } from "@/contexts/LayoutContext";
+import { useHomeViewportMode } from "@/hooks/useHomeViewportMode";
+import { toast } from "@/lib/no-toast";
+import { useDocumentTitle } from "@/hooks/use-document-title";
+import { isPublicRestrictedMode } from "@/lib/site-config";
+import { requestAuthUi } from "@/lib/auth-ui-events";
+import { buildBrowserTitle } from "@/lib/seo";
+import {
+  DESKTOP_LEFT_PANEL_EXPAND_ON_ENTRY_EVENT,
+  shouldExpandDesktopLeftPanelForRoute,
+} from "@/lib/desktop-left-panel-entry";
+import {
+  DEFAULT_HOME_MAP_USER_PREFERENCES,
+  HOME_MAP_USER_PREFERENCES_EVENT,
+  readLastHomeMapUserPreferences,
+  readHomeMapUserPreferences,
+  type HomeMapLayoutMode,
+  type HomeMapPanelSide,
+  type HomeMapUserPreferencesEvent,
+} from "@/lib/home-map-user-preferences";
+import type { Restaurant } from "@/types/restaurant";
+import {
+  resolveDeviceOrientationHeading,
+  resolveGeolocationHeading,
+  resolveDeviceLocationStateUpdatePlan,
+  type DeviceMapLocation,
+} from "@/lib/device-location-map";
+import {
+  acquireDeviceLocationUseAuthorization,
+  createDeviceLocationTrackingLifecycle,
+  DEVICE_LOCATION_NETWORK_SINK,
+  evaluateLocationUse,
+  revokeDeviceLocationUseAuthorization,
+  type DeviceLocationTrackingLifecycle,
+  type DeviceLocationUseAuthorization,
+} from "@/lib/privacy/location-gate";
+import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-contextual-restaurants";
+import {
+  buildHomeDetailState,
+  buildHomeDetailUrl,
+  resolveHomeDetailRestaurantParam,
+  buildHomeListState,
+  createHomeRestoreKey,
+  dispatchHomeRestoreEvent,
+  isHomeDetailHistoryState,
+  isHomeListHistoryState,
+  readHomeRestoreSnapshot,
+  writeHomeRestoreSnapshot,
+  type HomeMapMode,
+  type HomeRestoreCompactRestaurant,
+  type HomeRestoreSnapshotV1,
+} from "@/lib/home-detail-route-state";
+
+function HomeMapContainerPendingShell() {
+  return (
+    <section
+      aria-hidden="true"
+      className="relative flex-1 overflow-hidden bg-background"
+    />
+  );
+}
+
+function HomeMapUserMenuPendingShell() {
+  return (
+    <div aria-hidden="true" data-desktop-map-user-menu-pending="true">
+      <span
+        data-desktop-map-fullscreen-toggle="true"
+        className="fixed right-20 top-4 z-[120] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/95 p-0 text-foreground shadow-lg"
+      >
+        <Maximize2 className="h-4 w-4" />
+      </span>
+      <span
+        data-desktop-map-user-menu="true"
+        className="fixed right-6 top-4 z-[120] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/95 p-0 shadow-lg"
+      >
+        <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary">
+          <UserRound className="h-4 w-4" />
+        </span>
+      </span>
+    </div>
+  );
+}
+
+// [OPTIMIZATION] 동적 임포트
+const HomeControlPanel = dynamic(
+  () => import("../components/home/home-control-panel"),
+  {
+    ssr: false,
+    loading: () => null,
+  },
+);
+
+const HomeMapContainer = dynamic(
+  () => import("../components/home/home-map-container"),
+  {
+    ssr: false,
+    loading: () => <HomeMapContainerPendingShell />,
+  },
+);
+const SubmissionFloatingButton = dynamic(
+  () => import("../components/home/SubmissionFloatingButton"),
+  { ssr: false },
+);
+const HomeMapUserMenu = dynamic(
+  () => import("../components/home/HomeMapUserMenu"),
+  { ssr: false, loading: () => <HomeMapUserMenuPendingShell /> },
+);
+
+const HomeClientSidePanels = dynamic(() => import("./home-client-sidepanels"), {
+  ssr: false,
+});
+const HomeClientEffects = dynamic(() => import("./home-client-effects"), {
+  ssr: false,
+});
+import { useHomeState } from "./hooks/useHomeState";
+import { useHomeHandlers } from "./hooks/useHomeHandlers";
+import { useRestaurantPopupListener } from "./hooks/useRestaurantPopupListener";
+
+import type { Announcement } from "@/types/announcement";
+
+type HomeStartupIntent = "search" | "bookmark" | "notification" | "user";
+const HOME_DESKTOP_DETAIL_RETURN_CAPTURE_EVENT =
+  "home:desktop-detail-return-capture";
+
+const requestDesktopDetailReturnCapture = () => {
+  if (typeof window === "undefined") return;
+
+  window.dispatchEvent(new Event(HOME_DESKTOP_DETAIL_RETURN_CAPTURE_EVENT));
+};
+
+const HOME_INITIAL_SHELL_INTENT_KEY = "tzudong:home-initial-intent";
+const PUBLIC_DEMO_BLOCKED_PANEL_PARAMS = new Set([
+  "feed",
+  "stamp",
+  "leaderboard",
+  "review",
+  "profile",
+  "bookmarks",
+  "notifications",
+  "settings",
+  "mypage",
+  "adminReviews",
+  "announcement",
+]);
+const DEVICE_LOCATION_ENABLE_TOAST = "위치 서비스(GPS) 기능을 켜주세요.";
+const DEVICE_LOCATION_PERMISSION_DENIED_TOAST = "위치 권한이 거부됐어요. 브라우저 설정에서 허용하면 현재 위치를 표시할 수 있어요.";
+const DEVICE_LOCATION_TIMEOUT_TOAST = "현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.";
+const DEVICE_LOCATION_UNAVAILABLE_TOAST = "현재 위치를 확인할 수 없어요. 잠시 후 다시 시도해 주세요.";
+const DEVICE_LOCATION_READINESS_BLOCKED =
+  "현재 위치를 지금 표시하지 못했어요. 잠시 후 다시 시도해 주세요.";
+
+const DEVICE_LOCATION_DISCLOSURE =
+  "현재 위치 좌표는 현재 React 메모리에만 보관되며 Tzudong에 저장되지 않습니다. 브라우저 지도 렌더링 및 화면 이동은 승인된 지도 제공자 경계를 통과할 수 있습니다. 브라우저 위치 권한을 요청할까요?";
+const DEVICE_LOCATION_DISCLOSURE_CANCELLED =
+  "위치 권한을 요청하지 않았어요. 지도는 계속 이용할 수 있어요.";
+
+function describeDeviceLocationFailure(error: unknown) {
+  const code = typeof error === "object" && error !== null && "code" in error
+    ? Number((error as { code?: unknown }).code)
+    : NaN;
+  if (code === 1) return DEVICE_LOCATION_PERMISSION_DENIED_TOAST;
+  if (code === 3) return DEVICE_LOCATION_TIMEOUT_TOAST;
+  if (code === 2) return DEVICE_LOCATION_UNAVAILABLE_TOAST;
+  return DEVICE_LOCATION_ENABLE_TOAST;
+}
+
+function clearAnnouncementPanelUrl() {
+  if (typeof window === "undefined") return;
+
+  const currentUrl = new URL(window.location.href);
+  if (
+    currentUrl.pathname !== "/" ||
+    currentUrl.searchParams.get("panel") !== "announcement"
+  ) {
+    return;
+  }
+
+  currentUrl.searchParams.delete("panel");
+  currentUrl.searchParams.delete("announcementId");
+  const nextSearch = currentUrl.searchParams.toString();
+  const nextUrl = `${currentUrl.pathname}${nextSearch ? `?${nextSearch}` : ""}${currentUrl.hash}`;
+  window.history.replaceState(window.history.state, "", nextUrl);
+}
+
+const isHomeStartupIntent = (
+  value: string | null,
+): value is HomeStartupIntent =>
+  value === "search" ||
+  value === "bookmark" ||
+  value === "notification" ||
+  value === "user";
+
+type HomeDetailOpenOptions = {
+  source?: "user" | "url";
+  searchFocusRestaurant?: Restaurant | null;
+  mapMode?: HomeMapMode;
+  restoreKey?: string | null;
+};
+
+export default function HomeClient() {
+  const { isAdmin, user } = useAuth();
+  const { isSidebarOpen } = useLayout();
+  const viewportMode = useHomeViewportMode();
+  const isViewportResolved = viewportMode !== "pending";
+  const isDesktop = viewportMode === "desktop";
+  const isMobileOrTablet = viewportMode === "mobileOrTablet";
+  const [mapMode, setMapMode] = useState<"domestic" | "overseas">("domestic");
+  const [activePanel, setActivePanel] = useState<"map" | "detail" | "control">(
+    "map",
+  );
+  const [mapFocusZoom, setMapFocusZoom] = useState<number | null>(null); // [New] 지도 줌 레벨 제어
+  const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
+  const [showUserSubmittedMarkers, setShowUserSubmittedMarkers] = useState(true);
+
+  // 통합 패널 상태 관리
+  // 'detail'은 맛집 상세 패널(state.isPanelOpen으로 관리), 나머지는 activeRightPanel로 관리
+  type PanelType = "mypage" | "adminReviews" | "announcement" | null;
+  const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
+  const [selectedAnnouncement, setSelectedAnnouncement] =
+    useState<Announcement | null>(null);
+  const [desktopPanelCollapsed, setIsPanelCollapsed] = useState(
+    () => DEFAULT_HOME_MAP_USER_PREFERENCES.desktopPanelDefault === "collapsed",
+  );
+  const isPanelCollapsed = isDesktop && desktopPanelCollapsed;
+  const [desktopMapLayout, setDesktopMapLayout] = useState<HomeMapLayoutMode>(
+    DEFAULT_HOME_MAP_USER_PREFERENCES.desktopMapLayout,
+  );
+  const [desktopPanelSide, setDesktopPanelSide] = useState<HomeMapPanelSide>(
+    DEFAULT_HOME_MAP_USER_PREFERENCES.desktopPanelSide,
+  );
+  const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
+  const [mobileMapFullscreen, setIsMapFullscreen] = useState(false);
+  const isMapFullscreen = isMobileOrTablet && mobileMapFullscreen;
+  useEffect(() => {
+    if (isDesktop) setIsMapFullscreen(false);
+  }, [isDesktop]);
+  const [contextualRestaurantsPayload, setContextualRestaurantsPayload] =
+    useState<HomeMapContextualRestaurantsPayload | null>(null);
+  const [mapInteractionEpoch, setMapInteractionEpoch] = useState(0);
+  const [deviceLocation, setDeviceLocation] =
+    useState<DeviceMapLocation | null>(null);
+  const [initialMobileOverlayIntent, setInitialMobileOverlayIntent] =
+    useState<HomeStartupIntent | null>(null);
+  const [isDeviceLocationPending, setIsDeviceLocationPending] = useState(false);
+  const [isDeviceHeadingMode, setIsDeviceHeadingMode] = useState(false);
+  const deviceLocationFocusRequestIdRef = useRef(0);
+  const deviceLocationWatchIdRef = useRef<number | null>(null);
+  const deviceOrientationCleanupRef = useRef<(() => void) | null>(null);
+  const deviceLocationTrackingLifecycleRef =
+    useRef<DeviceLocationTrackingLifecycle | null>(null);
+  const deviceLocationAuthorizationRef =
+    useRef<DeviceLocationUseAuthorization | null>(null);
+  const deviceLocationMountedRef = useRef(true);
+  const deviceLocationAuthorizationExpiryTimerRef = useRef<
+    ReturnType<typeof globalThis.setTimeout> | null
+  >(null);
+  const openPanelRef = useRef<(panel: PanelType) => void>(() => {});
+  const openDetailPanelRef = useRef<
+    (restaurant: Restaurant, focusZoom?: number, options?: HomeDetailOpenOptions) => void
+  >(() => {});
+  useEffect(() => {
+    if (mapMode !== "domestic" || isMapFullscreen) {
+      setContextualRestaurantsPayload(null);
+    }
+  }, [isMapFullscreen, mapMode]);
+
+  useEffect(() => {
+    const preferences = readLastHomeMapUserPreferences();
+    setIsPanelCollapsed(preferences.desktopPanelDefault === "collapsed");
+    setDesktopMapLayout(preferences.desktopMapLayout);
+    setDesktopPanelSide(preferences.desktopPanelSide);
+  }, []);
+
+  // [Fix] 마운트 시점 기록 - 라우트 변경 후 돌아왔을 때 지도 강제 리마운트
+  const [mapMountKey] = useState(() => Date.now());
+
+  const state = useHomeState(mapMode);
+  const {
+    clearRestaurantDetailSelection,
+    closeRestaurantDetailPanel,
+    openRestaurantDetailSelection,
+    releaseSearchSelectionOwnership,
+    setFilters,
+    setIsReviewModalOpen,
+    setSelectedCategories,
+    setSelectedCountry,
+    setSelectedRegion,
+    syncRestaurantDetailSelection,
+  } = state;
+  const visibleDetailRestaurant = state.isPanelOpen
+    ? (state.panelRestaurant ?? state.selectedRestaurant)
+    : null;
+  const visibleDetailTitle = visibleDetailRestaurant
+    ? buildBrowserTitle(visibleDetailRestaurant.name)
+    : null;
+  useDocumentTitle(visibleDetailTitle);
+  const toCompactRestaurant = useCallback(
+    (restaurant: Restaurant | null): HomeRestoreCompactRestaurant | null => {
+      if (!restaurant) return null;
+
+      return {
+        id: restaurant.id,
+        name: restaurant.name,
+        lat: restaurant.lat,
+        lng: restaurant.lng,
+        road_address: restaurant.road_address,
+        jibun_address: restaurant.jibun_address,
+        categories: restaurant.categories,
+      };
+    },
+    [],
+  );
+
+  // 패널 열기 (상호 배타적) - 마이페이지, 제보관리, 리뷰관리용
+  // [OPTIMIZATION] useCallback으로 메모이제이션하여 불필요한 리렌더링 방지
+  const openPanel = useCallback(
+    (panel: PanelType) => {
+      if (isPublicRestrictedMode && (panel === "mypage" || panel === "adminReviews" || panel === "announcement")) {
+        return;
+      }
+      setIsMapFullscreen(false);
+      // 맛집 상세 패널 닫기
+      clearRestaurantDetailSelection();
+      if (panel === "announcement" && isMobileOrTablet) {
+        setActiveRightPanel(null);
+        setIsAnnouncementSheetOpen(true);
+        setIsPanelCollapsed(false);
+        return;
+      }
+
+      setIsAnnouncementSheetOpen(false);
+      setActiveRightPanel(panel);
+      setIsPanelCollapsed(false); // 새 패널 열릴 때 펼쳐진 상태로
+    },
+    [clearRestaurantDetailSelection, isMobileOrTablet],
+  );
+  useEffect(() => {
+    openPanelRef.current = openPanel;
+  }, [openPanel]);
+
+  // 모든 패널 닫기
+  // [OPTIMIZATION] useCallback으로 메모이제이션
+  const closeAllPanels = useCallback(() => {
+    setIsMapFullscreen(false);
+    clearRestaurantDetailSelection();
+    setActiveRightPanel(null);
+    setIsAnnouncementSheetOpen(false);
+    setSelectedAnnouncement(null);
+    setIsPanelCollapsed(false);
+    clearAnnouncementPanelUrl();
+  }, [clearRestaurantDetailSelection]);
+
+  const returnToRestaurantListPanel = useCallback(() => {
+    if (
+      typeof window !== "undefined" &&
+      isHomeDetailHistoryState(window.history.state)
+    ) {
+      const { snapshot } = readHomeRestoreSnapshot(window.history.state.restoreKey);
+      if (snapshot) {
+        window.history.back();
+        return;
+      }
+    }
+
+    closeRestaurantDetailPanel();
+    setActiveRightPanel(null);
+    setIsAnnouncementSheetOpen(false);
+    setSelectedAnnouncement(null);
+    clearAnnouncementPanelUrl();
+  }, [closeRestaurantDetailPanel]);
+
+  const createHomeRestoreSnapshot = useCallback(
+    (): HomeRestoreSnapshotV1 => ({
+      version: 1,
+      createdAt: Date.now(),
+      mapMode,
+      selectedRestaurantId: state.selectedRestaurant?.id ?? null,
+      panelRestaurantId: state.panelRestaurant?.id ?? null,
+      searchedRestaurantId: state.searchedRestaurant?.id ?? null,
+      searchedRestaurant: toCompactRestaurant(state.searchedRestaurant),
+      filters: {
+        categories: state.filters.categories,
+        featuredTheme: state.filters.featuredTheme,
+      },
+      selectedRegion: state.selectedRegion,
+      selectedCountry: state.selectedCountry,
+      activePanel,
+      activeRightPanel,
+      isPanelCollapsed,
+      isAnnouncementSheetOpen,
+      contextualRestaurantIds:
+        contextualRestaurantsPayload?.restaurants.map((restaurant) => restaurant.id) ?? [],
+    }),
+    [
+      activePanel,
+      activeRightPanel,
+      contextualRestaurantsPayload,
+      isAnnouncementSheetOpen,
+      isPanelCollapsed,
+      mapMode,
+      state.filters.categories,
+      state.filters.featuredTheme,
+      state.panelRestaurant,
+      state.searchedRestaurant,
+      state.selectedCountry,
+      state.selectedRegion,
+      state.selectedRestaurant,
+      toCompactRestaurant,
+    ],
+  );
+
+  const applyHomeRestoreSnapshot = useCallback(
+    (restoreKey: string) => {
+      const { snapshot, reason } = readHomeRestoreSnapshot(restoreKey);
+      if (!snapshot) {
+        dispatchHomeRestoreEvent("home.restore.failed", {
+          restoreKey,
+          reason: reason ?? "missing",
+        });
+        syncRestaurantDetailSelection(null, {
+          isPanelOpen: false,
+          searchFocusRestaurant: null,
+        });
+        return;
+      }
+
+      setMapMode(snapshot.mapMode);
+      setFilters((previous) => ({
+        ...previous,
+        categories: snapshot.filters.categories,
+        featuredTheme: snapshot.filters.featuredTheme,
+      }));
+      setSelectedCategories(snapshot.filters.categories);
+      setSelectedRegion(snapshot.selectedRegion);
+      setSelectedCountry(snapshot.selectedCountry);
+      const restoredSearchRestaurant = snapshot.searchedRestaurant
+        ? (snapshot.searchedRestaurant as Restaurant)
+        : null;
+      syncRestaurantDetailSelection(null, {
+        isPanelOpen: false,
+        searchFocusRestaurant: restoredSearchRestaurant,
+      });
+      setActivePanel(snapshot.activePanel);
+      setActiveRightPanel(snapshot.activeRightPanel);
+      setIsAnnouncementSheetOpen(snapshot.isAnnouncementSheetOpen);
+      setIsPanelCollapsed(snapshot.isPanelCollapsed);
+      setSelectedAnnouncement(null);
+      dispatchHomeRestoreEvent("home.restore.succeeded", { restoreKey });
+    },
+    [
+      setFilters,
+      setSelectedCategories,
+      setSelectedCountry,
+      setSelectedRegion,
+      syncRestaurantDetailSelection,
+    ],
+  );
+
+  useEffect(() => {
+    const handleHomeOverlayPanelOpened = () => {
+      closeAllPanels();
+    };
+
+    window.addEventListener(
+      "homeOverlayPanelOpened",
+      handleHomeOverlayPanelOpened,
+    );
+    return () => {
+      window.removeEventListener(
+        "homeOverlayPanelOpened",
+        handleHomeOverlayPanelOpened,
+      );
+    };
+  }, [closeAllPanels]);
+
+  useEffect(() => {
+    if (!user?.id || !isDesktop) return;
+
+    const preferences = readHomeMapUserPreferences(user.id);
+    setIsPanelCollapsed(preferences.desktopPanelDefault === "collapsed");
+    setDesktopMapLayout(preferences.desktopMapLayout);
+    setDesktopPanelSide(preferences.desktopPanelSide);
+  }, [isDesktop, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !isDesktop) return;
+
+    const handlePreferencesChanged = (event: Event) => {
+      const customEvent = event as HomeMapUserPreferencesEvent;
+      if (customEvent.detail?.userId !== user.id) return;
+
+      if (!customEvent.detail.preservePanelCollapse) {
+        setIsPanelCollapsed(
+          customEvent.detail.preferences.desktopPanelDefault === "collapsed",
+        );
+      }
+      setDesktopMapLayout(customEvent.detail.preferences.desktopMapLayout);
+      setDesktopPanelSide(customEvent.detail.preferences.desktopPanelSide);
+    };
+
+    window.addEventListener(
+      HOME_MAP_USER_PREFERENCES_EVENT,
+      handlePreferencesChanged,
+    );
+    return () => {
+      window.removeEventListener(
+        HOME_MAP_USER_PREFERENCES_EVENT,
+        handlePreferencesChanged,
+      );
+    };
+  }, [isDesktop, user?.id]);
+
+  // 패널 접기/펼치기
+  // [OPTIMIZATION] useCallback으로 메모이제이션
+  const togglePanelCollapse = useCallback(() => {
+    setIsPanelCollapsed((prev) => !prev);
+  }, []);
+  const handleMapInteraction = useCallback(() => {
+    setMapInteractionEpoch((current) => current + 1);
+  }, []);
+
+  useEffect(() => {
+    const handleExpandLeftPanelForPageEntry = (event: Event) => {
+      const href =
+        event instanceof CustomEvent && typeof event.detail?.href === "string"
+          ? event.detail.href
+          : "";
+
+      if (!shouldExpandDesktopLeftPanelForRoute(href)) return;
+
+      setIsMapFullscreen(false);
+      setIsPanelCollapsed(false);
+    };
+
+    window.addEventListener(
+      DESKTOP_LEFT_PANEL_EXPAND_ON_ENTRY_EVENT,
+      handleExpandLeftPanelForPageEntry,
+    );
+    return () => {
+      window.removeEventListener(
+        DESKTOP_LEFT_PANEL_EXPAND_ON_ENTRY_EVENT,
+        handleExpandLeftPanelForPageEntry,
+      );
+    };
+  }, []);
+
+  // 맛집 상세 패널이 열릴 때 다른 패널 닫기
+  useEffect(() => {
+    if (state.isPanelOpen) {
+      // 맛집 상세 패널이 열리면 다른 패널들 모두 닫기
+      setActiveRightPanel(null);
+      setIsAnnouncementSheetOpen(false);
+      setIsPanelCollapsed(false);
+    }
+  }, [state.isPanelOpen]);
+
+  // 이벤트 핸들러 커스텀 훅
+  const handlers = useHomeHandlers({
+    setFilters: state.setFilters,
+    setSelectedCategories: state.setSelectedCategories,
+    setAdminRestaurantToEdit: state.setAdminRestaurantToEdit,
+    setIsAdminEditModalOpen: state.setIsAdminEditModalOpen,
+    setRestaurantToEdit: state.setRestaurantToEdit,
+    setEditFormData: state.setEditFormData,
+    setIsEditModalOpen: state.setIsEditModalOpen,
+    setSelectedRegion: state.setSelectedRegion,
+    setSelectedCountry: state.setSelectedCountry,
+    setMoveToRestaurant: state.setMoveToRestaurant,
+    syncRestaurantDetailSelection: state.syncRestaurantDetailSelection,
+    openRestaurantDetailSelection: state.openRestaurantDetailSelection,
+    clearRestaurantDetailSelection: state.clearRestaurantDetailSelection,
+  });
+  const { handleRequestEditRestaurant: openRestaurantEditRequest } = handlers;
+
+  // 맛집 상세 패널 열기 (다른 패널 닫기 포함)
+  // [OPTIMIZATION] useCallback으로 메모이제이션
+  const openDetailPanel = useCallback(
+    (restaurant: Restaurant, focusZoom?: number, options?: HomeDetailOpenOptions) => {
+      if (options?.source === "url" && typeof window !== "undefined") {
+        const currentRestaurantId = resolveHomeDetailRestaurantParam(
+          new URLSearchParams(window.location.search),
+        );
+        if (currentRestaurantId !== restaurant.id) {
+          return;
+        }
+      }
+      if (options?.source !== "url" && typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("home:detail-user-opened", {
+            detail: { restaurantId: restaurant.id },
+          }),
+        );
+      }
+      requestDesktopDetailReturnCapture();
+      setIsMapFullscreen(false);
+
+      setActiveRightPanel(null);
+      setIsPanelCollapsed(false);
+      openRestaurantDetailSelection(restaurant, {
+        searchFocusRestaurant: options?.searchFocusRestaurant ?? null,
+      });
+
+      if (focusZoom) {
+        setMapFocusZoom(focusZoom);
+      } else {
+        setMapFocusZoom(null);
+      }
+
+      const detailMapMode = options?.mapMode ?? mapMode;
+      if (typeof window !== "undefined") {
+        const restoreKey =
+          isHomeDetailHistoryState(window.history.state) &&
+          window.history.state.restaurantId === restaurant.id
+            ? window.history.state.restoreKey
+            : options?.restoreKey?.trim() || createHomeRestoreKey();
+        const detailState = buildHomeDetailState({
+          restaurantId: restaurant.id,
+          mapMode: detailMapMode,
+          restoreKey,
+        });
+        const detailUrl = buildHomeDetailUrl({
+          restaurantId: restaurant.id,
+          mapMode: detailMapMode,
+          restoreKey,
+          focusZoom,
+        });
+
+        if (options?.source === "url") {
+          window.history.replaceState(detailState, "", detailUrl);
+        } else {
+          const snapshot = createHomeRestoreSnapshot();
+          const wroteSnapshot = writeHomeRestoreSnapshot(restoreKey, snapshot);
+          if (!wroteSnapshot) {
+            dispatchHomeRestoreEvent("home.restore.failed", {
+              restoreKey,
+              reason: "snapshot-write-failed",
+            });
+          }
+          window.history.replaceState(
+            buildHomeListState({
+              restaurantId: restaurant.id,
+              mapMode: detailMapMode,
+              restoreKey,
+            }),
+            "",
+            window.location.href,
+          );
+          window.history.pushState(detailState, "", detailUrl);
+        }
+      }
+    },
+    [createHomeRestoreSnapshot, mapMode, openRestaurantDetailSelection],
+  );
+  useEffect(() => {
+    openDetailPanelRef.current = openDetailPanel;
+  }, [openDetailPanel]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handlePopState = (event: PopStateEvent) => {
+      if (isHomeListHistoryState(event.state)) {
+        applyHomeRestoreSnapshot(event.state.restoreKey);
+        return;
+      }
+
+      if (isHomeDetailHistoryState(event.state)) {
+        setMapMode(event.state.mapMode);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [applyHomeRestoreSnapshot]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const intent = window.sessionStorage.getItem(
+        HOME_INITIAL_SHELL_INTENT_KEY,
+      );
+      window.sessionStorage.removeItem(HOME_INITIAL_SHELL_INTENT_KEY);
+
+      if (!isHomeStartupIntent(intent)) return;
+      if (isPublicRestrictedMode && intent !== "search") return;
+
+      setInitialMobileOverlayIntent(intent);
+      if (intent === "search") {
+        setActivePanel("control");
+      }
+    } catch (_) {
+      // Session storage may be unavailable in restrictive browser modes; fall back to normal home load.
+    }
+  }, []);
+  useEffect(() => {
+    if (!isPublicRestrictedMode || typeof window === "undefined") return;
+
+    const currentUrl = new URL(window.location.href);
+    const panel = currentUrl.searchParams.get("panel");
+    const hasDemoAuthRequest = currentUrl.searchParams.get("auth") === "login";
+    const hasBlockedPanel = PUBLIC_DEMO_BLOCKED_PANEL_PARAMS.has(panel ?? "");
+    if (!hasDemoAuthRequest && !hasBlockedPanel) return;
+
+    if (hasDemoAuthRequest) {
+      currentUrl.searchParams.delete("auth");
+      currentUrl.searchParams.delete("reason");
+      currentUrl.searchParams.delete("next");
+    }
+    if (hasBlockedPanel) {
+      currentUrl.searchParams.delete("panel");
+      currentUrl.searchParams.delete("user");
+      currentUrl.searchParams.delete("announcementId");
+      currentUrl.searchParams.delete("user");
+    }
+    const nextSearch = currentUrl.searchParams.toString();
+    const nextUrl = `${currentUrl.pathname}${nextSearch ? `?${nextSearch}` : ""}${currentUrl.hash}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
+  }, []);
+
+  const handleRestaurantSelectionSync = useCallback(
+    (restaurant: Restaurant | null) => {
+      if (!restaurant) {
+        setIsMapFullscreen(false);
+        clearRestaurantDetailSelection();
+        return;
+      }
+
+      requestDesktopDetailReturnCapture();
+      setIsMapFullscreen(false);
+      openRestaurantDetailSelection(restaurant);
+    },
+    [clearRestaurantDetailSelection, openRestaurantDetailSelection],
+  );
+
+  const handleControlRestaurantSelect = useCallback(
+    (restaurant: Restaurant) => {
+      openDetailPanel(restaurant);
+    },
+    [openDetailPanel],
+  );
+
+  const handleControlRestaurantSearch = useCallback(
+    (restaurant: Restaurant) => {
+      openDetailPanel(restaurant, undefined, { searchFocusRestaurant: restaurant });
+    },
+    [openDetailPanel],
+  );
+
+  // 팝업 이벤트 리스너
+  useRestaurantPopupListener({
+    mapMode,
+    moveToRestaurant: state.moveToRestaurant,
+    setSelectedRegion: state.setSelectedRegion,
+    setSelectedRestaurant: state.setSelectedRestaurant,
+    setSearchedRestaurant: state.setSearchedRestaurant,
+    openDetailPanel, // 팝업 클릭 시 상세 패널 열기
+  });
+
+  // [OPTIMIZATION] useMemo로 메모이제이션
+  const onAdminEditRestaurant = useMemo(
+    () => (isAdmin ? handlers.handleAdminEditRestaurant : undefined),
+    [isAdmin, handlers.handleAdminEditRestaurant],
+  );
+
+  // [OPTIMIZATION] useCallback으로 메모이제이션
+  const handleSubmissionButtonClick = useCallback(() => {
+    if (isPublicRestrictedMode) return;
+    if (!user) {
+      toast.info("로그인하면 맛집 제보를 바로 이어서 할 수 있어요");
+      requestAuthUi({
+        source: "home-submission-button",
+        route: "/",
+        reason: "submit-restaurant",
+        force: true,
+      });
+      return;
+    }
+    setIsSubmissionModalOpen(true);
+  }, [user]);
+
+  const handleUserSubmittedMarkerToggle = useCallback(() => {
+    const next = !showUserSubmittedMarkers;
+
+    setShowUserSubmittedMarkers(next);
+    toast.info({
+      title: next ? "사용자 제보 맛집 마커 표시" : "사용자 제보 맛집 마커 숨김",
+      description: next
+        ? "지도에서 사용자 제보 맛집을 다시 보여줘요."
+        : "지도에서 사용자 제보 맛집을 잠시 숨겼어요.",
+    });
+  }, [showUserSubmittedMarkers]);
+
+  const applyDevicePosition = useCallback(
+    (
+      position: GeolocationPosition,
+      mode: "position" | "heading",
+      options: { shouldFocus: boolean },
+    ) => {
+      const authorization = deviceLocationAuthorizationRef.current;
+      const memoryUse = evaluateLocationUse({
+        purpose: "home-map-device-marker",
+        destination: "memory",
+        authorization,
+      });
+      const networkUse = evaluateLocationUse({
+        purpose: "home-map-device-marker",
+        destination: "network",
+        networkSink: DEVICE_LOCATION_NETWORK_SINK,
+        authorization,
+      });
+
+      if (!memoryUse.allowed || !networkUse.allowed) {
+        const lifecycle = deviceLocationTrackingLifecycleRef.current;
+        deviceLocationTrackingLifecycleRef.current = null;
+        lifecycle?.dispose();
+
+        if (!lifecycle) {
+          const watchId = deviceLocationWatchIdRef.current;
+          deviceLocationWatchIdRef.current = null;
+          if (
+            watchId !== null &&
+            typeof navigator !== "undefined" &&
+            navigator.geolocation
+          ) {
+            navigator.geolocation.clearWatch(watchId);
+          }
+          deviceOrientationCleanupRef.current?.();
+          deviceOrientationCleanupRef.current = null;
+        }
+
+        revokeDeviceLocationUseAuthorization(authorization);
+        const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
+        if (expiryTimer !== null) {
+          globalThis.clearTimeout(expiryTimer);
+          deviceLocationAuthorizationExpiryTimerRef.current = null;
+        }
+        deviceLocationAuthorizationRef.current = null;
+        setDeviceLocation(null);
+        setIsDeviceHeadingMode(false);
+        toast.error(DEVICE_LOCATION_READINESS_BLOCKED);
+        return;
+      }
+
+      const nextHeading = resolveGeolocationHeading(position.coords.heading);
+      const nextFocusRequestId = options.shouldFocus
+        ? deviceLocationFocusRequestIdRef.current + 1
+        : deviceLocationFocusRequestIdRef.current;
+
+      if (options.shouldFocus) {
+        deviceLocationFocusRequestIdRef.current = nextFocusRequestId;
+      }
+
+      setDeviceLocation((previous) => {
+        const nextLocation: DeviceMapLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: Number.isFinite(position.coords.accuracy)
+            ? position.coords.accuracy
+            : null,
+          heading: nextHeading ?? previous?.heading ?? null,
+          mode,
+          focusRequestId: nextFocusRequestId,
+          updatedAt: Date.now(),
+        };
+
+        return resolveDeviceLocationStateUpdatePlan({
+          previous,
+          next: nextLocation,
+        }).nextLocation;
+      });
+    },
+    [],
+  );
+
+  const stopDeviceHeadingWatchers = useCallback(() => {
+    const watchId = deviceLocationWatchIdRef.current;
+    deviceLocationWatchIdRef.current = null;
+
+    if (
+      watchId !== null &&
+      typeof navigator !== "undefined" &&
+      navigator.geolocation
+    ) {
+      navigator.geolocation.clearWatch(watchId);
+    }
+
+    deviceOrientationCleanupRef.current?.();
+    deviceOrientationCleanupRef.current = null;
+  }, []);
+
+  const stopDeviceLocationTracking = useCallback(() => {
+    const lifecycle = deviceLocationTrackingLifecycleRef.current;
+    deviceLocationTrackingLifecycleRef.current = null;
+
+    if (lifecycle) {
+      lifecycle.dispose();
+      return;
+    }
+
+    stopDeviceHeadingWatchers();
+  }, [stopDeviceHeadingWatchers]);
+  const clearDeviceLocationState = useCallback(() => {
+    const authorization = deviceLocationAuthorizationRef.current;
+    const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
+    if (expiryTimer !== null) {
+      globalThis.clearTimeout(expiryTimer);
+      deviceLocationAuthorizationExpiryTimerRef.current = null;
+    }
+    revokeDeviceLocationUseAuthorization(authorization);
+    deviceLocationAuthorizationRef.current = null;
+    stopDeviceLocationTracking();
+    setDeviceLocation(null);
+    setIsDeviceHeadingMode(false);
+  }, [stopDeviceLocationTracking]);
+  useEffect(() => {
+    if (mapMode === "overseas") {
+      clearDeviceLocationState();
+    }
+  }, [clearDeviceLocationState, mapMode]);
+
+  const startDeviceOrientationTracking = useCallback(async () => {
+    if (typeof window === "undefined") return false;
+    if (!deviceLocationAuthorizationRef.current) return false;
+
+    const OrientationEvent = window.DeviceOrientationEvent as
+      | (typeof DeviceOrientationEvent & {
+          requestPermission?: () => Promise<PermissionState>;
+        })
+      | undefined;
+
+    if (!OrientationEvent) {
+      toast.info(
+        "이 브라우저는 방향 센서를 지원하지 않아 현재 위치만 표시해요",
+      );
+      return false;
+    }
+
+    try {
+      if (typeof OrientationEvent.requestPermission === "function") {
+        const permission = await OrientationEvent.requestPermission();
+        if (permission !== "granted") {
+          toast.info("방향 권한이 허용되지 않아 현재 위치만 표시해요");
+          return false;
+        }
+      }
+    } catch {
+      toast.info("방향 권한을 확인하지 못해 현재 위치만 표시해요");
+      return false;
+    }
+
+    if (deviceOrientationCleanupRef.current) return true;
+
+    const handleOrientation = (
+      event: DeviceOrientationEvent & { webkitCompassHeading?: number | null },
+    ) => {
+      const networkUse = evaluateLocationUse({
+        purpose: "home-map-device-marker",
+        destination: "network",
+        networkSink: DEVICE_LOCATION_NETWORK_SINK,
+        authorization: deviceLocationAuthorizationRef.current,
+      });
+      if (!networkUse.allowed) {
+        clearDeviceLocationState();
+        return;
+      }
+
+      const heading = resolveDeviceOrientationHeading(event);
+      if (heading === null) return;
+
+      setDeviceLocation((previous) => {
+        if (!previous) return previous;
+
+        const nextLocation: DeviceMapLocation = {
+          ...previous,
+          heading,
+          mode: "heading",
+          updatedAt: Date.now(),
+        };
+
+        return resolveDeviceLocationStateUpdatePlan({
+          previous,
+          next: nextLocation,
+        }).nextLocation;
+      });
+    };
+
+    window.addEventListener("deviceorientationabsolute", handleOrientation);
+    window.addEventListener("deviceorientation", handleOrientation);
+    deviceOrientationCleanupRef.current = () => {
+      window.removeEventListener(
+        "deviceorientationabsolute",
+        handleOrientation,
+      );
+      window.removeEventListener("deviceorientation", handleOrientation);
+    };
+
+    return true;
+  }, [clearDeviceLocationState]);
+
+  const startDeviceLocationWatch = useCallback(
+    (mode: "position" | "heading") => {
+      const authorization = deviceLocationAuthorizationRef.current;
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.geolocation ||
+        !authorization ||
+        deviceLocationWatchIdRef.current !== null
+      )
+        return;
+
+      deviceLocationTrackingLifecycleRef.current?.dispose();
+      const lifecycle = createDeviceLocationTrackingLifecycle(
+        stopDeviceHeadingWatchers,
+        authorization,
+      );
+      deviceLocationTrackingLifecycleRef.current = lifecycle;
+
+      try {
+        deviceLocationWatchIdRef.current = navigator.geolocation.watchPosition(
+          (position) =>
+            applyDevicePosition(position, mode, { shouldFocus: false }),
+          () => {
+            lifecycle.dispose();
+            if (deviceLocationTrackingLifecycleRef.current === lifecycle) {
+              clearDeviceLocationState();
+            }
+          },
+          { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+        );
+      } catch {
+        lifecycle.dispose();
+        if (deviceLocationTrackingLifecycleRef.current === lifecycle) {
+          clearDeviceLocationState();
+        }
+      }
+    },
+    [applyDevicePosition, clearDeviceLocationState, stopDeviceHeadingWatchers],
+  );
+
+  const handleDeviceLocationClick = useCallback(async () => {
+    if (isPublicRestrictedMode) {
+      clearDeviceLocationState();
+      return;
+    }
+    if (isDeviceHeadingMode) {
+      deviceLocationTrackingLifecycleRef.current?.onModeChange(false);
+      clearDeviceLocationState();
+      toast.info("현재 위치와 방향 표시를 껐어요");
+      return;
+    }
+
+    const authorization = await acquireDeviceLocationUseAuthorization();
+    if (!authorization) {
+      clearDeviceLocationState();
+      toast.error(DEVICE_LOCATION_READINESS_BLOCKED);
+      return;
+    }
+
+    if (
+      !deviceLocationMountedRef.current ||
+      (typeof document !== "undefined" &&
+        document.visibilityState === "hidden")
+    ) {
+      revokeDeviceLocationUseAuthorization(authorization);
+      clearDeviceLocationState();
+      return;
+    }
+
+    const previousAuthorization = deviceLocationAuthorizationRef.current;
+    const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
+    if (expiryTimer !== null) {
+      globalThis.clearTimeout(expiryTimer);
+      deviceLocationAuthorizationExpiryTimerRef.current = null;
+    }
+    revokeDeviceLocationUseAuthorization(previousAuthorization);
+    deviceLocationAuthorizationRef.current = authorization;
+    const expiresIn = authorization.expiresAt - authorization.grantedAt;
+    deviceLocationAuthorizationExpiryTimerRef.current = globalThis.setTimeout(() => {
+      if (deviceLocationAuthorizationRef.current === authorization) {
+        clearDeviceLocationState();
+      }
+    }, expiresIn);
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      clearDeviceLocationState();
+      toast.error(DEVICE_LOCATION_ENABLE_TOAST);
+      return;
+    }
+
+    try {
+      if (
+        typeof window === "undefined" ||
+        !window.confirm(DEVICE_LOCATION_DISCLOSURE)
+      ) {
+        clearDeviceLocationState();
+        toast.info(DEVICE_LOCATION_DISCLOSURE_CANCELLED);
+        return;
+      }
+    } catch {
+      clearDeviceLocationState();
+      toast.info(DEVICE_LOCATION_DISCLOSURE_CANCELLED);
+      return;
+    }
+
+    if (deviceLocationAuthorizationRef.current !== authorization) {
+      clearDeviceLocationState();
+      return;
+    }
+
+    const nextMode: "position" | "heading" = deviceLocation
+      ? "heading"
+      : "position";
+    setIsDeviceLocationPending(true);
+
+    try {
+      const position = await new Promise<GeolocationPosition>(
+        (resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            maximumAge: 3000,
+            timeout: 12000,
+          });
+        },
+      );
+      if (
+        !deviceLocationMountedRef.current ||
+        (typeof document !== "undefined" &&
+          document.visibilityState === "hidden")
+      ) {
+        clearDeviceLocationState();
+        return;
+      }
+
+      if (nextMode === "heading") {
+        setIsDeviceHeadingMode(true);
+        await startDeviceOrientationTracking();
+
+        if (
+          !deviceLocationMountedRef.current ||
+          (typeof document !== "undefined" &&
+            document.visibilityState === "hidden")
+        ) {
+          clearDeviceLocationState();
+          return;
+        }
+
+        startDeviceLocationWatch("heading");
+        toast.success("현재 위치와 방향 표시를 켰어요");
+      } else {
+        stopDeviceLocationTracking();
+        setIsDeviceHeadingMode(false);
+        toast.success("현재 위치를 지도에 표시했어요");
+      }
+
+      applyDevicePosition(position, nextMode, { shouldFocus: true });
+    } catch (error) {
+      clearDeviceLocationState();
+      toast.error(describeDeviceLocationFailure(error));
+    } finally {
+      if (deviceLocationMountedRef.current) {
+        setIsDeviceLocationPending(false);
+      }
+    }
+  }, [
+    applyDevicePosition,
+    clearDeviceLocationState,
+    deviceLocation,
+    isDeviceHeadingMode,
+    startDeviceLocationWatch,
+    startDeviceOrientationTracking,
+    stopDeviceLocationTracking,
+  ]);
+
+  useEffect(() => {
+    deviceLocationMountedRef.current = true;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "hidden") return;
+
+      deviceLocationTrackingLifecycleRef.current?.onVisibilityChange(
+        document.visibilityState,
+      );
+      clearDeviceLocationState();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      deviceLocationMountedRef.current = false;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearDeviceLocationState();
+    };
+  }, [clearDeviceLocationState]);
+
+  const shouldRenderSidePanels = Boolean(
+    isAnnouncementSheetOpen ||
+      (!isPublicRestrictedMode &&
+        (isSubmissionModalOpen ||
+          state.isEditModalOpen ||
+          state.isAdminEditModalOpen ||
+          state.isReviewModalOpen)),
+  );
+
+  const handleTopShellUserIconClick = useCallback(() => {
+    if (isPublicRestrictedMode) return;
+    if (typeof window === "undefined") return;
+
+    if (!user) {
+      toast.info("로그인 후 프로필을 확인할 수 있어요");
+      requestAuthUi({
+        source: "mobile-top-shell",
+        route: "/",
+        reason: "open-profile",
+        force: true,
+      });
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("home:mobile-profile-request", {
+        detail: {
+          source: "mobile-top-shell",
+          route: "/",
+          userId: user.id,
+          ts: Date.now(),
+        },
+      }),
+    );
+  }, [user]);
+  const handleRequestEditRestaurant = useCallback(
+    (restaurant: Restaurant) => {
+      if (isPublicRestrictedMode) return;
+      openRestaurantEditRequest(restaurant);
+    },
+    [openRestaurantEditRequest],
+  );
+  const handleReviewModalOpen = useCallback(() => {
+    if (isPublicRestrictedMode) return;
+    setIsReviewModalOpen(true);
+  }, [setIsReviewModalOpen]);
+
+  return (
+    <>
+      <HomeClientEffects
+        activeRightPanel={activeRightPanel}
+        clearRestaurantDetailSelection={clearRestaurantDetailSelection}
+        isAdmin={isAdmin}
+        isLoggedIn={!!user}
+        isAnnouncementSheetOpen={isAnnouncementSheetOpen}
+        mapMode={mapMode}
+        closeAllPanels={closeAllPanels}
+        openDetailPanelRef={openDetailPanelRef}
+        openPanelRef={openPanelRef}
+        selectedAnnouncement={selectedAnnouncement}
+        setMapMode={setMapMode}
+        setSelectedAnnouncement={setSelectedAnnouncement}
+      />
+
+      {isPublicRestrictedMode && (
+        <>
+          <div
+            className="pointer-events-none fixed left-1/2 top-3 z-[130] -translate-x-1/2 rounded-full border border-border bg-background/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm"
+            data-public-demo-mode="true"
+            role="status"
+          >
+            공개 데모 · 개인정보 기능 제한
+          </div>
+          <style>{`[data-desktop-map-menu-trigger="true"], [data-desktop-map-menu="true"] { display: none !important; }`}</style>
+        </>
+      )}
+      <HomeMapContainer
+        key={mapMountKey}
+        viewportMode={viewportMode}
+        mapMode={mapMode}
+        mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
+        filters={state.filters}
+        selectedRegion={state.selectedRegion}
+        selectedCountry={state.selectedCountry}
+        searchedRestaurant={state.searchedRestaurant}
+        selectedRestaurant={state.selectedRestaurant}
+        refreshTrigger={state.refreshTrigger}
+        panelRestaurant={state.panelRestaurant}
+        isPanelOpen={state.isPanelOpen && !isPanelCollapsed}
+        onAdminEditRestaurant={onAdminEditRestaurant}
+        onRequestEditRestaurant={handleRequestEditRestaurant}
+        onRestaurantSelect={handleRestaurantSelectionSync}
+        onMapReady={handlers.handleMapReady}
+        onMarkerClick={openDetailPanel}
+        onPanelClose={closeAllPanels}
+        onDetailPanelBack={returnToRestaurantListPanel}
+        onReviewModalOpen={handleReviewModalOpen}
+        onTogglePanelCollapse={togglePanelCollapse}
+        activePanel={activePanel}
+        onPanelClick={setActivePanel}
+        externalPanelOpen={true}
+        isPanelCollapsed={isPanelCollapsed}
+        desktopMapLayout={desktopMapLayout}
+        desktopPanelSide={desktopPanelSide}
+        isMapFullscreen={isMapFullscreen}
+        onMapFullscreenChange={setIsMapFullscreen}
+        deviceLocation={mapMode === "domestic" ? deviceLocation : null}
+        onReleaseSearchSelectionOwnership={releaseSearchSelectionOwnership}
+        onContextualRestaurantsChange={setContextualRestaurantsPayload}
+        onMapInteraction={handleMapInteraction}
+        renderDesktopDetailPanel={!isDesktop}
+        showUserSubmittedMarkers={showUserSubmittedMarkers}
+      />
+
+
+      {isViewportResolved && !(isMobileOrTablet && isMapFullscreen) && (
+        <HomeControlPanel
+          viewportMode={viewportMode}
+          mapMode={mapMode}
+          selectedRegion={state.selectedRegion}
+          selectedCountry={state.selectedCountry}
+          selectedCategories={state.filters.categories}
+          filters={state.filters}
+          onRegionChange={handlers.handleRegionChange}
+          onCountryChange={handlers.handleCountryChange}
+          onCategoryChange={handlers.handleCategoryChange}
+          onThemeChange={handlers.handleThemeChange}
+          onRestaurantSelect={handleControlRestaurantSelect}
+          onRestaurantSearch={handleControlRestaurantSearch}
+          onSearchExecute={handlers.switchToSingleMap}
+          activePanel={activePanel}
+          onPanelClick={setActivePanel}
+          panelRestaurant={state.panelRestaurant}
+          isPanelOpen={state.isPanelOpen && !isPanelCollapsed}
+          contextualRestaurantsPayload={contextualRestaurantsPayload}
+          isMapFullscreen={isMapFullscreen}
+          mapInteractionEpoch={mapInteractionEpoch}
+          onPanelClose={closeAllPanels}
+          onDetailPanelBack={returnToRestaurantListPanel}
+          onReviewModalOpen={isPublicRestrictedMode ? undefined : handleReviewModalOpen}
+          onAdminEditRestaurant={onAdminEditRestaurant}
+          onRequestEditRestaurant={isPublicRestrictedMode ? undefined : handleRequestEditRestaurant}
+          isAdmin={isAdmin}
+          onModeChange={(mode) => {
+            setIsMapFullscreen(false);
+            clearRestaurantDetailSelection();
+            setMapMode(mode);
+          }}
+          user={isPublicRestrictedMode ? null : user}
+          onSubmissionClick={isPublicRestrictedMode ? undefined : handleSubmissionButtonClick}
+          onTopShellUserIconClick={isPublicRestrictedMode ? undefined : handleTopShellUserIconClick}
+          onDeviceLocationClick={isPublicRestrictedMode ? undefined : handleDeviceLocationClick}
+          deviceLocation={isPublicRestrictedMode ? null : deviceLocation}
+          isDeviceLocationPending={isDeviceLocationPending}
+          isDeviceHeadingMode={isDeviceHeadingMode}
+          showUserSubmittedMarkers={showUserSubmittedMarkers}
+          onUserSubmittedMarkersToggle={handleUserSubmittedMarkerToggle}
+          isPanelCollapsed={isPanelCollapsed}
+          onTogglePanelCollapse={togglePanelCollapse}
+          onSetPanelCollapsed={setIsPanelCollapsed}
+          desktopPanelSide={desktopPanelSide}
+          initialIntent={initialMobileOverlayIntent}
+          activeRightPanel={activeRightPanel}
+          selectedAnnouncement={selectedAnnouncement}
+        />
+      )}
+
+      {isDesktop && !isPublicRestrictedMode && (
+        <>
+          <HomeMapUserMenu
+            desktopPanelSide={desktopPanelSide}
+            isPanelCollapsed={isPanelCollapsed}
+          />
+          <SubmissionFloatingButton
+            onClick={handleSubmissionButtonClick}
+            isSidebarOpen={isSidebarOpen}
+            onDeviceLocationClick={handleDeviceLocationClick}
+            deviceLocation={deviceLocation}
+            isDeviceLocationPending={isDeviceLocationPending}
+            isDeviceHeadingMode={isDeviceHeadingMode}
+            desktopPanelSide={desktopPanelSide}
+            isPanelCollapsed={isPanelCollapsed}
+            isAdmin={isAdmin}
+            showUserSubmittedMarkers={showUserSubmittedMarkers}
+            onUserSubmittedMarkersToggle={handleUserSubmittedMarkerToggle}
+          />
+        </>
+      )}
+
+      {isViewportResolved && shouldRenderSidePanels && (
+        <HomeClientSidePanels
+          closeAllPanels={closeAllPanels}
+          isAdmin={isAdmin}
+          isAnnouncementSheetOpen={isAnnouncementSheetOpen}
+          isMobileOrTablet={isMobileOrTablet}
+          isSubmissionModalOpen={isSubmissionModalOpen}
+          selectedAnnouncement={selectedAnnouncement}
+          setIsAnnouncementSheetOpen={setIsAnnouncementSheetOpen}
+          setIsSubmissionModalOpen={setIsSubmissionModalOpen}
+          setSelectedAnnouncement={setSelectedAnnouncement}
+          state={state}
+        />
+      )}
+    </>
+  );
+}
+
+
+===== apps/web/lib/device-location-map.ts | whole-file SHA256 884697059112904b4293679d640e5577ab5e4f1355e2a729917da95f4f32b845 =====
+export type DeviceLocationMode = 'position' | 'heading';
+
+export interface DeviceMapLocation {
+    lat: number;
+    lng: number;
+    accuracy: number | null;
+    heading: number | null;
+    mode: DeviceLocationMode;
+    focusRequestId: number;
+    updatedAt: number;
+}
+
+export interface DeviceLocationButtonStateInput {
+    hasLocation: boolean;
+    isHeadingMode: boolean;
+    isPending: boolean;
+}
+
+export interface DeviceLocationMapRenderPlanInput {
+    currentZoom: number;
+    location: Pick<DeviceMapLocation, 'accuracy' | 'focusRequestId'> | null;
+    maxAccuracyRadius?: number;
+    minAccuracyRadius?: number;
+    minimumFocusZoom?: number;
+    previousFocusRequestId: number | null;
+}
+
+export interface DeviceLocationMapRenderPlan {
+    accuracyRadius: number | null;
+    focusZoom: number;
+    hasLocation: boolean;
+    nextFocusedRequestId: number | null;
+    shouldFocus: boolean;
+}
+
+export interface DeviceLocationStateUpdateInput {
+    previous: DeviceMapLocation | null;
+    next: DeviceMapLocation;
+    headingThresholdDegrees?: number;
+    positionThresholdMeters?: number;
+    accuracyThresholdMeters?: number;
+}
+
+export interface DeviceLocationStateUpdatePlan {
+    nextLocation: DeviceMapLocation;
+    shouldUpdate: boolean;
+}
+
+const DEFAULT_HEADING_UPDATE_THRESHOLD_DEGREES = 3;
+const DEFAULT_POSITION_UPDATE_THRESHOLD_METERS = 3;
+const DEFAULT_ACCURACY_UPDATE_THRESHOLD_METERS = 5;
+const EARTH_RADIUS_METERS = 6_371_000;
+
+export function normalizeCompassHeading(value: number | null | undefined): number | null {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+    return ((value % 360) + 360) % 360;
+}
+
+export function resolveDeviceOrientationHeading(
+    event: Pick<DeviceOrientationEvent, 'alpha' | 'absolute'> & { webkitCompassHeading?: number | null }
+): number | null {
+    const webkitHeading = normalizeCompassHeading(event.webkitCompassHeading);
+    if (webkitHeading !== null) return webkitHeading;
+
+    if (event.absolute !== true) return null;
+    const alphaHeading = normalizeCompassHeading(event.alpha);
+    if (alphaHeading === null) return null;
+
+    // DeviceOrientation alpha grows counter-clockwise on many Android browsers;
+    // convert it to the same clockwise-from-north convention as compass headings.
+    return normalizeCompassHeading(360 - alphaHeading);
+}
+
+export function resolveGeolocationHeading(value: number | null | undefined): number | null {
+    return normalizeCompassHeading(value);
+}
+
+export function resolveDeviceLocationButtonLabel({
+    hasLocation,
+    isHeadingMode,
+    isPending,
+}: DeviceLocationButtonStateInput): string {
+    if (isPending) return '현재 위치 확인 중';
+    if (isHeadingMode) return '현재 위치와 방향 다시 확인';
+    if (hasLocation) return '현재 위치 기준 방향 확인';
+    return '현재 위치 보기';
+}
+
+export function shouldFocusDeviceLocation(
+    previousFocusRequestId: number | null,
+    location: Pick<DeviceMapLocation, 'focusRequestId'> | null
+): boolean {
+    return location !== null && previousFocusRequestId !== location.focusRequestId;
+}
+
+export function resolveDeviceLocationAccuracyRadius(
+    accuracy: number | null | undefined,
+    minRadius = 12,
+    maxRadius = 500
+): number | null {
+    if (typeof accuracy !== 'number' || !Number.isFinite(accuracy)) return null;
+    return Math.max(minRadius, Math.min(accuracy, maxRadius));
+}
+
+export function resolveDeviceLocationFocusZoom(currentZoom: number, minimumFocusZoom = 15): number {
+    if (typeof currentZoom !== 'number' || !Number.isFinite(currentZoom)) return minimumFocusZoom;
+    return Math.max(currentZoom, minimumFocusZoom);
+}
+
+function toRadians(value: number): number {
+    return value * Math.PI / 180;
+}
+
+export function getDeviceLocationDistanceMeters(
+    first: Pick<DeviceMapLocation, 'lat' | 'lng'>,
+    second: Pick<DeviceMapLocation, 'lat' | 'lng'>,
+): number {
+    const firstLat = toRadians(first.lat);
+    const secondLat = toRadians(second.lat);
+    const deltaLat = toRadians(second.lat - first.lat);
+    const deltaLng = toRadians(second.lng - first.lng);
+    const haversine =
+        Math.sin(deltaLat / 2) ** 2 +
+        Math.cos(firstLat) * Math.cos(secondLat) * Math.sin(deltaLng / 2) ** 2;
+
+    return 2 * EARTH_RADIUS_METERS * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+export function getCompassHeadingDeltaDegrees(
+    previousHeading: number | null | undefined,
+    nextHeading: number | null | undefined,
+): number {
+    const previous = normalizeCompassHeading(previousHeading);
+    const next = normalizeCompassHeading(nextHeading);
+    if (previous === null || next === null) return previous === next ? 0 : Number.POSITIVE_INFINITY;
+
+    const directDelta = Math.abs(next - previous);
+    return Math.min(directDelta, 360 - directDelta);
+}
+
+function getAccuracyDeltaMeters(
+    previousAccuracy: number | null | undefined,
+    nextAccuracy: number | null | undefined,
+): number {
+    if (
+        typeof previousAccuracy !== 'number' ||
+        !Number.isFinite(previousAccuracy) ||
+        typeof nextAccuracy !== 'number' ||
+        !Number.isFinite(nextAccuracy)
+    ) {
+        return previousAccuracy === nextAccuracy ? 0 : Number.POSITIVE_INFINITY;
+    }
+
+    return Math.abs(nextAccuracy - previousAccuracy);
+}
+
+export function resolveDeviceLocationStateUpdatePlan({
+    accuracyThresholdMeters = DEFAULT_ACCURACY_UPDATE_THRESHOLD_METERS,
+    headingThresholdDegrees = DEFAULT_HEADING_UPDATE_THRESHOLD_DEGREES,
+    next,
+    positionThresholdMeters = DEFAULT_POSITION_UPDATE_THRESHOLD_METERS,
+    previous,
+}: DeviceLocationStateUpdateInput): DeviceLocationStateUpdatePlan {
+    if (!previous) {
+        return { nextLocation: next, shouldUpdate: true };
+    }
+
+    if (previous.focusRequestId !== next.focusRequestId || previous.mode !== next.mode) {
+        return { nextLocation: next, shouldUpdate: true };
+    }
+
+    const distanceMeters = getDeviceLocationDistanceMeters(previous, next);
+    if (distanceMeters >= positionThresholdMeters) {
+        return { nextLocation: next, shouldUpdate: true };
+    }
+
+    const headingDelta = getCompassHeadingDeltaDegrees(previous.heading, next.heading);
+    if (headingDelta >= headingThresholdDegrees) {
+        return { nextLocation: next, shouldUpdate: true };
+    }
+
+    const accuracyDelta = getAccuracyDeltaMeters(previous.accuracy, next.accuracy);
+    if (accuracyDelta >= accuracyThresholdMeters) {
+        return { nextLocation: next, shouldUpdate: true };
+    }
+
+    return { nextLocation: previous, shouldUpdate: false };
+}
+
+export function resolveDeviceLocationMapRenderPlan({
+    currentZoom,
+    location,
+    maxAccuracyRadius = 500,
+    minAccuracyRadius = 12,
+    minimumFocusZoom = 15,
+    previousFocusRequestId,
+}: DeviceLocationMapRenderPlanInput): DeviceLocationMapRenderPlan {
+    if (!location) {
+        return {
+            accuracyRadius: null,
+            focusZoom: resolveDeviceLocationFocusZoom(currentZoom, minimumFocusZoom),
+            hasLocation: false,
+            nextFocusedRequestId: null,
+            shouldFocus: false,
+        };
+    }
+
+    const shouldFocus = shouldFocusDeviceLocation(previousFocusRequestId, location);
+
+    return {
+        accuracyRadius: resolveDeviceLocationAccuracyRadius(location.accuracy, minAccuracyRadius, maxAccuracyRadius),
+        focusZoom: resolveDeviceLocationFocusZoom(currentZoom, minimumFocusZoom),
+        hasLocation: true,
+        nextFocusedRequestId: shouldFocus ? location.focusRequestId : previousFocusRequestId,
+        shouldFocus,
+    };
+}
+
+export function buildDeviceLocationMarkerHtml(location: Pick<DeviceMapLocation, 'accuracy' | 'heading' | 'mode'>): string {
+    const heading = normalizeCompassHeading(location.heading);
+    const showHeading = location.mode === 'heading' && heading !== null;
+    const markerHeading = heading === null ? null : Math.round(heading * 10) / 10;
+    const accuracyRadius = resolveDeviceLocationAccuracyRadius(location.accuracy);
+    const accuracyLabel = accuracyRadius === null
+        ? '현재 위치'
+        : `${Math.round(accuracyRadius)}m`;
+
+    return `
+        <div style="position:relative;width:56px;height:56px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+            <div style="position:absolute;width:34px;height:34px;border-radius:9999px;background:rgba(37,99,235,0.14);border:1px solid rgba(37,99,235,0.25);"></div>
+            ${showHeading ? `<div aria-hidden="true" style="position:absolute;left:50%;top:2px;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:22px solid rgba(37,99,235,0.68);transform:translateX(-50%) rotate(${markerHeading}deg);transform-origin:50% 26px;filter:drop-shadow(0 2px 3px rgba(15,23,42,0.22));"></div>` : ''}
+            <div style="position:relative;width:18px;height:18px;border-radius:9999px;background:#2563eb;border:3px solid white;box-shadow:0 4px 12px rgba(37,99,235,0.45),0 0 0 1px rgba(15,23,42,0.16);"></div>
+            <span style="position:absolute;left:50%;top:44px;transform:translateX(-50%);white-space:nowrap;border-radius:9999px;background:rgba(15,23,42,0.78);color:white;font-size:10px;font-weight:700;line-height:1;padding:4px 7px;box-shadow:0 2px 8px rgba(15,23,42,0.18);">${showHeading ? `${Math.round(heading)}°` : accuracyLabel}</span>
+        </div>
+    `;
+}
+
+
+===== apps/web/lib/privacy/location-readiness.ts | whole-file SHA256 84b07e792e6abff43ecc982feb7052ceefd7820fec375f09bf96e390aba1c3dd =====
+export const DEVICE_LOCATION_AVAILABLE = 'DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED' as const;
+
+export type DeviceLocationReadiness = Readonly<{
+  status: 'available';
+  reasonCode: typeof DEVICE_LOCATION_AVAILABLE;
+}>;
+
+export function resolveDeviceLocationReadiness(): DeviceLocationReadiness {
+  return { status: 'available', reasonCode: DEVICE_LOCATION_AVAILABLE };
+}
+
+
+===== apps/web/app/api/privacy/location-readiness/route.ts | whole-file SHA256 d1ac058eba6ada352e8d30eafcc2baac8571acb5c19a0d26e5738a448d3acfa7 =====
+import { NextResponse } from 'next/server';
+
+import { resolveDeviceLocationReadiness } from '@/lib/privacy/location-readiness';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+
+export async function GET() {
+  const readiness = resolveDeviceLocationReadiness();
+  return NextResponse.json(
+    { status: readiness.status, reasonCode: 'DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED' },
+    {
+    headers: { 'Cache-Control': 'no-store, max-age=0' },
+  });
+}
+
+
+===== apps/web/package.json | whole-file SHA256 407643e76fdcd7646d2caa77095a74b851ba694ad8ed8c488271b703fca0f285 =====
+{
+  "name": "web",
+  "version": "1.2.4",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "packageManager": "npm@11.6.2",
+  "scripts": {
+    "dev": "node scripts/run-local-dev.mjs --port 3000",
+    "dev:local": "node scripts/run-local-dev.mjs --port 3000",
+    "dev:hosted": "node scripts/dev-prewarm.mjs --port 3000 --hosted",
+    "dev:clean": "node scripts/run-local-dev.mjs --port 3000 --clean",
+    "dev:playwright": "node scripts/run-local-dev.mjs --port 3000",
+    "dev:playwright:naver-live": "node scripts/run-local-dev.mjs --port 3000 --live-naver-provider-smoke",
+    "build": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next build --webpack && node scripts/verify-route-css-boundaries.mjs",
+    "start": "node scripts/start-standalone.mjs",
+    "start:playwright": "node scripts/start-standalone.mjs --port 3000 --hostname localhost",
+    "lint": "node scripts/run-web-tool.mjs eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0",
+    "lint:fix": "node scripts/run-web-tool.mjs eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "analyze": "node scripts/run-web-tool.mjs next-analyze",
+    "supabase:gen-types": "node scripts/supabase-gen-types.mjs",
+    "supabase:gen-types:local": "node scripts/run-local-supabase-types.mjs",
+    "typecheck:verify": "node scripts/verify-typescript-toolchain.mjs",
+    "typecheck:native": "node scripts/run-typecheck.mjs --compiler native",
+    "typecheck:compat": "node scripts/run-typecheck.mjs --compiler compat",
+    "typecheck:parity": "node scripts/run-typecheck.mjs --compiler parity",
+    "typecheck:benchmark": "node scripts/measure-typecheck.mjs",
+    "bench:typecheck": "node scripts/measure-typecheck.mjs",
+    "release-performance:score": "node scripts/score-performance-backlog.mjs",
+    "release-performance:validate": "node scripts/validate-performance-backlog.mjs",
+    "release-auth:smoke": "node scripts/run-auth-release-smoke.mjs",
+    "release-visual:run": "node scripts/run-release-visual-evidence.mjs",
+    "release-visual:assemble": "node scripts/assemble-release-visual-evidence.mjs",
+    "release-visual:verify": "node scripts/verify-release-visual-evidence.mjs",
+    "test:unit": "node scripts/run-unit-tests.mjs",
+    "test:nightly": "node scripts/run-nightly-regression.mjs",
+    "test:dependency-modernization": "node scripts/run-dependency-modernization-browser.mjs --package-only",
+    "test:dependency-modernization:browser": "node scripts/run-dependency-modernization-browser.mjs",
+    "test:responsive": "node scripts/run-responsive-tests.mjs",
+    "test:naver-live-provider": "node scripts/run-naver-live-provider-smoke.mjs",
+    "dev:webpack": "node scripts/run-local-dev.mjs --port 3000",
+    "dev:webpack:clean": "node scripts/run-local-dev.mjs --port 3000 --clean",
+    "dev:turbopack": "node scripts/run-local-dev.mjs --port 3000 --turbopack",
+    "bench:dev": "node scripts/measure-dev-compile.mjs",
+    "bench:routes": "node scripts/measure-dev-routes.mjs",
+    "bench:compare": "node scripts/compare-dev-route-reports.mjs",
+    "dev:thumbnail-ready": "node scripts/dev-thumbnail-ready.mjs",
+    "storyboard:image-proof": "python3 scripts/codex-imagegen-storyboard-provider.py --prove --proof-file .omx/artifacts/gpt-image-2-provenance/latest-verified.json --output-dir .omx/artifacts/gpt-image-2-provenance/latest-proof",
+    "thumbnail:release-certify": "node scripts/thumbnail-release-readback-certification.mjs",
+    "storyboard:quality-loop": "node scripts/storyboard-quality-loop.mjs",
+    "storyboard:local-bridge": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/storyboard-local-bridge.ts",
+    "storyboard:eight-real-smoke": "bun scripts/storyboard-eight-real-provider-smoke.ts",
+    "storyboard:rag-ollama-pull": "node scripts/storyboard-rag-ollama-pull.mjs",
+    "image:readiness": "bun scripts/check-anycap-gpt-image-readiness.ts",
+    "storyboard:gemini-worker": "bun scripts/storyboard-gemini-worker.ts"
+  },
+  "dependencies": {
+    "@emnapi/core": "^1.11.3",
+    "@emnapi/runtime": "^1.11.3",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@google/genai": "^2.24.0",
+    "@radix-ui/react-accordion": "^1.2.20",
+    "@radix-ui/react-alert-dialog": "^1.1.23",
+    "@radix-ui/react-aspect-ratio": "^1.1.15",
+    "@radix-ui/react-avatar": "^1.2.6",
+    "@radix-ui/react-checkbox": "^1.3.11",
+    "@radix-ui/react-collapsible": "^1.1.16",
+    "@radix-ui/react-context-menu": "^2.3.7",
+    "@radix-ui/react-dialog": "^1.1.19",
+    "@radix-ui/react-dropdown-menu": "^2.1.24",
+    "@radix-ui/react-hover-card": "^1.1.23",
+    "@radix-ui/react-label": "^2.1.15",
+    "@radix-ui/react-menubar": "^1.1.24",
+    "@radix-ui/react-navigation-menu": "^1.2.22",
+    "@radix-ui/react-popover": "^1.1.23",
+    "@radix-ui/react-progress": "^1.1.16",
+    "@radix-ui/react-radio-group": "^1.4.7",
+    "@radix-ui/react-scroll-area": "^1.2.18",
+    "@radix-ui/react-select": "^2.3.7",
+    "@radix-ui/react-separator": "^1.1.15",
+    "@radix-ui/react-slider": "^1.4.7",
+    "@radix-ui/react-slot": "^1.3.3",
+    "@radix-ui/react-switch": "^1.3.7",
+    "@radix-ui/react-tabs": "^1.1.21",
+    "@radix-ui/react-toast": "^1.2.23",
+    "@radix-ui/react-toggle": "^1.1.18",
+    "@radix-ui/react-toggle-group": "^1.1.19",
+    "@radix-ui/react-tooltip": "^1.2.16",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.110.2",
+    "@tanstack/react-query": "^5.103.2",
+    "@vercel/speed-insights": "^2.0.0",
+    "browser-image-compression": "^2.0.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "d3-cloud": "^1.2.9",
+    "d3-hierarchy": "^3.1.2",
+    "date-fns": "^4.4.0",
+    "embla-carousel-react": "^8.6.0",
+    "framer-motion": "^13.4.0",
+    "idb": "^8.0.3",
+    "input-otp": "^1.5.0",
+    "lucide-react": "^1.48.0",
+    "maplibre-gl": "^6.11.2",
+    "next": "16.3.8",
+    "openai": "^7.23.0",
+    "react": "^19.3.0",
+    "react-day-picker": "^10.0.1",
+    "react-dom": "^19.3.0",
+    "react-error-boundary": "^6.1.6",
+    "react-hook-form": "^7.88.0",
+    "react-markdown": "^10.1.0",
+    "react-resizable-panels": "^4.13.3",
+    "recharts": "^3.10.1",
+    "remark-gfm": "^4.0.1",
+    "sharp": "0.35.5",
+    "supercluster": "^9.1.0",
+    "swr": "^2.5.1",
+    "tailwind-merge": "^3.7.0",
+    "three": "0.180.0",
+    "web-vitals": "^6.2.2",
+    "zod": "^4.6.5",
+    "@sentry/nextjs": "11.4.0"
+  },
+  "devDependencies": {
+    "@next/bundle-analyzer": "16.3.8",
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/cli": "^4.3.3",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/d3-cloud": "^1.2.9",
+    "@types/d3-hierarchy": "^3.1.7",
+    "@types/google.maps": "^3.66.4",
+    "@types/node": "^24.13.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/supercluster": "^7.1.3",
+    "@typescript/native": "npm:typescript@7.0.2",
+    "@typescript/old": "npm:typescript@6.0.2",
+    "baseline-browser-mapping": "2.11.26",
+    "dotenv": "^17.4.2",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.3.8",
+    "postcss": "^8.5.28",
+    "supabase": "^2.117.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript-eslint": "8.63.0",
+    "braces": "file:vendor/tzudong-braces-3.0.3-tzudong.2.tgz"
+  },
+  "overrides": {
+    "baseline-browser-mapping": "2.11.26",
+    "browserslist": "4.28.8",
+    "brace-expansion": "5.0.12",
+    "nanoid": "3.3.18",
+    "minimatch@3.1.5": {
+      "brace-expansion": "2.1.7"
+    },
+    "postcss": "$postcss",
+    "sharp": "$sharp",
+    "braces": "$braces",
+    "source-map-js": "1.2.2"
+  },
+  "patchedDependencies": {
+    "minimatch@3.1.5": "patches/minimatch@3.1.5.patch"
+  }
+}
+
+
+===== apps/web/components/map/NaverMapView.tsx | whole-file SHA256 8070b6afa230a1ab368c6e479275b7d4278ce52ff47c99f7445fb55068bd5477 =====
+
+--- exact lines 1..80 ---
+'use client';
+import { syncRetainedMarkerAccessibility } from '@/lib/retained-marker-accessibility';
+
+import { Suspense, lazy, useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
+import type { CSSProperties } from "react";
+import { usePathname } from "next/navigation";
+
+import { buildHomeMapActivationPlan, isEmbeddedHomeRuntimeWindow } from "@/app/home-map-runtime-activation";
+import { useNaverMaps } from "@/hooks/use-naver-maps";
+import { useRestaurants } from "@/hooks/use-restaurants";
+import type { FilterState } from "@/components/filters/filter-state";
+import type { Restaurant, Region } from "@/types/restaurant";
+import type { Announcement } from "@/types/announcement";
+import type { Tables } from "@/integrations/supabase/types";
+import { REGION_MAP_CONFIG } from "@/config/maps";
+import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
+import { NaverMapLoadErrorState } from "@/components/map/map-view-status-panels";
+import { NaverMapSurface } from "@/components/map/naver-map-surface";
+import {
+    NaverMapOverlayStack,
+    resolveNaverMapOverlayKind,
+    resolveNaverMapTimedOverlayDropPlan,
+} from "@/components/map/naver-map-overlay-stack";
+import { isPublicRestrictedMode } from "@/lib/site-config";
+import {
+    NaverMapDetailPanelShell,
+    NaverMapReviewModal,
+} from "@/components/map/naver-map-sidepanels";
+import { useLayout } from "@/contexts/LayoutContext";
+import { useDeviceType } from "@/hooks/useDeviceType";
+import { fetchSupabaseRows, postgrestIn, supabaseRestRpcClient } from "@/lib/supabase-rest-client";
+import {
+    ANONYMOUS_PUBLIC_REVIEWER_NICKNAME,
+    readPublicProfileSummariesLookup,
+    resolvePublicReviewerDisplay,
+} from "@/lib/public-profile-read";
+import {
+    buildDeviceLocationMarkerHtml,
+    resolveDeviceLocationMapRenderPlan,
+    type DeviceMapLocation,
+} from "@/lib/device-location-map";
+import {
+    HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM,
+    type HomeMapContextualRestaurantsIneligibilityReason,
+    type HomeMapContextualRestaurantsPayload,
+    type HomeMapRenderMode,
+} from "@/lib/home-map-contextual-restaurants";
+import type Supercluster from 'supercluster';
+import type { ClusterFeature, PointFeature } from 'supercluster';
+import {
+    createClusterIndex,
+    expandCluster,
+    restaurantsToGeoJSON,
+    getClusters,
+    getClusterCategories,
+    isCluster,
+    getClusterIndexMaxZoom,
+    getClusterMaxZoom,
+    getRegionalClusters,
+    type ClusterProperties,
+    type RegionalCluster,
+    type SeoulDistrictCluster,
+    getSeoulDistrictClusters,
+} from "@/lib/clustering";
+import { markerPool } from "@/lib/marker-pool";
+import {
+    createClusterMarkerHTML,
+    clusterAnimationManager,
+    injectClusterCSS,
+    removeClusterCSS
+} from "@/lib/cluster-marker";
+import { syncPopularityMarkerInteraction } from "@/lib/evidence-engineering/popularity-marker";
+import { getNaverIndividualMarkerVisual } from "@/lib/naver-map-marker-visuals";
+import { projectPublishedPopularityTier } from "@/lib/evidence-engineering/published-popularity";
+import { deferMarkerRenders } from "@/lib/deferred-marker-renders";
+import './marker-icons.css';
+import {
+    buildRestaurantMarkerKindSignature,
+    isUserSubmittedRestaurant,
+    RESTAURANT_MARKER_ASSET_VERSION,
+
+--- exact lines 400..450 ---
+    onAdminAddRestaurant?: () => void;
+    onAdminEditRestaurant?: (restaurant: Restaurant) => void;
+    onRequestEditRestaurant?: (restaurant: Restaurant) => void;
+    isGridMode?: boolean;
+    gridSelectedRestaurant?: Restaurant | null; // 그리드 모드에서 각 그리드별 선택된 맛집
+    onRestaurantSelect?: (restaurant: Restaurant) => void;
+    activePanel?: 'map' | 'detail' | 'control';
+    onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
+    onMarkerClick?: (restaurant: Restaurant) => void; // 외부 패널 열기
+    externalPanelOpen?: boolean; // 외부에서 패널 열림 상태 제어
+    isPanelCollapsed?: boolean; // 패널 접기 상태 (접혀있으면 오프셋 없음)
+    isPanelOpen?: boolean; // 외부에서 전달받는 패널 열림 상태 (Centering 용)
+    reservesDesktopLeftPanelSpace?: boolean; // 외부 좌측 패널이 지도 위에 겹치지 않고 레이아웃 공간을 선점하는지
+    mobileSheetHeightPercent?: number; // 모바일 바텀시트 높이(%) - 마커 Y축 중앙 보정
+    onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
+    onContextualRestaurantsChange?: (payload: HomeMapContextualRestaurantsPayload) => void;
+    onSearchSelectionRelease?: () => void;
+    onMapBlankClick?: () => void;
+    onMapInteraction?: () => void;
+    deviceLocation?: DeviceMapLocation | null;
+    showUserSubmittedMarkers?: boolean;
+}
+const hasValidNaverDeviceLocation = (
+  location: DeviceMapLocation | null,
+  zoom: number,
+): location is DeviceMapLocation =>
+  location !== null &&
+  Number.isFinite(location.lat) &&
+  Number.isFinite(location.lng) &&
+  location.lat >= -90 &&
+  location.lat <= 90 &&
+  location.lng >= -180 &&
+  location.lng <= 180 &&
+  Number.isFinite(zoom);
+
+/**
+ * [OPTIMIZATION] HTML 마커 콘텐츠 캐시 (LRU 기반)
+ * 각 레스토랑의 선택/비선택 상태별로 HTML을 캐싱하여 재사용
+ */
+const markerContentCache = new LruCache<string, string>(500);
+type VisibleMarkerReviewRow = Pick<
+    Tables<'reviews'>,
+    'id' | 'restaurant_id' | 'user_id' | 'content' | 'food_photos' | 'created_at' | 'is_pinned'
+>;
+
+const VISIBLE_MARKER_REVIEW_SELECT = 'id,restaurant_id,user_id,content,food_photos,created_at,is_pinned';
+const EMPTY_CONTEXTUAL_RESTAURANTS: Restaurant[] = [];
+
+let lastComposedMarkerLayerVersion = '';
+let lastComposedMarkerKindSignature = '';
+
+
+--- exact lines 740..835 ---
+    refreshTrigger: _refreshTrigger,
+    onAdminEditRestaurant,
+    onRequestEditRestaurant,
+    isGridMode = false,
+    gridSelectedRestaurant,
+    onRestaurantSelect,
+    activePanel,
+    onPanelClick,
+    onMarkerClick,
+    externalPanelOpen,
+    isPanelCollapsed = false,
+    isPanelOpen: propIsPanelOpen,
+    reservesDesktopLeftPanelSpace = false,
+    mobileSheetHeightPercent = 0,
+    onVisibleRestaurantsChange,
+    onContextualRestaurantsChange,
+    onSearchSelectionRelease,
+    onMapBlankClick,
+    onMapInteraction,
+    deviceLocation = null,
+    showUserSubmittedMarkers = true,
+}: NaverMapViewProps) => {
+    const mapRef = useRef<HTMLDivElement>(null);
+    const mapInstanceRef = useRef<NaverMapLike | null>(null);
+    const markerRenderSignatureRef = useRef<MarkerRenderSignature | null>(null);
+    const pendingOffscreenMarkerRendersRef = useRef<(() => void) | null>(null);
+    const extendedBoundsRef = useRef({ south: 0, west: 0, north: 0, east: 0 });
+    const lastMarkerViewportRef = useRef<string | null>(null);
+    const [markerViewportRevision, setMarkerViewportRevision] = useState(0);
+    const lastPublishedMapListsRef = useRef({
+        swipeCandidates: null as Restaurant[] | null,
+        contextualRestaurants: null as Restaurant[] | null,
+        zoom: Number.NaN,
+        renderMode: '',
+        isEligible: false,
+        ineligibilityReason: undefined as HomeMapContextualRestaurantsIneligibilityReason | undefined,
+    });
+    const earlyMarkerRenderKeyRef = useRef<{
+        zoom: number;
+        south: number;
+        west: number;
+        north: number;
+        east: number;
+        clusters: unknown;
+        regionalClusters: unknown;
+        seoulDistrictClusters: unknown;
+        seoulDistrictClustersFiltered: unknown;
+        displayRestaurants: unknown;
+        selectedRegion: Region | null;
+        selectedRestaurantId: string;
+        searchedRestaurantId: string;
+        showUserSubmittedMarkers: boolean;
+        markerKindSignature: string;
+        expandedClusterRestaurantIds: unknown;
+        visibleMarkerReviewBubbles: unknown;
+        isMobileOrTablet: boolean;
+        markerRenderRetryTick: number;
+        markerViewportRevision: number;
+    } | null>(null);
+    const previousSearchedRestaurantRef = useRef<Restaurant | null>(null); // 이전 searchedRestaurant 추적
+    const releasedSearchSelectionIdRef = useRef<string | null>(null);
+    const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
+    const prevSelectedRestaurantIdRef = useRef<string | null>(null); // 이전 선택된 레스토랑 ID 추적 (동일 마커 재클릭 감지용)
+    const hasUserMovedMapRef = useRef<boolean>(false); // 사용자가 지도를 직접 움직였는지 추적
+    const lastImmediateMarkerCenterRef = useRef<{
+        restaurantId: string;
+        targetLat: number;
+        targetLng: number;
+        targetZoom: number;
+        targetOffsetX: number;
+        targetOffsetY: number;
+        centeredAt: number;
+    } | null>(null);
+    const [isMapRuntimeActive, setIsMapRuntimeActive] = useState(false);
+    const deviceLocationMarkerRef = useRef<{
+        setMap: (map: unknown | null) => void;
+        setPosition: (position: unknown) => void;
+        setIcon: (icon: unknown) => void;
+    } | null>(null);
+    const lastFocusedDeviceLocationRequestRef = useRef<number | null>(null);
+    const isInitialLoadFromUrlRef = useRef<boolean>(false); // URL 파라미터로 초기화되었는지 추적 (공유 URL 지원)
+
+    // [Cluster] Supercluster 인덱스 및 클러스터 상태
+    const clusterIndexRef = useRef<Supercluster<ClusterProperties> | null>(null);
+    const [clusterIndexVersion, setClusterIndexVersion] = useState(0);
+    const [clusters, setClusters] = useState<Array<ClusterFeature<ClusterProperties> | PointFeature<ClusterProperties>>>([]);
+    const [regionalClusters, setRegionalClusters] = useState<RegionalCluster[]>([]); // 17개 행정구역 클러스터
+    const [seoulDistrictClusters, setSeoulDistrictClusters] = useState<SeoulDistrictCluster[]>([]); // 줄 9-10: 서울 자치구 25개 모두
+    const [seoulDistrictClustersFiltered, setSeoulDistrictClustersFiltered] = useState<SeoulDistrictCluster[]>([]); // 줄 11-12: 마커 3개 이상만
+    const [seoulIndividualIds, setSeoulIndividualIds] = useState<string[]>([]); // 줄 11-12: 마커 2개 이하
+    const [expandedClusterRestaurantIds, setExpandedClusterRestaurantIds] = useState<string[]>([]);
+    const [isClusterMode, setIsClusterMode] = useState(false); // 클러스터 모드 활성화 여부
+    const [isRegionalClusterMode, setIsRegionalClusterMode] = useState(false); // 행정구역 클러스터 모드
+    const [isSeoulDistrictMode, setIsSeoulDistrictMode] = useState(false); // 서울 자치구 모드
+    const [markerRenderRetryTick, setMarkerRenderRetryTick] = useState(0);
+    const markerRenderEmptyRetryCountRef = useRef(0);
+
+--- exact lines 1135..1220 ---
+        return () => {
+            mapEventListeners.forEach((listener) => {
+                maps.Event.removeListener(listener);
+            });
+
+            if (mapElement) {
+                interactionListenerPlan.domListeners.forEach(({ eventName, handlerKey }) => {
+                    mapElement.removeEventListener(
+                        eventName,
+                        interactionHandlers[handlerKey],
+                        NAVER_INTERACTION_REMOVE_OPTIONS,
+                    );
+                });
+            }
+        };
+    }, [activateNoncriticalMapEffects, isMapInitialized, onMapInteraction, releaseSearchSelectionOnUserInteraction]);
+
+    // Renders authorized device coordinates at the approved map-provider boundary.
+    useEffect(() => {
+        if (!isMapInitialized || !mapInstanceRef.current || !window.naver?.maps) return;
+
+        const { naver } = window;
+        if (!naver.maps.LatLng || !naver.maps.Point || !naver.maps.Marker) return;
+        const map = mapInstanceRef.current;
+
+        if (!deviceLocation) {
+            deviceLocationMarkerRef.current?.setMap(null);
+            deviceLocationMarkerRef.current = null;
+            lastFocusedDeviceLocationRequestRef.current = null;
+            return;
+        }
+
+        const currentZoom = map.getZoom();
+        if (!hasValidNaverDeviceLocation(deviceLocation, currentZoom) || !Number.isFinite(currentZoom)) {
+            deviceLocationMarkerRef.current?.setMap(null);
+            deviceLocationMarkerRef.current = null;
+            lastFocusedDeviceLocationRequestRef.current = null;
+            return;
+        }
+
+        // Provider boundary: keep coordinates in React state memory, and only apply validated updates to the Naver map.
+        const position = new naver.maps.LatLng(deviceLocation.lat, deviceLocation.lng);
+        const icon = {
+            content: buildDeviceLocationMarkerHtml(deviceLocation),
+            anchor: new naver.maps.Point(28, 28),
+        };
+        const deviceLocationRenderPlan = resolveDeviceLocationMapRenderPlan({
+            currentZoom,
+            location: deviceLocation,
+            previousFocusRequestId: lastFocusedDeviceLocationRequestRef.current,
+        });
+
+        if (!deviceLocationMarkerRef.current) {
+            deviceLocationMarkerRef.current = new naver.maps.Marker({
+                position,
+                map,
+                icon,
+                zIndex: 10000,
+            });
+        } else {
+            deviceLocationMarkerRef.current.setPosition(position);
+            deviceLocationMarkerRef.current.setIcon(icon);
+            deviceLocationMarkerRef.current.setMap(map);
+        }
+
+        if (deviceLocationRenderPlan.shouldFocus) {
+            lastFocusedDeviceLocationRequestRef.current = deviceLocationRenderPlan.nextFocusedRequestId;
+            map.setCenter(position);
+            map.setZoom(deviceLocationRenderPlan.focusZoom);
+        }
+    }, [deviceLocation, isMapInitialized]);
+
+    useEffect(() => () => {
+        deviceLocationMarkerRef.current?.setMap(null);
+    }, []);
+
+    const handleDetailPanelMouseDownCapture = useMemo(
+        () => buildNaverMapDetailPanelMouseDownCaptureHandler(onPanelClick),
+        [onPanelClick]
+    );
+
+    const handleDetailPanelFocusCapture = useMemo(
+        () => buildNaverMapDetailPanelFocusCaptureHandler(onPanelClick),
+        [onPanelClick]
+    );
+

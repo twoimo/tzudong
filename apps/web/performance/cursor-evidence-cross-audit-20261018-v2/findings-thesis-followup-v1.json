@@ -1,0 +1,282 @@
+{
+  "source_revision": "9228c1454393560bcd37240f793065e450f85683",
+  "findings": [
+    {
+      "id": "W001-F1",
+      "decision": "ACCEPT",
+      "reason": "Stored binary64 deadline differs from mathematical exact duration.",
+      "actual_action": "REPORT.md clarifies half-open stored deadline; actual fractional regression fix9228 retained without epsilon.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md",
+        "../cursor-evidence-delivery-20261018-v1/cross-audit-v1/thesis-clock-boundaries-observed-v1.json",
+        "capability-boundaries-v2.log"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W001-F2",
+      "decision": "ACCEPT",
+      "reason": "Conforming captured performance.now is trusted; generic backwards-clock detection is not implemented.",
+      "actual_action": "Bound claims to expiry-observed deletion; document synthetic intra-window decrease rather than add unrequested state.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md",
+        "../cursor-evidence-delivery-20261018-v1/cross-audit-v1/thesis-clock-boundaries-observed-v1.json"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W001-F3",
+      "decision": "ACCEPT",
+      "reason": "Invalid or unsafe clock must fail closed and invalidate existing authority.",
+      "actual_action": "Added11 native Bun cases/31assertions including five invalid times at mint and active-use invalidation, plus fractional expiry. Typed fixture integration failure corrected as native BunJS; no app compiler/dependency exclusions changed.",
+      "verification_artifacts": [
+        "capability-boundaries.test.mjs",
+        "capability-boundaries-v2.log",
+        "fixture-typecheck-diagnosis-v1.json",
+        "typecheck-parity-v2.log"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W001-F4",
+      "decision": "CONDITIONAL",
+      "reason": "Original9-source package lacked callers/site-config.",
+      "actual_action": "New18-path bundle adds full home/site-config/readiness/device helper and exact Naver location ranges; byte-bound9228 and deployedb4.",
+      "verification_artifacts": [
+        "source-index-v2.json",
+        "source_bundle_v2.txt"
+      ],
+      "remaining_condition": "Full renderer/application graph and real-coordinate boundary execution remain outside this source package; no BOUNDARY_INTEGRATION_TESTED certification.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W002-F1",
+      "decision": "CONDITIONAL",
+      "reason": "Source branch and instrumented synthetic component results are different evidence.",
+      "actual_action": "Retain actual component instrumentation raw results; no physical/process-memory/service gain inference.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-comparison-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-capability-v1/results-before.json",
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-capability-v1/results-after.json",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": "Synthetic navigator/softwareGL only; full Next production/import tracing or hardware claim requires separate proof.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W002-F2",
+      "decision": "ACCEPT",
+      "reason": "deviceMemory is coarse; memory threshold is not physical6GiB detection.",
+      "actual_action": "Document coarse heuristic semantics and prohibit physical-model claim.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md",
+        "../cursor-evidence-delivery-20261018-v1/REPRODUCE-mobile-capability-v1.md",
+        "../cursor-evidence-delivery-20261018-v1/cross-audit-v1/chatgpt-thesis-citation-urls-v1.json"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W002-F3",
+      "decision": "ACCEPT",
+      "reason": "Unsupported powerful mobile can intentionally receive static viewer.",
+      "actual_action": "Preserve caller fallback/default-off; disclose trade-off.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md",
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-comparison-v1.json",
+        "source_bundle_v2.txt"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W002-F4",
+      "decision": "ACCEPT",
+      "reason": "Global OS-to-model heuristic was not fixed.",
+      "actual_action": "Scope delivery and claimed benefit to optional viewer; document remaining global limitation.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md",
+        "source_bundle_v2.txt"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W002-F5",
+      "decision": "DEFER",
+      "reason": "In-flight module fetch cannot be equated with unmount cleanup.",
+      "actual_action": "Do not claim network cancellation/leak resolution; optional3D remains default-off and low/unknown mobile static fallback.",
+      "verification_artifacts": [
+        "source_bundle_v2.txt",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": "Actual delayed-chunk unmount race and user feedback during loading require additional targeted reproduction; no early-cleanup guarantee.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W002-F6",
+      "decision": "CONDITIONAL",
+      "reason": "Original session helper was outside submitted closure.",
+      "actual_action": "Added exact session helper and existing native session test source to18-path bundle.",
+      "verification_artifacts": [
+        "source-index-v2.json",
+        "source_bundle_v2.txt"
+      ],
+      "remaining_condition": "Source availability is repaired; whole Next/SDK concurrency runtime certification is not inferred.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F1",
+      "decision": "ACCEPT",
+      "reason": "Old production2e cannot prove new9228 candidate delivery.",
+      "actual_action": "Separate new exactb4 tree/dpl5Md/READY/alias/live chain; no reuse/relabel of old operating evidence.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/location-production-ready-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/delivery-final-readback-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F2",
+      "decision": "CONDITIONAL",
+      "reason": "First external package omitted underlying actual-browser evidence.",
+      "actual_action": "Provide saved anonymous live output/assets/console/map-only PNG proof, exact source identity and remote packet verification.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/live-readback-after-v4.json",
+        "../cursor-evidence-delivery-20261018-v1/production-verification-receipt-v2.json",
+        "../cursor-evidence-delivery-20261018-v1/visual-pixel-inspection-v3.json",
+        "../../../../docs/evidence/cursor-evidence-remote-verification-20261018-v1.json"
+      ],
+      "remaining_condition": "Functional short runs and static images only, no full trace/HAR/pixel cadence/device/field certification.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F3",
+      "decision": "CONDITIONAL",
+      "reason": "Original report only saw an attestation of synthetic resource numbers.",
+      "actual_action": "Keep raw instrumented component outputs and explicit dependent sample counts/220ms limits.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-comparison-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-capability-v1/results-before.json",
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-capability-v1/results-after.json",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": "No whole UI performance admission.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F4",
+      "decision": "DEFER",
+      "reason": "Strict marker visibility still fails before and after; diagnostic restoration is a different predicate.",
+      "actual_action": "Preserve strict failure and diagnostic3/3 separately; no all-history-success or whole-goal completion.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/live-history-before-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/live-history-after-v3.json",
+        "../cursor-evidence-delivery-20261018-v1/live-history-after-v4.json",
+        "../cursor-evidence-delivery-20261018-v1/production-verification-plan-v4.json"
+      ],
+      "remaining_condition": "Existing strict restoration remains unresolved. Grade/cohort activation stays off/unpublished; this known app history limitation remains explicit rather than being called resolved.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F5",
+      "decision": "DEFER",
+      "reason": "CSP and anonymous401 remain.",
+      "actual_action": "Preserve raw bounded categories; do not weaken CSP/auth or claim clean console.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/console-boundary-after-v3.json",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": "No unauthorized security relaxation; remaining noise/error causes not all fixed.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F6",
+      "decision": "CONDITIONAL",
+      "reason": "Sampler gap failure must remain, separate from real unit failure.",
+      "actual_action": "Preserved raw failed and same-source one-job retry success; threshold60ms unchanged and no speed/memory improvement claimed.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-rerun-completed-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/attempt-outcomes.json",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/preflight-receipts.json",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/01-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/02-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/03-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/04-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/05-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/06-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/07-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/08-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/09-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/10-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/11-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/12-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/13-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/14-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/warmup-compat.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/warmup-native.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/report.json",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": "A one-job retry is not statistical compiler performance proof; raw successful artifact must independently meet unchanged hard validity limit.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F7",
+      "decision": "ACCEPT",
+      "reason": "Thesis snapshot had pendingCI; later state needs fresh proof.",
+      "actual_action": "Fresh completed exact-head source/data/main receipts all failure0/unresolved0; normal protected merges.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/location-source-final-ci-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/location-data-postmerge-ci-v2.json",
+        "../cursor-evidence-delivery-20261018-v1/location-main-final-ci-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/location-protected-main-merge-v1.json"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F8",
+      "decision": "DEFER",
+      "reason": "Original memory guard/physical/field proof remains missing.",
+      "actual_action": "No performance admission or default3D/cohort activation; explicit safety fallback and bounded reporting.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md",
+        "source_bundle_v2.txt"
+      ],
+      "remaining_condition": "Original memory/physical/field/flicker goal incomplete; phone-free instruction retained.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F9",
+      "decision": "DEFER",
+      "reason": "readiness label is not legal/operating approval proof.",
+      "actual_action": "Read back unchanged before/after status and expressly avoid independent legal approval assertion.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/privacy-gate-before-v2.json",
+        "../cursor-evidence-delivery-20261018-v1/privacy-gate-after-v2.json",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": "No new precise coordinate permission/collection; inherit current server readiness only, no legal certification.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "EVIDENCE-TAGS-01",
+      "decision": "ACCEPT",
+      "reason": "Original prompt/report used FIELD_TESTED and omitted canonical PROPOSED; physical and field conflated.",
+      "actual_action": "Correct next canonical plan to exact seven skill tags with separate environmentClass; original full report unchanged.",
+      "verification_artifacts": [
+        "MASTER-PLAN-v2.md"
+      ],
+      "remaining_condition": "Require Gemini and reverse review to adjudicate taxonomy too.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    }
+  ],
+  "all_19_thesis_ids_present": true,
+  "final_external_consensus": false
+}
