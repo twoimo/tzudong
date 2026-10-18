@@ -595,6 +595,11 @@
       "path": "mode-provenance-identity-negative-v1.json",
       "bytes": 288,
       "sha256": "10a2f67e59a163765db5d3999e04f8244b5dbb5e4dec3f8a91921ce0e13f6bc8"
+    },
+    {
+      "path": "research-live-readback-20261019-v1.json",
+      "bytes": 784,
+      "sha256": "7ee59b38bfcc0b575d1f0a97673c1a0c97e95c6988ef047a8af79de63ef18bf9"
     }
   ],
   "remaining_blockers": [
@@ -629,6 +634,6 @@
     "negativeCases": "premature complete, report substitution, duplicate finding ID, source bundle substitution rejected",
     "tests": "5 pass /11 assertions /0fail",
     "scope": "Saved-file integrity only; no web research or runtime certification",
-    "priorManifestPreserved": "completion-manifest-pre-mode-provenance-v1.json"
+    "priorManifestPreserved": "completion-manifest-pre-live-readback-v1.json"
   }
 }

@@ -1,0 +1,16 @@
+{
+  "recordedAt": "2026-10-18T16:12:50.365021+00:00",
+  "url": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+  "accountAliasConfirmed": "kss2740",
+  "modelUiLabel": "Argon 최고가",
+  "researchMode": "Deep Research",
+  "action": "Reloaded original URL once after unchanged progress; waited10s; re-read actual accessibility state",
+  "displayedStatus": "Tzudong 계획 및 소스 반대 감사 보고서 작성 중...",
+  "stopGenerationControlPresent": true,
+  "terminalReportObserved": false,
+  "exportControlObserved": false,
+  "duplicatePromptOrStartSent": false,
+  "backendLivenessBeyondCurrentUi": "UNVERIFIED",
+  "nativeGoalStatusReadBack": "active",
+  "limits": "Current reloaded application UI is observed; completion and provider backend execution are not inferred."
+}

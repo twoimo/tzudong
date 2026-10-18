@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-18T15:42:23.158189+00:00",
+  "updatedAt": "2026-10-18T16:12:50.365021+00:00",
   "threadId": "01a14e99-77bf-7531-b29e-a612bd99b540",
   "sourceRevision": "9228c1454393560bcd37240f793065e450f85683",
   "sourceBundleSha256": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
@@ -62,11 +62,12 @@
     "startActor": "UNVERIFIED: start turn and acknowledgement observed; no duplicate start sent by this automation",
     "browsingSourceCount": null
   },
-  "latestUiStatus": "Tzudong 계획 및 소스 반대 감사 보고서 생성 중...; final-report composition progress visible; not terminal report",
+  "latestUiStatus": "Tzudong 계획 및 소스 반대 감사 보고서 작성 중...",
   "modeProvenance": {
     "path": "antithesis-mode-provenance-v1.json",
     "dispatchAndStartUiContractObserved": true,
     "backendIdentity": "UNVERIFIED",
     "otherTabComposerReport": "Separate collaborator reported lowest level on another tab; current composer setting does not attest dispatch-time setting"
-  }
+  },
+  "latestUiReadback": "research-live-readback-20261019-v1.json"
 }

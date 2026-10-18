@@ -2,3 +2,4 @@
 {"observedAt": "2026-10-18T15:37:50.712472+00:00", "stage": "planning", "conversationUrl": "https://gemini.google.com/app/d33ca8e24b4acf9d", "researchStarted": false}
 {"observedAt": "2026-10-18T15:38:22.851842+00:00", "stage": "research_started", "conversationUrl": "https://gemini.google.com/app/d33ca8e24b4acf9d", "startAcknowledgementObserved": true, "reportComplete": false}
 {"observedAt": "2026-10-18T15:42:23.158189+00:00", "stage": "report_generation", "conversationUrl": "https://gemini.google.com/app/d33ca8e24b4acf9d", "terminalReportObserved": false, "newServiceWarningObserved": false}
+{"recordedAt": "2026-10-18T16:12:50.365021+00:00", "stage": "report_generation", "event": "Original URL reloaded once and still shows writing; no terminal report or export", "duplicateDispatch": false}
