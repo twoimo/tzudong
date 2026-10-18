@@ -1,5 +1,13 @@
 # 교차 감사 증거의 재검증
 
+## 실행 시점 모델 설정 근거
+
+`antithesis-mode-provenance-v1.json`은 실제 원본 CUA 기록에서 선택한 여섯 call/output의 모드·도구·첨부 이름 행만 보존한다. 전송 직전, 전송 직후, 연구 착수 화면에서 최고가와 Deep Research가 함께 관측됐다. 입력문에 최고가라고 쓴 내용으로 대체하지 않는다. 다른 탭의 현재 composer와 실행 시점 설정은 별개이며 backend identity는 미확인이다.
+
+원본 transcript는 비공개 로컬 기록으로 Git에 포함하지 않았다. 원본에 접근 권한이 있는 운영자는 `python3 extract-antithesis-mode-provenance-v1.py <원본 transcript> <새 출력 경로>`로 재추출할 수 있다. 스크립트는 해당 대화의 session_meta.id를 먼저 검사하고 정확한 여섯 쌍만 선택하며 기존 출력 파일을 덮어쓰지 않는다. 기록의 원본 행·prefix 해시는 그 비공개 원본과의 대조에 쓰이며, 원본 없이 provider backend를 독립 인증하는 수단이 아니다. `mode-provenance-identity-negative-v1.json`에 다른 대화 ID의 출력 거부 결과를 보존했다.
+
+## 저장 파일과 구현 경계 확인
+
 현재 `completion-manifest.json`은 `in_progress`다. 완료한 웹 보고서는 ChatGPT thesis 한 건뿐이며 Gemini antithesis와 ChatGPT reverse는 아직 없다. 원본 보고서와 봉인된 delivery 폴더는 변경하지 않는다.
 
 프로젝트 Node24/Bun1.4 환경에서 repository root를 기준으로 실행한다.

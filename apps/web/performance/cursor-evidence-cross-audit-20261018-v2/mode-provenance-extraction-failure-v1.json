@@ -1,0 +1,9 @@
+{
+  "stage": "first provenance extraction",
+  "exitCode": 1,
+  "stdout": "Expected UI labels absent; no evidence written",
+  "sourceSha256": "2c45ae6dc73b68c7ee6b5a15ba328fc9f9f9c52f9fb850e2d17e75c6f816aba8",
+  "cause": "Transcript text envelope type differs from text; text field is present. Initial extractor required type exactly text.",
+  "failedSnippet": "if value.get('type') == 'text' and isinstance(value.get('text'), str):",
+  "evidenceWritten": false
+}

@@ -1,0 +1,107 @@
+{
+  "thread_id": "01a14e99-77bf-7531-b29e-a612bd99b540",
+  "transcript_filename": "rollout-2026-10-18T19-40-43-01a14e99-77bf-7531-b29e-a612bd99b540.jsonl",
+  "transcript_prefix_through_last_selected_output": {
+    "bytes": 18980993,
+    "sha256": "4837f8693c53d51e22d0ab65bff139b03bf7317e9bf290c913afffc2475ab5ed"
+  },
+  "selection": "Exactly six allowlisted CUA call/output pairs; UI label lines only",
+  "events": [
+    {
+      "title": "Argon 최고가 선택",
+      "call_id": "call_e8a8567f1d0a4f0e8af83dab7d56cbc0",
+      "call_timestamp": "2026-10-18T15:32:51.290Z",
+      "call_raw_line_sha256": "22927c42cd1d86ce476c41cc793e2a3198ea035e512c34e76641d7f01057da6d",
+      "output_timestamp": "2026-10-18T15:32:51.809Z",
+      "output_raw_line_sha256": "0a0f9cae0d2839c87a3f22e14970554e6935206639b736a4177c772520838e70",
+      "exact_allowlisted_ui_lines": [
+        "~\t\t\t\t\t\t\t\t41 pop up button (collapsed) Description: 모드 선택 도구 열기, 현재 Argon 최고가 모드 사용 중, Secondary Actions: Expand",
+        "The focused UI element is 41 pop up button (collapsed) Description: 모드 선택 도구 열기, 현재 Argon 최고가 모드 사용 중, Secondary Actions: Expand"
+      ],
+      "max_label_observed": true,
+      "research_chip_observed": false
+    },
+    {
+      "title": "Tzudong Deep Research 활성화 확인",
+      "call_id": "call_e1e38dafd6444316940a821d5317d1c4",
+      "call_timestamp": "2026-10-18T15:33:05.104Z",
+      "call_raw_line_sha256": "000b9e85e034bc0575041b2345ecebddf620899f21415f7b27913753baf2f6cd",
+      "output_timestamp": "2026-10-18T15:33:05.555Z",
+      "output_raw_line_sha256": "71499c83970f5a32bd478c2cab6ff94f1493f76050008bfe054d76bc84d30f82",
+      "exact_allowlisted_ui_lines": [
+        "+\t\t\t\t\t\t\t43 button Deep Research 선택 해제"
+      ],
+      "max_label_observed": false,
+      "research_chip_observed": true
+    },
+    {
+      "title": "Argon 최고가와 Deep Research 동시 활성 확인",
+      "call_id": "call_89e1c682ddc24e9fb6bee6d56f36e185",
+      "call_timestamp": "2026-10-18T15:34:14.483Z",
+      "call_raw_line_sha256": "54a420e6d89b51e5833840dce7ccbb03f6959c294be023b64f056ee9732ad5c2",
+      "output_timestamp": "2026-10-18T15:34:14.922Z",
+      "output_raw_line_sha256": "c7a45d31760e05fc8d74db77fd043e2f81e55696d91f26c36b2521cf93ecbe97",
+      "exact_allowlisted_ui_lines": [
+        "+\t\t\t\t\t\t\t62 button Deep Research 선택 해제"
+      ],
+      "max_label_observed": false,
+      "research_chip_observed": true
+    },
+    {
+      "title": "반대 감사 질문 입력 및 전송 전 확인",
+      "call_id": "call_f33fa3d0e60246dc803b1096e7715762",
+      "call_timestamp": "2026-10-18T15:36:17.924Z",
+      "call_raw_line_sha256": "08b28a6cdc9e855c4a93a61f447205be7ba5cba9bca53b32d1b04c69a89f88a5",
+      "output_timestamp": "2026-10-18T15:36:18.431Z",
+      "output_raw_line_sha256": "1ba3868f3af31205a45d63e265216eba0aa3a1884c2a3c1eb1fd0d6e5cd3a08b",
+      "exact_allowlisted_ui_lines": [
+        "\t\t\t\t\t\t\t\t72 text MASTER-PLAN-v3",
+        "\t\t\t\t\t\t\t\t74 text TXT source_bundle_v2",
+        "\t\t\t\t\t\t\t62 button Deep Research 선택 해제",
+        "\t\t\t\t\t\t\t\t56 pop up button (collapsed) Description: 모드 선택 도구 열기, 현재 Argon 최고가 모드 사용 중, Secondary Actions: Expand"
+      ],
+      "max_label_observed": true,
+      "research_chip_observed": true
+    },
+    {
+      "title": "Tzudong 반대 감사 한 번 전송",
+      "call_id": "call_e18c4de231fe44209463211e4add5477",
+      "call_timestamp": "2026-10-18T15:36:25.848Z",
+      "call_raw_line_sha256": "91d27ea72dea91bec54aa04b0c370571aa9a4b5ebcc2e45d131ecd6682e1d64e",
+      "output_timestamp": "2026-10-18T15:36:26.620Z",
+      "output_raw_line_sha256": "ce8668c4bda806f4898b37682e670d4aa59fa95b1355d61bad215a7bd0c8a0c3",
+      "exact_allowlisted_ui_lines": [
+        "\t\t\t\t\t\t71 button MASTER-PLAN-v3.md",
+        "\t\t\t\t\t\t\t73 text MASTER-PLAN-v3",
+        "\t\t\t\t\t\t74 button source_bundle_v2.txt",
+        "\t\t\t\t\t\t\t62 button Deep Research 선택 해제",
+        "\t\t\t\t\t\t\t\t56 pop up button (collapsed) Description: 모드 선택 도구 열기, 현재 Argon 최고가 모드 사용 중, Secondary Actions: Expand"
+      ],
+      "max_label_observed": true,
+      "research_chip_observed": true
+    },
+    {
+      "title": "생성된 반대 감사 연구 계획 확인",
+      "call_id": "call_1c3de34be2e148abb756695b52c99507",
+      "call_timestamp": "2026-10-18T15:37:57.369Z",
+      "call_raw_line_sha256": "287c848ee375aff31a410dc7c8d5992b5a0cc372ba0424514cd9d27865cdbcad",
+      "output_timestamp": "2026-10-18T15:37:58.030Z",
+      "output_raw_line_sha256": "8da276d8c938343a2870081a388c52a9d2137d52c6700cc414257a8ca726dfd1",
+      "exact_allowlisted_ui_lines": [
+        "\t\t\t\t\t\t\t\t101 button MASTER-PLAN-v3.md",
+        "\t\t\t\t\t\t\t\t\t103 text MASTER-PLAN-v3",
+        "\t\t\t\t\t\t\t\t104 button source_bundle_v2.txt",
+        "\t\t\t\t\t\t\t\t145 heading 말씀하신 내용 연구 시작, Value: 5",
+        "\t\t\t\t\t\t\t\t\t\t155 text 착수할게요.  연구가 완료되면 알려 드릴게요.  그러는 동안 이 대화에서 나가셔도 됩니다.",
+        "\t\t\t\t\t\t\t\t\t\t157 text Tzudong 계획 및 소스 반대 감사 조사 시작 중...",
+        "\t\t\t\t\t\t\t62 button Deep Research 선택 해제",
+        "\t\t\t\t\t\t\t\t56 pop up button (collapsed) Description: 모드 선택 도구 열기, 현재 Argon 최고가 모드 사용 중, Secondary Actions: Expand"
+      ],
+      "max_label_observed": true,
+      "research_chip_observed": true
+    }
+  ],
+  "dispatch_and_start_max_plus_research_ui_observed": true,
+  "backend_identity": "UNVERIFIED",
+  "limits": "UI labels and tool history are observed configuration evidence, not provider backend attestation. A different tab current composer is not the dispatch-time configuration."
+}

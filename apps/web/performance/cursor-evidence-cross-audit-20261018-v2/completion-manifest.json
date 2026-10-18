@@ -570,10 +570,35 @@
       "path": "manifest-integrity-readback-v1.json",
       "bytes": 310,
       "sha256": "8e502c2db0cbff6168769c73a994961a1935e465863a473451ac0ba484bc3aa6"
+    },
+    {
+      "path": "antithesis-start-acceptance-v1.json",
+      "bytes": 2844,
+      "sha256": "2008c98bc2bf472cbb8a3cda4b69271365857daaf6d46b0048cc6b69276a70e4"
+    },
+    {
+      "path": "protected-heads-during-antithesis-v1.json",
+      "bytes": 379,
+      "sha256": "ab65c1a8130c3aae6e480bd9b4a8d633778b97a7e1f4639b3c204ba821c2429f"
+    },
+    {
+      "path": "extract-antithesis-mode-provenance-v1.py",
+      "bytes": 5197,
+      "sha256": "61fd0c1f2cb2018e5a2e7b935d6fddffbc155183fbd92b09e98a5c6daa36a243"
+    },
+    {
+      "path": "antithesis-mode-provenance-v1.json",
+      "bytes": 5946,
+      "sha256": "372416d59c157a952d9eb413d06b1e1fdb009b71d2fbe1d2044b47f07137f597"
+    },
+    {
+      "path": "mode-provenance-identity-negative-v1.json",
+      "bytes": 288,
+      "sha256": "10a2f67e59a163765db5d3999e04f8244b5dbb5e4dec3f8a91921ce0e13f6bc8"
     }
   ],
   "remaining_blockers": [
-    "Gemini shared lane held by existing Alden research; own enriched input queued, no upload/dispatch yet",
+    "Gemini antithesis actually accepted and research start acknowledged at https://gemini.google.com/app/d33ca8e24b4acf9d; full report not yet complete. Latest direct user authorized local slot-wait exception; old own FIFO item withdrawn, other owner preserved.",
     "ChatGPT reverse DeepResearch not started; must follow completed Gemini and final-source adjudication",
     "Explicitly deferred history/CSP/physical/field/legal conditions remain, no whole-goal completion"
   ],
@@ -598,12 +623,12 @@
     "evidence_commit": "7ea5816d3ceea92129f328e3a07dfb52cf887a76",
     "sealed_base_map_sha256": "027ad58f931c0094a4f9878bd798c46caacd4913e193a916a97519a7e65cc031"
   },
-  "updated_at": "2026-10-18T11:59:03.257379+00:00",
+  "updated_at": "2026-10-18T15:40:32.641115+00:00",
   "manifest_integrity": {
     "schemaAndFileChecks": "passed; original partial state not marked complete",
     "negativeCases": "premature complete, report substitution, duplicate finding ID, source bundle substitution rejected",
     "tests": "5 pass /11 assertions /0fail",
     "scope": "Saved-file integrity only; no web research or runtime certification",
-    "priorManifestPreserved": "completion-manifest-v1.json"
+    "priorManifestPreserved": "completion-manifest-pre-mode-provenance-v1.json"
   }
 }

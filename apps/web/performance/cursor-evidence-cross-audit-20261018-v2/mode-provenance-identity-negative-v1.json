@@ -1,0 +1,9 @@
+{
+  "case": "Wrong expected conversation identity",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Transcript identity mismatch; no evidence written\n",
+  "outputNotCreated": true,
+  "passed": true,
+  "extractorSha256": "61fd0c1f2cb2018e5a2e7b935d6fddffbc155183fbd92b09e98a5c6daa36a243"
+}

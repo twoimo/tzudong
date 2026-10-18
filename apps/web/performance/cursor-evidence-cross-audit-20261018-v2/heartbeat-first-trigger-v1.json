@@ -1,0 +1,20 @@
+{
+  "automationId": "tzudong",
+  "threadId": "01a14e99-77bf-7531-b29e-a612bd99b540",
+  "triggerTime": "2026-10-18T12:27:15.897Z",
+  "observedAt": "2026-10-18T12:28:06.382834+00:00",
+  "firstScheduledTriggerObserved": true,
+  "admission": {
+    "provider": "gemini",
+    "otherOwner": "01a14e9b-2552-7273-8f1a-7d5ccedb559f",
+    "otherReservation": "88f6855e7549452c4288cb93",
+    "ownRequest": "cc4ed397fc5b793aad315375",
+    "ownStatus": "queued",
+    "ownQueuePosition": 1
+  },
+  "nativeGoalStatus": "blocked",
+  "action": "Preserved FIFO, other reservation and original research. No new dispatch, account change, source change or passing-suite repetition.",
+  "researchCompletionClaimed": false,
+  "remoteResearchLivenessVerified": false,
+  "unchangedRegistrationReceiptPreserved": true
+}

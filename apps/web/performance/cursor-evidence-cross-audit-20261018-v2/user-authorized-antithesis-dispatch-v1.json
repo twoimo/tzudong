@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-18T15:42:23.158189+00:00",
+  "threadId": "01a14e99-77bf-7531-b29e-a612bd99b540",
+  "sourceRevision": "9228c1454393560bcd37240f793065e450f85683",
+  "sourceBundleSha256": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+  "stage": "report_generation",
+  "conversationUrl": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+  "reportComplete": false,
+  "authorization": {
+    "source": "Direct latest human instruction",
+    "text": "Gemini의 실제 선행 연구 기다리지 말고 시작해.",
+    "scope": "This Tzudong Gemini antithesis only; exception to local one-provider-slot waiting, not service restrictions"
+  },
+  "coordination": {
+    "originalQueueRequest": "cc4ed397fc5b793aad315375",
+    "ownQueueWithdrawnToPreventDuplicate": true,
+    "otherOwnerReservationUnchanged": true,
+    "sharedStateManuallyEdited": false,
+    "actualServiceWarningObserved": false
+  },
+  "uiObservation": {
+    "accountAlias": "kss2740",
+    "modelLabel": "4 Argon",
+    "reasoningLabel": "최고가",
+    "researchMode": "Deep Research",
+    "windowUsedPercent": 0,
+    "weeklyUsedPercent": 32,
+    "windowResetDisplayed": "오전 3:20",
+    "weeklyResetDisplayed": "10월 20일 오후 8:20",
+    "backendIdentity": "UNVERIFIED"
+  },
+  "predecessorUiObservation": {
+    "url": "https://gemini.google.com/u/1/app/dbfc799ae2292d1a",
+    "displayed": "웹사이트 23개 조사 완료; 보고서 작성 중; 대답 생성 중지 control visible",
+    "terminalCompletionObserved": false,
+    "originalExecutionChanged": false
+  },
+  "uploads": [
+    "MASTER-PLAN-v3.md",
+    "source_bundle_v2.txt"
+  ],
+  "promptFile": "ANTITHESIS-PROMPT-v1.md",
+  "heartbeatUpdated": true,
+  "remaining": [
+    "Upload ready confirmation",
+    "Single dispatch and research start",
+    "Full antithesis report saved and adjudicated",
+    "Applicable fixes and native verification",
+    "Actual GPT-6 Pro Deep Research reverse audit and new findings resolved"
+  ],
+  "uploadReadyConfirmed": true,
+  "dispatchCount": 1,
+  "promptIntentSha256": "cb6fcade1e5f7e8943f77b149ee036e7b432adce2f8972fe559fe0df1ea874f3",
+  "uiAcceptedObservation": "Own original URL settled; attached file-name buttons, full user prompt and 조사 계획 생성 중 visible. Argon 최고가 and Deep Research selected together. No service warning shown.",
+  "researchStarted": true,
+  "actualServiceWarningObservedAfterDispatch": false,
+  "startObservation": {
+    "displayedUserTurn": "연구 시작",
+    "displayedReply": "착수할게요. 연구가 완료되면 알려 드릴게요.",
+    "displayedStatus": "Tzudong 계획 및 소스 반대 감사 조사 시작 중...",
+    "startActor": "UNVERIFIED: start turn and acknowledgement observed; no duplicate start sent by this automation",
+    "browsingSourceCount": null
+  },
+  "latestUiStatus": "Tzudong 계획 및 소스 반대 감사 보고서 생성 중...; final-report composition progress visible; not terminal report",
+  "modeProvenance": {
+    "path": "antithesis-mode-provenance-v1.json",
+    "dispatchAndStartUiContractObserved": true,
+    "backendIdentity": "UNVERIFIED",
+    "otherTabComposerReport": "Separate collaborator reported lowest level on another tab; current composer setting does not attest dispatch-time setting"
+  }
+}

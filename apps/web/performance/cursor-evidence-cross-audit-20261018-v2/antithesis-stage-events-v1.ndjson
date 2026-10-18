@@ -1,0 +1,4 @@
+{"observedAt": "2026-10-18T15:36:55.017872+00:00", "stage": "accepted", "singleDispatch": true, "conversationUrlPending": true, "uploadReadyConfirmed": true}
+{"observedAt": "2026-10-18T15:37:50.712472+00:00", "stage": "planning", "conversationUrl": "https://gemini.google.com/app/d33ca8e24b4acf9d", "researchStarted": false}
+{"observedAt": "2026-10-18T15:38:22.851842+00:00", "stage": "research_started", "conversationUrl": "https://gemini.google.com/app/d33ca8e24b4acf9d", "startAcknowledgementObserved": true, "reportComplete": false}
+{"observedAt": "2026-10-18T15:42:23.158189+00:00", "stage": "report_generation", "conversationUrl": "https://gemini.google.com/app/d33ca8e24b4acf9d", "terminalReportObserved": false, "newServiceWarningObserved": false}
