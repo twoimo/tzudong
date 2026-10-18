@@ -189,7 +189,7 @@ describe('naver map marker render guard', () => {
         expect(shouldSkipMarkerUpdate(previous, nextToggleChanged)).toBe(false);
     });
 
-    test('reuses the display id signature for the same id list', () => {
+    test('refreshes the display signature when the same id list is edited', () => {
         const displayRestaurantIds = ['r-2', 'r-1', 'r-2'];
         const input = {
             zoom: 12,
@@ -204,8 +204,37 @@ describe('naver map marker render guard', () => {
         const first = buildMarkerRenderSignature(input);
         displayRestaurantIds.push('r-3');
         const second = buildMarkerRenderSignature(input);
-        expect(second.displayRestaurantIdsSignature).toBe(first.displayRestaurantIdsSignature);
+        expect(second.displayRestaurantIdsSignature).toBe('r-1|r-2|r-3');
         expect(first.displayRestaurantIdsSignature).toBe('r-1|r-2');
+        expect(shouldSkipMarkerUpdate(first, second)).toBe(false);
+    });
+
+    test('preserves canonical ids across fresh arrays, edits and interleaved views', () => {
+        const signature = (displayRestaurantIds: string[]) => buildMarkerRenderSignature({
+            zoom: 12,
+            bounds: null,
+            displayRestaurantIds,
+            selectedRestaurantId: null,
+            isClusterMode: false,
+            isRegionalClusterMode: false,
+            isSeoulDistrictMode: false,
+        }).displayRestaurantIdsSignature;
+
+        const ids = ['r-2', '', 'r-1', 'r-2'];
+        expect(signature(ids)).toBe('r-1|r-2');
+        expect(signature([...ids])).toBe('r-1|r-2');
+        ids[2] = 'r-3';
+        expect(signature(ids)).toBe('r-2|r-3');
+        expect(signature(['other'])).toBe('other');
+        expect(signature(ids)).toBe('r-2|r-3');
+        ids.splice(0, ids.length, 'r-3', '', 'r-3');
+        expect(signature(ids)).toBe('r-3');
+        ids.length = 0;
+        expect(signature(ids)).toBe('');
+        expect(signature([])).toBe('');
+        ids.push('restored');
+        expect(signature(ids)).toBe('restored');
+        expect(signature(['r-1', 'r-2', 'r-1'])).toBe('r-1|r-2');
     });
 
     test('keeps an empty desktop marker render from poisoning the render signature', () => {

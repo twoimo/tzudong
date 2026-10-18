@@ -79,17 +79,30 @@ function makeBoundsSignature(bounds: RenderBoundsLike | null): string | null {
     return lastBoundsSignature;
 }
 
-const displayIdsSignatureCache = new WeakMap<readonly string[], string>();
+// Expanded markers rebuild their token array on viewport changes. Keep one
+// value snapshot so equal arrays avoid Set/sort/join, while in-place edits
+// cannot reuse a stale signature. No history of previous views is retained.
+let lastDisplayIds: readonly string[] | null = null;
+let lastDisplayIdsSignature = '';
 
 function makeDisplayIdsSignature(ids: readonly string[]): string {
-    const cached = displayIdsSignatureCache.get(ids);
-    if (cached !== undefined) return cached;
+    if (lastDisplayIds && lastDisplayIds.length === ids.length) {
+        let same = true;
+        for (let index = 0; index < ids.length; index += 1) {
+            if (lastDisplayIds[index] !== ids[index]) {
+                same = false;
+                break;
+            }
+        }
+        if (same) return lastDisplayIdsSignature;
+    }
 
     const signature = [...new Set(ids)]
         .filter(Boolean)
         .sort()
         .join("|");
-    displayIdsSignatureCache.set(ids, signature);
+    lastDisplayIds = ids.slice();
+    lastDisplayIdsSignature = signature;
     return signature;
 }
 
@@ -179,4 +192,3 @@ export function shouldSkipMarkerUpdate(
         previous.markerLayerSignature === next.markerLayerSignature
     );
 }
-
