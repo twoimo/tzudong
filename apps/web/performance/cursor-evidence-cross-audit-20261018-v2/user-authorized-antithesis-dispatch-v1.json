@@ -61,21 +61,22 @@
     "startActor": "UNVERIFIED: start turn and acknowledgement observed; no duplicate start sent by this automation",
     "browsingSourceCount": null
   },
-  "latestUiStatus": "Writing card remains; account five-hour100% cap, controls disabled, current composer Flash-Lite",
+  "latestUiStatus": "Post0320 actual window0%/weekly38%; max/DeepResearch enabled, cap notice absent; original report writing persists, no terminal report/export",
   "modeProvenance": {
     "path": "antithesis-mode-provenance-v1.json",
     "dispatchAndStartUiContractObserved": true,
     "backendIdentity": "UNVERIFIED",
     "otherTabComposerReport": "Separate collaborator reported lowest level on another tab; current composer setting does not attest dispatch-time setting"
   },
-  "latestUiReadback": "account-five-hour-cap-observation-v1.json",
+  "latestUiReadback": "post-0320-reconciliation-v1.json",
   "currentAccountAvailability": {
-    "ready": false,
-    "windowExhausted": true,
-    "fiveHourUsedPercent": 100,
+    "ready": true,
+    "windowExhausted": false,
+    "fiveHourUsedPercent": 0,
     "weeklyUsedPercent": 38,
-    "windowReset": "2026-10-19T03:20:00+09:00",
+    "windowReset": "2026-10-19T08:20:00+09:00",
     "weeklyReset": "2026-10-20T20:20:00+09:00",
+    "observedAt": "2026-10-18T18:22:15.746241+00:00",
     "originalDispatchModeEvidencePreserved": true,
     "currentBackendIdentity": "UNVERIFIED",
     "originalResearchTerminalState": "UNVERIFIED"
@@ -85,5 +86,7 @@
     "reservation": "cc4ed397fc5b793aad315375",
     "phase": "uncertain",
     "uncertainFrom": "researching"
-  }
+  },
+  "postResetReconciliation": "post-0320-reconciliation-v1.json",
+  "latestEscalation": "external-research-escalation-v2.json"
 }

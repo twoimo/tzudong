@@ -630,10 +630,25 @@
       "path": "external-research-escalation-v1.json",
       "bytes": 4477,
       "sha256": "3e073632fa02728cf1980485693a5c8dc68b89a6da3a5e699bccb3abe5d0b50c"
+    },
+    {
+      "path": "post-0320-reconciliation-v1.json",
+      "bytes": 4731,
+      "sha256": "b03f9c7c6477057f8b2950797dffb13512c9303622012ca117f1b5351b342474"
+    },
+    {
+      "path": "external-research-escalation-v2.json",
+      "bytes": 4481,
+      "sha256": "ae8f148dd476b5f01772ca9c7127801f34b90e6f24503aacb81151cba41c6857"
+    },
+    {
+      "path": "heartbeat-prompt-post-reset-v1.txt",
+      "bytes": 10431,
+      "sha256": "e7f436e0d0ca7030d57d2b0de84da7deb48a1131693950efcba3806d96f7f681"
     }
   ],
   "remaining_blockers": [
-    "Gemini full antithesis report remains absent at original d33ca8e24b4acf9d. Actual account kss2740 five-hour usage100%, reset2026-10-19T03:20+09; weekly38% separately observed. Original writing/start evidence and owned reservation cc4ed397fc5b793aad315375 preserved. Account cap is not report completion or terminal backend failure. No same-run failover/resend.",
+    "Post0320 actual kss2740 window0%/weekly38% and required max/DeepResearch UI recovered, canonical window-available recorded. Original d33ca8e24b4acf9d still shows writing card; Canvas reopen reveals no terminal full report/export. Original owned result-uncertain reservation preserved, no duplicate/cancel/release. Full antithesis report still required before final-source reverse.",
     "ChatGPT reverse DeepResearch not started; must follow completed Gemini and final-source adjudication",
     "Explicitly deferred history/CSP/physical/field/legal conditions remain, no whole-goal completion"
   ],
@@ -658,12 +673,14 @@
     "evidence_commit": "7ea5816d3ceea92129f328e3a07dfb52cf887a76",
     "sealed_base_map_sha256": "027ad58f931c0094a4f9878bd798c46caacd4913e193a916a97519a7e65cc031"
   },
-  "updated_at": "2026-10-18T16:47:58.809951+00:00",
+  "updated_at": "2026-10-18T18:25:06.498679+00:00",
   "manifest_integrity": {
     "schemaAndFileChecks": "passed; original partial state not marked complete",
     "negativeCases": "premature complete, report substitution, duplicate finding ID, source bundle substitution rejected",
     "tests": "5 pass /11 assertions /0fail",
     "scope": "Saved-file integrity only; no web research or runtime certification",
-    "priorManifestPreserved": "completion-manifest-pre-escalation-v1.json"
+    "priorManifestPreserved": "completion-manifest-pre-escalation-v1.json",
+    "previousManifestGitBlob": "a8d32dfdd697eddedfa13ab565feec375be11c24",
+    "previousManifestGitCommit": "c45c5e266d136204f98f2145f07a2f426906fb3a"
   }
 }

@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-18T18:23:47.652Z",
+  "requestKey": "kss2740-post0320-original-reconciliation-20261019",
+  "evidenceHead": "c45c5e266d136204f98f2145f07a2f426906fb3a",
+  "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+  "job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+  "reservation": "cc4ed397fc5b793aad315375",
+  "originalConversationUrl": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+  "usageUrl": "https://gemini.google.com/usage",
+  "accountAlias": "kss2740",
+  "sourceBundleSha256": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+  "masterPlanSha256": "f27da98869ce41ec42ba464d324fe408d985aa7c667504fc00900fe2582483e5",
+  "observations": {
+    "resetPassedAtActualClock": "2026-10-18 18:21:11 UTC",
+    "usageLabels": [
+      "방금 업데이트됨",
+      "현재 사용량",
+      "0% 사용됨",
+      "오전 8:20에 초기화",
+      "주간 한도",
+      "10월 20일 오후 8:20에 초기화",
+      "38% 사용됨"
+    ],
+    "sameAccountIdentityObserved": true,
+    "windowAvailabilityConfirmed": true,
+    "windowUsedPercent": 0,
+    "weeklyUsedPercent": 38,
+    "windowReset": "2026-10-19T08:20:00+09:00",
+    "weeklyReset": "2026-10-20T20:20:00+09:00",
+    "modeLabelsAfterReturningToOriginal": [
+      "현재 Argon 최고가 모드 사용 중",
+      "Deep Research 선택 해제"
+    ],
+    "controlsDisabled": false,
+    "accountCapNoticePresent": false,
+    "writingCard": "Tzudong 계획 및 소스 반대 감사 보고서 작성 중...",
+    "researchPanelHeading": "조사 시작 중...",
+    "lastVisibleProgressSummary": "말도 좋지만, 때로는 시각적인 자료가 더 효과적이죠. 그래서 가장 중요한 내용을 어떻게 시각적으로 보여줄지 고민 중이에요.",
+    "terminalReportObserved": false,
+    "exportControlObserved": false,
+    "backendJobLivenessAttested": false,
+    "backendModelIdentity": "UNVERIFIED"
+  },
+  "readOnlyReconciliation": [
+    "Read exact original d33 conversation",
+    "Navigate owned tab to usage and verify settled actual account0/38 with resets",
+    "Return original via browser back; initial transient shell resolved; required max/DR both enabled without worker model selection",
+    "Expand visible research progress summary; final visible status is report visual composition",
+    "Close original side panel once, then reopen using its actual Canvas button; still no terminal report or export"
+  ],
+  "canonicalAccountObservation": {
+    "account": "kss2740",
+    "model": "4 Argon / 최고가 (original conversation current UI)",
+    "research": "Deep Research enabled, deselect control observed",
+    "note": "Post0320 explicit owned UI reconciliation: signed-in kss2740 usage0%, current reset오전8:20, weekly38%, reset10월20일오후8:20. After returning to original d33ca8e24b4acf9d, Argon 최고가 and DeepResearch deselect control enabled together, account-cap notice absent. No worker model/account change or new send. Original report-writing card and start acknowledgement remain; terminal full report/backend job liveness unverified.",
+    "weekly_exhausted": false,
+    "weekly_used": 38,
+    "weekly_reset": "2026-10-20T20:20:00+09:00",
+    "weekly_reset_observed_at": "2026-10-18T18:22:15.745993+00:00",
+    "window_exhausted": false,
+    "window_used": 0,
+    "window_reset": "2026-10-19T08:20:00+09:00",
+    "window_reset_observed_at": "2026-10-18T18:22:15.746239+00:00",
+    "provider": "gemini",
+    "observed_at": "2026-10-18T18:22:15.746241+00:00",
+    "source_url": "https://gemini.google.com/usage",
+    "ready": true
+  },
+  "workerActions": {
+    "accountSwitched": false,
+    "modelSelected": false,
+    "researchStopped": false,
+    "newPromptSent": false,
+    "researchStartedAgain": false,
+    "otherOwnerReleased": false,
+    "paidCapacityChanged": false
+  },
+  "limits": "Quota recovery is proved by current UI, not by time alone. Progress summary is model/UI self-report, not executed source/math verification or backend liveness. Current original study remains result-uncertain and must not be copied or released as terminal.",
+  "nextAllowedActions": [
+    "Preserve original; bounded actual report observation on existing owned heartbeat",
+    "If original terminal full report appears, save verbatim with bytes/SHA/URL/mode/source and only then owner release",
+    "Adjudicate findings and perform applicable real repairs/native checks before final-source GPT reverse audit",
+    "Do not treat this quota recovery as audit completion"
+  ],
+  "missingStages": [
+    "antithesis full report",
+    "applicable new finding repair/verification",
+    "actual final-source GPT-6 Pro Deep Research reverse"
+  ],
+  "completionEligible": false
+}

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 2,
+  "recordedAt": "2026-10-18T18:25:06.435Z",
+  "supersedesHistoricalCheckpoint": "external-research-escalation-v1.json",
+  "requestKey": "kss2740-post0320-original-reconciliation-20261019",
+  "originalUrl": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+  "job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+  "reservation": "cc4ed397fc5b793aad315375",
+  "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+  "account": "kss2740",
+  "sourceBundleSha256": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+  "lastObservationReceipt": "post-0320-reconciliation-v1.json",
+  "missingStage": "Terminal full Gemini antithesis report",
+  "resolvedBlocker": "Actual account five-hour cap: live0% plus required max/DR controls recovered; canonical window_available=true",
+  "remainingBlocker": "Writing card persists, research panel heading still start-in-progress and visible summary ends visual composition. Reopening original Canvas reveals no terminal report/export. Backend job liveness and terminality remain unverified.",
+  "evidencePaths": [
+    "post-0320-reconciliation-v1.json",
+    "antithesis-mode-provenance-v1.json",
+    "account-five-hour-cap-observation-v1.json"
+  ],
+  "canonicalTransition": {
+    "provider": "gemini",
+    "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+    "job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+    "bundle": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+    "request_id": "cc4ed397fc5b793aad315375",
+    "account": "kss2740",
+    "phase": "uncertain",
+    "url": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+    "model": "4 Argon / 최고가",
+    "research": "Deep Research",
+    "reserved_at": "2026-10-18T16:37:08.651781+00:00",
+    "adopted_existing": true,
+    "receipt": "Human instruction: Gemini의 실제 선행 연구 기다리지 말고 시작해. Original dispatch checkpoint /Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/performance/cursor-evidence-cross-audit-20261018-v2/user-authorized-antithesis-dispatch-v1.json SHA256 b36220288f965596979cd4ba17db5d85735743225c752b974b2958c9eae16990; original UI start accepted, current same-URL writing card and stop control; kss2740/max/DR observed. Backend liveness unverified; no new send. Start mode proof antithesis-mode-provenance-v1.json SHA256 372416d59c157a952d9eb413d06b1e1fdb009b71d2fbe1d2044b47f07137f597",
+    "instruction": "Record of already-running work only; never permission to resend",
+    "uncertain_from": "researching",
+    "updated_at": "2026-10-18T18:23:47.741680+00:00",
+    "uncertainty_evidence": "Original research-start acknowledged; original dispatch max/DR proof preserved. Post0320 actual signed-in usage0%/weekly38%, current reset2026-10-19T08:20+09 and weekly2026-10-20T20:20+09; original UI max/DR controls both recovered without worker mode change. Exact writing card remains; progress summary ends visual composition; side panel close/reopen reconciled, no full report/export. Read-only receipt /Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/performance/cursor-evidence-cross-audit-20261018-v2/post-0320-reconciliation-v1.json SHA256 b03f9c7c6477057f8b2950797dffb13512c9303622012ca117f1b5351b342474. Backend liveness unverified; no resend/cancel/release."
+  },
+  "nextAllowedActions": [
+    "Preserve original URL/tab/reservation; bounded original report observation",
+    "Save full terminal raw report/hash first and owner release afterward",
+    "Adjudicate/fix/verify, then actual final-source GPT reverse through normal admission"
+  ],
+  "prohibitedInferences": [
+    "0 percent account meter does not prove original job running or completed",
+    "Current UI model badge is not backend identity",
+    "Visible progress summary claiming verification is not actual source/math test proof",
+    "Elapsed time, reset or lack of report does not authorize cancel/release/resend"
+  ],
+  "automationReadback": {
+    "id": "tzudong",
+    "status": "ACTIVE",
+    "rrule": "FREQ=MINUTELY;INTERVAL=5",
+    "targetThreadId": "01a14e99-77bf-7531-b29e-a612bd99b540",
+    "updatedAt": 1792347866238,
+    "promptSha256": "bfd3bbb9d8b6bf3e20c890a1183b72393c5ef026a17a9239666d78209724a075",
+    "promptPath": "heartbeat-prompt-post-reset-v1.txt",
+    "exactMatch": true
+  },
+  "outsideWork": {
+    "otherOwnerMessagesSent": 0,
+    "newResearchSent": 0,
+    "productSourceChanged": false,
+    "operatingChanges": false
+  },
+  "completionEligible": false
+}
