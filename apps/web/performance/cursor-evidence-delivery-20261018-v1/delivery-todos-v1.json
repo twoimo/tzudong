@@ -1,0 +1,38 @@
+{
+  "request": "PR3307 CI \u2192 protected data/main promotion \u2192 exact production deployment \u2192 actual URL readback",
+  "source": {
+    "pr": 3318,
+    "head": "3ecf69e63365e3df5aa9d434b990e35cff1cf263",
+    "tree": "77fa0dabf8d22ba490bf1998dc7913a4720e6089",
+    "localValidation": "passed; see badge-mobile-validation-v1.json",
+    "ci": "in progress"
+  },
+  "next": [
+    {
+      "id": "S1",
+      "action": "Finish exact source PR3318 CI/reviews and normally merge develop",
+      "state": "in progress"
+    },
+    {
+      "id": "S2",
+      "action": "Confirm actual repair in PR3317 head, resolve only addressed review, protected merge data",
+      "state": "pending"
+    },
+    {
+      "id": "S3",
+      "action": "Confirm both addressed reviews fixed in data and merge PR3311 main under current required checks",
+      "state": "pending"
+    },
+    {
+      "id": "S4",
+      "action": "Fresh project/rollback/source preflight, exact SHA guard, reconcile/create one Git production deployment; READY and alias proof",
+      "state": "pending"
+    },
+    {
+      "id": "S5",
+      "action": "Real SDK/marker/detail/review/stamp/ranking/assets/API/aliases/visual/history readback, preserve failures, seal/remote-verify evidence",
+      "state": "pending"
+    }
+  ],
+  "excluded": "phone, account/DB/Storage writes, DNS, new paid capacity, physical/field improvement claims"
+}

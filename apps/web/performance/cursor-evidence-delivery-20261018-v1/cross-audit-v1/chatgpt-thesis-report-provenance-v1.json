@@ -1,0 +1,17 @@
+{
+  "conversationUrl": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "modelLabel": "GPT-6",
+  "reasoningLabel": "Pro",
+  "researchLabel": "심층 리서치",
+  "reportCompleteObserved": true,
+  "uiElapsed": "7m",
+  "uiSources": 19,
+  "uiSearchCount": 250,
+  "backendIdentity": "UNVERIFIED",
+  "downloadMethod": "UI Markdown export; complete original bytes copied, no editing",
+  "reportPath": "chatgpt_6_pro_thesis_full_report.md",
+  "reportBytes": 47182,
+  "reportSha256": "c8b70ca937c33214dae131f269986462f249d9cf63500a1c196cb0863d22b838",
+  "sourceBundleSha256": "9420e4c1a47230c305c98e9f739571f9a3c188919fac750ee0fd45635902a6ee",
+  "savedAt": "2026-10-18T11:22:47.096125+00:00"
+}

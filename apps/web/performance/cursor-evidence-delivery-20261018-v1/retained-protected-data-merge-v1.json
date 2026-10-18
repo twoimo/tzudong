@@ -1,0 +1,14 @@
+{
+  "headRefOid": "d62647dc45f809ec1dad3bbf1eaf4f86f641e256",
+  "mergeCommit": {
+    "oid": "e145623bc0878db7a2f106702cc99fd9e42b413b"
+  },
+  "mergedAt": "2026-10-18T08:50:44Z",
+  "state": "MERGED",
+  "sourceCandidate": "9a63f25f2f3884c2062fde6f22cacfb4f352078c",
+  "sourceTree": "f05fd25b3af24c22513efb2f0be7db4c7cbb5e16",
+  "finalCI": "retained-data-final-ci-v3.json",
+  "observedAt": "2026-10-18T08:51:30.400042+00:00",
+  "nextMainPr": 3311,
+  "productionMutationPerformed": false
+}

@@ -1,0 +1,17 @@
+{
+  "scope": "same synthetic static fallback screenshots between signal-only and import-gated variants; not original animated before vs final, not whole app/device/flicker proof",
+  "rows": [
+    {
+      "profile": "low-memory",
+      "intermediateSha256": "985028f15229f0310382cae4fb5cf64e3c8f322adc5aad7e69ff42e8cedb40a8",
+      "finalSha256": "985028f15229f0310382cae4fb5cf64e3c8f322adc5aad7e69ff42e8cedb40a8",
+      "pngBytesEqual": true
+    },
+    {
+      "profile": "low-no-memory-api",
+      "intermediateSha256": "985028f15229f0310382cae4fb5cf64e3c8f322adc5aad7e69ff42e8cedb40a8",
+      "finalSha256": "985028f15229f0310382cae4fb5cf64e3c8f322adc5aad7e69ff42e8cedb40a8",
+      "pngBytesEqual": true
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "observedAt": "2026-10-18T10:58:29.048607+00:00",
+  "sourceRevision": "9228c1454393560bcd37240f793065e450f85683",
+  "planSha256": "cf0474a58f7f54541c1395e62a383b81208369ab1a9926b9603eae27dde09122",
+  "bundleSha256": "9420e4c1a47230c305c98e9f739571f9a3c188919fac750ee0fd45635902a6ee",
+  "stage": "prepared",
+  "uploaded": false,
+  "dispatched": false,
+  "externalReportsComplete": false,
+  "hold": "User explicitly requires shared reservation path and usage instructions before any new web research dispatch; pending. No research or source upload was started.",
+  "chatgpt": {
+    "tabUrl": "https://chatgpt.com/",
+    "authenticated": true,
+    "observedModelLabel": "GPT-6 selected",
+    "observedReasoningLabel": "Pro",
+    "deepResearch": "tool menu offers 심층 리서치; not activated",
+    "backendIdentity": "UNVERIFIED",
+    "queryCount": "UNVERIFIED",
+    "conversationUrl": null
+  },
+  "gemini": {
+    "tabUrl": "https://gemini.google.com/app",
+    "authenticated": true,
+    "observedCurrentModelLabel": "3.8 Flash",
+    "observedRequestedChoice": "4 Argon 복잡한 작업 available in menu, not selected",
+    "maximumThinking": "UNVERIFIED",
+    "deepResearch": "UNVERIFIED",
+    "accountIdentifyingLabel": "excluded from public evidence",
+    "backendIdentity": "UNVERIFIED",
+    "queryCount": "UNVERIFIED",
+    "conversationUrl": null
+  },
+  "thesis": "DEFER pending shared reservation and active exact Pro/DeepResearch combination",
+  "antithesis": "DEFER pending thesis and shared reservation; no unrequested account switch",
+  "reverseAudit": "DEFER pending both complete reports",
+  "guard": "No lower model substitution, no paid/account/host model change. Local release continues independently; external audit not claimed complete."
+}

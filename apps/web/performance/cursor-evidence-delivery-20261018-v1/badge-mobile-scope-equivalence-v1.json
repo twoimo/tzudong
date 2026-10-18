@@ -1,0 +1,22 @@
+{
+  "sourceHead": "3ecf69e63365e3df5aa9d434b990e35cff1cf263",
+  "hookChange": "only export existing pure getTierFromHardware; classification and module cache unchanged",
+  "checks": [
+    {
+      "path": "apps/web/hooks/useMapOptimization.ts",
+      "sha256": "91728e5bcb17602b6f311ff81bb49a7f7fbd2ef8ce076f39e9b5fc1f5a04864d",
+      "unchanged": true
+    },
+    {
+      "path": "apps/web/components/restaurant/Badge3DViewer.tsx",
+      "sha256": "a54439aa7e2046f7ab96c8cedf9963d7fb0abd258e5a0fb21080581ba58ed760",
+      "unchanged": true
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/badge-viewer-lifecycle.ts",
+      "sha256": "b470fe9fb3c3a8c9984cc075f3be1004f394c6732872b6c6b94e67310372dfd0",
+      "unchanged": true
+    }
+  ],
+  "scope": "source-byte equality boundaries only, not operating behavior proof"
+}

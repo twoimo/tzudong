@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-10-18T10:50:55.234Z",
+  "phase": "before",
+  "gitSha": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+  "httpStatus": 200,
+  "status": "available",
+  "reasonCode": "DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED",
+  "scope": "Public server-owned readiness readback; preserve observed baseline state. Response code is not independent legal evidence. No permission request or coordinate collection."
+}

@@ -1,0 +1,198 @@
+{
+  "recordedAt": "2026-10-18T09:19:28.892758+00:00",
+  "baselineGitSource": "e145623bc0878db7a2f106702cc99fd9e42b413b",
+  "runtime": "production React/Next dynamic component bundle, Chromium153 software WebGL, Bun1.4.0, Node24.22.0,430x860,DPR2",
+  "independentBrowserProcessesPerPhase": 1,
+  "contextsPerProfilePerPhase": 1,
+  "dependentOpenCloseActionsPerContext": 3,
+  "observationWindowMs": 220,
+  "executionOrder": [
+    "before",
+    "signalOnly",
+    "final"
+  ],
+  "jitCacheLimits": "fresh contexts per hardware profile; repeated opens share module cache within context; no A/A/randomized timing trial",
+  "formula": "lower is better: absoluteReduction=before-after, relative=absoluteReduction/before*100; no ratio from zero baseline",
+  "confidenceInterval": null,
+  "confidenceIntervalReason": "one process/context per profile and dependent repeated actions; insufficient independent samples for population CI/p95",
+  "scope": "specific opt-in component resource correctness; not active public cohorts, physical devices, whole app frame/memory/latency/field gain",
+  "tradeOff": "static fallback is hoisted in caller to avoid heavy import; normal profile still lazily loads3D module; existing hardware heuristic not redesigned; no process-memory byte measurement",
+  "rows": [
+    {
+      "profile": "high-motion",
+      "isLowEndSignal": false,
+      "contextCreations": {
+        "before": 3,
+        "signalOnly": 3,
+        "final": 3,
+        "absoluteReduction": 0,
+        "relativeReductionPct": 0.0
+      },
+      "rafPer220ms": {
+        "before": [
+          12,
+          14,
+          14
+        ],
+        "signalOnly": [
+          14,
+          14,
+          14
+        ],
+        "final": [
+          13,
+          14,
+          14
+        ],
+        "medianBefore": 14,
+        "medianFinal": 14,
+        "absoluteReduction": 0,
+        "relativeReductionPct": null,
+        "classification": "functional control; timing improvement not established"
+      },
+      "coldOpenedScriptCount": {
+        "before": 1,
+        "signalOnly": 1,
+        "final": 1
+      },
+      "coldOpenedModuleRawBytes": {
+        "before": 494159,
+        "final": 494159,
+        "absoluteReduction": 0,
+        "relativeReductionPct": 0.0
+      }
+    },
+    {
+      "profile": "high-reduced",
+      "isLowEndSignal": false,
+      "contextCreations": {
+        "before": 3,
+        "signalOnly": 3,
+        "final": 3,
+        "absoluteReduction": 0,
+        "relativeReductionPct": 0.0
+      },
+      "rafPer220ms": {
+        "before": [
+          0,
+          0,
+          0
+        ],
+        "signalOnly": [
+          0,
+          0,
+          0
+        ],
+        "final": [
+          0,
+          0,
+          0
+        ],
+        "medianBefore": 0,
+        "medianFinal": 0,
+        "absoluteReduction": 0,
+        "relativeReductionPct": null,
+        "classification": "functional control; timing improvement not established"
+      },
+      "coldOpenedScriptCount": {
+        "before": 1,
+        "signalOnly": 1,
+        "final": 1
+      },
+      "coldOpenedModuleRawBytes": {
+        "before": 494159,
+        "final": 494159,
+        "absoluteReduction": 0,
+        "relativeReductionPct": 0.0
+      }
+    },
+    {
+      "profile": "low-memory",
+      "isLowEndSignal": true,
+      "contextCreations": {
+        "before": 3,
+        "signalOnly": 0,
+        "final": 0,
+        "absoluteReduction": 3,
+        "relativeReductionPct": 100.0
+      },
+      "rafPer220ms": {
+        "before": [
+          13,
+          14,
+          14
+        ],
+        "signalOnly": [
+          0,
+          0,
+          0
+        ],
+        "final": [
+          0,
+          0,
+          0
+        ],
+        "medianBefore": 14,
+        "medianFinal": 0,
+        "absoluteReduction": 14,
+        "relativeReductionPct": 100.0,
+        "classification": "conditional-loop removal observed"
+      },
+      "coldOpenedScriptCount": {
+        "before": 1,
+        "signalOnly": 1,
+        "final": 0
+      },
+      "coldOpenedModuleRawBytes": {
+        "before": 494159,
+        "final": 0,
+        "absoluteReduction": 494159,
+        "relativeReductionPct": 100.0
+      }
+    },
+    {
+      "profile": "low-no-memory-api",
+      "isLowEndSignal": true,
+      "contextCreations": {
+        "before": 3,
+        "signalOnly": 0,
+        "final": 0,
+        "absoluteReduction": 3,
+        "relativeReductionPct": 100.0
+      },
+      "rafPer220ms": {
+        "before": [
+          13,
+          13,
+          13
+        ],
+        "signalOnly": [
+          0,
+          0,
+          0
+        ],
+        "final": [
+          0,
+          0,
+          0
+        ],
+        "medianBefore": 13,
+        "medianFinal": 0,
+        "absoluteReduction": 13,
+        "relativeReductionPct": 100.0,
+        "classification": "conditional-loop removal observed"
+      },
+      "coldOpenedScriptCount": {
+        "before": 1,
+        "signalOnly": 1,
+        "final": 0
+      },
+      "coldOpenedModuleRawBytes": {
+        "before": 494159,
+        "final": 0,
+        "absoluteReduction": 494159,
+        "relativeReductionPct": 100.0
+      }
+    }
+  ]
+}

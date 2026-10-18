@@ -1,0 +1,42 @@
+{
+  "sourceHead": "3ecf69e63365e3df5aa9d434b990e35cff1cf263",
+  "unit": {
+    "tests": 15,
+    "assertions": 68,
+    "files": 4,
+    "failures": 0
+  },
+  "eslint": "changed four files passed",
+  "typecheckParity": {
+    "passed": true,
+    "diagnostics": 0,
+    "logicalInputs": 3182,
+    "log": "badge-mobile-parity-v1.log"
+  },
+  "negativeTypeContract": "badge-required-capability-type-proof-v4.json",
+  "builds": {
+    "v1": "passed; offline environment omitted at build time",
+    "v2": "passed Next16.3.8 + named-dist CSS boundaries, fixed build-time fixture values"
+  },
+  "offlineBrowser": {
+    "v1": {
+      "pass": 1,
+      "fail": 1,
+      "notRun": 1,
+      "log": "badge-mobile-offline-browser-v1.log"
+    },
+    "v2": {
+      "pass": 3,
+      "fail": 0,
+      "durationSeconds": 4.7,
+      "log": "badge-mobile-offline-browser-v2.log"
+    }
+  },
+  "componentBrowser": "badge-mobile-comparison-v1.json",
+  "pixelsInspected": [
+    "badge-mobile-capability-v1/before-generic-ios18-cores6.png",
+    "badge-mobile-capability-v1/after-generic-ios18-cores6.png"
+  ],
+  "sourceCI": "pending exact head, not represented by local checks",
+  "deployment": "pending"
+}

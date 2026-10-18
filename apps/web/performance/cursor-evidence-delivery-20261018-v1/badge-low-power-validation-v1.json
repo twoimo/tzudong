@@ -1,0 +1,37 @@
+{
+  "sourceHead": "4696e6ee38d5bee9c4397bffcb1dcb09ac93cfcf",
+  "sourceTree": "87f5b7824d86843f7371b59530266a4adf288808",
+  "baseline": "e145623bc0878db7a2f106702cc99fd9e42b413b",
+  "unit": {
+    "pass": 28,
+    "fail": 0,
+    "assertions": 203,
+    "files": 4
+  },
+  "lint": "passed",
+  "parity": "passed diagnostics0 logicalInputs3181",
+  "productionBuild": {
+    "dist": ".next-badge-low-power-20261018-v2",
+    "status": "passed",
+    "cssGate": "passed"
+  },
+  "offlineBrowser": {
+    "pass": 3,
+    "fail": 0,
+    "seconds": 4.7
+  },
+  "componentComparison": "badge-low-power-comparison-v1.json",
+  "browserEvidence": {
+    "baseline": "badge-low-power-v1/results-before.json",
+    "signalOnly": "badge-low-power-v1/results-after.json",
+    "final": "badge-low-power-v2/results-after.json"
+  },
+  "pixelsInspected": [
+    "badge-low-power-v2/after-low-memory.png",
+    "badge-low-power-v1/after-high-motion.png"
+  ],
+  "viewerTypeOnlyEmitProof": "badge-low-power-type-contract-v1.json",
+  "reactReview": "hooks unconditional, cheap capability gate before heavy import, stable component definition, existing Escape/focus behavior retained; no network/data/provider configuration changes",
+  "scope": "synthetic opt-in component resource correctness; no whole-app/process-memory/physical/field claim; publication remains empty",
+  "productionMutationPerformed": false
+}

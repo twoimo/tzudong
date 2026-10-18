@@ -1,0 +1,12 @@
+{
+  "baseRefName": "main",
+  "headRefOid": "8b24f0c4560b9b8b0d1f4f7a3cf264b409b7dc20",
+  "mergeCommit": {
+    "oid": "b4eb780c532c9ba02a1af456b17459debc59a757"
+  },
+  "mergedAt": "2026-10-18T11:22:02Z",
+  "number": 3321,
+  "state": "MERGED",
+  "url": "https://github.com/twoimo/tzudong/pull/3321",
+  "sourceTree": "d0cee44ace30d3a337b0fd8077032ed099cfb567"
+}

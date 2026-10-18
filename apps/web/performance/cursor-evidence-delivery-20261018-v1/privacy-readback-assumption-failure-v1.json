@@ -1,0 +1,12 @@
+{
+  "script": "run-privacy-gate-readback-v1.mjs",
+  "expected": "unavailable/DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED",
+  "observed": {
+    "sha": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+    "httpStatus": 200,
+    "status": "available",
+    "reasonCode": "DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED"
+  },
+  "classification": "Initial additional check assumed an unverified operating setting. Not a source regression caused by this patch. Original script/failure retained.",
+  "correction": "Version2 records actual baseline and requires exact same status/code after new deployment; no readiness/permission/legal settings changed. Actual server code literal alone does not certify legal/approval evidence."
+}

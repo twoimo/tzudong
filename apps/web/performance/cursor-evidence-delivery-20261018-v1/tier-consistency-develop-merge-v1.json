@@ -1,0 +1,32 @@
+{
+  "sourceHead": "267969b2fe7f59f3af5303175842702a5727962b",
+  "protectedDevelopMerge": "7b042c43b91c5abbea9faabd737e754a3b8ffa2d",
+  "sourceAndDevelopTree": "070a79a76c1cba8c3b14060fcae9cc64af6a0994",
+  "featurePr": 3309,
+  "dataPr": 3307,
+  "reviewThreadsResolved": [
+    "PRRT_kwDOQGRyNc6tncim",
+    "PRRT_kwDOQGRyNc6tncin"
+  ],
+  "resolvedAfterSourceMerge": true,
+  "featureExactHeadCI": {
+    "success": 18,
+    "skipped": 1,
+    "unresolved": 0,
+    "receipt": "tier-consistency-final-ci-v1.json"
+  },
+  "observedAt": "2026-10-18T07:13:03.815124+00:00",
+  "dataMergePerformed": false,
+  "productionMutationPerformed": false,
+  "appAttachment": {
+    "pr": 3309,
+    "attemptedOnce": true,
+    "outcome": "unknown; application metadata call did not return and was stopped; not retried"
+  },
+  "scopeLimits": [
+    "phone-free",
+    "publication intentionally empty/unpublished",
+    "no DB/Storage/DNS mutation",
+    "no performance/memory/field gain asserted"
+  ]
+}

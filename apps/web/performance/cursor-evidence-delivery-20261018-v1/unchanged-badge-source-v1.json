@@ -1,0 +1,61 @@
+{
+  "verifiedBeforeSource": "3ea4448758e140ca4f571641f82803262e4c18db",
+  "finalCandidateSource": "9a63f25f2f3884c2062fde6f22cacfb4f352078c",
+  "scope": "supports reuse of existing component-only source/build/runtime dependency evidence; does not prove whole map or production performance",
+  "rows": [
+    {
+      "path": "apps/web/components/restaurant/Badge3DViewer.tsx",
+      "bytes": 5474,
+      "sha256": "6938c1bd3cf0e0943c8b7892d72f24a1dc432782678c7ec59f012943992e6843",
+      "equal": true
+    },
+    {
+      "path": "apps/web/components/restaurant/PopularityBadge.tsx",
+      "bytes": 3111,
+      "sha256": "aa169db7c478cf9cd2cec51ce73242494c256a8494fb79370332b376f6724a1a",
+      "equal": true
+    },
+    {
+      "path": "apps/web/app/globals.css",
+      "bytes": 7277,
+      "sha256": "593f9588727f36865e2d0edd9f7e9f70e07cae944570a9b0b1f477d51ab99f3d",
+      "equal": true
+    },
+    {
+      "path": "apps/web/package.json",
+      "bytes": 7698,
+      "sha256": "407643e76fdcd7646d2caa77095a74b851ba694ad8ed8c488271b703fca0f285",
+      "equal": true
+    },
+    {
+      "path": "apps/web/package-lock.json",
+      "bytes": 503476,
+      "sha256": "870ba5b2b6c292c906b4c558f97b892fda3f95f8ac55bea0fbc2a1fed300dea4",
+      "equal": true
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_fire_40.webp",
+      "bytes": 2410,
+      "sha256": "77cf5b90c7823b16ef2f11f3f1d30a4f5c45f38c662e7604848950cba7e4170d",
+      "equal": true
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_fire_80.webp",
+      "bytes": 7618,
+      "sha256": "36fca709dc18574f138ae5beeec9cec72c01030c003dc8652a809d593fc9aa65",
+      "equal": true
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_rainbow_40.webp",
+      "bytes": 2718,
+      "sha256": "9aa8bd618b2a1f77c6a0d8783c339ad16e46d56f65856a7c4966bb5ab0cf770d",
+      "equal": true
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_rainbow_80.webp",
+      "bytes": 8766,
+      "sha256": "92cc370f652e2d9e530c11b15bd54526e49afe0bf838773b52b6ff4afffd51b3",
+      "equal": true
+    }
+  ]
+}

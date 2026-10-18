@@ -1,0 +1,231 @@
+{
+  "baseRefName": "data",
+  "baseRefOid": "f71e9395dd376b11998276fa4a6c2d277672a2db",
+  "headRefOid": "716e36fc9ec1f476cb3bcd0843ab0fa9cd324794",
+  "mergeCommit": {
+    "oid": "8b24f0c4560b9b8b0d1f4f7a3cf264b409b7dc20"
+  },
+  "mergeStateStatus": "UNKNOWN",
+  "mergedAt": "2026-10-18T11:08:02Z",
+  "number": 3320,
+  "state": "MERGED",
+  "url": "https://github.com/twoimo/tzudong/pull/3320",
+  "checks": [
+    {
+      "name": "Install",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083"
+    },
+    {
+      "name": "Install",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815"
+    },
+    {
+      "name": "Analyze (actions)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586035"
+    },
+    {
+      "name": "Analyze (actions)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400"
+    },
+    {
+      "name": "Promotion Path",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137"
+    },
+    {
+      "name": "Release",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920"
+    },
+    {
+      "name": "Release",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714"
+    },
+    {
+      "name": "Analyze (go)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586229"
+    },
+    {
+      "name": "Analyze (go)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362"
+    },
+    {
+      "name": "Analyze (javascript-typescript)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586211"
+    },
+    {
+      "name": "Analyze (javascript-typescript)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332"
+    },
+    {
+      "name": "Analyze (python)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586277"
+    },
+    {
+      "name": "Analyze (python)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330"
+    },
+    {
+      "name": "Analyze (rust)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586243"
+    },
+    {
+      "name": "Analyze (rust)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349"
+    },
+    {
+      "name": "Analyze (swift)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213"
+    },
+    {
+      "name": "Analyze (swift)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594268"
+    },
+    {
+      "name": "Ubuntu npm",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126"
+    },
+    {
+      "name": "Ubuntu npm",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793"
+    },
+    {
+      "name": "Ubuntu Bun",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344"
+    },
+    {
+      "name": "Ubuntu Bun",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639"
+    },
+    {
+      "name": "Windows npm",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014"
+    },
+    {
+      "name": "Windows npm",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859"
+    },
+    {
+      "name": "Windows Bun",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180"
+    },
+    {
+      "name": "Windows Bun",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807"
+    },
+    {
+      "name": "Admin",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950"
+    },
+    {
+      "name": "Admin",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827"
+    },
+    {
+      "name": "CodeQL",
+      "status": "COMPLETED",
+      "conclusion": "NEUTRAL",
+      "detailsUrl": "https://github.com/twoimo/tzudong/runs/117658730755"
+    },
+    {
+      "name": "GitGuardian Security Checks",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://dashboard.gitguardian.com"
+    },
+    {
+      "context": "Vercel",
+      "state": "SUCCESS",
+      "targetUrl": "https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk"
+    },
+    {
+      "name": "Vercel Preview Comments",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://vercel.com/github"
+    }
+  ],
+  "counts": {
+    "SUCCESS": 30,
+    "NEUTRAL": 1
+  },
+  "unresolved": [],
+  "pending": [],
+  "failed": [],
+  "requiredChecks": [
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920",
+      "name": "Release",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137",
+      "name": "Promotion Path",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714",
+      "name": "Release",
+      "state": "SUCCESS"
+    }
+  ],
+  "requiredCommandExitCode": 0,
+  "requiredSuccess": true,
+  "allChecksCompleted": true,
+  "observedAt": "2026-10-18T11:19:22.184201+00:00"
+}

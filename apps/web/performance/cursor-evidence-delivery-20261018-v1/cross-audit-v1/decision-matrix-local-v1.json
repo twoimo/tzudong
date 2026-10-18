@@ -1,0 +1,51 @@
+{
+  "scope": "Local evidence adjudication only; no external model report has been dispatched or completed",
+  "items": [
+    {
+      "id": "C01",
+      "workOrder": "W001",
+      "decision": "ACCEPT",
+      "evidenceGrade": [
+        "SOURCE_OBSERVED",
+        "SYNTHETIC_MOCK_TESTED"
+      ],
+      "finding": "Fractional monotonic subtraction can reject genuine capabilities.",
+      "implementation": "9228c145, original minted-sum equality, no epsilon; fixed lifetime/identity/expiry/revocation preserved",
+      "verification": "location-precision-unit-before-v1.log (9pass1fail) / after-v1 (10pass128assertions); lint/parity/build/offline3pass; sourceCI pending"
+    },
+    {
+      "id": "C02",
+      "workOrder": "W002",
+      "decision": "CONDITIONAL",
+      "evidenceGrade": [
+        "SOURCE_OBSERVED",
+        "SYNTHETIC_MOCK_TESTED"
+      ],
+      "finding": "Mobile static preview avoids optional renderer import on uncertain capability.",
+      "condition": "Report only observed component resources; no physical/field/process-memory/latency gain. Experimental3D defaultoff, public cohort0 and static fallback are runtime boundaries.",
+      "verification": "badge-mobile-comparison-v1.json / source CI17success1skip1neutral / previous operating public schema2entries0"
+    },
+    {
+      "id": "C03",
+      "workOrder": "W003",
+      "decision": "DEFER",
+      "evidenceGrade": [
+        "UNVERIFIED"
+      ],
+      "finding": "Whole UI memory guard, real mobile and field performance remain unproven.",
+      "runtimeBoundary": "Do not promote unadmitted cache candidate or activate optional3D/public grades; keep static fallback/defaultoff and disclose missing evidence."
+    },
+    {
+      "id": "C04",
+      "workOrder": "W003",
+      "decision": "ACCEPT",
+      "evidenceGrade": [
+        "SOURCE_OBSERVED",
+        "BOUNDARY_INTEGRATION_TESTED"
+      ],
+      "finding": "Strict history marker visibility fails before/after; narrower detail restoration pass does not close it.",
+      "implementation": "Retain strict failed evidence and separate diagnostic/report; do not claim repaired history/flicker. Full restoration fix is a distinct remaining work item.",
+      "verification": "live-history-before/after-v1.json failed; before/after-v2 detailrestore3/3 observational marker0"
+    }
+  ]
+}

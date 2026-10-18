@@ -1,0 +1,123 @@
+{
+  "schemaVersion": "tzudong-complete-set-artifact-map.v1",
+  "kind": "correctness-and-release-preflight",
+  "sourceHead": "1d7ed099f5a3dea2717cecef7c8ed79ff74e53e0",
+  "performanceMeasurementsAdmitted": 0,
+  "entries": [
+    {
+      "path": "1c213fc0-supabase-migration-apply.yml",
+      "bytes": 7413,
+      "sha256": "ab453f6a28edbf754c8edf0a36604d12e20d4b9e677e5e8cc172854280a8e0fb"
+    },
+    {
+      "path": "1c213fc0-supabase-migration-release-manifest.v1.json",
+      "bytes": 21219,
+      "sha256": "29abd5a378c25ba83f2c579de1f849c4fd9b89a4d16f4664e7c153a88cc70561"
+    },
+    {
+      "path": "2a2ff258-supabase-migration-apply.yml",
+      "bytes": 7313,
+      "sha256": "2a3b9da3bb069c726539c9d00cc2b7a63dfcc004782c7be2cc6c30bdd8caa9aa"
+    },
+    {
+      "path": "2a2ff258-supabase-migration-release-manifest.v1.json",
+      "bytes": 15426,
+      "sha256": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d"
+    },
+    {
+      "path": "7e2fc534-supabase-migration-apply.yml",
+      "bytes": 7346,
+      "sha256": "eb017e8af5ab0dcc47a4b11ad9871611b8bb4abd4d1c4bee7a5a696e21e621f4"
+    },
+    {
+      "path": "7e2fc534-supabase-migration-release-manifest.v1.json",
+      "bytes": 17836,
+      "sha256": "8b083835e67fcccd06fbd4317cdc25a425ddb82923cd26a82dffca4a8860f580"
+    },
+    {
+      "path": "REPRODUCE.md",
+      "bytes": 2821,
+      "sha256": "1aba304a40d6075149c506752ab246091adb7d723d12c7101609e48d3135673e"
+    },
+    {
+      "path": "d006986d-supabase-migration-apply.yml",
+      "bytes": 7313,
+      "sha256": "f0072e73c954248474d55d8c40ac04d40d47062c8ebea9310b82132a1ffba9ab"
+    },
+    {
+      "path": "d006986d-supabase-migration-release-manifest.v1.json",
+      "bytes": 17836,
+      "sha256": "8b083835e67fcccd06fbd4317cdc25a425ddb82923cd26a82dffca4a8860f580"
+    },
+    {
+      "path": "d11e57aa-supabase-migration-apply.yml",
+      "bytes": 7377,
+      "sha256": "cc410b2465798be76c9458940e6f46f8e51e82a490c0419b86e4066269cf881a"
+    },
+    {
+      "path": "d11e57aa-supabase-migration-release-manifest.v1.json",
+      "bytes": 19397,
+      "sha256": "db3bf9155074d1d5b132079e8d6ce767a50a1b368ce2888ec081ee7858afb296"
+    },
+    {
+      "path": "evidence-migration-runs-details-v1.json",
+      "bytes": 3556,
+      "sha256": "78932d254cac0361b520daec66104016c4abe218a95934c1bc91e52f5227d57b"
+    },
+    {
+      "path": "expanded-legacy-release-manifest-v1.json",
+      "bytes": 21219,
+      "sha256": "29abd5a378c25ba83f2c579de1f849c4fd9b89a4d16f4664e7c153a88cc70561"
+    },
+    {
+      "path": "full-unit-restored-boundary-v1.json",
+      "bytes": 1577,
+      "sha256": "5367e1ca40b3c9d81ba796c121d25076eb36fd591c9a070f45e7154d638e054b"
+    },
+    {
+      "path": "legacy-boundary-restoration.patch",
+      "bytes": 16477,
+      "sha256": "2dd571f05df2a8d0d3dcf044992d4f53458e88785b70a355de905027fba2b65f"
+    },
+    {
+      "path": "local-validation-v1.json",
+      "bytes": 3118,
+      "sha256": "54bdd96c783896d6a61ae5863d6a7bbde1dc1251941888500cddff18a77bb1be"
+    },
+    {
+      "path": "migration-boundary-history-v1.json",
+      "bytes": 3231,
+      "sha256": "059008b258ead08d9566bf5e79a2619b40e8ce39e5686abac65de5135ab8c92c"
+    },
+    {
+      "path": "migration-workflow-runs-metadata-v1.json",
+      "bytes": 25930,
+      "sha256": "6a9841f9e82e45a5c9d485a7f3b03ff46b95d947e7acc43163a675db243d8858"
+    },
+    {
+      "path": "operating-catalog-metadata-v1.json",
+      "bytes": 1459,
+      "sha256": "5afb6eef2339d4887adfb95ffe27825d4cc789ce685b6606f2a02af18e2b644d"
+    },
+    {
+      "path": "plan-work-order-trace-v1.json",
+      "bytes": 13885,
+      "sha256": "26088fb93a2075737f6762a02bb7d37f96f9a9467a6af4389734f8411ff77f50"
+    },
+    {
+      "path": "security-review-v1.json",
+      "bytes": 1524,
+      "sha256": "017b3369d0bd0c062627f006477a042bc9b233cdc7ea18e6c66f9b982b58a7eb"
+    },
+    {
+      "path": "source.patch",
+      "bytes": 5726,
+      "sha256": "964255ac39d3a9da52f4e7d4510f521400b0163110058399c285f2b406bdda71"
+    },
+    {
+      "path": "verify-complete-packet.py",
+      "bytes": 1668,
+      "sha256": "2ccbb984dc23b4e834b975690b02722185d359d071b356747a061e58656bcd72"
+    }
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "sourceHead": "3ea4448758e140ca4f571641f82803262e4c18db",
+  "fullUnit": {
+    "exitCode": 0,
+    "pass": 3728,
+    "skip": 11,
+    "fail": 0,
+    "lanes": 21
+  },
+  "productionBuild": {
+    "exitCode": 0,
+    "next": "16.3.8",
+    "dist": ".next-cursor-evidence-review-20261018-v2",
+    "buildId": "YObRMrT1C_0ScfcP7gbSV",
+    "routeCssBoundary": "passed"
+  },
+  "productionBrowser": {
+    "passed": 3,
+    "failed": 0,
+    "seconds": 4.9,
+    "fixture": "offline synthetic REST, no actual SDK"
+  },
+  "badgeBrowser": {
+    "scope": "production-mode component harness, synthetic tier, software WebGL; not full-app deployed/physical/field proof",
+    "browser": "153.0.8010.12",
+    "cases": [
+      {
+        "reducedMotion": false,
+        "scriptsBeforeOpen": [
+          "/harness.js",
+          "/chunk-22sst59p.js"
+        ],
+        "dynamicallyLoadedScripts": [
+          "/chunk-vc9skwkw.js"
+        ],
+        "dpr": 2,
+        "cssSize": [
+          120,
+          120
+        ],
+        "drawingBuffer": [
+          240,
+          240
+        ],
+        "rafDelta": 23,
+        "framePixelsChanged": true,
+        "focusRestored": true,
+        "escapeContained": true,
+        "contextTeardown": [
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          }
+        ],
+        "errors": []
+      },
+      {
+        "reducedMotion": true,
+        "scriptsBeforeOpen": [
+          "/harness.js",
+          "/chunk-22sst59p.js"
+        ],
+        "dynamicallyLoadedScripts": [
+          "/chunk-vc9skwkw.js"
+        ],
+        "dpr": 2,
+        "cssSize": [
+          120,
+          120
+        ],
+        "drawingBuffer": [
+          240,
+          240
+        ],
+        "rafDelta": 0,
+        "framePixelsChanged": false,
+        "focusRestored": true,
+        "escapeContained": true,
+        "contextTeardown": [
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          }
+        ],
+        "errors": []
+      }
+    ],
+    "failureRemount": {
+      "recoveredOnRestaurantChange": true,
+      "tierChangeShowsNewImage": true
+    },
+    "status": "passed"
+  },
+  "limits": [
+    "No active public cohort is published",
+    "No new physical or field evidence",
+    "No original memory guard acceptance",
+    "Source promotion/deploy pending current-head CI"
+  ]
+}

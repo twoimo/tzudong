@@ -1,0 +1,26 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/home-detail-route-state.test.ts:
+(pass) home detail route state contracts > locks snapshot TTL and max size to the approved contract [0.04ms]
+(pass) home detail route state contracts > canonical detail URL includes restaurant, mapMode, restore, optional z, and no legacy r [0.12ms]
+(pass) home detail route state contracts > type guards accept only app-owned detail and list history state shapes [0.07ms]
+(pass) home detail route state contracts > snapshot write/read enforces TTL and 8KB cap [0.33ms]
+(pass) home detail route state contracts > dispatches failed restore instrumentation with reason metadata [0.07ms]
+
+tests-unit/expanded-cluster-flow-invariants.test.ts:
+(pass) expanded cluster flow invariants > provider marker culling does not remove list or swipe candidates [0.79ms]
+(pass) expanded cluster flow invariants > selected and searched offscreen restaurants remain provider exceptions [0.03ms]
+(pass) expanded cluster flow invariants > pan to an empty viewport releases stale candidates and pan back restores the same ordered rows [0.58ms]
+(pass) expanded cluster flow invariants > a refreshed array identity reindexes changed coordinates and changes the render signature [0.20ms]
+(pass) expanded cluster flow invariants > empty viewport cleanup keeps an expanded selection renderable until expansion clears
+(pass) expanded cluster flow invariants > idle and resize invalidate expanded markers before scheduling the unchanged cluster debounce [0.20ms]
+(pass) expanded cluster flow invariants > fast pan return restores culled markers without an away idle (cluster index: %s) [1.25ms]
+(pass) expanded cluster flow invariants > fast pan return restores culled markers without an away idle (cluster index: %s) [0.57ms]
+(pass) expanded cluster flow invariants > raw viewport changes invalidate only expanded markers (expanded: %s) [0.16ms]
+(pass) expanded cluster flow invariants > raw viewport changes invalidate only expanded markers (expanded: %s) [0.05ms]
+(pass) expanded cluster flow invariants > unchanged repeated idle keeps the marker signature while viewport revision invalidates it [0.12ms]
+
+ 16 pass
+ 0 fail
+ 77 expect() calls
+Ran 16 tests across 2 files. [39.00ms]

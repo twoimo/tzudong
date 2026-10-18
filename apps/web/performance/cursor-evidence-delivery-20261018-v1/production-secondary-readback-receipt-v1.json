@@ -1,0 +1,21 @@
+{
+  "gitSha": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+  "runs": [
+    {
+      "script": "run-live-visual-readback-v1.mjs",
+      "startedAt": "2026-10-18T10:32:49.975022+00:00",
+      "exitCode": 0
+    },
+    {
+      "script": "run-live-history-readback-v1.mjs",
+      "startedAt": "2026-10-18T10:32:54.985289+00:00",
+      "exitCode": 1
+    },
+    {
+      "script": "run-live-history-readback-v2.mjs",
+      "startedAt": "2026-10-18T10:33:31.313600+00:00",
+      "exitCode": 0
+    }
+  ],
+  "scope": "history strict result remains separate from diagnostic and screenshot capture; no performance gain claim"
+}

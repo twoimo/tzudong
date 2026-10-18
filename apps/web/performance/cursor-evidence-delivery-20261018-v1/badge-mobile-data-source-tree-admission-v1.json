@@ -1,0 +1,103 @@
+{
+  "pr": 3317,
+  "head": "3967549ed9c6c00902e72159e4a2014f178b0def",
+  "tree": "77fa0dabf8d22ba490bf1998dc7913a4720e6089",
+  "fullyAffectedTestSourceHead": "3ecf69e63365e3df5aa9d434b990e35cff1cf263",
+  "sameSourceTree": true,
+  "affectedChecks": [
+    "Ubuntu npm",
+    "Ubuntu Bun",
+    "Windows npm",
+    "Windows Bun",
+    "Analyze (javascript-typescript)"
+  ],
+  "requiredCurrentChecksPassed": true,
+  "unresolved": 0,
+  "knownFailures": 0,
+  "pendingDuplicateChecks": [
+    {
+      "name": "Install",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118613121/job/117649421593"
+    },
+    {
+      "name": "Install",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118610812/job/117649414948"
+    },
+    {
+      "name": "Analyze (javascript-typescript)",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118610414/job/117649415278"
+    },
+    {
+      "name": "Analyze (swift)",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118610414/job/117649415428"
+    },
+    {
+      "name": "Analyze (swift)",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118611953/job/117649419641"
+    },
+    {
+      "name": "Ubuntu npm",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118613121/job/117649421685"
+    },
+    {
+      "name": "Ubuntu npm",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118610812/job/117649415063"
+    },
+    {
+      "name": "Ubuntu Bun",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118613121/job/117649421479"
+    },
+    {
+      "name": "Ubuntu Bun",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118610812/job/117649415133"
+    },
+    {
+      "name": "Windows npm",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118613121/job/117649421638"
+    },
+    {
+      "name": "Windows npm",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118610812/job/117649415146"
+    },
+    {
+      "name": "Windows Bun",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118613121/job/117649421548"
+    },
+    {
+      "name": "Windows Bun",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118610812/job/117649415113"
+    },
+    {
+      "context": "Vercel",
+      "state": "PENDING",
+      "targetUrl": "https://vercel.com/twoimos-projects/tzudong/2HGuhsXyyG1agKoDg9vbzXd47BUT"
+    }
+  ],
+  "scope": "Normal protected merge after exact same source tree passed affected CI and current required checks. Duplicate platform/CodeQL runs remain tracked separately, not claimed completed."
+}

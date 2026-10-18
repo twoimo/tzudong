@@ -1,0 +1,13 @@
+2026-10-18T10:18:47.9824234Z > node scripts/measure-typecheck.mjs --profile ubuntu-npm --release-id 77fa0dabf8d22ba490bf1998dc7913a4720e6089 --output /home/runner/work/_temp/ts7-release/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/report.json
+2026-10-18T10:24:29.6407153Z node scripts/verify-typecheck-benchmark-report.mjs --report "$RUNNER_TEMP/ts7-release/$tree/ubuntu-npm/report.json" --tree "$tree" --profile ubuntu-npm --platform linux-x64 --installer npm
+2026-10-18T10:29:31.1028964Z error: expect(received).not.toBeNull()
+2026-10-18T10:29:31.1029500Z Received: null
+2026-10-18T10:29:31.1072810Z ##[error]Received: null
+2026-10-18T10:29:31.1086909Z (fail) capabilities are opaque, revocable, and reject clone or relabel attempts [0.49ms]
+2026-10-18T10:29:31.1108477Z error: expect(received).not.toBeNull()
+2026-10-18T10:29:31.1109026Z Received: null
+2026-10-18T10:29:31.1123826Z ##[error]Received: null
+2026-10-18T10:29:31.1128663Z (fail) tracking lifecycle revokes the genuine capability exactly once on every stop path [0.99ms]
+2026-10-18T10:30:27.6470722Z (fail) capabilities are opaque, revocable, and reject clone or relabel attempts [0.49ms]
+2026-10-18T10:30:27.6471465Z (fail) tracking lifecycle revokes the genuine capability exactly once on every stop path [0.99ms]
+2026-10-18T10:30:27.7767827Z ##[error]Process completed with exit code 1.

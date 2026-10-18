@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "runs": [
+    {
+      "databaseId": 39042543755,
+      "headSha": "a3f34fbfa8b7e189a68478c861c071edd2f62066",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39042543755",
+      "jobs": [
+        {
+          "id": 117424763991,
+          "name": "validate",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": []
+        },
+        {
+          "id": 117424840032,
+          "name": "apply",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "name": "Install PostgreSQL client for migration apply or terminal verification",
+              "conclusion": "success"
+            },
+            {
+              "name": "Apply reviewed migration or verify provider-applied terminal state",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "databaseId": 39036266961,
+      "headSha": "7fdbe268287c4cfa90da306234c7ac19bdf6f3f9",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39036266961",
+      "jobs": [
+        {
+          "id": 117406558105,
+          "name": "validate",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": []
+        },
+        {
+          "id": 117406618286,
+          "name": "apply",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "name": "Install PostgreSQL client for migration apply or terminal verification",
+              "conclusion": "success"
+            },
+            {
+              "name": "Apply reviewed migration or verify provider-applied terminal state",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "databaseId": 39018539898,
+      "headSha": "80c4aff244632720b76a10044a04403dbb4fb390",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39018539898",
+      "jobs": [
+        {
+          "id": 117355520374,
+          "name": "validate",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": []
+        },
+        {
+          "id": 117355563299,
+          "name": "apply",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "name": "Install PostgreSQL client for migration apply or terminal verification",
+              "conclusion": "success"
+            },
+            {
+              "name": "Apply reviewed migration or verify provider-applied terminal state",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "databaseId": 39015534702,
+      "headSha": "d377a5bb1a44cf109eafc3310661cd90b6387961",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39015534702",
+      "jobs": [
+        {
+          "id": 117346780824,
+          "name": "validate",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": []
+        },
+        {
+          "id": 117346933808,
+          "name": "apply",
+          "status": "completed",
+          "conclusion": "skipped",
+          "steps": []
+        }
+      ]
+    }
+  ],
+  "scope": "workflow/job/step metadata only; terminal SQL and ledger not yet independently read back"
+}

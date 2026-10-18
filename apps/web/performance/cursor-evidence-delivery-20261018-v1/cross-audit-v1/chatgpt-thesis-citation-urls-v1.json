@@ -1,0 +1,98 @@
+{
+  "observedAt": "2026-10-18T11:28:41.271680+00:00",
+  "conversationUrl": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "method": "Original completed report UI, citation button9 opened Sources panel, bulk DOM anchor titles/hrefs and displayed citation numbers read. Removed only observed utm_source query in this separate mapping. Original Markdown bytes untouched.",
+  "mappingKind": "UI citation numbers, not guessed export-token mapping",
+  "fileCitations": {
+    "1": "source_bundle(1).txt",
+    "2": "MASTER-PLAN.md"
+  },
+  "sources": [
+    {
+      "uiCitation": 3,
+      "title": "ECMAScript 2027 Language Specification",
+      "url": "https://tc39.es/ecma262/index.html"
+    },
+    {
+      "uiCitation": 4,
+      "title": "ECMAScript 2027 Language Specification",
+      "url": "https://tc39.es/ecma262/"
+    },
+    {
+      "uiCitation": 5,
+      "title": "High Resolution Time",
+      "url": "https://w3c.github.io/hr-time/"
+    },
+    {
+      "uiCitation": 9,
+      "title": "Device Memory API",
+      "url": "https://w3c.github.io/device-memory/"
+    },
+    {
+      "uiCitation": 6,
+      "title": "Guides: Lazy Loading | Next.js",
+      "url": "https://nextjs.org/docs/app/guides/lazy-loading"
+    },
+    {
+      "uiCitation": 12,
+      "title": "Getting Started: Server and Client Components | Next.js",
+      "url": "https://nextjs.org/docs/app/getting-started/server-and-client-components"
+    },
+    {
+      "uiCitation": 7,
+      "title": "useEffect - React",
+      "url": "https://react.dev/reference/react/useEffect"
+    },
+    {
+      "uiCitation": 8,
+      "title": "HTML Standard animations",
+      "url": "https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html"
+    },
+    {
+      "uiCitation": 10,
+      "title": "HTML Standard workers",
+      "url": "https://html.spec.whatwg.org/multipage/workers.html"
+    },
+    {
+      "uiCitation": 11,
+      "title": "Navigator userAgent - MDN",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/API/Navigator/userAgent"
+    },
+    {
+      "uiCitation": 13,
+      "title": "import() - MDN",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import"
+    },
+    {
+      "uiCitation": 14,
+      "title": "vercel list",
+      "url": "https://vercel.com/docs/cli/list"
+    },
+    {
+      "uiCitation": 15,
+      "title": "vercel bisect",
+      "url": "https://vercel.com/docs/cli/bisect"
+    },
+    {
+      "uiCitation": 16,
+      "title": "Deployment Checks",
+      "url": "https://vercel.com/docs/deployment-checks"
+    },
+    {
+      "uiCitation": 17,
+      "title": "vercel alias",
+      "url": "https://vercel.com/docs/cli/alias"
+    },
+    {
+      "uiCitation": 18,
+      "title": "Deploying Git Repositories with Vercel",
+      "url": "https://vercel.com/docs/git"
+    },
+    {
+      "uiCitation": 19,
+      "title": "How to dispose of Objects",
+      "url": "https://threejs.org/manual/pages/how-to-dispose-of-objects.html"
+    }
+  ],
+  "completeness": "17 public source URLs +2 uploaded file references =19 UI cited sources; searched-only sources are not included"
+}

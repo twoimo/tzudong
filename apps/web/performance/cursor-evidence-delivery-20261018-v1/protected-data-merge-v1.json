@@ -1,0 +1,13 @@
+{
+  "headRefOid": "7b042c43b91c5abbea9faabd737e754a3b8ffa2d",
+  "mergeCommit": {
+    "oid": "a3af881cb475b004d6dbd3b138a9793bf0d8cc89"
+  },
+  "mergedAt": "2026-10-18T07:28:22Z",
+  "number": 3307,
+  "state": "MERGED",
+  "observedAt": "2026-10-18T07:29:18.562110+00:00",
+  "sourceTree": "070a79a76c1cba8c3b14060fcae9cc64af6a0994",
+  "finalCI": "data-final-new-head-ci-v6.json",
+  "mainPromotionPr": 3311
+}

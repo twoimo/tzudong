@@ -1,0 +1,42 @@
+{
+  "declaredAt": "2026-10-18T09:22:31.839385+00:00",
+  "sourceCandidate": "4696e6ee38d5bee9c4397bffcb1dcb09ac93cfcf",
+  "expectedSourceTree": "87f5b7824d86843f7371b59530266a4adf288808",
+  "finalMainSha": "bind after protected merge; fail closed on any changed tree",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "teamId": "team_OUj64KeLxJI3PkEbOaFZnorA",
+  "currentKnownRollback": {
+    "sha": "00234a368ee64f273fb396a3eb307ad187c7fafd",
+    "deploymentId": "dpl_9NFaiMgg1yyt1jnEx8SpXfuhjnnX",
+    "requiresFreshReadbackBeforeMutation": true
+  },
+  "scope": "phone-free anonymous public functional delivery; no DB/Storage/DNS/account writes, actual grade activation, field or performance admission",
+  "primaryAcceptance": [
+    "protected promote tree equals candidate and relevant/required checks/reviews pass",
+    "READY production in exact Git-integrated project, exact final main SHA and www/root correspondence",
+    "live-v3: real Naver SDK and map tiles, cluster/marker detail open-close, review/stamp/ranking headings, ranking RPC200, pageerror0 and no horizontal overflow across 1440x900/834x1112/430x860",
+    "public API exact schema2/unpublished/nullrevision/emptyentries; four displayWebP200 with exactGitblob SHA256/bytes",
+    "public-map-only screenshots inspected at three sizes"
+  ],
+  "secondaryReadback": [
+    "same strict history-v1 criterion as baseline, failure remains a failure; no replacement by narrow diagnostic",
+    "history-v2 separately observes detail restoration/close and exactMarkerCount/visibility, clusters",
+    "fixed1.5s CSP/resource observation compared to baseline, not statistical improvement",
+    "low-power capability gate has separate component before/intermediate/final evidence; public cohort stays empty, so no activation or field gain claim"
+  ],
+  "knownBaselineFailures": [
+    "nelo connect-src/eval script-src CSP blocks",
+    "announcements/ad_banners401",
+    "strict history original marker visibility failed on firstdesktopattempt; diagnostic3sizes shows0individual/16clusters despite same detailrestoration"
+  ],
+  "rollbackConditions": [
+    "new critical public flow failure or pageerror relative to baseline",
+    "wrong final SHA/project/alias or API/asset content does not equal reviewed source",
+    "new unauthorized data disclosure or security boundary failure"
+  ],
+  "rollbackGuard": "re-read alias immediately before rollback; act only if alias is still this task deployment, else stop/reconcile concurrent change; restore fresh named prior READY deployment and verify health/flows again",
+  "statistics": "No new UI timing/memory/field improvement claim. Three dependent viewport scenarios in one browser process are functional checks; no p95/CI fabricated. One-observation badge RAF results remain limited component diagnosis.",
+  "evidence": "retain failed attempts and immutable baselines; new versions for retries; no raw rows/query URLs/headers/sessions stored",
+  "previousPlan": "production-verification-plan-v1.json",
+  "revisionReason": "additional valid low-power review repaired; original live acceptance/rollback criteria unchanged; no deployed after measurements yet"
+}

@@ -1,0 +1,28 @@
+{
+  "phase": "before",
+  "gitSha": "00234a368ee64f273fb396a3eb307ad187c7fafd",
+  "deploymentId": "dpl_9NFaiMgg1yyt1jnEx8SpXfuhjnnX",
+  "scope": "public response status and stored content hashes; no performance or activation claim",
+  "rows": [
+    {
+      "path": "/api/public-popularity",
+      "status": 404
+    },
+    {
+      "path": "/assets/badges/badge_popular_fire_40.webp",
+      "status": 404
+    },
+    {
+      "path": "/assets/badges/badge_popular_fire_80.webp",
+      "status": 404
+    },
+    {
+      "path": "/assets/badges/badge_popular_rainbow_40.webp",
+      "status": 404
+    },
+    {
+      "path": "/assets/badges/badge_popular_rainbow_80.webp",
+      "status": 404
+    }
+  ]
+}

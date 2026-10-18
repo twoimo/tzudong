@@ -1,0 +1,31 @@
+Vercel CLI 56.5.0 (Node.js 24.22.0)
+Fetching deployment "tzudong-9p964kzxn-twoimos-projects.vercel.app" in twoimos-projects
+> Fetched deployment "tzudong-9p964kzxn-twoimos-projects.vercel.app" in twoimos-projects [1m]
+
+  General
+
+    id		dpl_8vFh9BJnQPLE9kvvrHrdgKqE8FDE
+    name	tzudong
+    target	production
+    status	● Ready
+    url		https://tzudong-9p964kzxn-twoimos-projects.vercel.app
+    created	Sun Oct 18 2026 19:26:20 GMT+0900 (Korean Standard Time) [5m ago]
+
+
+  Aliases
+
+    ╶ https://tzudong-twoimos-projects.vercel.app
+    ╶ https://tzudong-git-main-twoimos-projects.vercel.app
+    
+
+  Builds
+
+    ┌ .        [0ms]
+    ├── λ index (55.54MB) [icn1]
+    ├── λ _error (55.54MB) [icn1]
+    ├── λ _not-found (55.54MB) [icn1]
+    ├── λ _not-found.rsc (55.54MB) [icn1]
+    ├── λ admin (55.54MB) [icn1]
+    └── 263 output items hidden
+    
+

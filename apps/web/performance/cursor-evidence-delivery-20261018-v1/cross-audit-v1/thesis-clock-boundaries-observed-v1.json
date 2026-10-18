@@ -1,0 +1,35 @@
+{
+  "source": "9228c1454393560bcd37240f793065e450f85683",
+  "scope": "Actual private API in one isolated Bun process; synthetic nonconforming clock and readiness only. No actual location/permission/network/account operation.",
+  "steps": [
+    {
+      "syntheticNow": 1000,
+      "allowed": true
+    },
+    {
+      "syntheticNow": 2000,
+      "allowed": true
+    },
+    {
+      "syntheticNow": 1500,
+      "allowed": true
+    },
+    {
+      "syntheticNow": 301000,
+      "allowed": false
+    },
+    {
+      "syntheticNow": 1500,
+      "allowed": false
+    }
+  ],
+  "numeric": {
+    "grantedAt": 262144.02702702704,
+    "storedDeadline": 562144.027027027,
+    "subtraction": 299999.99999999994,
+    "storedSumEquality": true
+  },
+  "conclusion": "Intra-window backwards synthetic time is not independently detected. Stored exact deadline rejects and deletes capability; later rewind cannot revive it. Do not claim generic rewind-proof or real-number-exact five minutes.",
+  "productChange": false,
+  "performanceClaim": false
+}

@@ -1,0 +1,46 @@
+{
+  "projectId": "aqlcofblfxdrjhhdmarw",
+  "rows": [
+    {
+      "object_name": "restaurant_evidence_frames",
+      "object_exists": true,
+      "rls_enabled": true,
+      "anon_select_grant": true,
+      "authenticated_select_grant": true,
+      "read_policy_count": 1,
+      "public_restaurant_tier_column_present": false
+    },
+    {
+      "object_name": "restaurant_popularity_metrics",
+      "object_exists": true,
+      "rls_enabled": true,
+      "anon_select_grant": false,
+      "authenticated_select_grant": false,
+      "read_policy_count": 0,
+      "public_restaurant_tier_column_present": false
+    },
+    {
+      "object_name": "restaurant_popularity_shadow",
+      "object_exists": true,
+      "rls_enabled": true,
+      "anon_select_grant": false,
+      "authenticated_select_grant": false,
+      "read_policy_count": 0,
+      "public_restaurant_tier_column_present": false
+    }
+  ],
+  "readOnly": true,
+  "scope": "schema/ACL/policy-count metadata; no user rows; grants alone do not establish row access",
+  "migrationCount": 89,
+  "evidenceVersions": [
+    "20261017043000",
+    "20261017140000",
+    "20261017160000"
+  ],
+  "operatingWrites": 0,
+  "limitations": [
+    "Policy expressions and actual row-level authorization not revalidated by this metadata query.",
+    "Legacy source restoration does not roll back operating migrations or renew the old 86-to-97 admission.",
+    "No public restaurant popularity tier column exists."
+  ]
+}

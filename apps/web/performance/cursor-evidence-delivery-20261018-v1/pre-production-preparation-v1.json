@@ -1,0 +1,35 @@
+{
+  "entries": [
+    {
+      "name": "frozen pre-promotion checkpoint",
+      "passed": true,
+      "files": 23,
+      "artifactMapSha256": "1356df5565f5985e318003b8292bb199e4431c98a1fe402df17c409fec66e949",
+      "method": "independent complete-set verifier, exact absolute root and detached pin"
+    },
+    {
+      "path": "live-readback-before-v3.json",
+      "bytes": 4865,
+      "sha256": "d793e609b9a0e746d6c2789d080f087d1d26e7b092b09d04364556bba71fc2ef"
+    },
+    {
+      "path": "public-assets-before-v1.json",
+      "bytes": 696,
+      "sha256": "197c5a013524cfbedbe588882e7a5d12438bacd66aa31f89738e85ae30b655d7"
+    },
+    {
+      "path": "console-boundary-before-v2.json",
+      "bytes": 1675,
+      "sha256": "32cb8eeadedd431b2dc540c8017ddd3b7c929316d8e233b8d41d2fdfe2d18c5f"
+    },
+    {
+      "path": "delivery-source-manifest-v2.json",
+      "bytes": 8417,
+      "sha256": "1aa8d1cc38ad297b0bd8f54d066748f55bff4c8a748bfd6535e3d10c9a4feab8"
+    }
+  ],
+  "productionMutationPerformed": false,
+  "nativeGoalReset": false,
+  "physicalDeviceUsed": false,
+  "note": "Preparation receipt only. Exact protected merges, deploy and live after results remain separate."
+}

@@ -1,0 +1,125 @@
+{
+  "scope": "bounded component correctness and public functional readback; not service performance admission",
+  "rows": [
+    {
+      "흐름": "위치 capability 발급",
+      "환경·표본 수": "Chromium153, phase별 process1/context4; fractional context3×종속시도3",
+      "지표": "3종 fractional 시점의 발급 성공",
+      "Before": "0/9",
+      "After": "9/9",
+      "절대 변화": "+9건 / +100%p",
+      "상대 변화": "0 baseline이므로 계산 안 함",
+      "노이즈·신뢰구간": "합성 clock/fetch; population CI/p95 없음",
+      "판정": "정확성 결함 재현·수정; 전체 UI/실제 위치 미검증",
+      "증거 경로": "location-precision-browser-comparison-v1.json; location-precision-browser-v2/"
+    },
+    {
+      "흐름": "위치 만료 경계",
+      "환경·표본 수": "동일 합성 API, after 4context×3시도",
+      "지표": "exact expiry 및 rewind 후 거부",
+      "Before": "기존 실패에서는 발급 자체 실패",
+      "After": "저장된 exact expiry 및 만료 관찰 뒤 rewind 거부",
+      "절대 변화": "비교 불가",
+      "상대 변화": "해당 없음",
+      "노이즈·신뢰구간": "실제 권한 요청/좌표 획득 없음",
+      "판정": "권한 경계 보존 관찰",
+      "증거 경로": "location-precision-browser-v2/results-after.json"
+    },
+    {
+      "흐름": "모바일 optional3D",
+      "환경·표본 수": "실제 React/Nextdynamic/software GL; phase별 process1; 6문제 navigator profile×종속 open3",
+      "지표": "WebGL context 생성 수/profile",
+      "Before": "3",
+      "After": "0",
+      "절대 변화": "3 감소",
+      "상대 변화": "100% 감소(구성요소 한정)",
+      "노이즈·신뢰구간": "UA/CPU/memory 합성, CI/p95 없음",
+      "판정": "불필요한 선택적 자원 생성 차단",
+      "증거 경로": "badge-mobile-comparison-v1.json; badge-mobile-capability-v1/"
+    },
+    {
+      "흐름": "모바일 optional3D cold import",
+      "환경·표본 수": "같은6문제 profile; profile당 cold1",
+      "지표": "추가 engine script 수/profile",
+      "Before": "1",
+      "After": "0",
+      "절대 변화": "1 감소",
+      "상대 변화": "100% 감소(요청 개수 한정)",
+      "노이즈·신뢰구간": "같은 process의 fresh contexts; 실제 CDN bytes 아님",
+      "판정": "무거운 import 차단 관찰",
+      "증거 경로": "badge-mobile-comparison-v1.json"
+    },
+    {
+      "흐름": "모바일 optional3D RAF",
+      "환경·표본 수": "같은6문제 profile; open당220ms window",
+      "지표": "관찰 callback 수/window",
+      "Before": "13–14",
+      "After": "0",
+      "절대 변화": "13–14 감소",
+      "상대 변화": "100% 감소(조건부 loop 제거)",
+      "노이즈·신뢰구간": "프레임 시간/FPS/CPU/배터리/process memory 미측정",
+      "판정": "loop 제거; 서비스 성능 개선 입증 안 됨",
+      "증거 경로": "badge-mobile-comparison-v1.json"
+    },
+    {
+      "흐름": "정상 desktop3D control",
+      "환경·표본 수": "동일 component/process1; 종속 open3",
+      "지표": "RAF callback/window",
+      "Before": "13,14,13",
+      "After": "13,14,14",
+      "절대 변화": "median 13→14",
+      "상대 변화": "개선율 산출 안 함",
+      "노이즈·신뢰구간": "220ms scheduler 관찰; A/A·랜덤화 없음",
+      "판정": "성능 개선 입증 안 됨",
+      "증거 경로": "badge-mobile-comparison-v1.json"
+    },
+    {
+      "흐름": "실제 지도·상세·리뷰·도장·랭킹",
+      "환경·표본 수": "운영 Chromium153; 각 버전 process1, 3viewport fresh contexts",
+      "지표": "기능 흐름 통과 viewport",
+      "Before": "3/3 (00234)",
+      "After": "3/3 (최종 main)",
+      "절대 변화": "0",
+      "상대 변화": "0%",
+      "노이즈·신뢰구간": "기능 readback; latency/INP/LCP 측정 아님",
+      "판정": "주요 익명 기능 회귀 관찰 안 됨",
+      "증거 경로": "live-readback-before-v3.json; live-readback-after-v4.json"
+    },
+    {
+      "흐름": "운영 pageerror",
+      "환경·표본 수": "동일 실제 URL3viewport",
+      "지표": "pageerror 수",
+      "Before": "0",
+      "After": "0",
+      "절대 변화": "0",
+      "상대 변화": "0 baseline이므로 계산 안 함",
+      "노이즈·신뢰구간": "짧은 기능 시나리오3개; 전 사용자 오류율 아님",
+      "판정": "관찰 중0건",
+      "증거 경로": "live-readback-after-v4.json"
+    },
+    {
+      "흐름": "운영 strict 뒤로 가기",
+      "환경·표본 수": "최초 desktop 시도; baseline과 같은 strict criterion",
+      "지표": "원래 marker visibility 계약",
+      "Before": "실패 (before-v1)",
+      "After": "failed",
+      "절대 변화": "해결 입증 안 됨",
+      "상대 변화": "해당 없음",
+      "노이즈·신뢰구간": "diagnostic pass가 strict fail을 대체하지 않음",
+      "판정": "미해결",
+      "증거 경로": "live-history-before-v1.json; live-history-after-v3.json; live-history-after-v4.json"
+    },
+    {
+      "흐름": "전체 UI memory·field·물리 모바일",
+      "환경·표본 수": "이번 phone-free 범위 표본0",
+      "지표": "memory guard/INP/LCP/CLS·고빈도 pixel flicker",
+      "Before": "원래 실패/불충분 자료 유지",
+      "After": "이번 범위 미측정",
+      "절대 변화": "계산 불가",
+      "상대 변화": "계산 불가",
+      "노이즈·신뢰구간": "실기기/field로 외삽 금지",
+      "판정": "개선 입증 안 됨",
+      "증거 경로": "production-verification-plan-v4.json; REPRODUCE.md"
+    }
+  ]
+}

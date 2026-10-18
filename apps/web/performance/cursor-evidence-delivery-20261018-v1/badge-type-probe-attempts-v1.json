@@ -1,0 +1,22 @@
+{
+  "scope": "compiler probe attempts, not application CI failures",
+  "attempts": [
+    {
+      "version": 1,
+      "result": "failed REQUIRED_SIGNAL_CONTRACT_NOT_PROVEN",
+      "reason": "narrow probe did not include canonical ambient declarations and assumed direct-JSX diagnostic2741; no source changed to satisfy it"
+    },
+    {
+      "version": 2,
+      "result": "failed; raw diagnostic log preserved",
+      "reason": "diagnosed missing ambient three declaration7016 and real next/dynamic overload code2769; no install/suppression or source modification",
+      "log": "badge-required-capability-diagnostics-v2.log"
+    },
+    {
+      "version": 3,
+      "result": "passed",
+      "reason": "uses existing canonical project .d.ts roots; optional old viewer allows omitted prop, required viewer rejects it with2769, valid actual caller has0diagnostics",
+      "receipt": "badge-required-capability-type-proof-v3.json"
+    }
+  ]
+}

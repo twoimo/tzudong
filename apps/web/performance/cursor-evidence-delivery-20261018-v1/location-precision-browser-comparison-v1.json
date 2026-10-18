@@ -1,0 +1,108 @@
+{
+  "sourceBefore": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+  "sourceAfter": "9228c1454393560bcd37240f793065e450f85683",
+  "browser": "153.0.8010.12",
+  "independentBrowserProcessesPerPhase": 1,
+  "freshContextsPerPhase": 4,
+  "scope": "actual compiled capability API, synthetic clock and readiness, no device permission/location/account data; fixture UI not whole app; no latency or performance benefit claim",
+  "rows": [
+    {
+      "syntheticTime": 1000,
+      "beforeSuccessfulMints": 3,
+      "afterSuccessfulMints": 3,
+      "dependentAttempts": 3,
+      "afterBoundaries": [
+        {
+          "justBefore": true,
+          "at": false,
+          "rewind": false
+        },
+        {
+          "justBefore": true,
+          "at": false,
+          "rewind": false
+        },
+        {
+          "justBefore": true,
+          "at": false,
+          "rewind": false
+        }
+      ]
+    },
+    {
+      "syntheticTime": 262144.02702702704,
+      "beforeSuccessfulMints": 0,
+      "afterSuccessfulMints": 3,
+      "dependentAttempts": 3,
+      "afterBoundaries": [
+        {
+          "justBefore": true,
+          "at": false,
+          "rewind": false
+        },
+        {
+          "justBefore": true,
+          "at": false,
+          "rewind": false
+        },
+        {
+          "justBefore": true,
+          "at": false,
+          "rewind": false
+        }
+      ]
+    },
+    {
+      "syntheticTime": 262144.1081081081,
+      "beforeSuccessfulMints": 0,
+      "afterSuccessfulMints": 3,
+      "dependentAttempts": 3,
+      "afterBoundaries": [
+        {
+          "justBefore": true,
+          "at": false,
+          "rewind": false
+        },
+        {
+          "justBefore": true,
+          "at": false,
+          "rewind": false
+        },
+        {
+          "justBefore": true,
+          "at": false,
+          "rewind": false
+        }
+      ]
+    },
+    {
+      "syntheticTime": 262144.1621621622,
+      "beforeSuccessfulMints": 0,
+      "afterSuccessfulMints": 3,
+      "dependentAttempts": 3,
+      "afterBoundaries": [
+        {
+          "justBefore": true,
+          "at": false,
+          "rewind": false
+        },
+        {
+          "justBefore": true,
+          "at": false,
+          "rewind": false
+        },
+        {
+          "justBefore": true,
+          "at": false,
+          "rewind": false
+        }
+      ]
+    }
+  ],
+  "pixelsInspected": [
+    "location-precision-browser-v2/before-fractional-1.png",
+    "location-precision-browser-v2/after-fractional-1.png"
+  ],
+  "originalHarnessFailuresRetained": "location-precision-browser-v1",
+  "noise": "deterministic success/failure counts only; no populationCI or p95; no relative increase from0 baseline"
+}

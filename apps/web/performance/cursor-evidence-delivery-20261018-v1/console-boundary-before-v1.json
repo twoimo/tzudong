@@ -1,0 +1,64 @@
+{
+  "phase": "before",
+  "gitSha": "00234a368ee64f273fb396a3eb307ad187c7fafd",
+  "scope": "anonymous desktop diagnostic, 1.5s bounded observation after readiness/heading; no source URLs/query/body/session data persisted",
+  "rows": [
+    {
+      "route": "/",
+      "csp": [
+        {
+          "directive": "connect-src",
+          "target": "kr-col-ext.nelo.navercorp.com",
+          "disposition": "enforce"
+        },
+        {
+          "directive": "script-src",
+          "target": "eval",
+          "disposition": "enforce"
+        }
+      ]
+    },
+    {
+      "route": "/feed",
+      "csp": [
+        {
+          "directive": "connect-src",
+          "target": "kr-col-ext.nelo.navercorp.com",
+          "disposition": "enforce"
+        }
+      ]
+    },
+    {
+      "route": "/leaderboard",
+      "csp": [
+        {
+          "directive": "connect-src",
+          "target": "kr-col-ext.nelo.navercorp.com",
+          "disposition": "enforce"
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "host": "aqlcofblfxdrjhhdmarw.supabase.co",
+      "status": 401,
+      "type": "fetch"
+    },
+    {
+      "host": "aqlcofblfxdrjhhdmarw.supabase.co",
+      "status": 401,
+      "type": "fetch"
+    },
+    {
+      "host": "aqlcofblfxdrjhhdmarw.supabase.co",
+      "status": 401,
+      "type": "fetch"
+    },
+    {
+      "host": "aqlcofblfxdrjhhdmarw.supabase.co",
+      "status": 401,
+      "type": "fetch"
+    }
+  ]
+}

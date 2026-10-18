@@ -1,0 +1,51 @@
+{
+  "kind": "single-observation component defect reproduction, not performance admission",
+  "beforeSource": "1d7ed099f5a3dea2717cecef7c8ed79ff74e53e0",
+  "afterSource": "3ea4448758e140ca4f571641f82803262e4c18db",
+  "browser": "153.0.8010.12",
+  "viewport": {
+    "width": 430,
+    "height": 860,
+    "deviceScaleFactor": 2
+  },
+  "independentBrowserProcessesPerVersion": 1,
+  "contextsPerMotionMode": 1,
+  "timedObservationMs": 220,
+  "timingLimit": "220ms waits are scheduler observations; no frame-rate/latency improvement, p95, CI or battery/process-memory claim. Screenshots are outside the v3 RAF window.",
+  "rows": [
+    {
+      "reducedMotion": false,
+      "beforeCssSize": [
+        240,
+        240
+      ],
+      "afterCssSize": [
+        120,
+        120
+      ],
+      "beforeRaf": 14,
+      "afterRaf": 13,
+      "beforeFocusRestored": false,
+      "afterFocusRestored": true,
+      "beforeEscapeReachedWindow": 1,
+      "afterEscapeReachedWindow": 0
+    },
+    {
+      "reducedMotion": true,
+      "beforeCssSize": [
+        240,
+        240
+      ],
+      "afterCssSize": [
+        120,
+        120
+      ],
+      "beforeRaf": 13,
+      "afterRaf": 0,
+      "beforeFocusRestored": false,
+      "afterFocusRestored": true,
+      "beforeEscapeReachedWindow": 1,
+      "afterEscapeReachedWindow": 0
+    }
+  ]
+}

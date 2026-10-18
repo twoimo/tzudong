@@ -1,0 +1,1147 @@
+diff --git a/apps/web/app/api/public-popularity/route.ts b/apps/web/app/api/public-popularity/route.ts
+new file mode 100644
+index 00000000..652574aa
+--- /dev/null
++++ b/apps/web/app/api/public-popularity/route.ts
+@@ -0,0 +1,14 @@
++import { createHash } from 'node:crypto';
++import { NextResponse } from 'next/server';
++import { publicPopularityPublication } from '@/lib/evidence-engineering/published-popularity';
++
++export const dynamic = 'force-static';
++
++export function GET() {
++    const body = JSON.stringify(publicPopularityPublication);
++    return new NextResponse(body, { headers: {
++        'content-type': 'application/json; charset=utf-8',
++        'cache-control': 'public, max-age=0, must-revalidate',
++        etag: `"${createHash('sha256').update(body).digest('hex')}"`,
++    } });
++}
+diff --git a/apps/web/components/map/NaverMapView.tsx b/apps/web/components/map/NaverMapView.tsx
+index 2f5407c1..c3ea3f7e 100644
+--- a/apps/web/components/map/NaverMapView.tsx
++++ b/apps/web/components/map/NaverMapView.tsx
+@@ -2081,8 +2081,11 @@ const NaverMapView = memo(({
+     }, [showUserSubmittedMarkers]);
+ 
+     const markerKindSignature = useMemo(
+-        () => buildRestaurantMarkerKindSignature(displayRestaurants),
+-        [displayRestaurants],
++        () => buildRestaurantMarkerKindSignature(displayRestaurants, undefined, {
++            selected: selectedRestaurant?.popularity_tier,
++            searched: activeSearchedRestaurant?.popularity_tier,
++        }),
++        [displayRestaurants, selectedRestaurant?.popularity_tier, activeSearchedRestaurant?.popularity_tier],
+     );
+     const overlappingMarkerOffsets = useMemo(
+         () => buildNaverOverlappingMarkerOffsets(displayRestaurants),
+diff --git a/apps/web/components/restaurant/Badge3DViewer.tsx b/apps/web/components/restaurant/Badge3DViewer.tsx
+index 57425031..0c97fcb2 100644
+--- a/apps/web/components/restaurant/Badge3DViewer.tsx
++++ b/apps/web/components/restaurant/Badge3DViewer.tsx
+@@ -2,18 +2,25 @@
+ 
+ import { useEffect, useRef, useState } from "react";
+ import {
++  AmbientLight,
++  CylinderGeometry,
++  DirectionalLight,
+   Mesh,
+-  MeshBasicMaterial,
++  MeshStandardMaterial,
+   PerspectiveCamera,
+   Scene,
+-  SphereGeometry,
+   WebGLRenderer,
+ } from "three";
+ 
++import { createBadgeViewerSession } from "@/lib/evidence-engineering/badge-viewer-session";
+ import {
+-  badgeViewerClosesOnKey,
+-  createBadgeViewerSession,
+-} from "@/lib/evidence-engineering/badge-viewer-session";
++  createBadgeContextLossHandler,
++  createBadgeContextRecoveryLimit,
++  handleBadgeViewerCloseKey,
++  releaseBadgeRendererResources,
++  sizeBadgeCanvas,
++  startBadgeRenderLoop,
++} from "@/lib/evidence-engineering/badge-viewer-lifecycle";
+ 
+ const TIER_COLOR = { fire: 0xff6a00, rainbow: 0x7c5cff } as const;
+ 
+@@ -37,21 +44,29 @@ export default function Badge3DViewer({
+     const session = createBadgeViewerSession();
+     let disposed = false;
+     let renderer: WebGLRenderer | null = null;
+-    let geometry: SphereGeometry | null = null;
+-    let material: MeshBasicMaterial | null = null;
++    let geometry: CylinderGeometry | null = null;
++    let material: MeshStandardMaterial | null = null;
+     let canvas: HTMLCanvasElement | null = null;
+-    let frame = 0;
++    let contextLossListener: EventListener | null = null;
++    let stopAnimation: (() => void) | null = null;
++    const tryContextRecovery = createBadgeContextRecoveryLimit();
+     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+ 
+     const teardownRenderer = () => {
+-      cancelAnimationFrame(frame);
+-      geometry?.dispose();
+-      material?.dispose();
+-      renderer?.dispose();
++      releaseBadgeRendererResources({
++        canvas,
++        contextLossListener,
++        stopAnimation,
++        disposeGeometry: () => geometry?.dispose(),
++        disposeMaterial: () => material?.dispose(),
++        disposeRenderer: () => renderer?.dispose(),
++        forceContextLoss: () => renderer?.forceContextLoss(),
++      });
++      stopAnimation = null;
++      contextLossListener = null;
+       geometry = null;
+       material = null;
+       renderer = null;
+-      canvas?.remove();
+       canvas = null;
+     };
+ 
+@@ -77,8 +92,6 @@ export default function Badge3DViewer({
+         throw error;
+       }
+       canvas = document.createElement("canvas");
+-      canvas.width = 120;
+-      canvas.height = 120;
+       canvas.setAttribute("aria-hidden", "true");
+       host.appendChild(canvas);
+       try {
+@@ -90,27 +103,47 @@ export default function Badge3DViewer({
+         showStaticFallback();
+         return;
+       }
+-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+-      renderer.setSize(120, 120, false);
++      sizeBadgeCanvas(canvas, renderer, window.devicePixelRatio);
+       const scene = new Scene();
+       const camera = new PerspectiveCamera(40, 1, 0.1, 10);
+-      camera.position.z = 2.6;
+-      geometry = new SphereGeometry(0.62, 32, 20);
+-      material = new MeshBasicMaterial({ color: TIER_COLOR[tier] });
++      camera.position.z = 2.8;
++      geometry = new CylinderGeometry(0.66, 0.5, 0.24, 7, 1, false);
++      material = new MeshStandardMaterial({
++        color: TIER_COLOR[tier],
++        flatShading: true,
++        metalness: 0.3,
++        roughness: 0.34,
++      });
+       const mesh = new Mesh(geometry, material);
+-      scene.add(mesh);
+-      const draw = () => {
+-        if (!reducedMotion) mesh.rotation.y += 0.015;
+-        renderer?.render(scene, camera);
+-        frame = requestAnimationFrame(draw);
+-      };
+-      draw();
+-      canvas.addEventListener("webglcontextlost", (event) => {
+-        event.preventDefault();
+-        session.loseContext();
+-        teardownRenderer();
+-        mount();
++      mesh.rotation.x = Math.PI / 2 - 0.22;
++      mesh.rotation.y = 0.36;
++      mesh.rotation.z = -0.14;
++      const ambientLight = new AmbientLight(0xffffff, 1.15);
++      const keyLight = new DirectionalLight(0xffffff, 3.2);
++      keyLight.position.set(2.5, 3.5, 4);
++      const fillLight = new DirectionalLight(0x8fb8ff, 1.1);
++      fillLight.position.set(-3, -1.5, 2.5);
++      scene.add(mesh, ambientLight, keyLight, fillLight);
++      stopAnimation = startBadgeRenderLoop({
++        reducedMotion,
++        rotate: () => {
++          mesh.rotation.y += 0.015;
++          mesh.rotation.z += 0.0025;
++        },
++        render: () => renderer?.render(scene, camera),
++        requestFrame: (callback) => window.requestAnimationFrame(callback),
++        cancelFrame: (handle) => window.cancelAnimationFrame(handle),
++      });
++      contextLossListener = createBadgeContextLossHandler({
++        releaseLostContext: () => {
++          session.loseContext();
++          teardownRenderer();
++        },
++        tryRecover: tryContextRecovery,
++        recover: mount,
++        fallback: showStaticFallback,
+       });
++      canvas.addEventListener("webglcontextlost", contextLossListener);
+     };
+ 
+     mount();
+@@ -131,7 +164,7 @@ export default function Badge3DViewer({
+       data-badge-3d={tier}
+       data-badge-viewer={lowPower ? "fallback" : "viewer"}
+       onKeyDown={(event) => {
+-        if (badgeViewerClosesOnKey(event.key)) onClose();
++        handleBadgeViewerCloseKey(event, onClose);
+       }}
+     >
+       <div ref={hostRef} />
+diff --git a/apps/web/components/restaurant/PopularityBadge.tsx b/apps/web/components/restaurant/PopularityBadge.tsx
+index 2e3f9bd9..6b7079bc 100644
+--- a/apps/web/components/restaurant/PopularityBadge.tsx
++++ b/apps/web/components/restaurant/PopularityBadge.tsx
+@@ -1,7 +1,9 @@
+ "use client";
+ 
+ import dynamic from "next/dynamic";
+-import { useState } from "react";
++import { useCallback, useLayoutEffect, useRef, useState } from "react";
++
++import { restoreBadgeViewerFocus } from "@/lib/evidence-engineering/badge-viewer-lifecycle";
+ 
+ const Badge3DViewer = dynamic(
+   () => import("./Badge3DViewer"),
+@@ -11,8 +13,8 @@ const Badge3DViewer = dynamic(
+ export const POPULARITY_BADGE_KINDS = ["fire", "rainbow"] as const;
+ export const BADGE_BYTE_COUNT_IS_PASS_THRESHOLD = false;
+ const BADGE_SRC = {
+-  fire: "/assets/badges/badge_popular_fire_3d.webp",
+-  rainbow: "/assets/badges/badge_popular_rainbow_3d.webp",
++  fire: "/assets/badges/badge_popular_fire_40.webp",
++  rainbow: "/assets/badges/badge_popular_rainbow_40.webp",
+ } as const satisfies Record<(typeof POPULARITY_BADGE_KINDS)[number], string>;
+ 
+ export type BadgeViewerPhase = "off" | "offer" | "open";
+@@ -31,6 +33,19 @@ export function PopularityBadge({
+ }) {
+   const [open, setOpen] = useState(false);
+   const [assetFailed, setAssetFailed] = useState(false);
++  const openerRef = useRef<HTMLButtonElement>(null);
++  const shouldRestoreFocusRef = useRef(false);
++  const closeViewer = useCallback(() => {
++    shouldRestoreFocusRef.current = true;
++    setOpen(false);
++  }, []);
++
++  useLayoutEffect(() => {
++    if (open || !shouldRestoreFocusRef.current) return;
++    shouldRestoreFocusRef.current = false;
++    restoreBadgeViewerFocus(openerRef.current);
++  }, [open]);
++
+   if (tier === "standard" || assetFailed) return null;
+   const phase = badgeViewerPhase(experimental3D, open);
+   return (
+@@ -38,21 +53,35 @@ export function PopularityBadge({
+       <style>{`
+         .tz-popularity-badge img { transform: scale(1); }
+         @media (hover: hover) and (prefers-reduced-motion: no-preference) {
++          .tz-popularity-badge img { transition: transform var(--duration-quick, 150ms) var(--ease-smooth-out, cubic-bezier(0.22, 1, 0.36, 1)); }
+           .tz-popularity-badge:hover img { transform: scale(1.15); }
+         }
+       `}</style>
+       {/* eslint-disable-next-line @next/next/no-img-element -- Static badge WebP hides itself when the file is missing, and the hover scale targets this img. */}
+       <img
+         src={BADGE_SRC[tier]}
+-        alt={`${tier} popularity badge`}
++        srcSet={`${BADGE_SRC[tier]} 1x, /assets/badges/badge_popular_${tier}_80.webp 2x`}
++        alt={tier === "fire" ? "인기 맛집 불꽃 배지" : "인기 맛집 무지개 배지"}
+         width={40}
+         height={40}
+         onError={() => setAssetFailed(true)}
+       />
+-      {phase === "offer" ? (
+-        <button type="button" onClick={() => setOpen(true)}>3D 보기</button>
++      {phase !== "off" ? (
++        <button
++          ref={openerRef}
++          type="button"
++          aria-haspopup="dialog"
++          aria-expanded={phase === "open"}
++          hidden={phase === "open"}
++          onClick={() => {
++            shouldRestoreFocusRef.current = false;
++            setOpen(true);
++          }}
++        >
++          3D 보기
++        </button>
+       ) : null}
+-      {phase === "open" ? <Badge3DViewer tier={tier} onClose={() => setOpen(false)} /> : null}
++      {phase === "open" ? <Badge3DViewer tier={tier} onClose={closeViewer} /> : null}
+     </section>
+   );
+ }
+diff --git a/apps/web/components/restaurant/RestaurantDetailPanel.tsx b/apps/web/components/restaurant/RestaurantDetailPanel.tsx
+index 610a9558..5461d7b2 100644
+--- a/apps/web/components/restaurant/RestaurantDetailPanel.tsx
++++ b/apps/web/components/restaurant/RestaurantDetailPanel.tsx
+@@ -1105,7 +1105,11 @@ export function RestaurantDetailPanel({
+                 />
+                 {viewMode === 'detail' && (
+                     <div className="shrink-0 border-b border-border px-3 py-2">
+-                                        <PopularityBadge tier={publicPopularityTier(restaurant.popularity_tier)} />
++                                        <PopularityBadge
++                                            key={`${restaurant.id}:${publicPopularityTier(restaurant.popularity_tier)}`}
++                                            tier={publicPopularityTier(restaurant.popularity_tier)}
++                                            experimental3D
++                                        />
+                                         <OperationalCautionNotice
+                                             caution={cautionForDetailPanel(restaurant)}
+                                             shopName={restaurant.name}
+diff --git a/apps/web/hooks/use-restaurant-detail.tsx b/apps/web/hooks/use-restaurant-detail.tsx
+index 63ac54da..59e53d82 100644
+--- a/apps/web/hooks/use-restaurant-detail.tsx
++++ b/apps/web/hooks/use-restaurant-detail.tsx
+@@ -6,6 +6,7 @@ import { publicEvidenceFrames } from "@/components/restaurant/RestaurantEvidence
+ import { hydrateRestaurantDetailWithMergeContext } from "@/lib/restaurant-merged-media";
+ import { postgrestIn } from "@/lib/supabase-rest-client";
+ import { fetchRestaurantsRecoveringMissingEmbed, mergeRestaurants, RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
++import { lookupPublishedPopularityTier, projectPublishedPopularityTier, type PublishedPopularityLookup } from "@/lib/evidence-engineering/published-popularity";
+ 
+ type DBRestaurant = Tables<"restaurants">;
+ 
+@@ -20,10 +21,11 @@ function collectRestaurantMergeContextIds(restaurant: Restaurant | null | undefi
+     ])].sort();
+ }
+ 
+-function hydrateDbRestaurant(dbData: DBRestaurant): Restaurant {
++function hydrateDbRestaurant(dbData: DBRestaurant, publishedTier: PublishedPopularityLookup = lookupPublishedPopularityTier): Restaurant {
+     const embedded = (dbData as { restaurant_evidence_frames?: unknown }).restaurant_evidence_frames;
+     return {
+         ...dbData,
++        popularity_tier: publishedTier(dbData.id),
+         evidence_frames: publicEvidenceFrames([Array.isArray(embedded) ? embedded : []]),
+         address: dbData.road_address || dbData.jibun_address || '',
+         category: dbData.categories,
+@@ -33,21 +35,24 @@ function hydrateDbRestaurant(dbData: DBRestaurant): Restaurant {
+ export function buildRestaurantDetailFromMergeRows(
+     mergeContextRestaurant: Restaurant,
+     rows: DBRestaurant[],
++    publishedTier: PublishedPopularityLookup = lookupPublishedPopularityTier,
+ ): Restaurant | null {
+     if (rows.length === 0) {
+-        return hydrateRestaurantDetailWithMergeContext(null, mergeContextRestaurant);
++        const fallback = hydrateRestaurantDetailWithMergeContext(null, mergeContextRestaurant);
++        return fallback ? projectPublishedPopularityTier(fallback, publishedTier) : null;
+     }
+ 
+     const mergeContextIds = collectRestaurantMergeContextIds(mergeContextRestaurant);
+-    const hydratedRows = rows.map(hydrateDbRestaurant);
++    const hydratedRows = rows.map((row) => hydrateDbRestaurant(row, publishedTier));
+     const primaryDetail = hydratedRows.find((restaurant) => restaurant.id === mergeContextRestaurant.id) ?? hydratedRows[0] ?? null;
+-    const mergedCandidates = mergeRestaurants(rows);
++    const mergedCandidates = mergeRestaurants(rows, publishedTier);
+     const mergedCandidate = mergedCandidates.find((restaurant) =>
+         restaurant.id === mergeContextRestaurant.id ||
+         restaurant.mergedRestaurants?.some((mergedRestaurant) => mergeContextIds.includes(mergedRestaurant.id))
+     ) ?? mergedCandidates[0] ?? null;
+ 
+-    return hydrateRestaurantDetailWithMergeContext(primaryDetail, mergedCandidate ?? mergeContextRestaurant);
++    const hydrated = hydrateRestaurantDetailWithMergeContext(primaryDetail, mergedCandidate ?? mergeContextRestaurant);
++    return hydrated ? projectPublishedPopularityTier(hydrated, publishedTier) : null;
+ }
+ 
+ export function useRestaurantWithMergeContext(mergeContextRestaurant: Restaurant | null | undefined) {
+diff --git a/apps/web/hooks/use-restaurants.tsx b/apps/web/hooks/use-restaurants.tsx
+index d9419c64..241a0b5c 100644
+--- a/apps/web/hooks/use-restaurants.tsx
++++ b/apps/web/hooks/use-restaurants.tsx
+@@ -15,6 +15,7 @@ import {
+ } from "@/lib/home-map-theme-filters";
+ import { enrichRestaurantsWithHomeMapYoutubeKpiMetrics } from "@/lib/home-map-youtube-kpi";
+ import { describeErrorCodeForLog } from "@/lib/debug-log";
++import { lookupPublishedPopularityTier, type PublishedPopularityLookup } from "@/lib/evidence-engineering/published-popularity";
+ 
+ 
+ type DBRestaurant = Tables<"restaurants">;
+@@ -331,7 +332,7 @@ function buildRestaurantQueryKey(
+     ];
+ }
+ 
+-function projectSingletonRestaurant(restaurant: DBRestaurant): Restaurant {
++function projectSingletonRestaurant(restaurant: DBRestaurant, publishedTier: PublishedPopularityLookup): Restaurant {
+     const categories = Array.from(new Set(restaurant.categories || []));
+     const youtubeLink = restaurant.youtube_link || null;
+     const review = restaurant.tzuyang_review || null;
+@@ -339,6 +340,7 @@ function projectSingletonRestaurant(restaurant: DBRestaurant): Restaurant {
+ 
+     return {
+         ...restaurant,
++        popularity_tier: publishedTier(restaurant.id),
+         name: getRestaurantName(restaurant as RestaurantWithOptionalName),
+         lat: restaurant.lat || 0,
+         lng: restaurant.lng || 0,
+@@ -459,7 +461,10 @@ function isNameBetterForMainCandidate(candidate: RestaurantWithOptionalName, cur
+  * @param restaurants DB에서 조회된 레스토랑 목록
+  * @returns 병합된 레스토랑 목록
+  */
+-export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
++export function mergeRestaurants(
++    restaurants: DBRestaurant[],
++    publishedTier: PublishedPopularityLookup = lookupPublishedPopularityTier,
++): Restaurant[] {
+     if (!restaurants.length) return [];
+ 
+     perfMonitor.startMeasure('mergeRestaurants');
+@@ -570,7 +575,7 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
+ 
+     const mergedResults: Restaurant[] = Array.from(groups.values()).map((indices) => {
+         if (indices.length === 1) {
+-            return projectSingletonRestaurant(restaurants[indices[0]]);
++            return projectSingletonRestaurant(restaurants[indices[0]], publishedTier);
+         }
+         const groupRestaurants = indices.map(idx => restaurants[idx]);
+ 
+@@ -619,6 +624,7 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
+ 
+         return {
+             ...mainRestaurant,
++            popularity_tier: publishedTier(mainRestaurant.id),
+             name: getRestaurantName(mainRestaurant as RestaurantWithOptionalName),
+             lat,
+             lng,
+diff --git a/apps/web/lib/evidence-engineering/badge-viewer-lifecycle.ts b/apps/web/lib/evidence-engineering/badge-viewer-lifecycle.ts
+new file mode 100644
+index 00000000..efce2c0d
+--- /dev/null
++++ b/apps/web/lib/evidence-engineering/badge-viewer-lifecycle.ts
+@@ -0,0 +1,139 @@
++import { badgeViewerClosesOnKey } from "./badge-viewer-session";
++
++type BadgeCanvasSurface = {
++  style: {
++    display: string;
++    height: string;
++    width: string;
++  };
++  remove(): void;
++  removeEventListener(type: "webglcontextlost", listener: EventListener): void;
++};
++
++type BadgeRendererSurface = {
++  setPixelRatio(value: number): void;
++  setSize(width: number, height: number, updateStyle?: boolean): void;
++};
++
++export function sizeBadgeCanvas(
++  canvas: BadgeCanvasSurface,
++  renderer: Pick<BadgeRendererSurface, "setPixelRatio" | "setSize">,
++  devicePixelRatio: number,
++  logicalSize = 120,
++): void {
++  canvas.style.display = "block";
++  canvas.style.width = `${logicalSize}px`;
++  canvas.style.height = `${logicalSize}px`;
++  renderer.setPixelRatio(Math.min(Math.max(devicePixelRatio || 1, 1), 2));
++  renderer.setSize(logicalSize, logicalSize, false);
++}
++
++export function startBadgeRenderLoop({
++  reducedMotion,
++  rotate,
++  render,
++  requestFrame,
++  cancelFrame,
++}: {
++  reducedMotion: boolean;
++  rotate: () => void;
++  render: () => void;
++  requestFrame: (callback: FrameRequestCallback) => number;
++  cancelFrame: (handle: number) => void;
++}): () => void {
++  let stopped = false;
++  let frame: number | null = null;
++
++  const draw: FrameRequestCallback = () => {
++    if (stopped) return;
++    if (!reducedMotion) rotate();
++    render();
++    if (!reducedMotion) frame = requestFrame(draw);
++  };
++
++  draw(0);
++
++  return () => {
++    stopped = true;
++    if (frame !== null) cancelFrame(frame);
++    frame = null;
++  };
++}
++
++export function releaseBadgeRendererResources({
++  canvas,
++  contextLossListener,
++  stopAnimation,
++  disposeGeometry,
++  disposeMaterial,
++  disposeRenderer,
++  forceContextLoss,
++}: {
++  canvas: BadgeCanvasSurface | null;
++  contextLossListener: EventListener | null;
++  stopAnimation: (() => void) | null;
++  disposeGeometry: () => void;
++  disposeMaterial: () => void;
++  disposeRenderer: () => void;
++  forceContextLoss: () => void;
++}): void {
++  stopAnimation?.();
++  if (canvas && contextLossListener) {
++    canvas.removeEventListener("webglcontextlost", contextLossListener);
++  }
++  disposeGeometry();
++  disposeMaterial();
++  disposeRenderer();
++  forceContextLoss();
++  canvas?.remove();
++}
++
++export function createBadgeContextLossHandler({
++  releaseLostContext,
++  tryRecover,
++  recover,
++  fallback,
++}: {
++  releaseLostContext: () => void;
++  tryRecover: () => boolean;
++  recover: () => void;
++  fallback: () => void;
++}): EventListener {
++  return (event) => {
++    event.preventDefault();
++    releaseLostContext();
++    if (tryRecover()) {
++      recover();
++      return;
++    }
++    fallback();
++  };
++}
++
++export function createBadgeContextRecoveryLimit(maxRecoveries = 1): () => boolean {
++  let recoveryCount = 0;
++  return () => {
++    if (recoveryCount >= maxRecoveries) return false;
++    recoveryCount += 1;
++    return true;
++  };
++}
++
++export function handleBadgeViewerCloseKey(
++  event: Pick<KeyboardEvent, "key" | "preventDefault" | "stopPropagation">,
++  onClose: () => void,
++): boolean {
++  if (!badgeViewerClosesOnKey(event.key)) return false;
++  event.preventDefault();
++  event.stopPropagation();
++  onClose();
++  return true;
++}
++
++export function restoreBadgeViewerFocus(
++  opener: Pick<HTMLElement, "focus"> | null,
++): boolean {
++  if (!opener) return false;
++  opener.focus({ preventScroll: true });
++  return true;
++}
+diff --git a/apps/web/lib/evidence-engineering/public-popularity-publication.json b/apps/web/lib/evidence-engineering/public-popularity-publication.json
+new file mode 100644
+index 00000000..e42505db
+--- /dev/null
++++ b/apps/web/lib/evidence-engineering/public-popularity-publication.json
+@@ -0,0 +1,6 @@
++{
++  "schemaVersion": 1,
++  "publicationVersion": "unpublished",
++  "sourceRevision": null,
++  "entries": []
++}
+diff --git a/apps/web/lib/evidence-engineering/published-popularity.ts b/apps/web/lib/evidence-engineering/published-popularity.ts
+new file mode 100644
+index 00000000..260ba196
+--- /dev/null
++++ b/apps/web/lib/evidence-engineering/published-popularity.ts
+@@ -0,0 +1,70 @@
++import publication from './public-popularity-publication.json';
++import type { Restaurant } from '@/types/restaurant';
++
++export type PublishedPopularityTier = 'fire' | 'rainbow' | 'standard';
++export type PublishedPopularityLookup = (restaurantId: string) => PublishedPopularityTier;
++export interface PublicPopularityPublication {
++    readonly schemaVersion: 1;
++    readonly publicationVersion: string;
++    readonly sourceRevision: string | null;
++    readonly entries: readonly Readonly<{ restaurantId: string; tier: PublishedPopularityTier }>[];
++}
++
++const MAX_PUBLICATIONS = 5000;
++const MAX_PUBLICATION_BYTES = 512 * 1024;
++const fail = (): never => { throw new Error('PUBLIC_POPULARITY_PUBLICATION_INVALID'); };
++
++function exactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
++    const actual = Object.keys(value);
++    return actual.length === keys.length && keys.every((key) => Object.hasOwn(value, key));
++}
++
++// Shape validation is not an operator approval receipt. The source is deliberately
++// empty until an operator-reviewed cohort is published through protected Git.
++// Never populate it automatically from the private metrics or shadow tables.
++export function parsePublicPopularityPublication(value: unknown): PublicPopularityPublication {
++    if (!value || typeof value !== 'object' || Array.isArray(value)) return fail();
++    const data = value as Record<string, unknown>;
++    if (!exactKeys(data, ['schemaVersion', 'publicationVersion', 'sourceRevision', 'entries'])
++        || data.schemaVersion !== 1
++        || typeof data.publicationVersion !== 'string'
++        || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(data.publicationVersion)
++        || (data.sourceRevision !== null && (typeof data.sourceRevision !== 'string' || !/^[a-f0-9]{40}$/.test(data.sourceRevision)))
++        || !Array.isArray(data.entries) || data.entries.length > MAX_PUBLICATIONS) return fail();
++    if (data.entries.length > 0 && (data.publicationVersion === 'unpublished' || data.sourceRevision === null)) return fail();
++    const seen = new Set<string>();
++    const entries = data.entries.map((entry: unknown) => {
++        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return fail();
++        const row = entry as Record<string, unknown>;
++        if (!exactKeys(row, ['restaurantId', 'tier'])
++            || typeof row.restaurantId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(row.restaurantId)
++            || typeof row.tier !== 'string' || !['fire', 'rainbow', 'standard'].includes(row.tier)
++            || seen.has(row.restaurantId)) return fail();
++        seen.add(row.restaurantId);
++        return Object.freeze({ restaurantId: row.restaurantId, tier: row.tier as PublishedPopularityTier });
++    });
++    const result = { schemaVersion: 1 as const, publicationVersion: data.publicationVersion,
++        sourceRevision: data.sourceRevision as string | null, entries: Object.freeze(entries) };
++    if (new TextEncoder().encode(JSON.stringify(result)).byteLength > MAX_PUBLICATION_BYTES) return fail();
++    return Object.freeze(result);
++}
++
++function lookupFor(publication: PublicPopularityPublication): PublishedPopularityLookup {
++    const tiers = new Map(publication.entries.map((entry) => [entry.restaurantId, entry.tier]));
++    return (restaurantId) => tiers.get(restaurantId) ?? 'standard';
++}
++
++export function createPublishedPopularityLookup(value: unknown): PublishedPopularityLookup {
++    return lookupFor(parsePublicPopularityPublication(value));
++}
++
++export const publicPopularityPublication = parsePublicPopularityPublication(publication);
++export const lookupPublishedPopularityTier = lookupFor(publicPopularityPublication);
++
++export function projectPublishedPopularityTier(
++    restaurant: Restaurant,
++    lookup: PublishedPopularityLookup = lookupPublishedPopularityTier,
++): Restaurant {
++    const tier = lookup(restaurant.id);
++    return restaurant.popularity_tier === tier ? restaurant : { ...restaurant, popularity_tier: tier };
++}
+diff --git a/apps/web/lib/restaurant-marker-kind.ts b/apps/web/lib/restaurant-marker-kind.ts
+index b2ddea9d..9b2e1679 100644
+--- a/apps/web/lib/restaurant-marker-kind.ts
++++ b/apps/web/lib/restaurant-marker-kind.ts
+@@ -1,4 +1,5 @@
+ import type { Restaurant } from '@/types/restaurant';
++import { publicPopularityTier } from '@/lib/evidence-engineering/popularity-marker';
+ 
+ export const USER_SUBMITTED_RESTAURANT_SOURCE_TYPE = 'user_submission_new';
+ export const RESTAURANT_MARKER_ASSET_VERSION = 'restaurant-marker-assets-gpt-image-2-20260707';
+@@ -7,7 +8,7 @@ export type RestaurantMarkerKind = 'category' | 'user-submitted' | 'trend' | 'se
+ export type RestaurantOverlayMarkerKind = Extract<RestaurantMarkerKind, 'trend' | 'seasonal'>;
+ 
+ type MarkerKindRestaurant = Partial<Pick<Restaurant, 'id' | 'source_type' | 'mergedRestaurants'>>;
+-type MarkerKindSignatureRestaurant = MarkerKindRestaurant & { id: string };
++type MarkerKindSignatureRestaurant = MarkerKindRestaurant & { id: string; popularity_tier?: Restaurant['popularity_tier'] };
+ 
+ export function isUserSubmittedRestaurant(restaurant: MarkerKindRestaurant | null | undefined): boolean {
+     if (!restaurant) return false;
+@@ -31,13 +32,19 @@ export function resolveRestaurantMarkerKind(
+ export function buildRestaurantMarkerKindSignature(
+     restaurants: readonly MarkerKindSignatureRestaurant[],
+     overlayKindByRestaurantId: ReadonlyMap<string, readonly RestaurantOverlayMarkerKind[]> = new Map(),
++    retainedTiers?: { selected?: unknown; searched?: unknown },
+ ): string {
+-    return restaurants
++    const signature = restaurants
+         .map((restaurant) => [
+             restaurant.id,
+             resolveRestaurantMarkerKind(restaurant, overlayKindByRestaurantId.get(restaurant.id) ?? []),
+             restaurant.source_type ?? 'source:null',
++            publicPopularityTier(restaurant.popularity_tier),
+         ].join(':'))
+         .sort()
+         .join('|');
++    // Selection/search markers can be retained outside the current query result.
++    return retainedTiers
++        ? `${signature}|selected-tier:${publicPopularityTier(retainedTiers.selected)}|searched-tier:${publicPopularityTier(retainedTiers.searched)}`
++        : signature;
+ }
+diff --git a/apps/web/tests-unit/badge-ui-lifecycle.test.ts b/apps/web/tests-unit/badge-ui-lifecycle.test.ts
+new file mode 100644
+index 00000000..5e85faeb
+--- /dev/null
++++ b/apps/web/tests-unit/badge-ui-lifecycle.test.ts
+@@ -0,0 +1,193 @@
++import { describe, expect, test } from "bun:test";
++
++import {
++  createBadgeContextLossHandler,
++  createBadgeContextRecoveryLimit,
++  handleBadgeViewerCloseKey,
++  releaseBadgeRendererResources,
++  restoreBadgeViewerFocus,
++  sizeBadgeCanvas,
++  startBadgeRenderLoop,
++} from "../lib/evidence-engineering/badge-viewer-lifecycle";
++
++describe("badge UI lifecycle", () => {
++  test("keeps a 120px CSS canvas while sizing the DPR2 drawing buffer", () => {
++    const canvas = {
++      style: { display: "", height: "", width: "" },
++      remove() {},
++      removeEventListener() {},
++    };
++    const calls: unknown[][] = [];
++    let pixelRatio = 1;
++    let drawingBuffer = { height: 0, width: 0 };
++    const renderer = {
++      setPixelRatio(value: number) {
++        pixelRatio = value;
++        calls.push(["pixelRatio", value]);
++      },
++      setSize(width: number, height: number, updateStyle?: boolean) {
++        drawingBuffer = { height: height * pixelRatio, width: width * pixelRatio };
++        calls.push(["size", width, height, updateStyle]);
++      },
++    };
++
++    sizeBadgeCanvas(canvas, renderer, 2);
++
++    expect(canvas.style).toEqual({ display: "block", height: "120px", width: "120px" });
++    expect(drawingBuffer).toEqual({ height: 240, width: 240 });
++    expect(calls).toEqual([
++      ["pixelRatio", 2],
++      ["size", 120, 120, false],
++    ]);
++  });
++
++  test("renders reduced motion once without scheduling RAF", () => {
++    let renders = 0;
++    let rotations = 0;
++    let requests = 0;
++    let cancels = 0;
++
++    const stop = startBadgeRenderLoop({
++      reducedMotion: true,
++      rotate: () => rotations++,
++      render: () => renders++,
++      requestFrame: () => {
++        requests++;
++        return 1;
++      },
++      cancelFrame: () => cancels++,
++    });
++    stop();
++
++    expect({ renders, rotations, requests, cancels }).toEqual({
++      renders: 1,
++      rotations: 0,
++      requests: 0,
++      cancels: 0,
++    });
++  });
++
++  test("runs one animated RAF chain and cancels its pending frame", () => {
++    const callbacks = new Map<number, FrameRequestCallback>();
++    const cancelled: number[] = [];
++    let nextFrame = 0;
++    let renders = 0;
++    let rotations = 0;
++    const stop = startBadgeRenderLoop({
++      reducedMotion: false,
++      rotate: () => rotations++,
++      render: () => renders++,
++      requestFrame: (callback) => {
++        const handle = ++nextFrame;
++        callbacks.set(handle, callback);
++        return handle;
++      },
++      cancelFrame: (handle) => cancelled.push(handle),
++    });
++
++    expect({ renders, rotations, pending: callbacks.size }).toEqual({
++      renders: 1,
++      rotations: 1,
++      pending: 1,
++    });
++    callbacks.get(1)?.(16);
++    expect({ renders, rotations, pending: callbacks.size }).toEqual({
++      renders: 2,
++      rotations: 2,
++      pending: 2,
++    });
++    stop();
++    expect(cancelled).toEqual([2]);
++    callbacks.get(2)?.(32);
++    expect(renders).toBe(2);
++  });
++
++  test("allows one real context-loss recreation, then falls back", () => {
++    const calls: string[] = [];
++    const tryRecover = createBadgeContextRecoveryLimit();
++    const createHandler = () =>
++      createBadgeContextLossHandler({
++        releaseLostContext: () => calls.push("release"),
++        tryRecover,
++        recover: () => calls.push("recover"),
++        fallback: () => calls.push("fallback"),
++      });
++    const event = {
++      preventDefault: () => calls.push("preventDefault"),
++    } as unknown as Event;
++
++    createHandler()(event);
++    createHandler()(event);
++
++    expect(calls).toEqual([
++      "preventDefault",
++      "release",
++      "recover",
++      "preventDefault",
++      "release",
++      "fallback",
++    ]);
++  });
++
++  test("removes the loss listener before disposal and intentional context loss", () => {
++    const calls: string[] = [];
++    const listener = () => calls.push("unexpected-recovery");
++    let listenerAttached = true;
++    const canvas = {
++      style: { display: "", height: "", width: "" },
++      removeEventListener(type: string, candidate: EventListener) {
++        expect(type).toBe("webglcontextlost");
++        expect(candidate).toBe(listener);
++        listenerAttached = false;
++        calls.push("remove-listener");
++      },
++      remove: () => calls.push("remove-canvas"),
++    };
++    const forceContextLoss = () => {
++        calls.push("force-context-loss");
++        if (listenerAttached) listener(new Event("webglcontextlost"));
++    };
++
++    releaseBadgeRendererResources({
++      canvas,
++      contextLossListener: listener,
++      stopAnimation: () => calls.push("stop-animation"),
++      disposeGeometry: () => calls.push("dispose-geometry"),
++      disposeMaterial: () => calls.push("dispose-material"),
++      disposeRenderer: () => calls.push("dispose-renderer"),
++      forceContextLoss,
++    });
++
++    expect(calls).toEqual([
++      "stop-animation",
++      "remove-listener",
++      "dispose-geometry",
++      "dispose-material",
++      "dispose-renderer",
++      "force-context-loss",
++      "remove-canvas",
++    ]);
++  });
++
++  test("consumes Escape and restores focus to the captured opener", () => {
++    const calls: unknown[] = [];
++    const escape = {
++      key: "Escape",
++      preventDefault: () => calls.push("preventDefault"),
++      stopPropagation: () => calls.push("stopPropagation"),
++    };
++    expect(handleBadgeViewerCloseKey(escape, () => calls.push("close"))).toBe(true);
++    expect(calls).toEqual(["preventDefault", "stopPropagation", "close"]);
++
++    const opener = {
++      focus: (options?: FocusOptions) => calls.push(["focus", options]),
++    };
++    expect(restoreBadgeViewerFocus(opener)).toBe(true);
++    expect(calls.at(-1)).toEqual(["focus", { preventScroll: true }]);
++
++    calls.length = 0;
++    expect(handleBadgeViewerCloseKey({ ...escape, key: "Enter" }, () => calls.push("close"))).toBe(false);
++    expect(restoreBadgeViewerFocus(null)).toBe(false);
++    expect(calls).toEqual([]);
++  });
++});
+diff --git a/apps/web/tests-unit/evidence-engineering-remaining.test.ts b/apps/web/tests-unit/evidence-engineering-remaining.test.ts
+index 7d8051ec..d54985c3 100644
+--- a/apps/web/tests-unit/evidence-engineering-remaining.test.ts
++++ b/apps/web/tests-unit/evidence-engineering-remaining.test.ts
+@@ -294,8 +294,8 @@ describe("evidence engineering remaining tasks", () => {
+     const badge = readFileSync(resolve(import.meta.dir, "../components/restaurant/PopularityBadge.tsx"), "utf8");
+     expect(panel).not.toContain("assetAvailable={false}");
+     expect(badge).toContain("onError");
+-    expect(badge).toContain("/assets/badges/badge_popular_fire_3d.webp");
+-    expect(badge).toContain("/assets/badges/badge_popular_rainbow_3d.webp");
++    expect(badge).toContain("/assets/badges/badge_popular_fire_40.webp");
++    expect(badge).toContain("/assets/badges/badge_popular_rainbow_40.webp");
+   });
+ 
+   test("open cross-check clauses stay locked without new formulas", () => {
+diff --git a/apps/web/tests-unit/public-popularity-publication.test.ts b/apps/web/tests-unit/public-popularity-publication.test.ts
+new file mode 100644
+index 00000000..d26d6264
+--- /dev/null
++++ b/apps/web/tests-unit/public-popularity-publication.test.ts
+@@ -0,0 +1,108 @@
++import { describe, expect, test } from 'bun:test';
++import { createHash } from 'node:crypto';
++import { GET } from '../app/api/public-popularity/route';
++import { mergeRestaurants } from '../hooks/use-restaurants';
++import { buildRestaurantDetailFromMergeRows } from '../hooks/use-restaurant-detail';
++import {
++    createPublishedPopularityLookup, parsePublicPopularityPublication,
++    projectPublishedPopularityTier, publicPopularityPublication,
++} from '../lib/evidence-engineering/published-popularity';
++import { buildRestaurantMarkerKindSignature } from '../lib/restaurant-marker-kind';
++import { buildMarkerRenderSignature, shouldSkipMarkerUpdate } from '../lib/map-render-guard';
++import type { Tables } from '../integrations/supabase/types';
++import type { Restaurant } from '../types/restaurant';
++
++const snapshot = () => ({ schemaVersion: 1, publicationVersion: 'test-cohort-1',
++    sourceRevision: 'a'.repeat(40), entries: [{ restaurantId: 'public-a', tier: 'fire' }] });
++const dbRow = (id: string, extra = {}) => ({ id, approved_name: '검증 식당', status: 'approved',
++    road_address: '공개 주소', lat: 37.5, lng: 127, categories: ['한식'],
++    created_at: '2026-10-17T00:00:00Z', ...extra } as unknown as Tables<'restaurants'>);
++
++describe('operator-published public popularity', () => {
++    test('rejects private fields, duplicate IDs, invalid grades and unreviewed nonempty cohorts', () => {
++        const valid = snapshot();
++        const invalid = [
++            { ...valid, metrics: { score: 100 } },
++            { ...valid, entries: [{ ...valid.entries[0], raw_score: 100 }] },
++            { ...valid, entries: [...valid.entries, ...valid.entries] },
++            { ...valid, entries: [{ restaurantId: 'public-a', tier: 'private-shadow' }] },
++            { ...valid, entries: [{ restaurantId: 'public-a', tier: { toString() { throw new Error('coerced'); } } }] },
++            { ...valid, publicationVersion: 'unpublished' },
++            { ...valid, sourceRevision: null },
++        ];
++        for (const value of invalid) expect(() => parsePublicPopularityPublication(value)).toThrow('PUBLIC_POPULARITY_PUBLICATION_INVALID');
++    });
++
++    test('bounds entry count and serialized bytes and freezes independent copies', () => {
++        const valid = snapshot();
++        const parsed = parsePublicPopularityPublication(valid);
++        valid.entries[0].tier = 'rainbow';
++        expect(parsed.entries[0].tier).toBe('fire');
++        expect(Object.isFrozen(parsed.entries[0])).toBe(true);
++        expect(Object.isFrozen(parsed.entries)).toBe(true);
++        expect(() => parsePublicPopularityPublication({ ...valid,
++            entries: Array.from({ length: 5001 }, (_, i) => ({ restaurantId: `r-${i}`, tier: 'fire' })),
++        })).toThrow('PUBLIC_POPULARITY_PUBLICATION_INVALID');
++        expect(() => parsePublicPopularityPublication({ ...valid,
++            entries: Array.from({ length: 4000 }, (_, i) => ({ restaurantId: `${i}-`.padEnd(128, 'a'), tier: 'fire' })),
++        })).toThrow('PUBLIC_POPULARITY_PUBLICATION_INVALID');
++    });
++
++    test('list and detail derive the same tier without a database tier column; stale/raw tiers cannot promote it', () => {
++        const lookup = createPublishedPopularityLookup(snapshot());
++        const rows = [dbRow('public-a'), dbRow('private-b', { approved_name: '다른 식당', road_address: '다른 주소', lng: 128, popularity_tier: 'rainbow' })];
++        const before = structuredClone(rows);
++        const list = mergeRestaurants(rows, lookup);
++        expect(list.find((r) => r.id === 'public-a')?.popularity_tier).toBe('fire');
++        expect(list.find((r) => r.id === 'private-b')?.popularity_tier).toBe('standard');
++        for (const item of list) {
++            const stale = { ...item, popularity_tier: 'rainbow' as const };
++            expect(buildRestaurantDetailFromMergeRows(stale, rows.filter((r) => r.id === item.id), lookup)?.popularity_tier)
++                .toBe(item.popularity_tier);
++            expect(buildRestaurantDetailFromMergeRows(stale, [], lookup)?.popularity_tier).toBe(item.popularity_tier);
++        }
++        expect(rows).toEqual(before);
++        expect(projectPublishedPopularityTier(list[0], lookup)).toBe(list[0]);
++    });
++
++    test('merged representatives use their published identity and do not inherit a child grade', () => {
++        const lookup = createPublishedPopularityLookup(snapshot());
++        const rows = [dbRow('public-a', { created_at: '2026-10-16T00:00:00Z' }), dbRow('new-primary')];
++        const [merged] = mergeRestaurants(rows, lookup);
++        expect(merged.mergedRestaurants).toHaveLength(2);
++        expect(merged.popularity_tier).toBe(lookup(merged.id));
++        expect(buildRestaurantDetailFromMergeRows(merged, rows, lookup)?.popularity_tier).toBe(lookup(merged.id));
++    });
++
++    test('published endpoint returns only the bundled reviewed shape, stable ETag and no active cohort by default', async () => {
++        const response = GET();
++        const body = await response.text();
++        expect(response.status).toBe(200);
++        expect(JSON.parse(body)).toEqual(publicPopularityPublication);
++        expect(response.headers.get('etag')).toBe(`"${createHash('sha256').update(body).digest('hex')}"`);
++        expect(response.headers.get('cache-control')).toBe('public, max-age=0, must-revalidate');
++        expect(publicPopularityPublication.entries).toEqual([]);
++        expect(publicPopularityPublication.publicationVersion).toBe('unpublished');
++        expect(createPublishedPopularityLookup(publicPopularityPublication)('missing')).toBe('standard');
++    });
++});
++
++describe('public tier reaches the outer Naver render guard', () => {
++    const signature = (tier: unknown, retained: { selected?: unknown; searched?: unknown } = {}) => buildMarkerRenderSignature({
++        zoom: 14, bounds: null, displayRestaurantIds: ['public-a'], selectedRestaurantId: 'retained', searchedRestaurantId: null,
++        isClusterMode: false, isRegionalClusterMode: false, isSeoulDistrictMode: false,
++        markerLayerVersion: buildRestaurantMarkerKindSignature([
++            { id: 'public-a', popularity_tier: tier as Restaurant['popularity_tier'] },
++        ], undefined, retained),
++    });
++    test('same IDs/viewport/selection refreshes fire → rainbow → standard, while normalized missing values skip', () => {
++        expect(shouldSkipMarkerUpdate(signature('fire'), signature('rainbow'))).toBe(false);
++        expect(shouldSkipMarkerUpdate(signature('rainbow'), signature('standard'))).toBe(false);
++        expect(shouldSkipMarkerUpdate(signature(null), signature(undefined))).toBe(true);
++        expect(shouldSkipMarkerUpdate(signature('unknown'), signature('standard'))).toBe(true);
++    });
++    test('retained selection/search grades also invalidate the unchanged-query guard', () => {
++        expect(shouldSkipMarkerUpdate(signature('standard', { selected: 'fire' }), signature('standard', { selected: 'rainbow' }))).toBe(false);
++        expect(shouldSkipMarkerUpdate(signature('standard', { searched: 'fire' }), signature('standard', { searched: 'standard' }))).toBe(false);
++    });
++});
+diff --git a/apps/web/tests-unit/use-restaurants-merge.test.ts b/apps/web/tests-unit/use-restaurants-merge.test.ts
+index 65d686c1..683f30cb 100644
+--- a/apps/web/tests-unit/use-restaurants-merge.test.ts
++++ b/apps/web/tests-unit/use-restaurants-merge.test.ts
+@@ -8,6 +8,7 @@ import * as overseasMatching from '../lib/overseas-region-matching';
+ import * as restClient from '../lib/supabase-rest-client';
+ import * as homeMapThemeFilters from '../lib/home-map-theme-filters';
+ import type { Restaurant } from '../types/restaurant';
++import * as publishedPopularity from '../lib/evidence-engineering/published-popularity';
+ 
+ type MergeInput = Array<Record<string, unknown>>;
+ 
+@@ -99,6 +100,7 @@ function regionQueryFixture(regions = OVERSEAS_REGIONS) {
+             enrichRestaurantsWithHomeMapYoutubeKpiMetrics: async (restaurants: Restaurant[]) => restaurants,
+         },
+         '@/lib/debug-log': { describeErrorCodeForLog: unexpected },
++        '@/lib/evidence-engineering/published-popularity': publishedPopularity,
+     };
+     const source = readFileSync(resolve(import.meta.dir, '../hooks/use-restaurants.tsx'), 'utf8');
+     const compiled = ts.transpileModule(source, { compilerOptions: {
+diff --git a/apps/web/types/three.d.ts b/apps/web/types/three.d.ts
+index aab46c96..ce83685c 100644
+--- a/apps/web/types/three.d.ts
++++ b/apps/web/types/three.d.ts
+@@ -1,30 +1,57 @@
+ // three 0.180.0 ships no declarations; covers only what Badge3DViewer imports.
+ declare module "three" {
+-  type Vector = { x: number; y: number; z: number };
++  type Vector = {
++    x: number;
++    y: number;
++    z: number;
++    set(x: number, y: number, z: number): Vector;
++  };
+ 
+-  export class SphereGeometry {
+-    constructor(radius?: number, widthSegments?: number, heightSegments?: number);
++  export class CylinderGeometry {
++    constructor(
++      radiusTop?: number,
++      radiusBottom?: number,
++      height?: number,
++      radialSegments?: number,
++      heightSegments?: number,
++      openEnded?: boolean,
++    );
+     dispose(): void;
+   }
+ 
+-  export class MeshBasicMaterial {
+-    constructor(parameters?: { color?: number | string });
++  export class MeshStandardMaterial {
++    constructor(parameters?: {
++      color?: number | string;
++      flatShading?: boolean;
++      metalness?: number;
++      roughness?: number;
++    });
+     dispose(): void;
+   }
+ 
+-  export class Mesh {
+-    constructor(geometry?: SphereGeometry, material?: MeshBasicMaterial);
++  export class Object3D {
+     readonly position: Vector;
+     readonly rotation: Vector;
+   }
+ 
++  export class Mesh extends Object3D {
++    constructor(geometry?: CylinderGeometry, material?: MeshStandardMaterial);
++  }
++
++  export class AmbientLight extends Object3D {
++    constructor(color?: number | string, intensity?: number);
++  }
++
++  export class DirectionalLight extends Object3D {
++    constructor(color?: number | string, intensity?: number);
++  }
++
+   export class Scene {
+-    add(...objects: Mesh[]): this;
++    add(...objects: Object3D[]): this;
+   }
+ 
+-  export class PerspectiveCamera {
++  export class PerspectiveCamera extends Object3D {
+     constructor(fov?: number, aspect?: number, near?: number, far?: number);
+-    readonly position: Vector;
+   }
+ 
+   export class WebGLRenderer {
+@@ -38,6 +65,7 @@ declare module "three" {
+     render(scene: Scene, camera: PerspectiveCamera): void;
+     getContext(): WebGLRenderingContext | null;
+     dispose(): void;
++    forceContextLoss(): void;
+   }
+ 
+   export {};
+diff --git a/docs/evidence-engineering/rendering-and-persistence.md b/docs/evidence-engineering/rendering-and-persistence.md
+index 99eaccb6..e2f715e8 100644
+--- a/docs/evidence-engineering/rendering-and-persistence.md
++++ b/docs/evidence-engineering/rendering-and-persistence.md
+@@ -10,6 +10,14 @@
+ 
+ ## 상세 배지
+ 
++### 2026-10-18 공개 발행 경로
++
++현재 운영 `restaurants`에는 `popularity_tier` 컬럼이 없다. 공개 등급은 별도 소스인 `apps/web/lib/evidence-engineering/public-popularity-publication.json`을 보호된 Git 검토·승격으로 발행한다. 목록 병합과 상세 hydration은 같은 읽기 전용 인덱스를 사용하며, 대표 식당 ID로 조회한다. private metrics/shadow의 등급이나 원시 응답의 동명 필드를 복사하지 않는다. 승인된 발행 자료가 없는 기본 스냅샷은 `unpublished`와 빈 entries이므로 모든 식당은 standard다. 형식 검증은 승인 영수증이 아니며 임의 점수·계수로 빈 자료를 채우지 않는다.
++
++스냅샷은 최대 5,000개·512KiB다. 배포당 한 번 O(P) 인덱스를 만들고 행마다 O(1)로 조회한다. 추가 요청·검색별 캐시는 없다. `/api/public-popularity`는 동일 스냅샷과 SHA256 ETag만 제공한다. 새 발행 자료는 새 배포·페이지 로드로 반영된다. 원격 실시간 점수 갱신을 구현한 것은 아니다. 같은 ID의 등급이 달라지면 마커의 외부 렌더 가드와 HTML 캐시가 모두 무효화되며, 현재 결과 밖의 선택·검색 마커도 포함한다.
++
++정적 배지는 40/80px 무손실 WebP를 40 CSS px의 1x/2x 소스로 사용한다. 256/512px 원본 변환본은 초기 화면에서 요청하지 않는다. 생성 원본의 해시·변환본 크기·알파 검증은 작업 증거에 보존한다. 15KB는 원본 변환본이 충족하지 못한 목표이며, 표시용 소형 파일은 실제 바이트를 별도 기록한다. 3D는 버튼을 누른 뒤 로드되고, DPR2에서도 120 CSS px를 유지한다. reduced-motion에서는 1회만 그리며 RAF를 예약하지 않는다. 닫기·Escape는 포커스를 원래 버튼으로 돌리고 상위 상세 패널 Escape에 전파하지 않는다. 실제 컨텍스트 손실은 1회 재생성 후 정적으로 대체하고, 종료 시 리스너를 먼저 제거한 뒤 dispose와 명시적 context loss를 실행한다.
++
+ 기본 배지는 정적 WebP다. 표준 티어는 배지를 그리지 않는다. 실험 3D는 기본 꺼짐이고, 사용자가 켠 뒤에만 동적 임포트한다. 초기 렌더에서 Three.js를 로드하지 않는다. 뷰어를 구현할 때는 종료 시 리소스 해제, 컨텍스트 손실 복구, 렌더러 중복 생성 방지, 저전력 대체 UI, 키보드 접근을 포함한다. 36px에서 40px 배지 하나를 위해 초기 번들에 Three.js를 넣지 않는다.
+ 
+ Thesis의 에셋 이름은 `badge_popular_fire_3d`와 `badge_popular_rainbow_3d`다. 목표 형식은 알파가 있는 WebP다. 15KB 이하와 256, 512 정사각은 Thesis의 목표이지 측정된 사실이 아니다. GPT 이미지 생성은 이 계약의 순수 함수가 아니다.
+diff --git a/docs/evidence/CURSOR-EVIDENCE-GOAL-20261018.md b/docs/evidence/CURSOR-EVIDENCE-GOAL-20261018.md
+index 4c8b659e..28d53fc1 100644
+--- a/docs/evidence/CURSOR-EVIDENCE-GOAL-20261018.md
++++ b/docs/evidence/CURSOR-EVIDENCE-GOAL-20261018.md
+@@ -57,3 +57,13 @@ Cursor의 앞선 근거·섀도 작업이 legacy release manifest를 3개에서
+ 독립 읽기 전용 보안 검토에서 legacy manifest/workflow의 복구 전 바이트 일치, 11개 SQL 및 7개 toolchain 해시 일치, Python 경계 테스트 누락을 확인했고 그 누락도 수정했다. 추가 이력은 `d006986d → 7e2fc534 → d11e57aa → 1c213fc0`의 실제 파일 바이트로 보존했다.
+ 
+ 운영 프로젝트 `aqlcofblfxdrjhhdmarw`의 읽기 전용 migration 목록은 현재 89개이며 위 세 근거·섀도 version이 포함된다. 세 apply job 성공과 한 dry-run의 apply 생략도 별도 확인했다. 이는 과거 DB 변경을 소스 복구가 되돌린다는 뜻이 아니며, 현재 ledger의 statements·권한·데이터 전체를 재검증한 증거도 아니다. 기존 86→97 successor의 신규 운영 admission은 여전히 별도 현황 검증이 필요하다. 이번 작업에서 DB/Storage 변경은 없다.
++
++## PR 리뷰에서 추가로 확인한 결함과 수정
++
++1d7ed099의 필수 CI는 29개 양성·Freshness 1개 생략·실패 0개였지만, 미해결 리뷰 9건으로 정상 merge가 거부됐다. 이를 우회하지 않고 공개 발행 경로, 외부 마커 가드의 등급 무효화, 식당·등급 변경 시 배지 실패 상태 초기화, DPR2 크기, reduced-motion의 RAF 정지, 키보드 포커스/Escape, 비대칭 3D 표현, 명시적 WebGL 해제를 수정했다.
++
++운영에 없는 restaurants.popularity_tier 컬럼을 임의로 추가하거나 private shadow를 복사하지 않는다. 보호된 Git으로 발행할 수 있는 bounded 공개 스냅샷을 목록·상세의 실제 projection 경로에 연결했다. 초기 자료는 unpublished/빈 entries이며 활성 인기 등급이나 점수·cohort 승인을 주장하지 않는다. 새 공개 자료는 새 배포·페이지 로드로 반영되며 실시간 원격 점수 조회가 아니다.
++
++정적 fire/rainbow 배지 2종을 생성하고 투명 알파를 확인했다. 256/512px 무손실 원본 변환본은 55,470–178,678B로 15KB 목표를 충족하지 못했다. 실제 40px 화면에는 40/80px 무손실 파생본(2,410–8,766B)을 사용하고 원본 변환본을 초기 로드하지 않는다. 생성·변환 해시와 알파 결과는 별도 증거다.
++
++Chrome Headless Shell 153.0.8010.12의 production-mode 컴포넌트 harness에서 DPR2의 120 CSS px/240px buffer, 모션 감소시 추가 RAF 0회, 동작시 픽셀 변경, 닫기/Escape 포커스 복원, 상위 Escape 차단, 반복 열기·닫기 및 컨텍스트 손실 1회 복구 후 폴백을 확인했다. 실제 컴포넌트·Three를 사용했지만 소프트웨어 WebGL 및 합성 tier 자료다. 운영 앱·실기기·field 증거로 대체하지 않는다. 전체 앱 production build·최신 HEAD CI·배포 결과는 해당 단계의 별도 영수증으로 확정한다.

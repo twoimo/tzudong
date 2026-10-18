@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "kind": "correctness-and-delivery-evidence",
+  "recordedAt": "2026-10-18T03:18:58.688174+00:00",
+  "inputZipSha256": "fca4b5276fc82def8fa938d0153d1e7ee41b329af698ef03e2928e2fcb3f290b",
+  "cursorComposerId": "48f3cf59-270b-49ff-b915-63c821156b65",
+  "beforeSource": "e7e87a3d319f7864f7e4b239da0a83961d6ece9a",
+  "afterSource": "47c39178f74909bf2da59fab2a1950d527bc7573",
+  "sourcePr": 3306,
+  "baselineCi": {
+    "run": 39090952008,
+    "failure": "TS2339: popularity_tier absent from NaverIndividualMarkerRestaurant",
+    "affectedJobs": [
+      "Ubuntu npm",
+      "Ubuntu Bun",
+      "Windows npm",
+      "Windows Bun",
+      "Admin",
+      "Install"
+    ]
+  },
+  "regressionTests": {
+    "before": {
+      "pass": 7,
+      "fail": 2,
+      "assertions": 41
+    },
+    "afterFocused": {
+      "files": 4,
+      "pass": 37,
+      "fail": 0,
+      "assertions": 392
+    },
+    "beforeScope": "new tier-invalidation cases added to the unchanged baseline implementation; CSS text is excluded by asserting the actual wrapper attribute"
+  },
+  "localEnvironment": {
+    "node": "24.22.0",
+    "npm": "11.6.2",
+    "bun": "1.4.0",
+    "nativeTypescript": "7.0.2",
+    "compatTypescript": "6.0.2",
+    "ciNodePin": "24.21.0"
+  },
+  "typecheckParity": {
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 3172,
+    "logicalInputNamesSha256": "316e39eb52985b550086354ce78c9efb8efb2d01b747f2551d04772c53c0730f"
+  },
+  "lint": {
+    "changedTs": "passed"
+  },
+  "productionBuild": {
+    "status": "passed",
+    "dist": ".next-cursor-evidence-delivery-20261018-v1",
+    "buildId": "iTlJAWqL0HbwRgfgsqdlf",
+    "routeCssBoundary": "passed"
+  },
+  "browser": {
+    "browser": "Chrome Headless Shell 153.0.8010.12 (Playwright revision 1243)",
+    "firstAttempt": {
+      "executedApplicationTests": 0,
+      "runnerFailed": 1,
+      "notRun": 2,
+      "reason": "required browser executable absent"
+    },
+    "retry": {
+      "testsPassed": 3,
+      "testsFailed": 0,
+      "elapsedSeconds": 7.3
+    },
+    "scenario": [
+      "production initial page offline",
+      "keyboard selection and focus restoration",
+      "panel pointer/keyboard resize within bounds"
+    ],
+    "network": "localhost production build; synthetic REST fixture; all other remote requests aborted",
+    "physicalDeviceRuns": 0,
+    "operatingUiReadback": false
+  },
+  "rollbackBaseline": {
+    "liveHealthOk": true,
+    "gitSha": "00234a368ee64f273fb396a3eb307ad187c7fafd",
+    "deploymentId": "dpl_9NFaiMgg1yyt1jnEx8SpXfuhjnnX",
+    "immutableHost": "tzudong-6qt4zuxwx-twoimos-projects.vercel.app",
+    "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "target": "production",
+    "state": "READY",
+    "alias": "www.tzudong.app"
+  },
+  "scopeLimits": {
+    "badgeWebpAssetsPresent": false,
+    "performanceMeasurementsAdmitted": 0,
+    "fieldSamples": 0,
+    "oldMemoryGuardResolved": false,
+    "oldFullFlickerGoalComplete": false,
+    "sourcePromotionComplete": false,
+    "deploymentComplete": false,
+    "goalRegistration": "create_goal rejected because the previous unfinished paused goal exists"
+  }
+}

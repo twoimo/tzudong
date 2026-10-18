@@ -1,0 +1,16 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/user-submitted-marker-visibility.test.ts:
+(pass) user-submitted marker visibility contract > classifies direct and merged user-submitted restaurants as the public user marker kind [0.15ms]
+(pass) user-submitted marker visibility contract > keeps admin-only toggle state wired to map filtering and Korean accessible controls [1.25ms]
+(pass) user-submitted marker visibility contract > keeps public home and map sources free of admin overlay/proposal endpoints [1.30ms]
+
+tests-unit/naver-retained-publication.test.ts:
+(pass) retained Naver rows use the same publication for invalidation and visual rendering > history-restored search and raw selection outside the result keep the published tier without mutation [1.17ms]
+(pass) retained Naver rows use the same publication for invalidation and visual rendering > unpublished raw and newly merged members cannot promote a retained marker [0.24ms]
+(pass) retained Naver rows use the same publication for invalidation and visual rendering > existing user-submission visibility and duplicate selection semantics remain intact [0.46ms]
+
+ 6 pass
+ 0 fail
+ 109 expect() calls
+Ran 6 tests across 2 files. [209.00ms]

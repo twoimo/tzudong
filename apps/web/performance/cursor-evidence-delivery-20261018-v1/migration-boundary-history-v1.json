@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "history": [
+    {
+      "commit": "2a2ff2589b00c4b49de32de4cbabae9a655d5a09",
+      "sources": [
+        {
+          "sourcePath": ".github/supabase-migration-release-manifest.v1.json",
+          "artifact": "2a2ff258-supabase-migration-release-manifest.v1.json",
+          "sha256": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d"
+        },
+        {
+          "sourcePath": ".github/workflows/supabase-migration-apply.yml",
+          "artifact": "2a2ff258-supabase-migration-apply.yml",
+          "sha256": "2a3b9da3bb069c726539c9d00cc2b7a63dfcc004782c7be2cc6c30bdd8caa9aa"
+        }
+      ]
+    },
+    {
+      "commit": "d006986df1c206d64691851416b17cf7d6fc07da",
+      "sources": [
+        {
+          "sourcePath": ".github/supabase-migration-release-manifest.v1.json",
+          "artifact": "d006986d-supabase-migration-release-manifest.v1.json",
+          "sha256": "8b083835e67fcccd06fbd4317cdc25a425ddb82923cd26a82dffca4a8860f580"
+        },
+        {
+          "sourcePath": ".github/workflows/supabase-migration-apply.yml",
+          "artifact": "d006986d-supabase-migration-apply.yml",
+          "sha256": "f0072e73c954248474d55d8c40ac04d40d47062c8ebea9310b82132a1ffba9ab"
+        }
+      ]
+    },
+    {
+      "commit": "7e2fc534ddda3a5bded1ade90b509f2908b8f1a2",
+      "sources": [
+        {
+          "sourcePath": ".github/supabase-migration-release-manifest.v1.json",
+          "artifact": "7e2fc534-supabase-migration-release-manifest.v1.json",
+          "sha256": "8b083835e67fcccd06fbd4317cdc25a425ddb82923cd26a82dffca4a8860f580"
+        },
+        {
+          "sourcePath": ".github/workflows/supabase-migration-apply.yml",
+          "artifact": "7e2fc534-supabase-migration-apply.yml",
+          "sha256": "eb017e8af5ab0dcc47a4b11ad9871611b8bb4abd4d1c4bee7a5a696e21e621f4"
+        }
+      ]
+    },
+    {
+      "commit": "d11e57aa36dc0d743fd4382a9bbb98f293ad1a02",
+      "sources": [
+        {
+          "sourcePath": ".github/supabase-migration-release-manifest.v1.json",
+          "artifact": "d11e57aa-supabase-migration-release-manifest.v1.json",
+          "sha256": "db3bf9155074d1d5b132079e8d6ce767a50a1b368ce2888ec081ee7858afb296"
+        },
+        {
+          "sourcePath": ".github/workflows/supabase-migration-apply.yml",
+          "artifact": "d11e57aa-supabase-migration-apply.yml",
+          "sha256": "cc410b2465798be76c9458940e6f46f8e51e82a490c0419b86e4066269cf881a"
+        }
+      ]
+    },
+    {
+      "commit": "1c213fc07eea73da7acc4dcdfc508f9f766ef90e",
+      "sources": [
+        {
+          "sourcePath": ".github/supabase-migration-release-manifest.v1.json",
+          "artifact": "1c213fc0-supabase-migration-release-manifest.v1.json",
+          "sha256": "29abd5a378c25ba83f2c579de1f849c4fd9b89a4d16f4664e7c153a88cc70561"
+        },
+        {
+          "sourcePath": ".github/workflows/supabase-migration-apply.yml",
+          "artifact": "1c213fc0-supabase-migration-apply.yml",
+          "sha256": "ab453f6a28edbf754c8edf0a36604d12e20d4b9e677e5e8cc172854280a8e0fb"
+        }
+      ]
+    }
+  ],
+  "operatingWritesThisTurn": 0,
+  "oldReceiptsRewritten": false,
+  "operatingMigrationApplicationStatus": "not inferred from source history"
+}

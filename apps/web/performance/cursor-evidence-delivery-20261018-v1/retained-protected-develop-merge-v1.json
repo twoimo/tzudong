@@ -1,0 +1,14 @@
+{
+  "headRefOid": "9a63f25f2f3884c2062fde6f22cacfb4f352078c",
+  "mergeCommit": {
+    "oid": "eee496232f710981e8c24b16ac41bb3bbe474d01"
+  },
+  "mergedAt": "2026-10-18T08:25:29Z",
+  "state": "MERGED",
+  "sourceTree": "f05fd25b3af24c22513efb2f0be7db4c7cbb5e16",
+  "finalCI": "retained-source-final-ci-v1.json",
+  "nextDataPr": 3313,
+  "mainPr": 3311,
+  "mainReviewStillUnresolved": "PRRT_kwDOQGRyNc6tocJs",
+  "productionMutationPerformed": false
+}

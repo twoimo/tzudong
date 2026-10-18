@@ -1,0 +1,24 @@
+{
+  "observedAt": "2026-10-18T11:33:38.924242+00:00",
+  "mainSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "sourceCandidate": "9228c1454393560bcd37240f793065e450f85683",
+  "sourceTree": "d0cee44ace30d3a337b0fd8077032ed099cfb567",
+  "deploymentId": "dpl_5MdWf1WjdpgsTGWzo7SV97u7nFcn",
+  "deploymentUrl": "tzudong-gfa0qdb3c-twoimos-projects.vercel.app",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "primaryPassed": true,
+  "publicViewportFunctionalChecks": 15,
+  "pageErrors": 0,
+  "publicAssetsEqual": 4,
+  "newCriticalRegressionObserved": false,
+  "allErrorsFixedClaimed": false,
+  "knownStrictHistory": {
+    "passed": false,
+    "stage": "restored-marker",
+    "baselineSameFailure": true
+  },
+  "diagnosticStatus": "passed",
+  "physicalOrFieldPerformanceClaimed": false,
+  "rollbackPerformed": false,
+  "noDbStorageDnsPhoneChanges": true
+}

@@ -1,0 +1,77 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/badge-ui-lifecycle.test.ts:
+(pass) badge UI lifecycle > keeps a 120px CSS canvas while sizing the DPR2 drawing buffer [0.16ms]
+(pass) badge UI lifecycle > renders reduced motion once without scheduling RAF [0.05ms]
+(pass) badge UI lifecycle > runs one animated RAF chain and cancels its pending frame [0.05ms]
+(pass) badge UI lifecycle > allows one real context-loss recreation, then falls back [0.05ms]
+(pass) badge UI lifecycle > removes the loss listener before disposal and intentional context loss [0.07ms]
+(pass) badge UI lifecycle > consumes Escape and restores focus to the captured opener [0.06ms]
+
+tests-unit/naver-map-marker-visuals.test.ts:
+(pass) naver map marker visuals > refreshes both cached selection states when the public popularity tier changes in place [0.35ms]
+(pass) naver map marker visuals > keeps shared visual cache entries distinct across refreshed rows and overlay markers [0.13ms]
+(pass) naver map marker visuals > reuses the visual for the same restaurant until a displayed field changes [0.02ms]
+(pass) naver map marker visuals > returns selected marker payload [0.02ms]
+(pass) naver map marker visuals > returns unselected marker payload [0.01ms]
+(pass) naver map marker visuals > shows red visit count badge for restaurants visited at least twice [0.07ms]
+(pass) naver map marker visuals > does not show visit count badge for single-visit restaurants [0.02ms]
+(pass) naver map marker visuals > marks user-submitted restaurants with a distinct marker wrapper without changing category asset [0.04ms]
+(pass) naver map marker visuals > uses admin overlay marker assets for trend and seasonal marker kinds [0.03ms]
+
+tests-unit/public-popularity-publication.test.ts:
+(pass) operator-published public popularity > rejects private fields, duplicate IDs, invalid grades and unreviewed nonempty cohorts [0.14ms]
+(pass) operator-published public popularity > bounds entry count and serialized bytes and freezes independent copies [2.88ms]
+(pass) operator-published public popularity > list and detail derive the same tier without a database tier column; stale/raw tiers cannot promote it [0.89ms]
+(pass) operator-published public popularity > merged representatives use their published identity and do not inherit a child grade [0.38ms]
+(pass) operator-published public popularity > published endpoint returns only the bundled reviewed shape, stable ETag and no active cohort by default [0.21ms]
+(pass) public tier reaches the outer Naver render guard > same IDs/viewport/selection refreshes fire → rainbow → standard, while normalized missing values skip [0.12ms]
+(pass) public tier reaches the outer Naver render guard > retained selection/search grades also invalidate the unchanged-query guard [0.01ms]
+
+tests-unit/evidence-engineering-remaining.test.ts:
+(pass) evidence engineering remaining tasks > uploads only the immutable webp key and refuses collisions [0.30ms]
+(pass) evidence engineering remaining tasks > moderation requires preview, confirm, apply, and readback before an audit record [0.25ms]
+(pass) evidence engineering remaining tasks > public carousel keeps approved sign evidence and its seek url [0.38ms]
+(pass) evidence engineering remaining tasks > operational caution ignores a plain search miss and does not use device coordinates [0.03ms]
+(pass) evidence engineering remaining tasks > marker wrapper stays on transform and opacity [0.16ms]
+(pass) evidence engineering remaining tasks > merged media unions approved frames and does not promote a higher tier [0.13ms]
+(pass) evidence engineering remaining tasks > missing evidence embed falls back without dropping restaurants [0.16ms]
+(pass) evidence engineering remaining tasks > badge viewer stays closed until experimental mode is opened and can close again [0.11ms]
+(pass) evidence engineering remaining tasks > open cross-check clauses stay locked without new formulas [0.52ms]
+(pass) evidence engineering remaining tasks > render summary records percentiles without a 60fps gate [0.04ms]
+
+tests-unit/use-restaurants-merge.test.ts:
+(pass) buildRestaurantSelectFields > includes youtube_meta only for full or metadata-backed compact projections [0.08ms]
+(pass) buildRestaurantSelectFields > includes source_type in compact and full projections for marker classification [0.02ms]
+(pass) useRestaurants region queries > preserves every configured overseas query, source projection, filters and returned ID order [54.16ms]
+(pass) useRestaurants region queries > sanitizes overseas keywords and skips terms that become empty without changing keyword order [13.13ms]
+(pass) useRestaurants region queries > keeps empty keyword lists free of an empty OR or a country fallback [21.05ms]
+(pass) useRestaurants region queries > builds each country filter once inside the callback and reuses its exact result [8.42ms]
+(pass) useRestaurants region queries > preserves domestic island, ordinary, unknown and blank region boundaries [7.95ms]
+(pass) mergeRestaurants > returns an empty list for empty input [0.10ms]
+(pass) mergeRestaurants > projects a singleton with empty media, fallback address and deduplicated categories [0.13ms]
+(pass) mergeRestaurants > preserves alias names and populated media without sorting singleton groups [0.10ms]
+(pass) mergeRestaurants > keeps singleton and multi-row group order and sorts only the multi-row media [0.14ms]
+(pass) mergeRestaurants > retains every member of a large already-connected address group [12.80ms]
+(pass) mergeRestaurants > still joins similar names and retains different names within one address [0.33ms]
+(pass) mergeRestaurants > preserves first-seen group and member order with interleaved duplicates [0.08ms]
+(pass) mergeRestaurants > merges a long same-name chain without exhausting the call stack [42.57ms]
+(pass) mergeRestaurants > merges restaurants with same normalized name and address [0.28ms]
+(pass) mergeRestaurants > keeps unique restaurants when name/address combination differs [0.05ms]
+(pass) mergeRestaurants > preserves every merged youtube video and tzuyang review for the detail panel [0.13ms]
+(pass) mergeRestaurants > restores merged videos and reviews when compact detail context has only merged ids [0.19ms]
+(pass) mergeRestaurants > keeps compact detail context visible when full merge rows are unavailable [0.08ms]
+(pass) mergeRestaurants > mergeRestaurants exposes merge performance counters when available [0.21ms]
+
+tests-unit/naver-map-render-guard.test.ts:
+(pass) naver map marker render guard > skips marker render when effective signature is unchanged [0.04ms]
+(pass) naver map marker render guard > does not skip marker render when selected marker changes [0.01ms]
+(pass) naver map marker render guard > does not skip marker render when viewport or mode changes [0.02ms]
+(pass) naver map marker render guard > does not skip marker render when marker kind, asset version, or user toggle changes [0.09ms]
+(pass) naver map marker render guard > reuses the display id signature for the same id list [0.01ms]
+(pass) naver map marker render guard > keeps an empty desktop marker render from poisoning the render signature [0.41ms]
+
+ 59 pass
+ 0 fail
+ 446 expect() calls
+Ran 59 tests across 6 files. [346.00ms]

@@ -1,0 +1,8 @@
+{
+  "notDispatched": true,
+  "reservationRequiredBeforeUse": true,
+  "thesis": "MASTER-PLAN.md와 source_bundle.txt를 읽고 W001의 IEEE double 산술과 private capability 경계, W002의 모바일 렌더러 선택, W003의 증거·승격 조건을 반증 우선으로 감사하세요. 출력은 결함 유도, 7단계 근거 등급, W/ADR ID, 실행 재현 또는 unified diff만 포함하세요. 실행하지 않은 측정이나 전체 앱·물리기기·field·법적 증거를 만들지 마세요.",
+  "antithesis": "정확한 Pro + Deep Research의 완성된 thesis 전문을 먼저 확인한 뒤 같은 입증 기준으로 각 결론을 반대 검토하세요. 산술 반례, 자원 수명주기, 캐시 무효화, 불확실한 모바일 성능, 정확한 만료·시계 되돌리기·철회와 릴리스 증거 구분을 점검하세요. 찬사나 근거 없는 물리 성과 주장은 제외하세요.",
+  "reverseAudit": "Gemini 보고서 전문과 정확한 Pro + Deep Research 모드를 확인하세요. 각 지적을 보존하고 ACCEPT/CONDITIONAL/REJECT/DEFER를 대칭적으로 판정하세요. REJECT에는 실행·수학·공식 소스 반증을, 하드웨어 미검증 DEFER에는 기존 안전한 런타임 대체 경로를 요구하세요. 채택 항목은 실제 소스·검증과 연결하세요.",
+  "correction": "Prepared prompts are local drafts, not external reports or completed research."
+}

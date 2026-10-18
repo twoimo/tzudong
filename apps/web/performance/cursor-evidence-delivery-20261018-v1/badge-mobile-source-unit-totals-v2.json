@@ -1,0 +1,188 @@
+{
+  "run": 39117546171,
+  "sourceHead": "3ecf69e63365e3df5aa9d434b990e35cff1cf263",
+  "scope": "Ubuntu npm Run npm run test:unit reported independent general and isolated lane totals, other jobs excluded",
+  "reportedLaneTotals": [
+    {
+      "count": 3479,
+      "kind": "pass"
+    },
+    {
+      "count": 21,
+      "kind": "skip"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 17,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 7,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 5,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 23,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 6,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 3,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 2,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 63,
+      "kind": "pass"
+    },
+    {
+      "count": 8,
+      "kind": "skip"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 13,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 24,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 4,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 7,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 9,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 3,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 15,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 8,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 1,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 5,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 16,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    },
+    {
+      "count": 11,
+      "kind": "pass"
+    },
+    {
+      "count": 0,
+      "kind": "fail"
+    }
+  ],
+  "sumReportedTotals": {
+    "pass": 3721,
+    "skip": 29,
+    "fail": 0
+  }
+}

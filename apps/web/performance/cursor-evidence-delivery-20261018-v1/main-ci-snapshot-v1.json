@@ -1,0 +1,459 @@
+{
+  "observedAt": "2026-10-18T07:29:18.248199+00:00",
+  "expectedHead": "a3af881cb475b004d6dbd3b138a9793bf0d8cc89",
+  "pr": {
+    "baseRefName": "main",
+    "headRefName": "data",
+    "headRefOid": "a3af881cb475b004d6dbd3b138a9793bf0d8cc89",
+    "mergeCommit": null,
+    "mergeStateStatus": "BLOCKED",
+    "mergeable": "MERGEABLE",
+    "mergedAt": null,
+    "number": 3311,
+    "state": "OPEN",
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808509/job/117617345705",
+        "name": "Install",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107781321/job/117617263463",
+        "name": "Install",
+        "startedAt": "2026-10-18T07:28:28Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107781306/job/117617265788",
+        "name": "Analyze (actions)",
+        "startedAt": "2026-10-18T07:28:29Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CodeQL"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107806119/job/117617338712",
+        "name": "Analyze (actions)",
+        "startedAt": "2026-10-18T07:28:52Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CodeQL"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808572/job/117617344736",
+        "name": "Release",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "Release"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107781266/job/117617262646",
+        "name": "Release",
+        "startedAt": "2026-10-18T07:28:28Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "Release"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-18T07:29:07Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808463/job/117617344862",
+        "name": "Promotion Path",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "COMPLETED",
+        "workflowName": "Promotion"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-18T07:29:09Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808520/job/117617344823",
+        "name": "npm-audit (apps/web)",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "COMPLETED",
+        "workflowName": "Security"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107781306/job/117617265715",
+        "name": "Analyze (go)",
+        "startedAt": "2026-10-18T07:28:29Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CodeQL"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107806119/job/117617338955",
+        "name": "Analyze (go)",
+        "startedAt": "2026-10-18T07:28:52Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CodeQL"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-18T07:29:12Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808520/job/117617344833",
+        "name": "npm-audit (backend)",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "COMPLETED",
+        "workflowName": "Security"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107781306/job/117617265855",
+        "name": "Analyze (javascript-typescript)",
+        "startedAt": "2026-10-18T07:28:29Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CodeQL"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107806119/job/117617338913",
+        "name": "Analyze (javascript-typescript)",
+        "startedAt": "2026-10-18T07:28:53Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CodeQL"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107781306/job/117617265609",
+        "name": "Analyze (python)",
+        "startedAt": "2026-10-18T07:28:29Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CodeQL"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107806119/job/117617338871",
+        "name": "Analyze (python)",
+        "startedAt": "2026-10-18T07:28:52Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CodeQL"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107781306/job/117617265693",
+        "name": "Analyze (rust)",
+        "startedAt": "2026-10-18T07:28:29Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CodeQL"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107806119/job/117617338962",
+        "name": "Analyze (rust)",
+        "startedAt": "2026-10-18T07:28:52Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CodeQL"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107781306/job/117617265698",
+        "name": "Analyze (swift)",
+        "startedAt": "2026-10-18T07:28:34Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CodeQL"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107806119/job/117617338894",
+        "name": "Analyze (swift)",
+        "startedAt": "2026-10-18T07:28:59Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CodeQL"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808509/job/117617345892",
+        "name": "Ubuntu npm",
+        "startedAt": "2026-10-18T07:29:14Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107781321/job/117617263430",
+        "name": "Ubuntu npm",
+        "startedAt": "2026-10-18T07:28:28Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-18T07:29:16Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808520/job/117617344801",
+        "name": "pip-audit (backend/test-requirements.txt)",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "COMPLETED",
+        "workflowName": "Security"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808520/job/117617344842",
+        "name": "pip-audit (backend/pipeline/requirements.txt)",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "Security"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808520/job/117617344803",
+        "name": "pip-audit (backend/restaurant-crawling/scripts/requirements.txt)",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "Security"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808520/job/117617344822",
+        "name": "pip-audit (backend/supabase/scripts/g037-hosted-closure-requirements.txt)",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "Security"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-18T07:29:15Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808520/job/117617344955",
+        "name": "pip-audit (backend/pipeline-control/requirements.txt)",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "COMPLETED",
+        "workflowName": "Security"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808509/job/117617345517",
+        "name": "Ubuntu Bun",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107781321/job/117617263294",
+        "name": "Ubuntu Bun",
+        "startedAt": "2026-10-18T07:28:28Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808520/job/117617344687",
+        "name": "orchestration-readiness",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "Security"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808509/job/117617345704",
+        "name": "Windows npm",
+        "startedAt": "2026-10-18T07:29:13Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107781321/job/117617263455",
+        "name": "Windows npm",
+        "startedAt": "2026-10-18T07:28:29Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808520/job/117617344805",
+        "name": "rust-recovery",
+        "startedAt": "2026-10-18T07:28:56Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "Security"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808509/job/117617345759",
+        "name": "Windows Bun",
+        "startedAt": "2026-10-18T07:29:11Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107781321/job/117617263554",
+        "name": "Windows Bun",
+        "startedAt": "2026-10-18T07:28:29Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-18T07:29:12Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808520/job/117617344820",
+        "name": "secret-pattern-scan",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "COMPLETED",
+        "workflowName": "Security"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808509/job/117617345756",
+        "name": "Admin",
+        "startedAt": "2026-10-18T07:29:10Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107781321/job/117617263475",
+        "name": "Admin",
+        "startedAt": "2026-10-18T07:28:29Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-18T07:29:09Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39107808520/job/117617344777",
+        "name": "sbom",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "COMPLETED",
+        "workflowName": "Security"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-18T07:29:15Z",
+        "conclusion": "NEUTRAL",
+        "detailsUrl": "https://github.com/twoimo/tzudong/runs/117617410092",
+        "name": "CodeQL",
+        "startedAt": "2026-10-18T07:29:11Z",
+        "status": "COMPLETED",
+        "workflowName": ""
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-18T07:28:54Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://dashboard.gitguardian.com",
+        "name": "GitGuardian Security Checks",
+        "startedAt": "2026-10-18T07:28:54Z",
+        "status": "COMPLETED",
+        "workflowName": ""
+      }
+    ],
+    "url": "https://github.com/twoimo/tzudong/pull/3311"
+  },
+  "checkCounts": {
+    "IN_PROGRESS": 31,
+    "SUCCESS": 8,
+    "NEUTRAL": 1
+  },
+  "unresolvedThreads": [],
+  "requiredPresent": false,
+  "readyByObservedChecks": false,
+  "badChecks": [
+    "Install",
+    "Install",
+    "Analyze (actions)",
+    "Analyze (actions)",
+    "Release",
+    "Release",
+    "Analyze (go)",
+    "Analyze (go)",
+    "Analyze (javascript-typescript)",
+    "Analyze (javascript-typescript)",
+    "Analyze (python)",
+    "Analyze (python)",
+    "Analyze (rust)",
+    "Analyze (rust)",
+    "Analyze (swift)",
+    "Analyze (swift)",
+    "Ubuntu npm",
+    "Ubuntu npm",
+    "pip-audit (backend/pipeline/requirements.txt)",
+    "pip-audit (backend/restaurant-crawling/scripts/requirements.txt)",
+    "pip-audit (backend/supabase/scripts/g037-hosted-closure-requirements.txt)",
+    "Ubuntu Bun",
+    "Ubuntu Bun",
+    "orchestration-readiness",
+    "Windows npm",
+    "Windows npm",
+    "rust-recovery",
+    "Windows Bun",
+    "Windows Bun",
+    "Admin",
+    "Admin"
+  ]
+}

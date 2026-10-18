@@ -1,0 +1,8 @@
+{
+  "sourceHead": "9228c1454393560bcd37240f793065e450f85683",
+  "sourceTree": "d0cee44ace30d3a337b0fd8077032ed099cfb567",
+  "files": 51,
+  "mismatches": [],
+  "passed": true,
+  "scope": "independent Git object bytes against latest51-file source manifest; no runtime/deployment claim"
+}

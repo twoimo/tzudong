@@ -1,0 +1,29 @@
+{
+  "observedAt": "2026-10-18T11:22:00.055547+00:00",
+  "sourceAllCompleted": true,
+  "dataAllCompleted": true,
+  "sameTestedTrees": {
+    "9228c1454393560bcd37240f793065e450f85683": "d0cee44ace30d3a337b0fd8077032ed099cfb567",
+    "716e36fc9ec1f476cb3bcd0843ab0fa9cd324794": "d0cee44ace30d3a337b0fd8077032ed099cfb567",
+    "8b24f0c4560b9b8b0d1f4f7a3cf264b409b7dc20": "d0cee44ace30d3a337b0fd8077032ed099cfb567"
+  },
+  "mainRequiredSuccess": true,
+  "mainPending": [
+    {
+      "name": "Analyze (swift)",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39122011238/job/117659341435"
+    },
+    {
+      "name": "Ubuntu npm",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39122008692/job/117659332800"
+    }
+  ],
+  "mainFailed": [],
+  "mainUnresolved": [],
+  "allMainChecksClaimedComplete": false,
+  "method": "normal protected gh merge --match-head-commit; no admin or force"
+}

@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-18T10:29:07.849212+00:00",
+  "runId": 39118613121,
+  "failedJobId": 117649421685,
+  "head": "3967549ed9c6c00902e72159e4a2014f178b0def",
+  "tree": "77fa0dabf8d22ba490bf1998dc7913a4720e6089",
+  "failure": "TYPECHECK_BENCHMARK_SAMPLES / sampling-gap-exceeded",
+  "maximumGapMs": 73.32713499999954,
+  "allowedGapMs": 60,
+  "sourceOrThresholdChanges": false,
+  "action": "gh run rerun same run, only failed Ubuntu npm job; exit0",
+  "firstFailureRetained": "data-ci-benchmark-failure-v1",
+  "status": "rerun queued; not yet a pass"
+}

@@ -1,0 +1,27 @@
+{
+  "observedAt": "2026-10-18T11:32:29.314089+00:00",
+  "gitSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "rows": [
+    {
+      "path": "live-map-1440x900-v3.png",
+      "sha256": "61d65fc4c9616be6330504afc9700294197c31beef858aaee2a57450a3978965",
+      "bytes": 383249,
+      "actuallyViewed": true
+    },
+    {
+      "path": "live-map-834x1112-v3.png",
+      "sha256": "d584d600ab6f6df744ba6825bf07b132651d2cae604a465fc9c258fec815793b",
+      "bytes": 361993,
+      "actuallyViewed": true
+    },
+    {
+      "path": "live-map-430x860-v3.png",
+      "sha256": "ba7d943239cb5b9c15b6b4067f960278db5c9885640851ddcc81965a89153938",
+      "bytes": 266643,
+      "actuallyViewed": true
+    }
+  ],
+  "observations": "Actual map tiles/clusters and filter controls visible at3 viewport crops. Tablet crop includes some cluster counts without all food icons; do not infer all image completion or whole-frame stability. No account/precise location material.",
+  "captureLimit": "One map-only static PNG per viewport with animations disabled; no video/frame cadence, bottom navigation excluded by crop boundary. Cannot rule out intermittent flicker or claim its removal.",
+  "physicalOrFieldProof": false
+}

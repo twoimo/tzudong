@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-18T11:34:57.197470+00:00",
+  "phase1": "completed full ChatGPT thesis; original report preserved with UI citation URL mapping",
+  "geminiPhase": "queued behind existing other owner; no antithesis dispatch",
+  "job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+  "reversePhase": "not started",
+  "consensusComplete": false,
+  "followupEvidenceRoot": "../cursor-evidence-cross-audit-20261018-v2",
+  "basePacketCanBeSealedIndependently": true,
+  "noFutureWritesIntoSealedBasePacket": true,
+  "missing": "Gemini admission + exact UI model/account/research verification + report; ChatGPT reverse audit; adjudication/verification"
+}

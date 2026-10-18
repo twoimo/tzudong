@@ -1,0 +1,44 @@
+[WebServer] (node:47095) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 3 tests using 1 worker
+
+(node:47100) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/3] [chromium] › tests/dependency-modernization.spec.ts:67:3 › dependency modernization browser contracts › serves the npm-built application without network access
+[2/3] [chromium] › tests/dependency-modernization.spec.ts:77:3 › dependency modernization browser contracts › commits a keyboard selection and restores focus in the production Radix select
+  1) [chromium] › tests/dependency-modernization.spec.ts:77:3 › dependency modernization browser contracts › commits a keyboard selection and restores focus in the production Radix select 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: /패널 의존성 검증 맛집/ })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('button', { name: /패널 의존성 검증 맛집/ }) with timeout 15000ms
+      - waiting for getByRole('button', { name: /패널 의존성 검증 맛집/ })
+
+
+      29 |   // The trigger is server-rendered before its pointer handler is hydrated.
+      30 |   // Wait for the client-fetched fixture to prove this page can handle input.
+    > 31 |   await expect(page.getByRole('button', { name: /패널 의존성 검증 맛집/ })).toBeVisible({ timeout: 15_000 });
+         |                                                                    ^
+      32 | }
+      33 |
+      34 | async function openProductionDetailPanel(page: Page) {
+        at openGlobalMap (/Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/tests/dependency-modernization.spec.ts:31:68)
+        at /Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/tests/dependency-modernization.spec.ts:78:5
+
+    Error Context: test-results/dependency-modernization-d-ac258-the-production-Radix-select-chromium/error-context.md
+
+
+[3/3] [chromium] › tests/dependency-modernization.spec.ts:97:3 › dependency modernization browser contracts › resizes real production percentage panels by pointer and keyboard within limits
+  1 failed
+    [chromium] › tests/dependency-modernization.spec.ts:77:3 › dependency modernization browser contracts › commits a keyboard selection and restores focus in the production Radix select 
+  1 did not run
+  1 passed (17.1s)

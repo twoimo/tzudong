@@ -1,0 +1,35 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/naver-map-marker-visuals.test.ts:
+(pass) naver map marker visuals > refreshes both cached selection states when the public popularity tier changes in place [0.80ms]
+(pass) naver map marker visuals > keeps shared visual cache entries distinct across refreshed rows and overlay markers [0.23ms]
+(pass) naver map marker visuals > reuses the visual for the same restaurant until a displayed field changes [0.05ms]
+(pass) naver map marker visuals > returns selected marker payload [0.05ms]
+(pass) naver map marker visuals > returns unselected marker payload [0.02ms]
+(pass) naver map marker visuals > shows red visit count badge for restaurants visited at least twice [0.08ms]
+(pass) naver map marker visuals > does not show visit count badge for single-visit restaurants [0.02ms]
+(pass) naver map marker visuals > marks user-submitted restaurants with a distinct marker wrapper without changing category asset [0.10ms]
+(pass) naver map marker visuals > uses admin overlay marker assets for trend and seasonal marker kinds [0.10ms]
+
+tests-unit/public-popularity-publication.test.ts:
+(pass) operator-published public popularity > rejects private fields, duplicate IDs, invalid grades and unreviewed nonempty cohorts [0.21ms]
+(pass) operator-published public popularity > bounds entry count and serialized bytes and freezes independent copies [4.41ms]
+(pass) operator-published public popularity > list and detail derive the same tier without a database tier column; stale/raw tiers cannot promote it [1.20ms]
+(pass) operator-published public popularity > merged representatives use their published identity and do not inherit a child grade [0.51ms]
+(pass) operator-published public popularity > explicit canonical membership keeps compact, full, partial, and direct-detail grades identical [0.21ms]
+(pass) operator-published public popularity > new members or conflicting cohorts fail closed for either display representative [0.16ms]
+(pass) operator-published public popularity > rejects ambiguous/incomplete canonical membership and bounds the whole member index [2.80ms]
+(pass) operator-published public popularity > the shared panel badge binding resolves raw feed/direct rows through the publication boundary [49.00ms]
+(pass) operator-published public popularity > published endpoint returns only the bundled reviewed shape, stable ETag and no active cohort by default [0.27ms]
+(pass) public tier reaches the outer Naver render guard > same IDs/viewport/selection refreshes fire → rainbow → standard, while normalized missing values skip [0.18ms]
+(pass) public tier reaches the outer Naver render guard > retained selection/search grades also invalidate the unchanged-query guard [0.02ms]
+
+tests-unit/naver-retained-publication.test.ts:
+(pass) retained Naver rows use the same publication for invalidation and visual rendering > history-restored search and raw selection outside the result keep the published tier without mutation [1.01ms]
+(pass) retained Naver rows use the same publication for invalidation and visual rendering > unpublished raw and newly merged members cannot promote a retained marker [0.28ms]
+(pass) retained Naver rows use the same publication for invalidation and visual rendering > existing user-submission visibility and duplicate selection semantics remain intact [0.23ms]
+
+ 23 pass
+ 0 fail
+ 172 expect() calls
+Ran 23 tests across 3 files. [241.00ms]

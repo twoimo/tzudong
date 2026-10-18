@@ -1,0 +1,195 @@
+diff --git a/.github/supabase-migration-release-manifest.v1.json b/.github/supabase-migration-release-manifest.v1.json
+index 5d656737..80c2c833 100644
+--- a/.github/supabase-migration-release-manifest.v1.json
++++ b/.github/supabase-migration-release-manifest.v1.json
+@@ -52,58 +52,6 @@
+           "g016_onboarding_confirmation_freshness_terminal_state": true
+         }
+       }
+-    },
+-    {
+-      "id": "evidence_frames_and_popularity",
+-      "path": "backend/supabase/migrations/20261017043000_evidence_frames_and_popularity.sql",
+-      "sha256": "d254fe76eb8c74587183bc89372891cd08a6a1cf92a99b8aa041497fa6ca7733",
+-      "expectedPriorState": {
+-        "query": "SELECT json_build_object(\n  'restaurant_evidence_frames_absent', to_regclass('public.restaurant_evidence_frames') IS NULL,\n  'restaurant_popularity_metrics_absent', to_regclass('public.restaurant_popularity_metrics') IS NULL\n)::text;\n",
+-        "expected": {
+-          "restaurant_evidence_frames_absent": true,
+-          "restaurant_popularity_metrics_absent": true
+-        }
+-      },
+-      "terminalReadback": {
+-        "query": "SELECT json_build_object(\n  'restaurant_evidence_frames_terminal_state',\n  to_regclass('public.restaurant_evidence_frames') IS NOT NULL\n  AND to_regclass('public.restaurant_popularity_metrics') IS NOT NULL\n  AND COALESCE((\n    SELECT relrowsecurity FROM pg_class\n    WHERE oid = to_regclass('public.restaurant_evidence_frames')\n  ), false)\n  AND COALESCE((\n    SELECT relrowsecurity FROM pg_class\n    WHERE oid = to_regclass('public.restaurant_popularity_metrics')\n  ), false)\n  AND COALESCE((\n    SELECT array_agg(policyname::text ORDER BY policyname)\n    FROM pg_policies\n    WHERE schemaname = 'public' AND tablename = 'restaurant_evidence_frames'\n  ), '{}'::text[]) = ARRAY['restaurant_evidence_frames_approved_read']::text[]\n  AND COALESCE(has_table_privilege('anon', to_regclass('public.restaurant_evidence_frames'), 'select'), false)\n  AND COALESCE(has_table_privilege('authenticated', to_regclass('public.restaurant_evidence_frames'), 'select'), false)\n  AND NOT COALESCE(has_table_privilege('anon', to_regclass('public.restaurant_evidence_frames'), 'insert'), false)\n  AND NOT COALESCE(has_table_privilege('anon', to_regclass('public.restaurant_evidence_frames'), 'update'), false)\n  AND NOT COALESCE(has_table_privilege('anon', to_regclass('public.restaurant_evidence_frames'), 'delete'), false)\n  AND NOT COALESCE(has_table_privilege('anon', to_regclass('public.restaurant_popularity_metrics'), 'select'), false)\n  AND NOT COALESCE(has_table_privilege('authenticated', to_regclass('public.restaurant_popularity_metrics'), 'select'), false)\n)::text;\n",
+-        "expected": {
+-          "restaurant_evidence_frames_terminal_state": true
+-        }
+-      }
+-    },
+-    {
+-      "id": "restaurant_popularity_shadow",
+-      "path": "backend/supabase/migrations/20261017140000_restaurant_popularity_shadow.sql",
+-      "sha256": "fe0621f3a6f663beec2c14a60729ddbb17ba715205a114f24879af9b4dba11c6",
+-      "expectedPriorState": {
+-        "query": "SELECT json_build_object(\n  'restaurant_popularity_shadow_absent', to_regclass('public.restaurant_popularity_shadow') IS NULL\n)::text;\n",
+-        "expected": {
+-          "restaurant_popularity_shadow_absent": true
+-        }
+-      },
+-      "terminalReadback": {
+-        "query": "SELECT json_build_object(\n  'restaurant_popularity_shadow_terminal_state',\n  to_regclass('public.restaurant_popularity_shadow') IS NOT NULL\n  AND COALESCE((\n    SELECT relrowsecurity FROM pg_class\n    WHERE oid = to_regclass('public.restaurant_popularity_shadow')\n  ), false)\n  AND NOT COALESCE(has_table_privilege('anon', to_regclass('public.restaurant_popularity_shadow'), 'select'), false)\n  AND NOT COALESCE(has_table_privilege('authenticated', to_regclass('public.restaurant_popularity_shadow'), 'select'), false)\n  AND NOT COALESCE(has_table_privilege('anon', to_regclass('public.restaurant_popularity_shadow'), 'insert'), false)\n  AND NOT COALESCE(has_table_privilege('anon', to_regclass('public.restaurant_popularity_shadow'), 'update'), false)\n  AND NOT COALESCE(has_table_privilege('anon', to_regclass('public.restaurant_popularity_shadow'), 'delete'), false)\n)::text;\n",
+-        "expected": {
+-          "restaurant_popularity_shadow_terminal_state": true
+-        }
+-      }
+-    },
+-    {
+-      "id": "restaurant_popularity_shadow_tier",
+-      "path": "backend/supabase/migrations/20261017160000_restaurant_popularity_shadow_tier.sql",
+-      "sha256": "4ba19ee5b7ae3fbbfc4ffa00a93ed30e1197cd2ad1763e063a75f75158a48426",
+-      "expectedPriorState": {
+-        "query": "SELECT json_build_object(\n  'restaurant_popularity_shadow_tier_absent',\n  to_regclass('public.restaurant_popularity_shadow') IS NOT NULL\n  AND NOT EXISTS (\n    SELECT 1 FROM pg_attribute\n    WHERE attrelid = to_regclass('public.restaurant_popularity_shadow')\n      AND attname = 'popularity_tier'\n      AND attnum > 0\n      AND NOT attisdropped\n  )\n)::text;\n",
+-        "expected": {
+-          "restaurant_popularity_shadow_tier_absent": true
+-        }
+-      },
+-      "terminalReadback": {
+-        "query": "SELECT json_build_object(\n  'restaurant_popularity_shadow_tier_terminal_state',\n  EXISTS (\n    SELECT 1 FROM pg_attribute\n    WHERE attrelid = to_regclass('public.restaurant_popularity_shadow')\n      AND attname = 'popularity_tier'\n      AND attnum > 0\n      AND NOT attisdropped\n  )\n  AND NOT COALESCE(has_table_privilege('anon', to_regclass('public.restaurant_popularity_shadow'), 'select'), false)\n  AND NOT COALESCE(has_table_privilege('authenticated', to_regclass('public.restaurant_popularity_shadow'), 'select'), false)\n  AND NOT COALESCE(has_table_privilege('anon', to_regclass('public.restaurant_popularity_shadow'), 'insert'), false)\n  AND NOT COALESCE(has_table_privilege('anon', to_regclass('public.restaurant_popularity_shadow'), 'update'), false)\n  AND NOT COALESCE(has_table_privilege('anon', to_regclass('public.restaurant_popularity_shadow'), 'delete'), false)\n)::text;\n",
+-        "expected": {
+-          "restaurant_popularity_shadow_tier_terminal_state": true
+-        }
+-      }
+     }
+   ]
+ }
+diff --git a/.github/workflows/supabase-migration-apply.yml b/.github/workflows/supabase-migration-apply.yml
+index 6d3f5e5c..25ea7623 100644
+--- a/.github/workflows/supabase-migration-apply.yml
++++ b/.github/workflows/supabase-migration-apply.yml
+@@ -29,7 +29,7 @@ permissions:
+ 
+ env:
+   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+-  RELEASE_MIGRATION_MANIFEST_SHA256: "29abd5a378c25ba83f2c579de1f849c4fd9b89a4d16f4664e7c153a88cc70561"
++  RELEASE_MIGRATION_MANIFEST_SHA256: "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d"
+ concurrency:
+   group: supabase-migration-apply
+   cancel-in-progress: false
+@@ -109,7 +109,7 @@ jobs:
+       github.ref == 'refs/heads/main' &&
+       github.ref_name == 'main' &&
+       (vars.G037_WRITE_FREEZE != 'active' ||
+-       contains(fromJSON('["g016_privacy_audit_owner_policy","g016_onboarding_confirmation_freshness","evidence_frames_and_popularity","restaurant_popularity_shadow","restaurant_popularity_shadow_tier"]'), needs.validate.outputs.migration_id)) &&
++       contains(fromJSON('["g016_privacy_audit_owner_policy","g016_onboarding_confirmation_freshness"]'), needs.validate.outputs.migration_id)) &&
+       (!contains(fromJSON('["g016_privacy_audit_owner_policy","g016_onboarding_confirmation_freshness"]'), needs.validate.outputs.migration_id) ||
+        github.event.inputs.verify_terminal_state == 'true')
+     runs-on: ubuntu-latest
+diff --git a/apps/web/tests-unit/production-workflow-trust.test.ts b/apps/web/tests-unit/production-workflow-trust.test.ts
+index 83c9050a..80bd4185 100644
+--- a/apps/web/tests-unit/production-workflow-trust.test.ts
++++ b/apps/web/tests-unit/production-workflow-trust.test.ts
+@@ -10,7 +10,7 @@ const releaseManifestPath = join(
+   "supabase-migration-release-manifest.v1.json",
+ );
+ const releaseManifest = readFileSync(releaseManifestPath);
+-const RELEASE_MANIFEST_SHA256 = "29abd5a378c25ba83f2c579de1f849c4fd9b89a4d16f4664e7c153a88cc70561";
++const RELEASE_MANIFEST_SHA256 = "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d";
+ const workflow = (name: string) =>
+   readFileSync(join(root, ".github", "workflows", name), "utf8");
+ 
+diff --git a/apps/web/tests-unit/supabase-migration-apply-source.test.ts b/apps/web/tests-unit/supabase-migration-apply-source.test.ts
+index b3860e53..9274b576 100644
+--- a/apps/web/tests-unit/supabase-migration-apply-source.test.ts
++++ b/apps/web/tests-unit/supabase-migration-apply-source.test.ts
+@@ -15,7 +15,7 @@ import {
+   validateReleaseMigrationManifest,
+ } from "../scripts/apply-supabase-migration.mjs";
+ 
+-const MANIFEST_SHA256 = "29abd5a378c25ba83f2c579de1f849c4fd9b89a4d16f4664e7c153a88cc70561";
++const MANIFEST_SHA256 = "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d";
+ const manifestBytes = readFileSync(RELEASE_MIGRATION_MANIFEST_PATH);
+ const manifestDocument = JSON.parse(manifestBytes.toString("utf8"));
+ const migration = manifestDocument.migrations[0];
+@@ -125,21 +125,6 @@ describe("reviewed Supabase migration apply contract", () => {
+           path: "backend/supabase/migrations/20260801000200_g016_onboarding_confirmation_freshness.sql",
+           sha256: "a116b2d0a71304b0c6cd6ceca05344e198709384381451b250d7145d4fe12d3e",
+         }),
+-        expect.objectContaining({
+-          id: "evidence_frames_and_popularity",
+-          path: "backend/supabase/migrations/20261017043000_evidence_frames_and_popularity.sql",
+-          sha256: "d254fe76eb8c74587183bc89372891cd08a6a1cf92a99b8aa041497fa6ca7733",
+-        }),
+-        expect.objectContaining({
+-          id: "restaurant_popularity_shadow",
+-          path: "backend/supabase/migrations/20261017140000_restaurant_popularity_shadow.sql",
+-          sha256: "fe0621f3a6f663beec2c14a60729ddbb17ba715205a114f24879af9b4dba11c6",
+-        }),
+-        expect.objectContaining({
+-          id: "restaurant_popularity_shadow_tier",
+-          path: "backend/supabase/migrations/20261017160000_restaurant_popularity_shadow_tier.sql",
+-          sha256: "4ba19ee5b7ae3fbbfc4ffa00a93ed30e1197cd2ad1763e063a75f75158a48426",
+-        }),
+       ],
+     });
+ 
+@@ -176,6 +161,23 @@ describe("reviewed Supabase migration apply contract", () => {
+     );
+   });
+ 
++  test("rejects evidence and shadow migrations before transport in the frozen legacy release path", async () => {
++    let transportCalls = 0;
++    let vectorCalls = 0;
++    for (const id of ["evidence_frames_and_popularity", "restaurant_popularity_shadow", "restaurant_popularity_shadow_tier"]) {
++      await expect(main(["--migration-id", id, "--dry-run", "--json"], {
++        environment: { RELEASE_MIGRATION_MANIFEST_SHA256: MANIFEST_SHA256 },
++        runPsqlImpl: () => { transportCalls++; throw new Error("unexpected_transport"); },
++        readVectorImpl: () => { vectorCalls++; throw new Error("unexpected_source_read"); },
++      })).rejects.toThrow("MIGRATION_ID_NOT_ALLOWLISTED");
++    }
++    expect(transportCalls).toBe(0);
++    expect(vectorCalls).toBe(0);
++    const workflow = readFileSync(new URL("../../../.github/workflows/supabase-migration-apply.yml", import.meta.url), "utf8");
++    expect(workflow).toContain('contains(fromJSON(\'["g016_privacy_audit_owner_policy","g016_onboarding_confirmation_freshness"]\'), needs.validate.outputs.migration_id)');
++    expect(workflow).toContain("github.event.inputs.verify_terminal_state == 'true'");
++  });
++
+   test("accepts only a manifest identity, never caller path or migration digest", async () => {
+     const { migrations } = await loadReleaseMigrationManifest({
+       expectedManifestSha256: MANIFEST_SHA256,
+diff --git a/backend/supabase/tests/test_g037_core_workflow_guards.py b/backend/supabase/tests/test_g037_core_workflow_guards.py
+index 92a841ad..86bb6df0 100644
+--- a/backend/supabase/tests/test_g037_core_workflow_guards.py
++++ b/backend/supabase/tests/test_g037_core_workflow_guards.py
+@@ -75,10 +75,7 @@ class G037CoreWorkflowGuardTests(unittest.TestCase):
+             "github.ref == 'refs/heads/main' && github.ref_name == 'main' && "
+             "(vars.G037_WRITE_FREEZE != 'active' || "
+             "contains(fromJSON('[\"g016_privacy_audit_owner_policy\","
+-            "\"g016_onboarding_confirmation_freshness\","
+-            "\"evidence_frames_and_popularity\","
+-            "\"restaurant_popularity_shadow\","
+-            "\"restaurant_popularity_shadow_tier\"]'), "
++            "\"g016_onboarding_confirmation_freshness\"]'), "
+             "needs.validate.outputs.migration_id)) && "
+             "(!contains(fromJSON('[\"g016_privacy_audit_owner_policy\","
+             "\"g016_onboarding_confirmation_freshness\"]'), "
+diff --git a/docs/evidence/CURSOR-EVIDENCE-GOAL-20261018.md b/docs/evidence/CURSOR-EVIDENCE-GOAL-20261018.md
+index 13fa82c3..4c8b659e 100644
+--- a/docs/evidence/CURSOR-EVIDENCE-GOAL-20261018.md
++++ b/docs/evidence/CURSOR-EVIDENCE-GOAL-20261018.md
+@@ -43,3 +43,17 @@ W001–W018의 기존 계약과 수용/기각 내역은 `TASKS.md`와 `docs/evid
+ 수정 전 두 회귀 테스트 실패를 확인했다. 수정은 공개 등급 정규화를 입력 타입, 객체 스탬프 및 공유 시각 캐시 키에 반영한다. 캐시 용량과 정상 결과 재사용은 유지한다. 시간·공간 증가는 항목당 고정 크기의 정규화된 등급이며 성능 개선율은 측정하지 않았다.
+ 
+ 로컬 Node 24.22.0 / npm 11.6.2 / Bun 1.4.0에서 관련 4개 파일 37 tests / 392 assertions 통과, native 7.0.2·compat 6.0.2 parity diagnostics 0 (3172 logical inputs), 변경 TS의 ESLint 및 `git diff --check` 통과를 확인했다. 이는 운영 배포 증거가 아니다.
++
++## 두 번째 CI에서 확인한 릴리스 경계 불일치
++
++47c39178의 마커 수정 후 기존 타입 실패는 해소됐다. 최신 CI의 27개 검사가 통과했지만 Ubuntu npm 전체 unit은 3440 pass / 21 skip / 4 fail / 1 error였다. 운영 승격은 하지 않았다.
++
++Cursor의 앞선 근거·섀도 작업이 legacy release manifest를 3개에서 6개로 확장하고 쓰기 동결 예외를 추가했다. 이 파일은 review-media의 11단계 successor가 정확한 3개 항목과 SHA-256 `515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d`로 고정한 입력이다. 실패는 해시 검증과 실제 허용 목록의 불일치이며 테스트 기대값만 바꾸어 해결할 수 없다.
++
++확장된 파일의 원래 바이트(SHA-256 `29abd5a378c25ba83f2c579de1f849c4fd9b89a4d16f4664e7c153a88cc70561`)는 새 증거 폴더에 보존했다. legacy manifest와 workflow pin/동결 예외를 기존 범위로 복구하고 새 근거·섀도 ID가 SQL 전송 전에 거부되는 회귀 검증을 추가한다. 적용된 SQL 원문과 11단계 controller/manifest는 수정하지 않는다. 추가 SQL을 삭제하거나 이미 적용됐다는 운영 사실을 추정하지 않는다. 새 SQL의 향후 실행에는 별도의 검토된 경로가 필요하다.
++
++복구 후 관련 웹 테스트 112개 / 976 assertions, 전체 `npm run test:unit`의 모든 lane 종료 코드 0, Python 3.11.17 + PyYAML 6.0.3의 G037 경계 테스트 4개, TS parity diagnostics 0 (production build 이후 생성 타입을 포함한 3177 logical inputs)을 확인했다. 검증 도구의 누락 dependency와 첫 브라우저 시작 실패도 실패 이력으로 보존하며 제품 기능 통과로 계산하지 않는다.
++
++독립 읽기 전용 보안 검토에서 legacy manifest/workflow의 복구 전 바이트 일치, 11개 SQL 및 7개 toolchain 해시 일치, Python 경계 테스트 누락을 확인했고 그 누락도 수정했다. 추가 이력은 `d006986d → 7e2fc534 → d11e57aa → 1c213fc0`의 실제 파일 바이트로 보존했다.
++
++운영 프로젝트 `aqlcofblfxdrjhhdmarw`의 읽기 전용 migration 목록은 현재 89개이며 위 세 근거·섀도 version이 포함된다. 세 apply job 성공과 한 dry-run의 apply 생략도 별도 확인했다. 이는 과거 DB 변경을 소스 복구가 되돌린다는 뜻이 아니며, 현재 ledger의 statements·권한·데이터 전체를 재검증한 증거도 아니다. 기존 86→97 successor의 신규 운영 admission은 여전히 별도 현황 검증이 필요하다. 이번 작업에서 DB/Storage 변경은 없다.

@@ -1,0 +1,8 @@
+{
+  "path": "components/restaurant/Badge3DViewer.tsx",
+  "beforeSha256": "6938c1bd3cf0e0943c8b7892d72f24a1dc432782678c7ec59f012943992e6843",
+  "afterSha256": "a54439aa7e2046f7ab96c8cedf9963d7fb0abd258e5a0fb21080581ba58ed760",
+  "javascriptEmitEqual": true,
+  "javascriptSha256": "f8eaf030727719e8a6fb91a08e1010862ec083b76a22a7824695ff695cbdc5cb",
+  "scope": "required caller capability prop; runtime default and emitted viewer code unchanged; caller/browser evidence remains separate"
+}

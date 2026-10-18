@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "agentId": "01a14d0c-cbda-70e0-a934-4530a5ae3b92",
+  "requestedModel": "gpt-6-astra",
+  "requestedEffort": "xhigh",
+  "scope": "one bounded independent read-only local source/history audit; agent closed afterward",
+  "findings": [
+    {
+      "severity": "P2",
+      "finding": "Python G037 boundary test still expected the three extra freeze exceptions",
+      "resolution": "restored the G016 two-ID verify-only expectation; Python 3.11.17 / PyYAML 6.0.3: four tests pass"
+    },
+    {
+      "finding": "restored manifest and workflow byte-identical to d006986d^; eleven SQL and seven toolchain hashes equal",
+      "resolution": "no successor/controller/applied SQL changes"
+    },
+    {
+      "finding": "evidence freeze exception originated at 7e2fc534; historical manifests/workflows and old receipts must remain original",
+      "resolution": "five revision snapshots retained; existing receipts not rewritten"
+    },
+    {
+      "finding": "source restoration does not undo operating database state or renew the old 86-to-97 admission",
+      "resolution": "operating metadata and source restoration are separate evidence; DB writes 0"
+    }
+  ],
+  "relatedBoundaryWebTests": {
+    "pass": 112,
+    "fail": 0,
+    "assertions": 976
+  },
+  "fullWebUnitExitCode": 0,
+  "finalLocalParity": {
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 3177,
+    "logicalInputNamesSha256": "5788fb199609e501dc9357ed8e36dc39566c5e063054e2ef2712a1c62b191fab"
+  },
+  "operatingWrites": 0
+}

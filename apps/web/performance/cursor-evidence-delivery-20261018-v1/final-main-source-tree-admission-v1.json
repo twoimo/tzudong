@@ -1,0 +1,122 @@
+{
+  "head": "f71e9395dd376b11998276fa4a6c2d277672a2db",
+  "tree": "77fa0dabf8d22ba490bf1998dc7913a4720e6089",
+  "exactTreeSourceCI": "badge-mobile-source-final-ci-v1.json",
+  "sourceAllChecksCompleted": true,
+  "currentRequiredPassed": true,
+  "unresolved": 0,
+  "knownFailures": 0,
+  "priorFullMainCI": "main-low-power-blocked-ci-v3.json",
+  "pathsChangedSincePriorFull41Success": [
+    "apps/web/components/restaurant/Badge3DViewer.tsx",
+    "apps/web/components/restaurant/PopularityBadge.tsx",
+    "apps/web/hooks/useDevicePerformance.ts",
+    "apps/web/lib/evidence-engineering/badge-device-capability.ts",
+    "apps/web/tests-unit/badge-device-capability.test.ts"
+  ],
+  "pendingDuplicateChecks": [
+    {
+      "name": "Install",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118829490/job/117650063403"
+    },
+    {
+      "name": "Install",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118827961/job/117650059538"
+    },
+    {
+      "name": "Analyze (javascript-typescript)",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118826672/job/117650058300"
+    },
+    {
+      "name": "Analyze (python)",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118826672/job/117650058196"
+    },
+    {
+      "name": "Analyze (rust)",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118826672/job/117650058049"
+    },
+    {
+      "name": "Analyze (rust)",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118827877/job/117650060683"
+    },
+    {
+      "name": "Analyze (swift)",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118826672/job/117650058259"
+    },
+    {
+      "name": "Analyze (swift)",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118827877/job/117650060761"
+    },
+    {
+      "name": "Ubuntu npm",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118829490/job/117650063592"
+    },
+    {
+      "name": "Ubuntu npm",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118827961/job/117650059648"
+    },
+    {
+      "name": "Ubuntu Bun",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118829490/job/117650063679"
+    },
+    {
+      "name": "Ubuntu Bun",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118827961/job/117650059347"
+    },
+    {
+      "name": "orchestration-readiness",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118829495/job/117650063356"
+    },
+    {
+      "name": "Windows npm",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118829490/job/117650063684"
+    },
+    {
+      "name": "Windows npm",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118827961/job/117650059732"
+    },
+    {
+      "name": "Windows Bun",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118829490/job/117650063632"
+    },
+    {
+      "name": "Windows Bun",
+      "status": "IN_PROGRESS",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/twoimo/tzudong/actions/runs/39118827961/job/117650059573"
+    }
+  ],
+  "scope": "Current required exact-head checks plus completed affected/full source CI on identical final tree. Unchanged backend/workflow boundaries had prior full main41SUCCESS. Duplicate main checks continue; not counted as completed."
+}

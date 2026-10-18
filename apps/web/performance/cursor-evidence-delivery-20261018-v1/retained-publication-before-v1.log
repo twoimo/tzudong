@@ -1,0 +1,37 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/naver-retained-publication.test.ts:
+47 |         for (const selected of [false, true]) {
+48 |             const raw = Object.freeze(row());
+49 |             const fire = run(selected ? raw : null, selected ? null : raw, 'fire');
+50 |             const rainbow = run(selected ? raw : null, selected ? null : raw, 'rainbow');
+51 |             expect(fire.restaurantsForSwipe).toHaveLength(1);
+52 |             expect(fire.restaurantsForSwipe[0].popularity_tier).toBe('fire');
+                                                                     ^
+error: expect(received).toBe(expected)
+
+Expected: "fire"
+Received: undefined
+
+      at <anonymous> (/Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/tests-unit/naver-retained-publication.test.ts:52:65)
+(fail) retained Naver rows use the same publication for invalidation and visual rendering > history-restored search and raw selection outside the result keep the published tier without mutation [1.03ms]
+61 |     test('unpublished raw and newly merged members cannot promote a retained marker', () => {
+62 |         for (const raw of [row('unpublished', { popularity_tier: 'rainbow' }),
+63 |             row('approved-a', { popularity_tier: 'rainbow', mergedRestaurants: [row('new-member')] })]) {
+64 |             const result = run(raw, raw, 'fire');
+65 |             expect(result.restaurantsForSwipe).toHaveLength(1);
+66 |             expect(result.restaurantsForSwipe[0].popularity_tier).toBe('standard');
+                                                                       ^
+error: expect(received).toBe(expected)
+
+Expected: "standard"
+Received: "rainbow"
+
+      at <anonymous> (/Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/tests-unit/naver-retained-publication.test.ts:66:67)
+(fail) retained Naver rows use the same publication for invalidation and visual rendering > unpublished raw and newly merged members cannot promote a retained marker [0.28ms]
+(pass) retained Naver rows use the same publication for invalidation and visual rendering > existing user-submission visibility and duplicate selection semantics remain intact [0.26ms]
+
+ 1 pass
+ 2 fail
+ 7 expect() calls
+Ran 3 tests across 1 file. [200.00ms]

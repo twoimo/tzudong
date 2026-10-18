@@ -1,0 +1,33 @@
+{
+  "observedAt": "2026-10-18T11:24:30.780Z",
+  "approvedProductionSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "envUpdateExitCode": 0,
+  "existingSensitiveTypePreserved": true,
+  "onlyExistingApprovedShaChanged": true,
+  "oldValueRead": false,
+  "rows": [
+    {
+      "id": "dpl_3MeUH9UjbarSv5XRyWpdx9ANp3Hw",
+      "url": "tzudong-c0m49iy3x-twoimos-projects.vercel.app",
+      "state": "CANCELED",
+      "target": "production",
+      "gitSha": "b4eb780c532c9ba02a1af456b17459debc59a757"
+    },
+    {
+      "id": "dpl_8vFh9BJnQPLE9kvvrHrdgKqE8FDE",
+      "url": "tzudong-9p964kzxn-twoimos-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "gitSha": "2e5630fada4cd50fb71ff7542723ca6393afe7c0"
+    },
+    {
+      "id": "dpl_4PS189qeh5vA9U5AGBRcewWTuLqY",
+      "url": "tzudong-92447c4x6-twoimos-projects.vercel.app",
+      "state": "CANCELED",
+      "target": "production",
+      "gitSha": "2e5630fada4cd50fb71ff7542723ca6393afe7c0"
+    }
+  ],
+  "unknownOrActiveExactSha": false,
+  "manualCreateCount": 0
+}

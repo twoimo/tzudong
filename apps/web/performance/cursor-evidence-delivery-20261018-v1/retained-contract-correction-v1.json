@@ -1,0 +1,24 @@
+{
+  "sourceHead": "9a63f25f2f3884c2062fde6f22cacfb4f352078c",
+  "sourceTree": "f05fd25b3af24c22513efb2f0be7db4c7cbb5e16",
+  "previousHead": "2210f9e2d7c5800a91c798b9097fd5cf5b4b960e",
+  "changedFilesSinceBuild": [
+    "apps/web/tests-unit/user-submitted-marker-visibility.test.ts"
+  ],
+  "applicationBlobUnchanged": true,
+  "applicationSha256": "8070b6afa230a1ab368c6e479275b7d4278ce52ff47c99f7445fb55068bd5477",
+  "affectedTests": {
+    "pass": 6,
+    "fail": 0,
+    "assertions": 109
+  },
+  "lint": "passed",
+  "priorFailedCI": 39109383462,
+  "priorFailure": "one source contract still demanded raw variable names; both references updated to projected variables, all other assertions retained",
+  "priorGeneralUnit": {
+    "pass": 3474,
+    "skip": 21,
+    "fail": 1
+  },
+  "newExactHeadCI": "pending"
+}

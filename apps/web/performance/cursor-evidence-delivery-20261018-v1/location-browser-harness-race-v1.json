@@ -1,0 +1,6 @@
+{
+  "attempt": "location-precision-browser-v1",
+  "status": "failed",
+  "diagnosis": "Repeated mint clicks reused the same visible text as the previous mint, so text-only readiness could pass before the next async response completed; it could inspect the prior expired/revoked capability.",
+  "correction": "Version2 waits for the monotonically incremented completion receipt written after each real async mint. No arbitrary delay, test weakening or product source change. Both failed phases/results remain retained."
+}

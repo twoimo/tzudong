@@ -1,0 +1,37 @@
+{
+  "observedAt": "2026-10-18T11:31:34.394Z",
+  "scope": "public root/www alias and health correspondence only",
+  "rows": [
+    {
+      "requestedHost": "tzudong.app",
+      "chain": [
+        {
+          "host": "tzudong.app",
+          "path": "/api/health",
+          "status": 301
+        },
+        {
+          "host": "www.tzudong.app",
+          "path": "/api/health",
+          "status": 200
+        }
+      ],
+      "gitSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+      "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+      "deploymentId": "dpl_5MdWf1WjdpgsTGWzo7SV97u7nFcn"
+    },
+    {
+      "requestedHost": "www.tzudong.app",
+      "chain": [
+        {
+          "host": "www.tzudong.app",
+          "path": "/api/health",
+          "status": 200
+        }
+      ],
+      "gitSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+      "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+      "deploymentId": "dpl_5MdWf1WjdpgsTGWzo7SV97u7nFcn"
+    }
+  ]
+}

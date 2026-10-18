@@ -1,0 +1,22 @@
+{
+  "pr": 3311,
+  "head": "f71e9395dd376b11998276fa4a6c2d277672a2db",
+  "actualRepairedFiles": [
+    {
+      "path": "apps/web/components/restaurant/PopularityBadge.tsx",
+      "sha256": "3e002ca1aefa4e55a52a1b25624c24ce1d084b0084aace15e7ecd04ebeeec710"
+    },
+    {
+      "path": "apps/web/components/restaurant/Badge3DViewer.tsx",
+      "sha256": "a54439aa7e2046f7ab96c8cedf9963d7fb0abd258e5a0fb21080581ba58ed760"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/badge-device-capability.ts",
+      "sha256": "d3d0f575f0e483dfbb5ab465379f0f65c95d28ec97b0190335710cd840125b68"
+    }
+  ],
+  "resolved": {
+    "id": "PRRT_kwDOQGRyNc6to_vV",
+    "isResolved": true
+  }
+}

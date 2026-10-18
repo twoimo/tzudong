@@ -1,0 +1,32 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/device-location-privacy.test.ts:
+(pass) readback acquisition is the only mint boundary and validates the exact response schema [0.62ms]
+(pass) readiness literals, spreads, clones, and JSON cannot mint a capability without the removed factory API [0.19ms]
+(pass) device coordinates use only approved memory and the exact Naver network sink [0.39ms]
+(pass) business source relabels do not bypass the device coordinate gate [0.10ms]
+(pass) capabilities are opaque, revocable, and reject clone or relabel attempts [0.12ms]
+(pass) monotonic expiry cannot be revived by replaying an earlier clock value [0.41ms]
+373 |       const authorization = await gate.acquireDeviceLocationUseAuthorization();
+374 |       if (isPublicRestrictedMode) {
+375 |         expect(authorization).toBeNull();
+376 |         return;
+377 |       }
+378 |       expect(authorization).not.toBeNull();
+                                      ^
+error: expect(received).not.toBeNull()
+
+Received: null
+
+      at <anonymous> (/Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/tests-unit/device-location-privacy.test.ts:378:33)
+      at async withReadinessResponse (/Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/tests-unit/device-location-privacy.test.ts:60:18)
+      at async <anonymous> (/Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/tests-unit/device-location-privacy.test.ts:372:11)
+(fail) fractional monotonic timestamps retain authorization until exact expiry and never revive it [0.46ms]
+(pass) tracking lifecycle revokes the genuine capability exactly once on every stop path [0.13ms]
+(pass) home client revokes retained capabilities on readiness failure, lifecycle cleanup, and errors [0.05ms]
+(pass) home client keeps the capability boundary before disclosure and confines rendering to Naver [0.14ms]
+
+ 9 pass
+ 1 fail
+ 114 expect() calls
+Ran 10 tests across 1 file. [39.00ms]

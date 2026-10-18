@@ -1,0 +1,59 @@
+{
+  "gitSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "scope": "anonymous production functional/asset/CSP verification, no account or database writes; not field/device/performance proof",
+  "runs": [
+    {
+      "script": "run-live-readback-v4.mjs",
+      "startedAt": "2026-10-18T11:30:29.198546+00:00",
+      "completedAt": "2026-10-18T11:30:49.861696+00:00",
+      "exitCode": 0
+    },
+    {
+      "script": "run-public-assets-readback-v2.mjs",
+      "startedAt": "2026-10-18T11:30:49.861742+00:00",
+      "completedAt": "2026-10-18T11:30:50.715901+00:00",
+      "exitCode": 0
+    },
+    {
+      "script": "run-console-boundary-diagnosis-v3.mjs",
+      "startedAt": "2026-10-18T11:30:50.715943+00:00",
+      "completedAt": "2026-10-18T11:30:59.989126+00:00",
+      "exitCode": 0
+    }
+  ],
+  "assetEquality": [
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_fire_40.webp",
+      "gitBytes": 2410,
+      "liveBytes": 2410,
+      "gitSha256": "77cf5b90c7823b16ef2f11f3f1d30a4f5c45f38c662e7604848950cba7e4170d",
+      "liveSha256": "77cf5b90c7823b16ef2f11f3f1d30a4f5c45f38c662e7604848950cba7e4170d",
+      "equal": true
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_fire_80.webp",
+      "gitBytes": 7618,
+      "liveBytes": 7618,
+      "gitSha256": "36fca709dc18574f138ae5beeec9cec72c01030c003dc8652a809d593fc9aa65",
+      "liveSha256": "36fca709dc18574f138ae5beeec9cec72c01030c003dc8652a809d593fc9aa65",
+      "equal": true
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_rainbow_40.webp",
+      "gitBytes": 2718,
+      "liveBytes": 2718,
+      "gitSha256": "9aa8bd618b2a1f77c6a0d8783c339ad16e46d56f65856a7c4966bb5ab0cf770d",
+      "liveSha256": "9aa8bd618b2a1f77c6a0d8783c339ad16e46d56f65856a7c4966bb5ab0cf770d",
+      "equal": true
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_rainbow_80.webp",
+      "gitBytes": 8766,
+      "liveBytes": 8766,
+      "gitSha256": "92cc370f652e2d9e530c11b15bd54526e49afe0bf838773b52b6ff4afffd51b3",
+      "liveSha256": "92cc370f652e2d9e530c11b15bd54526e49afe0bf838773b52b6ff4afffd51b3",
+      "equal": true
+    }
+  ],
+  "passed": true
+}

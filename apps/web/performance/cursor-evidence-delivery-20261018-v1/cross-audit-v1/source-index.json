@@ -1,0 +1,51 @@
+{
+  "sourceRevision": "9228c1454393560bcd37240f793065e450f85683",
+  "entries": [
+    {
+      "path": "apps/web/lib/privacy/location-gate.ts",
+      "bytes": 8776,
+      "sha256": "845c387c1a165a015e2369b4759d7ed0017faee9da93216932ad84988fa4ff64"
+    },
+    {
+      "path": "apps/web/tests-unit/device-location-privacy.test.ts",
+      "bytes": 19204,
+      "sha256": "ffe99d65979a45a6e9a4c310f189386afbf329362af049b8feed0a39955bdd21"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/badge-device-capability.ts",
+      "bytes": 929,
+      "sha256": "d3d0f575f0e483dfbb5ab465379f0f65c95d28ec97b0190335710cd840125b68"
+    },
+    {
+      "path": "apps/web/hooks/useDevicePerformance.ts",
+      "bytes": 8389,
+      "sha256": "db9f8cfeecf7d7086482752e48455a4d9fd1150412a1a360cd28715d9d05f5ca"
+    },
+    {
+      "path": "apps/web/components/restaurant/PopularityBadge.tsx",
+      "bytes": 4211,
+      "sha256": "3e002ca1aefa4e55a52a1b25624c24ce1d084b0084aace15e7ecd04ebeeec710"
+    },
+    {
+      "path": "apps/web/components/restaurant/Badge3DViewer.tsx",
+      "bytes": 5473,
+      "sha256": "a54439aa7e2046f7ab96c8cedf9963d7fb0abd258e5a0fb21080581ba58ed760"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/badge-viewer-lifecycle.ts",
+      "bytes": 3306,
+      "sha256": "b470fe9fb3c3a8c9984cc075f3be1004f394c6732872b6c6b94e67310372dfd0"
+    },
+    {
+      "path": "apps/web/tests-unit/badge-device-capability.test.ts",
+      "bytes": 1999,
+      "sha256": "b20c2e115f4840dc393a90f9a301fa26ec6e31a195c81f07a2531aad8b9b5379"
+    },
+    {
+      "path": "apps/web/tests-unit/badge-ui-lifecycle.test.ts",
+      "bytes": 5866,
+      "sha256": "ad7d985682fcc893ed3f82a41fd5f41fca85ed7ab824463fa00496d0df6e7d5a"
+    }
+  ],
+  "bundleSha256": "9420e4c1a47230c305c98e9f739571f9a3c188919fac750ee0fd45635902a6ee"
+}

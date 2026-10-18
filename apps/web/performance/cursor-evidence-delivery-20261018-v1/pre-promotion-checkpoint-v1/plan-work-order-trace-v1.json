@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "inputZipSha256": "fca4b5276fc82def8fa938d0153d1e7ee41b329af698ef03e2928e2fcb3f290b",
+  "sourceTasksSha256": "7a0eb9a5bccbde332d60aa05d91fe2ca4fc44a19f047c4794726a3f28c96e219",
+  "count": 18,
+  "items": [
+    {
+      "workOrder": "W001",
+      "inputTitle": "# W001: FFmpeg I-Frame 탐색 및 씬 체인지 기반 키프레임 추출 파이프라인 구현",
+      "workOrderSha256": "a75a012fc377921453f86be87868fe138ef16b2bad0e2146ea6a93c99b5f6131",
+      "existingSourceDeclaration": {
+        "heading": "## Task 2: W001 기존 Step 04에 키프레임 시작점과 디코드 후 2fps 샘플링을 연결한다",
+        "declaration": "- [x] 완료. `backend/restaurant-crawling/scripts/evidence-frame-sampling.mjs`를 `04-extract-frames-with-heatmap.js`가 호출한다. 히트맵 추출은 키프레임을 디코드 시작점으로 쓰고, 근거 샘플은 목표 시각 ±5초를 디코딩한 뒤 `fps=2`로 남긴다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn"
+    },
+    {
+      "workOrder": "W002",
+      "inputTitle": "# W002: 추출 JPEG 프레임 SHA-256 무결성 검증 및 기검토 609개 프레임 대사기",
+      "workOrderSha256": "33c97ba24b1099a9e3c52968bb7d68143ab5d4ddace56e17eb0e9ba08626b74e",
+      "existingSourceDeclaration": {
+        "heading": "## Task 3: W002 콘텐츠 SHA-256과 frame_id를 분리하고 기존 프레임과 대사한다",
+        "declaration": "- [x] 완료. `evidence-frame-identity.mjs`가 바이트 해시와 `frame_id`를 분리하고, Step 04가 `storage-key.mjs`의 키 규칙으로 원장을 대사한다. 609/763/663은 성공 조건이 아니다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn"
+    },
+    {
+      "workOrder": "W003",
+      "inputTitle": "# W003: 영상 간판 및 자막 배너 OCR 영역 분리 및 상호·지점명 추출기",
+      "workOrderSha256": "cea5b266a60c4c26ef8b083f125eef7ad82de57fdfaa05bc6b2fa6b475a8e566",
+      "existingSourceDeclaration": {
+        "heading": "## Task 4: W003 간판·자막 영역을 나누고 상호명과 지점명만 추출한다",
+        "declaration": "- [x] 완료. `detected_place_names.py`를 `06-frame-caption.py`가 호출한다. 원문 OCR은 결과에 남지 않는다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn"
+    },
+    {
+      "workOrder": "W004",
+      "inputTitle": "# W004: 네이버 지도 10단계 쿼리 폴백 생성기 및 비공식 엔드포인트 세션 관리",
+      "workOrderSha256": "e91d8060b9d47a1255f73a704cc79a1d03df1f2bda4477e90329cf2b8287a788",
+      "existingSourceDeclaration": {
+        "heading": "## Task 5: W004 명세된 1–5단계 질의만 생성한다",
+        "declaration": "- [x] 완료. `naver_query_plan.py`가 1–5단계만 만들고, `10-rule-evaluation.py`는 exact 1–3단계만 검색한다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn"
+    },
+    {
+      "workOrder": "W005",
+      "inputTitle": "# W005: 영업·폐업 및 이전 판정 상태 머신 (레벤슈타인 + 150m 반경 오차 검증)",
+      "workOrderSha256": "e26fffc57967a25bfafd77e0237649ffc43bfb9eacf6dd5dd7113f75f2d7dac3",
+      "existingSourceDeclaration": {
+        "heading": "## Task 6: W005 영업·이전 자동 판정을 순수 상태 기계에 연결한다",
+        "declaration": "- [x] 완료. `evidence_identity.py`를 `build_location_result`가 검색 실패 경로에서 호출한다. 자동 `closed_store`는 만들지 않는다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn"
+    },
+    {
+      "workOrder": "W006",
+      "inputTitle": "# W006: 영상장소근거 엑셀 관리표와 Supabase 데이터베이스 양방향 동기화기",
+      "workOrderSha256": "95d6480bb5192e0ce4f0deb868ea1762522a1aa16bf67f1e56b2f4c6d5296342",
+      "existingSourceDeclaration": {
+        "heading": "## Task 7: W006 관리표 반영을 검수 소유권과 분리한다",
+        "declaration": "- [x] 완료. `review_ledger_import.py`는 수집 입력이 기존 검수 상태를 바꾸면 거부한다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn"
+    },
+    {
+      "workOrder": "W007",
+      "inputTitle": "# W007: Supabase 스키마 마이그레이션: evidence_frames 및 popularity 컬럼 추가",
+      "workOrderSha256": "114446c8ce8b76c450bc036b5b91c6687661ecfbdea916b5aaa53e99ad8565fa",
+      "existingSourceDeclaration": {
+        "heading": "## Task 8: W007 evidence_frames와 popularity 위성 테이블을 추가한다",
+        "declaration": "- [x] 완료. `backend/supabase/migrations/20261017043000_evidence_frames_and_popularity.sql`만 추가했다. 호스티드 DB에는 적용하지 않았다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn",
+      "currentTurnObservation": "89 migration entries include the three evidence/shadow versions; schema/ACL metadata read back, no DB writes or ledger-vector proof"
+    },
+    {
+      "workOrder": "W008",
+      "inputTitle": "# W008: Supabase Storage 프레임 WebP 압축 업로더 및 CDN 딥링크 생성기",
+      "workOrderSha256": "d890f989386d8475ef1d802905d5f55feec200a17fb80881eaf6f713277d3846",
+      "existingSourceDeclaration": {
+        "heading": "## Task 9: W008 불변 스토리지 키로 WebP를 업로드한다",
+        "declaration": "- [x] 완료. `upload-evidence-frame.ts`가 `buildStorageObjectKey`와 WebP 바이트, 콘텐츠 해시를 검사한다. 테스트는 가짜 스토리지 경계를 쓰고, 운영 스토리지는 호출하지 않는다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn"
+    },
+    {
+      "workOrder": "W009",
+      "inputTitle": "# W009: 관리자 검수 화면: 프레임-상호 매칭 수동 승인/거절 및 감사 로그 API",
+      "workOrderSha256": "4b3676f1c11b0aa069f84a897490668d13ee14c6295589057d4e2c8225d6fce6",
+      "existingSourceDeclaration": {
+        "heading": "## Task 10: W009 관리자 프레임 검수 API",
+        "declaration": "- [x] 완료. `app/api/admin/evidence-frames/route.ts`는 `requireAdmin` 뒤에 Preview, Confirm, Apply, Readback을 검사한다. 이 저장소에는 이 흐름의 로컬 저장 대역이 없고, 행 저장은 로컬 Supabase Docker 스택과 미적용 마이그레이션이 있어야 한다. Apply는 그 전까지 `persistence_unavailable`로 닫는다. 호스티드 DB에는 연결하지 않는다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn"
+    },
+    {
+      "workOrder": "W010",
+      "inputTitle": "# W010: RestaurantDetailPanel: 쯔양 방문 확정 근거 프레임 캐러셀 컴포넌트 구현",
+      "workOrderSha256": "f48fb85d01eebadd4530532c06fef6080f0a8f7f7dbd1c7297c20f8b41d64e7e",
+      "existingSourceDeclaration": {
+        "heading": "## Task 11: W010 RestaurantDetailPanel 근거 프레임 캐러셀",
+        "declaration": "- [x] 완료. `RestaurantEvidenceCarousel`는 승인된 간판·자막 프레임만 16:9로 보여 주고 상세 패널에 연결했다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn"
+    },
+    {
+      "workOrder": "W011",
+      "inputTitle": "# W011: 프레임 클릭 시 타임스탬프 유튜브 재생 연동 인터랙션 및 딥링크 핸들러",
+      "workOrderSha256": "5fad7895076b887c85294b372aec673294ce47abb070372c3a21d2bb940cba9f",
+      "existingSourceDeclaration": {
+        "heading": "## Task 12: W011 프레임 활성화 시 시크 URL로 이동한다",
+        "declaration": "- [x] 완료. 캐러셀 링크는 `youtube_seek_url`이다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn"
+    },
+    {
+      "workOrder": "W012",
+      "inputTitle": "# W012: 인기 맛집 정량 스코어링 수식 배치 계산기 (시간 감쇠 + 재방문 승수)",
+      "workOrderSha256": "81c7a84588cdc6fa4288b31200fb14d8973acbad8114639c6aed262dd068077f",
+      "existingSourceDeclaration": {
+        "heading": "## Task 13: W012 일일 인기 점수 배치",
+        "declaration": "- [x] 완료. `popularity_score_batch.py`는 감쇠와 방문 승수를 분리해 계산하고 단일 곱셈 점수와 티어를 만들지 않는다. 호스티드 DB에는 쓰지 않는다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn",
+      "currentTurnObservation": "no public restaurant tier column; no shadow publication or unadopted scoring formula"
+    },
+    {
+      "workOrder": "W013",
+      "inputTitle": "# W013: 네이버 지도 마커 외곽 CSS3 GPU 하드웨어 가속 Fire/Rainbow 이펙트 래퍼",
+      "workOrderSha256": "727f21c75815360aebafa75609a6764e5ae2241ecf864da47c1b607e05e6ecaf",
+      "existingSourceDeclaration": {
+        "heading": "## Task 14: W013 마커 외곽을 transform과 opacity로만 움직인다",
+        "declaration": "- [x] 완료. 기존 핀 HTML 바깥에 `data-popularity-tier` 래퍼를 둔다. `will-change`와 `drop-shadow` 애니메이션은 없다. `markerType`은 바꾸지 않는다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn",
+      "currentTurnObservation": "marker tier cache/type defect fixed; 37 focused tests and production offline flows pass; actual Naver SDK comparison not run"
+    },
+    {
+      "workOrder": "W014",
+      "inputTitle": "# W014: 맛집 상세 패널 Three.js 단일 3D 프리미엄 배지 뷰어 (Dynamic Import)",
+      "workOrderSha256": "e34c4100e9785371e38cfc72d0e5228cd5d466fb4555a9d75306f0d06fe5f690",
+      "existingSourceDeclaration": {
+        "heading": "## Task 15: W014 상세 패널의 실험 3D 배지",
+        "declaration": "- [x] 완료. 기본 배지는 정적 WebP다. 파이어·무지개 티어는 지정된 경로를 그리고, 이미지 로드가 실패하면 깨진 이미지를 남기지 않는다. 실험 3D는 기본 꺼짐이다. 사용자가 켠 뒤에만 `Badge3DViewer`가 `three`를 로드하고, `PopularityBadge`는 `three`를 직접 import하지 않는다. 배지 호버는 `scale(1.15)`이고 모션 축소 설정에서는 확대하지 않는다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn"
+    },
+    {
+      "workOrder": "W015",
+      "inputTitle": "# W015: GPT Image 최신 모델 기반 3D 파이어 및 무지개 배지 WebP 에셋 파이프라인",
+      "workOrderSha256": "4e739af37cd01c2e3c1b1721d9667465ecec08ae6e7d4d6b979c868540705a64",
+      "existingSourceDeclaration": {
+        "heading": "## Task 16: W015 정적 배지 에셋 계약",
+        "declaration": "- [x] 완료. 배지 경로는 `badge_popular_fire_3d.webp`와 `badge_popular_rainbow_3d.webp`다. 이미지 파일은 생성하지 않았고, 없으면 이미지를 렌더하지 않는다. 15KB는 합격 수치가 아니다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn",
+      "currentTurnObservation": "two named WebP assets absent; not complete"
+    },
+    {
+      "workOrder": "W016",
+      "inputTitle": "# W016: 폐업 및 이전 매장 안내 주의 배지 및 네이버 지도 링크 연동",
+      "workOrderSha256": "201335e169ef5e654ea62bd3be52e30245be53f8b49a6d0a8b2d4b51d43033ad",
+      "existingSourceDeclaration": {
+        "heading": "## Task 17: W016 폐업·이전 안내",
+        "declaration": "- [x] 완료. `closure_candidate`와 검수된 `closed_store`/`relocated`만 안내한다. 링크는 상호명 검색이며 기기 좌표를 넣지 않는다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn"
+    },
+    {
+      "workOrder": "W017",
+      "inputTitle": "# W017: 다중 레코드 병합(mergedRestaurants) 시 근거 프레임 누락 방지 하이드레이션",
+      "workOrderSha256": "bf0b7296ef6c880fda30aa142585999685c823872a6bc9238dc66c872f0f4e07",
+      "existingSourceDeclaration": {
+        "heading": "## Task 18: W017 다중 방문 병합에 승인 프레임을 포함한다",
+        "declaration": "- [x] 완료. `collectRestaurantMergedMedia`가 승인 프레임을 `frame_id`로 합친다. 더 높은 티어로 바꾸지 않는다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn"
+    },
+    {
+      "workOrder": "W018",
+      "inputTitle": "# W018: E2E 회귀 테스트: 모바일 뷰포트 Safe-Area 및 60fps 렌더링 검증",
+      "workOrderSha256": "ebc3fa22459eb83e246b615721c0bdfea51389a64ddf3cb2a249a32b95459003",
+      "existingSourceDeclaration": {
+        "heading": "## Task 19: W018 모바일 렌더 측정",
+        "declaration": "- [x] 완료. `summarizeRenderSamples`는 p50, p95, 50ms 초과 횟수만 계산한다. 60fps와 Paint 0ms는 합격 조건이 아니다. 기기 기준선 숫자는 기획서가 정하지 않아 임계값을 만들지 않았다."
+      },
+      "evidenceClass": "source declaration; not independently promoted to operating completion this turn",
+      "currentTurnObservation": "no new admitted performance slices, physical-device samples or field metrics"
+    }
+  ],
+  "scope": "original document instructions are reference material; current user authorization and project boundaries control execution"
+}

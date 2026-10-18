@@ -1,0 +1,10 @@
+{
+  "preparedAt": "2026-10-18T10:56:10.223278+00:00",
+  "sourceRevision": "9228c1454393560bcd37240f793065e450f85683",
+  "sourceDirty": false,
+  "scope": "selected committed public source; no private runtime data",
+  "planSha256": "cf0474a58f7f54541c1395e62a383b81208369ab1a9926b9603eae27dde09122",
+  "bundleSha256": "9420e4c1a47230c305c98e9f739571f9a3c188919fac750ee0fd45635902a6ee",
+  "files": 9,
+  "externalStatus": "not dispatched; capability check in progress"
+}

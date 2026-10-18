@@ -1,0 +1,196 @@
+{
+  "phase": "after",
+  "sourceSha256": "6506d38dc25f8e2dc17c7e3101b336c42049204b7940f1d2894e7d4bb2570f63",
+  "browser": "153.0.8010.12",
+  "scope": "production React/actual PopularityBadge/device hook/dynamic viewer; synthetic hardware profiles, software WebGL; one browser process, one context per profile, three dependent opens/context; not device/field/process-memory/timing gain",
+  "observationWindowMs": 220,
+  "profiles": [
+    {
+      "name": "high-motion",
+      "cores": 8,
+      "memory": 8,
+      "low": false,
+      "reduced": false,
+      "observations": [
+        {
+          "open": 1,
+          "canvasCount": 1,
+          "rafDelta": 13,
+          "viewerState": "viewer"
+        },
+        {
+          "open": 2,
+          "canvasCount": 1,
+          "rafDelta": 14,
+          "viewerState": "viewer"
+        },
+        {
+          "open": 3,
+          "canvasCount": 1,
+          "rafDelta": 14,
+          "viewerState": "viewer"
+        }
+      ],
+      "contextCount": 3,
+      "teardown": {
+        "contexts": [
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          }
+        ],
+        "outerEscape": 0
+      },
+      "scriptsBeforeOpen": [
+        "/harness.js",
+        "/chunk-q13rbtsj.js"
+      ],
+      "openedScripts": [
+        "/chunk-gwkxz348.js"
+      ],
+      "focusRestored": true,
+      "errors": []
+    },
+    {
+      "name": "high-reduced",
+      "cores": 8,
+      "memory": 8,
+      "low": false,
+      "reduced": true,
+      "observations": [
+        {
+          "open": 1,
+          "canvasCount": 1,
+          "rafDelta": 0,
+          "viewerState": "viewer"
+        },
+        {
+          "open": 2,
+          "canvasCount": 1,
+          "rafDelta": 0,
+          "viewerState": "viewer"
+        },
+        {
+          "open": 3,
+          "canvasCount": 1,
+          "rafDelta": 0,
+          "viewerState": "viewer"
+        }
+      ],
+      "contextCount": 3,
+      "teardown": {
+        "contexts": [
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          },
+          {
+            "connected": false,
+            "lossCalls": 1
+          }
+        ],
+        "outerEscape": 0
+      },
+      "scriptsBeforeOpen": [
+        "/harness.js",
+        "/chunk-q13rbtsj.js"
+      ],
+      "openedScripts": [
+        "/chunk-gwkxz348.js"
+      ],
+      "focusRestored": true,
+      "errors": []
+    },
+    {
+      "name": "low-memory",
+      "cores": 2,
+      "memory": 2,
+      "low": true,
+      "reduced": false,
+      "observations": [
+        {
+          "open": 1,
+          "canvasCount": 0,
+          "rafDelta": 0,
+          "viewerState": "fallback"
+        },
+        {
+          "open": 2,
+          "canvasCount": 0,
+          "rafDelta": 0,
+          "viewerState": "fallback"
+        },
+        {
+          "open": 3,
+          "canvasCount": 0,
+          "rafDelta": 0,
+          "viewerState": "fallback"
+        }
+      ],
+      "contextCount": 0,
+      "teardown": {
+        "contexts": [],
+        "outerEscape": 0
+      },
+      "scriptsBeforeOpen": [
+        "/harness.js",
+        "/chunk-q13rbtsj.js"
+      ],
+      "openedScripts": [],
+      "focusRestored": true,
+      "errors": []
+    },
+    {
+      "name": "low-no-memory-api",
+      "cores": 2,
+      "memory": null,
+      "low": true,
+      "reduced": false,
+      "observations": [
+        {
+          "open": 1,
+          "canvasCount": 0,
+          "rafDelta": 0,
+          "viewerState": "fallback"
+        },
+        {
+          "open": 2,
+          "canvasCount": 0,
+          "rafDelta": 0,
+          "viewerState": "fallback"
+        },
+        {
+          "open": 3,
+          "canvasCount": 0,
+          "rafDelta": 0,
+          "viewerState": "fallback"
+        }
+      ],
+      "contextCount": 0,
+      "teardown": {
+        "contexts": [],
+        "outerEscape": 0
+      },
+      "scriptsBeforeOpen": [
+        "/harness.js",
+        "/chunk-q13rbtsj.js"
+      ],
+      "openedScripts": [],
+      "focusRestored": true,
+      "errors": []
+    }
+  ],
+  "status": "passed"
+}

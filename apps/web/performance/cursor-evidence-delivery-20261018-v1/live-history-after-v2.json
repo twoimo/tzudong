@@ -1,0 +1,51 @@
+{
+  "phase": "after",
+  "gitSha": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+  "deploymentId": "dpl_8vFh9BJnQPLE9kvvrHrdgKqE8FDE",
+  "browser": "153.0.8010.12",
+  "startedAt": "2026-10-18T10:33:31.896Z",
+  "scope": "anonymous real SDK full-navigation detail restoration; exact marker visibility is observational and unproven, not a passing gate; no row bodies, query URLs, account mutations, device/field/performance claim",
+  "rows": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "clusterOpens": 1,
+      "sameRestaurantRestored": true,
+      "exactOriginalMarkerVisible": false,
+      "exactMarkerCount": 0,
+      "markerCount": 0,
+      "clusterCount": 16,
+      "detailClosed": true
+    },
+    {
+      "viewport": {
+        "width": 834,
+        "height": 1112
+      },
+      "clusterOpens": 1,
+      "sameRestaurantRestored": true,
+      "exactOriginalMarkerVisible": false,
+      "exactMarkerCount": 0,
+      "markerCount": 0,
+      "clusterCount": 16,
+      "detailClosed": true
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 860
+      },
+      "clusterOpens": 1,
+      "sameRestaurantRestored": true,
+      "exactOriginalMarkerVisible": false,
+      "exactMarkerCount": 0,
+      "markerCount": 0,
+      "clusterCount": 16,
+      "detailClosed": true
+    }
+  ],
+  "status": "passed",
+  "completedAt": "2026-10-18T10:33:44.021Z"
+}

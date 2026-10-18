@@ -1,0 +1,17 @@
+{
+  "observedAt": "2026-10-18T11:29:53.355Z",
+  "id": "dpl_5MdWf1WjdpgsTGWzo7SV97u7nFcn",
+  "url": "tzudong-gfa0qdb3c-twoimos-projects.vercel.app",
+  "readyState": "READY",
+  "target": "production",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "gitSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "aliases": [
+    "www.tzudong.app",
+    "internal.tzudong.app",
+    "tzudong.app",
+    "tzudong-twoimos-projects.vercel.app",
+    "tzudong-git-main-twoimos-projects.vercel.app"
+  ],
+  "scope": "provider READY metadata; CLI gitSource and actual live URL independently required"
+}

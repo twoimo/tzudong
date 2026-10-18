@@ -1,0 +1,595 @@
+Refreshing run status every 30 seconds. Press Ctrl+C to quit.
+
+* develop CI twoimo/tzudong#3317 · 39118613121
+Triggered via pull_request about 4 minutes ago
+
+JOBS
+* Ubuntu npm (ID 117651735156)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Run npm run typecheck:verify
+  ✓ Run npm run typecheck:native
+  ✓ Run npm run typecheck:compat
+  ✓ Run npm run typecheck:parity
+  * Run tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
+  * Run tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
+  * Upload npm benchmark evidence
+  * Fail closed on benchmark evidence
+  * Run npm run lint
+  * Run npm run test:unit
+  * Run npm run build
+  * Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  * Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  * Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+✓ Windows Bun in 11m26s (ID 117651736265)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Run bun install --frozen-lockfile
+  ✓ Run bun run typecheck:verify
+  ✓ Run bun run typecheck:native
+  ✓ Run bun run typecheck:compat
+  ✓ Run bun run typecheck:parity
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
+  ✓ Upload Bun benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Admin in 1m22s (ID 117651736624)
+  ✓ Set up job
+  ✓ Initialize containers
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Install backend dependencies with bounded network retry
+  ✓ Run npx eslint lib/admin-address-consistency.ts app/admin/evaluations/page.tsx components/admin/EvaluationDetailView.tsx components/admin/EvaluationTableNew.tsx tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts scripts/restaurant-refresh-cron.mjs scripts/apply-supabase-migration.mjs tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts --max-warnings=0
+  ✓ Run npx tsc --noEmit --pretty false
+  ✓ Run cd ../.. && node --test backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs backend/bin/tests/node-dependency-compatibility.test.mjs
+  ✓ Run cd ../.. && TZUYANG_LEDGER_CI_FIXTURE=1 SUPABASE_DB_HOST=localhost SUPABASE_DB_PORT=5432 SUPABASE_DB_NAME=tzudong_ci SUPABASE_DB_USER=postgres SUPABASE_DB_PASSWORD=39118613121 SUPABASE_DB_SSL=disable node backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs
+  ✓ Run bun test tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts tests-unit/mobile-desktop-parity-source.test.ts tests-unit/web-quality-performance-source.test.ts tests-unit/vercel-ignore-build.test.ts tests-unit/backend-npm-ci-retry-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Stop containers
+  ✓ Complete job
+✓ Windows npm in 10m40s (ID 117651753243)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Run npm run lint
+  ✓ Run npm run typecheck:verify
+  ✓ Run npm run typecheck:native
+  ✓ Run npm run typecheck:compat
+  ✓ Run npm run typecheck:parity
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
+  ✓ Upload npm benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Ubuntu Bun in 7m41s (ID 117651763425)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Run bun install --frozen-lockfile
+  ✓ Run bun run typecheck:verify
+  ✓ Run bun run typecheck:native
+  ✓ Run bun run typecheck:compat
+  ✓ Run bun run typecheck:parity
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
+  ✓ Upload Bun benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Install in 6m48s (ID 117651768011)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Create independent clean workspaces
+  ✓ Pin authoritative Node and npm
+  ✓ Authoritative npm clean install, Node production probes, and browser behavior
+  ✓ Supplemental Bun clean install and Node production probes
+  ✓ Upload clean-install lock evidence
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+Refreshing run status every 30 seconds. Press Ctrl+C to quit.
+
+* develop CI twoimo/tzudong#3317 · 39118613121
+Triggered via pull_request about 4 minutes ago
+
+JOBS
+* Ubuntu npm (ID 117651735156)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Run npm run typecheck:verify
+  ✓ Run npm run typecheck:native
+  ✓ Run npm run typecheck:compat
+  ✓ Run npm run typecheck:parity
+  * Run tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
+  * Run tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
+  * Upload npm benchmark evidence
+  * Fail closed on benchmark evidence
+  * Run npm run lint
+  * Run npm run test:unit
+  * Run npm run build
+  * Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  * Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  * Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+✓ Windows Bun in 11m26s (ID 117651736265)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Run bun install --frozen-lockfile
+  ✓ Run bun run typecheck:verify
+  ✓ Run bun run typecheck:native
+  ✓ Run bun run typecheck:compat
+  ✓ Run bun run typecheck:parity
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
+  ✓ Upload Bun benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Admin in 1m22s (ID 117651736624)
+  ✓ Set up job
+  ✓ Initialize containers
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Install backend dependencies with bounded network retry
+  ✓ Run npx eslint lib/admin-address-consistency.ts app/admin/evaluations/page.tsx components/admin/EvaluationDetailView.tsx components/admin/EvaluationTableNew.tsx tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts scripts/restaurant-refresh-cron.mjs scripts/apply-supabase-migration.mjs tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts --max-warnings=0
+  ✓ Run npx tsc --noEmit --pretty false
+  ✓ Run cd ../.. && node --test backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs backend/bin/tests/node-dependency-compatibility.test.mjs
+  ✓ Run cd ../.. && TZUYANG_LEDGER_CI_FIXTURE=1 SUPABASE_DB_HOST=localhost SUPABASE_DB_PORT=5432 SUPABASE_DB_NAME=tzudong_ci SUPABASE_DB_USER=postgres SUPABASE_DB_PASSWORD=39118613121 SUPABASE_DB_SSL=disable node backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs
+  ✓ Run bun test tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts tests-unit/mobile-desktop-parity-source.test.ts tests-unit/web-quality-performance-source.test.ts tests-unit/vercel-ignore-build.test.ts tests-unit/backend-npm-ci-retry-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Stop containers
+  ✓ Complete job
+✓ Windows npm in 10m40s (ID 117651753243)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Run npm run lint
+  ✓ Run npm run typecheck:verify
+  ✓ Run npm run typecheck:native
+  ✓ Run npm run typecheck:compat
+  ✓ Run npm run typecheck:parity
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
+  ✓ Upload npm benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Ubuntu Bun in 7m41s (ID 117651763425)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Run bun install --frozen-lockfile
+  ✓ Run bun run typecheck:verify
+  ✓ Run bun run typecheck:native
+  ✓ Run bun run typecheck:compat
+  ✓ Run bun run typecheck:parity
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
+  ✓ Upload Bun benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Install in 6m48s (ID 117651768011)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Create independent clean workspaces
+  ✓ Pin authoritative Node and npm
+  ✓ Authoritative npm clean install, Node production probes, and browser behavior
+  ✓ Supplemental Bun clean install and Node production probes
+  ✓ Upload clean-install lock evidence
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+Refreshing run status every 30 seconds. Press Ctrl+C to quit.
+
+* develop CI twoimo/tzudong#3317 · 39118613121
+Triggered via pull_request about 5 minutes ago
+
+JOBS
+* Ubuntu npm (ID 117651735156)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Run npm run typecheck:verify
+  ✓ Run npm run typecheck:native
+  ✓ Run npm run typecheck:compat
+  ✓ Run npm run typecheck:parity
+  * Run tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
+  * Run tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
+  * Upload npm benchmark evidence
+  * Fail closed on benchmark evidence
+  * Run npm run lint
+  * Run npm run test:unit
+  * Run npm run build
+  * Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  * Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  * Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+✓ Windows Bun in 11m26s (ID 117651736265)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Run bun install --frozen-lockfile
+  ✓ Run bun run typecheck:verify
+  ✓ Run bun run typecheck:native
+  ✓ Run bun run typecheck:compat
+  ✓ Run bun run typecheck:parity
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
+  ✓ Upload Bun benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Admin in 1m22s (ID 117651736624)
+  ✓ Set up job
+  ✓ Initialize containers
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Install backend dependencies with bounded network retry
+  ✓ Run npx eslint lib/admin-address-consistency.ts app/admin/evaluations/page.tsx components/admin/EvaluationDetailView.tsx components/admin/EvaluationTableNew.tsx tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts scripts/restaurant-refresh-cron.mjs scripts/apply-supabase-migration.mjs tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts --max-warnings=0
+  ✓ Run npx tsc --noEmit --pretty false
+  ✓ Run cd ../.. && node --test backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs backend/bin/tests/node-dependency-compatibility.test.mjs
+  ✓ Run cd ../.. && TZUYANG_LEDGER_CI_FIXTURE=1 SUPABASE_DB_HOST=localhost SUPABASE_DB_PORT=5432 SUPABASE_DB_NAME=tzudong_ci SUPABASE_DB_USER=postgres SUPABASE_DB_PASSWORD=39118613121 SUPABASE_DB_SSL=disable node backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs
+  ✓ Run bun test tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts tests-unit/mobile-desktop-parity-source.test.ts tests-unit/web-quality-performance-source.test.ts tests-unit/vercel-ignore-build.test.ts tests-unit/backend-npm-ci-retry-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Stop containers
+  ✓ Complete job
+✓ Windows npm in 10m40s (ID 117651753243)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Run npm run lint
+  ✓ Run npm run typecheck:verify
+  ✓ Run npm run typecheck:native
+  ✓ Run npm run typecheck:compat
+  ✓ Run npm run typecheck:parity
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
+  ✓ Upload npm benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Ubuntu Bun in 7m41s (ID 117651763425)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Run bun install --frozen-lockfile
+  ✓ Run bun run typecheck:verify
+  ✓ Run bun run typecheck:native
+  ✓ Run bun run typecheck:compat
+  ✓ Run bun run typecheck:parity
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
+  ✓ Upload Bun benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Install in 6m48s (ID 117651768011)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Create independent clean workspaces
+  ✓ Pin authoritative Node and npm
+  ✓ Authoritative npm clean install, Node production probes, and browser behavior
+  ✓ Supplemental Bun clean install and Node production probes
+  ✓ Upload clean-install lock evidence
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+Refreshing run status every 30 seconds. Press Ctrl+C to quit.
+
+* develop CI twoimo/tzudong#3317 · 39118613121
+Triggered via pull_request about 5 minutes ago
+
+JOBS
+* Ubuntu npm (ID 117651735156)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Run npm run typecheck:verify
+  ✓ Run npm run typecheck:native
+  ✓ Run npm run typecheck:compat
+  ✓ Run npm run typecheck:parity
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
+  ✓ Upload npm benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  * Run npm run lint
+  * Run npm run test:unit
+  * Run npm run build
+  * Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  * Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  * Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+✓ Windows Bun in 11m26s (ID 117651736265)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Run bun install --frozen-lockfile
+  ✓ Run bun run typecheck:verify
+  ✓ Run bun run typecheck:native
+  ✓ Run bun run typecheck:compat
+  ✓ Run bun run typecheck:parity
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
+  ✓ Upload Bun benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Admin in 1m22s (ID 117651736624)
+  ✓ Set up job
+  ✓ Initialize containers
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Install backend dependencies with bounded network retry
+  ✓ Run npx eslint lib/admin-address-consistency.ts app/admin/evaluations/page.tsx components/admin/EvaluationDetailView.tsx components/admin/EvaluationTableNew.tsx tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts scripts/restaurant-refresh-cron.mjs scripts/apply-supabase-migration.mjs tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts --max-warnings=0
+  ✓ Run npx tsc --noEmit --pretty false
+  ✓ Run cd ../.. && node --test backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs backend/bin/tests/node-dependency-compatibility.test.mjs
+  ✓ Run cd ../.. && TZUYANG_LEDGER_CI_FIXTURE=1 SUPABASE_DB_HOST=localhost SUPABASE_DB_PORT=5432 SUPABASE_DB_NAME=tzudong_ci SUPABASE_DB_USER=postgres SUPABASE_DB_PASSWORD=39118613121 SUPABASE_DB_SSL=disable node backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs
+  ✓ Run bun test tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts tests-unit/mobile-desktop-parity-source.test.ts tests-unit/web-quality-performance-source.test.ts tests-unit/vercel-ignore-build.test.ts tests-unit/backend-npm-ci-retry-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Stop containers
+  ✓ Complete job
+✓ Windows npm in 10m40s (ID 117651753243)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Run npm run lint
+  ✓ Run npm run typecheck:verify
+  ✓ Run npm run typecheck:native
+  ✓ Run npm run typecheck:compat
+  ✓ Run npm run typecheck:parity
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
+  ✓ Upload npm benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Ubuntu Bun in 7m41s (ID 117651763425)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Run bun install --frozen-lockfile
+  ✓ Run bun run typecheck:verify
+  ✓ Run bun run typecheck:native
+  ✓ Run bun run typecheck:compat
+  ✓ Run bun run typecheck:parity
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
+  ✓ Upload Bun benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Install in 6m48s (ID 117651768011)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Create independent clean workspaces
+  ✓ Pin authoritative Node and npm
+  ✓ Authoritative npm clean install, Node production probes, and browser behavior
+  ✓ Supplemental Bun clean install and Node production probes
+  ✓ Upload clean-install lock evidence
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+Refreshing run status every 30 seconds. Press Ctrl+C to quit.
+
+* develop CI twoimo/tzudong#3317 · 39118613121
+Triggered via pull_request about 6 minutes ago
+
+JOBS
+* Ubuntu npm (ID 117651735156)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Run npm run typecheck:verify
+  ✓ Run npm run typecheck:native
+  ✓ Run npm run typecheck:compat
+  ✓ Run npm run typecheck:parity
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
+  ✓ Upload npm benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  * Run npm run lint
+  * Run npm run test:unit
+  * Run npm run build
+  * Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  * Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  * Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+✓ Windows Bun in 11m26s (ID 117651736265)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Run bun install --frozen-lockfile
+  ✓ Run bun run typecheck:verify
+  ✓ Run bun run typecheck:native
+  ✓ Run bun run typecheck:compat
+  ✓ Run bun run typecheck:parity
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
+  ✓ Upload Bun benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Admin in 1m22s (ID 117651736624)
+  ✓ Set up job
+  ✓ Initialize containers
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Install backend dependencies with bounded network retry
+  ✓ Run npx eslint lib/admin-address-consistency.ts app/admin/evaluations/page.tsx components/admin/EvaluationDetailView.tsx components/admin/EvaluationTableNew.tsx tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts scripts/restaurant-refresh-cron.mjs scripts/apply-supabase-migration.mjs tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts --max-warnings=0
+  ✓ Run npx tsc --noEmit --pretty false
+  ✓ Run cd ../.. && node --test backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs backend/bin/tests/node-dependency-compatibility.test.mjs
+  ✓ Run cd ../.. && TZUYANG_LEDGER_CI_FIXTURE=1 SUPABASE_DB_HOST=localhost SUPABASE_DB_PORT=5432 SUPABASE_DB_NAME=tzudong_ci SUPABASE_DB_USER=postgres SUPABASE_DB_PASSWORD=39118613121 SUPABASE_DB_SSL=disable node backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs
+  ✓ Run bun test tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts tests-unit/mobile-desktop-parity-source.test.ts tests-unit/web-quality-performance-source.test.ts tests-unit/vercel-ignore-build.test.ts tests-unit/backend-npm-ci-retry-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Stop containers
+  ✓ Complete job
+✓ Windows npm in 10m40s (ID 117651753243)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Pin npm authority
+  ✓ Run npm ci
+  ✓ Run npm run lint
+  ✓ Run npm run typecheck:verify
+  ✓ Run npm run typecheck:native
+  ✓ Run npm run typecheck:compat
+  ✓ Run npm run typecheck:parity
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
+  ✓ Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
+  ✓ Upload npm benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Ubuntu Bun in 7m41s (ID 117651763425)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Run bun install --frozen-lockfile
+  ✓ Run bun run typecheck:verify
+  ✓ Run bun run typecheck:native
+  ✓ Run bun run typecheck:compat
+  ✓ Run bun run typecheck:parity
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
+  ✓ Run tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
+  ✓ Upload Bun benchmark evidence
+  ✓ Fail closed on benchmark evidence
+  ✓ Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job
+✓ Install in 6m48s (ID 117651768011)
+  ✓ Set up job
+  ✓ Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Create independent clean workspaces
+  ✓ Pin authoritative Node and npm
+  ✓ Authoritative npm clean install, Node production probes, and browser behavior
+  ✓ Supplemental Bun clean install and Node production probes
+  ✓ Upload clean-install lock evidence
+  ✓ Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+  ✓ Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+  ✓ Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+  ✓ Complete job

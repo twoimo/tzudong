@@ -1,0 +1,77 @@
+diff --git a/apps/web/components/restaurant/Badge3DViewer.tsx b/apps/web/components/restaurant/Badge3DViewer.tsx
+index 0c97fcb2..42c99ec0 100644
+--- a/apps/web/components/restaurant/Badge3DViewer.tsx
++++ b/apps/web/components/restaurant/Badge3DViewer.tsx
+@@ -31,7 +31,7 @@ export default function Badge3DViewer({
+ }: {
+   tier: "fire" | "rainbow";
+   onClose: () => void;
+-  lowPower?: boolean;
++  lowPower: boolean;
+ }) {
+   const rootRef = useRef<HTMLDivElement>(null);
+   const hostRef = useRef<HTMLDivElement>(null);
+diff --git a/apps/web/components/restaurant/PopularityBadge.tsx b/apps/web/components/restaurant/PopularityBadge.tsx
+index 6b7079bc..b920faf1 100644
+--- a/apps/web/components/restaurant/PopularityBadge.tsx
++++ b/apps/web/components/restaurant/PopularityBadge.tsx
+@@ -1,9 +1,10 @@
+ "use client";
+ 
+ import dynamic from "next/dynamic";
+-import { useCallback, useLayoutEffect, useRef, useState } from "react";
++import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+ 
+-import { restoreBadgeViewerFocus } from "@/lib/evidence-engineering/badge-viewer-lifecycle";
++import { useDevicePerformance } from "@/hooks/useDevicePerformance";
++import { handleBadgeViewerCloseKey, restoreBadgeViewerFocus } from "@/lib/evidence-engineering/badge-viewer-lifecycle";
+ 
+ const Badge3DViewer = dynamic(
+   () => import("./Badge3DViewer"),
+@@ -24,6 +25,25 @@ export function badgeViewerPhase(experimental3D: boolean, open: boolean): BadgeV
+   return open ? "open" : "offer";
+ }
+ 
++function StaticBadgeViewer({ tier, onClose }: { tier: "fire" | "rainbow"; onClose: () => void }) {
++  const rootRef = useRef<HTMLDivElement>(null);
++  useEffect(() => { rootRef.current?.focus(); }, []);
++  return (
++    <div
++      ref={rootRef}
++      role="dialog"
++      aria-label="3D 배지"
++      tabIndex={0}
++      data-badge-3d={tier}
++      data-badge-viewer="fallback"
++      onKeyDown={(event) => handleBadgeViewerCloseKey(event, onClose)}
++    >
++      <p>정적 배지로 표시합니다.</p>
++      <button type="button" onClick={onClose}>닫기</button>
++    </div>
++  );
++}
++
+ export function PopularityBadge({
+   tier,
+   experimental3D = false,
+@@ -31,6 +51,7 @@ export function PopularityBadge({
+   tier: "fire" | "rainbow" | "standard";
+   experimental3D?: boolean;
+ }) {
++  const { isLowEndDevice } = useDevicePerformance();
+   const [open, setOpen] = useState(false);
+   const [assetFailed, setAssetFailed] = useState(false);
+   const openerRef = useRef<HTMLButtonElement>(null);
+@@ -81,7 +102,11 @@ export function PopularityBadge({
+           3D 보기
+         </button>
+       ) : null}
+-      {phase === "open" ? <Badge3DViewer tier={tier} onClose={closeViewer} /> : null}
++      {phase === "open" ? (
++        isLowEndDevice
++          ? <StaticBadgeViewer tier={tier} onClose={closeViewer} />
++          : <Badge3DViewer tier={tier} onClose={closeViewer} lowPower={isLowEndDevice} />
++      ) : null}
+     </section>
+   );
+ }

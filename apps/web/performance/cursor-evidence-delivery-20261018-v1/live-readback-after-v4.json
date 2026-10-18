@@ -1,0 +1,223 @@
+{
+  "phase": "after",
+  "expectedSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "scope": "anonymous public production functional readback; no phone, account mutation, performance comparison or field claim",
+  "browser": "153.0.8010.12",
+  "viewports": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "sdkResponses": [
+        {
+          "host": "oapi.map.naver.com",
+          "path": "/openapi/v3/maps.js",
+          "status": 200
+        },
+        {
+          "host": "oapi.map.naver.com",
+          "path": "/openapi/v3/maps.js",
+          "status": 200
+        },
+        {
+          "host": "oapi.map.naver.com",
+          "path": "/openapi/v3/maps.js",
+          "status": 200
+        }
+      ],
+      "pageErrors": [],
+      "consoleErrorCount": 7,
+      "consoleCategories": {
+        "csp": 3,
+        "resource": 4
+      },
+      "publicLeaderboardResponses": [
+        {
+          "status": 200
+        },
+        {
+          "status": 200
+        }
+      ],
+      "flows": [
+        {
+          "name": "home-real-naver",
+          "apiAvailable": true,
+          "mapCount": 1,
+          "tileImageCount": 101
+        },
+        {
+          "name": "real-marker-detail-open-close",
+          "clusterOpens": 1,
+          "detailVisible": true,
+          "selectionUrlPresent": true,
+          "closed": true
+        },
+        {
+          "name": "/feed",
+          "mainVisible": true,
+          "headerVisible": true,
+          "headingCount": 1,
+          "documentOverflow": false
+        },
+        {
+          "name": "/stamp",
+          "mainVisible": true,
+          "headerVisible": true,
+          "headingCount": 1,
+          "documentOverflow": false
+        },
+        {
+          "name": "/leaderboard",
+          "mainVisible": true,
+          "headerVisible": true,
+          "headingCount": 1,
+          "documentOverflow": false
+        }
+      ],
+      "publicPublication": {
+        "status": 200,
+        "publicationVersion": "unpublished",
+        "count": 0
+      }
+    },
+    {
+      "viewport": {
+        "width": 834,
+        "height": 1112
+      },
+      "sdkResponses": [
+        {
+          "host": "oapi.map.naver.com",
+          "path": "/openapi/v3/maps.js",
+          "status": 200
+        }
+      ],
+      "pageErrors": [],
+      "consoleErrorCount": 2,
+      "consoleCategories": {
+        "csp": 1,
+        "resource": 1
+      },
+      "publicLeaderboardResponses": [
+        {
+          "status": 200
+        }
+      ],
+      "flows": [
+        {
+          "name": "home-real-naver",
+          "apiAvailable": true,
+          "mapCount": 1,
+          "tileImageCount": 91
+        },
+        {
+          "name": "real-marker-detail-open-close",
+          "clusterOpens": 1,
+          "detailVisible": true,
+          "selectionUrlPresent": true,
+          "closed": true
+        },
+        {
+          "name": "/feed",
+          "mainVisible": true,
+          "headerVisible": true,
+          "headingCount": 1,
+          "documentOverflow": false
+        },
+        {
+          "name": "/stamp",
+          "mainVisible": true,
+          "headerVisible": true,
+          "headingCount": 1,
+          "documentOverflow": false
+        },
+        {
+          "name": "/leaderboard",
+          "mainVisible": true,
+          "headerVisible": true,
+          "headingCount": 1,
+          "documentOverflow": false
+        }
+      ],
+      "publicPublication": {
+        "status": 200,
+        "publicationVersion": "unpublished",
+        "count": 0
+      }
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 860
+      },
+      "sdkResponses": [
+        {
+          "host": "oapi.map.naver.com",
+          "path": "/openapi/v3/maps.js",
+          "status": 200
+        }
+      ],
+      "pageErrors": [],
+      "consoleErrorCount": 2,
+      "consoleCategories": {
+        "csp": 1,
+        "resource": 1
+      },
+      "publicLeaderboardResponses": [
+        {
+          "status": 200
+        }
+      ],
+      "flows": [
+        {
+          "name": "home-real-naver",
+          "apiAvailable": true,
+          "mapCount": 1,
+          "tileImageCount": 97
+        },
+        {
+          "name": "real-marker-detail-open-close",
+          "clusterOpens": 1,
+          "detailVisible": true,
+          "selectionUrlPresent": true,
+          "closed": true
+        },
+        {
+          "name": "/feed",
+          "mainVisible": true,
+          "headerVisible": true,
+          "headingCount": 1,
+          "documentOverflow": false
+        },
+        {
+          "name": "/stamp",
+          "mainVisible": true,
+          "headerVisible": true,
+          "headingCount": 1,
+          "documentOverflow": false
+        },
+        {
+          "name": "/leaderboard",
+          "mainVisible": true,
+          "headerVisible": true,
+          "headingCount": 1,
+          "documentOverflow": false
+        }
+      ],
+      "publicPublication": {
+        "status": 200,
+        "publicationVersion": "unpublished",
+        "count": 0
+      }
+    }
+  ],
+  "health": {
+    "ok": true,
+    "gitSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+    "deploymentId": "dpl_5MdWf1WjdpgsTGWzo7SV97u7nFcn",
+    "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl"
+  },
+  "status": "passed"
+}

@@ -1,0 +1,13 @@
+{
+  "observedAt": "2026-10-18T10:25:29.060138+00:00",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "teamId": "team_OUj64KeLxJI3PkEbOaFZnorA",
+  "key": "TZUDONG_APPROVED_PRODUCTION_SHA",
+  "target": "production",
+  "value": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+  "type": "sensitive",
+  "exitCode": 0,
+  "previousValueRead": false,
+  "otherSettingsChanged": false,
+  "scope": "Existing single production deployment guard only; deployed runtime not yet verified"
+}

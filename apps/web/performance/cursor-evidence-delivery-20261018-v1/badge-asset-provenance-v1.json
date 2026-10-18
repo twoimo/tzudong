@@ -1,0 +1,125 @@
+{
+  "assets": [
+    {
+      "kind": "fire",
+      "prompt": "Use case: stylized-concept\nAsset type: Tzudong restaurant-map popularity badge source icon, designed to remain identifiable at 40 px\nScene/backdrop: genuinely transparent background outside the icon, including all four corners\nSubject: one compact premium 3D badge whose central motif is a bold flame shaped like a phoenix feather; deep red core, vivid orange flame, polished gold edges, and one small symmetrical gold mount integrated at the bottom\nStyle/medium: refined dimensional 3D icon, concise shape language, crisp silhouette, subtle bevels and controlled material highlights\nComposition/framing: exactly one centered icon on one square canvas; near-symmetrical silhouette; icon fills about 76% of the canvas with even clear padding; thick readable masses and very few interior divisions so it reads at 40 px\nLighting/mood: luminous warm fire colors with a clean gold rim and restrained internal glow; strong edge separation that stays legible on both bright and dark map UI\nColor palette: gold, deep red, vivid orange, small amber highlights\nMaterials/textures: premium polished gold and translucent enamel-like flame surfaces, clean edges\nText: none\nConstraints: actual alpha transparency outside the icon; preserve a simple compact silhouette; one icon only\nAvoid: letters, words, numbers, logos, watermark, background tile, black matte, fake checkerboard, decorative frame, extra objects, loose sparks, large floor shadow, large cast shadow, background glow panel",
+      "original": {
+        "sha256": "3646c20efea040cae16d7cdf34200a1e15c848ba6e2fb1b2d2b109ebdae8dc76"
+      },
+      "outputs": [
+        {
+          "file": "badge_popular_fire_3d.webp",
+          "sha256": "e9fa363ec77f8514852fc2b163bdaa02e9741fa441f5ebcfc2da901c2b2d61b2",
+          "bytes": 60320,
+          "dimensions": "256x256",
+          "hasAlpha": true,
+          "alphaMin": 0,
+          "alphaMax": 255,
+          "outermostBorderAlphaMin": 0,
+          "outermostBorderAlphaMax": 0,
+          "outermostBorderNonTransparentPixels": 0
+        },
+        {
+          "file": "badge_popular_fire_3d@2x.webp",
+          "sha256": "e0fbb5352bc93769a36ca11951b02c979a9f1ae8d575ccaefc046c3dd8ce1dde",
+          "bytes": 173962,
+          "dimensions": "512x512",
+          "hasAlpha": true,
+          "alphaMin": 0,
+          "alphaMax": 255,
+          "outermostBorderAlphaMin": 0,
+          "outermostBorderAlphaMax": 0,
+          "outermostBorderNonTransparentPixels": 0
+        },
+        {
+          "file": "badge_popular_fire_40.webp",
+          "bytes": 2410,
+          "sha256": "77cf5b90c7823b16ef2f11f3f1d30a4f5c45f38c662e7604848950cba7e4170d",
+          "width": 40,
+          "height": 40,
+          "hasAlpha": true,
+          "alphaMin": 0,
+          "alphaMax": 255,
+          "borderAlphaMax": 28,
+          "lossless": true
+        },
+        {
+          "file": "badge_popular_fire_80.webp",
+          "bytes": 7618,
+          "sha256": "36fca709dc18574f138ae5beeec9cec72c01030c003dc8652a809d593fc9aa65",
+          "width": 80,
+          "height": 80,
+          "hasAlpha": true,
+          "alphaMin": 0,
+          "alphaMax": 255,
+          "borderAlphaMax": 2,
+          "lossless": true
+        }
+      ]
+    },
+    {
+      "kind": "rainbow",
+      "prompt": "Use case: stylized-concept\nAsset type: Tzudong restaurant-map popularity badge source icon, designed to remain identifiable at 40 px\nScene/backdrop: genuinely transparent background outside the icon, including all four corners\nSubject: one compact premium 3D prism-and-aurora rainbow badge, with a clear faceted prism or jewel core carrying a concise spectral rainbow sweep and one small symmetrical gold mount integrated at the bottom\nStyle/medium: refined dimensional 3D icon, concise shape language, crisp silhouette, subtle bevels and controlled material highlights\nComposition/framing: exactly one centered icon on one square canvas; near-symmetrical silhouette; icon fills about 76% of the canvas with even clear padding; the same visual weight as a premium flame badge; thick readable masses and very few interior divisions so it reads at 40 px\nLighting/mood: luminous prismatic color with a clean gold rim and restrained aurora glow; strong edge separation that stays legible on both bright and dark map UI\nColor palette: balanced aurora spectrum of cyan, blue, violet, magenta, warm yellow and coral, anchored by polished gold\nMaterials/textures: premium polished gold and translucent faceted crystal/enamel surfaces, clean edges\nText: none\nConstraints: actual alpha transparency outside the icon; preserve a simple compact silhouette; one icon only\nAvoid: letters, words, numbers, logos, watermark, background tile, black matte, fake checkerboard, decorative frame, extra objects, large floor shadow, large cast shadow, background glow panel",
+      "original": {
+        "sha256": "00316fa1f3b689fdbd5928210b8da4ab7f51d5b51c9a21faea46ec1820849b29"
+      },
+      "outputs": [
+        {
+          "file": "badge_popular_rainbow_3d.webp",
+          "sha256": "b028d46241a8fd6d4ecadb0fa5ba19ff238dfad1945cad6b237b900beb718916",
+          "bytes": 55470,
+          "dimensions": "256x256",
+          "hasAlpha": true,
+          "alphaMin": 0,
+          "alphaMax": 255,
+          "outermostBorderAlphaMin": 0,
+          "outermostBorderAlphaMax": 0,
+          "outermostBorderNonTransparentPixels": 0
+        },
+        {
+          "file": "badge_popular_rainbow_3d@2x.webp",
+          "sha256": "2b92e03051d0b987214c580f025abc9c4d1e4bc758bbda3ad049ca2bc2287d6a",
+          "bytes": 178678,
+          "dimensions": "512x512",
+          "hasAlpha": true,
+          "alphaMin": 0,
+          "alphaMax": 255,
+          "outermostBorderAlphaMin": 0,
+          "outermostBorderAlphaMax": 0,
+          "outermostBorderNonTransparentPixels": 0
+        },
+        {
+          "file": "badge_popular_rainbow_40.webp",
+          "bytes": 2718,
+          "sha256": "9aa8bd618b2a1f77c6a0d8783c339ad16e46d56f65856a7c4966bb5ab0cf770d",
+          "width": 40,
+          "height": 40,
+          "hasAlpha": true,
+          "alphaMin": 0,
+          "alphaMax": 255,
+          "borderAlphaMax": 2,
+          "lossless": true
+        },
+        {
+          "file": "badge_popular_rainbow_80.webp",
+          "bytes": 8766,
+          "sha256": "92cc370f652e2d9e530c11b15bd54526e49afe0bf838773b52b6ff4afffd51b3",
+          "width": 80,
+          "height": 80,
+          "hasAlpha": true,
+          "alphaMin": 0,
+          "alphaMax": 255,
+          "borderAlphaMax": 2,
+          "lossless": true
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "conversion": "Sharp under /opt/homebrew/opt/node@24/bin/node; 256x256 and 512x512 lossless WebP with alpha preserved",
+    "visualScope": "Originals and 256px outputs inspected directly; 256px outputs composited on #f8fafc and #111827; 40px previews inspected on both backgrounds",
+    "pixelScope": "Sharp metadata, alpha channel min/max, all four corner alpha values, and every outermost border pixel checked for each original and output",
+    "hashAndSizeScope": "SHA256 and exact byte length measured from the stored original PNGs and final WebP files",
+    "displayDerivative": "Original PNG → 40/80px lossless WebP; actual CSS40px srcSet1x/2x. 256/512px masters remain downloadable only on explicit requests."
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "head": "3ea4448758e140ca4f571641f82803262e4c18db",
+  "responses": [
+    {
+      "data": {
+        "resolveReviewThread": {
+          "thread": {
+            "id": "PRRT_kwDOQGRyNc6tmZuS",
+            "isResolved": true
+          }
+        }
+      }
+    },
+    {
+      "data": {
+        "resolveReviewThread": {
+          "thread": {
+            "id": "PRRT_kwDOQGRyNc6tmZuW",
+            "isResolved": true
+          }
+        }
+      }
+    },
+    {
+      "data": {
+        "resolveReviewThread": {
+          "thread": {
+            "id": "PRRT_kwDOQGRyNc6tmZuY",
+            "isResolved": true
+          }
+        }
+      }
+    },
+    {
+      "data": {
+        "resolveReviewThread": {
+          "thread": {
+            "id": "PRRT_kwDOQGRyNc6tmZub",
+            "isResolved": true
+          }
+        }
+      }
+    },
+    {
+      "data": {
+        "resolveReviewThread": {
+          "thread": {
+            "id": "PRRT_kwDOQGRyNc6tmZuf",
+            "isResolved": true
+          }
+        }
+      }
+    },
+    {
+      "data": {
+        "resolveReviewThread": {
+          "thread": {
+            "id": "PRRT_kwDOQGRyNc6tm3lI",
+            "isResolved": true
+          }
+        }
+      }
+    },
+    {
+      "data": {
+        "resolveReviewThread": {
+          "thread": {
+            "id": "PRRT_kwDOQGRyNc6tnBxp",
+            "isResolved": true
+          }
+        }
+      }
+    },
+    {
+      "data": {
+        "resolveReviewThread": {
+          "thread": {
+            "id": "PRRT_kwDOQGRyNc6tnBxs",
+            "isResolved": true
+          }
+        }
+      }
+    },
+    {
+      "data": {
+        "resolveReviewThread": {
+          "thread": {
+            "id": "PRRT_kwDOQGRyNc6tnBxu",
+            "isResolved": true
+          }
+        }
+      }
+    }
+  ]
+}

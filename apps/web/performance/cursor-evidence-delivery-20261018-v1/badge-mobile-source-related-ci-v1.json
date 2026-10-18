@@ -1,0 +1,17 @@
+{
+  "head": "3ecf69e63365e3df5aa9d434b990e35cff1cf263",
+  "requiredSuccess": true,
+  "relevantFullCI": "Ubuntu npm/Bun, Windows npm/Bun and JS/TS CodeQL SUCCESS",
+  "unresolved": 0,
+  "knownFailures": 0,
+  "pendingOptional": [
+    "Analyze (swift)"
+  ],
+  "changedPathsSinceFullyTestedParent": [
+    "apps/web/components/restaurant/PopularityBadge.tsx",
+    "apps/web/hooks/useDevicePerformance.ts",
+    "apps/web/lib/evidence-engineering/badge-device-capability.ts",
+    "apps/web/tests-unit/badge-device-capability.test.ts"
+  ],
+  "decision": "Normal protected merge allowed after all affected checks. Unchanged Swift analysis continues; not claimed complete. Keep watching and reconcile any failure."
+}

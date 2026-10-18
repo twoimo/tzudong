@@ -1,0 +1,106 @@
+diff --git a/apps/web/lib/naver-map-marker-visuals.ts b/apps/web/lib/naver-map-marker-visuals.ts
+index edd7954a..4b2973e3 100644
+--- a/apps/web/lib/naver-map-marker-visuals.ts
++++ b/apps/web/lib/naver-map-marker-visuals.ts
+@@ -22,6 +22,7 @@ type NaverIndividualMarkerRestaurant = Partial<Pick<
+     | 'mergedTzuyangReviews'
+     | 'mergedRestaurants'
+     | 'source_type'
++    | 'popularity_tier'
+ >> & {
+     category?: string | string[] | null;
+ };
+@@ -150,6 +151,7 @@ type IndividualMarkerStamp = {
+     categories0: string;
+     category0: string;
+     source: string;
++    popularityTier: ReturnType<typeof publicPopularityTier>;
+     visual: IndividualMarkerVisual;
+ };
+ 
+@@ -168,6 +170,7 @@ function individualMarkerStampFields(restaurant: NaverIndividualMarkerRestaurant
+         categories0: Array.isArray(restaurant.categories) ? restaurant.categories[0] ?? '' : '',
+         category0: Array.isArray(restaurant.category) ? restaurant.category[0] ?? '' : restaurant.category ?? '',
+         source: restaurant.source_type ?? '',
++        popularityTier: publicPopularityTier(restaurant.popularity_tier),
+     };
+ }
+ 
+@@ -179,7 +182,8 @@ function individualStampMatches(stamp: IndividualMarkerStamp, restaurant: NaverI
+         && stamp.hasReview === (restaurant.tzuyang_review ? 1 : 0)
+         && stamp.categories0 === (Array.isArray(restaurant.categories) ? restaurant.categories[0] ?? '' : '')
+         && stamp.category0 === (Array.isArray(restaurant.category) ? restaurant.category[0] ?? '' : restaurant.category ?? '')
+-        && stamp.source === (restaurant.source_type ?? '');
++        && stamp.source === (restaurant.source_type ?? '')
++        && stamp.popularityTier === publicPopularityTier(restaurant.popularity_tier);
+ }
+ 
+ export function getNaverIndividualMarkerVisual(
+@@ -188,6 +192,7 @@ export function getNaverIndividualMarkerVisual(
+     overlayKinds: readonly RestaurantOverlayMarkerKind[] = [],
+ ) {
+     const slot = isSelected ? 'selected' : 'plain';
++    const popularityTier = publicPopularityTier(restaurant.popularity_tier);
+     const canReuseObject = overlayKinds.length === 0;
+     if (canReuseObject) {
+         const cachedStamp = individualVisualCache.get(restaurant)?.[slot];
+@@ -208,6 +213,7 @@ export function getNaverIndividualMarkerVisual(
+         Array.isArray(restaurant.categories) ? restaurant.categories[0] ?? '' : '',
+         Array.isArray(restaurant.category) ? restaurant.category[0] ?? '' : restaurant.category ?? '',
+         restaurant.source_type ?? '',
++        popularityTier,
+     ].join('|');
+     const cached = readMarkerVisualCache(cacheKey);
+     if (cached) return cached;
+@@ -233,8 +239,6 @@ export function getNaverIndividualMarkerVisual(
+     const markerHtml = markerKind !== 'category'
+         ? wrapSpecialMarkerContent(content, isSelected, markerKind)
+         : `<div data-restaurant-marker-kind="category" data-restaurant-marker-asset-version="${RESTAURANT_MARKER_ASSET_VERSION}">${content}</div>`;
+-    const popularityTier = publicPopularityTier(restaurant.popularity_tier);
+-
+     const visual = writeMarkerVisualCache(cacheKey, {
+         content: wrapMarkerWithPopularityTier(markerHtml, popularityTier),
+         anchor: isSelected ? { x: 18, y: 18 } : { x: 14, y: 14 },
+diff --git a/apps/web/tests-unit/naver-map-marker-visuals.test.ts b/apps/web/tests-unit/naver-map-marker-visuals.test.ts
+index 1b11f4d5..68bbb154 100644
+--- a/apps/web/tests-unit/naver-map-marker-visuals.test.ts
++++ b/apps/web/tests-unit/naver-map-marker-visuals.test.ts
+@@ -1,8 +1,38 @@
+ import { describe, expect, test } from 'bun:test';
+ 
+ import { getNaverIndividualMarkerVisual } from '../lib/naver-map-marker-visuals';
++import type { Restaurant } from '../types/restaurant';
+ 
+ describe('naver map marker visuals', () => {
++    test('refreshes both cached selection states when the public popularity tier changes in place', () => {
++        const restaurant: Pick<Restaurant, 'id' | 'categories' | 'popularity_tier'> = {
++            id: 'tier-mutation-marker',
++            categories: ['한식'],
++            popularity_tier: 'standard',
++        };
++        for (const tier of ['standard', 'fire', 'rainbow', null] as const) {
++            restaurant.popularity_tier = tier;
++            for (const selected of [false, true]) {
++                const visual = getNaverIndividualMarkerVisual(restaurant, selected);
++                expect(visual.content).toContain(`class="tz-popularity-marker" data-popularity-tier="${tier ?? 'standard'}"`);
++                expect(getNaverIndividualMarkerVisual(restaurant, selected)).toBe(visual);
++            }
++        }
++    });
++
++    test('keeps shared visual cache entries distinct across refreshed rows and overlay markers', () => {
++        const restaurant = { id: 'tier-refetch-marker', categories: ['분식'] };
++        for (const overlay of [[], ['trend']] as const) {
++            for (const tier of ['fire', 'rainbow', 'standard', null] as const) {
++                for (const selected of [false, true]) {
++                    const visual = getNaverIndividualMarkerVisual({ ...restaurant, popularity_tier: tier }, selected, overlay);
++                    expect(visual.content).toContain(`class="tz-popularity-marker" data-popularity-tier="${tier ?? 'standard'}"`);
++                    expect(visual.content).toContain(`data-restaurant-marker-kind="${overlay.length ? 'trend' : 'category'}"`);
++                }
++            }
++        }
++    });
++
+     test('reuses the visual for the same restaurant until a displayed field changes', () => {
+         const restaurant = { categories: ['한식'], category: [] as string[] };
+         const first = getNaverIndividualMarkerVisual(restaurant, false);

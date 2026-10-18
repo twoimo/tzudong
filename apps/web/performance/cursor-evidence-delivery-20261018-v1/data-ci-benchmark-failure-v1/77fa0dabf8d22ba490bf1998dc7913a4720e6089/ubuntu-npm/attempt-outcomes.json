@@ -1,0 +1,120 @@
+[
+  {
+    "phase": "warmup",
+    "kind": "native",
+    "retry": 1,
+    "accepted": true,
+    "durationMs": 4872.114881,
+    "rawOutput": "warmup-native.ndjson",
+    "rawSha256": "f370ccdab234a40a7eb57f04dd6445dac7a9e9e9975074daf7e8a3e59437dc5f",
+    "summary": {
+      "schemaVersion": 2,
+      "rootPid": 2696,
+      "rootStartIdentity": "16659",
+      "requestedIntervalMs": 10,
+      "maximumAllowedGapMs": 60,
+      "samples": 486,
+      "peakRssBytes": 1818415104,
+      "maximumGapMs": 22.99084999999991,
+      "terminalObserved": true,
+      "valid": true,
+      "invalidReasons": [],
+      "output": "warmup-native.ndjson"
+    },
+    "failure": null
+  },
+  {
+    "phase": "warmup",
+    "kind": "compat",
+    "retry": 1,
+    "accepted": false,
+    "rawOutput": "warmup-compat.ndjson",
+    "rawSha256": "d6875823d066ea8ed503ea056912eaa6212fb4d25a652ebb7428c796b044506d",
+    "failure": "TYPECHECK_SAMPLER_SUMMARY_INVALID",
+    "summary": {
+      "schemaVersion": 2,
+      "rootPid": 2722,
+      "rootStartIdentity": "17149",
+      "requestedIntervalMs": 10,
+      "maximumAllowedGapMs": 60,
+      "samples": 2600,
+      "peakRssBytes": 2033815552,
+      "maximumGapMs": 64.9704470000006,
+      "terminalObserved": true,
+      "valid": false,
+      "invalidReasons": [
+        "sampling-gap-exceeded"
+      ],
+      "output": "warmup-compat.ndjson"
+    }
+  },
+  {
+    "phase": "warmup",
+    "kind": "compat",
+    "retry": 2,
+    "accepted": false,
+    "rawOutput": "warmup-compat-attempt-2.ndjson",
+    "rawSha256": "039107ca5f40e3e0ae16892951ee3da47d169613ef8d7c8d1d06e0b3d646b605",
+    "failure": "TYPECHECK_SAMPLER_SUMMARY_INVALID",
+    "summary": {
+      "schemaVersion": 2,
+      "rootPid": 2746,
+      "rootStartIdentity": "19763",
+      "requestedIntervalMs": 10,
+      "maximumAllowedGapMs": 60,
+      "samples": 2505,
+      "peakRssBytes": 1848578048,
+      "maximumGapMs": 62.961996,
+      "terminalObserved": true,
+      "valid": false,
+      "invalidReasons": [
+        "sampling-gap-exceeded"
+      ],
+      "output": "warmup-compat-attempt-2.ndjson"
+    }
+  },
+  {
+    "phase": "warmup",
+    "kind": "compat",
+    "retry": 3,
+    "accepted": true,
+    "durationMs": 25411.988548,
+    "rawOutput": "warmup-compat-attempt-3.ndjson",
+    "rawSha256": "2c6817d087095addd8e73b4e56615111e561dfb65aa6408c8dcce35dcfbe8b2b",
+    "summary": {
+      "schemaVersion": 2,
+      "rootPid": 2770,
+      "rootStartIdentity": "22281",
+      "requestedIntervalMs": 10,
+      "maximumAllowedGapMs": 60,
+      "samples": 2533,
+      "peakRssBytes": 1948332032,
+      "maximumGapMs": 54.34758499999998,
+      "terminalObserved": true,
+      "valid": true,
+      "invalidReasons": [],
+      "output": "warmup-compat-attempt-3.ndjson"
+    },
+    "failure": null
+  },
+  {
+    "phase": "measured",
+    "position": 1,
+    "retry": 1,
+    "kind": "compat",
+    "accepted": false,
+    "rawOutput": "01-compat-attempt-1.ndjson",
+    "rawSha256": "c4e86d9da148a4f64829be20456ab78f7fd18e6169a9b8e1a1930687131b687e",
+    "failure": "TYPECHECK_SAMPLER_SUMMARY_INVALID"
+  },
+  {
+    "phase": "measured",
+    "position": 1,
+    "retry": 2,
+    "kind": "compat",
+    "accepted": false,
+    "rawOutput": "01-compat-attempt-2.ndjson",
+    "rawSha256": "a58c083a49ed34a6ced8f6e0e04ee1f0e9c3acdec44539f23e32f93f2f567683",
+    "failure": "TYPECHECK_SAMPLER_SUMMARY_INVALID"
+  }
+]

@@ -1,0 +1,181 @@
+{
+  "scope": "actual production React component, synthetic navigator inputs, software GL; baseline4696; no physical/field/memory/timing claim",
+  "independentProcessesPerPhase": 1,
+  "independentContextsPerPhase": 10,
+  "dependentOpensPerContext": 3,
+  "observations": [
+    {
+      "profile": "desktop-high",
+      "contextsBefore": 3,
+      "contextsAfter": 3,
+      "additionalScriptsBefore": 1,
+      "additionalScriptsAfter": 1,
+      "rafBefore": [
+        13,
+        14,
+        13
+      ],
+      "rafAfter": [
+        13,
+        14,
+        14
+      ]
+    },
+    {
+      "profile": "desktop-reduced",
+      "contextsBefore": 3,
+      "contextsAfter": 3,
+      "additionalScriptsBefore": 1,
+      "additionalScriptsAfter": 1,
+      "rafBefore": [
+        0,
+        0,
+        0
+      ],
+      "rafAfter": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "profile": "generic-ios17-cores6",
+      "contextsBefore": 3,
+      "contextsAfter": 0,
+      "additionalScriptsBefore": 1,
+      "additionalScriptsAfter": 0,
+      "rafBefore": [
+        14,
+        14,
+        14
+      ],
+      "rafAfter": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "profile": "generic-ios17-cores8",
+      "contextsBefore": 3,
+      "contextsAfter": 0,
+      "additionalScriptsBefore": 1,
+      "additionalScriptsAfter": 0,
+      "rafBefore": [
+        14,
+        14,
+        14
+      ],
+      "rafAfter": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "profile": "generic-ios18-cores6",
+      "contextsBefore": 3,
+      "contextsAfter": 0,
+      "additionalScriptsBefore": 1,
+      "additionalScriptsAfter": 0,
+      "rafBefore": [
+        13,
+        14,
+        14
+      ],
+      "rafAfter": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "profile": "generic-ios18-cores8",
+      "contextsBefore": 3,
+      "contextsAfter": 0,
+      "additionalScriptsBefore": 1,
+      "additionalScriptsAfter": 0,
+      "rafBefore": [
+        14,
+        13,
+        14
+      ],
+      "rafAfter": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "profile": "desktop-ua-touch-unknown",
+      "contextsBefore": 3,
+      "contextsAfter": 0,
+      "additionalScriptsBefore": 1,
+      "additionalScriptsAfter": 0,
+      "rafBefore": [
+        13,
+        14,
+        14
+      ],
+      "rafAfter": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "profile": "android-high",
+      "contextsBefore": 3,
+      "contextsAfter": 3,
+      "additionalScriptsBefore": 1,
+      "additionalScriptsAfter": 1,
+      "rafBefore": [
+        13,
+        14,
+        14
+      ],
+      "rafAfter": [
+        14,
+        14,
+        14
+      ]
+    },
+    {
+      "profile": "android-model-high-memory4",
+      "contextsBefore": 3,
+      "contextsAfter": 0,
+      "additionalScriptsBefore": 1,
+      "additionalScriptsAfter": 0,
+      "rafBefore": [
+        13,
+        14,
+        13
+      ],
+      "rafAfter": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "profile": "low-memory",
+      "contextsBefore": 0,
+      "contextsAfter": 0,
+      "additionalScriptsBefore": 0,
+      "additionalScriptsAfter": 0,
+      "rafBefore": [
+        0,
+        0,
+        0
+      ],
+      "rafAfter": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "tradeoff": "Unknown or mid-memory mobile/touch devices, including powerful iPhones with no deviceMemory API, receive static optional preview. Default public cohort empty. Existing global map tier/presets unchanged.",
+  "source": "https://www.w3.org/TR/device-memory/",
+  "sourceStatus": "Working Draft 2026-03-30, rounded bounded values; unknown handling is application policy"
+}

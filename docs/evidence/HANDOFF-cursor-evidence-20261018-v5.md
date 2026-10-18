@@ -1,0 +1,14 @@
+# Handoff v5 delta — continue, do not stop at CI plan
+
+Read v4 then v3 for complete delivery/runtime/project/evidence instructions. Current latest source unchanged2210f9e2d7c5800a91c798b9097fd5cf5b4b960e/tree00f9e43076e42efdd6c732a53046c54b9e0d626c, branch codex/retained-public-tier-20261018, isolated checkout /Users/twoimo/Documents/projects/tzudong-evidence-unblock. PR3312→develop is OPEN; watcher90832 still running. Last fresh state12SUCCESS,5IN_PROGRESS(Swift/4OSlanes),skip1,neutral1, no unresolvedreviews. Preserve exacthead; no source edits after commit. No production/env/DB/Storage/DNS writes.
+
+Next: finish3312CI and normalmerge develop; create new develop→dataPR (3307merged a3af881c already), finish checks/reviews and merge;3311data→mainhead updates, resolve PRRT_kwDOQGRyNc6tocJs only when fix reachesdata; wait newheadCI, normalmainmerge; exactSHAapprovedenv + onegitproductiondeploy + all actualURLreadbacks + seal/push evidence. Do not reuse3311old40green. Prior3307final43SUCCESS remains historical successfulstage.
+
+New actual history observations:
+- session59837 completed exit1. live-history-before-v1.json is strict baseline FAILURE at restored-marker, after full-page /feed navigation and back successfully reopened same detail. Runner aborts firstfailure, so only desktop attempted. Preserve.
+- session14021 completed0. Diagnostic run-live-history-readback-v2.mjs before oldlive00234a368ee64f273fb396a3eb307ad187c7fafd: all3viewports navigate/feed/back/same restaurant/detailclose pass; exactOriginalMarkerVisible=false, exactMarkerCount0, markerCount0, clusterCount16 each. Source of marker/zoom state notproved. Do not infer alias/zoom cause. v2 passed is navigation/detail only; does NOT replace or waive v1 marker criterion.
+- history-readback-scope-v1.md makes the boundary explicit. After deployment run the SAME strictv1 (preserve failure ifstilloccurs) AND diagnosticv2; report exact visibility as remaining/unproven as appropriate. Do not claim generalhistorymarker restorationfixed from thissource fix. Existingactualbaselineproblem does not disappear because a later narrowdiagnosticpasses. No sourcebroadened for this optionalprobe.
+
+Source defectfix remains concrete VMtestedsamebindings with publishedfixture: before1pass2fail → related23pass/172assertions, existinghistory/cluster16pass/77assertions, lint/TSparity/build/CSS/offlineChromium3/3(4.8s) pass. Badwrapperassertionafter-v1logretained and correctedafter-v2. Publicpublicationunpublishedempty. No realfire/rainbowactivation, field, physical or generalmemoryproof.
+
+Appattach3312cell119 now terminated withoutresult, outcomeunknown/no retry (same as3311/3309). CLI/MCPprojectcredentials unchanged. Nativegoalmgrstillpaused/unresumablebytools, no unsafeappcontrol. Onlyowneddocs/performanceuntracked. Memoryfinalcitation MEMORY.md776–784, rollout01a0d4b7-9081-7901-8a57-9b8b9bc702bf.

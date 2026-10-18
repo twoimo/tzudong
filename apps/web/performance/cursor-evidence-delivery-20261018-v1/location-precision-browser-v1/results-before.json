@@ -1,0 +1,9 @@
+{
+  "phase": "before",
+  "browser": "153.0.8010.12",
+  "source": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+  "scope": "Real compiled private capability API in Chromium/V8; clock and readiness mocked, no geolocation/permission/account/network data. One browser process/phase; four fresh contexts, three dependent mints/context. Not full product or physical/field proof.",
+  "rows": [],
+  "status": "failed",
+  "failure": "Error: expect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 1\n\n  Object {\n    \"at\": false,\n-   \"justBefore\": true,\n+   \"justBefore\": false,\n    \"rewind\": false,\n  }"
+}

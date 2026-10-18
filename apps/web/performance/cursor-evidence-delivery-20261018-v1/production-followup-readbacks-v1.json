@@ -1,0 +1,37 @@
+{
+  "gitSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "runs": [
+    {
+      "script": "run-public-alias-readback-v2.mjs",
+      "startedAt": "2026-10-18T11:31:33.439753+00:00",
+      "completedAt": "2026-10-18T11:31:34.399262+00:00",
+      "exitCode": 0
+    },
+    {
+      "script": "run-live-visual-readback-v3.mjs",
+      "startedAt": "2026-10-18T11:31:34.399337+00:00",
+      "completedAt": "2026-10-18T11:31:42.686958+00:00",
+      "exitCode": 0
+    },
+    {
+      "script": "run-privacy-gate-readback-v2.mjs",
+      "startedAt": "2026-10-18T11:31:42.687017+00:00",
+      "completedAt": "2026-10-18T11:31:43.270297+00:00",
+      "exitCode": 0
+    },
+    {
+      "script": "run-live-history-readback-v3.mjs",
+      "startedAt": "2026-10-18T11:31:43.270382+00:00",
+      "completedAt": "2026-10-18T11:32:20.693459+00:00",
+      "exitCode": 1
+    },
+    {
+      "script": "run-live-history-readback-v4.mjs",
+      "startedAt": "2026-10-18T11:32:20.693576+00:00",
+      "completedAt": "2026-10-18T11:32:39.375919+00:00",
+      "exitCode": 0
+    }
+  ],
+  "strictPredicateNotReplacedByDiagnostic": true,
+  "allPassClaimed": false
+}

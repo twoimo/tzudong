@@ -1,0 +1,12 @@
+{
+  "phase": "after",
+  "gitSha": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+  "deploymentId": "dpl_8vFh9BJnQPLE9kvvrHrdgKqE8FDE",
+  "browser": "153.0.8010.12",
+  "startedAt": "2026-10-18T10:32:55.579Z",
+  "scope": "anonymous real SDK full-navigation history restoration; no row bodies, query URLs, account mutations, device/field/performance claim",
+  "rows": [],
+  "status": "failed",
+  "failedStage": "restored-marker",
+  "completedAt": "2026-10-18T10:33:31.289Z"
+}

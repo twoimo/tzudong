@@ -1,0 +1,12 @@
+import { fileURLToPath } from 'node:url';
+import { dirname,join } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { writeFile,mkdir } from 'node:fs/promises';
+const root=dirname(fileURLToPath(import.meta.url));
+const phase=process.argv[2];if(!['before','after'].includes(phase))throw Error('INVALID_PHASE');
+const out=join(root,phase+'-build');
+await mkdir(out);
+const result=await Bun.build({entrypoints:[join(root,'harness.jsx')],outdir:out,target:'browser',format:'esm',splitting:true,minify:true,plugins:phase==='before'?[{name:'exact-baseline',setup(builder){builder.onLoad({filter:/PopularityBadge\.tsx$/},()=>({contents:execFileSync('git',['show','4696e6ee38d5bee9c4397bffcb1dcb09ac93cfcf:apps/web/components/restaurant/PopularityBadge.tsx'],{encoding:'utf8'}),loader:'tsx'}))}}]:[],define:{'process.env.NODE_ENV':'"production"'}});
+if(!result.success)throw new Error(result.logs.map(String).join('\n'));
+await writeFile(join(out,'index.html'),'<!doctype html><html lang="ko"><meta charset="utf-8"><title>Badge component verification</title><link rel="stylesheet" href="/harness.css"><div id="root"></div><script type="module" src="/harness.js"></script></html>');
+console.log(JSON.stringify({success:true,outputs:result.outputs.map(x=>({name:x.path.split('/').pop(),bytes:x.size}))}));

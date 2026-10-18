@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-18T10:52:03.881385+00:00",
+  "runId": 39118613121,
+  "attempt": 2,
+  "conclusion": "success",
+  "sameHead": "3967549ed9c6c00902e72159e4a2014f178b0def",
+  "sameTree": "77fa0dabf8d22ba490bf1998dc7913a4720e6089",
+  "originalFailureRetained": "data-ci-benchmark-failure-v1",
+  "successfulRawEvidence": "data-ci-benchmark-retry-success-v1",
+  "thresholdChanged": false,
+  "note": "Sampling validity failure and rerun success are separate evidence; no compiler speed/memory gain claim."
+}

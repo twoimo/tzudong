@@ -1,0 +1,52 @@
+2026-10-18T10:29:31.1020404Z (pass) business source relabels do not bypass the device coordinate gate [0.30ms]
+2026-10-18T10:29:31.1025153Z 252 |     const authorization = await acquireDeviceLocationUseAuthorization();
+2026-10-18T10:29:31.1026047Z 253 |     if (isPublicRestrictedMode) {
+2026-10-18T10:29:31.1026711Z 254 |       expect(authorization).toBeNull();
+2026-10-18T10:29:31.1027272Z 255 |       return;
+2026-10-18T10:29:31.1027584Z 256 |     }
+2026-10-18T10:29:31.1027893Z 257 |     expect(authorization).not.toBeNull();
+2026-10-18T10:29:31.1028345Z                                     ^
+2026-10-18T10:29:31.1028964Z error: expect(received).not.toBeNull()
+2026-10-18T10:29:31.1029329Z 
+2026-10-18T10:29:31.1029500Z Received: null
+2026-10-18T10:29:31.1029734Z 
+2026-10-18T10:29:31.1030542Z       at <anonymous> (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:257:31)
+2026-10-18T10:29:31.1032383Z       at async withReadinessResponse (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:60:18)
+2026-10-18T10:29:31.1034910Z       at async <anonymous> (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:251:9)
+2026-10-18T10:29:31.1035851Z 
+2026-10-18T10:29:31.1072810Z ##[error]Received: null
+
+      at <anonymous> (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:257:31)
+      at async withReadinessResponse (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:60:18)
+      at async <anonymous> (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:251:9)
+2026-10-18T10:29:31.1086909Z (fail) capabilities are opaque, revocable, and reject clone or relabel attempts [0.49ms]
+2026-10-18T10:29:31.1102550Z (pass) monotonic expiry cannot be revived by replaying an earlier clock value [0.92ms]
+2026-10-18T10:29:31.1103898Z 362 |       const authorization = await acquireDeviceLocationUseAuthorization();
+2026-10-18T10:29:31.1105108Z 363 |       if (isPublicRestrictedMode) {
+2026-10-18T10:29:31.1105801Z 364 |         expect(authorization).toBeNull();
+2026-10-18T10:29:31.1106394Z 365 |         return;
+2026-10-18T10:29:31.1106810Z 366 |       }
+2026-10-18T10:29:31.1107371Z 367 |       expect(authorization).not.toBeNull();
+2026-10-18T10:29:31.1107936Z                                       ^
+2026-10-18T10:29:31.1108477Z error: expect(received).not.toBeNull()
+2026-10-18T10:29:31.1108838Z 
+2026-10-18T10:29:31.1109026Z Received: null
+2026-10-18T10:29:31.1109278Z 
+2026-10-18T10:29:31.1110055Z       at <anonymous> (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:367:33)
+2026-10-18T10:29:31.1112001Z       at async <anonymous> (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:392:11)
+2026-10-18T10:29:31.1113817Z       at async withReadinessResponse (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:60:18)
+2026-10-18T10:29:31.1115866Z       at async <anonymous> (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:356:9)
+2026-10-18T10:29:31.1116738Z 
+2026-10-18T10:29:31.1123826Z ##[error]Received: null
+
+      at <anonymous> (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:367:33)
+      at async <anonymous> (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:392:11)
+      at async withReadinessResponse (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:60:18)
+      at async <anonymous> (/home/runner/work/tzudong/tzudong/apps/web/tests-unit/device-location-privacy.test.ts:356:9)
+2026-10-18T10:29:31.1128663Z (fail) tracking lifecycle revokes the genuine capability exactly once on every stop path [0.99ms]
+2026-10-18T10:29:31.1129544Z (pass) home client revokes retained capabilities on readiness failure, lifecycle cleanup, and errors [0.19ms]
+2026-10-18T10:29:31.1130406Z (pass) home client keeps the capability boundary before disclosure and confines rendering to Naver [0.31ms]
+2026-10-18T10:29:31.1130843Z 
+2026-10-18T10:29:31.1131119Z ##[endgroup]
+2026-10-18T10:29:31.1131251Z 
+2026-10-18T10:29:31.1131575Z ##[group]tests-unit/naver-map-viewport-helpers.test.ts:

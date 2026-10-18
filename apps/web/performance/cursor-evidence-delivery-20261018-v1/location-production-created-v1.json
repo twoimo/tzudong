@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-18T11:25:14.024Z",
+  "id": "dpl_5MdWf1WjdpgsTGWzo7SV97u7nFcn",
+  "url": "tzudong-gfa0qdb3c-twoimos-projects.vercel.app",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "state": "INITIALIZING",
+  "target": "production",
+  "gitSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "gitRef": "main",
+  "manualCreateCount": 1,
+  "method": "GitHub exact protected main; no local upload/forceNew/settings override"
+}

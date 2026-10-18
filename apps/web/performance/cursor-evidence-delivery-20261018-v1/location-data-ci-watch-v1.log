@@ -1,0 +1,832 @@
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Release	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Vercel	pending	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Vercel is deploying your app
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (go)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594268	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Release	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Vercel	pending	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Vercel is deploying your app
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (javascript-typescript)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (rust)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594268	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Release	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Vercel	pending	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Vercel is deploying your app
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Analyze (javascript-typescript)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Analyze (rust)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Vercel	pending	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Vercel is deploying your app
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Analyze (rust)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594268	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Vercel	pending	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Vercel is deploying your app
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Analyze (rust)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594268	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Vercel	pending	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Vercel is deploying your app
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Install	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Ubuntu Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows Bun	pass	10m7s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows Bun	pass	10m7s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows Bun	pass	10m7s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Ubuntu npm	pass	11m16s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows Bun	pass	10m7s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Ubuntu npm	pass	11m16s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Windows Bun	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows Bun	pass	10m7s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Windows Bun	pass	12m44s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Ubuntu npm	pass	11m16s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Windows Bun	pass	10m7s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Windows Bun	pass	12m44s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Ubuntu npm	pass	11m16s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Windows Bun	pass	10m7s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Windows Bun	pass	12m44s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Ubuntu npm	pass	11m16s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Analyze (swift)	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Windows Bun	pass	10m7s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Analyze (swift)	pass	13m51s	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Windows npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Ubuntu npm	pass	11m16s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Windows npm	pass	13m51s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows Bun	pass	12m44s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Windows Bun	pass	10m7s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Refreshing checks status every 30 seconds. Press Ctrl+C to quit.
+
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Analyze (swift)	pass	13m51s	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Ubuntu npm	pass	11m16s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Windows Bun	pass	10m7s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pass	12m44s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pass	13m51s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pass	14m34s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+Ubuntu npm	pending	0	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Analyze (swift)	pass	13m51s	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Ubuntu npm	pass	14m56s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pass	11m16s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Windows Bun	pass	10m7s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pass	12m44s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pass	13m51s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pass	14m34s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed
+Admin	pass	1m33s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584827	
+Admin	pass	1m37s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658596950	
+Analyze (actions)	pass	48s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594400	
+Analyze (go)	pass	1m25s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594362	
+Analyze (javascript-typescript)	pass	2m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594332	
+Analyze (python)	pass	1m11s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594330	
+Analyze (rust)	pass	3m7s	https://github.com/twoimo/tzudong/actions/runs/39121753612/job/117658594349	
+Analyze (swift)	pass	13m51s	https://github.com/twoimo/tzudong/actions/runs/39121750741/job/117658586213	
+GitGuardian Security Checks	pass	10s	https://dashboard.gitguardian.com	
+Install	pass	5m13s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584815	
+Install	pass	6m43s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597083	
+Promotion Path	pass	12s	https://github.com/twoimo/tzudong/actions/runs/39121755241/job/117658597137	
+Release	pass	1m57s	https://github.com/twoimo/tzudong/actions/runs/39121750979/job/117658584714	
+Release	pass	1m56s	https://github.com/twoimo/tzudong/actions/runs/39121755253/job/117658596920	
+Ubuntu Bun	pass	8m45s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584639	
+Ubuntu Bun	pass	5m8s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597344	
+Ubuntu npm	pass	14m56s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584793	
+Ubuntu npm	pass	11m16s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597126	
+Vercel Preview Comments	pass	0	https://vercel.com/github	
+Windows Bun	pass	10m7s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584807	
+Windows Bun	pass	12m44s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597180	
+Windows npm	pass	13m51s	https://github.com/twoimo/tzudong/actions/runs/39121750955/job/117658584859	
+Windows npm	pass	14m34s	https://github.com/twoimo/tzudong/actions/runs/39121755248/job/117658597014	
+CodeQL	skipping	2s	https://github.com/twoimo/tzudong/runs/117658730755	
+Vercel	pass	0	https://vercel.com/twoimos-projects/tzudong/CHcUSmPMjL7Tc4DnZvGojWXmFagk	Deployment has completed

@@ -1,0 +1,141 @@
+{
+  "phase": "after",
+  "browser": "153.0.8010.12",
+  "source": "9228c1454393560bcd37240f793065e450f85683",
+  "scope": "Real compiled private capability API in Chromium/V8; clock and readiness mocked, no geolocation/permission/account/network data. One browser process/phase; four fresh contexts, three dependent mints/context. Not full product or physical/field proof.",
+  "rows": [
+    {
+      "syntheticTime": 1000,
+      "trials": [
+        {
+          "minted": true,
+          "forgedCloneAllowed": false,
+          "boundary": {
+            "justBefore": true,
+            "at": false,
+            "rewind": false
+          }
+        },
+        {
+          "minted": true,
+          "forgedCloneAllowed": false,
+          "boundary": {
+            "justBefore": true,
+            "at": false,
+            "rewind": false
+          }
+        },
+        {
+          "minted": true,
+          "forgedCloneAllowed": false,
+          "boundary": {
+            "justBefore": true,
+            "at": false,
+            "rewind": false
+          }
+        }
+      ],
+      "pageErrors": 0
+    },
+    {
+      "syntheticTime": 262144.02702702704,
+      "trials": [
+        {
+          "minted": true,
+          "forgedCloneAllowed": false,
+          "boundary": {
+            "justBefore": true,
+            "at": false,
+            "rewind": false
+          }
+        },
+        {
+          "minted": true,
+          "forgedCloneAllowed": false,
+          "boundary": {
+            "justBefore": true,
+            "at": false,
+            "rewind": false
+          }
+        },
+        {
+          "minted": true,
+          "forgedCloneAllowed": false,
+          "boundary": {
+            "justBefore": true,
+            "at": false,
+            "rewind": false
+          }
+        }
+      ],
+      "pageErrors": 0
+    },
+    {
+      "syntheticTime": 262144.1081081081,
+      "trials": [
+        {
+          "minted": true,
+          "forgedCloneAllowed": false,
+          "boundary": {
+            "justBefore": true,
+            "at": false,
+            "rewind": false
+          }
+        },
+        {
+          "minted": true,
+          "forgedCloneAllowed": false,
+          "boundary": {
+            "justBefore": true,
+            "at": false,
+            "rewind": false
+          }
+        },
+        {
+          "minted": true,
+          "forgedCloneAllowed": false,
+          "boundary": {
+            "justBefore": true,
+            "at": false,
+            "rewind": false
+          }
+        }
+      ],
+      "pageErrors": 0
+    },
+    {
+      "syntheticTime": 262144.1621621622,
+      "trials": [
+        {
+          "minted": true,
+          "forgedCloneAllowed": false,
+          "boundary": {
+            "justBefore": true,
+            "at": false,
+            "rewind": false
+          }
+        },
+        {
+          "minted": true,
+          "forgedCloneAllowed": false,
+          "boundary": {
+            "justBefore": true,
+            "at": false,
+            "rewind": false
+          }
+        },
+        {
+          "minted": true,
+          "forgedCloneAllowed": false,
+          "boundary": {
+            "justBefore": true,
+            "at": false,
+            "rewind": false
+          }
+        }
+      ],
+      "pageErrors": 0
+    }
+  ],
+  "status": "passed"
+}

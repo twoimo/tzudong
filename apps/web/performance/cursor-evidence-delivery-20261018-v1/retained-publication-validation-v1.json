@@ -1,0 +1,35 @@
+{
+  "sourceHead": "2210f9e2d7c5800a91c798b9097fd5cf5b4b960e",
+  "baselineSource": "7b042c43b91c5abbea9faabd737e754a3b8ffa2d",
+  "before": {
+    "pass": 1,
+    "fail": 2,
+    "assertionsBeforeEarlyExit": 7
+  },
+  "afterFocused": {
+    "pass": 23,
+    "fail": 0,
+    "assertions": 172
+  },
+  "relatedExisting": {
+    "pass": 16,
+    "fail": 0,
+    "assertions": 77
+  },
+  "lint": "passed",
+  "parity": "passed; diagnostics0, logicalInputs3181",
+  "productionBuild": {
+    "dist": ".next-retained-publication-20261018-v1",
+    "status": "passed",
+    "routeCss": "passed"
+  },
+  "offlineProductionBrowser": {
+    "passed": 3,
+    "failed": 0,
+    "seconds": 4.8
+  },
+  "testLimit": "actual component bindings executed in VM; not whole component mount/real SDK tier activation",
+  "productionMutationPerformed": false,
+  "mainBlockedThread": "PRRT_kwDOQGRyNc6tocJs",
+  "incorrectAfterAssertionRetained": "retained-publication-after-v1.log checks attribute absence although standard wrapper is intentional; corrected exact wrapper assertion in after-v2; before failures occur earlier on actual tier mismatch"
+}

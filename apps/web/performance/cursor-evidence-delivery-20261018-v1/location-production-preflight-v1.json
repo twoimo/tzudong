@@ -1,0 +1,40 @@
+{
+  "observedAt": "2026-10-18T11:23:06.772279+00:00",
+  "mainSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "sourceTree": "d0cee44ace30d3a337b0fd8077032ed099cfb567",
+  "project": {
+    "id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "teamId": "team_OUj64KeLxJI3PkEbOaFZnorA",
+    "name": "tzudong",
+    "rootDirectory": "apps/web",
+    "nodeVersion": "24.x",
+    "git": {
+      "type": "github",
+      "repoId": 1080324661,
+      "org": "twoimo",
+      "repo": "tzudong",
+      "productionBranch": "main"
+    }
+  },
+  "live": {
+    "ok": true,
+    "gitSha": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+    "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "deploymentId": "dpl_8vFh9BJnQPLE9kvvrHrdgKqE8FDE"
+  },
+  "currentReadyDeployment": {
+    "id": "dpl_8vFh9BJnQPLE9kvvrHrdgKqE8FDE",
+    "url": "tzudong-9p964kzxn-twoimos-projects.vercel.app",
+    "sha": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+    "aliases": [
+      "www.tzudong.app",
+      "internal.tzudong.app",
+      "tzudong.app",
+      "tzudong-twoimos-projects.vercel.app",
+      "tzudong-git-main-twoimos-projects.vercel.app"
+    ]
+  },
+  "needsDeployment": true,
+  "previousApprovedShaValueRead": false,
+  "mutationPerformed": false
+}

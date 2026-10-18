@@ -1,0 +1,8 @@
+{
+  "attempt": "run-production-preflight-v2.py",
+  "protectedMainSha": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+  "projectAndGitIdentity": "passed before public health step",
+  "failure": "Python urllib public health GET returned HTTP403",
+  "mutationPerformed": false,
+  "resolution": "Inspect bounded response metadata and use the same legitimate Node/browser transport as retained public baseline; do not weaken WAF or deployment protection."
+}

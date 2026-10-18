@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "status": "failed",
+  "failureStage": "SAMPLES",
+  "failureCode": "TYPECHECK_BENCHMARK_SAMPLES",
+  "sampler": {
+    "code": null,
+    "signal": null,
+    "errorCode": null,
+    "summaryPresent": false,
+    "invalidReasons": [],
+    "samples": null,
+    "maximumGapMs": null,
+    "maximumHostPressurePercent": null,
+    "evidenceTimeout": null
+  },
+  "lastFailure": {
+    "position": 1,
+    "retry": 2,
+    "kind": "compat",
+    "failureCode": "TYPECHECK_SAMPLER_SUMMARY_INVALID",
+    "sampler": {
+      "code": 1,
+      "signal": null,
+      "errorCode": null,
+      "summaryPresent": true,
+      "invalidReasons": [
+        "sampling-gap-exceeded"
+      ],
+      "samples": 2576,
+      "maximumGapMs": 73.32713499999954,
+      "maximumHostPressurePercent": 19.207071791673172,
+      "evidenceTimeout": null
+    }
+  }
+}

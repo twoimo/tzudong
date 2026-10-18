@@ -1,0 +1,237 @@
+{
+  "sourceHead": "9a63f25f2f3884c2062fde6f22cacfb4f352078c",
+  "sourceTree": "f05fd25b3af24c22513efb2f0be7db4c7cbb5e16",
+  "scope": "retained-map projection plus preserved visibility test contract; production pending",
+  "changedFiles": [
+    {
+      "path": ".github/supabase-migration-release-manifest.v1.json",
+      "bytes": 15426,
+      "sha256": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d"
+    },
+    {
+      "path": ".github/workflows/supabase-migration-apply.yml",
+      "bytes": 7313,
+      "sha256": "2a3b9da3bb069c726539c9d00cc2b7a63dfcc004782c7be2cc6c30bdd8caa9aa"
+    },
+    {
+      "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+      "bytes": 168157,
+      "sha256": "fe557f88c825c7965a98c8954babeff492bc8594bf5188439f5f58532c681ef2"
+    },
+    {
+      "path": "TASKS.md",
+      "bytes": 23120,
+      "sha256": "7a0eb9a5bccbde332d60aa05d91fe2ca4fc44a19f047c4794726a3f28c96e219"
+    },
+    {
+      "path": "apps/web/app/api/public-popularity/route.ts",
+      "bytes": 559,
+      "sha256": "dbebbbb737f20f45a08ae774a67492fa772100ffb5cd3237f6942a9f84e9ee48"
+    },
+    {
+      "path": "apps/web/bun.lock",
+      "bytes": 248069,
+      "sha256": "c96d9c1aaba76267908d38c364d3233f2869741a5ca83e3be65166f96bc6e52c"
+    },
+    {
+      "path": "apps/web/components/map/NaverMapView.tsx",
+      "bytes": 172208,
+      "sha256": "8070b6afa230a1ab368c6e479275b7d4278ce52ff47c99f7445fb55068bd5477"
+    },
+    {
+      "path": "apps/web/components/restaurant/Badge3DViewer.tsx",
+      "bytes": 5474,
+      "sha256": "6938c1bd3cf0e0943c8b7892d72f24a1dc432782678c7ec59f012943992e6843"
+    },
+    {
+      "path": "apps/web/components/restaurant/PopularityBadge.tsx",
+      "bytes": 3111,
+      "sha256": "aa169db7c478cf9cd2cec51ce73242494c256a8494fb79370332b376f6724a1a"
+    },
+    {
+      "path": "apps/web/components/restaurant/RestaurantDetailPanel.tsx",
+      "bytes": 83937,
+      "sha256": "ac5df764f020d796b9933ea7443701854aed4946180ab1e8df989b430f66c62e"
+    },
+    {
+      "path": "apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx",
+      "bytes": 3498,
+      "sha256": "59b273e6373133a154abbce3c3a9d4858bab280dffcbc4fe2b332a81edf3b1e3"
+    },
+    {
+      "path": "apps/web/hooks/use-restaurant-detail.tsx",
+      "bytes": 3810,
+      "sha256": "bb4ac1e5149994d66ed571a056ac6481e4a6317f1b75e44db5339daac5306db2"
+    },
+    {
+      "path": "apps/web/hooks/use-restaurants.tsx",
+      "bytes": 30154,
+      "sha256": "2313e3e7f76ad9e3137bd75aac525238809c3ffa120c36e55d856dddf396b1a7"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/badge-viewer-lifecycle.ts",
+      "bytes": 3306,
+      "sha256": "b470fe9fb3c3a8c9984cc075f3be1004f394c6732872b6c6b94e67310372dfd0"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/popularity-marker.ts",
+      "bytes": 1668,
+      "sha256": "4eff963802dad9d04b1f6b0491e99e39e009306babb31319f997e3c520e85d62"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/public-popularity-publication.json",
+      "bytes": 107,
+      "sha256": "151068c4eedf1d96a0bb054d11359bfcbf025761cca9402745a7a948bef22920"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/published-popularity.ts",
+      "bytes": 5668,
+      "sha256": "dc0f23601be9fa4da874fce329d8b7ae2724a6738551633201d5db8c61b9df4b"
+    },
+    {
+      "path": "apps/web/lib/naver-map-marker-visuals.ts",
+      "bytes": 9365,
+      "sha256": "6b73821b062691fc9d1139448bca5ff7c690379e1ba9e50322f8b7c3a9ac83b8"
+    },
+    {
+      "path": "apps/web/lib/restaurant-marker-kind.ts",
+      "bytes": 2454,
+      "sha256": "9b24ad33c226721584205536961a0285177ea9e515a6c9c5e0a06e6abaf9e90d"
+    },
+    {
+      "path": "apps/web/package-lock.json",
+      "bytes": 503476,
+      "sha256": "870ba5b2b6c292c906b4c558f97b892fda3f95f8ac55bea0fbc2a1fed300dea4"
+    },
+    {
+      "path": "apps/web/package.json",
+      "bytes": 7698,
+      "sha256": "407643e76fdcd7646d2caa77095a74b851ba694ad8ed8c488271b703fca0f285"
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_fire_3d.webp",
+      "bytes": 60320,
+      "sha256": "e9fa363ec77f8514852fc2b163bdaa02e9741fa441f5ebcfc2da901c2b2d61b2"
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_fire_3d@2x.webp",
+      "bytes": 173962,
+      "sha256": "e0fbb5352bc93769a36ca11951b02c979a9f1ae8d575ccaefc046c3dd8ce1dde"
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_fire_40.webp",
+      "bytes": 2410,
+      "sha256": "77cf5b90c7823b16ef2f11f3f1d30a4f5c45f38c662e7604848950cba7e4170d"
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_fire_80.webp",
+      "bytes": 7618,
+      "sha256": "36fca709dc18574f138ae5beeec9cec72c01030c003dc8652a809d593fc9aa65"
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_rainbow_3d.webp",
+      "bytes": 55470,
+      "sha256": "b028d46241a8fd6d4ecadb0fa5ba19ff238dfad1945cad6b237b900beb718916"
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_rainbow_3d@2x.webp",
+      "bytes": 178678,
+      "sha256": "2b92e03051d0b987214c580f025abc9c4d1e4bc758bbda3ad049ca2bc2287d6a"
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_rainbow_40.webp",
+      "bytes": 2718,
+      "sha256": "9aa8bd618b2a1f77c6a0d8783c339ad16e46d56f65856a7c4966bb5ab0cf770d"
+    },
+    {
+      "path": "apps/web/public/assets/badges/badge_popular_rainbow_80.webp",
+      "bytes": 8766,
+      "sha256": "92cc370f652e2d9e530c11b15bd54526e49afe0bf838773b52b6ff4afffd51b3"
+    },
+    {
+      "path": "apps/web/tests-unit/badge-ui-lifecycle.test.ts",
+      "bytes": 5866,
+      "sha256": "ad7d985682fcc893ed3f82a41fd5f41fca85ed7ab824463fa00496d0df6e7d5a"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-engineering-remaining.test.ts",
+      "bytes": 18976,
+      "sha256": "4d462aee0a5f5c208bc5cc121752ef62781ac7043e6d221a13f4be90145d6c52"
+    },
+    {
+      "path": "apps/web/tests-unit/naver-map-marker-visuals.test.ts",
+      "bytes": 6406,
+      "sha256": "0a99f600f7ba9b3e7bacf8b8b582f2ed8dcbd2f57ba5012b8a73334993d6bf0e"
+    },
+    {
+      "path": "apps/web/tests-unit/naver-retained-publication.test.ts",
+      "bytes": 5193,
+      "sha256": "d16db63f0b42e701d7376ddcc4e2e190753e0746e7d8ac2ad11e92bb79632b79"
+    },
+    {
+      "path": "apps/web/tests-unit/production-workflow-trust.test.ts",
+      "bytes": 6594,
+      "sha256": "9c8ec1d68e3d4a4c30197edafe0a20dac90db7ebecb41dc1830fea668beb2cf8"
+    },
+    {
+      "path": "apps/web/tests-unit/public-popularity-publication.test.ts",
+      "bytes": 13771,
+      "sha256": "0c1b71618aa62b4eb5beea2ad5b11abadbc91e829e9bd208499c6e23cd6bda00"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-migration-apply-source.test.ts",
+      "bytes": 15926,
+      "sha256": "07e2f1c33037c5888dabce1517b291222661593d10a34695437578dc060f13b3"
+    },
+    {
+      "path": "apps/web/tests-unit/use-restaurants-merge.test.ts",
+      "bytes": 30621,
+      "sha256": "a35af34b6baeef658f214c8f2d2f81eb870037f49897faed1d2bba84ada70814"
+    },
+    {
+      "path": "apps/web/tests-unit/user-submitted-marker-visibility.test.ts",
+      "bytes": 5185,
+      "sha256": "da05ee2f521cfa6bf944ec5855a02b6921605f07be52c07321074e34627ad3f7"
+    },
+    {
+      "path": "apps/web/types/restaurant.ts",
+      "bytes": 3932,
+      "sha256": "cd932ed70b5166367320f4d73bfd9f89dd062ec66e47f344793e52c2b475a5ba"
+    },
+    {
+      "path": "apps/web/types/three.d.ts",
+      "bytes": 1784,
+      "sha256": "a44ee2cd369612f5160db8a7343c34c75f5b9042027deb86784abb0bf9567054"
+    },
+    {
+      "path": "backend/bin/tests/test_check_layout_manifest_unittest.py",
+      "bytes": 19212,
+      "sha256": "bce41c62233c647116dc8428be96866721327ef0748713d325e2cf9d2a8db7ae"
+    },
+    {
+      "path": "backend/layout-manifest.v1.json",
+      "bytes": 19534,
+      "sha256": "f309ee02a5807cbb4ca91d2596f6ab3b8de2451dd29f79b284389b4bbffefca7"
+    },
+    {
+      "path": "backend/supabase/tests/test_g037_core_workflow_guards.py",
+      "bytes": 9157,
+      "sha256": "8d49fa9356507807ddab51b7690fc2ae634b04a0c391e835bfbde220f796c22b"
+    },
+    {
+      "path": "backend/utils/tests/test_layout_naming_source_recovery.py",
+      "bytes": 4845,
+      "sha256": "191cc5227dd43a85b6909abe08275bed8d80b8b2ae90dad05b77c33d46f0fd1e"
+    },
+    {
+      "path": "docs/evidence-engineering/rendering-and-persistence.md",
+      "bytes": 9274,
+      "sha256": "eee26ddb2be3bd98fb3a10cddac0451b22357605eb8f7989996c6dd503b09138"
+    },
+    {
+      "path": "docs/evidence/CURSOR-EVIDENCE-GOAL-20261018.md",
+      "bytes": 10994,
+      "sha256": "0bfa82239b160201d80a7e6954579643fecf241c80b36aa062947d68183bfeea"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "commit": "1d7ed099f5a3dea2717cecef7c8ed79ff74e53e0",
+  "files": [
+    {
+      "source": "apps/web/components/restaurant/Badge3DViewer.tsx",
+      "sha256": "2e5f757b048e2469f75851cdedbac37a7d7d6d6927ed31889e45f300934af5a4"
+    },
+    {
+      "source": "apps/web/components/restaurant/PopularityBadge.tsx",
+      "sha256": "322b8e5e99043aea02de3eadb272b0cdb88782bea1d5d8a38e6ed8bcebab712e"
+    }
+  ],
+  "scope": "unchanged historical UI source, same browser and synthetic tier; generated shared image fixtures; not deployed baseline or UI performance benchmark"
+}

@@ -1,0 +1,105 @@
+{
+  "createdAt": "2026-10-18T11:30:57.637885+00:00",
+  "scope": "Local adjudication of completed ChatGPT thesis only, not Gemini antithesis or reverse-audit consensus",
+  "externalReportSha256": "c8b70ca937c33214dae131f269986462f249d9cf63500a1c196cb0863d22b838",
+  "rows": [
+    {
+      "finding": "W001-F1",
+      "decision": "ACCEPT",
+      "claim": "수학적 exact300000msとは異なる binary64 deadline; terminology bounded",
+      "reason": "Stored sum equality preserves existing stored deadline, not real-number exact duration.",
+      "evidence": "thesis-clock-boundaries-observed-v1.json",
+      "action": "Report wording clarified; no source/policy change."
+    },
+    {
+      "finding": "W001-F2",
+      "decision": "ACCEPT",
+      "claim": "Intra-window nonconforming clock decrease not tracked",
+      "reason": "Actual private API under synthetic1000→2000→1500 allows all; exact expiry301000 deletes; rewind1500 then denies. Conforming captured performance.now is trusted monotonic primitive.",
+      "evidence": "thesis-clock-boundaries-observed-v1.json",
+      "action": "Reject generic rewind-proof claim; do not add unrequested mutable state."
+    },
+    {
+      "finding": "W001-origin-expiry",
+      "decision": "ACCEPT",
+      "claim": "WeakMap identity/revoke/stored expiry checks are source-observed",
+      "reason": "Existing actual API unit and browser fixtures cover clone/revoke/expiry-observed replay; external report did not receive raw fixture data.",
+      "evidence": "../location-precision-browser-comparison-v1.json",
+      "action": "Keep functional evidence scope synthetic clock/readiness."
+    },
+    {
+      "finding": "W002-F1",
+      "decision": "CONDITIONAL",
+      "claim": "Static source branch versus runtime reduction",
+      "reason": "Local retained actual component results use synthetic navigator/softwareGL. They establish component instrumentation counts only; external9-source audit has not independently verified raw runs.",
+      "evidence": "../badge-mobile-comparison-v1.json",
+      "action": "No whole product/process-memory/physical/field gain claim."
+    },
+    {
+      "finding": "W002-F2",
+      "decision": "ACCEPT",
+      "claim": "deviceMemory is coarse signal",
+      "reason": "Threshold6 is not a physical6GiB detector and hardwareConcurrency need not equal physical cores.",
+      "evidence": "chatgpt-thesis-citation-urls-v1.json",
+      "action": "Retain explicit heuristic/trade-off in report; global hook not redesigned."
+    },
+    {
+      "finding": "W002-F3",
+      "decision": "ACCEPT",
+      "claim": "Powerful unsupported-API mobile can be static",
+      "reason": "Intentional conservative optional viewer policy; default experimental3D remains false.",
+      "evidence": "../REPRODUCE-mobile-capability-v1.md",
+      "action": "Disclose functional trade-off."
+    },
+    {
+      "finding": "W002-F4",
+      "decision": "ACCEPT",
+      "claim": "OS→model inference remains globally",
+      "reason": "Patch scopes optional badge caller; no accurate physical-model or global-map-tier claim.",
+      "evidence": "../delivery-source-manifest-v7.json",
+      "action": "Existing limitation remains."
+    },
+    {
+      "finding": "W002-F5",
+      "decision": "DEFER",
+      "claim": "In-flight dynamic chunk is not cancellable by unmount",
+      "reason": "Static path avoided; already-started module fetch and effect teardown differ. No physical/process-memory or full Next production import-race proof in submitted9-source bundle.",
+      "evidence": "chatgpt_6_pro_thesis_full_report.md",
+      "action": "Keep optional3D default off; do not claim cancellation or leak resolution."
+    },
+    {
+      "finding": "W002-F6",
+      "decision": "DEFER",
+      "claim": "Submitted source dependency closure incomplete",
+      "reason": "badge-viewer-session/site-config/actual home consumer outside submitted9files. Local source exists but was not externally audited.",
+      "evidence": "source-index.json",
+      "action": "External session semantics remain unverified, no full boundary certification."
+    },
+    {
+      "finding": "W003-release",
+      "decision": "CONDITIONAL",
+      "claim": "Old production evidence cannot prove new candidate",
+      "reason": "Thesis snapshot correctly says9228 not yet deployed. New protected b4 tree d0/READY deployment has separate fresh operating receipts; complete-set/remote seal still pending.",
+      "evidence": "../location-production-ready-v1.json",
+      "action": "Bind exact new source→CI→main→READY→alias→live→remote bytes; preserve old snapshots."
+    },
+    {
+      "finding": "W003-strict-history-console",
+      "decision": "ACCEPT",
+      "claim": "Strict failure and diagnostic pass differ",
+      "reason": "Strict marker visibility and CSP/401 remain separately recorded, no all-error-free assertion.",
+      "evidence": "../production-verification-plan-v4.json",
+      "action": "Never replace original predicate by diagnostic success."
+    },
+    {
+      "finding": "W003-field-physical",
+      "decision": "DEFER",
+      "claim": "No field/physical/legal inference",
+      "reason": "Phone-free instruction; original memory guard unresolved; no complete flicker or field metric sample in this release packet.",
+      "evidence": "../REPRODUCE.md",
+      "action": "Broader original goal remains incomplete."
+    }
+  ],
+  "geminiComplete": false,
+  "reverseComplete": false
+}

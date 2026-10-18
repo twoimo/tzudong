@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-18T10:35:00.166608+00:00",
+  "gitSha": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+  "initialV1Capture": "Tile images alone were ready; screenshot still showed expected pin-placement loading and no markers. Preserved; not accepted as settled visual proof.",
+  "correctedV2Predicate": "tile images and at least one real marker/cluster; pin-placement loading absent, no arbitrary delay",
+  "inspected": [
+    "live-map-1440x900-v2.png",
+    "live-map-834x1112-v2.png",
+    "live-map-430x860-v2.png"
+  ],
+  "scope": "Three settled public-map crops, actually inspected; not full-page, video, high-frequency flicker, physical-device or field proof"
+}

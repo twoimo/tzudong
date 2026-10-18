@@ -1,0 +1,24 @@
+import ts from 'typescript';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+const root=dirname(fileURLToPath(import.meta.url)),web=resolve(root,'../..');
+const parent=resolve(web,'components/restaurant/PopularityBadge.tsx'),viewer=resolve(web,'components/restaurant/Badge3DViewer.tsx');
+const source=readFileSync(parent,'utf8'),currentViewer=readFileSync(viewer,'utf8');
+if((source.match(/ lowPower=\{isLowEndDevice\}/g)||[]).length!==1)throw Error('CALLER_TARGET_CHANGED');
+const missing=source.replace(' lowPower={isLowEndDevice}','');
+const old=execFileSync('git',['show','e145623bc0878db7a2f106702cc99fd9e42b413b:apps/web/components/restaurant/Badge3DViewer.tsx'],{cwd:web,encoding:'utf8'});
+const config=ts.readConfigFile(resolve(web,'tsconfig.json'),ts.sys.readFile);if(config.error)throw Error('CONFIG_READ_FAILED');
+const parsed=ts.parseJsonConfigFileContent(config.config,ts.sys,web);
+const options={...parsed.options,noEmit:true,incremental:false};
+function check(parentSource,viewerSource){const host=ts.createCompilerHost(options),original=host.getSourceFile.bind(host);host.getCurrentDirectory=()=>web;
+ host.getSourceFile=(path,language,onError,createNew)=>{const name=resolve(path);if(name===parent||name===viewer)return ts.createSourceFile(path,name===parent?parentSource:viewerSource,language,true,ts.ScriptKind.TSX);return original(path,language,onError,createNew)};
+ return ts.getPreEmitDiagnostics(ts.createProgram([parent,...parsed.fileNames.filter(p=>p.endsWith('.d.ts'))],options,host));
+}
+const before=check(missing,old),afterMissing=check(missing,currentViewer),afterActual=check(source,currentViewer);
+if(before.length!==0||afterActual.length!==0||afterMissing.length!==1||afterMissing[0].code!==2769||!ts.flattenDiagnosticMessageText(afterMissing[0].messageText,' ').includes("Property 'lowPower' is missing")||resolve(afterMissing[0].file.fileName)!==parent)throw Error('REQUIRED_SIGNAL_CONTRACT_NOT_PROVEN');
+const hash=s=>createHash('sha256').update(s).digest('hex');
+const result={compiler:ts.version,scope:'actual next/dynamic caller type regression, in-memory host overrides only; no source or tsbuildinfo write',beforeViewerSha256:hash(old),currentViewerSha256:hash(currentViewer),currentCallerSha256:hash(source),beforeOmissionDiagnostics:0,afterOmissionDiagnostics:[2769],currentValidCallerDiagnostics:0,passed:true};
+writeFileSync(resolve(root,'badge-required-capability-type-proof-v3.json'),JSON.stringify(result,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(result));

@@ -1,0 +1,35 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/badge-ui-lifecycle.test.ts:
+(pass) badge UI lifecycle > keeps a 120px CSS canvas while sizing the DPR2 drawing buffer [0.16ms]
+(pass) badge UI lifecycle > renders reduced motion once without scheduling RAF [0.05ms]
+(pass) badge UI lifecycle > runs one animated RAF chain and cancels its pending frame [0.05ms]
+(pass) badge UI lifecycle > allows one real context-loss recreation, then falls back [0.06ms]
+(pass) badge UI lifecycle > removes the loss listener before disposal and intentional context loss [0.06ms]
+(pass) badge UI lifecycle > consumes Escape and restores focus to the captured opener [0.06ms]
+
+tests-unit/public-popularity-publication.test.ts:
+(pass) operator-published public popularity > rejects private fields, duplicate IDs, invalid grades and unreviewed nonempty cohorts [0.13ms]
+(pass) operator-published public popularity > bounds entry count and serialized bytes and freezes independent copies [2.78ms]
+(pass) operator-published public popularity > list and detail derive the same tier without a database tier column; stale/raw tiers cannot promote it [0.78ms]
+(pass) operator-published public popularity > merged representatives use their published identity and do not inherit a child grade [0.58ms]
+(pass) operator-published public popularity > published endpoint returns only the bundled reviewed shape, stable ETag and no active cohort by default [0.24ms]
+(pass) public tier reaches the outer Naver render guard > same IDs/viewport/selection refreshes fire → rainbow → standard, while normalized missing values skip [0.15ms]
+(pass) public tier reaches the outer Naver render guard > retained selection/search grades also invalidate the unchanged-query guard [0.02ms]
+
+tests-unit/evidence-engineering-remaining.test.ts:
+(pass) evidence engineering remaining tasks > uploads only the immutable webp key and refuses collisions [0.30ms]
+(pass) evidence engineering remaining tasks > moderation requires preview, confirm, apply, and readback before an audit record [0.40ms]
+(pass) evidence engineering remaining tasks > public carousel keeps approved sign evidence and its seek url [0.39ms]
+(pass) evidence engineering remaining tasks > operational caution ignores a plain search miss and does not use device coordinates [0.03ms]
+(pass) evidence engineering remaining tasks > marker wrapper stays on transform and opacity [0.26ms]
+(pass) evidence engineering remaining tasks > merged media unions approved frames and does not promote a higher tier [0.14ms]
+(pass) evidence engineering remaining tasks > missing evidence embed falls back without dropping restaurants [0.16ms]
+(pass) evidence engineering remaining tasks > badge viewer stays closed until experimental mode is opened and can close again [0.09ms]
+(pass) evidence engineering remaining tasks > open cross-check clauses stay locked without new formulas [0.45ms]
+(pass) evidence engineering remaining tasks > render summary records percentiles without a 60fps gate [0.04ms]
+
+ 23 pass
+ 0 fail
+ 163 expect() calls
+Ran 23 tests across 3 files. [123.00ms]

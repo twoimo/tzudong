@@ -1,0 +1,47 @@
+{
+  "gitSha": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+  "observedAt": "2026-10-18T10:32:54.961Z",
+  "browser": "153.0.8010.12",
+  "scope": "public map-only rendered screenshots; no field, device or timing claim",
+  "rows": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "live-map-1440x900-v1.png",
+      "mapBox": {
+        "x": 392,
+        "y": 0,
+        "width": 1048,
+        "height": 900
+      }
+    },
+    {
+      "viewport": {
+        "width": 834,
+        "height": 1112
+      },
+      "path": "live-map-834x1112-v1.png",
+      "mapBox": {
+        "x": 0,
+        "y": 0,
+        "width": 834,
+        "height": 1051
+      }
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 860
+      },
+      "path": "live-map-430x860-v1.png",
+      "mapBox": {
+        "x": 0,
+        "y": 0,
+        "width": 430,
+        "height": 799
+      }
+    }
+  ]
+}

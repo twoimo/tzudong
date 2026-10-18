@@ -1,0 +1,30 @@
+{
+  "sourceCandidate": "9228c1454393560bcd37240f793065e450f85683",
+  "sourceTree": "d0cee44ace30d3a337b0fd8077032ed099cfb567",
+  "sourceBaseline": "2e5630fada4cd50fb71ff7542723ca6393afe7c0",
+  "defect": "fl(fl(t+300000)-t) can differ from300000; private mint incorrectly denies valid response",
+  "syntheticExample": {
+    "grantedAt": 262144.02702702704,
+    "expiry": 562144.027027027,
+    "subtractedLifetime": 299999.99999999994
+  },
+  "repair": "Compare expiry to the original rounded sum, keep exact sum and all original identity/time/grant checks; no epsilon/relaxation",
+  "before": {
+    "testPass": 9,
+    "testFail": 1,
+    "raw": "location-precision-unit-before-v1.log"
+  },
+  "after": {
+    "testPass": 10,
+    "testFail": 0,
+    "assertions": 128,
+    "raw": "location-precision-unit-after-v1.log"
+  },
+  "parity": "passed0 diagnostics, loglocation-precision-parity-v1.log",
+  "lint": "changed2files passed",
+  "failedOldDataCI": "data-duplicate-unit-failure-context-v2.log",
+  "unrelatedSamplerFailure": "retained separately, identical-source rerun39118613121 attempt2SUCCESS; no source/threshold change",
+  "actualLocationCollected": false,
+  "operatingCapabilityActivated": false,
+  "attachment3319": "attempted once; tool rejected identitycount>100; PR exists normally"
+}

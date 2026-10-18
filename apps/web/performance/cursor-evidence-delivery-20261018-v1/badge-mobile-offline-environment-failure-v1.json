@@ -1,0 +1,10 @@
+{
+  "status": "failed",
+  "tests": {
+    "pass": 1,
+    "fail": 1,
+    "notRun": 1
+  },
+  "reason": "The v1 build omitted the offline fixture NEXT_PUBLIC_SUPABASE build-time values; supplying them only at next start cannot replace inlined client values. Expected intercepted fixture restaurant absent.",
+  "correction": "New named v2 build with identical fixture values at build and serve time. First failure/build retained; no test weakening or source change."
+}
