@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-18T16:38:51.857Z",
+  "sourceEvidenceHead": "a7434a138747153124be2e2b5b51d42a36ca995f",
+  "purpose": "Record already-dispatched original Gemini research and update the owned heartbeat to current reset-aware policy; no new send",
+  "originalAdoptionResult": {
+    "status": "existing_registered",
+    "reservation": {
+      "provider": "gemini",
+      "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+      "job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+      "bundle": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+      "request_id": "cc4ed397fc5b793aad315375",
+      "account": "kss2740",
+      "phase": "uncertain",
+      "url": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+      "model": "4 Argon / 최고가",
+      "research": "Deep Research",
+      "reserved_at": "2026-10-18T16:37:08.651781+00:00",
+      "adopted_existing": true,
+      "receipt": "Human instruction: Gemini의 실제 선행 연구 기다리지 말고 시작해. Original dispatch checkpoint /Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/performance/cursor-evidence-cross-audit-20261018-v2/user-authorized-antithesis-dispatch-v1.json SHA256 b36220288f965596979cd4ba17db5d85735743225c752b974b2958c9eae16990; original UI start accepted, current same-URL writing card and stop control; kss2740/max/DR observed. Backend liveness unverified; no new send. Start mode proof antithesis-mode-provenance-v1.json SHA256 372416d59c157a952d9eb413d06b1e1fdb009b71d2fbe1d2044b47f07137f597",
+      "instruction": "Record of already-running work only; never permission to resend",
+      "uncertain_from": "dispatched"
+    }
+  },
+  "transitions": [
+    {
+      "provider": "gemini",
+      "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+      "job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+      "bundle": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+      "request_id": "cc4ed397fc5b793aad315375",
+      "account": "kss2740",
+      "phase": "researching",
+      "url": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+      "model": "4 Argon / 최고가",
+      "research": "Deep Research",
+      "reserved_at": "2026-10-18T16:37:08.651781+00:00",
+      "adopted_existing": true,
+      "receipt": "Human instruction: Gemini의 실제 선행 연구 기다리지 말고 시작해. Original dispatch checkpoint /Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/performance/cursor-evidence-cross-audit-20261018-v2/user-authorized-antithesis-dispatch-v1.json SHA256 b36220288f965596979cd4ba17db5d85735743225c752b974b2958c9eae16990; original UI start accepted, current same-URL writing card and stop control; kss2740/max/DR observed. Backend liveness unverified; no new send. Start mode proof antithesis-mode-provenance-v1.json SHA256 372416d59c157a952d9eb413d06b1e1fdb009b71d2fbe1d2044b47f07137f597",
+      "instruction": "Record of already-running work only; never permission to resend",
+      "uncertain_from": "dispatched",
+      "updated_at": "2026-10-18T16:38:23.233569+00:00"
+    },
+    {
+      "provider": "gemini",
+      "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+      "job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+      "bundle": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+      "request_id": "cc4ed397fc5b793aad315375",
+      "account": "kss2740",
+      "phase": "uncertain",
+      "url": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+      "model": "4 Argon / 최고가",
+      "research": "Deep Research",
+      "reserved_at": "2026-10-18T16:37:08.651781+00:00",
+      "adopted_existing": true,
+      "receipt": "Human instruction: Gemini의 실제 선행 연구 기다리지 말고 시작해. Original dispatch checkpoint /Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/performance/cursor-evidence-cross-audit-20261018-v2/user-authorized-antithesis-dispatch-v1.json SHA256 b36220288f965596979cd4ba17db5d85735743225c752b974b2958c9eae16990; original UI start accepted, current same-URL writing card and stop control; kss2740/max/DR observed. Backend liveness unverified; no new send. Start mode proof antithesis-mode-provenance-v1.json SHA256 372416d59c157a952d9eb413d06b1e1fdb009b71d2fbe1d2044b47f07137f597",
+      "instruction": "Record of already-running work only; never permission to resend",
+      "uncertain_from": "researching",
+      "updated_at": "2026-10-18T16:38:23.343706+00:00"
+    }
+  ],
+  "currentOwnOperations": [
+    {
+      "provider": "gemini",
+      "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+      "job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+      "bundle": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+      "request_id": "cc4ed397fc5b793aad315375",
+      "account": "kss2740",
+      "phase": "uncertain",
+      "url": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+      "model": "4 Argon / 최고가",
+      "research": "Deep Research",
+      "reserved_at": "2026-10-18T16:37:08.651781+00:00",
+      "adopted_existing": true,
+      "receipt": "Human instruction: Gemini의 실제 선행 연구 기다리지 말고 시작해. Original dispatch checkpoint /Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/performance/cursor-evidence-cross-audit-20261018-v2/user-authorized-antithesis-dispatch-v1.json SHA256 b36220288f965596979cd4ba17db5d85735743225c752b974b2958c9eae16990; original UI start accepted, current same-URL writing card and stop control; kss2740/max/DR observed. Backend liveness unverified; no new send. Start mode proof antithesis-mode-provenance-v1.json SHA256 372416d59c157a952d9eb413d06b1e1fdb009b71d2fbe1d2044b47f07137f597",
+      "instruction": "Record of already-running work only; never permission to resend",
+      "uncertain_from": "researching",
+      "updated_at": "2026-10-18T16:38:23.343706+00:00"
+    }
+  ],
+  "sharedReadback": {
+    "ownCount": 1,
+    "geminiActiveCount": 2,
+    "otherOriginalOwnerPreserved": true,
+    "admission": {
+      "gemini": {
+        "provider": "gemini",
+        "mode": "fifo",
+        "local_max_active": 1,
+        "active_count": 2,
+        "free_slots": 0,
+        "dispatch_pending": false,
+        "next_owner": "01a14e9a-ebaf-7a11-8049-0a8c4ad6b6fe",
+        "next_request_id": "ea1760ea38555c87ff385cea",
+        "eligible_accounts": [
+          "kss2740"
+        ],
+        "urgent_accounts": [],
+        "vendor_concurrency_limit": null
+      },
+      "chatgpt": {
+        "provider": "chatgpt",
+        "mode": "fifo",
+        "local_max_active": 1,
+        "active_count": 0,
+        "free_slots": 1,
+        "dispatch_pending": false,
+        "next_owner": "01a14e99-241b-7730-b4a5-cfb54370a619",
+        "next_request_id": "0669022c006afc7c11cd5fe3",
+        "eligible_accounts": [],
+        "urgent_accounts": [],
+        "vendor_concurrency_limit": null
+      }
+    }
+  },
+  "uiReadback": {
+    "originalUrl": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+    "accountAlias": "kss2740",
+    "mode": "4 Argon / 최고가",
+    "research": "Deep Research",
+    "writingCard": true,
+    "stopControl": true,
+    "terminalReportObserved": false,
+    "backendJobLiveness": "UNVERIFIED",
+    "source": "Current owned CUA accessibility snapshot before adoption"
+  },
+  "adoptionPhaseReason": "Research start/acknowledgement was already observed. After adoption recorded uncertain_from=dispatched, normal owner transitions researching then uncertain preserve the truthful already-started origin without claiming current backend job liveness. Final uncertain_from=researching.",
+  "policy": {
+    "uses": [
+      "active_operations",
+      "admission"
+    ],
+    "urgency": "Only freshly observed future weekly reset within 24 hours; local maximum three; ready reverse/delta/thesis/followup priority",
+    "ordinary": "One/FIFO",
+    "actualServiceLimitsRespected": true,
+    "numericWeeklyLimitAssumed": false,
+    "newSendCount": 0,
+    "otherReservationReleased": false
+  },
+  "automation": {
+    "id": "tzudong",
+    "status": "ACTIVE",
+    "rrule": "FREQ=MINUTELY;INTERVAL=5",
+    "targetThreadId": "01a14e99-77bf-7531-b29e-a612bd99b540",
+    "updatedAt": 1792341464775,
+    "promptSha256": "4a755209c7a2a8d2600038d52bb6cc0e490340c14df6ac8deb1fca7a82afe867",
+    "beforePath": "heartbeat-prompt-pre-reset-policy-v1.txt",
+    "afterPath": "heartbeat-prompt-reset-aware-v1.txt",
+    "supportedToolUpdateConfirmed": true,
+    "readbackMatched": true
+  },
+  "canonicalSkillHashes": {
+    "/Users/twoimo/.agents/skills/deep-research-cross-audit/SKILL.md": "9eead46c9f83da24b048283c70cfcf6da65836da7a850808c99a7cdf001a32f0",
+    "/Users/twoimo/.agents/skills/deep-research-cross-audit/references/capacity.md": "5c7816fe7fba43191b8dbde401875fe53262011bd8ff95f81b2bfd1deb911907"
+  },
+  "completion": false
+}

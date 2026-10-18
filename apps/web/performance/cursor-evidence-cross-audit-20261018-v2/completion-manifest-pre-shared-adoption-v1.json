@@ -1,0 +1,639 @@
+{
+  "thread_id": "01a14e99-77bf-7531-b29e-a612bd99b540",
+  "source_revision": "9228c1454393560bcd37240f793065e450f85683",
+  "source_bundle_sha256": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+  "source_bundle_path": "source_bundle_v2.txt",
+  "reports": [
+    {
+      "stage": "thesis",
+      "provider": "ChatGPT",
+      "model_label": "GPT-6",
+      "reasoning_label": "Pro",
+      "research_mode": "심층 리서치",
+      "conversation_url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+      "report_path": "../cursor-evidence-delivery-20261018-v1/cross-audit-v1/chatgpt_6_pro_thesis_full_report.md",
+      "sha256": "c8b70ca937c33214dae131f269986462f249d9cf63500a1c196cb0863d22b838",
+      "completed_at": "2026-10-18T11:22:47.096125+00:00",
+      "completion_time_basis": "UI terminal state observed and full export saved; not backend timestamp",
+      "source_bundle_sha256": "9420e4c1a47230c305c98e9f739571f9a3c188919fac750ee0fd45635902a6ee"
+    }
+  ],
+  "findings": [
+    {
+      "id": "W001-F1",
+      "decision": "ACCEPT",
+      "reason": "Stored binary64 deadline differs from mathematical exact duration.",
+      "actual_action": "REPORT.md clarifies half-open stored deadline; actual fractional regression fix9228 retained without epsilon.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md",
+        "../cursor-evidence-delivery-20261018-v1/cross-audit-v1/thesis-clock-boundaries-observed-v1.json",
+        "capability-boundaries-v2.log"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W001-F2",
+      "decision": "ACCEPT",
+      "reason": "Conforming captured performance.now is trusted; generic backwards-clock detection is not implemented.",
+      "actual_action": "Bound claims to expiry-observed deletion; document synthetic intra-window decrease rather than add unrequested state.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md",
+        "../cursor-evidence-delivery-20261018-v1/cross-audit-v1/thesis-clock-boundaries-observed-v1.json"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W001-F3",
+      "decision": "ACCEPT",
+      "reason": "Invalid or unsafe clock must fail closed and invalidate existing authority.",
+      "actual_action": "Added11 native Bun cases/31assertions including five invalid times at mint and active-use invalidation, plus fractional expiry. Typed fixture integration failure corrected as native BunJS; no app compiler/dependency exclusions changed.",
+      "verification_artifacts": [
+        "capability-boundaries.test.mjs",
+        "capability-boundaries-v2.log",
+        "fixture-typecheck-diagnosis-v1.json",
+        "typecheck-parity-v2.log"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W001-F4",
+      "decision": "CONDITIONAL",
+      "reason": "Original9-source package lacked callers/site-config.",
+      "actual_action": "New18-path bundle adds full home/site-config/readiness/device helper and exact Naver location ranges; byte-bound9228 and deployedb4.",
+      "verification_artifacts": [
+        "source-index-v2.json",
+        "source_bundle_v2.txt"
+      ],
+      "remaining_condition": "Full renderer/application graph and real-coordinate boundary execution remain outside this source package; no BOUNDARY_INTEGRATION_TESTED certification.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W002-F1",
+      "decision": "CONDITIONAL",
+      "reason": "Source branch and instrumented synthetic component results are different evidence.",
+      "actual_action": "Retain actual component instrumentation raw results; no physical/process-memory/service gain inference.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-comparison-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-capability-v1/results-before.json",
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-capability-v1/results-after.json",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": "Synthetic navigator/softwareGL only; full Next production/import tracing or hardware claim requires separate proof.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W002-F2",
+      "decision": "ACCEPT",
+      "reason": "deviceMemory is coarse; memory threshold is not physical6GiB detection.",
+      "actual_action": "Document coarse heuristic semantics and prohibit physical-model claim.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md",
+        "../cursor-evidence-delivery-20261018-v1/REPRODUCE-mobile-capability-v1.md",
+        "../cursor-evidence-delivery-20261018-v1/cross-audit-v1/chatgpt-thesis-citation-urls-v1.json"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W002-F3",
+      "decision": "ACCEPT",
+      "reason": "Unsupported powerful mobile can intentionally receive static viewer.",
+      "actual_action": "Preserve caller fallback/default-off; disclose trade-off.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md",
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-comparison-v1.json",
+        "source_bundle_v2.txt"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W002-F4",
+      "decision": "ACCEPT",
+      "reason": "Global OS-to-model heuristic was not fixed.",
+      "actual_action": "Scope delivery and claimed benefit to optional viewer; document remaining global limitation.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md",
+        "source_bundle_v2.txt"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W002-F5",
+      "decision": "DEFER",
+      "reason": "In-flight module fetch cannot be equated with unmount cleanup.",
+      "actual_action": "Do not claim network cancellation/leak resolution; optional3D remains default-off and low/unknown mobile static fallback.",
+      "verification_artifacts": [
+        "source_bundle_v2.txt",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": "Actual delayed-chunk unmount race and user feedback during loading require additional targeted reproduction; no early-cleanup guarantee.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W002-F6",
+      "decision": "CONDITIONAL",
+      "reason": "Original session helper was outside submitted closure.",
+      "actual_action": "Added exact session helper and existing native session test source to18-path bundle.",
+      "verification_artifacts": [
+        "source-index-v2.json",
+        "source_bundle_v2.txt"
+      ],
+      "remaining_condition": "Source availability is repaired; whole Next/SDK concurrency runtime certification is not inferred.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F1",
+      "decision": "ACCEPT",
+      "reason": "Old production2e cannot prove new9228 candidate delivery.",
+      "actual_action": "Separate new exactb4 tree/dpl5Md/READY/alias/live chain; no reuse/relabel of old operating evidence.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/location-production-ready-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/delivery-final-readback-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F2",
+      "decision": "CONDITIONAL",
+      "reason": "First external package omitted underlying actual-browser evidence.",
+      "actual_action": "Provide saved anonymous live output/assets/console/map-only PNG proof, exact source identity and remote packet verification.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/live-readback-after-v4.json",
+        "../cursor-evidence-delivery-20261018-v1/production-verification-receipt-v2.json",
+        "../cursor-evidence-delivery-20261018-v1/visual-pixel-inspection-v3.json",
+        "../../../../docs/evidence/cursor-evidence-remote-verification-20261018-v1.json"
+      ],
+      "remaining_condition": "Functional short runs and static images only, no full trace/HAR/pixel cadence/device/field certification.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F3",
+      "decision": "CONDITIONAL",
+      "reason": "Original report only saw an attestation of synthetic resource numbers.",
+      "actual_action": "Keep raw instrumented component outputs and explicit dependent sample counts/220ms limits.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-comparison-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-capability-v1/results-before.json",
+        "../cursor-evidence-delivery-20261018-v1/badge-mobile-capability-v1/results-after.json",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": "No whole UI performance admission.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F4",
+      "decision": "DEFER",
+      "reason": "Strict marker visibility still fails before and after; diagnostic restoration is a different predicate.",
+      "actual_action": "Preserve strict failure and diagnostic3/3 separately; no all-history-success or whole-goal completion.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/live-history-before-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/live-history-after-v3.json",
+        "../cursor-evidence-delivery-20261018-v1/live-history-after-v4.json",
+        "../cursor-evidence-delivery-20261018-v1/production-verification-plan-v4.json"
+      ],
+      "remaining_condition": "Existing strict restoration remains unresolved. Grade/cohort activation stays off/unpublished; this known app history limitation remains explicit rather than being called resolved.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F5",
+      "decision": "DEFER",
+      "reason": "CSP and anonymous401 remain.",
+      "actual_action": "Preserve raw bounded categories; do not weaken CSP/auth or claim clean console.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/console-boundary-after-v3.json",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": "No unauthorized security relaxation; remaining noise/error causes not all fixed.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F6",
+      "decision": "CONDITIONAL",
+      "reason": "Sampler gap failure must remain, separate from real unit failure.",
+      "actual_action": "Preserved raw failed and same-source one-job retry success; threshold60ms unchanged and no speed/memory improvement claimed.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-rerun-completed-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/attempt-outcomes.json",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/preflight-receipts.json",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/01-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/02-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/03-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/04-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/05-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/06-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/07-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/08-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/09-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/10-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/11-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/12-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/13-compat-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/14-native-attempt-1.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/warmup-compat.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/warmup-native.ndjson",
+        "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/report.json",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": "A one-job retry is not statistical compiler performance proof; raw successful artifact must independently meet unchanged hard validity limit.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F7",
+      "decision": "ACCEPT",
+      "reason": "Thesis snapshot had pendingCI; later state needs fresh proof.",
+      "actual_action": "Fresh completed exact-head source/data/main receipts all failure0/unresolved0; normal protected merges.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/location-source-final-ci-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/location-data-postmerge-ci-v2.json",
+        "../cursor-evidence-delivery-20261018-v1/location-main-final-ci-v1.json",
+        "../cursor-evidence-delivery-20261018-v1/location-protected-main-merge-v1.json"
+      ],
+      "remaining_condition": null,
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F8",
+      "decision": "DEFER",
+      "reason": "Original memory guard/physical/field proof remains missing.",
+      "actual_action": "No performance admission or default3D/cohort activation; explicit safety fallback and bounded reporting.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md",
+        "source_bundle_v2.txt"
+      ],
+      "remaining_condition": "Original memory/physical/field/flicker goal incomplete; phone-free instruction retained.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "W003-F9",
+      "decision": "DEFER",
+      "reason": "readiness label is not legal/operating approval proof.",
+      "actual_action": "Read back unchanged before/after status and expressly avoid independent legal approval assertion.",
+      "verification_artifacts": [
+        "../cursor-evidence-delivery-20261018-v1/privacy-gate-before-v2.json",
+        "../cursor-evidence-delivery-20261018-v1/privacy-gate-after-v2.json",
+        "../cursor-evidence-delivery-20261018-v1/REPORT.md"
+      ],
+      "remaining_condition": "No new precise coordinate permission/collection; inherit current server readiness only, no legal certification.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    },
+    {
+      "id": "EVIDENCE-TAGS-01",
+      "decision": "ACCEPT",
+      "reason": "Original prompt/report used FIELD_TESTED and omitted canonical PROPOSED; physical and field conflated.",
+      "actual_action": "Correct next canonical plan to exact seven skill tags with separate environmentClass; original full report unchanged.",
+      "verification_artifacts": [
+        "MASTER-PLAN-v2.md"
+      ],
+      "remaining_condition": "Require Gemini and reverse review to adjudicate taxonomy too.",
+      "adjudication_stage": "local thesis followup; not final Gemini/reverse consensus"
+    }
+  ],
+  "verification_artifacts": [
+    {
+      "path": "../../../../docs/evidence/cursor-evidence-remote-verification-20261018-v1.json",
+      "bytes": 587,
+      "sha256": "b65db0711595880aff72bd444fbd8d58c110b81a0958681d11de9c8089467e42"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/REPORT.md",
+      "bytes": 11002,
+      "sha256": "23eeaf9f81ca4c203574a702fb765dac0a409d97e648c8401de9a4d9ea69f021"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/REPRODUCE-mobile-capability-v1.md",
+      "bytes": 3047,
+      "sha256": "8aa8e07c487089d25b5a2f80418602063834a2a4891c40ee95322fab697fe9fd"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/badge-mobile-capability-v1/results-after.json",
+      "bytes": 11239,
+      "sha256": "d9ef4b7af72eaf0232bfc2ce7ce70fb9c6200667729c56ae8eee55e336dfdf04"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/badge-mobile-capability-v1/results-before.json",
+      "bytes": 13036,
+      "sha256": "485540d8c935da7d75370b1d89be48d1dee11ffad4f96e54a7a9021403f01511"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/badge-mobile-comparison-v1.json",
+      "bytes": 3667,
+      "sha256": "2c362818d86ef7fde270edd91bc5cdca2243b84bdd1b37cf05424dcf2953780f"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/console-boundary-after-v3.json",
+      "bytes": 1674,
+      "sha256": "3f8929171ded6cf40d5aad3328c60681b3ab2d211bd04eea3eef2cd73c519b06"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/cross-audit-v1/chatgpt-thesis-citation-urls-v1.json",
+      "bytes": 3117,
+      "sha256": "8bb8b0086d87e9412677374ca81f1a431bcd5eb22ad8713257c61a7711433b4d"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/cross-audit-v1/thesis-clock-boundaries-observed-v1.json",
+      "bytes": 1027,
+      "sha256": "604a20f4ed02df82f57577af73ecf09e272b5c48eaf182a344203d7c1493d94a"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-rerun-completed-v1.json",
+      "bytes": 510,
+      "sha256": "205da11c164d57546641e0461edb65872d18387c33c8de47cca3439609007642"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/attempt-outcomes.json",
+      "bytes": 11064,
+      "sha256": "94d71617a06844ef319aa4a13c995581a9900dd322781e68a7fb45de338e699b"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/preflight-receipts.json",
+      "bytes": 1753,
+      "sha256": "310a1a59c829ae38b31f9a03a04d92f68dc03b425e510f5764a714e54c0f1c33"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/01-compat-attempt-1.ndjson",
+      "bytes": 918278,
+      "sha256": "0ab5e8527194098c71ae6684582eea218cce4554b35ba8b2c4b318371a974fa7"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/02-native-attempt-1.ndjson",
+      "bytes": 144215,
+      "sha256": "f615d8e4a2994c07d5fefc3518d0cdcdf3a5ce89f3d22c920c2b323911fd7a66"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/03-compat-attempt-1.ndjson",
+      "bytes": 926963,
+      "sha256": "035ed76fc576791d3573a1974617d12244d5e5f0bdcb510bd77628dc7fde9f6a"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/04-native-attempt-1.ndjson",
+      "bytes": 150429,
+      "sha256": "f9334c824059c2dc0138e01ece39583e13425d146846c28c64f9d80369bda2e1"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/05-compat-attempt-1.ndjson",
+      "bytes": 928802,
+      "sha256": "37c673de231bb73b9be550412b655433c56bf5ede703a6b65d0bd6cbd9d4fdad"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/06-native-attempt-1.ndjson",
+      "bytes": 150032,
+      "sha256": "9cce3deaf1f7220cdc0e30f2569da4a256befec8e3b4db7daa3d347b26514122"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/07-compat-attempt-1.ndjson",
+      "bytes": 929656,
+      "sha256": "969d533aa9f18f58c4834e5c09bbdebeed7b026f5efacc33a1085ace1db4ab08"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/08-native-attempt-1.ndjson",
+      "bytes": 159612,
+      "sha256": "afbb834b62866a1a9c210cda4cba8836ebccf3bdfcaf5432678b51a33c880cc8"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/09-compat-attempt-1.ndjson",
+      "bytes": 937905,
+      "sha256": "5efe4a5064c9dabdb718b0d3800cea35d7d32e77b2d5974b637475117277807a"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/10-native-attempt-1.ndjson",
+      "bytes": 161288,
+      "sha256": "86e4e1901bc0b93d4a1ae5eeab66950dfd2894999097229faaf5c25ab0a1ade3"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/11-compat-attempt-1.ndjson",
+      "bytes": 921355,
+      "sha256": "8a6605b5dc90423ab375d31ec9636a7934d0bcd8d4845e78b967efe030b5693f"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/12-native-attempt-1.ndjson",
+      "bytes": 155419,
+      "sha256": "d9fe58bd263161b82256d91718fa423810f52b5a47526cddadaf1123b1b13f84"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/13-compat-attempt-1.ndjson",
+      "bytes": 916802,
+      "sha256": "ce5bfea7a1d456da9690e29f5201b85614f07f4922659cae8fe41943d914ab7e"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/14-native-attempt-1.ndjson",
+      "bytes": 149230,
+      "sha256": "6f4d188cf7c5fb327dd3e7cd2e243fdac32da8fad7128ea377a86f239c62aaa5"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/warmup-compat.ndjson",
+      "bytes": 944037,
+      "sha256": "10ec67907229dcc3328fa423a9808690cbce37bef1dfd695e31b884d7afe3719"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/raw/warmup-native.ndjson",
+      "bytes": 154664,
+      "sha256": "e51f7fffc6bc0bdf3bdd27eb6a6fc6472e7b3e5c6acecc93e7ab559a742f61d0"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/data-ci-benchmark-retry-success-v1/77fa0dabf8d22ba490bf1998dc7913a4720e6089/ubuntu-npm/report.json",
+      "bytes": 13569,
+      "sha256": "9bc56754dd73350179d45847a47377b6772066814564d2b905d180f079f7610b"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/delivery-final-readback-v1.json",
+      "bytes": 858,
+      "sha256": "2f50856ef2a184fc46029bcdee726e0acf864dbbc03295047e784d293f126461"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/live-history-after-v3.json",
+      "bytes": 470,
+      "sha256": "8ec528612b5bece3a2fbb6c77e3e8cba36e37cb771a97c1e1ccee190760ba6d3"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/live-history-after-v4.json",
+      "bytes": 1406,
+      "sha256": "0334b5d8f42152762bb4bccdcae8f8398f684a28efc9419fccce5427caaeb4e0"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/live-history-before-v1.json",
+      "bytes": 471,
+      "sha256": "7023aa354ceca685d4f4700480a3aaa224302dfa5c80d7b9046f4eba67f2f369"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/live-readback-after-v4.json",
+      "bytes": 5284,
+      "sha256": "6468b46ca320251a25463776f1ec19e5ad1460558e75f3d40b2cec79fbf4e91c"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/location-data-postmerge-ci-v2.json",
+      "bytes": 7348,
+      "sha256": "cbade9968b1752bd3dfb06afe6bbc3f47d45b39b28d20861ac6b3cef9be84e15"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/location-main-final-ci-v1.json",
+      "bytes": 7008,
+      "sha256": "dbff47b5a6080ff1d8694c8f89012f2af4c23c037e4bd055b0d598742507119b"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/location-production-ready-v1.json",
+      "bytes": 1211,
+      "sha256": "763812f54928af4ae6421a7496b2603a0845b2edd32487b77d5e5aaf718695e0"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/location-protected-main-merge-v1.json",
+      "bytes": 359,
+      "sha256": "025eb3231432af473b80bb7c723902ef0c14f920ff9f6410862ded6af980db53"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/location-source-final-ci-v1.json",
+      "bytes": 4746,
+      "sha256": "8db5eec3257d4454e36bf00cd665e80fb32f048af53664fbdb0f6ebaea7cbb17"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/privacy-gate-after-v2.json",
+      "bytes": 416,
+      "sha256": "9d28f9b210d52cff9910ebfb60bea15eb6f21e876f4a8948a080fa90c9ba8abf"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/privacy-gate-before-v2.json",
+      "bytes": 417,
+      "sha256": "d9dc672cc7000b50c5ffc25de7a413a8313b8aa700d0774a60801e672ffd96c0"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/production-verification-plan-v4.json",
+      "bytes": 3267,
+      "sha256": "7d32c84ecc094055deff075d740dbe84f7df0a36a7effe5d19ae5ba6769b2b99"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/production-verification-receipt-v2.json",
+      "bytes": 2173,
+      "sha256": "10d42266e600a03d15d2606804531ba66c4acdd48ed8329ec648e1f3a2901bf3"
+    },
+    {
+      "path": "../cursor-evidence-delivery-20261018-v1/visual-pixel-inspection-v3.json",
+      "bytes": 1202,
+      "sha256": "62597e638712d4d24514a3464dc31039512d83fc220d6019e175dea5a0683e52"
+    },
+    {
+      "path": "MASTER-PLAN-v2.md",
+      "bytes": 72139,
+      "sha256": "e9dfe1c7ca3be85267cc6fe04435440a562e722fe92800decb3aada0a5001952"
+    },
+    {
+      "path": "capability-boundaries-v2.log",
+      "bytes": 1076,
+      "sha256": "c0f43da0abb3640f016ddd2fbc8fe92eb6884a58f3a7e81ff7e0fd782a11eee5"
+    },
+    {
+      "path": "capability-boundaries.test.mjs",
+      "bytes": 3026,
+      "sha256": "396f45e9f83ef0a9ae0546e0971ee308039e0d0f2a09898c19025c5cf5f7fa20"
+    },
+    {
+      "path": "fixture-typecheck-diagnosis-v1.json",
+      "bytes": 625,
+      "sha256": "e682073109bca97ae4dd416fdc96d7e4cb00bc3712f7010a1b548b7f58b47ce7"
+    },
+    {
+      "path": "source-index-v2.json",
+      "bytes": 5526,
+      "sha256": "1a7b581e42fdeee6e204efdc97b746e571d7f239abbdeda2284205a86eb40521"
+    },
+    {
+      "path": "source_bundle_v2.txt",
+      "bytes": 146510,
+      "sha256": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203"
+    },
+    {
+      "path": "typecheck-parity-v2.log",
+      "bytes": 510,
+      "sha256": "299822b55caa12db59a85d47e7c66c6e0bc4fa7a8b23fa4a171250515d8e4a4d"
+    },
+    {
+      "path": "verify-completion-manifest.mjs",
+      "bytes": 4880,
+      "sha256": "b0a6973fdbba342c8ab9d1c9c57dc3629ed5bdba2215089121e461a14a9fd076"
+    },
+    {
+      "path": "manifest-integrity.test.mjs",
+      "bytes": 1918,
+      "sha256": "b16fd77d6ddc6246ecbf45094ca83f04c5c02ace36e2aea3f3a6222bd7b07432"
+    },
+    {
+      "path": "manifest-integrity-tests-v1.log",
+      "bytes": 668,
+      "sha256": "1c902362aefc23011a6e9b10565557d388bb2249bc418ba5e38018fe66023c24"
+    },
+    {
+      "path": "manifest-integrity-readback-v1.json",
+      "bytes": 310,
+      "sha256": "8e502c2db0cbff6168769c73a994961a1935e465863a473451ac0ba484bc3aa6"
+    },
+    {
+      "path": "antithesis-start-acceptance-v1.json",
+      "bytes": 2844,
+      "sha256": "2008c98bc2bf472cbb8a3cda4b69271365857daaf6d46b0048cc6b69276a70e4"
+    },
+    {
+      "path": "protected-heads-during-antithesis-v1.json",
+      "bytes": 379,
+      "sha256": "ab65c1a8130c3aae6e480bd9b4a8d633778b97a7e1f4639b3c204ba821c2429f"
+    },
+    {
+      "path": "extract-antithesis-mode-provenance-v1.py",
+      "bytes": 5197,
+      "sha256": "61fd0c1f2cb2018e5a2e7b935d6fddffbc155183fbd92b09e98a5c6daa36a243"
+    },
+    {
+      "path": "antithesis-mode-provenance-v1.json",
+      "bytes": 5946,
+      "sha256": "372416d59c157a952d9eb413d06b1e1fdb009b71d2fbe1d2044b47f07137f597"
+    },
+    {
+      "path": "mode-provenance-identity-negative-v1.json",
+      "bytes": 288,
+      "sha256": "10a2f67e59a163765db5d3999e04f8244b5dbb5e4dec3f8a91921ce0e13f6bc8"
+    },
+    {
+      "path": "research-live-readback-20261019-v1.json",
+      "bytes": 784,
+      "sha256": "7ee59b38bfcc0b575d1f0a97673c1a0c97e95c6988ef047a8af79de63ef18bf9"
+    }
+  ],
+  "remaining_blockers": [
+    "Gemini antithesis actually accepted and research start acknowledged at https://gemini.google.com/app/d33ca8e24b4acf9d; full report not yet complete. Latest direct user authorized local slot-wait exception; old own FIFO item withdrawn, other owner preserved.",
+    "ChatGPT reverse DeepResearch not started; must follow completed Gemini and final-source adjudication",
+    "Explicitly deferred history/CSP/physical/field/legal conditions remain, no whole-goal completion"
+  ],
+  "status": "in_progress",
+  "local_state": {
+    "native_boundary_tests": "11 pass/31assertions/0fail",
+    "typecheck_parity": "diagnostics0/logicalInputs3184",
+    "product_source_changes_after_b4": false,
+    "documentation_and_test_snapshot": "prepared under evidence-only branch; source bundle binds committed9228 identical b4 code"
+  },
+  "runtime_state": {
+    "anonymous_actual_url": "15 checks pass, pageerror0; strict history known failed",
+    "physical_mobile": "not executed; phone-free"
+  },
+  "installation_state": {
+    "app_model_permission_changes": false
+  },
+  "deployment_state": {
+    "main_sha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+    "deployment_id": "dpl_5MdWf1WjdpgsTGWzo7SV97u7nFcn",
+    "ready_and_live_verified": true,
+    "evidence_commit": "7ea5816d3ceea92129f328e3a07dfb52cf887a76",
+    "sealed_base_map_sha256": "027ad58f931c0094a4f9878bd798c46caacd4913e193a916a97519a7e65cc031"
+  },
+  "updated_at": "2026-10-18T15:40:32.641115+00:00",
+  "manifest_integrity": {
+    "schemaAndFileChecks": "passed; original partial state not marked complete",
+    "negativeCases": "premature complete, report substitution, duplicate finding ID, source bundle substitution rejected",
+    "tests": "5 pass /11 assertions /0fail",
+    "scope": "Saved-file integrity only; no web research or runtime certification",
+    "priorManifestPreserved": "completion-manifest-pre-live-readback-v1.json"
+  }
+}

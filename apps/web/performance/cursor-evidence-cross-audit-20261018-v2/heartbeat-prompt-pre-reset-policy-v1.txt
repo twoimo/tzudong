@@ -1,0 +1,15 @@
+이 채팅의 Tzudong 실제 교차 감사를 끝까지 수행한다. 소유 checkout /Users/twoimo/Documents/projects/tzudong-evidence-unblock, branch codex/cursor-delivery-evidence-20261018. 시작 시 현재 상태와 docs/evidence/HANDOFF-cursor-evidence-20261018-v18.md 이후 최신 인계를 읽는다. 현재 Gemini 실행의 정본 체크포인트는 apps/web/performance/cursor-evidence-cross-audit-20261018-v2/user-authorized-antithesis-dispatch-v1.json 과 antithesis-stage-events-v1.ndjson이다.
+
+중요한 최신 사용자 지시: 2026-10-19 KST에 사용자가 "Gemini의 실제 선행 연구 기다리지 말고 시작해"라고 명시했다. 이번 Tzudong Gemini antithesis는 로컬 단일 슬롯 대기의 예외로 실제 한 번 전송됐다. 원래 Alden 연구·예약을 보존했고 우리 옛 FIFO 항목 cc4ed397fc5b793aad315375는 중복 방지를 위해 정상 withdraw했다. 공유 provider status는 참고하되 다른 소유자 점유 때문에 이 Tzudong 실행을 또 대기시키거나 재전송하지 않는다. 다른 단계의 공유 FIFO/소유권 정책은 그대로 유지하며 실제 서비스 경고·한도·안전 제한은 우회하지 않는다.
+
+실제 Tzudong Gemini 원래 대화는 https://gemini.google.com/app/d33ca8e24b4acf9d 이다. 소유 IAB tab2/account kss2740에서 4 Argon 최고가 + Deep Research를 함께 확인했고 사용량0%/주간32%를 실제 UI에서 관측했다. MASTER-PLAN-v3.md (SHA f27da98869ce41ec42ba464d324fe408d985aa7c667504fc00900fe2582483e5)와 source_bundle_v2.txt (SHA 7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203) 두 파일 업로드 완료 후 ANTITHESIS-PROMPT-v1.md의 본문을 한 번 전송했다. 연구 계획 생성이 관측됐으며 연구 시작·보고서 완료는 현재 receipt의 실제 최신 상태를 따른다. 첫 GPT-6 Pro thesis는 이미 완료·해시 검증됐으므로 재실행하지 않는다.
+
+다음 작업은 예약 조회 반복이 아니라 이 소유 Gemini 원래 화면 확인이다. 계획이 준비되면 실제 연구 시작 버튼을 눌러 browsing/researching을 확인한다. 실제 연구 진행은 bounded interval로 확인하며 같은 입력을 중복 전송하지 않는다. 완료되면 전체 원문을 UI export/visible copy로 변경 없이 저장하고 원래 URL·모드·source hash·bytes·SHA256·완료 관측을 연결한다. 로컬 예약 예외 실행을 정상 공유 예약처럼 사칭하거나 다른 owner를 release하지 않는다. 연구 완료·저장을 기록한 뒤 로컬 판정으로 진행한다.
+
+모든 기존/새 finding을 안정적 ID로 ACCEPT/CONDITIONAL/REJECT/DEFER, 근거, 실제 조치·변경 파일, native 검증과 잔여 조건에 연결한다. 적용 가능한 유효 지적은 실제 수정·필수 경계/회귀 검증을 마친다. 그 최종 소스와 Gemini 원문을 실제 GPT-6 Pro+Deep Research 역검증에 맡기고 새 유효 지적도 해결한다. ChatGPT 단계는 정본 /Users/twoimo/.agents/skills/deep-research-cross-audit/SKILL.md, references/local-desktop.md, references/capacity.md와 canonical coordinate.py의 현재 상태·정상 FIFO·실제 UI 모드/한도 확인을 따른다.
+
+봉인된 apps/web/performance/cursor-evidence-delivery-20261018-v1/ 및 detached pin, 원문 보고서, dirty 원래 worktree와 다른 세션·탭·큐·인증·모델을 보존한다. 새 증거는 unsealed cross-audit v2 아래에만 쓴다. completion-manifest와 원문·hash·필수 검사·artifact map을 독립 재검증하기 전 완료로 표시하지 않는다. 제품 수정 배포가 필요하면 현재 release 지침의 develop→data→main 보호 절차와 운영 exact-SHA/rollback/alias 확인을 따른다. 전화/ADB·DB/Storage/DNS·유료 용량/계정/호스트 설정 변경, 새 채팅·중복 자동화·다른 채팅 메시지는 하지 않는다.
+
+대기 중 독립 작업은 새 근거와 실제 필요가 있을 때만 진행한다. 통과한 검사, 보고서 생성, 의미 없는 상태 확인을 반복하지 않는다. 변화 없는 연구 진행은 조용히 보존하고 의미 있는 단계 완료·실제 수정·새 차단·필요 조치만 알린다. 세 실제 원문 보고서와 유효 지적 수정·검증이 끝나면 근거·한계를 종합 보고하고 이 실행용 heartbeat tzudong만 PAUSED로 바꾼다. 원래 memory/physical/field/flicker 및 strict marker/CSP의 미입증·미해결 범위는 별도 유지한다.
+
+아직 전송하지 않은 GPT-6 Pro 역검증 등 후속 질문에는 이미지 생성 없이 텍스트와 표, 수식 및 코드 diff로 완전한 Markdown 보고서를 작성하도록 명시한다. 이미 실행 중인 Gemini 연구는 이 목적 때문에 중단·변경·재전송하지 않는다.
