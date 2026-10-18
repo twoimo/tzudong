@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-18T16:47:58.694Z",
+  "originalUrl": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+  "job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+  "reservation": "cc4ed397fc5b793aad315375",
+  "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+  "account": "kss2740",
+  "sourceBundleSha256": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+  "missingStage": "Complete Gemini antithesis report, before final-source GPT reverse audit",
+  "lastObservedState": {
+    "writingCard": "Tzudong 계획 및 소스 반대 감사 보고서 작성 중...",
+    "startAcknowledgementPreserved": true,
+    "currentComposer": "Flash-Lite disabled",
+    "fullReportObserved": false,
+    "backendJobLiveness": "UNVERIFIED",
+    "accountWindowUsedPercent": 100,
+    "accountWindowReset": "2026-10-19T03:20:00+09:00",
+    "accountWeeklyUsedPercent": 38
+  },
+  "evidencePaths": [
+    "antithesis-mode-provenance-v1.json",
+    "account-five-hour-cap-observation-v1.json",
+    "user-authorized-antithesis-dispatch-v1.json",
+    "shared-existing-operation-adoption-v1.json"
+  ],
+  "readOnlyReconciliation": [
+    "Original same-URL accessibility snapshot and screenshot inspected",
+    "Clicked own usage view; verified five-hour period text and actual100/38 percentages with reset labels",
+    "Returned to original URL; did not stop, change account/model or resend"
+  ],
+  "canonicalTransition": {
+    "provider": "gemini",
+    "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+    "job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+    "bundle": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+    "request_id": "cc4ed397fc5b793aad315375",
+    "account": "kss2740",
+    "phase": "uncertain",
+    "url": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+    "model": "4 Argon / 최고가",
+    "research": "Deep Research",
+    "reserved_at": "2026-10-18T16:37:08.651781+00:00",
+    "adopted_existing": true,
+    "receipt": "Human instruction: Gemini의 실제 선행 연구 기다리지 말고 시작해. Original dispatch checkpoint /Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/performance/cursor-evidence-cross-audit-20261018-v2/user-authorized-antithesis-dispatch-v1.json SHA256 b36220288f965596979cd4ba17db5d85735743225c752b974b2958c9eae16990; original UI start accepted, current same-URL writing card and stop control; kss2740/max/DR observed. Backend liveness unverified; no new send. Start mode proof antithesis-mode-provenance-v1.json SHA256 372416d59c157a952d9eb413d06b1e1fdb009b71d2fbe1d2044b47f07137f597",
+    "instruction": "Record of already-running work only; never permission to resend",
+    "uncertain_from": "researching",
+    "updated_at": "2026-10-18T16:47:36.866453+00:00",
+    "uncertainty_evidence": "Original research-start acknowledgement and max/Deep Research dispatch UI saved in antithesis-mode-provenance-v1.json (SHA256 372416d59c157a952d9eb413d06b1e1fdb009b71d2fbe1d2044b47f07137f597). Actual same-URL writing card persists; account five-hour100% cap observed, controls disabled, current composer Flash-Lite. Exact account-cap/read-only usage reconciliation: /Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/performance/cursor-evidence-cross-audit-20261018-v2/account-five-hour-cap-observation-v1.json SHA256 0eea55cd3c713226a81a1a4c058b64e59b4da1c301636f8e9a2e5cc49188a801. Full antithesis report missing; no new send/cancel/release or backend liveness claim. Preserve original and wait for actual terminal result/readiness verification."
+  },
+  "escalationRoute": "Owning chat checkpoint; no cross-chat message or new external review dispatched",
+  "nextAllowedActions": [
+    "Read-only original terminal report observation and full unedited UI extraction if present",
+    "After actual displayed reset, verify live UI availability; do not infer restoration from time",
+    "Next independent prepared job may use other verified authorized account under normal shared admission; not a duplicate of this original",
+    "Only after full Gemini report and actual finding repairs/native checks, prepare final-source GPT-6 Pro Deep Research reverse audit"
+  ],
+  "notAuthorizedByThisCheckpoint": [
+    "Cancel/release original without terminal evidence",
+    "Replay unfinished audit on other account or model",
+    "Purchase or alter host/account settings",
+    "Replace missing raw audit report with local summary"
+  ],
+  "completionEligible": false
+}

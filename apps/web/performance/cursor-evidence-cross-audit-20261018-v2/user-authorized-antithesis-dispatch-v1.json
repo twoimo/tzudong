@@ -43,18 +43,17 @@
   "promptFile": "ANTITHESIS-PROMPT-v1.md",
   "heartbeatUpdated": true,
   "remaining": [
-    "Upload ready confirmation",
-    "Single dispatch and research start",
     "Full antithesis report saved and adjudicated",
     "Applicable fixes and native verification",
-    "Actual GPT-6 Pro Deep Research reverse audit and new findings resolved"
+    "Actual GPT-6 Pro Deep Research reverse audit and new valid findings resolved",
+    "Evidence closure and explicit unresolved scopes"
   ],
   "uploadReadyConfirmed": true,
   "dispatchCount": 1,
   "promptIntentSha256": "cb6fcade1e5f7e8943f77b149ee036e7b432adce2f8972fe559fe0df1ea874f3",
   "uiAcceptedObservation": "Own original URL settled; attached file-name buttons, full user prompt and 조사 계획 생성 중 visible. Argon 최고가 and Deep Research selected together. No service warning shown.",
   "researchStarted": true,
-  "actualServiceWarningObservedAfterDispatch": false,
+  "actualServiceWarningObservedAfterDispatch": true,
   "startObservation": {
     "displayedUserTurn": "연구 시작",
     "displayedReply": "착수할게요. 연구가 완료되면 알려 드릴게요.",
@@ -62,12 +61,29 @@
     "startActor": "UNVERIFIED: start turn and acknowledgement observed; no duplicate start sent by this automation",
     "browsingSourceCount": null
   },
-  "latestUiStatus": "Tzudong 계획 및 소스 반대 감사 보고서 작성 중...",
+  "latestUiStatus": "Writing card remains; account five-hour100% cap, controls disabled, current composer Flash-Lite",
   "modeProvenance": {
     "path": "antithesis-mode-provenance-v1.json",
     "dispatchAndStartUiContractObserved": true,
     "backendIdentity": "UNVERIFIED",
     "otherTabComposerReport": "Separate collaborator reported lowest level on another tab; current composer setting does not attest dispatch-time setting"
   },
-  "latestUiReadback": "research-live-readback-20261019-v1.json"
+  "latestUiReadback": "account-five-hour-cap-observation-v1.json",
+  "currentAccountAvailability": {
+    "ready": false,
+    "windowExhausted": true,
+    "fiveHourUsedPercent": 100,
+    "weeklyUsedPercent": 38,
+    "windowReset": "2026-10-19T03:20:00+09:00",
+    "weeklyReset": "2026-10-20T20:20:00+09:00",
+    "originalDispatchModeEvidencePreserved": true,
+    "currentBackendIdentity": "UNVERIFIED",
+    "originalResearchTerminalState": "UNVERIFIED"
+  },
+  "sharedExistingRegistration": {
+    "receipt": "shared-existing-operation-adoption-v1.json",
+    "reservation": "cc4ed397fc5b793aad315375",
+    "phase": "uncertain",
+    "uncertainFrom": "researching"
+  }
 }

@@ -615,10 +615,25 @@
       "path": "heartbeat-prompt-reset-aware-v1.txt",
       "bytes": 5800,
       "sha256": "d3ca4be977242702ce766283755af9abf09067eb8f605c950207866ee53e18d8"
+    },
+    {
+      "path": "account-five-hour-cap-observation-v1.json",
+      "bytes": 6892,
+      "sha256": "0eea55cd3c713226a81a1a4c058b64e59b4da1c301636f8e9a2e5cc49188a801"
+    },
+    {
+      "path": "heartbeat-prompt-account-failover-v1.txt",
+      "bytes": 7321,
+      "sha256": "28392906aa289be7cc0915b6784bb7c8f5b804a7a87acd2c6905079b17c1073e"
+    },
+    {
+      "path": "external-research-escalation-v1.json",
+      "bytes": 4477,
+      "sha256": "3e073632fa02728cf1980485693a5c8dc68b89a6da3a5e699bccb3abe5d0b50c"
     }
   ],
   "remaining_blockers": [
-    "Gemini antithesis originally accepted and started at https://gemini.google.com/app/d33ca8e24b4acf9d; existing execution now adopted into canonical shared capacity as cc4ed397fc5b793aad315375, phase uncertain_from researching. Same-URL writing/stop UI is not completed report or backend liveness proof. Full antithesis report remains absent; other owner preserved; no new send.",
+    "Gemini full antithesis report remains absent at original d33ca8e24b4acf9d. Actual account kss2740 five-hour usage100%, reset2026-10-19T03:20+09; weekly38% separately observed. Original writing/start evidence and owned reservation cc4ed397fc5b793aad315375 preserved. Account cap is not report completion or terminal backend failure. No same-run failover/resend.",
     "ChatGPT reverse DeepResearch not started; must follow completed Gemini and final-source adjudication",
     "Explicitly deferred history/CSP/physical/field/legal conditions remain, no whole-goal completion"
   ],
@@ -643,12 +658,12 @@
     "evidence_commit": "7ea5816d3ceea92129f328e3a07dfb52cf887a76",
     "sealed_base_map_sha256": "027ad58f931c0094a4f9878bd798c46caacd4913e193a916a97519a7e65cc031"
   },
-  "updated_at": "2026-10-18T16:39:11.949420+00:00",
+  "updated_at": "2026-10-18T16:47:58.809951+00:00",
   "manifest_integrity": {
     "schemaAndFileChecks": "passed; original partial state not marked complete",
     "negativeCases": "premature complete, report substitution, duplicate finding ID, source bundle substitution rejected",
     "tests": "5 pass /11 assertions /0fail",
     "scope": "Saved-file integrity only; no web research or runtime certification",
-    "priorManifestPreserved": "completion-manifest-pre-shared-adoption-v1.json"
+    "priorManifestPreserved": "completion-manifest-pre-escalation-v1.json"
   }
 }

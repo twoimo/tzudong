@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-18T16:46:17.814Z",
+  "evidenceHead": "a583524584ccc0ccdc7314fddce30bd647cba445",
+  "originalConversationUrl": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+  "usageUrl": "https://gemini.google.com/usage",
+  "accountAlias": "kss2740",
+  "observedIn": "Owned CUA original conversation full accessibility and screenshot, then explicit usage controls; no other owner tab inspected",
+  "literalUiEvidence": [
+    "현재 사용량 한도에 도달했습니다",
+    "10월 19일 오전 3:20에 초기화되면 Deep Research를 다시 사용할 수 있습니다.",
+    "모드 선택 도구 열기, 현재 Flash-Lite 모드 사용 중 (disabled)",
+    "Deep Research 선택 해제 (disabled)",
+    "대답 생성 중지 (disabled)",
+    "Tzudong 계획 및 소스 반대 감사 보고서 작성 중...",
+    "현재 사용량",
+    "100% 사용됨",
+    "오전 3:20에 초기화",
+    "5시간 동안의 사용량입니다.",
+    "주간 한도",
+    "10월 20일 오후 8:20에 초기화",
+    "38% 사용됨"
+  ],
+  "normalization": {
+    "timezone": "Asia/Seoul",
+    "windowReset": "2026-10-19T03:20:00+09:00",
+    "weeklyReset": "2026-10-20T20:20:00+09:00",
+    "windowUsedPercent": 100,
+    "weeklyUsedPercent": 38,
+    "windowScope": "account five-hour compute window; explicit usage help text",
+    "unknown": [
+      "Exact cap onset",
+      "Backend job liveness",
+      "Backend model identity",
+      "Full account activity outside observed meters",
+      "Whether original research can finish while account is capped"
+    ]
+  },
+  "observationLimits": "Earlier filtered writing-card observations did not inspect the full quota area. First positive full-screen warning observation in this resumed turn does not establish its first onset. Current disabled composer label does not retroactively change original max/Deep Research dispatch evidence.",
+  "pauseReconciliation": {
+    "temporaryUnknownScopePause": {
+      "reason": "2026-10-19 KST owned kss2740 original https://gemini.google.com/app/d33ca8e24b4acf9d visibly displays 현재 사용량 한도에 도달했습니다; Deep Research unavailable until 2026-10-19 03:20 Asia/Seoul. Composer shows disabled Flash-Lite and disabled stop/DR/upload. Exact affected compute window and numeric use unverified. Preserve originals, no account switch or admission until actual warning/readiness reconciled.",
+      "at": "2026-10-18T16:43:55.503001+00:00"
+    },
+    "unpauseAfterExplicitAccountScope": {
+      "unpaused": "gemini"
+    },
+    "rule": "Account-only five-hour exhaustion stops that account. Other verified authorized account may receive next independent ready job; original incomplete research is never resent. Provider rate/concurrency/safety or unknown-scope warnings pause service.",
+    "ownPauseIdentityComparedBeforeUnpause": true
+  },
+  "canonicalReadback": {
+    "account": {
+      "account": "kss2740",
+      "model": "Flash-Lite (disabled current composer; original Argon max dispatch preserved)",
+      "research": "Deep Research currently unavailable at account five-hour cap",
+      "note": "Owned signed-in kss2740 usage UI explicitly shows 5시간 동안의 사용량입니다, 현재 사용량100%, reset 오전3:20; 주간38%, reset10월20일오후8:20. Original conversation notice names Deep Research reset10월19일오전3:20. Account-scoped compute cap confirmed; no provider concurrency/rate/safety notice observed. No account/model change or new send.",
+      "weekly_exhausted": false,
+      "weekly_used": 38,
+      "weekly_reset": "2026-10-20T20:20:00+09:00",
+      "weekly_reset_observed_at": "2026-10-18T16:44:53.491261+00:00",
+      "window_exhausted": true,
+      "window_used": 100,
+      "window_reset": "2026-10-19T03:20:00+09:00",
+      "window_reset_observed_at": "2026-10-18T16:44:53.491428+00:00",
+      "provider": "gemini",
+      "observed_at": "2026-10-18T16:44:53.491430+00:00",
+      "source_url": "https://gemini.google.com/usage",
+      "ready": false
+    },
+    "ownOperation": {
+      "provider": "gemini",
+      "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+      "job": "tzudong-9228c145-c8b70ca9-antithesis-v1",
+      "bundle": "7bb1e2b658c3781078f0eef5b61494bd494d72c8e29a20abf8f4408045655203",
+      "request_id": "cc4ed397fc5b793aad315375",
+      "account": "kss2740",
+      "phase": "uncertain",
+      "url": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+      "model": "4 Argon / 최고가",
+      "research": "Deep Research",
+      "reserved_at": "2026-10-18T16:37:08.651781+00:00",
+      "adopted_existing": true,
+      "receipt": "Human instruction: Gemini의 실제 선행 연구 기다리지 말고 시작해. Original dispatch checkpoint /Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/performance/cursor-evidence-cross-audit-20261018-v2/user-authorized-antithesis-dispatch-v1.json SHA256 b36220288f965596979cd4ba17db5d85735743225c752b974b2958c9eae16990; original UI start accepted, current same-URL writing card and stop control; kss2740/max/DR observed. Backend liveness unverified; no new send. Start mode proof antithesis-mode-provenance-v1.json SHA256 372416d59c157a952d9eb413d06b1e1fdb009b71d2fbe1d2044b47f07137f597",
+      "instruction": "Record of already-running work only; never permission to resend",
+      "uncertain_from": "researching",
+      "updated_at": "2026-10-18T16:38:23.343706+00:00"
+    },
+    "providerPaused": null,
+    "activeCount": 3,
+    "otherOriginalPreserved": true,
+    "admission": {
+      "provider": "gemini",
+      "mode": "fifo",
+      "local_max_active": 1,
+      "active_count": 3,
+      "free_slots": 0,
+      "dispatch_pending": true,
+      "next_owner": "01a14e9a-ebaf-7a11-8049-0a8c4ad6b6fe",
+      "next_request_id": "ea1760ea38555c87ff385cea",
+      "eligible_accounts": [],
+      "urgent_accounts": [],
+      "five_hour_limited_accounts": [
+        "kss2740"
+      ],
+      "vendor_concurrency_limit": null
+    }
+  },
+  "originalPreservation": {
+    "ownOriginalRestored": true,
+    "stopClicked": false,
+    "modeOrAccountChangedByWorker": false,
+    "paidUpgrade": false,
+    "newResearchDispatchCount": 0,
+    "otherOwnerReleased": false,
+    "fullReportObserved": false
+  },
+  "automationReadback": {
+    "id": "tzudong",
+    "status": "ACTIVE",
+    "rrule": "FREQ=MINUTELY;INTERVAL=5",
+    "targetThreadId": "01a14e99-77bf-7531-b29e-a612bd99b540",
+    "updatedAt": 1792341947386,
+    "promptSha256": "f9e5faa3695873fd5b226556466632013f9291f1c618d9530e4875f8e729bc78",
+    "promptPath": "heartbeat-prompt-account-failover-v1.txt",
+    "matchesSupportedUpdate": true
+  },
+  "remaining": [
+    "Full Gemini antithesis report",
+    "Finding adjudication and applicable fixes/native verification",
+    "Final-source actual GPT-6 Pro Deep Research reverse audit",
+    "Final evidence closure; original known unproven scopes remain"
+  ]
+}
