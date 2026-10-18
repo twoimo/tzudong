@@ -1,0 +1,13 @@
+bun test v1.4.0 (34cbb9a40)
+
+performance/cursor-evidence-cross-audit-20261018-v2/manifest-integrity.test.mjs:
+(pass) current partial manifest validates its bytes without being declared complete [188.76ms]
+(pass) rejects premature completion through a real subprocess and filesystem readback [64.05ms]
+(pass) rejects report substitution through a real subprocess and filesystem readback [48.79ms]
+(pass) rejects duplicate finding ID through a real subprocess and filesystem readback [64.23ms]
+(pass) rejects source bundle substitution through a real subprocess and filesystem readback [43.11ms]
+
+ 5 pass
+ 0 fail
+ 11 expect() calls
+Ran 5 tests across 1 file. [566.00ms]

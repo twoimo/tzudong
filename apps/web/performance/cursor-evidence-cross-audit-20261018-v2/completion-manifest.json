@@ -550,6 +550,26 @@
       "path": "typecheck-parity-v2.log",
       "bytes": 510,
       "sha256": "299822b55caa12db59a85d47e7c66c6e0bc4fa7a8b23fa4a171250515d8e4a4d"
+    },
+    {
+      "path": "verify-completion-manifest.mjs",
+      "bytes": 4880,
+      "sha256": "b0a6973fdbba342c8ab9d1c9c57dc3629ed5bdba2215089121e461a14a9fd076"
+    },
+    {
+      "path": "manifest-integrity.test.mjs",
+      "bytes": 1918,
+      "sha256": "b16fd77d6ddc6246ecbf45094ca83f04c5c02ace36e2aea3f3a6222bd7b07432"
+    },
+    {
+      "path": "manifest-integrity-tests-v1.log",
+      "bytes": 668,
+      "sha256": "1c902362aefc23011a6e9b10565557d388bb2249bc418ba5e38018fe66023c24"
+    },
+    {
+      "path": "manifest-integrity-readback-v1.json",
+      "bytes": 310,
+      "sha256": "8e502c2db0cbff6168769c73a994961a1935e465863a473451ac0ba484bc3aa6"
     }
   ],
   "remaining_blockers": [
@@ -578,5 +598,12 @@
     "evidence_commit": "7ea5816d3ceea92129f328e3a07dfb52cf887a76",
     "sealed_base_map_sha256": "027ad58f931c0094a4f9878bd798c46caacd4913e193a916a97519a7e65cc031"
   },
-  "updated_at": "2026-10-18T11:49:46.079486+00:00"
+  "updated_at": "2026-10-18T11:59:03.257379+00:00",
+  "manifest_integrity": {
+    "schemaAndFileChecks": "passed; original partial state not marked complete",
+    "negativeCases": "premature complete, report substitution, duplicate finding ID, source bundle substitution rejected",
+    "tests": "5 pass /11 assertions /0fail",
+    "scope": "Saved-file integrity only; no web research or runtime certification",
+    "priorManifestPreserved": "completion-manifest-v1.json"
+  }
 }

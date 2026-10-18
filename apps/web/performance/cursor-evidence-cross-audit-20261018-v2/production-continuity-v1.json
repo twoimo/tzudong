@@ -1,0 +1,10 @@
+{
+  "observedAt": "2026-10-18T12:00:02.686Z",
+  "httpStatus": 200,
+  "ok": true,
+  "gitSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "deploymentId": "dpl_5MdWf1WjdpgsTGWzo7SV97u7nFcn",
+  "matchesReviewedDeployment": true,
+  "scope": "Public identity continuity only; no new functional/performance/device/field inference"
+}
