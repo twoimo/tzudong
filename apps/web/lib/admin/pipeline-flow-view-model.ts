@@ -35,12 +35,13 @@ export function parsePipelineManifest(value: unknown): PipelineManifestView {
   const root = isRecord(value) ? value : {};
   const run = isRecord(root.runDaily) ? root.runDaily : {};
   const availability = ['available', 'missing', 'unreadable'].includes(String(run.manifestStatus)) ? run.manifestStatus as PipelineManifestView['availability'] : 'unknown';
+  const checkedAt = timestamp(run.checkedAt);
   const events: StepEvent[] = [];
   let invalidEvents = 0;
   if (availability === 'available' && Array.isArray(run.stepEvents) && run.stepEvents.length <= 100) {
     for (const item of run.stepEvents) {
       if (!isRecord(item) || typeof item.name !== 'string') { invalidEvents++; continue; }
-      if (!canonicalNames.has(item.name)) continue; // Never render free-form event names/reasons.
+      if (!canonicalNames.has(item.name)) { invalidEvents++; continue; } // Never render free-form event names/reasons.
       if (!eventStates.includes(item.status as StepEvent['status'])) { invalidEvents++; continue; }
       events.push({ name: item.name, status: item.status as StepEvent['status'], durationSeconds: duration(item.durationSeconds) ? item.durationSeconds : null });
     }
@@ -49,7 +50,27 @@ export function parsePipelineManifest(value: unknown): PipelineManifestView {
   const githubState = parseGithubWorkflowState({ status: gha.latestRunStatus, conclusion: gha.latestRunConclusion });
   const github = gha.enabled === true && gha.configured === true && gha.reachable === true && count(gha.latestRunId) && gha.latestRunId > 0 && githubState.failed !== null
     ? { id: String(gha.latestRunId), status: githubState.status, conclusion: githubState.conclusion } : null;
-  return { availability, checkedAt: timestamp(run.checkedAt), stale: typeof run.stale === 'boolean' ? run.stale : null, invalidEvents, events, github };
+  const runtime = isRecord(run.runtime) ? run.runtime : {};
+  const githubRunId = runtime.githubRunId;
+  const githubRunAttempt = runtime.githubRunAttempt;
+  const validRunId = githubRunId === undefined || (typeof githubRunId === 'string' && /^[1-9][0-9]*$/.test(githubRunId));
+  const validAttempt = githubRunAttempt === undefined || (typeof githubRunAttempt === 'string' && /^[1-9][0-9]*$/.test(githubRunAttempt));
+  const sameGithubRun = !github || githubRunId === undefined || githubRunId === github.id;
+  const sameGithubAttempt = !github || githubRunAttempt === undefined || !count(gha.latestRunAttempt)
+    || Number(githubRunAttempt) === gha.latestRunAttempt;
+  const exitCode = run.finalExitCode;
+  const terminalStatus = ((run.finalStatus === 'OK' || run.finalStatus === 'WARN') && exitCode === 0)
+    || (run.finalStatus === 'ERROR' && typeof exitCode === 'number' && Number.isSafeInteger(exitCode) && exitCode !== 0);
+  const explicitFailure = events.some(event => event.status === 'failed');
+  const failedRequired = Array.isArray(run.failedRequiredSteps) && run.failedRequiredSteps.length > 0;
+  const consistentEvents = !(run.finalStatus === 'OK' && (explicitFailure || failedRequired))
+    && !(run.finalStatus === 'WARN' && failedRequired)
+    && !(run.finalStatus === 'ERROR' && events.length > 0 && !explicitFailure);
+  const evidenceCurrent = availability === 'available' && run.stale === false && checkedAt !== null
+    && typeof run.latestManifestPath === 'string' && run.latestManifestPath.length > 0
+    && terminalStatus && consistentEvents && run.noWorkShortCircuit !== true && !run.detail
+    && validRunId && validAttempt && sameGithubRun && sameGithubAttempt && invalidEvents === 0;
+  return { availability, checkedAt, stale: typeof run.stale === 'boolean' ? run.stale : null, invalidEvents, events: evidenceCurrent ? events : [], github };
 }
 
 export function buildPipelineStages(manifest: PipelineManifestView | undefined) {

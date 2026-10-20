@@ -9,8 +9,11 @@ const id = '22222222-2222-4222-8222-222222222222';
 const job = { id, target: 'tzuyang', profile: 'heavy_local', status: 'Fetching', dry_run: true, adapter_index: 0 };
 const status = (overrides: Record<string, unknown> = {}) => ({ source: 'job_api', jobs: [job], targets: [{ id: 'tzuyang', status: 'Fetching' }], failures: [], ...overrides });
 const events = PIPELINE_FLOW_STAGES.flatMap(stage => stage.steps.map(name => ({ name, status: 'completed', durationSeconds: 1.5 })));
-const manifest = (steps: unknown = events, overrides: Record<string, unknown> = {}) => parsePipelineManifest({ runDaily: { manifestStatus: 'available', stepEvents: steps, checkedAt: '2026-10-04T00:00:00Z', stale: false, ...overrides } });
-const stage = (id: string, steps: unknown) => buildPipelineStages(manifest(steps)).find(stage => stage.id === id)!;
+const manifest = (steps: unknown = events, overrides: Record<string, unknown> = {}) => parsePipelineManifest({ runDaily: {
+  manifestStatus: 'available', latestManifestPath: '/tmp/current-summary.json', latestLogUpdatedAt: '2026-10-04T00:00:00Z',
+  finalStatus: 'OK', finalExitCode: 0, stepEvents: steps, checkedAt: '2026-10-04T00:00:00Z', stale: false, ...overrides,
+} });
+const stage = (id: string, steps: unknown, overrides: Record<string, unknown> = {}) => buildPipelineStages(manifest(steps, overrides)).find(stage => stage.id === id)!;
 
 describe('pipeline manifest projection', () => {
   test('canonical steps and evidence paths exist; app and document share an acyclic DAG', () => {
@@ -37,11 +40,48 @@ describe('pipeline manifest projection', () => {
     expect(manifest({}).invalidEvents).toBe(1);
     expect(manifest(Array(101).fill(events[0])).events).toHaveLength(0);
   });
+  test('stale, absent or contradictory run evidence cannot color old completed steps', () => {
+    const invalid = [
+      { stale: true }, { stale: undefined }, { checkedAt: 'invalid' },
+      { latestManifestPath: undefined },
+      { finalStatus: undefined }, { finalExitCode: undefined },
+      { finalStatus: 'OK', finalExitCode: 1 }, { finalStatus: 'ERROR', finalExitCode: 1 },
+      { noWorkShortCircuit: true }, { detail: 'manifest_read_failed' },
+      { failedRequiredSteps: ['Step 13 failed'] },
+    ];
+    for (const overrides of invalid) {
+      const snapshot = manifest(events, overrides);
+      expect(snapshot.events).toHaveLength(0);
+      expect(buildPipelineStages(snapshot).slice(0, 7).every(s => s.state === 'unknown')).toBe(true);
+    }
+    expect(buildPipelineStages(manifest()).filter(s => s.state === 'completed')).toHaveLength(7);
+  });
+  test('an explicit fresh manifest without a local log preserves completion, failure and skip', () => {
+    const manifestOnly = { latestLogUpdatedAt: undefined };
+    expect(stage('evaluate', events, manifestOnly)).toMatchObject({ state: 'completed', durationSeconds: 1.5 });
+    const evaluation = events.find(event => event.name === 'Step 11 (LAAJ Evaluation)')!;
+    expect(stage('evaluate', [{ ...evaluation, status: 'failed' }], {
+      ...manifestOnly, finalStatus: 'ERROR', finalExitCode: 1,
+    })).toMatchObject({ state: 'failed', durationSeconds: 1.5 });
+    expect(stage('evaluate', [{ ...evaluation, status: 'optional_skipped' }], {
+      ...manifestOnly, finalStatus: 'WARN', finalExitCode: 0,
+    })).toMatchObject({ state: 'skipped', durationSeconds: 1.5 });
+  });
+  test('a newer GitHub run or attempt does not inherit an older manifest', () => {
+    const githubActions = { enabled: true, configured: true, reachable: true, latestRunId: 42, latestRunAttempt: 2, latestRunStatus: 'completed', latestRunConclusion: 'success' };
+    const runDaily = { manifestStatus: 'available', latestManifestPath: '/tmp/current-summary.json', latestLogUpdatedAt: '2026-10-04T00:00:00Z',
+      finalStatus: 'OK', finalExitCode: 0, stepEvents: events, checkedAt: '2026-10-04T00:00:00Z', stale: false };
+    for (const runtime of [{ githubRunId: '41', githubRunAttempt: '2' }, { githubRunId: '42', githubRunAttempt: '1' }, { githubRunId: 'invalid' }]) {
+      const result = parsePipelineManifest({ runDaily: { ...runDaily, runtime }, githubActions });
+      expect(result.events).toHaveLength(0);
+    }
+    expect(parsePipelineManifest({ runDaily: { ...runDaily, runtime: { githubRunId: '42', githubRunAttempt: '2' } }, githubActions }).events).toHaveLength(events.length);
+  });
   test('failure, upstream skip, optional skip and partial observations stay distinct', () => {
     const e = events.find(e => e.name === 'Step 11 (LAAJ Evaluation)')!;
-    for (const [status, state] of [['failed', 'failed'], ['optional_skipped', 'skipped'], ['downstream_skipped', 'blocked']]) expect(stage('evaluate', [{ ...e, status }]).state).toBe(state);
+    for (const [status, state] of [['failed', 'failed'], ['optional_skipped', 'skipped'], ['downstream_skipped', 'blocked']]) expect(stage('evaluate', [{ ...e, status }], status === 'failed' ? { finalStatus: 'ERROR', finalExitCode: 1 } : {}).state).toBe(state);
     expect(stage('collect', [events[0]])).toMatchObject({ state: 'partial', durationSeconds: null });
-    expect(stage('collect', [{ ...events[0], status: 'failed' }]).state).toBe('failed');
+    expect(stage('collect', [{ ...events[0], status: 'failed' }], { finalStatus: 'ERROR', finalExitCode: 1 }).state).toBe('failed');
     expect(stage('collect', events.filter(e => e.name.startsWith('Step 2')))).toMatchObject({ state: 'partial', durationSeconds: null });
   });
   test('duplicates, invalid times and summed overflow never fabricate completion or timing', () => {
@@ -52,7 +92,7 @@ describe('pipeline manifest projection', () => {
   });
   test('raw event names, reasons, errors and paths never enter the projection', () => {
     const result = manifest([...events.map(e => ({ ...e, reason: 'private@example.test', upstreamStep: 'provider raw' })), { name: 'private@example.test', status: 'failed' }, { name: events[0].name, status: 'new-status' }], { manifestPath: '/secret/path' });
-    expect(result.invalidEvents).toBe(1);
+    expect(result.invalidEvents).toBe(2);
     for (const raw of ['private', 'provider', 'secret']) expect(JSON.stringify(result)).not.toContain(raw);
   });
 });
