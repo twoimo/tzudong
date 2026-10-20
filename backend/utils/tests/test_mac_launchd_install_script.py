@@ -41,7 +41,12 @@ class MacLaunchdInstallScriptTests(unittest.TestCase):
             explicit = root / "explicit-python"
             explicit.write_text("#!/bin/sh\nexit 0\n")
             explicit.chmod(0o700)
-            env = dict(os.environ)
+            node = root / "bin/node"
+            node.parent.mkdir()
+            node.write_text("#!/bin/sh\nexit 0\n")
+            node.chmod(0o700)
+            (root / "backend").mkdir()
+            env = {**os.environ, "NODE_CMD": str(node)}
             env.pop("PYTHON_CMD", None)
             script = 'REPO_ROOT=' + shlex.quote(str(root)) + '\n' + selection + '\nprintf "%s" "$PYTHON"'
             default = subprocess.run(["/bin/bash", "-eu", "-c", script], env=env, capture_output=True, text=True)
@@ -53,6 +58,19 @@ class MacLaunchdInstallScriptTests(unittest.TestCase):
             self.assertNotEqual(invalid.returncode, 0)
             self.assertEqual(invalid.stdout, "")
             self.assertIn("python_runtime_unavailable", invalid.stderr)
+
+    def test_non_node_basename_is_rejected_before_touching_launchd(self) -> None:
+        text = INSTALL.read_text()
+        selection = text[text.index('if [[ -n "${PYTHON_CMD:-}"') : text.index('mkdir -p')]
+        with tempfile.TemporaryDirectory() as raw:
+            node = Path(raw) / "different-node-name"
+            node.write_text("#!/bin/sh\nexit 0\n")
+            node.chmod(0o700)
+            script = 'REPO_ROOT=' + shlex.quote(raw) + '\n' + selection
+            result = subprocess.run(["/bin/bash", "-eu", "-c", script],
+                env={**os.environ, "NODE_CMD": str(node)}, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn('node_runtime_unavailable', result.stderr)
 
     def test_launchd_uses_one_calendar_event_without_replay_interval(self) -> None:
         text = INSTALL.read_text(encoding="utf-8")

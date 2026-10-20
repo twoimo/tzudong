@@ -2,10 +2,16 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
+import contextlib
+import io
+import json
 import unittest
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
+
+from backend.utils.stage_cache import complete
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -77,19 +83,154 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertTrue(str(calls[0][1]).endswith("01-collect-urls.py"))
 
-    def test_locally_evaluated_ids_reads_selection_and_not_selection(self) -> None:
+    def test_only_certified_final_or_real_empty_video_is_skipped(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / "evaluation" / "selection").mkdir(parents=True)
-            (root / "evaluation" / "notSelection").mkdir(parents=True)
-            (root / "evaluation" / "selection" / "sel1.jsonl").write_text("{}" + "\n")
-            (root / "evaluation" / "notSelection" / "ns1.jsonl").write_text("{}" + "\n")
-            self.assertEqual(module._locally_evaluated_ids(root), {"sel1", "ns1"})
+            crawling, evaluation = root / "crawling", root / "evaluation"
+
+            def stage(base: Path, folder: str, video_id: str, row: dict) -> Path:
+                output = base / folder / f"{video_id}.jsonl"
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text(json.dumps(row) + "\n", encoding="utf-8")
+                complete(output.parent / ".receipts" / f"{video_id}.json", "input", [output])
+                return output
+
+            stage(crawling, "crawling", "empty", {"restaurants": []})
+            stage(evaluation, "evaluation/notSelection", "empty", {
+                "evaluation_target": {}, "is_notSelected": True,
+                "notSelected_reason": "no_restaurants",
+            })
+            # The 09 receipt is stored beside selection even when only
+            # notSelection was written.
+            empty_output = evaluation / "evaluation/notSelection/empty.jsonl"
+            complete(evaluation / "evaluation/selection/.receipts/empty.json", "input", [empty_output])
+
+            stage(crawling, "crawling", "partial", {"restaurants": [{"origin_name": "A"}]})
+            stage(evaluation, "evaluation/selection", "partial", {
+                "evaluation_target": {"A": True}, "restaurants": [{"origin_name": "A"}],
+            })
+
+            stage(crawling, "crawling", "complete", {"restaurants": [
+                {"origin_name": "A"}, {"origin_name": "B"},
+            ]})
+            stage(evaluation, "evaluation/selection", "complete", {
+                "evaluation_target": {"A": True, "B": True},
+                "restaurants": [{"origin_name": "A"}, {"origin_name": "B"}],
+            })
+            stage(evaluation, "evaluation/rule_results", "complete", {})
+            laaj = stage(evaluation, "evaluation/laaj_results", "complete", {})
+            output = evaluation / "evaluation/transforms.jsonl"
+            output.write_text("".join(json.dumps({
+                "trace_id": trace, "origin_name": name, "youtube_link":
+                "https://www.youtube.com/watch?v=complete",
+            }) + "\n" for trace, name in (("trace-a", "A"), ("trace-b", "B"))), encoding="utf-8")
+            ledger = output.parent / ".receipts/transform.json"
+            ledger.parent.mkdir(parents=True, exist_ok=True)
+            ledger.write_text(json.dumps({
+                "outputHash": hashlib.sha256(output.read_bytes()).hexdigest(),
+                "groups": {"results:complete": {"records": ["trace-a", "trace-b"]}},
+            }), encoding="utf-8")
+
+            self.assertEqual(module._locally_evaluated_ids(evaluation, crawling), {"empty", "complete"})
+            laaj.write_text("changed\n", encoding="utf-8")
+            self.assertEqual(module._locally_evaluated_ids(evaluation, crawling), {"empty"})
+            laaj.write_text("{}\n", encoding="utf-8")
+            ledger.write_text(json.dumps({
+                "outputHash": hashlib.sha256(output.read_bytes()).hexdigest(),
+                "groups": {"results:complete": {"records": ["trace-a"]}},
+            }), encoding="utf-8")
+            self.assertEqual(module._locally_evaluated_ids(evaluation, crawling), {"empty"})
+
+    def test_transcript_failure_reports_retryable_video_and_restores_urls(self) -> None:
+        video_url = "https://www.youtube.com/watch?v=abcdefghijk"
+        previous_url = "https://www.youtube.com/watch?v=zzzzzzzzzzz"
+        writes: list[list[str]] = []
+        calls: list[list[str]] = []
+
+        def fake_run(argv: list[str], env: dict[str, str], *, required: bool = True) -> int:
+            calls.append(argv)
+            return 9 if str(argv[1]).endswith("03-collect-transcript.js") else 0
+
+        output = io.StringIO()
+        with patch.object(module, "assert_hosted_target"), patch.object(
+            module, "fetch_hosted_restaurant_snapshot", return_value=([], ["zzzzzzzzzzz"])
+        ), patch.object(
+            module, "_load_urls", side_effect=[[previous_url], [previous_url, video_url]]
+        ), patch.object(module, "_write_urls", side_effect=lambda _path, urls: writes.append(urls)), patch.object(
+            module, "_locally_evaluated_ids", return_value=set()
+        ), patch.object(module, "_is_short_video", return_value=False), patch.object(
+            module, "_run", side_effect=fake_run
+        ), patch.object(module, "_transformed_names", return_value={}), patch.object(
+            module, "_video_state", return_value="selection_incomplete"
+        ), contextlib.redirect_stdout(output):
+            code = module.main(["--channel", "tzuyang", "--limit", "1"])
+
+        self.assertEqual(code, 1)
+        self.assertTrue(any(str(call[1]).endswith("03-collect-transcript.js") for call in calls))
+        self.assertFalse(any("09-target-selection.py" in str(call[1]) for call in calls))
+        self.assertIn(previous_url, writes[-1])
+        self.assertIn(video_url, writes[-1])
+        self.assertIn("videoFailed=abcdefghijk reasons=transcript_failed,selection_incomplete", output.getvalue())
+        self.assertIn("failedVideoCount=1", output.getvalue())
+
+    def test_rule_failure_cannot_be_masked_by_old_completed_outputs(self) -> None:
+        video_url = "https://www.youtube.com/watch?v=abcdefghijk"
+
+        def fake_run(argv: list[str], env: dict[str, str], *, required: bool = True) -> int:
+            return 7 if str(argv[1]).endswith("10-rule-evaluation.py") else 0
+
+        output = io.StringIO()
+        with patch.object(module, "assert_hosted_target"), patch.object(
+            module, "fetch_hosted_restaurant_snapshot", return_value=([], [])
+        ), patch.object(module, "_load_urls", side_effect=[[], [video_url]]), patch.object(
+            module, "_write_urls"
+        ), patch.object(module, "_locally_evaluated_ids", return_value=set()), patch.object(
+            module, "_is_short_video", return_value=False
+        ), patch.object(module, "certified", return_value=True), patch.object(
+            module, "_video_state", return_value="completed"
+        ), patch.object(module, "_transformed_names", return_value={}), patch.object(
+            module, "_run", side_effect=fake_run
+        ), contextlib.redirect_stdout(output):
+            code = module.main(["--channel", "tzuyang", "--limit", "1"])
+
+        self.assertEqual(code, 1)
+        self.assertIn("videoFailed=abcdefghijk reasons=rule_failed", output.getvalue())
+        self.assertIn("completedVideoCount=0", output.getvalue())
+        self.assertIn("failedVideoCount=1", output.getvalue())
+
+    def test_latest_url_is_first_and_old_failed_url_remains_retryable(self) -> None:
+        newest = "https://www.youtube.com/watch?v=nnnnnnnnnnn"
+        old_failed = "https://www.youtube.com/watch?v=ooooooooooo"
+        collected_calls: list[list[str]] = []
+        restored: list[list[str]] = []
+
+        def fake_run(argv: list[str], _env: dict[str, str], *, required: bool = True) -> int:
+            collected_calls.append(argv)
+            return 0
+
+        def dry_run(local_done: set[str]) -> str:
+            output = io.StringIO()
+            with patch.object(module, "assert_hosted_target"), patch.object(
+                module, "fetch_hosted_restaurant_snapshot", return_value=([], [])
+            ), patch.object(
+                module, "_load_urls", side_effect=[[old_failed], [newest, old_failed]]
+            ), patch.object(
+                module, "_write_urls", side_effect=lambda _path, urls: restored.append(urls)
+            ), patch.object(
+                module, "_locally_evaluated_ids", return_value=local_done
+            ), patch.object(module, "_run", side_effect=fake_run), contextlib.redirect_stdout(output):
+                self.assertEqual(module.main(["--limit", "1", "--dry-run"]), 0)
+            return output.getvalue()
+
+        self.assertIn("newVideoIds=['nnnnnnnnnnn']", dry_run(set()))
+        self.assertIn("newVideoIds=['ooooooooooo']", dry_run({"nnnnnnnnnnn"}))
+        self.assertTrue(all("--latest-first" in call for call in collected_calls))
+        self.assertEqual(restored, [[old_failed], [old_failed]])
 
     def test_rejects_invalid_limit(self) -> None:
         self.assertEqual(module.main(["--limit", "0"]), 2)
         self.assertEqual(module.main(["--limit", "9"]), 2)
-    def test_continues_when_optional_context_fails(self) -> None:
+    def test_optional_context_failure_does_not_prevent_downstream_attempt(self) -> None:
         calls: list[list[str]] = []
 
         def fake_run(argv: list[str], env: dict[str, str], *, required: bool = True) -> int:
@@ -116,7 +257,7 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
             module, "_locally_evaluated_ids", return_value=set()
         ), patch.object(module, "_run", side_effect=fake_run):
             code = module.main(["--channel", "tzuyang", "--limit", "1"])
-        self.assertEqual(code, 0)
+        self.assertEqual(code, 1)  # mocked stages wrote no certified output
         self.assertTrue(any("08-chunk-multimodal-crawling.sh" in " ".join(call) for call in calls))
 
     def test_shorts_do_not_block_evaluation_of_the_other_videos(self) -> None:
@@ -155,10 +296,12 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
             module, "_is_short_video", side_effect=lambda _crawling, video_id: video_id == "aaaaaaaaaaa"
         ), patch.object(
             module, "_mark_crawl_not_selected", side_effect=mark
-        ), patch.object(module, "_run", side_effect=fake_run):
+        ), patch.object(module, "certified", return_value=True), patch.object(
+            module, "_run", side_effect=fake_run
+        ):
             code = module.main(["--channel", "tzuyang", "--limit", "3"])
 
-        self.assertEqual(code, 0)
+        self.assertEqual(code, 1)  # mocked stages wrote no certified output
         self.assertEqual(marked, ["aaaaaaaaaaa"])
         evaluated = [
             call[call.index("--video-id") + 1]

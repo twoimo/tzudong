@@ -4,6 +4,9 @@
 from __future__ import annotations
 
 import unittest
+import hashlib
+import io
+from contextlib import redirect_stdout
 from unittest.mock import patch
 
 from backend.supabase.scripts.hosted_data_plane import (
@@ -21,10 +24,206 @@ from backend.supabase.scripts.hosted_data_plane import (
     r2_public_object_url,
     load_evaluation_rows,
     _json_request,
+    fetch_hosted_restaurant_snapshot,
 )
 
 
 class HostedDataPlaneTests(unittest.TestCase):
+    def test_apply_cli_reports_partial_rows_as_failure(self) -> None:
+        from backend.bin.apply_hosted_pending_candidates import main
+
+        trace = hashlib.sha256(b"unresolved").hexdigest()
+        row = {"youtube_link": "https://youtu.be/abcdefghijk", "trace_id": trace,
+               "geocoding_success": True, "lat": 1, "lng": 2}
+        env = {"SUPABASE_URL": HOSTED_URL, "SUPABASE_SERVICE_ROLE_KEY": "key", APPROVAL_ENV: "1"}
+        result = {"insertedCount": 0, "insertedVideoIds": [], "skippedExistingVideoIds": [],
+                  "rowReceipts": [{"videoId": "abcdefghijk", "traceId": trace,
+                                   "outcome": "unresolved", "postStatus": "500", "readbackStatus": "200"}],
+                  "reflection": {"applied": [], "skippedAlreadyPresent": [], "unresolved": ["abcdefghijk"]}}
+        with (
+            patch.dict("os.environ", env),
+            patch("backend.bin.apply_hosted_pending_candidates.fetch_hosted_restaurant_snapshot",
+                  return_value=([], [], [], [])),
+            patch("backend.bin.apply_hosted_pending_candidates.load_evaluation_rows",
+                  return_value=[row]),
+            patch("backend.bin.apply_hosted_pending_candidates.apply_pending_candidates",
+                  return_value=result),
+            redirect_stdout(io.StringIO()) as output,
+        ):
+            self.assertEqual(main([]), 2)
+        self.assertIn("error=candidates_unresolved", output.getvalue())
+        self.assertIn("rowReceipts=", output.getvalue())
+
+    def test_trace_snapshot_keeps_default_tuple_and_rejects_bad_identity(self) -> None:
+        trace = hashlib.sha256(b"one").hexdigest()
+        hosted = [{"id": "id-one", "youtube_link": "https://youtu.be/abcdefghijk", "trace_id": trace}]
+        with patch("backend.supabase.scripts.hosted_data_plane._json_request", return_value=(200, hosted)) as request:
+            self.assertEqual(len(fetch_hosted_restaurant_snapshot(url=HOSTED_URL, service_role_key="key")), 2)
+            self.assertEqual(fetch_hosted_restaurant_snapshot(url=HOSTED_URL, service_role_key="key", include_trace_ids=True)[2], [trace])
+            self.assertIn("trace_id", request.call_args.args[0])
+        for bad_trace in (None, "legacy-trace", []):
+            legacy = [{"id": "id-one", "youtube_link": "https://youtu.be/abcdefghijk",
+                       "trace_id": bad_trace}]
+            with patch("backend.supabase.scripts.hosted_data_plane._json_request", return_value=(200, legacy)):
+                self.assertEqual(fetch_hosted_restaurant_snapshot(
+                    url=HOSTED_URL, service_role_key="key", include_trace_ids=True)[3], ["abcdefghijk"])
+        with patch("backend.supabase.scripts.hosted_data_plane._json_request", return_value=(200, [{"id": "id-one", "trace_id": None}])):
+            with self.assertRaisesRegex(HostedDataPlaneError, "hosted_identity_unscoped"):
+                fetch_hosted_restaurant_snapshot(url=HOSTED_URL, service_role_key="key", include_trace_ids=True)
+
+    def test_same_video_missing_restaurant_repaired_without_touching_approved(self) -> None:
+        first = hashlib.sha256(b"first restaurant").hexdigest()
+        second = hashlib.sha256(b"second restaurant").hexdigest()
+        def row(trace_id: str, name: str) -> dict:
+            return {"youtube_link": "https://youtu.be/abcdefghijk", "trace_id": trace_id,
+                    "origin_name": name, "geocoding_success": True, "lat": 37.5, "lng": 127.0}
+        rows = [row(first, "관리자 승인집"), row(second, "누락집")]
+        preview = build_apply_preview(local_restaurant_ids=[], hosted_restaurant_ids=["approved-id"],
+            hosted_youtube_ids=["abcdefghijk"], hosted_trace_ids=[first], evaluation_rows=rows)
+        self.assertEqual(preview["applyCandidateTraceIds"], [second])
+        self.assertEqual(preview["applyCandidateCount"], 1)
+        calls = []
+        def fetch(url, *, key, method="GET", payload=None, extra_headers=None):
+            calls.append((method, payload))
+            if method == "POST":
+                return 201, [{"id": "new-id", "trace_id": second, "status": "pending"}]
+            return 200, [{"id": "new-id", "trace_id": second, "status": "pending"}]
+        result = apply_pending_candidates(preview=preview, evaluation_rows=rows, url=HOSTED_URL,
+            service_role_key="key", environment={APPROVAL_ENV: "1"},
+            presented_preview_sha256=preview["previewSha256"], fetch=fetch)
+        self.assertEqual(result["insertedCount"], 1)
+        self.assertEqual(result["rowReceipts"], [{"videoId": "abcdefghijk", "traceId": second,
+            "outcome": "applied", "postStatus": "201", "readbackStatus": "200",
+            "hostedStatus": "pending"}])
+        self.assertEqual([item[0] for item in calls], ["POST", "GET"])
+        self.assertEqual(calls[0][1]["status"], "pending")
+        rerun = build_apply_preview(local_restaurant_ids=[], hosted_restaurant_ids=["approved-id", "new-id"],
+            hosted_youtube_ids=["abcdefghijk", "abcdefghijk"], hosted_trace_ids=[first, second], evaluation_rows=rows)
+        self.assertEqual(rerun["applyCandidateCount"], 0)
+
+    def test_legacy_trace_blocks_its_video_but_unrelated_video_can_apply(self) -> None:
+        legacy_video = "abcdefghijk"
+        new_video = "newvideo111"
+        new_trace = hashlib.sha256(b"new video restaurant").hexdigest()
+        legacy_candidate_trace = hashlib.sha256(b"same legacy video").hexdigest()
+        hosted = [{"id": "legacy-id", "youtube_link": f"https://youtu.be/{legacy_video}",
+                   "trace_id": None, "status": "approved"}]
+        with patch("backend.supabase.scripts.hosted_data_plane._json_request", return_value=(200, hosted)):
+            ids, videos, traces, ambiguous = fetch_hosted_restaurant_snapshot(
+                url=HOSTED_URL, service_role_key="key", include_trace_ids=True)
+        rows = [{"youtube_link": f"https://youtu.be/{video}", "trace_id": trace,
+                 "geocoding_success": True, "lat": 1, "lng": 2}
+                for video, trace in ((legacy_video, legacy_candidate_trace), (new_video, new_trace))]
+        preview = build_apply_preview(local_restaurant_ids=[], hosted_restaurant_ids=ids,
+            hosted_youtube_ids=videos, hosted_trace_ids=traces,
+            hosted_ambiguous_youtube_ids=ambiguous, evaluation_rows=rows)
+        self.assertEqual(preview["evaluationClasses"]["skip_hosted_identity_ambiguous"], 1)
+        self.assertEqual(preview["hostedAmbiguousVideoIds"], [legacy_video])
+        self.assertEqual(preview["applyCandidateTraceIds"], [new_trace])
+        calls = []
+        def fetch(url, *, key, method="GET", payload=None, extra_headers=None):
+            calls.append((method, payload))
+            if method == "POST":
+                return 201, [{"id": "new-id", "trace_id": new_trace, "status": "pending"}]
+            return 200, [{"id": "new-id", "trace_id": new_trace, "status": "pending"}]
+        result = apply_pending_candidates(preview=preview, evaluation_rows=rows,
+            url=HOSTED_URL, service_role_key="key", environment={APPROVAL_ENV: "1"},
+            presented_preview_sha256=preview["previewSha256"], fetch=fetch)
+        self.assertEqual(result["insertedCount"], 1)
+        self.assertEqual([item[1]["trace_id"] for item in calls if item[0] == "POST"], [new_trace])
+
+    def test_readback_requires_matching_id_and_status(self) -> None:
+        trace = hashlib.sha256(b"readback identity").hexdigest()
+        row = {"youtube_link": "https://youtu.be/abcdefghijk", "trace_id": trace,
+               "geocoding_success": True, "lat": 1, "lng": 2}
+        preview = build_apply_preview(local_restaurant_ids=[], hosted_restaurant_ids=[],
+            hosted_youtube_ids=[], hosted_trace_ids=[], evaluation_rows=[row])
+        for read_row in ({"id": "other-id", "trace_id": trace, "status": "pending"},
+                         {"id": "new-id", "trace_id": trace, "status": None},
+                         {"id": "new-id", "trace_id": trace, "status": "deleted"}):
+            def fetch(url, *, key, method="GET", payload=None, extra_headers=None):
+                if method == "POST":
+                    return 201, [{"id": "new-id", "trace_id": trace, "status": "pending"}]
+                return 200, [read_row]
+            result = apply_pending_candidates(preview=preview, evaluation_rows=[row],
+                url=HOSTED_URL, service_role_key="key", environment={APPROVAL_ENV: "1"},
+                presented_preview_sha256=preview["previewSha256"], fetch=fetch)
+            self.assertEqual(result["insertedCount"], 0)
+            self.assertEqual(result["rowReceipts"][0]["outcome"], "unresolved")
+
+    def test_partial_failure_remains_visible_and_rerun_selects_only_missing_row(self) -> None:
+        first = hashlib.sha256(b"first").hexdigest()
+        second = hashlib.sha256(b"second").hexdigest()
+        rows = [{"youtube_link": "https://youtu.be/abcdefghijk", "trace_id": trace,
+                 "origin_name": name, "geocoding_success": True, "lat": 1, "lng": 2}
+                for trace, name in ((first, "첫집"), (second, "둘째집"))]
+        preview = build_apply_preview(local_restaurant_ids=[], hosted_restaurant_ids=[],
+            hosted_youtube_ids=[], hosted_trace_ids=[], evaluation_rows=rows)
+        def fetch(url, *, key, method="GET", payload=None, extra_headers=None):
+            trace = payload["trace_id"] if method == "POST" else url.split("eq.")[-1]
+            if trace == second and method == "POST":
+                raise HostedDataPlaneError("hosted_request_failed")
+            if trace == second:
+                return 200, []
+            return (201, [{"id": "first-id", "trace_id": first, "status": "pending"}]) if method == "POST" else (200, [{"id": "first-id", "trace_id": first, "status": "pending"}])
+        result = apply_pending_candidates(preview=preview, evaluation_rows=rows, url=HOSTED_URL,
+            service_role_key="key", environment={APPROVAL_ENV: "1"},
+            presented_preview_sha256=preview["previewSha256"], fetch=fetch)
+        self.assertEqual(result["insertedCount"], 1)
+        self.assertEqual([r["outcome"] for r in result["rowReceipts"]], ["applied", "unresolved"])
+        self.assertEqual(result["reflection"]["unresolved"], ["abcdefghijk"])
+        rerun = build_apply_preview(local_restaurant_ids=[], hosted_restaurant_ids=["first-id"],
+            hosted_youtube_ids=["abcdefghijk"], hosted_trace_ids=[first], evaluation_rows=rows)
+        self.assertEqual(rerun["applyCandidateTraceIds"], [second])
+
+    def test_ignored_duplicate_and_missing_readback_are_not_insertions(self) -> None:
+        trace = hashlib.sha256(b"duplicate").hexdigest()
+        row = {"youtube_link": "https://youtu.be/abcdefghijk", "trace_id": trace,
+               "geocoding_success": True, "lat": 1, "lng": 2}
+        preview = build_apply_preview(local_restaurant_ids=[], hosted_restaurant_ids=[],
+            hosted_youtube_ids=[], hosted_trace_ids=[], evaluation_rows=[row])
+        for read_rows, expected in (([{"id": "existing-id", "trace_id": trace, "status": "approved"}], "skippedAlreadyPresent"),
+                                    ([], "unresolved")):
+            def fetch(url, *, key, method="GET", payload=None, extra_headers=None):
+                return (200, []) if method == "POST" else (200, read_rows)
+            result = apply_pending_candidates(preview=preview, evaluation_rows=[row], url=HOSTED_URL,
+                service_role_key="key", environment={APPROVAL_ENV: "1"},
+                presented_preview_sha256=preview["previewSha256"], fetch=fetch)
+            self.assertEqual(result["insertedCount"], 0)
+            self.assertEqual(result["rowReceipts"][0]["outcome"], expected)
+
+    def test_bad_trace_id_skips_and_changed_selected_payload_fails_before_write(self) -> None:
+        row = {"youtube_link": "https://youtu.be/abcdefghijk", "trace_id": None,
+               "geocoding_success": True, "lat": 1, "lng": 2}
+        preview = build_apply_preview(local_restaurant_ids=[], hosted_restaurant_ids=[],
+            hosted_youtube_ids=[], hosted_trace_ids=[], evaluation_rows=[row])
+        self.assertEqual(preview["evaluationClasses"], {"skip_invalid_identity": 1})
+        self.assertEqual(preview["applyCandidateCount"], 0)
+        row["trace_id"] = hashlib.sha256(b"valid").hexdigest()
+        preview = build_apply_preview(local_restaurant_ids=[], hosted_restaurant_ids=[],
+            hosted_youtube_ids=[], hosted_trace_ids=[], evaluation_rows=[row])
+        changed = dict(row, lat=3)
+        with self.assertRaisesRegex(HostedDataPlaneError, "apply_payload_mismatch"):
+            apply_pending_candidates(preview=preview, evaluation_rows=[changed], url=HOSTED_URL,
+                service_role_key="key", environment={APPROVAL_ENV: "1"},
+                presented_preview_sha256=preview["previewSha256"],
+                fetch=lambda *args, **kwargs: self.fail("write before binding check"))
+
+    def test_soft_deleted_hosted_trace_is_not_recreated(self) -> None:
+        trace = hashlib.sha256(b"admin deleted").hexdigest()
+        hosted = [{"id": "deleted-id", "trace_id": trace, "status": "deleted",
+                   "youtube_link": "https://youtu.be/abcdefghijk"}]
+        with patch("backend.supabase.scripts.hosted_data_plane._json_request", return_value=(200, hosted)):
+            ids, videos, traces, ambiguous = fetch_hosted_restaurant_snapshot(
+                url=HOSTED_URL, service_role_key="key", include_trace_ids=True)
+        preview = build_apply_preview(local_restaurant_ids=[], hosted_restaurant_ids=ids,
+            hosted_youtube_ids=videos, hosted_trace_ids=traces,
+            hosted_ambiguous_youtube_ids=ambiguous,
+            evaluation_rows=[{"youtube_link": "https://youtu.be/abcdefghijk", "trace_id": trace,
+                              "geocoding_success": True, "lat": 1, "lng": 2}])
+        self.assertEqual(preview["evaluationClasses"], {"skip_already_on_hosted": 1})
+        self.assertEqual(preview["applyCandidateCount"], 0)
+
     def test_disjoint_synthetic_local_restaurants_are_forbidden(self) -> None:
         label = classify_local_docker_restaurants(
             [

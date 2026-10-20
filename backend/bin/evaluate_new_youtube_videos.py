@@ -8,6 +8,7 @@ scripts for those videos. Does not write to hosted Supabase.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -16,6 +17,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "backend" / "supabase" / "scripts"))
+sys.path.insert(0, str(REPO_ROOT / "backend"))
+
+from utils.stage_cache import certified  # noqa: E402
 
 from hosted_data_plane import (  # noqa: E402
     HostedDataPlaneError,
@@ -36,6 +40,12 @@ SCRIPTS = {
     "laaj": REPO_ROOT / "backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh",
     "transform": REPO_ROOT / "backend/restaurant-evaluation/scripts/12-transform.py",
 }
+
+
+class _BatchFailure(Exception):
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(reason)
 
 
 def _run(argv: list[str], env: dict[str, str], *, required: bool = True) -> int:
@@ -96,19 +106,100 @@ def _mark_crawl_not_selected(evaluation: Path, video_id: str, reason: str) -> No
     )
 
 
-def _locally_evaluated_ids(evaluation: Path) -> set[str]:
-    """IDs 09 already wrote (selection or notSelection).
+def _last_record(path: Path) -> dict | None:
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+        value = json.loads(lines[-1])
+        return value if isinstance(value, dict) else None
+    except (OSError, IndexError, UnicodeError, json.JSONDecodeError):
+        return None
 
-    Foreign restaurants never reach hosted youtube ids, so they would
-    re-qualify as new every night and consume --limit.
-    """
-    ids: set[str] = set()
-    for folder in ("selection", "notSelection"):
-        directory = evaluation / "evaluation" / folder
-        if not directory.is_dir():
-            continue
-        ids.update(path.stem for path in directory.glob("*.jsonl"))
-    return ids
+
+def _transformed_names(evaluation: Path) -> dict[str, set[str]]:
+    """Use only the transform's committed, hash-matched snapshot."""
+    base = evaluation / "evaluation"
+    output = base / "transforms.jsonl"
+    receipt = base / ".receipts" / "transform.json"
+    try:
+        ledger = json.loads(receipt.read_text(encoding="utf-8"))
+        snapshot = output.read_bytes()
+        if hashlib.sha256(snapshot).hexdigest() != ledger.get("outputHash"):
+            return {}
+        rows = {}
+        for line in snapshot.decode("utf-8").splitlines():
+            if line.strip():
+                row = json.loads(line)
+                if isinstance(row, dict) and isinstance(row.get("trace_id"), str):
+                    rows[row["trace_id"]] = row
+        result: dict[str, set[str]] = {}
+        for identity, group in ledger.get("groups", {}).items():
+            if not identity.startswith("results:") or not isinstance(group, dict):
+                continue
+            video_id = identity.removeprefix("results:")
+            result[video_id] = {
+                row["origin_name"]
+                for trace in group.get("records", [])
+                if isinstance((row := rows.get(trace)), dict)
+                and isinstance(row.get("origin_name"), str)
+                and not row.get("is_missing")
+                and not row.get("is_notSelected")
+            }
+        return result
+    except (OSError, UnicodeError, ValueError, TypeError, AttributeError):
+        return {}
+
+
+def _video_state(
+    crawling: Path, evaluation: Path, video_id: str, transformed: dict[str, set[str]]
+) -> str:
+    """A 09 selection alone is never a completed evaluation."""
+    crawl_output = crawling / "crawling" / f"{video_id}.jsonl"
+    if not certified(crawling / "crawling" / ".receipts" / f"{video_id}.json", [crawl_output]):
+        return "extraction_incomplete"
+    base = evaluation / "evaluation"
+    selection = base / "selection" / f"{video_id}.jsonl"
+    not_selection = base / "notSelection" / f"{video_id}.jsonl"
+    outputs = [path for path in (selection, not_selection) if path.is_file()]
+    if not certified(base / "selection" / ".receipts" / f"{video_id}.json", outputs):
+        return "selection_incomplete"
+    record = _last_record(selection if selection.is_file() else not_selection)
+    if record is None or not isinstance(record.get("evaluation_target"), dict):
+        return "selection_incomplete"
+    targets = {name for name, chosen in record["evaluation_target"].items() if chosen is True}
+    if not targets:
+        if record.get("notSelected_reason") in {"no_restaurants", "all_names_null"}:
+            return "no_extraction"
+        return "no_evaluable_target"
+    for stage in ("rule_results", "laaj_results"):
+        output = base / stage / f"{video_id}.jsonl"
+        if not certified(base / stage / ".receipts" / f"{video_id}.json", [output]):
+            return f"{stage}_incomplete"
+    if not targets.issubset(transformed.get(video_id, set())):
+        return "transform_incomplete"
+    return "completed"
+
+
+def _locally_evaluated_ids(evaluation: Path, crawling: Path | None = None) -> set[str]:
+    """Skip only certified terminal outcomes; incomplete videos retry next tick."""
+    base = evaluation / "evaluation"
+    candidates = {
+        path.stem
+        for folder in ("selection", "notSelection")
+        for path in (base / folder).glob("*.jsonl")
+    }
+    transformed = _transformed_names(evaluation)
+    crawling = crawling or REPO_ROOT / "backend/restaurant-crawling/data" / evaluation.name
+    completed = {
+        video_id for video_id in candidates
+        if _video_state(crawling, evaluation, video_id, transformed)
+        in {"completed", "no_extraction", "no_evaluable_target"}
+    }
+    for path in (base / "notSelection").glob("*.jsonl"):
+        row = _last_record(path)
+        if (row and row.get("notSelected_reason") == "shorts:is_shorts_le_180"
+                and _is_short_video(crawling, path.stem)):
+            completed.add(path.stem)
+    return completed
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -138,9 +229,19 @@ def main(argv: list[str] | None = None) -> int:
     crawling = REPO_ROOT / "backend/restaurant-crawling/data" / args.channel
     evaluation = REPO_ROOT / "backend/restaurant-evaluation/data" / args.channel
     urls_path = crawling / "urls.txt"
-    local_done = _locally_evaluated_ids(evaluation)
+    local_done = _locally_evaluated_ids(evaluation, crawling)
     before = _load_urls(urls_path)
-    _run([python, str(SCRIPTS["collect_urls"]), "--channel", args.channel], env)
+    collect_exit = _run(
+        [python, str(SCRIPTS["collect_urls"]), "--channel", args.channel, "--latest-first"],
+        env,
+        required=False,
+    )
+    if collect_exit != 0:
+        print("collect=failed")
+        print("completedVideoCount=0")
+        print("excludedVideoCount=0")
+        print("failedVideoCount=0")
+        return collect_exit
     after = _load_urls(urls_path)
     new_urls: list[str] = []
     seen: set[str] = set()
@@ -163,13 +264,22 @@ def main(argv: list[str] | None = None) -> int:
     print(f"newVideoIds={[extract_youtube_video_id(item) for item in new_urls]}")
     if args.dry_run or not new_urls:
         _write_urls(urls_path, before)
+        print("completedVideoCount=0")
+        print("excludedVideoCount=0")
+        print("failedVideoCount=0")
         print("evaluate=skipped")
         return 0
 
     _write_urls(urls_path, new_urls)
     new_ids = [item for item in (extract_youtube_video_id(item) for item in new_urls) if item]
+    stage_failures: dict[str, list[str]] = {video_id: [] for video_id in new_ids}
+    evaluable_ids = new_ids
+    short_ids: list[str] = []
+    chunk_exit = 0
+    transform_exit = 0
     try:
-        _run([python, str(SCRIPTS["collect_meta"]), "--channel", args.channel], env)
+        if _run([python, str(SCRIPTS["collect_meta"]), "--channel", args.channel], env, required=False):
+            raise _BatchFailure("metadata_failed")
         short_ids = [video_id for video_id in new_ids if _is_short_video(crawling, video_id)]
         for video_id in short_ids:
             _mark_crawl_not_selected(evaluation, video_id, "shorts:is_shorts_le_180")
@@ -181,7 +291,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"shortVideoIds={short_ids}")
         print(f"evaluableVideoIds={evaluable_ids}")
         if evaluable_ids:
-            _run(["node", str(SCRIPTS["transcript"]), "--channel", args.channel], env)
+            if _run(["node", str(SCRIPTS["transcript"]), "--channel", args.channel], env, required=False):
+                raise _BatchFailure("transcript_failed")
             context_exit = _run(
                 [
                     python,
@@ -204,6 +315,10 @@ def main(argv: list[str] | None = None) -> int:
             if chunk_exit != 0:
                 print(f"chunk=continued exit={chunk_exit}")
         for video_id in evaluable_ids:
+            crawl_output = crawling / "crawling" / f"{video_id}.jsonl"
+            if not certified(crawling / "crawling" / ".receipts" / f"{video_id}.json", [crawl_output]):
+                stage_failures[video_id].append("extraction_incomplete")
+                continue
             for script_key in ("target", "rule"):
                 command = [
                     python,
@@ -220,8 +335,22 @@ def main(argv: list[str] | None = None) -> int:
                 step_exit = _run(command, env, required=False)
                 if step_exit != 0:
                     print(f"{script_key}=skipped video={video_id} exit={step_exit}")
+                    stage_failures[video_id].append(f"{script_key}_failed")
+                    break
+                if script_key == "target":
+                    state = _video_state(crawling, evaluation, video_id, {})
+                    if state in {"no_extraction", "no_evaluable_target"}:
+                        break
+                    if state == "selection_incomplete":
+                        stage_failures[video_id].append(state)
+                        break
+            if stage_failures[video_id] or _video_state(crawling, evaluation, video_id, {}) in {
+                "no_extraction", "no_evaluable_target"
+            }:
+                continue
             if env.get("TZUDONG_LAAJ_PROVIDER") == "opencode-go":
                 print(f"laaj=deferred provider=opencode-go video={video_id}")
+                stage_failures[video_id].append("laaj_deferred")
             else:
                 laaj_exit = _run(
                     [
@@ -241,7 +370,8 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 if laaj_exit != 0:
                     print(f"laaj=skipped video={video_id} exit={laaj_exit}")
-        _run(
+                    stage_failures[video_id].append("laaj_failed")
+        transform_exit = _run(
             [
                 python,
                 str(SCRIPTS["transform"]),
@@ -255,6 +385,12 @@ def main(argv: list[str] | None = None) -> int:
             env,
             required=False,
         )
+    except _BatchFailure as exc:
+        for video_id in evaluable_ids:
+            stage_failures[video_id].append(exc.reason)
+    except OSError:
+        for video_id in evaluable_ids:
+            stage_failures[video_id].append("runtime_failed")
     finally:
         merged = list(new_urls)
         known = {extract_youtube_video_id(item) for item in merged}
@@ -265,6 +401,32 @@ def main(argv: list[str] | None = None) -> int:
             known.add(video_id)
             merged.append(item)
         _write_urls(urls_path, merged)
+    transformed = _transformed_names(evaluation)
+    failures = 0
+    completed = 0
+    excluded = len(short_ids)
+    for video_id in evaluable_ids:
+        state = _video_state(crawling, evaluation, video_id, transformed)
+        reasons = stage_failures[video_id]
+        if transform_exit != 0 and state != "no_extraction":
+            reasons.append("transform_failed")
+        if state not in {"completed", "no_extraction", "no_evaluable_target"}:
+            reasons.append(state)
+        if reasons:
+            failures += 1
+            print(f"videoFailed={video_id} reasons={','.join(dict.fromkeys(reasons))}")
+        else:
+            if state == "completed":
+                completed += 1
+            else:
+                excluded += 1
+            print(f"videoCompleted={video_id} outcome={state}")
+    print(f"completedVideoCount={completed}")
+    print(f"excludedVideoCount={excluded}")
+    print(f"failedVideoCount={failures}")
+    if failures:
+        print(f"evaluate=failed videoCount={failures}")
+        return 1
     print("evaluate=ok")
     return 0
 

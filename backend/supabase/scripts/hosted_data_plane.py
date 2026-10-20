@@ -31,6 +31,7 @@ YOUTUBE_ID_RE = re.compile(
     r"(?:v=|/shorts/|/live/|youtu\.be/)([A-Za-z0-9_-]{11})"
 )
 R2_MIN_BYTES = 1_000_000
+TRACE_ID_RE = re.compile(r"[0-9a-f]{64}")
 
 
 class HostedDataPlaneError(RuntimeError):
@@ -80,13 +81,23 @@ def classify_local_docker_restaurants(
 def classify_evaluation_row(
     row: Mapping[str, Any],
     hosted_youtube_ids: Iterable[str],
+    *,
+    hosted_trace_ids: Iterable[str] | None = None,
+    hosted_ambiguous_youtube_ids: Iterable[str] = (),
 ) -> str:
-    hosted = set(hosted_youtube_ids)
     video_id = row_youtube_id(row)
-    if video_id and video_id in hosted:
-        return "skip_already_on_hosted"
     if not video_id:
         return "skip_no_video"
+    if hosted_trace_ids is not None:
+        if video_id in hosted_ambiguous_youtube_ids:
+            return "skip_hosted_identity_ambiguous"
+        trace_id = row.get("trace_id")
+        if not isinstance(trace_id, str) or not TRACE_ID_RE.fullmatch(trace_id):
+            return "skip_invalid_identity"
+        if trace_id in hosted_trace_ids:
+            return "skip_already_on_hosted"
+    elif video_id in hosted_youtube_ids:
+        return "skip_already_on_hosted"
     if bool(row.get("is_missing")):
         return "skip_missing"
     if bool(row.get("is_notSelected") or row.get("is_not_selected")):
@@ -140,12 +151,20 @@ def _preview_body(preview: Mapping[str, Any]) -> dict[str, Any]:
 def apply_payload_sha256(
     rows: Iterable[Mapping[str, Any]],
     hosted_youtube_ids: Iterable[str],
+    *,
+    hosted_trace_ids: Iterable[str] | None = None,
+    hosted_ambiguous_youtube_ids: Iterable[str] = (),
 ) -> str:
     """Hash only the rows that preview would insert, in a stable order."""
+    if hosted_trace_ids is not None:
+        hosted_trace_ids = set(hosted_trace_ids)
     payloads = [
         pending_insert_payload(row)
         for row in rows
-        if classify_evaluation_row(row, hosted_youtube_ids) in APPLY_CANDIDATE_LABELS
+        if classify_evaluation_row(
+            row, hosted_youtube_ids, hosted_trace_ids=hosted_trace_ids,
+            hosted_ambiguous_youtube_ids=hosted_ambiguous_youtube_ids,
+        ) in APPLY_CANDIDATE_LABELS
     ]
     payloads.sort(
         key=lambda item: (
@@ -163,33 +182,67 @@ def build_apply_preview(
     hosted_restaurant_ids: Iterable[str],
     hosted_youtube_ids: Iterable[str],
     evaluation_rows: Iterable[Mapping[str, Any]],
+    hosted_trace_ids: Iterable[str] | None = None,
+    hosted_ambiguous_youtube_ids: Iterable[str] = (),
 ) -> dict[str, Any]:
+    hosted_ambiguous_youtube_ids = list(hosted_ambiguous_youtube_ids)
+    if hosted_ambiguous_youtube_ids and hosted_trace_ids is None:
+        _deny("hosted_identity_mode_required")
+    if any(
+        not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_-]{11}", value)
+        for value in hosted_ambiguous_youtube_ids
+    ):
+        _deny("hosted_video_identity_invalid")
+    hosted_ambiguous_youtube_ids = set(hosted_ambiguous_youtube_ids)
+    if hosted_trace_ids is not None:
+        hosted_trace_ids = list(hosted_trace_ids)
+        if any(
+            not isinstance(value, str) or not TRACE_ID_RE.fullmatch(value)
+            for value in hosted_trace_ids
+        ):
+            _deny("hosted_identity_invalid")
+        hosted_trace_ids = set(hosted_trace_ids)
     docker_class = classify_local_docker_restaurants(
         local_restaurant_ids, hosted_restaurant_ids
     )
     rows_list = list(evaluation_rows)
     candidates: list[str] = []
+    trace_candidates: list[str] = []
     classes: dict[str, int] = {}
     for row in rows_list:
-        label = classify_evaluation_row(row, hosted_youtube_ids)
+        label = classify_evaluation_row(
+            row, hosted_youtube_ids, hosted_trace_ids=hosted_trace_ids,
+            hosted_ambiguous_youtube_ids=hosted_ambiguous_youtube_ids,
+        )
         classes[label] = classes.get(label, 0) + 1
         if label in APPLY_CANDIDATE_LABELS:
             video_id = row_youtube_id(row)
             if video_id:
                 candidates.append(video_id)
+                if hosted_trace_ids is not None:
+                    trace_candidates.append(row["trace_id"])
     candidates = sorted(set(candidates))
+    if len(trace_candidates) != len(set(trace_candidates)):
+        _deny("candidate_identity_duplicate")
     payload = {
-        "schemaVersion": 1,
+        "schemaVersion": 2 if hosted_trace_ids is not None else 1,
         "hostedProjectRef": HOSTED_PROJECT_REF,
         "dockerRestaurantClass": docker_class,
         "dockerRestaurantApply": [],
         "evaluationClasses": classes,
         "applyCandidateVideoIds": candidates,
-        "applyCandidateCount": len(candidates),
-        "applyPayloadSha256": apply_payload_sha256(rows_list, hosted_youtube_ids),
+        "applyCandidateCount": len(trace_candidates) if hosted_trace_ids is not None else len(candidates),
+        "applyPayloadSha256": apply_payload_sha256(
+            rows_list, hosted_youtube_ids, hosted_trace_ids=hosted_trace_ids,
+            hosted_ambiguous_youtube_ids=hosted_ambiguous_youtube_ids,
+        ),
         "insertStatus": "pending",
         "overwriteApprovedForbidden": True,
     }
+    if hosted_trace_ids is not None:
+        payload["candidateIdentity"] = "trace_id"
+        payload["applyCandidateTraceIds"] = sorted(trace_candidates)
+        payload["hostedAmbiguousVideoIds"] = sorted(hosted_ambiguous_youtube_ids)
     payload["previewSha256"] = preview_hash(
         {key: value for key, value in payload.items() if key != "previewSha256"}
     )
@@ -318,7 +371,13 @@ def fetch_hosted_restaurant_snapshot(
     *,
     url: str,
     service_role_key: str,
-) -> tuple[list[str], list[str]]:
+    include_trace_ids: bool = False,
+) -> tuple[list[str], list[str]] | tuple[list[str], list[str], list[str], list[str]]:
+    """Default to the legacy pair; identity mode adds valid traces and blocked videos.
+
+    A hosted row with a malformed trace blocks only its known video. If its
+    video cannot be identified, no safe scope exists and the snapshot fails.
+    """
     assert_hosted_target(url)
     if not service_role_key.strip():
         _deny("hosted_key_missing")
@@ -327,8 +386,9 @@ def fetch_hosted_restaurant_snapshot(
     page = 1000
     while True:
         end = start + page - 1
+        select = "id,youtube_link,youtube_meta,trace_id" if include_trace_ids else "id,youtube_link,youtube_meta"
         status, payload = _json_request(
-            f"{url.rstrip('/')}/rest/v1/restaurants?select=id,youtube_link,youtube_meta&order=id.asc",
+            f"{url.rstrip('/')}/rest/v1/restaurants?select={select}&order=id.asc",
             key=service_role_key,
             extra_headers={"Range": f"{start}-{end}", "Prefer": "count=exact"},
         )
@@ -336,7 +396,9 @@ def fetch_hosted_restaurant_snapshot(
             _deny("hosted_snapshot_failed")
         if not isinstance(payload, list):
             _deny("hosted_snapshot_failed")
-        rows.extend(item for item in payload if isinstance(item, dict))
+        if any(not isinstance(item, dict) for item in payload):
+            _deny("hosted_snapshot_failed")
+        rows.extend(payload)
         if len(payload) < page:
             break
         start += page
@@ -344,6 +406,24 @@ def fetch_hosted_restaurant_snapshot(
             _deny("hosted_snapshot_unbounded")
     ids = [str(row["id"]) for row in rows if row.get("id")]
     youtube_ids = [vid for row in rows if (vid := row_youtube_id(row))]
+    if include_trace_ids:
+        trace_ids: list[str] = []
+        ambiguous_video_ids: set[str] = set()
+        for row in rows:
+            value = row.get("trace_id")
+            if isinstance(value, str) and TRACE_ID_RE.fullmatch(value):
+                trace_ids.append(value)
+            else:
+                video_ids = {
+                    video_id for video_id in (
+                        row_youtube_id(row),
+                        extract_youtube_video_id(row.get("youtube_link")),
+                    ) if video_id is not None
+                }
+                if not video_ids:
+                    _deny("hosted_identity_unscoped")
+                ambiguous_video_ids.update(video_ids)
+        return ids, youtube_ids, trace_ids, sorted(ambiguous_video_ids)
     return ids, youtube_ids
 
 
@@ -381,26 +461,58 @@ def apply_pending_candidates(
         environment=environment,
         presented_preview_sha256=presented_preview_sha256,
     )
+    trace_mode = preview.get("schemaVersion") == 2
+    if trace_mode and preview.get("candidateIdentity") != "trace_id":
+        _deny("candidate_identity_invalid")
     allowed = set(preview.get("applyCandidateVideoIds") or [])
-    if preview.get("applyCandidateCount") != len(allowed):
+    allowed_traces = set(preview.get("applyCandidateTraceIds") or []) if trace_mode else set()
+    ambiguous_videos = set(preview.get("hostedAmbiguousVideoIds") or []) if trace_mode else set()
+    if trace_mode and (
+        any(not isinstance(value, str) or not TRACE_ID_RE.fullmatch(value) for value in allowed_traces)
+        or len(preview.get("applyCandidateTraceIds") or []) != len(allowed_traces)
+    ):
+        _deny("candidate_identity_invalid")
+    if preview.get("applyCandidateCount") != (len(allowed_traces) if trace_mode else len(allowed)):
         _deny("candidate_count_mismatch")
+    if trace_mode and (
+        allowed & ambiguous_videos
+        or any(not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_-]{11}", value)
+               for value in ambiguous_videos)
+    ):
+        _deny("candidate_identity_ambiguous")
     if preview.get("dockerRestaurantApply"):
         _deny("forbidden_local_docker_apply")
     rows_list = list(evaluation_rows)
     hosted_for_rows = [
-        video_id
-        for row in rows_list
+        video_id for row in rows_list
         if (video_id := row_youtube_id(row)) and video_id not in allowed
-    ]
-    if apply_payload_sha256(rows_list, hosted_for_rows) != preview.get("applyPayloadSha256"):
+    ] if not trace_mode else []
+    hosted_traces = {
+        trace_id for row in rows_list
+        if isinstance((trace_id := row.get("trace_id")), str)
+        and TRACE_ID_RE.fullmatch(trace_id) and trace_id not in allowed_traces
+    } if trace_mode else None
+    if trace_mode:
+        selected = [
+            row for row in rows_list
+            if isinstance(row.get("trace_id"), str)
+            and row["trace_id"] in allowed_traces
+        ]
+        if len(selected) != len(allowed_traces) or any(
+            row_youtube_id(row) not in allowed for row in selected
+        ):
+            _deny("candidate_identity_mismatch")
+    if apply_payload_sha256(
+        rows_list, hosted_for_rows, hosted_trace_ids=hosted_traces,
+        hosted_ambiguous_youtube_ids=ambiguous_videos,
+    ) != preview.get("applyPayloadSha256"):
         _deny("apply_payload_mismatch")
     inserted: list[str] = []
     skipped: list[str] = []
     unresolved: list[str] = []
-    # Per-candidate mutually-exclusive outcome by stable identity (video id).
-    # Precedence keeps a candidate in exactly one bucket when duplicate rows map
-    # to the same identity: an applied record dominates an already-present skip,
-    # which dominates an unresolved classification (R4.4).
+    row_receipts: list[dict[str, str]] = []
+    # Legacy reflection has one row per video. Trace mode keeps the video-level
+    # contract but lets any unresolved restaurant dominate partial success.
     _APPLIED, _PRESENT, _UNRESOLVED = 3, 2, 1
     outcome: dict[str, int] = {}
     requester = fetch or _json_request
@@ -408,21 +520,95 @@ def apply_pending_candidates(
         video_id = row_youtube_id(row)
         if video_id is None or video_id not in allowed:
             continue
-        if classify_evaluation_row(row, hosted_for_rows) not in APPLY_CANDIDATE_LABELS:
+        trace_id = row.get("trace_id")
+        if trace_mode and (
+            not isinstance(trace_id, str) or trace_id not in allowed_traces
+        ):
+            continue
+        if classify_evaluation_row(
+            row, hosted_for_rows, hosted_trace_ids=hosted_traces,
+            hosted_ambiguous_youtube_ids=ambiguous_videos,
+        ) not in APPLY_CANDIDATE_LABELS:
             continue
         payload = pending_insert_payload(row)
         if payload["status"] != "pending":
             _deny("approved_status_forbidden")
-        status, _body = requester(
-            f"{url.rstrip('/')}/rest/v1/restaurants?on_conflict=trace_id",
-            key=service_role_key,
-            method="POST",
-            payload=payload,
-            extra_headers={
-                "Prefer": "return=minimal,resolution=ignore-duplicates",
-            },
-        )
-        if status in {201, 200}:
+        try:
+            status, body = requester(
+                f"{url.rstrip('/')}/rest/v1/restaurants?on_conflict=trace_id",
+                key=service_role_key,
+                method="POST",
+                payload=payload,
+                extra_headers={
+                    "Prefer": (
+                        "return=representation,resolution=ignore-duplicates"
+                        if trace_mode else "return=minimal,resolution=ignore-duplicates"
+                    ),
+                },
+            )
+        except HostedDataPlaneError:
+            if not trace_mode:
+                raise
+            status, body = 0, None
+        if trace_mode:
+            # A successful HTTP response can be an ignored duplicate. Confirm
+            # the exact row on hosted, and use representation to prove creation.
+            try:
+                read_status, read_rows = requester(
+                    f"{url.rstrip('/')}/rest/v1/restaurants?select=id,trace_id,status&trace_id=eq.{trace_id}",
+                    key=service_role_key,
+                )
+            except HostedDataPlaneError:
+                read_status, read_rows = 0, None
+            present_rows = (
+                read_rows if read_status in {200, 206} and isinstance(read_rows, list)
+                else []
+            )
+            present = (
+                len(present_rows) == 1
+                and isinstance(present_rows[0], dict)
+                and present_rows[0].get("trace_id") == trace_id
+                and bool(present_rows[0].get("id"))
+                and isinstance(present_rows[0].get("status"), str)
+                and bool(present_rows[0]["status"].strip())
+            )
+            created = (
+                status in {200, 201}
+                and isinstance(body, list)
+                and len(body) == 1
+                and isinstance(body[0], dict)
+                and body[0].get("trace_id") == trace_id
+                and bool(body[0].get("id"))
+                and body[0].get("status") == "pending"
+                and present
+                and body[0]["id"] == present_rows[0]["id"]
+                and present_rows[0]["status"] == "pending"
+            )
+            already_present = present and (
+                status == 409
+                or status in {200, 201} and body == []
+            )
+            if created:
+                rank = _APPLIED
+                inserted.append(video_id)
+                row_outcome = "applied"
+            elif already_present:
+                rank = _PRESENT
+                skipped.append(video_id)
+                row_outcome = "skippedAlreadyPresent"
+            else:
+                rank = _UNRESOLVED
+                unresolved.append(video_id)
+                row_outcome = "unresolved"
+            row_receipts.append({
+                "videoId": video_id,
+                "traceId": trace_id,
+                "outcome": row_outcome,
+                "postStatus": str(status),
+                "readbackStatus": str(read_status),
+                "hostedStatus": present_rows[0]["status"] if present else "unverified",
+            })
+        elif status in {201, 200}:
             inserted.append(video_id)
             rank = _APPLIED
         elif status == 409:
@@ -436,7 +622,14 @@ def apply_pending_candidates(
             # (R4.6, R4.7).
             unresolved.append(video_id)
             rank = _UNRESOLVED
-        if rank > outcome.get(video_id, 0):
+        if trace_mode:
+            replace_outcome = rank == _UNRESOLVED or (
+                outcome.get(video_id) != _UNRESOLVED
+                and rank > outcome.get(video_id, 0)
+            )
+        else:
+            replace_outcome = rank > outcome.get(video_id, 0)
+        if replace_outcome:
             outcome[video_id] = rank
     # Every admitted candidate must have been processed into some bucket; the
     # three reflection lists then partition the processed set (R4.4).
@@ -450,10 +643,26 @@ def apply_pending_candidates(
         ),
         "unresolved": sorted(v for v, r in outcome.items() if r == _UNRESOLVED),
     }
+    if trace_mode:
+        # Keep the established per-video reflection while exposing each row's
+        # result, including partial success within one video.
+        reflection["applied"] = sorted(
+            video_id for video_id in allowed
+            if outcome.get(video_id) == _APPLIED
+        )
+        reflection["skippedAlreadyPresent"] = sorted(
+            video_id for video_id in allowed
+            if outcome.get(video_id) == _PRESENT
+        )
+        reflection["unresolved"] = sorted(
+            video_id for video_id in allowed
+            if outcome.get(video_id) == _UNRESOLVED
+        )
     return {
-        "insertedVideoIds": inserted,
-        "skippedExistingVideoIds": skipped,
+        "insertedVideoIds": sorted(set(inserted)) if trace_mode else inserted,
+        "skippedExistingVideoIds": sorted(set(skipped)) if trace_mode else skipped,
         "insertedCount": len(inserted),
         "previewSha256": presented_preview_sha256,
         "reflection": reflection,
+        **({"rowReceipts": row_receipts} if trace_mode else {}),
     }

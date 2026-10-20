@@ -32,6 +32,7 @@ from utils.config_loader import (
 from utils.logger import PipelineLogger
 from utils.runtime_paths import load_backend_env, get_backend_log_dir, resolve_backend_root
 from utils.privacy_log import safe_error_name
+from utils.stage_cache import atomic_write
 
 try:
     from googleapiclient.discovery import build
@@ -190,6 +191,7 @@ def save_urls(
     existing_urls: Set[str],
     logger: PipelineLogger,
     dry_run: bool = False,
+    latest_first: bool = False,
 ) -> int:
     """
     신규 URL을 urls.txt에 추가
@@ -203,7 +205,14 @@ def save_urls(
     new_urls = [url for url in urls if url not in existing_urls]
     skip_count = len(urls) - len(new_urls)
 
-    if not dry_run and new_urls:
+    if not dry_run and latest_first:
+        # The uploads playlist is the source of ordering. Rebuild only for an
+        # explicit caller; the default append contract remains unchanged.
+        ordered = list(dict.fromkeys(urls))
+        encoded = ("\n".join(ordered) + ("\n" if ordered else "")).encode("utf-8")
+        if not urls_file.is_file() or urls_file.read_bytes() != encoded:
+            atomic_write(urls_file, encoded)
+    elif not dry_run and new_urls:
         with open(urls_file, "a", encoding="utf-8") as f:
             for url in new_urls:
                 f.write(url + "\n")
@@ -254,7 +263,8 @@ def save_deleted_urls(
 
 
 def collect_channel_urls(
-    channel_name: str, api_key: str, logger: PipelineLogger, dry_run: bool = False
+    channel_name: str, api_key: str, logger: PipelineLogger, dry_run: bool = False,
+    latest_first: bool = False,
 ) -> Dict[str, Any]:
     """
     단일 채널의 URL 수집
@@ -277,7 +287,7 @@ def collect_channel_urls(
 
     # 저장 (신규 추가)
     with logger.timer("save_urls"):
-        new_count = save_urls(urls, urls_file, existing_urls, logger, dry_run)
+        new_count = save_urls(urls, urls_file, existing_urls, logger, dry_run, latest_first)
     
     # 삭제된 영상 처리
     # existing_urls에는 있지만, 방금 수집한 urls에는 없는 것
@@ -314,6 +324,10 @@ def main():
         help="채널 이름 (tzuyang, meatcreator). 미지정시 모든 채널",
     )
     parser.add_argument("--dry-run", action="store_true", help="실제 저장 없이 테스트")
+    parser.add_argument(
+        "--latest-first", action="store_true",
+        help="업로드 플레이리스트 순서로 URL을 저장합니다 (신규 평가 경로 전용)",
+    )
     args = parser.parse_args()
 
     # API 키 확인
@@ -345,7 +359,9 @@ def main():
         results = []
         for channel_name in channel_names:
             logger.info("op=youtube_channel_collection_started")
-            result = collect_channel_urls(channel_name, api_key, logger, args.dry_run)
+            result = collect_channel_urls(
+                channel_name, api_key, logger, args.dry_run, args.latest_first
+            )
             results.append(result)
 
         # 최종 결과 요약

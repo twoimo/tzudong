@@ -10,6 +10,9 @@ an admin approves them.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import time
+from datetime import datetime, timezone
 import os
 import subprocess
 import sys
@@ -113,6 +116,24 @@ def _review_reserved_slot() -> ReviewReservation:
         return ReviewReservation(1, False)
 
 
+def _write_run_receipt(path: Path, report: dict) -> None:
+    """Persist only bounded execution metadata, never child output or row data."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent,
+                                         prefix=".hosted-run-", delete=False) as handle:
+            temporary = Path(handle.name)
+            json.dump(report, handle, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--channel", default="tzuyang")
@@ -123,59 +144,105 @@ def main(argv: list[str] | None = None) -> int:
         "--preview-out",
         default=str(REPO_ROOT / "backend/log/cron/hosted-apply-preview.json"),
     )
+    parser.add_argument("--receipt-out", default="")
     args = parser.parse_args(argv)
     if args.limit < 1 or args.limit > 3:
         print("error=limit_invalid")
         return 2
-    _load_backend_env(REPO_ROOT)
-    cadence_source_preflight(REPO_ROOT)
-    env_contract_preflight("hosted-pending-apply")
-    _apply_local_runtime_environment()
-    print(f"source={os.environ.get('TZUDONG_PIPELINE_SOURCE', 'local')}")
-    new_limit = args.limit
-    review_confirmed = False
-    if args.review_automation and not args.dry_run:
-        # One existing video slot is reserved for a queued recheck. Never add
-        # a fourth evaluated video to the existing three-video daily budget.
-        reservation = _review_reserved_slot()
-        new_limit -= reservation.reserved_slots
-        review_confirmed = reservation.confirmed
-    evaluate_command = [
+    started = time.monotonic()
+    report = {
+        "schemaVersion": 1,
+        "executionId": str(uuid.uuid4()),
+        "startedAt": datetime.now(timezone.utc).isoformat(),
+        "runnerSha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "source": "unknown",
+        "limit": args.limit,
+        "dryRun": args.dry_run,
+        "reviewRequested": args.review_automation,
+        "reviewConfirmed": False,
+        "stage": "preflight",
+        "state": "failed",
+        "exitCode": 2,
+        "publicationVerified": False,
+    }
+    try:
+        _load_backend_env(REPO_ROOT)
+        cadence_source_preflight(REPO_ROOT)
+        env_contract_preflight("hosted-pending-apply")
+        _apply_local_runtime_environment()
+        source = os.environ.get("TZUDONG_PIPELINE_SOURCE", "local")
+        report["source"] = source if source in {"local", "mac", "github_actions"} else "unknown"
+        print(f"source={report['source']}")
+        new_limit = args.limit
+        review_confirmed = False
+        if args.review_automation and not args.dry_run:
+            # One existing video slot is reserved for a queued recheck. Never add
+            # a fourth evaluated video to the existing three-video daily budget.
+            reservation = _review_reserved_slot()
+            new_limit -= reservation.reserved_slots
+            review_confirmed = reservation.confirmed
+        evaluate_command = [
+                sys.executable,
+                str(EVALUATE),
+                "--channel",
+                args.channel,
+                "--limit",
+                str(new_limit),
+                *(["--dry-run"] if args.dry_run else []),
+            ]
+        report["stage"] = "evaluation"
+        report["newVideoLimit"] = new_limit
+        report["reviewConfirmed"] = review_confirmed
+        evaluate_exit = _run(evaluate_command, required=False) if new_limit > 0 else 0
+        report["evaluateExit"] = evaluate_exit
+        print(f"evaluate_exit={evaluate_exit}")
+        if evaluate_exit != 0:
+            print("pipeline=evaluation_failed")
+            report["exitCode"] = evaluate_exit
+            return evaluate_exit
+        report["stage"] = "pending_preview"
+        preview = Path(args.preview_out)
+        preview.parent.mkdir(parents=True, exist_ok=True)
+        apply_cmd = [
             sys.executable,
-            str(EVALUATE),
-            "--channel",
-            args.channel,
-            "--limit",
-            str(new_limit),
-            *(["--dry-run"] if args.dry_run else []),
+            str(APPLY),
+            "--preview-out",
+            str(preview),
         ]
-    evaluate_exit = _run(evaluate_command, required=False) if new_limit > 0 else 0
-    print(f"evaluate_exit={evaluate_exit}")
-    if evaluate_exit != 0:
-        print("pipeline=evaluation_failed")
-        return evaluate_exit
-    preview = Path(args.preview_out)
-    preview.parent.mkdir(parents=True, exist_ok=True)
-    apply_cmd = [
-        sys.executable,
-        str(APPLY),
-        "--preview-out",
-        str(preview),
-    ]
-    if args.dry_run:
-        apply_cmd.append("--dry-run")
-        _run(apply_cmd)
-        print("pipeline=dry_run")
+        if args.dry_run:
+            apply_cmd.append("--dry-run")
+            _run(apply_cmd)
+            report.update(state="dry_run", exitCode=0)
+            print("pipeline=dry_run")
+            return 0
+        _run(apply_cmd + ["--dry-run"])
+        report["stage"] = "pending_apply"
+        apply_exit = _run(apply_cmd)
+        report["applyExit"] = apply_exit
+        if args.review_automation and review_confirmed:
+            report["stage"] = "review_followup"
+            _run([sys.executable, str(REVIEW), "--recheck-limit", "0"])
+        elif args.review_automation:
+            report.update(state="review_unconfirmed", exitCode=1)
+            print("review_followup=skipped_unconfirmed")
+            return 1
+        print(f"apply_exit={apply_exit}")
+        report.update(stage="finished", state="execution_completed", exitCode=0)
+        print("pipeline=ok")
         return 0
-    _run(apply_cmd + ["--dry-run"])
-    apply_exit = _run(apply_cmd)
-    if args.review_automation and review_confirmed:
-        _run([sys.executable, str(REVIEW), "--recheck-limit", "0"])
-    elif args.review_automation:
-        print("review_followup=skipped_unconfirmed")
-    print(f"apply_exit={apply_exit}")
-    print("pipeline=ok")
-    return 0
+
+    except SystemExit as exc:
+        report["exitCode"] = (0 if exc.code is None else int(exc.code)
+                              if isinstance(exc.code, int) else 1)
+        raise
+    except OSError:
+        print("error=pipeline_runtime_unavailable")
+        return 2
+    finally:
+        report["finishedAt"] = datetime.now(timezone.utc).isoformat()
+        report["elapsedMs"] = max(0, round((time.monotonic() - started) * 1000))
+        if args.receipt_out:
+            _write_run_receipt(Path(args.receipt_out), report)
 
 
 if __name__ == "__main__":

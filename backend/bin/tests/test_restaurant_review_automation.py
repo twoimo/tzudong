@@ -362,7 +362,7 @@ class ReviewWorkerTests(unittest.TestCase):
         for dry in [False,True]:
             args=['--review-automation','--limit','3']+(['--dry-run'] if dry else [])
             with patch.object(runner,'_load_backend_env'),patch.object(runner,'cadence_source_preflight'),patch.object(runner,'env_contract_preflight'),patch.object(runner,'_apply_local_runtime_environment'),patch.object(runner,'_run',return_value=0) as run,contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(runner.main(args),0)
+                self.assertEqual(runner.main(args),0 if dry else 1)
             commands=[item.args[0] for item in run.call_args_list]
             evaluation=next(command for command in commands if command[1]==str(runner.EVALUATE))
             self.assertEqual(evaluation[evaluation.index('--limit')+1],'3' if dry else '2')
@@ -411,8 +411,79 @@ class ReviewWorkerTests(unittest.TestCase):
             commands.append(command)
             return 1 if command[1]==str(runner.REVIEW) else 0
         with patch.object(runner,'_load_backend_env'),patch.object(runner,'cadence_source_preflight'),patch.object(runner,'env_contract_preflight'),patch.object(runner,'_apply_local_runtime_environment'),patch.object(runner,'_run',side_effect=lost_response),contextlib.redirect_stdout(io.StringIO()) as output:
-            self.assertEqual(runner.main(['--review-automation','--limit','3']),0)
+            self.assertEqual(runner.main(['--review-automation','--limit','3']),1)
         self.assertEqual(sum(command[1]==str(runner.REVIEW) for command in commands),1)
         self.assertIn('review_followup=skipped_unconfirmed',output.getvalue())
+
+class PipelineExecutionReceiptTests(unittest.TestCase):
+    def test_evaluation_failure_is_persisted_without_applying_or_private_diagnostics(self):
+        import contextlib, io
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'receipt.json'
+            commands = []
+            def fail(command, **kwargs):
+                commands.append(command)
+                return 7
+            with patch.object(runner, '_load_backend_env'), patch.object(runner, 'cadence_source_preflight'), \
+                 patch.object(runner, 'env_contract_preflight'), patch.object(runner, '_apply_local_runtime_environment'), \
+                 patch.object(runner, '_run', side_effect=fail), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(runner.main(['--receipt-out', str(path)]), 7)
+            receipt = json.loads(path.read_text())
+            self.assertEqual(receipt['state'], 'failed')
+            self.assertEqual(receipt['stage'], 'evaluation')
+            self.assertEqual(receipt['exitCode'], 7)
+            self.assertFalse(receipt['publicationVerified'])
+            self.assertEqual([c[1] for c in commands], [str(runner.EVALUATE)])
+
+    def test_apply_rejection_preserves_failure_receipt_and_never_runs_review(self):
+        import contextlib, io
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'receipt.json'
+            commands = []
+            def run(command, **kwargs):
+                commands.append(command)
+                if command[1] == str(runner.APPLY) and '--dry-run' not in command:
+                    raise SystemExit(2)
+                return 0
+            with patch.object(runner, '_load_backend_env'), patch.object(runner, 'cadence_source_preflight'), \
+                 patch.object(runner, 'env_contract_preflight'), patch.object(runner, '_apply_local_runtime_environment'), \
+                 patch.object(runner, '_run', side_effect=run), contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaises(SystemExit):
+                    runner.main(['--receipt-out', str(path)])
+            receipt = json.loads(path.read_text())
+            self.assertEqual((receipt['stage'], receipt['exitCode']), ('pending_apply', 2))
+            self.assertEqual(receipt['state'], 'failed')
+            self.assertFalse(any(c[1] == str(runner.REVIEW) for c in commands))
+
+    def test_preflight_string_exit_receipt_matches_python_exit_status(self):
+        import contextlib, io
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'receipt.json'
+            with patch.object(runner, '_load_backend_env'), \
+                 patch.object(runner, 'cadence_source_preflight', side_effect=SystemExit('fixed_preflight_code')), \
+                 patch.object(runner, '_run') as run, contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaises(SystemExit):
+                    runner.main(['--receipt-out', str(path)])
+            receipt = json.loads(path.read_text())
+            self.assertEqual((receipt['state'], receipt['stage'], receipt['exitCode']), ('failed', 'preflight', 1))
+            self.assertNotIn('fixed_preflight_code', path.read_text())
+            run.assert_not_called()
+
+    def test_dry_run_receipt_is_bounded_and_never_claims_publication(self):
+        import contextlib, io
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'receipt.json'
+            with patch.object(runner, '_load_backend_env'), patch.object(runner, 'cadence_source_preflight'), \
+                 patch.object(runner, 'env_contract_preflight'), patch.object(runner, '_apply_local_runtime_environment'), \
+                 patch.dict(os.environ, {'TZUDONG_PIPELINE_SOURCE': 'private-value'}), \
+                 patch.object(runner, '_run', return_value=0) as run, contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(runner.main(['--dry-run', '--review-automation', '--receipt-out', str(path)]), 0)
+            receipt = json.loads(path.read_text())
+            self.assertEqual((receipt['state'], receipt['source']), ('dry_run', 'unknown'))
+            self.assertFalse(receipt['publicationVerified'])
+            self.assertNotIn('private-value', path.read_text())
+            self.assertLess(path.stat().st_size, 2048)
+            self.assertTrue(all('--dry-run' in call.args[0] for call in run.call_args_list))
+
 
 if __name__=='__main__':unittest.main()

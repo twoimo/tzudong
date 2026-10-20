@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Apply preview-selected pending restaurants to hosted Supabase.
 
-Does not flip PIPELINE_HOSTED_APPLY_ENABLED. Inserts only new youtube IDs
-classified as apply_candidate_pending_geocoded. Existing hosted rows stay
+Does not flip PIPELINE_HOSTED_APPLY_ENABLED. Inserts only new trace IDs
+classified as pending candidates. Existing hosted rows stay
 untouched.
 """
 
@@ -51,14 +51,16 @@ def main(argv: list[str] | None = None) -> int:
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     try:
         assert_hosted_target(url)
-        hosted_ids, hosted_youtube = fetch_hosted_restaurant_snapshot(
-            url=url, service_role_key=key
+        hosted_ids, hosted_youtube, hosted_traces, ambiguous_videos = fetch_hosted_restaurant_snapshot(
+            url=url, service_role_key=key, include_trace_ids=True
         )
         rows = load_evaluation_rows(args.evaluation)
         preview = build_apply_preview(
             local_restaurant_ids=[],
             hosted_restaurant_ids=hosted_ids,
             hosted_youtube_ids=hosted_youtube,
+            hosted_trace_ids=hosted_traces,
+            hosted_ambiguous_youtube_ids=ambiguous_videos,
             evaluation_rows=rows,
         )
     except HostedDataPlaneError as exc:
@@ -74,10 +76,14 @@ def main(argv: list[str] | None = None) -> int:
         )
     print(f"previewSha256={preview['previewSha256']}")
     print(f"applyCandidateCount={preview['applyCandidateCount']}")
+    print(f"applyCandidateTraceIds={preview['applyCandidateTraceIds']}")
+    print(f"hostedAmbiguousVideoIds={preview['hostedAmbiguousVideoIds']}")
     print(f"evaluationClasses={preview['evaluationClasses']}")
+    invalid_identity_count = preview["evaluationClasses"].get("skip_invalid_identity", 0)
+    ambiguous_identity_count = preview["evaluationClasses"].get("skip_hosted_identity_ambiguous", 0)
     if args.dry_run or preview["applyCandidateCount"] == 0:
         print("apply=skipped")
-        return 0
+        return 2 if invalid_identity_count or ambiguous_identity_count else 0
     try:
         result = apply_pending_candidates(
             preview=preview,
@@ -93,6 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"insertedCount={result['insertedCount']}")
     print(f"insertedVideoIds={result['insertedVideoIds']}")
     print(f"skippedExistingVideoIds={result['skippedExistingVideoIds']}")
+    print("rowReceipts=" + json.dumps(result["rowReceipts"], ensure_ascii=False, sort_keys=True))
     reflection = result.get("reflection") or {
         "applied": [],
         "skippedAlreadyPresent": [],
@@ -107,6 +114,9 @@ def main(argv: list[str] | None = None) -> int:
         "reflection="
         + json.dumps(reflection, ensure_ascii=False, sort_keys=True)
     )
+    if reflection["unresolved"] or invalid_identity_count or ambiguous_identity_count:
+        print("error=candidates_unresolved")
+        return 2
     if APPROVAL_ENV not in os.environ:
         return 2
     return 0
