@@ -40,6 +40,11 @@ case "$FREEZE_STATE" in
   active|cleared) ;;
   *) echo 'invalid_write_freeze_state' >&2; exit 2 ;;
 esac
+REVIEW_AUTOMATION="${TZUDONG_MAC_REVIEW_AUTOMATION:-0}"
+case "$REVIEW_AUTOMATION" in
+  0|1) ;;
+  *) echo 'invalid_review_automation_opt_in' >&2; exit 2 ;;
+esac
 mkdir -p "$HOME/Library/LaunchAgents" "$SUPPORT" "$LOG_DIR" "$REPO_ROOT/backend/log/cron"
 cat > "$WRAPPER" <<EOF
 #!/bin/bash
@@ -49,12 +54,16 @@ export TZUDONG_REPO_ROOT=$(printf '%q' "$REPO_ROOT")
 export TZUDONG_PIPELINE_SOURCE="mac"
 export G037_WRITE_FREEZE="${FREEZE_STATE}"
 export PYTHON_CMD=$(printf '%q' "$PYTHON")
-export TZUDONG_LAAJ_PROVIDER="opencode-go"
+export TZUDONG_LAAJ_PROVIDER="gemini"
 export TZUDONG_HOSTED_DATA_PLANE_APPROVED="1"
+REVIEW_AUTOMATION=${REVIEW_AUTOMATION}
+runner_args=(--channel tzuyang --limit 3)
+if [[ "\$REVIEW_AUTOMATION" == "1" ]]; then runner_args+=(--review-automation); fi
+runner_args+=(--receipt-out "\$TZUDONG_REPO_ROOT/backend/log/cron/hosted-run-\$(date -u +%Y%m%dT%H%M%SZ).json")
 cd "\$TZUDONG_REPO_ROOT"
 echo "\$(date -u +%Y-%m-%dT%H:%M:%SZ) start source=mac freeze=\${G037_WRITE_FREEZE} limit=3"
 set +e
-$(printf '%q' "$PYTHON") "\$TZUDONG_REPO_ROOT/backend/bin/run_hosted_new_video_pipeline.py" --channel tzuyang --limit 3 --receipt-out "\$TZUDONG_REPO_ROOT/backend/log/cron/hosted-run-\$(date -u +%Y%m%dT%H%M%SZ).json"
+$(printf '%q' "$PYTHON") "\$TZUDONG_REPO_ROOT/backend/bin/run_hosted_new_video_pipeline.py" "\${runner_args[@]}"
 pipeline_exit=\$?
 set -e
 echo "\$(date -u +%Y-%m-%dT%H:%M:%SZ) end exit=\${pipeline_exit}"
@@ -105,4 +114,5 @@ echo "wrapper=${WRAPPER}"
 echo "logs=${LOG_DIR}"
 echo "source=mac schedule=05:15 local evaluate+pending-apply limit=3"
 echo "write_freeze=${FREEZE_STATE}"
+echo "review_automation=${REVIEW_AUTOMATION}"
 echo "tcc=grant_full_disk_access_to_/bin/bash if repo is under Documents"
