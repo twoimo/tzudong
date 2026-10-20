@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Evaluate youtube IDs that hosted restaurants do not already have.
+"""Evaluate new videos and certified, unfinished hosted videos.
 
-Collects URLs, keeps only IDs absent from hosted, then runs numbered
+Collects URLs, prioritizes IDs absent from hosted, then runs numbered
 scripts for those videos. Does not write to hosted Supabase.
 """
 
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import subprocess
@@ -19,7 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "backend" / "supabase" / "scripts"))
 sys.path.insert(0, str(REPO_ROOT / "backend"))
 
-from utils.stage_cache import certified  # noqa: E402
+from utils.stage_cache import certified, fingerprint, reusable  # noqa: E402
 
 from hosted_data_plane import (  # noqa: E402
     HostedDataPlaneError,
@@ -115,7 +116,7 @@ def _last_record(path: Path) -> dict | None:
         return None
 
 
-def _transformed_names(evaluation: Path) -> dict[str, set[str]]:
+def _transformed_names(evaluation: Path) -> dict[str, set[str]] | None:
     """Use only the transform's committed, hash-matched snapshot."""
     base = evaluation / "evaluation"
     output = base / "transforms.jsonl"
@@ -123,17 +124,28 @@ def _transformed_names(evaluation: Path) -> dict[str, set[str]]:
     try:
         ledger = json.loads(receipt.read_text(encoding="utf-8"))
         snapshot = output.read_bytes()
-        if hashlib.sha256(snapshot).hexdigest() != ledger.get("outputHash"):
-            return {}
+        if (not isinstance(ledger, dict) or ledger.get("schemaVersion") != 2
+                or not isinstance(ledger.get("groups"), dict)
+                or type(ledger.get("recordCount")) is not int or ledger["recordCount"] < 0
+                or hashlib.sha256(snapshot).hexdigest() != ledger.get("outputHash")):
+            return None
         rows = {}
         for line in snapshot.decode("utf-8").splitlines():
             if line.strip():
                 row = json.loads(line)
-                if isinstance(row, dict) and isinstance(row.get("trace_id"), str):
-                    rows[row["trace_id"]] = row
+                if not isinstance(row, dict) or not isinstance(row.get("trace_id"), str):
+                    return None
+                rows[row["trace_id"]] = row
+        if len(rows) != ledger["recordCount"]:
+            return None
         result: dict[str, set[str]] = {}
-        for identity, group in ledger.get("groups", {}).items():
-            if not identity.startswith("results:") or not isinstance(group, dict):
+        for identity, group in ledger["groups"].items():
+            if (not isinstance(identity, str) or not isinstance(group, dict)
+                    or not isinstance(group.get("records"), list)):
+                return None
+            if any(not isinstance(trace, str) or trace not in rows for trace in group["records"]):
+                return None
+            if not identity.startswith("results:"):
                 continue
             video_id = identity.removeprefix("results:")
             result[video_id] = {
@@ -146,7 +158,7 @@ def _transformed_names(evaluation: Path) -> dict[str, set[str]]:
             }
         return result
     except (OSError, UnicodeError, ValueError, TypeError, AttributeError):
-        return {}
+        return None
 
 
 def _video_state(
@@ -179,7 +191,52 @@ def _video_state(
     return "completed"
 
 
-def _locally_evaluated_ids(evaluation: Path, crawling: Path | None = None) -> set[str]:
+def _current_selection_fingerprint(crawling: Path, video_id: str, channel: str) -> str | None:
+    crawl_output = crawling / "crawling" / f"{video_id}.jsonl"
+    if not certified(crawling / "crawling" / ".receipts" / f"{video_id}.json", [crawl_output]):
+        return None
+    visual_output = crawling / "visual-location" / f"{video_id}.jsonl"
+    inputs = [path for path in (crawl_output, visual_output) if path.is_file()]
+    try:
+        return fingerprint(inputs, assets=[SCRIPTS["target"]], settings=channel)
+    except (OSError, UnicodeError, ValueError, TypeError):
+        return None
+
+
+def _selection_outputs(evaluation: Path, video_id: str) -> list[Path]:
+    base = evaluation / "evaluation"
+    return [path for path in (base / "selection" / f"{video_id}.jsonl",
+                              base / "notSelection" / f"{video_id}.jsonl") if path.is_file()]
+
+
+def _selected_targets(record: dict | None) -> set[str] | None:
+    targets = record.get("evaluation_target") if record else None
+    if (not isinstance(targets, dict) or not targets
+            or any(not isinstance(name, str) or not name.strip() or type(chosen) is not bool
+                   for name, chosen in targets.items())):
+        return None
+    return {name for name, chosen in targets.items() if chosen is True}
+
+
+def _current_09_targets(crawling: Path, video_id: str, channel: str) -> set[str] | None:
+    """Call 09's read-only selection policy without publishing stage outputs."""
+    try:
+        spec = importlib.util.spec_from_file_location("tzudong_target_selection", SCRIPTS["target"])
+        if spec is None or spec.loader is None:
+            return None
+        target_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(target_module)
+        result = target_module.create_evaluation_targets(video_id, crawling, channel)
+        return _selected_targets(result.get("data") if isinstance(result, dict) else None)
+    except (OSError, UnicodeError, ValueError, TypeError, AttributeError, KeyError, ImportError):
+        return None
+
+
+def _locally_evaluated_ids(
+    evaluation: Path, crawling: Path | None = None,
+    transformed: dict[str, set[str]] | None = None,
+    channel: str | None = None,
+) -> set[str]:
     """Skip only certified terminal outcomes; incomplete videos retry next tick."""
     base = evaluation / "evaluation"
     candidates = {
@@ -187,12 +244,17 @@ def _locally_evaluated_ids(evaluation: Path, crawling: Path | None = None) -> se
         for folder in ("selection", "notSelection")
         for path in (base / folder).glob("*.jsonl")
     }
-    transformed = _transformed_names(evaluation)
+    if transformed is None:
+        transformed = _transformed_names(evaluation)
     crawling = crawling or REPO_ROOT / "backend/restaurant-crawling/data" / evaluation.name
+    channel = channel or evaluation.name
     completed = {
         video_id for video_id in candidates
-        if _video_state(crawling, evaluation, video_id, transformed)
+        if _video_state(crawling, evaluation, video_id, transformed or {})
         in {"completed", "no_extraction", "no_evaluable_target"}
+        and (expected := _current_selection_fingerprint(crawling, video_id, channel)) is not None
+        and reusable(evaluation / "evaluation" / "selection" / ".receipts" / f"{video_id}.json",
+                     expected, _selection_outputs(evaluation, video_id))
     }
     for path in (base / "notSelection").glob("*.jsonl"):
         row = _last_record(path)
@@ -200,6 +262,40 @@ def _locally_evaluated_ids(evaluation: Path, crawling: Path | None = None) -> se
                 and _is_short_video(crawling, path.stem)):
             completed.add(path.stem)
     return completed
+
+
+def _hosted_partial_recovery_has_evidence(
+    crawling: Path, evaluation: Path, video_id: str, transformed: dict[str, set[str]] | None,
+    channel: str,
+) -> bool:
+    """Retry a hosted video only when certified local selection proves unfinished work."""
+    if transformed is None:
+        return False
+    expected = _current_selection_fingerprint(crawling, video_id, channel)
+    if expected is None:
+        return False
+    base = evaluation / "evaluation"
+    selection = base / "selection" / f"{video_id}.jsonl"
+    if not selection.is_file():
+        return False
+    outputs = _selection_outputs(evaluation, video_id)
+    receipt = base / "selection" / ".receipts" / f"{video_id}.json"
+    if not certified(receipt, outputs):
+        return False
+    previous_targets = _selected_targets(_last_record(selection))
+    if previous_targets is None:
+        return False
+    if reusable(receipt, expected, outputs):
+        if not previous_targets:
+            return False
+        return _video_state(crawling, evaluation, video_id, transformed) in {
+            "rule_results_incomplete", "laaj_results_incomplete", "transform_incomplete"
+        }
+    current_targets = _current_09_targets(crawling, video_id, channel)
+    if (_current_selection_fingerprint(crawling, video_id, channel) != expected
+            or not current_targets or not certified(receipt, outputs)):
+        return False
+    return not current_targets.issubset(transformed.get(video_id, set()))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -229,7 +325,8 @@ def main(argv: list[str] | None = None) -> int:
     crawling = REPO_ROOT / "backend/restaurant-crawling/data" / args.channel
     evaluation = REPO_ROOT / "backend/restaurant-evaluation/data" / args.channel
     urls_path = crawling / "urls.txt"
-    local_done = _locally_evaluated_ids(evaluation, crawling)
+    transformed = _transformed_names(evaluation)
+    local_done = _locally_evaluated_ids(evaluation, crawling, transformed or {}, args.channel)
     before = _load_urls(urls_path)
     collect_exit = _run(
         [python, str(SCRIPTS["collect_urls"]), "--channel", args.channel, "--latest-first"],
@@ -243,25 +340,35 @@ def main(argv: list[str] | None = None) -> int:
         print("failedVideoCount=0")
         return collect_exit
     after = _load_urls(urls_path)
-    new_urls: list[str] = []
+    fresh_urls: list[str] = []
+    partial_urls: list[str] = []
     seen: set[str] = set()
     for item in after:
         video_id = extract_youtube_video_id(item)
         if (
             video_id is None
-            or video_id in hosted
             or video_id in seen
             or video_id in local_done
         ):
             continue
         seen.add(video_id)
-        new_urls.append(f"https://www.youtube.com/watch?v={video_id}")
-        if len(new_urls) >= args.limit:
-            break
+        canonical_url = f"https://www.youtube.com/watch?v={video_id}"
+        if video_id in hosted:
+            if len(partial_urls) < args.limit and _hosted_partial_recovery_has_evidence(
+                crawling, evaluation, video_id, transformed, args.channel
+            ):
+                partial_urls.append(canonical_url)
+        elif len(fresh_urls) < args.limit:
+            fresh_urls.append(canonical_url)
+            if len(fresh_urls) == args.limit:
+                break
+    new_urls = (fresh_urls + partial_urls)[:args.limit]
+    partial_selected = min(len(partial_urls), max(0, args.limit - len(fresh_urls)))
     print(f"hostedYoutubeIds={len(hosted)}")
     print(f"localEvaluatedIds={len(local_done)}")
     print(f"newVideoCount={len(new_urls)}")
     print(f"newVideoIds={[extract_youtube_video_id(item) for item in new_urls]}")
+    print(f"partialRecoveryVideoCount={partial_selected}")
     if args.dry_run or not new_urls:
         _write_urls(urls_path, before)
         print("completedVideoCount=0")
@@ -406,7 +513,7 @@ def main(argv: list[str] | None = None) -> int:
     completed = 0
     excluded = len(short_ids)
     for video_id in evaluable_ids:
-        state = _video_state(crawling, evaluation, video_id, transformed)
+        state = _video_state(crawling, evaluation, video_id, transformed or {})
         reasons = stage_failures[video_id]
         if transform_exit != 0 and state != "no_extraction":
             reasons.append("transform_failed")

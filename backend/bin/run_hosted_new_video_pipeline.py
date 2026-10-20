@@ -206,8 +206,8 @@ def main(argv: list[str] | None = None) -> int:
         new_limit = args.limit
         review_confirmed = False
         if args.review_automation and not args.dry_run:
-            # One existing video slot is reserved for a queued recheck. Never add
-            # a fourth evaluated video to the existing three-video daily budget.
+            # Reserve one of this invocation's video slots for a queued recheck.
+            # The three-slot limit is per invocation, not a shared daily budget.
             reservation = _review_reserved_slot()
             new_limit -= reservation.reserved_slots
             review_confirmed = reservation.confirmed

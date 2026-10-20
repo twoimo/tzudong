@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.utils.stage_cache import complete
+from backend.utils.stage_cache import complete, fingerprint
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -20,6 +20,61 @@ spec = importlib.util.spec_from_file_location("evaluate_new_youtube_videos", MOD
 module = importlib.util.module_from_spec(spec)
 assert spec and spec.loader
 spec.loader.exec_module(module)
+
+
+def certified_partial_video(root: Path, video_id: str) -> tuple[Path, Path, Path]:
+    crawling = root / "backend/restaurant-crawling/data/tzuyang"
+    evaluation = root / "backend/restaurant-evaluation/data/tzuyang"
+
+    def stage(base: Path, folder: str, row: dict) -> Path:
+        output = base / folder / f"{video_id}.jsonl"
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(row) + "\n", encoding="utf-8")
+        complete(output.parent / ".receipts" / f"{video_id}.json", "input", [output])
+        return output
+
+    stage(crawling, "crawling", {"restaurants": [
+        {"origin_name": "A", "address": "address A"},
+        {"origin_name": "B", "address": "address B"},
+    ]})
+    selection = stage(evaluation, "evaluation/selection", {
+        "evaluation_target": {"A": True, "B": True},
+        "restaurants": [{"origin_name": "A"}, {"origin_name": "B"}],
+    })
+    crawl_output = crawling / "crawling" / f"{video_id}.jsonl"
+    complete(selection.parent / ".receipts" / f"{video_id}.json", fingerprint(
+        [crawl_output], assets=[module.SCRIPTS["target"]], settings="tzuyang"
+    ), [selection])
+    stage(evaluation, "evaluation/rule_results", {})
+    stage(evaluation, "evaluation/laaj_results", {})
+    output = evaluation / "evaluation/transforms.jsonl"
+    output.write_text(json.dumps({
+        "trace_id": "trace-a", "origin_name": "A",
+        "youtube_link": f"https://www.youtube.com/watch?v={video_id}",
+    }) + "\n", encoding="utf-8")
+    ledger = output.parent / ".receipts/transform.json"
+    ledger.parent.mkdir(parents=True, exist_ok=True)
+    ledger.write_text(json.dumps({
+        "schemaVersion": 2, "recordCount": 1,
+        "outputHash": hashlib.sha256(output.read_bytes()).hexdigest(),
+        "groups": {f"results:{video_id}": {"records": ["trace-a"]}},
+    }), encoding="utf-8")
+    return crawling, selection, output
+
+
+def hosted_dry_run(root: Path, video_id: str) -> str:
+    urls = root / "backend/restaurant-crawling/data/tzuyang/urls.txt"
+    urls.parent.mkdir(parents=True, exist_ok=True)
+    if not urls.is_file():
+        urls.write_text(f"https://www.youtube.com/watch?v={video_id}\n", encoding="utf-8")
+    original_urls = urls.read_bytes()
+    output = io.StringIO()
+    with patch.object(module, "REPO_ROOT", root), patch.object(module, "assert_hosted_target"), \
+        patch.object(module, "fetch_hosted_restaurant_snapshot", return_value=(["hosted-A"], [video_id])), \
+        patch.object(module, "_run", return_value=0), contextlib.redirect_stdout(output):
+        assert module.main(["--limit", "1", "--dry-run"]) == 0
+    assert urls.read_bytes() == original_urls
+    return output.getvalue()
 
 
 class EvaluateNewYoutubeVideosTests(unittest.TestCase):
@@ -127,19 +182,305 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
             ledger = output.parent / ".receipts/transform.json"
             ledger.parent.mkdir(parents=True, exist_ok=True)
             ledger.write_text(json.dumps({
+                "schemaVersion": 2, "recordCount": 2,
                 "outputHash": hashlib.sha256(output.read_bytes()).hexdigest(),
                 "groups": {"results:complete": {"records": ["trace-a", "trace-b"]}},
             }), encoding="utf-8")
+
+            for video_id in ("empty", "complete"):
+                inputs = [crawling / "crawling" / f"{video_id}.jsonl"]
+                outputs = [path for path in (
+                    evaluation / "evaluation/selection" / f"{video_id}.jsonl",
+                    evaluation / "evaluation/notSelection" / f"{video_id}.jsonl",
+                ) if path.is_file()]
+                complete(evaluation / "evaluation/selection/.receipts" / f"{video_id}.json",
+                         fingerprint(inputs, assets=[module.SCRIPTS["target"]], settings="evaluation"),
+                         outputs)
 
             self.assertEqual(module._locally_evaluated_ids(evaluation, crawling), {"empty", "complete"})
             laaj.write_text("changed\n", encoding="utf-8")
             self.assertEqual(module._locally_evaluated_ids(evaluation, crawling), {"empty"})
             laaj.write_text("{}\n", encoding="utf-8")
             ledger.write_text(json.dumps({
+                "schemaVersion": 2, "recordCount": 2,
                 "outputHash": hashlib.sha256(output.read_bytes()).hexdigest(),
                 "groups": {"results:complete": {"records": ["trace-a"]}},
             }), encoding="utf-8")
             self.assertEqual(module._locally_evaluated_ids(evaluation, crawling), {"empty"})
+
+    def test_hosted_one_row_does_not_hide_certified_second_restaurant(self) -> None:
+        video_id = "abcdefghijk"
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            crawling, selection, transformed = certified_partial_video(root, video_id)
+            urls = crawling / "urls.txt"
+            urls.write_text(url + "\n", encoding="utf-8")
+            original_urls = urls.read_bytes()
+            original_selection = selection.read_bytes()
+            calls: list[str] = []
+
+            def collect(argv: list[str], _env: dict[str, str], *, required: bool = True) -> int:
+                calls.append(Path(argv[1]).name)
+                urls.write_text(url + "\n", encoding="utf-8")
+                return 0
+
+            def dry_run() -> str:
+                output = io.StringIO()
+                with patch.object(module, "REPO_ROOT", root), patch.object(module, "assert_hosted_target"), \
+                    patch.object(module, "fetch_hosted_restaurant_snapshot", return_value=(["hosted-A"], [video_id])), \
+                    patch.object(module, "_run", side_effect=collect), contextlib.redirect_stdout(output):
+                    self.assertEqual(module.main(["--limit", "1", "--dry-run"]), 0)
+                self.assertEqual(urls.read_bytes(), original_urls)
+                self.assertEqual(selection.read_bytes(), original_selection)
+                return output.getvalue()
+
+            first = dry_run()
+            self.assertIn(f"newVideoIds=['{video_id}']", first)
+            self.assertIn("partialRecoveryVideoCount=1", first)
+            self.assertEqual(calls, ["01-collect-urls.py"])
+
+            # Completion and partial classification must share one snapshot.
+            with patch.object(module, "REPO_ROOT", root), patch.object(module, "assert_hosted_target"), \
+                patch.object(module, "fetch_hosted_restaurant_snapshot", return_value=(["hosted-A"], [video_id])), \
+                patch.object(module, "_run", side_effect=collect), \
+                patch.object(module, "_transformed_names", side_effect=[
+                    {video_id: {"A"}}, {video_id: {"A", "B"}},
+                ]) as snapshots, contextlib.redirect_stdout(io.StringIO()) as same_snapshot_output:
+                self.assertEqual(module.main(["--limit", "1", "--dry-run"]), 0)
+            self.assertEqual(snapshots.call_count, 1)
+            self.assertIn(f"newVideoIds=['{video_id}']", same_snapshot_output.getvalue())
+
+            def fail_transcript(argv: list[str], _env: dict[str, str], *, required: bool = True) -> int:
+                return 9 if Path(argv[1]).name == "03-collect-transcript.js" else collect(argv, _env)
+
+            failed_output = io.StringIO()
+            with patch.object(module, "REPO_ROOT", root), patch.object(module, "assert_hosted_target"), \
+                patch.object(module, "fetch_hosted_restaurant_snapshot", return_value=(["hosted-A"], [video_id])), \
+                patch.object(module, "_run", side_effect=fail_transcript), contextlib.redirect_stdout(failed_output):
+                self.assertEqual(module.main(["--limit", "1"]), 1)
+            self.assertEqual(urls.read_bytes(), original_urls)
+            self.assertIn(f"videoFailed={video_id}", failed_output.getvalue())
+            self.assertIn("failedVideoCount=1", failed_output.getvalue())
+
+            # Once the selected B row is committed, evaluation need not rerun;
+            # pending-apply's existing trace-level contract handles hosted B.
+            transformed.write_text(transformed.read_text(encoding="utf-8") + json.dumps({
+                "trace_id": "trace-b", "origin_name": "B", "youtube_link": url,
+            }) + "\n", encoding="utf-8")
+            ledger = transformed.parent / ".receipts/transform.json"
+            ledger.write_text(json.dumps({
+                "schemaVersion": 2, "recordCount": 2,
+                "outputHash": hashlib.sha256(transformed.read_bytes()).hexdigest(),
+                "groups": {f"results:{video_id}": {"records": ["trace-a", "trace-b"]}},
+            }), encoding="utf-8")
+            self.assertIn("newVideoCount=0", dry_run())
+
+    def test_stale_selection_recomputes_current_09_targets_without_writing(self) -> None:
+        video_id = "abcdefghijk"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            crawling, selection, transformed = certified_partial_video(root, video_id)
+            crawl_output = crawling / "crawling" / f"{video_id}.jsonl"
+            selection_receipt = selection.parent / ".receipts" / f"{video_id}.json"
+            url = f"https://www.youtube.com/watch?v={video_id}"
+            transformed.write_text(transformed.read_text(encoding="utf-8") + json.dumps({
+                "trace_id": "trace-b", "origin_name": "B", "youtube_link": url,
+            }) + "\n", encoding="utf-8")
+            (transformed.parent / ".receipts/transform.json").write_text(json.dumps({
+                "schemaVersion": 2, "recordCount": 2,
+                "outputHash": hashlib.sha256(transformed.read_bytes()).hexdigest(),
+                "groups": {f"results:{video_id}": {"records": ["trace-a", "trace-b"]}},
+            }), encoding="utf-8")
+            original_selection = selection.read_bytes()
+            original_receipt = selection_receipt.read_bytes()
+            self.assertIn("newVideoCount=0", hosted_dry_run(root, video_id))
+
+            # Current certified extraction adds C; old 09 A+B is no longer terminal.
+            restaurants = [
+                {"origin_name": name, "address": f"address {name}"} for name in ("A", "B", "C")
+            ]
+            crawl_output.write_text(json.dumps({"restaurants": restaurants}) + "\n", encoding="utf-8")
+            complete(crawl_output.parent / ".receipts" / f"{video_id}.json", "input", [crawl_output])
+            self.assertIn("partialRecoveryVideoCount=1", hosted_dry_run(root, video_id))
+            self.assertEqual(selection.read_bytes(), original_selection)
+            self.assertEqual(selection_receipt.read_bytes(), original_receipt)
+
+            # A changed extraction with the same selected A+B needs no recovery.
+            restaurants.pop()
+            crawl_output.write_text(json.dumps({
+                "restaurants": restaurants, "recollect_version": {"changed": True},
+            }) + "\n", encoding="utf-8")
+            complete(crawl_output.parent / ".receipts" / f"{video_id}.json", "input", [crawl_output])
+            self.assertIn("newVideoCount=0", hosted_dry_run(root, video_id))
+            self.assertEqual(selection.read_bytes(), original_selection)
+            self.assertEqual(selection_receipt.read_bytes(), original_receipt)
+
+    def test_hosted_partial_requires_valid_transform_snapshot(self) -> None:
+        video_id = "abcdefghijk"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _crawling, _selection, transformed = certified_partial_video(root, video_id)
+            original = transformed.read_bytes()
+            self.assertIn("partialRecoveryVideoCount=1", hosted_dry_run(root, video_id))
+            transformed.write_bytes(original + b"{}\n")
+            self.assertIn("newVideoCount=0", hosted_dry_run(root, video_id))
+            transformed.write_bytes(original)
+            (transformed.parent / ".receipts/transform.json").unlink()
+            self.assertIn("newVideoCount=0", hosted_dry_run(root, video_id))
+
+    def test_stale_recalculation_rejects_input_change_during_read(self) -> None:
+        video_id = "abcdefghijk"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            crawling, _selection, _transformed = certified_partial_video(root, video_id)
+            crawl_output = crawling / "crawling" / f"{video_id}.jsonl"
+            crawl_output.write_text(json.dumps({"restaurants": [
+                {"origin_name": name, "address": f"address {name}"} for name in ("A", "B", "C")
+            ]}) + "\n", encoding="utf-8")
+            receipt = crawl_output.parent / ".receipts" / f"{video_id}.json"
+            complete(receipt, "input", [crawl_output])
+
+            def change_input(*_args: object) -> set[str]:
+                crawl_output.write_text(json.dumps({"restaurants": [
+                    {"origin_name": name, "address": f"address {name}"} for name in ("A", "B", "D")
+                ]}) + "\n", encoding="utf-8")
+                complete(receipt, "input", [crawl_output])
+                return {"A", "B", "C"}
+
+            with patch.object(module, "_current_09_targets", side_effect=change_input) as recalculate:
+                self.assertIn("newVideoCount=0", hosted_dry_run(root, video_id))
+            recalculate.assert_called_once()
+
+    def test_certified_all_false_selection_recovers_new_current_target(self) -> None:
+        video_id = "abcdefghijk"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            crawling, selection, transformed = certified_partial_video(root, video_id)
+            crawl_output = crawling / "crawling" / f"{video_id}.jsonl"
+            crawl_receipt = crawl_output.parent / ".receipts" / f"{video_id}.json"
+            selection_receipt = selection.parent / ".receipts" / f"{video_id}.json"
+            not_selection = selection.parent.parent / "notSelection" / f"{video_id}.jsonl"
+            not_selection.parent.mkdir(parents=True)
+            old_restaurants = [{"origin_name": "A", "address": None}]
+            crawl_output.write_text(json.dumps({"restaurants": old_restaurants}) + "\n", encoding="utf-8")
+            complete(crawl_receipt, "input", [crawl_output])
+            previous_row = json.dumps({"evaluation_target": {"A": False},
+                                       "restaurants": old_restaurants}) + "\n"
+            selection.write_text(previous_row, encoding="utf-8")
+            not_selection.write_text(previous_row, encoding="utf-8")
+            old_input_hash = fingerprint([crawl_output], assets=[module.SCRIPTS["target"]], settings="tzuyang")
+            complete(selection_receipt, old_input_hash, [selection, not_selection])
+            transformed.write_bytes(b"")
+            (transformed.parent / ".receipts/transform.json").write_text(json.dumps({
+                "schemaVersion": 2, "recordCount": 0,
+                "outputHash": hashlib.sha256(b"").hexdigest(), "groups": {},
+            }), encoding="utf-8")
+            self.assertIn("newVideoCount=0", hosted_dry_run(root, video_id))
+
+            crawl_output.write_text(json.dumps({"restaurants": old_restaurants + [
+                {"origin_name": "C", "address": "address C"},
+            ]}) + "\n", encoding="utf-8")
+            complete(crawl_receipt, "input", [crawl_output])
+            previous_selection = selection.read_bytes()
+            previous_receipt = selection_receipt.read_bytes()
+            self.assertIn("partialRecoveryVideoCount=1", hosted_dry_run(root, video_id))
+            self.assertEqual(selection.read_bytes(), previous_selection)
+            self.assertEqual(selection_receipt.read_bytes(), previous_receipt)
+
+            malformed = json.dumps({"evaluation_target": {"A": False, " ": False}}) + "\n"
+            selection.write_text(malformed, encoding="utf-8")
+            not_selection.write_text(malformed, encoding="utf-8")
+            complete(selection_receipt, old_input_hash, [selection, not_selection])
+            self.assertIn("newVideoCount=0", hosted_dry_run(root, video_id))
+            selection_receipt.unlink()
+            self.assertIn("newVideoCount=0", hosted_dry_run(root, video_id))
+
+    def test_hosted_partial_rejects_mixed_invalid_selection_targets(self) -> None:
+        video_id = "abcdefghijk"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            crawling, selection, _transformed = certified_partial_video(root, video_id)
+            evaluation = root / "backend/restaurant-evaluation/data/tzuyang"
+            crawl_output = crawling / "crawling" / f"{video_id}.jsonl"
+            receipt = selection.parent / ".receipts" / f"{video_id}.json"
+            expected = fingerprint([crawl_output], assets=[module.SCRIPTS["target"]], settings="tzuyang")
+            for targets in ({"A": True, " ": True}, {"A": True, "B": 1}):
+                with self.subTest(targets=targets):
+                    selection.write_text(json.dumps({"evaluation_target": targets}) + "\n", encoding="utf-8")
+                    complete(receipt, expected, [selection])
+                    self.assertFalse(module._hosted_partial_recovery_has_evidence(
+                        crawling, evaluation, video_id, module._transformed_names(evaluation), "tzuyang"
+                    ))
+                    self.assertIn("newVideoCount=0", hosted_dry_run(root, video_id))
+
+    def test_fresh_videos_take_priority_and_uncertified_hosted_is_excluded(self) -> None:
+        partial_id = "abcdefghijk"
+        unproven_id = "uuuuuuuuuuu"
+        fresh_ids = ("nnnnnnnnnnn", "mmmmmmmmmmm")
+        urls_after = [f"https://www.youtube.com/watch?v={video_id}"
+                      for video_id in (partial_id, unproven_id, *fresh_ids)]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            crawling, selection, _transformed = certified_partial_video(root, partial_id)
+            urls = crawling / "urls.txt"
+            urls.write_text(urls_after[0] + "\n", encoding="utf-8")
+            original_urls = urls.read_bytes()
+
+            def collect(_argv: list[str], _env: dict[str, str], *, required: bool = True) -> int:
+                urls.write_text("\n".join(urls_after) + "\n", encoding="utf-8")
+                return 0
+
+            def dry_run(limit: int) -> str:
+                output = io.StringIO()
+                with patch.object(module, "REPO_ROOT", root), patch.object(module, "assert_hosted_target"), \
+                    patch.object(module, "fetch_hosted_restaurant_snapshot", return_value=(
+                        ["hosted-A", "hosted-unknown"], [partial_id, unproven_id]
+                    )), \
+                    patch.object(module, "_run", side_effect=collect), contextlib.redirect_stdout(output):
+                    self.assertEqual(module.main(["--limit", str(limit), "--dry-run"]), 0)
+                self.assertEqual(urls.read_bytes(), original_urls)
+                return output.getvalue()
+
+            self.assertIn(f"newVideoIds=['{fresh_ids[0]}']", dry_run(1))
+            all_selected = dry_run(3)
+            self.assertIn(f"newVideoIds=['{fresh_ids[0]}', '{fresh_ids[1]}', '{partial_id}']", all_selected)
+            self.assertIn("partialRecoveryVideoCount=1", all_selected)
+            # A damaged selection cannot authorize hosted re-evaluation.
+            selection.write_text("{}\n", encoding="utf-8")
+            self.assertIn(f"newVideoIds=['{fresh_ids[0]}', '{fresh_ids[1]}']", dry_run(3))
+            # A certified but empty target set is also insufficient evidence.
+            selection.write_text(json.dumps({"evaluation_target": {}}) + "\n", encoding="utf-8")
+            complete(selection.parent / ".receipts" / f"{partial_id}.json", "input", [selection])
+            self.assertIn(f"newVideoIds=['{fresh_ids[0]}', '{fresh_ids[1]}']", dry_run(3))
+
+    def test_full_fresh_limit_does_not_inspect_later_hosted_evidence(self) -> None:
+        fresh_id = "nnnnnnnnnnn"
+        hosted_id = "abcdefghijk"
+        urls_after = [f"https://www.youtube.com/watch?v={video_id}"
+                      for video_id in (fresh_id, hosted_id)]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            crawling = root / "backend/restaurant-crawling/data/tzuyang"
+            urls = crawling / "urls.txt"
+            urls.parent.mkdir(parents=True)
+            urls.write_text(urls_after[1] + "\n", encoding="utf-8")
+            original_urls = urls.read_bytes()
+
+            def collect(_argv: list[str], _env: dict[str, str], *, required: bool = True) -> int:
+                urls.write_text("\n".join(urls_after) + "\n", encoding="utf-8")
+                return 0
+
+            output = io.StringIO()
+            with patch.object(module, "REPO_ROOT", root), patch.object(module, "assert_hosted_target"), \
+                patch.object(module, "fetch_hosted_restaurant_snapshot", return_value=(["hosted-A"], [hosted_id])), \
+                patch.object(module, "_run", side_effect=collect), \
+                patch.object(module, "_hosted_partial_recovery_has_evidence") as inspect_hosted, \
+                contextlib.redirect_stdout(output):
+                self.assertEqual(module.main(["--limit", "1", "--dry-run"]), 0)
+            inspect_hosted.assert_not_called()
+            self.assertIn(f"newVideoIds=['{fresh_id}']", output.getvalue())
+            self.assertEqual(urls.read_bytes(), original_urls)
 
     def test_transcript_failure_reports_retryable_video_and_restores_urls(self) -> None:
         video_url = "https://www.youtube.com/watch?v=abcdefghijk"
