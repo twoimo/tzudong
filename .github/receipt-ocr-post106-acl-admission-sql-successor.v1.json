@@ -25,16 +25,16 @@
   },
   "predecessor": {
     "manifestPath": ".github/review-media-evidence-prefixed-feature-successor.v1.json",
-    "manifestSha256": "2ac3d8ba37494ca73bf2785334e67a6ddd4b9201c966ee3f159ab529f1fb2530",
+    "manifestSha256": "f57298585dcad7b3949ddff7fe7127fe2d4705e7c50b0b3d912c7fe0df80c444",
     "ledgerCount": 105,
     "terminalIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c"
   },
   "baseSuccessor": {
     "state": "held_unapplied",
     "manifestPath": ".github/receipt-ocr-post105-sql-successor.v1.json",
-    "manifestSha256": "98773439dda2880ede3fbd182931a76350247bbf504b940f27e8a830bee6c998",
+    "manifestSha256": "63d02226cafe385518be4d4f56a93eb7dbb110b091a0e7085b42c50556994ebf",
     "compilerPath": "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs",
-    "compilerSha256": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+    "compilerSha256": "0515e7c2cf3cf28aa5fa370350b8aaa109f5dbc9969227ac3600cb536daa181a",
     "operatingTargetIdentityRoot": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1",
     "rehearsalTargetIdentityRoot": "b6184e8b14977dcba0d66959d1ef266b29268f5420b86451a7d213b81d5c6e24"
   },
@@ -73,7 +73,7 @@
   "toolchain": [
     {
       "path": "apps/web/scripts/receipt-ocr-post106-acl-admission-sql-successor.mjs",
-      "sha256": "a18b86a8d36f01eb08b18ae47417d750539f9742389fd792e5c6ff44f0f66504"
+      "sha256": "458394ad36e6b38ad19285b2e33b6bb7826326054bd27f41463cf30a8b272d41"
     }
   ]
 }

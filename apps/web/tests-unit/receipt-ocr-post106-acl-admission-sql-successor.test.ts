@@ -37,8 +37,8 @@ describe('held receipt OCR 105 -> 106 -> 107 ACL admission successor', () => {
     });
     expect(record.manifest.baseSuccessor).toMatchObject({
       state: 'held_unapplied',
-      manifestSha256: '98773439dda2880ede3fbd182931a76350247bbf504b940f27e8a830bee6c998',
-      compilerSha256: '4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda',
+      manifestSha256: '63d02226cafe385518be4d4f56a93eb7dbb110b091a0e7085b42c50556994ebf',
+      compilerSha256: '0515e7c2cf3cf28aa5fa370350b8aaa109f5dbc9969227ac3600cb536daa181a',
       operatingTargetIdentityRoot: '83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1',
     });
     expect(record.material.identity).toEqual({

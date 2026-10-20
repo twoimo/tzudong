@@ -145,7 +145,7 @@ function validateManifestShape(manifest) {
     || manifest.executorRole !== 'postgres'
     || manifest.stateRootAlgorithm !== 'review-media-ledger-identity/v1'
     || !Number.isSafeInteger(manifest.advisoryLockKey)
-    || manifest.launchPolicy?.state !== 'held') {
+    || !['held', 'ready'].includes(manifest.launchPolicy?.state)) {
     fail('RECEIPT_OCR_POST106_ACL_CONTRACT_INVALID');
   }
   exactKeys(manifest.launchPolicy, ['code', 'reason', 'state']);

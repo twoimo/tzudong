@@ -138,13 +138,16 @@ export function validateTransactionBody(sql, expectedInserts) {
   return Object.freeze({ spans, inserts });
 }
 
-export function loadRecovery108ChainSource() {
+export function loadRecovery108ChainSource({
+  loadRecoveryImpl = loadRecovery108HeldManifest,
+  loadPredecessorImpl = loadEvidencePrefixedSuccessorManifest,
+} = {}) {
   // 108 recursively authenticates 107, 105, and the evidence-prefixed feature source.
-  const recovery = loadRecovery108HeldManifest();
+  const recovery = loadRecoveryImpl();
   const acl = recovery.predecessorRecord;
   const post105 = acl.baseRecord;
   const feature = post105.predecessor;
-  const predecessor = loadEvidencePrefixedSuccessorManifest('predecessor');
+  const predecessor = loadPredecessorImpl('predecessor');
   const records = [predecessor, feature, post105, acl, recovery];
   const [first, second, third, fourth, fifth] = records.map(record => record.manifest);
   const transitions = [first.operatingTransition, second.operatingTransition,
@@ -164,7 +167,7 @@ export function loadRecovery108ChainSource() {
       || record.manifest.serverMajor !== 17
       || record.manifest.databaseName !== 'postgres'
       || record.manifest.executorRole !== 'postgres'
-      || record.manifest.launchPolicy.state !== 'held'
+      || !['held', 'ready'].includes(record.manifest.launchPolicy.state)
       || !equal(record.manifest.requiredWriterFences, first.requiredWriterFences))
     || new Set(records.map(record => record.manifest.advisoryLockKey)).size !== records.length) {
     fail('RECEIPT_OCR_CHAIN_SOURCE_BOUNDARY_INVALID');

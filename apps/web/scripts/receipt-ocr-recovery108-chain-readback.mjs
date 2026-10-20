@@ -1,47 +1,101 @@
-/** Source-only readback adapter for a caller-owned, single PostgreSQL connection. */
+/** Read-only reconciliation in one newly spawned psql connection. */
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { selectDirectDatabaseTransport } from './apply-supabase-migration.mjs';
 import {
-  classifyRecovery108ChainReconciliation,
+  assertSuccessorDatabaseTarget,
+  createSuccessorPsqlRunner,
+} from './review-media-sql-successor.mjs';
+import {
   compileRecovery108ChainPlan,
   loadRecovery108ChainSource,
 } from './receipt-ocr-recovery108-chain-plan.mjs';
 
 const MAX_READBACK_BYTES = 64 * 1024;
+const READBACK_TIMEOUT_MS = 30_000;
 const READ_ONLY_SQL = 'SET TRANSACTION READ ONLY;';
 const HEX = /^[0-9a-f]{64}$/;
-const USED_LEASES = new WeakSet();
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const fail = code => { const error = new Error(code); error.code = code; throw error; };
+const quote = value => `'${String(value).replaceAll("'", "''")}'`;
+const outcome = (status, reason) => Object.freeze({ status, reason });
+const OUTCOMES = Object.freeze({
+  SETTLED_INITIAL_MATCH: 'settled_initial_match',
+  SETTLED_TERMINAL_MATCH: 'settled_terminal_match',
+  STATE_CONFLICT: 'conflict',
+  IDENTITY_CONFLICT: 'conflict',
+  LEDGER_UNAVAILABLE: 'unknown',
+  IDENTITY_UNAVAILABLE: 'unknown',
+});
+const emit = reason => `SELECT ${quote(JSON.stringify({ status: OUTCOMES[reason], reason }))}::jsonb;`;
+const subquery = sql => sql.trim().replace(/;\s*$/, '');
 
-function exactKeys(value, keys) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)
-    || Object.keys(value).sort().join('\0') !== [...keys].sort().join('\0')) {
-    fail('RECEIPT_OCR_CHAIN_READBACK_INPUT_INVALID');
-  }
-}
-
-function oneValue(result, column) {
-  if (!result || typeof result !== 'object' || !Array.isArray(result.rows)
-    || result.rows.length !== 1) return null;
-  const row = result.rows[0];
-  if (!row || typeof row !== 'object' || Array.isArray(row)
-    || Object.keys(row).length !== 1 || !Object.hasOwn(row, column)) return null;
-  const raw = row[column];
+function parseOutcome(raw) {
+  if (typeof raw !== 'string' || Buffer.byteLength(raw) > MAX_READBACK_BYTES) return null;
   try {
-    if (typeof raw === 'string') {
-      if (Buffer.byteLength(raw) > MAX_READBACK_BYTES) return null;
-      const value = JSON.parse(raw);
-      return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
-    }
-    const encoded = JSON.stringify(raw);
-    return typeof encoded === 'string' && Buffer.byteLength(encoded) <= MAX_READBACK_BYTES
-      && raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : null;
+    const value = JSON.parse(raw.trim());
+    if (!value || typeof value !== 'object' || Array.isArray(value)
+      || Object.keys(value).sort().join(',') !== 'reason,status'
+      || !Object.hasOwn(OUTCOMES, value.reason) || value.status !== OUTCOMES[value.reason]) return null;
+    return outcome(value.status, value.reason);
   } catch { return null; }
 }
 
-const outcome = (status, reason) => Object.freeze({ status, reason });
+function stateMatchSql(query, column, expected) {
+  return `SELECT coalesce(count(*)=1 AND bool_and(${column}::jsonb IS NOT DISTINCT FROM ${quote(JSON.stringify(expected))}::jsonb),false) AS matches
+FROM (${subquery(query)}) AS state_readback
+\\gset ocr108_state_
+`;
+}
+
+function buildReadOnlyScript(plan) {
+  const initial = { ledgerCount: 89, ledgerIdentityRoot: plan.initialRoot };
+  const terminal = { ledgerCount: 108, ledgerIdentityRoot: plan.terminalRoot };
+  return `${plan.settlement.openSql}${READ_ONLY_SQL}
+${plan.settlement.lockSql}
+SELECT (availability->>'ledgerExists')::boolean AS ledger_exists,
+ (availability->>'initialObjectsReady')::boolean AS initial_objects,
+ (availability->>'terminalObjectsReady')::boolean AS terminal_objects
+FROM (${subquery(plan.availabilityQuery)}) AS available
+\\gset ocr108_available_
+\\if :ocr108_available_ledger_exists
+SELECT identity IS NOT DISTINCT FROM ${quote(JSON.stringify(initial))}::jsonb AS initial_match,
+ identity IS NOT DISTINCT FROM ${quote(JSON.stringify(terminal))}::jsonb AS terminal_match,
+ (identity->>'ledgerCount')::integer BETWEEN 89 AND 108 AS known_range
+FROM (${subquery(plan.identityQuery)}) AS identified
+\\gset ocr108_identity_
+\\if :ocr108_identity_initial_match
+\\if :ocr108_available_initial_objects
+${stateMatchSql(plan.initialStateQuery, 'state', plan.initialExpected)}\\if :ocr108_state_matches
+${emit('SETTLED_INITIAL_MATCH')}
+\\else
+${emit('STATE_CONFLICT')}
+\\endif
+\\else
+${emit('IDENTITY_CONFLICT')}
+\\endif
+\\elif :ocr108_identity_terminal_match
+\\if :ocr108_available_terminal_objects
+${stateMatchSql(plan.terminalStateQuery, 'receipt_ocr_recovery108_state', plan.terminalExpected)}\\if :ocr108_state_matches
+${emit('SETTLED_TERMINAL_MATCH')}
+\\else
+${emit('STATE_CONFLICT')}
+\\endif
+\\else
+${emit('IDENTITY_CONFLICT')}
+\\endif
+\\elif :ocr108_identity_known_range
+${emit('IDENTITY_CONFLICT')}
+\\else
+${emit('IDENTITY_UNAVAILABLE')}
+\\endif
+\\else
+${emit('LEDGER_UNAVAILABLE')}
+\\endif
+${plan.settlement.closeSql}`;
+}
 
 function preparePlan(compilationInput) {
   // Recompile from source-bound admissions; never execute caller-supplied SQL.
@@ -71,113 +125,57 @@ function preparePlan(compilationInput) {
   return Object.freeze({ sourceRoot: compiled.sourceRoot, plan });
 }
 
+
 export function prepareRecovery108ChainReadback(compilationInput) {
   const prepared = preparePlan(compilationInput);
   const plan = prepared.plan;
+  const readOnlyScript = buildReadOnlyScript(plan);
   const readbackCompilerSha256 = sha256(readFileSync(fileURLToPath(import.meta.url)));
   return Object.freeze({
     sourceRoot: prepared.sourceRoot,
     readbackCompilerSha256,
     readbackSourceRoot: sha256(JSON.stringify({ chainSourceRoot: prepared.sourceRoot, readbackCompilerSha256 })),
-    readOnlySql: READ_ONLY_SQL,
-    // Inspection copy for source-only tests and the later controller. Mutating it
-    // cannot change the private SQL used by execute().
+    readOnlyScript,
     queryPlan: structuredClone(plan),
-    async execute(factory) {
-      // This factory must create a fresh, idle, dedicated client for this call.
-      // A pool lease, active transaction, or shared client is outside this API.
-      if (!factory || typeof factory !== 'object'
-        || typeof factory.createDedicatedClient !== 'function'
-        || typeof factory.query === 'function') {
-        return outcome('unknown', 'FACTORY_INVALID');
-      }
-      let lease = null;
-      let close = null;
-      let began = false;
-      let reused = false;
-      let phase = 'FACTORY_FAILED';
-      let result = outcome('unknown', phase);
+    async execute(transport) {
+      // No existing query client or transaction can be supplied to this API.
+      if (!transport || typeof transport !== 'object'
+        || typeof transport.runReadOnlyScript !== 'function'
+        || typeof transport.query === 'function') return outcome('unknown', 'TRANSPORT_INVALID');
       try {
-        lease = await factory.createDedicatedClient();
-        phase = 'LEASE_INVALID';
-        close = lease && (typeof lease.close === 'function' ? lease.close
-          : typeof lease.dispose === 'function' ? lease.dispose : null);
-        if (!lease || typeof lease !== 'object' || typeof lease.query !== 'function' || !close) {
-          result = outcome('unknown', phase);
-        } else if (USED_LEASES.has(lease)) {
-          reused = true;
-          result = outcome('unknown', 'LEASE_REUSED');
-        } else {
-          USED_LEASES.add(lease);
-          phase = 'OPEN_FAILED';
-          began = true; // BEGIN may have reached the server before a rejection.
-          await lease.query(plan.settlement.openSql);
-          phase = 'READ_ONLY_UNAVAILABLE';
-          await lease.query(READ_ONLY_SQL);
-          phase = 'LOCK_UNAVAILABLE';
-          await lease.query(plan.settlement.lockSql);
-          phase = 'AVAILABILITY_UNAVAILABLE';
-          const availability = oneValue(await lease.query(plan.availabilityQuery), 'availability');
-          if (!availability) {
-            result = outcome('unknown', phase);
-          } else if (availability.ledgerExists !== true) {
-            result = outcome('unknown', 'LEDGER_UNAVAILABLE');
-          } else {
-            phase = 'IDENTITY_UNAVAILABLE';
-            const identity = oneValue(await lease.query(plan.identityQuery), 'identity');
-            if (!identity) {
-              result = outcome('unknown', phase);
-            } else {
-              const observation = { availability, identity, state: null };
-              let classification;
-              try { classification = classifyRecovery108ChainReconciliation(plan, observation); }
-              catch { classification = 'unknown'; }
-              if (classification === 'needs_settled_initial_state'
-                || classification === 'needs_settled_terminal_state') {
-                phase = 'STATE_UNAVAILABLE';
-                const initial = classification === 'needs_settled_initial_state';
-                const state = oneValue(await lease.query(initial
-                  ? plan.initialStateQuery : plan.terminalStateQuery),
-                initial ? 'state' : 'receipt_ocr_recovery108_state');
-                if (!state) {
-                  result = outcome('unknown', phase);
-                } else {
-                  try { classification = classifyRecovery108ChainReconciliation(plan,
-                    { availability, identity, state }); }
-                  catch { classification = 'unknown'; }
-                  result = classification === 'initial_match_unsettled'
-                    ? outcome('settled_initial_match', 'SETTLED_INITIAL_MATCH')
-                    : classification === 'terminal_match_unsettled'
-                      ? outcome('settled_terminal_match', 'SETTLED_TERMINAL_MATCH')
-                      : classification === 'partial_conflict'
-                        ? outcome('conflict', 'STATE_CONFLICT')
-                        : outcome('unknown', 'STATE_UNAVAILABLE');
-                }
-              } else {
-                result = classification === 'partial_conflict'
-                  ? outcome('conflict', 'IDENTITY_CONFLICT')
-                  : outcome('unknown', 'IDENTITY_UNAVAILABLE');
-              }
-            }
-          }
-        }
+        const raw = await transport.runReadOnlyScript(readOnlyScript);
+        return parseOutcome(raw) ?? outcome('unknown', 'READBACK_INVALID');
       } catch {
-        result = outcome('unknown', phase);
-      } finally {
-        if (began) {
-          try { await lease.query(plan.settlement.closeSql); }
-          catch { result = outcome('unknown', 'CLEANUP_UNCONFIRMED'); }
-        }
-        if (lease && !reused) {
-          if (close) {
-            try { await close.call(lease); }
-            catch { result = outcome('unknown', 'CLEANUP_UNCONFIRMED'); }
-          } else {
-            result = outcome('unknown', 'CLEANUP_UNCONFIRMED');
-          }
-        }
+        // A partial stdout match is discarded when psql, ROLLBACK, or exit fails.
+        return outcome('unknown', 'READBACK_UNAVAILABLE');
       }
-      return result;
     },
   });
+}
+
+export function createRecovery108PsqlReadbackExecutor({
+  environment = process.env,
+  psql = environment.TZUDONG_SUCCESSOR_PSQL || 'psql',
+  spawnImpl = spawnSync,
+} = {}) {
+  let databaseUrl;
+  try {
+    ({ databaseUrl } = selectDirectDatabaseTransport(environment));
+    assertSuccessorDatabaseTarget(databaseUrl, loadRecovery108ChainSource().recovery.manifest);
+    if (!new URL(databaseUrl).password) fail('RECEIPT_OCR_CHAIN_READBACK_TARGET_INVALID');
+  } catch { fail('RECEIPT_OCR_CHAIN_READBACK_TARGET_INVALID'); }
+  const run = createSuccessorPsqlRunner(databaseUrl, {
+    environment, psql,
+    spawnImpl: (binary, args, options) => spawnImpl(binary, [...args, '--no-password'], {
+      ...options,
+      maxBuffer: MAX_READBACK_BYTES,
+      env: { ...options.env, PGCONNECT_TIMEOUT: '5', PGOPTIONS: '-c default_transaction_read_only=on' },
+    }),
+  });
+  return async compilationInput => {
+    const prepared = prepareRecovery108ChainReadback(compilationInput);
+    return prepared.execute({
+      runReadOnlyScript(sql) { return run(databaseUrl, sql, false, { timeoutMs: READBACK_TIMEOUT_MS }); },
+    });
+  };
 }

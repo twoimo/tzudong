@@ -13,6 +13,14 @@ on:
           - observe
           - rehearse
           - apply
+      target:
+        description: 'Explicit successor path; receipt OCR never enters the legacy apply chain.'
+        required: true
+        default: review_media
+        type: choice
+        options:
+          - review_media
+          - receipt_ocr_89_108
       source_sha:
         description: 'Exact 40-character protected-main commit SHA.'
         required: true
@@ -24,6 +32,16 @@ on:
       local_vercel_bundle_sha256:
         description: 'Exact SHA-256 printed by capture-vercel for the canonical sanitized bundle.'
         required: true
+        type: string
+      chain_stage_admission:
+        description: 'Canonical source-bound stage admission JSON for receipt OCR only.'
+        required: false
+        default: ''
+        type: string
+      chain_stage_admission_sha256:
+        description: 'SHA-256 of the canonical receipt OCR stage admission JSON.'
+        required: false
+        default: ''
         type: string
       apply_confirmation:
         description: 'For apply only, enter apply:<source_sha>:<bundle_sha256>; leave empty otherwise.'
@@ -76,7 +94,9 @@ jobs:
         shell: bash
         env:
           APPLY_CONFIRMATION: ${{ inputs.apply_confirmation }}
+          CHAIN_STAGE_ADMISSION_SHA256: ${{ inputs.chain_stage_admission_sha256 }}
           EXPECTED_MODE: ${{ inputs.mode }}
+          EXPECTED_TARGET: ${{ inputs.target }}
           EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
           LOCAL_VERCEL_BUNDLE_SHA256: ${{ inputs.local_vercel_bundle_sha256 }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
@@ -84,6 +104,8 @@ jobs:
           TRIGGERING_ACTOR: ${{ github.triggering_actor }}
         run: |
           set -euo pipefail
+          EXPECTED_TARGET=${EXPECTED_TARGET:-review_media}
+          CHAIN_STAGE_ADMISSION_SHA256=${CHAIN_STAGE_ADMISSION_SHA256:-}
           test "$GITHUB_EVENT_NAME" = workflow_dispatch
           test "$GITHUB_REPOSITORY" = twoimo/tzudong
           test "$GITHUB_REF" = refs/heads/main
@@ -104,11 +126,25 @@ jobs:
               test -z "$APPLY_CONFIRMATION"
               ;;
             apply)
-              test "$APPLY_CONFIRMATION" = "apply:$EXPECTED_SOURCE_SHA:$LOCAL_VERCEL_BUNDLE_SHA256"
+              if [[ "$EXPECTED_TARGET" = receipt_ocr_89_108 ]]
+              then
+                test "$APPLY_CONFIRMATION" = "apply:receipt_ocr_89_108:$EXPECTED_SOURCE_SHA:$LOCAL_VERCEL_BUNDLE_SHA256:$CHAIN_STAGE_ADMISSION_SHA256"
+              else
+                test "$APPLY_CONFIRMATION" = "apply:$EXPECTED_SOURCE_SHA:$LOCAL_VERCEL_BUNDLE_SHA256"
+              fi
               ;;
             *)
               exit 2
               ;;
+          esac
+          case "$EXPECTED_TARGET" in
+            review_media)
+              test -z "$CHAIN_STAGE_ADMISSION_SHA256"
+              ;;
+            receipt_ocr_89_108)
+              [[ "$CHAIN_STAGE_ADMISSION_SHA256" =~ ^[0-9a-f]{64}$ ]]
+              ;;
+            *) exit 2 ;;
           esac
 
       - name: Set up pinned project Node.js
@@ -130,6 +166,13 @@ jobs:
             process.exit(2);
           }
           NODE
+
+      - name: Verify receipt OCR constituent launch gates before operating setup
+        if: inputs.target == 'receipt_ocr_89_108'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node apps/web/scripts/receipt-ocr-recovery108-operating-controller.mjs check-gates
 
       - name: Install pinned Vercel CLI readback authority
         id: vercel-cli
@@ -156,18 +199,22 @@ jobs:
         id: custody
         shell: bash
         env:
+          CHAIN_STAGE_ADMISSION: ${{ inputs.chain_stage_admission }}
+          CHAIN_STAGE_ADMISSION_SHA256: ${{ inputs.chain_stage_admission_sha256 }}
           LOCAL_VERCEL_EVIDENCE: ${{ inputs.local_vercel_evidence }}
           LOCAL_VERCEL_BUNDLE_SHA256: ${{ inputs.local_vercel_bundle_sha256 }}
+          SELECTED_TARGET: ${{ inputs.target }}
         run: |
           set -euo pipefail
           umask 077
           custody_root="$(mktemp -d "$RUNNER_TEMP/review-media-sql-successor.XXXXXXXX")"
           chmod 700 "$custody_root"
           operating_input="$custody_root/local-vercel-evidence.json"
+          chain_stage_input="$custody_root/chain-stage-admission.json"
           custody_dir="$custody_root/custody"
           serialized_runner="$custody_root/run-serialized-operation"
           vercel_readback_adapter="$custody_root/vercel-readback-adapter.mjs"
-          OPERATING_INPUT="$operating_input" node --input-type=module <<'NODE'
+          OPERATING_INPUT="$operating_input" CHAIN_STAGE_INPUT="$chain_stage_input" node --input-type=module <<'NODE'
           import { createHash } from 'node:crypto';
           import { constants, openSync, writeFileSync, closeSync } from 'node:fs';
 
@@ -199,6 +246,33 @@ jobs:
             writeFileSync(descriptor, bytes);
           } finally {
             closeSync(descriptor);
+          }
+          const target = process.env.SELECTED_TARGET || 'review_media';
+          const admissionRaw = Buffer.from(process.env.CHAIN_STAGE_ADMISSION ?? '', 'utf8');
+          const admissionSha256 = process.env.CHAIN_STAGE_ADMISSION_SHA256 ?? '';
+          if (target === 'receipt_ocr_89_108') {
+            if (!/^[0-9a-f]{64}$/.test(admissionSha256)
+              || admissionRaw.length < 2 || admissionRaw.length > 65536
+              || admissionRaw.includes(0)) process.exit(2);
+            let admission;
+            try { admission = JSON.parse(admissionRaw.toString('utf8')); }
+            catch { process.exit(2); }
+            if (!admission || typeof admission !== 'object' || Array.isArray(admission)
+              || Object.keys(admission).sort().join('\0') !== [
+                'featureAdmission', 'manifestSha256s', 'predecessorAdmission', 'sourceRoot',
+              ].sort().join('\0')) process.exit(2);
+            const admissionBytes = Buffer.from(`${JSON.stringify(canonical(admission))}\n`);
+            if (admissionBytes.length > 65536
+              || createHash('sha256').update(admissionBytes).digest('hex') !== admissionSha256) process.exit(2);
+            const admissionDescriptor = openSync(
+              process.env.CHAIN_STAGE_INPUT,
+              constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW,
+              0o600,
+            );
+            try { writeFileSync(admissionDescriptor, admissionBytes); }
+            finally { closeSync(admissionDescriptor); }
+          } else if (target !== 'review_media' || admissionRaw.length || admissionSha256) {
+            process.exit(2);
           }
           NODE
           cat > "$vercel_readback_adapter" <<'NODE'
@@ -325,11 +399,28 @@ jobs:
             operation=base-only
             operating_input=$6
             custody_dir=$8
+          elif (( $# == 11 )) && [[ "$1" = node
+            && "$2" = apps/web/scripts/receipt-ocr-recovery108-operating-controller.mjs
+            && "$3" = operate && "$4" = --mode && "$5" =~ ^(observe|rehearse)$
+            && "$6" = --input && -n "$7"
+            && "$8" = --stage-admission && -n "$9"
+            && "${10}" = --custody-dir && -n "${11}" ]]
+          then
+            operation=ocr-only
+            operating_input=$7
+            chain_stage_input=$9
+            custody_dir=${11}
           elif (( $# == 3 )) && [[ "$1" = apply-chain && -n "$2" && -n "$3" ]]
           then
             operation=apply-chain
             operating_input=$2
             custody_dir=$3
+          elif (( $# == 4 )) && [[ "$1" = ocr-chain && -n "$2" && -n "$3" && -n "$4" ]]
+          then
+            operation=ocr-apply-chain
+            operating_input=$2
+            chain_stage_input=$3
+            custody_dir=$4
           else
             exit 2
           fi
@@ -391,6 +482,19 @@ jobs:
                   || value.code !== 'FEATURE_SUCCESSOR_COMMITTED'
                   || value.status !== 'committed' || value.sourceRevision !== source) fail();
                 break;
+              case 'ocr-observe':
+              case 'ocr-rehearse':
+              case 'ocr-apply': {
+                const expected = {
+                  'ocr-observe': ['RECEIPT_OCR_CHAIN_INITIAL_OBSERVED', 'observed'],
+                  'ocr-rehearse': ['RECEIPT_OCR_CHAIN_REHEARSAL_PASSED', 'rolled_back'],
+                  'ocr-apply': ['RECEIPT_OCR_CHAIN_COMMITTED', 'committed'],
+                }[process.env.RESULT_PHASE];
+                if (!exact(['code', 'sourceRoot', 'status'])
+                  || value.code !== expected[0] || value.status !== expected[1]
+                  || !hex.test(value.sourceRoot)) fail();
+                break;
+              }
               default:
                 fail();
             }
@@ -404,12 +508,97 @@ jobs:
             stderr_path="$(dirname "$operating_input")/$phase.stderr"
             (umask 077; : > "$stdout_path"; : > "$stderr_path")
             chmod 600 "$stdout_path" "$stderr_path"
-            if ! "$@" >"$stdout_path" 2>"$stderr_path"
+            if ! run_guarded "$stdout_path" "$stderr_path" "$@"
             then
               return 1
             fi
-            test ! -s "$stderr_path"
+            test ! -s "$stderr_path" || return 1
             validate_result "$phase" "$stdout_path" "${base_stdout:-}"
+          }
+
+          serializer_heartbeat() {
+            heartbeat_counter=$((heartbeat_counter + 1))
+            marker="REVIEW_MEDIA_SQL_SUCCESSOR_HEARTBEAT_$heartbeat_counter"
+            if ! printf '%s\n' 'SELECT 1 WHERE false;' "\\echo $marker" >&"$lock_write_fd"
+            then
+              return 1
+            fi
+            for _ in 1 2 3
+            do
+              if ! IFS= read -r -t 2 heartbeat_line <&"$lock_read_fd"
+              then
+                return 1
+              fi
+              if [[ -z "$heartbeat_line" ]]
+              then
+                continue
+              fi
+              [[ "$heartbeat_line" = "$marker" ]]
+              return
+            done
+            return 1
+          }
+
+          stop_workload_group() {
+            if [[ -z "${guarded_pid:-}" ]]
+            then
+              return
+            fi
+            kill -TERM -- "-$guarded_pid" 2>/dev/null || true
+            for _ in 1 2 3 4 5 6 7 8 9 10
+            do
+              if ! jobs -pr | grep -Fxq "$guarded_pid"
+              then
+                break
+              fi
+              sleep 0.2
+            done
+            kill -KILL -- "-$guarded_pid" 2>/dev/null || true
+            wait "$guarded_pid" 2>/dev/null || true
+            guarded_pid=
+          }
+
+          run_guarded() {
+            guarded_stdout=$1
+            guarded_stderr=$2
+            shift 2
+            serializer_heartbeat || return 1
+            set -m
+            "$@" >"$guarded_stdout" 2>"$guarded_stderr" &
+            guarded_pid=$!
+            set +m
+            while jobs -pr | grep -Fxq "$guarded_pid"
+            do
+              if ! serializer_heartbeat
+              then
+                stop_workload_group
+                return 1
+              fi
+              sleep 0.2
+            done
+            if ! wait "$guarded_pid"
+            then
+              guarded_pid=
+              return 1
+            fi
+            guarded_pid=
+            serializer_heartbeat
+          }
+
+          emit_ocr_terminal_observed() {
+            RESULT_PATH="$(dirname "$operating_input")/$1.stdout.json" node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          try {
+            const bytes = readFileSync(process.env.RESULT_PATH);
+            if (bytes.length < 2 || bytes.length > 8192 || bytes.includes(0)) process.exit(2);
+            const value = JSON.parse(bytes.toString('utf8'));
+            if (!value || Object.keys(value).sort().join(',') !== 'code,sourceRoot,status'
+              || value.code !== 'RECEIPT_OCR_CHAIN_TERMINAL_OBSERVED'
+              || value.status !== 'terminal_observed'
+              || !/^[0-9a-f]{64}$/.test(value.sourceRoot)) process.exit(2);
+            process.stdout.write('{"code":"RECEIPT_OCR_CHAIN_TERMINAL_OBSERVED","status":"terminal_observed"}\n');
+          } catch { process.exit(2); }
+          NODE
           }
 
           run_apply_chain() {
@@ -417,14 +606,14 @@ jobs:
             export VERCEL_CLI_PATH
             if ! node "$VERCEL_CLI_PATH" verify >/dev/null 2>&1
             then
-              printf '%s\n' '{"code":"SUCCESSOR_VERCEL_READBACK_UNCONFIRMED","status":"failed"}'
+              pending_output='{"code":"SUCCESSOR_VERCEL_READBACK_UNCONFIRMED","status":"failed"}'
               return 1
             fi
             if ! run_private base-apply node \
               apps/web/scripts/review-media-operating-orchestrator.mjs \
               --mode apply --input "$operating_input" --custody-dir "$custody_dir"
             then
-              printf '%s\n' '{"code":"SUCCESSOR_BASE_OUTCOME_UNCONFIRMED","status":"failed"}'
+              pending_output='{"code":"SUCCESSOR_BASE_OUTCOME_UNCONFIRMED","status":"failed"}'
               return 1
             fi
             base_stdout="$(dirname "$operating_input")/base-apply.stdout.json"
@@ -434,19 +623,46 @@ jobs:
                 apps/web/scripts/review-media-feature-sql-successor.mjs \
                 --mode "$phase" --custody-dir "$custody_dir"
               then
-                printf '%s\n' '{"code":"SUCCESSOR_COMMITTED_FEATURE_HELD","featureStatus":"held","predecessorCode":"SUCCESSOR_COMMITTED","predecessorStatus":"committed","status":"partial"}'
+                pending_output='{"code":"SUCCESSOR_COMMITTED_FEATURE_HELD","featureStatus":"held","predecessorCode":"SUCCESSOR_COMMITTED","predecessorStatus":"committed","status":"partial"}'
                 return 1
               fi
             done
-            printf '%s\n' '{"code":"SUCCESSOR_AND_FEATURE_COMMITTED","featureStatus":"committed","predecessorCode":"SUCCESSOR_COMMITTED","predecessorStatus":"committed","status":"committed"}'
+            pending_output='{"code":"SUCCESSOR_AND_FEATURE_COMMITTED","featureStatus":"committed","predecessorCode":"SUCCESSOR_COMMITTED","predecessorStatus":"committed","status":"committed"}'
+          }
+
+          run_ocr_chain() {
+            export LOCAL_VERCEL_READBACK_INPUT="$operating_input"
+            export VERCEL_CLI_PATH
+            if ! node "$VERCEL_CLI_PATH" verify >/dev/null 2>&1
+            then
+              pending_output='{"code":"RECEIPT_OCR_CHAIN_VERCEL_UNCONFIRMED","status":"failed"}'
+              return 1
+            fi
+            if ! run_private ocr-apply node \
+              apps/web/scripts/receipt-ocr-recovery108-operating-controller.mjs \
+              operate --mode apply --input "$operating_input" \
+              --stage-admission "$chain_stage_input" --custody-dir "$custody_dir"
+            then
+              if pending_output=$(emit_ocr_terminal_observed ocr-apply)
+              then
+                return 1
+              fi
+              pending_output='{"code":"RECEIPT_OCR_CHAIN_OUTCOME_UNCONFIRMED","status":"failed"}'
+              return 1
+            fi
+            pending_output='{"code":"RECEIPT_OCR_CHAIN_COMMITTED","status":"committed"}'
           }
 
           lock_read_fd=
           lock_write_fd=
           lock_pid=
+          guarded_pid=
+          heartbeat_counter=0
+          pending_output=
           cleanup() {
             status=$?
             trap - EXIT INT TERM
+            stop_workload_group
             if [[ -n "$lock_write_fd" ]]
             then
               printf '%s\n' 'ROLLBACK;' '\quit' >&"$lock_write_fd" 2>/dev/null || true
@@ -456,15 +672,73 @@ jobs:
             then
               exec {lock_read_fd}<&- 2>/dev/null || true
             fi
-            if [[ -n "$lock_pid" ]] && ! wait "$lock_pid" 2>/dev/null && (( status == 0 ))
+            if [[ -n "$lock_pid" ]]
             then
-              status=2
+              for _ in 1 2 3 4 5 6 7 8 9 10
+              do
+                if ! jobs -pr | grep -Fxq "$lock_pid"
+                then
+                  break
+                fi
+                sleep 0.2
+              done
+              if jobs -pr | grep -Fxq "$lock_pid"
+              then
+                kill -TERM "$lock_pid" 2>/dev/null || true
+                sleep 0.2
+                kill -KILL "$lock_pid" 2>/dev/null || true
+              fi
+              if ! wait "$lock_pid" 2>/dev/null && (( status == 0 ))
+              then
+                status=2
+              fi
             fi
             exit "$status"
+          }
+          finish_serializer() {
+            serializer_ok=true
+            if ! serializer_heartbeat
+            then
+              serializer_ok=false
+            fi
+            if ! printf '%s\n' 'ROLLBACK;' '\quit' >&"$lock_write_fd"
+            then
+              serializer_ok=false
+            fi
+            exec {lock_write_fd}>&-
+            lock_write_fd=
+            for _ in 1 2 3 4 5 6 7 8 9 10
+            do
+              if ! jobs -pr | grep -Fxq "$lock_pid"
+              then
+                break
+              fi
+              sleep 0.2
+            done
+            if jobs -pr | grep -Fxq "$lock_pid"
+            then
+              serializer_ok=false
+              kill -TERM "$lock_pid" 2>/dev/null || true
+              sleep 0.2
+              kill -KILL "$lock_pid" 2>/dev/null || true
+            fi
+            if ! wait "$lock_pid" 2>/dev/null
+            then
+              serializer_ok=false
+            fi
+            lock_pid=
+            exec {lock_read_fd}<&-
+            lock_read_fd=
+            [[ "$serializer_ok" = true ]]
           }
           trap cleanup EXIT
           trap 'exit 130' INT
           trap 'exit 143' TERM
+
+          if [[ "$operation" = ocr-only || "$operation" = ocr-apply-chain ]]
+          then
+            node apps/web/scripts/receipt-ocr-recovery108-operating-controller.mjs check-gates >/dev/null
+          fi
 
           lock_diagnostics="$(dirname "$operating_input")/serializer.stderr"
           : > "$lock_diagnostics"
@@ -482,8 +756,11 @@ jobs:
             "SET LOCAL lock_timeout = '840s';" \
             "SET LOCAL idle_in_transaction_session_timeout = '900s';" \
             "SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('tzudong:review-media-sql-successor:workflow:v1', 0));" \
+            "SELECT 'REVIEW_MEDIA_SQL_SUCCESSOR_BACKEND:' || pg_backend_pid() || ':' || (EXTRACT(EPOCH FROM (SELECT backend_start FROM pg_catalog.pg_stat_activity WHERE pid=pg_backend_pid()))*1000000)::bigint;" \
             '\echo REVIEW_MEDIA_SQL_SUCCESSOR_LOCKED' >&"$lock_write_fd"
           locked=false
+          serializer_backend_pid=
+          serializer_backend_start_micros=
           while IFS= read -r lock_line <&"$lock_read_fd"
           do
             if [[ -z "$lock_line" ]]
@@ -495,21 +772,70 @@ jobs:
               locked=true
               break
             fi
+            if [[ "$lock_line" =~ ^REVIEW_MEDIA_SQL_SUCCESSOR_BACKEND:([1-9][0-9]{0,9}):([1-9][0-9]{0,19})$ && -z "$serializer_backend_pid" ]]
+            then
+              serializer_backend_pid=${BASH_REMATCH[1]}
+              serializer_backend_start_micros=${BASH_REMATCH[2]}
+              continue
+            fi
             exit 2
           done
           test "$locked" = true
+          test -n "$serializer_backend_pid"
+          test -n "$serializer_backend_start_micros"
+          export SUCCESSOR_SERIALIZER_BACKEND_PID="$serializer_backend_pid"
+          export SUCCESSOR_SERIALIZER_BACKEND_START_MICROS="$serializer_backend_start_micros"
+          operation_status=0
           if [[ "$operation" = base-only ]]
           then
-            "$@"
+            base_stdout="$(dirname "$operating_input")/base-only.stdout.json"
+            base_stderr="$(dirname "$operating_input")/base-only.stderr"
+            (umask 077; : > "$base_stdout"; : > "$base_stderr")
+            if run_guarded "$base_stdout" "$base_stderr" "$@" && test ! -s "$base_stderr" \
+              && test "$(wc -c < "$base_stdout")" -le 8192
+            then
+              pending_output="$(cat "$base_stdout")"
+            else
+              operation_status=2
+            fi
+          elif [[ "$operation" = ocr-only ]]
+          then
+            if ! run_private "ocr-$5" "$@"
+            then
+              operation_status=2
+            fi
           else
             test -x "${VERCEL_CLI_PATH:-}"
             test "$(dirname "$VERCEL_CLI_PATH")" = "$(dirname "$operating_input")"
-            run_apply_chain
+            if [[ "$operation" = ocr-apply-chain ]]
+            then
+              if ! run_ocr_chain
+              then
+                operation_status=2
+              fi
+            else
+              if ! run_apply_chain
+              then
+                operation_status=2
+              fi
+            fi
           fi
+          if ! finish_serializer
+          then
+            pending_output=
+            operation_status=2
+          fi
+          trap - EXIT INT TERM
+          if [[ -n "$pending_output" ]]
+          then
+            printf '%s\n' "$pending_output"
+          fi
+          exit "$operation_status"
           BASH
           chmod 700 "$serialized_runner"
           printf 'custody_dir=%s\n' "$custody_dir" >> "$GITHUB_OUTPUT"
           printf 'operating_input=%s\n' "$operating_input" >> "$GITHUB_OUTPUT"
+          printf 'chain_stage_input=%s\n' "$chain_stage_input" >> "$GITHUB_OUTPUT"
           printf 'serialized_runner=%s\n' "$serialized_runner" >> "$GITHUB_OUTPUT"
           printf 'vercel_readback_adapter=%s\n' "$vercel_readback_adapter" >> "$GITHUB_OUTPUT"
 
@@ -519,19 +845,27 @@ jobs:
         env:
           EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
           GITHUB_TOKEN: ${{ github.token }}
+          SELECTED_TARGET: ${{ inputs.target }}
           OPERATOR_ACTOR: ${{ github.actor }}
           OPERATOR_ACTOR_ID: ${{ github.actor_id }}
           OPERATING_INPUT: ${{ steps.custody.outputs.operating_input }}
+          CHAIN_STAGE_INPUT: ${{ steps.custody.outputs.chain_stage_input }}
           PRIVATE_CUSTODY_DIR: ${{ steps.custody.outputs.custody_dir }}
           SERIALIZED_RUNNER: ${{ steps.custody.outputs.serialized_runner }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: >-
-          timeout --signal=TERM --kill-after=10s 840s
-          "$SERIALIZED_RUNNER"
-          node apps/web/scripts/review-media-operating-orchestrator.mjs
-          --mode observe
-          --input "$OPERATING_INPUT"
-          --custody-dir "$PRIVATE_CUSTODY_DIR"
+        run: |
+          set -euo pipefail
+          if [[ "$SELECTED_TARGET" = receipt_ocr_89_108 ]]
+          then
+            timeout --signal=TERM --kill-after=10s 840s "$SERIALIZED_RUNNER" \
+              node apps/web/scripts/receipt-ocr-recovery108-operating-controller.mjs \
+              operate --mode observe --input "$OPERATING_INPUT" \
+              --stage-admission "$CHAIN_STAGE_INPUT" --custody-dir "$PRIVATE_CUSTODY_DIR"
+          else
+            timeout --signal=TERM --kill-after=10s 840s "$SERIALIZED_RUNNER" \
+              node apps/web/scripts/review-media-operating-orchestrator.mjs \
+              --mode observe --input "$OPERATING_INPUT" --custody-dir "$PRIVATE_CUSTODY_DIR"
+          fi
 
       - name: Rehearse held successor transaction
         if: inputs.mode == 'rehearse'
@@ -539,19 +873,27 @@ jobs:
         env:
           EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
           GITHUB_TOKEN: ${{ github.token }}
+          SELECTED_TARGET: ${{ inputs.target }}
           OPERATOR_ACTOR: ${{ github.actor }}
           OPERATOR_ACTOR_ID: ${{ github.actor_id }}
           OPERATING_INPUT: ${{ steps.custody.outputs.operating_input }}
+          CHAIN_STAGE_INPUT: ${{ steps.custody.outputs.chain_stage_input }}
           PRIVATE_CUSTODY_DIR: ${{ steps.custody.outputs.custody_dir }}
           SERIALIZED_RUNNER: ${{ steps.custody.outputs.serialized_runner }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: >-
-          timeout --signal=TERM --kill-after=10s 840s
-          "$SERIALIZED_RUNNER"
-          node apps/web/scripts/review-media-operating-orchestrator.mjs
-          --mode rehearse
-          --input "$OPERATING_INPUT"
-          --custody-dir "$PRIVATE_CUSTODY_DIR"
+        run: |
+          set -euo pipefail
+          if [[ "$SELECTED_TARGET" = receipt_ocr_89_108 ]]
+          then
+            timeout --signal=TERM --kill-after=10s 840s "$SERIALIZED_RUNNER" \
+              node apps/web/scripts/receipt-ocr-recovery108-operating-controller.mjs \
+              operate --mode rehearse --input "$OPERATING_INPUT" \
+              --stage-admission "$CHAIN_STAGE_INPUT" --custody-dir "$PRIVATE_CUSTODY_DIR"
+          else
+            timeout --signal=TERM --kill-after=10s 840s "$SERIALIZED_RUNNER" \
+              node apps/web/scripts/review-media-operating-orchestrator.mjs \
+              --mode rehearse --input "$OPERATING_INPUT" --custody-dir "$PRIVATE_CUSTODY_DIR"
+          fi
 
       - name: Apply explicitly confirmed successor transaction
         if: inputs.mode == 'apply'
@@ -559,9 +901,11 @@ jobs:
         env:
           EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
           GITHUB_TOKEN: ${{ github.token }}
+          SELECTED_TARGET: ${{ inputs.target }}
           OPERATOR_ACTOR: ${{ github.actor }}
           OPERATOR_ACTOR_ID: ${{ github.actor_id }}
           OPERATING_INPUT: ${{ steps.custody.outputs.operating_input }}
+          CHAIN_STAGE_INPUT: ${{ steps.custody.outputs.chain_stage_input }}
           LOCAL_VERCEL_BUNDLE_SHA256: ${{ inputs.local_vercel_bundle_sha256 }}
           PRIVATE_CUSTODY_DIR: ${{ steps.custody.outputs.custody_dir }}
           SERIALIZED_RUNNER: ${{ steps.custody.outputs.serialized_runner }}
@@ -574,6 +918,13 @@ jobs:
           test -n "$VERCEL_TOKEN"
           test -x "$VERCEL_VENDOR_CLI_PATH"
           test "$("$VERCEL_VENDOR_CLI_PATH" --version)" = "$VERCEL_CLI_VERSION"
-          timeout --signal=TERM --kill-after=10s 840s \
-            "$SERIALIZED_RUNNER" \
-            apply-chain "$OPERATING_INPUT" "$PRIVATE_CUSTODY_DIR"
+          if [[ "$SELECTED_TARGET" = receipt_ocr_89_108 ]]
+          then
+            timeout --signal=TERM --kill-after=10s 840s \
+              "$SERIALIZED_RUNNER" \
+              ocr-chain "$OPERATING_INPUT" "$CHAIN_STAGE_INPUT" "$PRIVATE_CUSTODY_DIR"
+          else
+            timeout --signal=TERM --kill-after=10s 840s \
+              "$SERIALIZED_RUNNER" \
+              apply-chain "$OPERATING_INPUT" "$PRIVATE_CUSTODY_DIR"
+          fi

@@ -123,7 +123,7 @@ function validateManifestShape(manifest) {
     || manifest.databaseName !== 'postgres'
     || manifest.executorRole !== 'postgres'
     || !Number.isSafeInteger(manifest.advisoryLockKey)
-    || manifest.launchPolicy.state !== 'held'
+    || !['held', 'ready'].includes(manifest.launchPolicy.state)
     || manifest.launchPolicy.code !== 'RECEIPT_OCR_RECOVERY108_LAUNCH_HELD'
     || manifest.protectedSource.remote !== 'origin'
     || manifest.protectedSource.ref !== 'refs/heads/main'

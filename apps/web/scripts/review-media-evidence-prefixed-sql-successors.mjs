@@ -264,7 +264,7 @@ function validateManifestShape(manifest, phase) {
     || manifest.databaseName !== 'postgres'
     || manifest.executorRole !== 'postgres'
     || !Number.isSafeInteger(manifest.advisoryLockKey)
-    || manifest.launchPolicy?.state !== 'held') fail('EVIDENCE_PREFIXED_CONTRACT_INVALID');
+    || !['held', 'ready'].includes(manifest.launchPolicy?.state)) fail('EVIDENCE_PREFIXED_CONTRACT_INVALID');
   exactKeys(manifest.launchPolicy, ['code', 'reason', 'state']);
   exactKeys(manifest.operatingTransition, ['after', 'before']);
   const expectedBefore = phase === 'predecessor' ? 89 : 100;

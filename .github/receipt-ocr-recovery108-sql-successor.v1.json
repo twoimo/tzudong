@@ -25,7 +25,7 @@
   "predecessor": {
     "state": "source_ready",
     "manifestPath": ".github/receipt-ocr-post106-acl-admission-sql-successor.v1.json",
-    "manifestSha256": "e05103af2f4edc06ed535a2ac6b6f0a25f1e6c3b2b3dcc14da7fb7bf950f3b08",
+    "manifestSha256": "47e22a2a542b32a8c71cca0abef84d886e69639ae54a35ec8e0ba05877bc41d3",
     "ledgerCount": 107,
     "terminalIdentityRoot": "cd04aebfc1efcc5588486adf3b7ba47fc5b5b76e39a9c23e316768f2919d9d9e"
   },
@@ -58,7 +58,7 @@
   "toolchain": [
     {
       "path": "apps/web/scripts/receipt-ocr-recovery108-sql-successor.mjs",
-      "sha256": "ffd5896649c0d30f09f0c75b0ebc4213be4b6457b13cf473f271ccdb1f29a719"
+      "sha256": "7996cb37445ea693c64e1344b03a3d088fba8b138e3664889b72601d7ed485a8"
     }
   ],
   "requiredWriterFences": {
