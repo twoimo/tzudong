@@ -17,6 +17,7 @@ import os
 import subprocess
 import sys
 import json
+import re
 import tempfile
 import uuid
 from pathlib import Path
@@ -100,6 +101,30 @@ class ReviewReservation(NamedTuple):
     confirmed: bool
 
 
+_GITHUB_RUN_NUMBER = re.compile(r"[1-9][0-9]{0,15}\Z")
+_GITHUB_SHA = re.compile(r"[0-9a-f]{40}\Z")
+_GITHUB_BRANCH_REF = re.compile(r"refs/heads/[A-Za-z0-9][A-Za-z0-9._/-]{0,127}\Z")
+
+
+def _github_run_metadata(env: dict[str, str]) -> dict | None:
+    """Retain only bounded Actions identity hints; a consumer must verify them."""
+    keys = ("GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT", "GITHUB_SHA", "GITHUB_WORKFLOW", "GITHUB_REF")
+    values = [env.get(key, "") for key in keys]
+    if any(not isinstance(value, str) or len(value) > 160 for value in values):
+        return None
+    run_id, attempt, sha, workflow, ref = values
+    if (not _GITHUB_RUN_NUMBER.fullmatch(run_id)
+            or not _GITHUB_RUN_NUMBER.fullmatch(attempt)
+            or int(run_id) > 2**53 - 1 or int(attempt) > 2**53 - 1
+            or not _GITHUB_SHA.fullmatch(sha)
+            or workflow != "Crawler"
+            or not _GITHUB_BRANCH_REF.fullmatch(ref)
+            or ".." in ref or "//" in ref or ref.endswith(("/", "."))):
+        return None
+    return {"runId": run_id, "runAttempt": attempt, "headSha": sha,
+            "workflow": workflow, "ref": ref}
+
+
 def _review_reserved_slot() -> ReviewReservation:
     with tempfile.TemporaryDirectory(prefix='tzudong-review-budget-') as folder:
         receipt=Path(folder)/'receipt.json'
@@ -117,14 +142,14 @@ def _review_reserved_slot() -> ReviewReservation:
 
 
 def _write_run_receipt(path: Path, report: dict) -> None:
-    """Persist only bounded execution metadata, never child output or row data."""
+    """Persist bounded metadata; generatedAt is file creation, not run completion."""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent,
                                          prefix=".hosted-run-", delete=False) as handle:
             temporary = Path(handle.name)
-            json.dump(report, handle, sort_keys=True)
+            json.dump({**report, "generatedAt": datetime.now(timezone.utc).isoformat()}, handle, sort_keys=True)
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
@@ -167,11 +192,16 @@ def main(argv: list[str] | None = None) -> int:
     }
     try:
         _load_backend_env(REPO_ROOT)
+        source = os.environ.get("TZUDONG_PIPELINE_SOURCE", "local")
+        report["source"] = source if source in {"local", "mac", "github_actions"} else "unknown"
+        if report["source"] == "github_actions":
+            github = _github_run_metadata(os.environ)
+            report["githubMetadataStatus"] = "metadata_available" if github else "unavailable"
+            if github:
+                report["github"] = github
         cadence_source_preflight(REPO_ROOT)
         env_contract_preflight("hosted-pending-apply")
         _apply_local_runtime_environment()
-        source = os.environ.get("TZUDONG_PIPELINE_SOURCE", "local")
-        report["source"] = source if source in {"local", "mac", "github_actions"} else "unknown"
         print(f"source={report['source']}")
         new_limit = args.limit
         review_confirmed = False

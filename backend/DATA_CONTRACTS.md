@@ -75,6 +75,23 @@ actual apply separately requires the approval value `1`. Runner preflight runs
 before any child work and records failure in the bounded execution receipt.
 Guard: `backend.utils.tests.test_env_contract_preflight_ordering`.
 
+`run_hosted_new_video_pipeline.py --receipt-out` atomically writes bounded
+execution metadata. `startedAt` and `finishedAt` bound the runner invocation;
+`generatedAt` is when the local receipt document was serialized, not an artifact
+upload, hosted readback, publication, or a second completion time. `exitCode`
+is the runner's final exit code, while `publicationVerified` remains false.
+`executionId` is local correlation and `runnerSha256` hashes only this runner
+file; neither proves the repository revision. For `source=github_actions` only,
+all five Actions env fields (`GITHUB_RUN_ID`, `GITHUB_RUN_ATTEMPT`, `GITHUB_SHA`,
+`GITHUB_WORKFLOW`, `GITHUB_REF`) must pass bounded allowlist parsing before the
+receipt contains `github` (`runId`, `runAttempt`, `headSha`, `workflow`, `ref`)
+and `githubMetadataStatus=metadata_available`. Missing or malformed metadata
+produces `githubMetadataStatus=unavailable` with no partial `github` object.
+These are producer metadata hints, not verified source proof: an authorized
+reader must bind artifact, run, attempt, workflow, ref and head SHA independently.
+Local/Mac receipts never inherit incidental GitHub env values. Guard:
+`backend.bin.tests.test_restaurant_review_automation.PipelineExecutionReceiptTests`.
+
 The hosted CLI uses preview `schemaVersion=2` to bind candidate counts and
 allowed `trace_id` values to payload/preview hashes. Legacy video-level preview
 and snapshot callers remain compatible. An invalid existing trace holds its

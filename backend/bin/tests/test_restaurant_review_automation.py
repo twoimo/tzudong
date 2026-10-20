@@ -416,6 +416,86 @@ class ReviewWorkerTests(unittest.TestCase):
         self.assertIn('review_followup=skipped_unconfirmed',output.getvalue())
 
 class PipelineExecutionReceiptTests(unittest.TestCase):
+    _GITHUB_ENV = {
+        'TZUDONG_PIPELINE_SOURCE': 'github_actions',
+        'GITHUB_RUN_ID': '39337448241',
+        'GITHUB_RUN_ATTEMPT': '2',
+        'GITHUB_SHA': 'a' * 40,
+        'GITHUB_WORKFLOW': 'Crawler',
+        'GITHUB_REF': 'refs/heads/main',
+    }
+
+    def receipt_for_env(self, env):
+        import contextlib, io
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'receipt.json'
+            with patch.dict(os.environ, env, clear=True), patch.object(runner, '_load_backend_env'), \
+                 patch.object(runner, 'cadence_source_preflight'), patch.object(runner, 'env_contract_preflight'), \
+                 patch.object(runner, '_apply_local_runtime_environment'), patch.object(runner, '_run', return_value=0), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(runner.main(['--dry-run', '--receipt-out', str(path)]), 0)
+            return json.loads(path.read_text()), path.read_bytes()
+
+    def test_github_metadata_is_bounded_identity_hint_not_source_verification(self):
+        from datetime import datetime
+        receipt, raw = self.receipt_for_env(self._GITHUB_ENV)
+        self.assertEqual(receipt['source'], 'github_actions')
+        self.assertEqual(receipt['githubMetadataStatus'], 'metadata_available')
+        self.assertEqual(receipt['github'], {
+            'runId': '39337448241', 'runAttempt': '2', 'headSha': 'a' * 40,
+            'workflow': 'Crawler', 'ref': 'refs/heads/main',
+        })
+        self.assertLess(len(raw), 2048)
+        self.assertGreaterEqual(datetime.fromisoformat(receipt['generatedAt']),
+                                datetime.fromisoformat(receipt['finishedAt']))
+        self.assertNotIn('sourceVerified', receipt)
+        self.assertNotIn('sourceRevision', receipt)
+
+    def test_missing_github_metadata_remains_unavailable_without_partial_values(self):
+        for missing in ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'GITHUB_WORKFLOW', 'GITHUB_REF'):
+            with self.subTest(missing=missing):
+                env = {key: value for key, value in self._GITHUB_ENV.items() if key != missing}
+                receipt, _ = self.receipt_for_env(env)
+                self.assertEqual(receipt['githubMetadataStatus'], 'unavailable')
+                self.assertNotIn('github', receipt)
+
+    def test_malformed_and_oversized_github_metadata_is_never_persisted(self):
+        invalid = {
+            'GITHUB_RUN_ID': ['0', '1' * 10000, '123/secret', str(2**53)],
+            'GITHUB_RUN_ATTEMPT': ['0', '2' * 10000, '1?token=private'],
+            'GITHUB_SHA': ['b' * 39, 'b' * 10000, 'https://private.example'],
+            'GITHUB_WORKFLOW': ['Other', 'Crawler' + 'x' * 10000],
+            'GITHUB_REF': ['refs/pull/1/merge', 'refs/heads/../private', 'refs/heads/private//bad',
+                           'refs/heads/' + 'x' * 10000, 'https://private.example'],
+        }
+        for key, values in invalid.items():
+            for value in values:
+                with self.subTest(key=key, value_length=len(value)):
+                    receipt, raw = self.receipt_for_env({**self._GITHUB_ENV, key: value})
+                    self.assertEqual(receipt['githubMetadataStatus'], 'unavailable')
+                    self.assertNotIn('github', receipt)
+                    if len(value) > 8:
+                        self.assertNotIn(value.encode(), raw)
+                    self.assertLess(len(raw), 2048)
+
+    def test_local_receipt_does_not_inherit_github_environment(self):
+        receipt, raw = self.receipt_for_env({**self._GITHUB_ENV, 'TZUDONG_PIPELINE_SOURCE': 'mac'})
+        self.assertEqual(receipt['source'], 'mac')
+        self.assertNotIn('githubMetadataStatus', receipt)
+        self.assertNotIn('github', receipt)
+        self.assertNotIn(b'39337448241', raw)
+
+    def test_atomic_receipt_replace_failure_preserves_previous_bytes_and_cleans_temp(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'receipt.json'
+            previous = b'{"state":"previous"}\n'
+            path.write_bytes(previous)
+            with patch.object(runner.os, 'replace', side_effect=OSError('fixture failure')):
+                with self.assertRaises(OSError):
+                    runner._write_run_receipt(path, {'state': 'failed'})
+            self.assertEqual(path.read_bytes(), previous)
+            self.assertEqual([item.name for item in Path(folder).iterdir()], ['receipt.json'])
+
     def test_evaluation_failure_is_persisted_without_applying_or_private_diagnostics(self):
         import contextlib, io
         with tempfile.TemporaryDirectory() as folder:
