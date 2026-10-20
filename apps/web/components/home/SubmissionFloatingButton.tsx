@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { useHydration } from "@/hooks/useHydration";
 import { resolveDeviceLocationButtonLabel, type DeviceMapLocation } from '@/lib/device-location-map';
+import { DeviceLocationDisclosure } from '@/components/home/DeviceLocationDisclosure';
 import type { HomeMapPanelSide } from "@/lib/home-map-user-preferences";
 
 interface SubmissionFloatingButtonProps {
@@ -124,31 +125,36 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
             </Button>
 
             {onDeviceLocationClick ? (
-                <Button
-                    type="button"
-                    onClick={onDeviceLocationClick}
-                    disabled={isDeviceLocationPending}
-                    aria-label={deviceLocationButtonLabel}
-                    className={cn(
-                        isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
-                        "rounded-full shadow-sm",
-                        "flex items-center justify-center",
-                        "border",
-                        isDeviceHeadingMode
-                            ? "bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70"
-                            : deviceLocation
-                                ? "bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                                : "bg-background hover:bg-secondary text-foreground border-border/70",
-                        isDeviceLocationPending && "opacity-80"
-                    )}
-                    title={deviceLocationButtonLabel}
-                >
-                    {isDeviceHeadingMode ? (
-                        <Navigation className={isMobileOrTablet ? "h-5 w-5" : "h-6 w-6"} aria-hidden="true" />
-                    ) : (
-                        <LocateFixed className={isMobileOrTablet ? "h-5 w-5" : "h-6 w-6"} aria-hidden="true" />
-                    )}
-                </Button>
+                <div className="relative">
+                    <DeviceLocationDisclosure id="desktop-device-location-disclosure" />
+                    <Button
+                        type="button"
+                        onClick={onDeviceLocationClick}
+                        disabled={isDeviceLocationPending}
+                        aria-label={deviceLocationButtonLabel}
+                        aria-describedby="desktop-device-location-disclosure"
+                        aria-busy={isDeviceLocationPending}
+                        className={cn(
+                            isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
+                            "rounded-full shadow-sm",
+                            "flex items-center justify-center",
+                            "border",
+                            isDeviceHeadingMode
+                                ? "bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70"
+                                : deviceLocation
+                                    ? "bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                                    : "bg-background hover:bg-secondary text-foreground border-border/70",
+                            isDeviceLocationPending && "opacity-80"
+                        )}
+                        title={deviceLocationButtonLabel}
+                    >
+                        {isDeviceHeadingMode ? (
+                            <Navigation className={isMobileOrTablet ? "h-5 w-5" : "h-6 w-6"} aria-hidden="true" />
+                        ) : (
+                            <LocateFixed className={isMobileOrTablet ? "h-5 w-5" : "h-6 w-6"} aria-hidden="true" />
+                        )}
+                    </Button>
+                </div>
             ) : null}
         </div>
     );

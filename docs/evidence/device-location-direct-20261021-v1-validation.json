@@ -1,0 +1,11 @@
+{
+  "verified": true,
+  "artifacts": 26,
+  "sources": 8,
+  "evidenceMapSha256": "dbd795c9a648fc23a654694171a8b1140318cd5163b393acffbaee9e4bd8d407",
+  "buildPassed": true,
+  "browserCasesPassed": 7,
+  "browserRetries": 0,
+  "localOnly": true,
+  "sanitizedInitialFailureReport": true
+}

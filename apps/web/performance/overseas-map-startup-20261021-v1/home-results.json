@@ -1,0 +1,29 @@
+{
+  "observedAt": "2026-10-20T19:41:57.121Z",
+  "browser": "153.0.8010.12",
+  "scope": "Actual full application build and public home wiring; real MapLibre/OpenFreeMap; local Naver and empty restaurant data fixtures only",
+  "cases": [
+    {
+      "width": 497,
+      "facts": {
+        "canvasCount": 1,
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "pageOverflow": false
+      },
+      "errors": [],
+      "domesticSwitchRemovesOverseasCanvas": true
+    },
+    {
+      "width": 1440,
+      "facts": {
+        "canvasCount": 1,
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "pageOverflow": false
+      },
+      "errors": [],
+      "domesticSwitchRemovesOverseasCanvas": true
+    }
+  ]
+}

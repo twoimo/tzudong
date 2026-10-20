@@ -1,0 +1,21 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/mobile-desktop-parity-source.test.ts:
+(pass) mobile and desktop parity source contracts > responsive overflow smoke includes the unified admin console route [0.65ms]
+(pass) mobile and desktop parity source contracts > responsive runner emits only fixed failure codes and allowlisted library facts [0.18ms]
+(pass) mobile and desktop parity source contracts > admin evaluation metric parsers accept LAAJ objects without name [0.62ms]
+(pass) mobile and desktop parity source contracts > responsive runner emits only fixed failure codes and allowlisted library facts [0.12ms]
+(pass) mobile and desktop parity source contracts > admin console exposes both mobile-width and desktop-width navigation affordances [6.08ms]
+(pass) mobile and desktop parity source contracts > admin evaluations keep equivalent mobile-card and desktop-table controls [0.86ms]
+(pass) mobile and desktop parity source contracts > admin evaluation delete and restore share one guarded confirmation across both presentations [0.48ms]
+(pass) mobile and desktop parity source contracts > embedded submission and review modules cannot switch into restaurant evaluation view [0.16ms]
+(pass) mobile and desktop parity source contracts > banner admin uses one responsive two-pane editor with keyboard upload access [0.70ms]
+(pass) mobile and desktop parity source contracts > home admin reviews share the same guarded confirmation on mobile and desktop [0.54ms]
+(pass) mobile and desktop parity source contracts > my review deletion uses the same inline typed confirmation on mobile and desktop [0.39ms]
+(pass) mobile and desktop parity source contracts > home navigation parity keeps desktop header routes and mobile overlay routes aligned intentionally [1.19ms]
+(pass) mobile and desktop parity source contracts > home map controls keep mobile touch targets and desktop map landmarks accessible [13.79ms]
+
+ 13 pass
+ 0 fail
+ 585 expect() calls
+Ran 13 tests across 1 file. [165.00ms]

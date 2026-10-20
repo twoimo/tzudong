@@ -123,20 +123,13 @@ export const StampCard = memo(function StampCard({
     const isList = layout === 'list';
     const resolvedStampSize = stampSize ?? size;
     const isStampCompact = resolvedStampSize === 'compact';
-    const isStampMobile = resolvedStampSize === 'mobile';
-    const stampSizeClass = isStampMobile
-        ? "w-auto"
-        : isStampCompact
-            ? "w-36 h-36 md:w-40 md:h-40"
-            : "w-48 h-48 sm:w-56 sm:h-56";
-    const stampImageStyle = isStampMobile
-        ? {
-            transform: 'translateY(0.375rem) rotate(-45deg)',
-            height: '74%',
-            maxHeight: '9rem',
-            maxWidth: '44%',
-        }
-        : { transform: 'rotate(-45deg)' };
+    // Give the picture a definite frame so image percentages do not shrink
+    // against an intrinsic-sized picture or an empty dark-mode sibling.
+    const stampFrameStyle = {
+        height: isStampCompact ? '92%' : '96%',
+        aspectRatio: '1 / 1',
+    };
+    const stampImageStyle = { transform: 'rotate(-12deg)' };
 
     const handleGuideClose = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -238,7 +231,7 @@ export const StampCard = memo(function StampCard({
                         <YoutubeThumbnail
                             videoId={currentVideoId}
                             alt={`${restaurantDisplayName} 썸네일`}
-                            sizes="(max-width: 480px) 100vw, 320px"
+                            sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, (max-width: 1999px) 400px, 20vw"
                             className={cn(
                                 "w-full h-full object-cover",
                                 showStamp ? "grayscale opacity-60" : ""
@@ -282,10 +275,7 @@ export const StampCard = memo(function StampCard({
                         {/* 방문 완료 스탬프 */}
                         {showStamp && (
                             <div
-                                className={cn(
-                                    "absolute inset-0 z-10 flex items-center justify-center",
-                                    isStampMobile ? "overflow-visible" : "overflow-hidden"
-                                )}
+                                className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center overflow-hidden"
                             >
                                 {guideLabel && (
                                     <span
@@ -311,7 +301,7 @@ export const StampCard = memo(function StampCard({
                                         type="button"
                                         onClick={handleGuideClose}
                                         className={cn(
-                                            "absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80",
+                                            "pointer-events-auto absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80",
                                             isCompact ? "w-5 h-5" : "w-6 h-6"
                                         )}
                                         aria-label="가이드 닫기"
@@ -321,23 +311,23 @@ export const StampCard = memo(function StampCard({
                                     </button>
                                 )}
                                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                    <picture>
+                                    <picture className="block shrink-0 dark:hidden" style={stampFrameStyle}>
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <source srcSet="/images/stamp-clear.webp" type="image/webp" />
                                     <img
                                         src="/images/stamp-clear.png"
                                         alt="방문 완료"
-                                        className={cn(stampSizeClass, "object-contain opacity-90 drop-shadow-lg dark:hidden")}
+                                        className="h-full w-full object-contain opacity-90 drop-shadow-lg"
                                         style={stampImageStyle}
                                     />
                                     </picture>
-                                    <picture>
+                                    <picture className="hidden shrink-0 dark:block" style={stampFrameStyle}>
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <source srcSet="/images/stamp-clear-dark.webp" type="image/webp" />
                                     <img
                                         src="/images/stamp-clear-dark.png"
                                         alt="방문 완료"
-                                        className={cn(stampSizeClass, "object-contain opacity-90 drop-shadow-lg hidden dark:block")}
+                                        className="h-full w-full object-contain opacity-90 drop-shadow-lg"
                                         style={stampImageStyle}
                                     />
                                     </picture>

@@ -1,0 +1,36 @@
+{
+  "observedAt": "2026-10-20T19:44:42.763728+00:00",
+  "baseCommit": "de62e9426ffd761c4be974a4ca670c034d98489e",
+  "actualAppBuildId": "UhrCATUAw8_yxjbBURGKW",
+  "appOutput": "standalone",
+  "workerDependencyClosure": [
+    {
+      "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+      "status": 200,
+      "bytes": 19133,
+      "sha256": "01ad197aa7f4cec258a890febd71b7515e96309881b036a7095befc01a45296e",
+      "mime": "application/javascript; charset=UTF-8",
+      "cacheControl": "public, max-age=31536000, immutable"
+    },
+    {
+      "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+      "status": 200,
+      "bytes": 515924,
+      "sha256": "76b5f55bdee928c65d592684aaff2b913d50b6b17b0ec6334e88b09b6aa47960",
+      "mime": "application/javascript; charset=UTF-8",
+      "cacheControl": "public, max-age=31536000, immutable"
+    },
+    {
+      "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/LICENSE.txt",
+      "status": 200,
+      "bytes": 5984,
+      "sha256": "ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2",
+      "mime": "text/plain; charset=UTF-8",
+      "cacheControl": "public, max-age=31536000, immutable"
+    }
+  ],
+  "baselineSourceMatchesGit": true,
+  "generatedTsconfigIncludesRestored": true,
+  "localDatabaseStarted": false,
+  "deployment": false
+}
