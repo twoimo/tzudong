@@ -11,7 +11,12 @@ import {
 const revision = 'a'.repeat(40);
 const createdAt = '2026-10-21T00:00:00.000Z';
 const expiresAt = '2026-10-21T00:15:00.000Z';
-const databaseUrl = () => `postgresql://postgres:${randomUUID()}@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres?sslmode=require`;
+function databaseUrl() {
+  const url = new URL('postgresql://db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres?sslmode=require');
+  url.username = 'postgres';
+  url.password = randomUUID();
+  return url.toString();
+}
 
 function fixture() {
   const held = loadRecovery108ChainSource();
