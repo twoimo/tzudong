@@ -25,14 +25,14 @@
   },
   "predecessor": {
     "manifestPath": ".github/review-media-evidence-prefixed-feature-successor.v1.json",
-    "manifestSha256": "45b7f146f31bca9afb863152fd616529e90562fb1b3ecbaa409c218439d41867",
+    "manifestSha256": "2ac3d8ba37494ca73bf2785334e67a6ddd4b9201c966ee3f159ab529f1fb2530",
     "ledgerCount": 105,
     "terminalIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c"
   },
   "baseSuccessor": {
     "state": "held_unapplied",
     "manifestPath": ".github/receipt-ocr-post105-sql-successor.v1.json",
-    "manifestSha256": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+    "manifestSha256": "98773439dda2880ede3fbd182931a76350247bbf504b940f27e8a830bee6c998",
     "compilerPath": "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs",
     "compilerSha256": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
     "operatingTargetIdentityRoot": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1",
@@ -73,7 +73,7 @@
   "toolchain": [
     {
       "path": "apps/web/scripts/receipt-ocr-post106-acl-admission-sql-successor.mjs",
-      "sha256": "58082785a1ffdab1aafa887e2b681f1d997c7d3620df546988bcbf31089195d6"
+      "sha256": "a18b86a8d36f01eb08b18ae47417d750539f9742389fd792e5c6ff44f0f66504"
     }
   ]
 }

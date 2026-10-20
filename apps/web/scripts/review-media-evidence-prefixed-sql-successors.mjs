@@ -496,8 +496,17 @@ export function validateEvidencePrefixedStageStates(stages, record, { mode = 'op
   const suffixRoot = manifest.phase === 'predecessor'
     ? elevenMigrationBundleSuffixRoot(record.targetRecord.manifest.migrations)
     : fiveMigrationBundleSuffixRoot(record.targetRecord.manifest.migrations);
+  const predecessorRoot = ledgerIdentityRoot(record.predecessorRows);
+  const featureRoot = ledgerIdentityRoot(record.featureRows);
+  const emptyRoot = ledgerIdentityRoot([]);
   stages.forEach((stage, index) => {
     validateStageShape(stage);
+    const predecessorCount = manifest.phase === 'predecessor' ? index : record.predecessorRows.length;
+    const featureCount = manifest.phase === 'feature' ? index : 0;
+    const expectedPredecessorRoot = manifest.phase === 'predecessor'
+      ? manifest.operatingIdentity.targetStageRoots[index] : predecessorRoot;
+    const expectedFeatureRoot = manifest.phase === 'feature'
+      ? manifest.operatingIdentity.targetStageRoots[index] : emptyRoot;
     if (stage.bundle.ledgerCount !== before + index
       || stage.bundle.priorCount !== before
       || stage.bundle.prefixRoot !== prefixRoot
@@ -510,10 +519,14 @@ export function validateEvidencePrefixedStageStates(stages, record, { mode = 'op
       || stage.state.evidenceReady !== true
       || stage.state.targetStageIndex !== index
       || stage.state.targetIdentityRoot !== manifest.operatingIdentity.targetStageRoots[index]
-      || stage.state.predecessorCount !== (manifest.phase === 'predecessor' ? index : 11)
-      || stage.state.featureCount !== (manifest.phase === 'feature' ? index : 0)
-      || (manifest.phase === 'predecessor' && stage.state.featureReady !== false)
-      || (manifest.phase === 'feature' && stage.state.predecessorReady !== true)) {
+      || stage.state.predecessorCount !== predecessorCount
+      || stage.state.predecessorIdentityRoot !== expectedPredecessorRoot
+      || stage.state.predecessorReady !== (predecessorCount === record.predecessorRows.length
+        && expectedPredecessorRoot === predecessorRoot)
+      || stage.state.featureCount !== featureCount
+      || stage.state.featureIdentityRoot !== expectedFeatureRoot
+      || stage.state.featureReady !== (featureCount === record.featureRows.length
+        && expectedFeatureRoot === featureRoot)) {
       fail('EVIDENCE_PREFIXED_STAGE_INVALID');
     }
     if (mode === 'operating' && (prefixRoot !== manifest.operatingIdentity.prefixIdentityRoot

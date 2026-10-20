@@ -24,7 +24,7 @@
   },
   "predecessor": {
     "manifestPath": ".github/review-media-evidence-prefixed-feature-successor.v1.json",
-    "manifestSha256": "45b7f146f31bca9afb863152fd616529e90562fb1b3ecbaa409c218439d41867",
+    "manifestSha256": "2ac3d8ba37494ca73bf2785334e67a6ddd4b9201c966ee3f159ab529f1fb2530",
     "ledgerCount": 105,
     "terminalIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c"
   },

@@ -374,6 +374,7 @@ export function compileRecovery108OperatingPlan(record = loadRecovery108HeldMani
     buildRecoverySealSql(record),
   );
   const lockTag = `$receipt_ocr_recovery108_${sha256(String(record.manifest.advisoryLockKey)).slice(0, 16)}$`;
+  const transactionBodySql = `SET LOCAL idle_in_transaction_session_timeout='30s';\nDO ${lockTag} BEGIN PERFORM pg_advisory_xact_lock(${record.manifest.advisoryLockKey}::bigint); END ${lockTag};\n${atomic108}\n`;
   return Object.freeze({
     finalReadback: migration.terminalReadback,
     id: record.manifest.id,
@@ -381,8 +382,9 @@ export function compileRecovery108OperatingPlan(record = loadRecovery108HeldMani
     plan,
     predecessorPlan,
     priorReadback: migration.expectedPriorState,
-    sql: `BEGIN;\nSET LOCAL idle_in_transaction_session_timeout='30s';\nDO ${lockTag} BEGIN PERFORM pg_advisory_xact_lock(${record.manifest.advisoryLockKey}::bigint); END ${lockTag};\n${atomic108}\nCOMMIT;\n`,
+    sql: `BEGIN;\n${transactionBodySql}COMMIT;\n`,
     stateQuery: terminalQuery,
+    transactionBodySql,
     transactionMode: 'single-explicit-108-transaction-after-verified-107',
   });
 }

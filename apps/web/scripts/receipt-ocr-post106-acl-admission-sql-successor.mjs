@@ -441,6 +441,7 @@ function compilePlan(record, { mode }) {
     buildAclSealSql(record, { mode }),
   );
   const lockTag = `$receipt_ocr_post106_acl_${sha256(String(record.manifest.advisoryLockKey)).slice(0, 16)}$`;
+  const transactionBodySql = `SET LOCAL idle_in_transaction_session_timeout='30s';\nDO ${lockTag} BEGIN PERFORM pg_advisory_xact_lock(${record.manifest.advisoryLockKey}::bigint); END ${lockTag};\n${basePlan.sql}\n${atomic107}\n`;
   return Object.freeze({
     basePlan,
     finalReadback: migration.terminalReadback,
@@ -448,8 +449,9 @@ function compilePlan(record, { mode }) {
     migration,
     plan,
     priorReadback: basePlan.priorReadback,
-    sql: `BEGIN;\nSET LOCAL idle_in_transaction_session_timeout='30s';\nDO ${lockTag} BEGIN PERFORM pg_advisory_xact_lock(${record.manifest.advisoryLockKey}::bigint); END ${lockTag};\n${basePlan.sql}\n${atomic107}\nCOMMIT;\n`,
+    sql: `BEGIN;\n${transactionBodySql}COMMIT;\n`,
     stateQuery: terminalQuery,
+    transactionBodySql,
     transactionMode: 'single-explicit-outer-transaction',
   });
 }
