@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { buildPipelineStages, canControlPipelineJob, parsePipelineManifest, parsePipelineStatus, pipelineJobsForDisplay, pipelineDisplayIsReliable, PIPELINE_FLOW_DOCUMENT, PIPELINE_FLOW_EDGES, PIPELINE_FLOW_STAGES } from '../lib/admin/pipeline-flow-view-model';
+import { buildPipelineStages, canControlPipelineJob, parsePipelineManifest, parsePipelineStatus, pipelineJobsForDisplay, pipelineDisplayIsReliable, pipelineJobLabel, HOSTED_EXECUTION_LABELS, PIPELINE_FLOW_DOCUMENT, PIPELINE_FLOW_EDGES, PIPELINE_FLOW_STAGES } from '../lib/admin/pipeline-flow-view-model';
 import { parsePipelineActionPreview, pipelineApplyBody, type PipelineActionInput } from '../lib/admin/pipeline-action-preview';
 import { assertPipelineGuardedBody, buildPipelinePreviewHash, PIPELINE_CONTROL_CONFIRMATION_TEXT, PIPELINE_LIVE_ENQUEUE_CONFIRMATION } from '../lib/admin/pipeline-control';
 import { parseOperationsSnapshot } from '../lib/admin/operations-view-model';
@@ -238,4 +238,67 @@ test('display reliability follows GitHub manifest admission while preserving job
  expect(pipelineDisplayIsReliable(snapshot,{...manifest(),github:{id:'77',status:'in_progress',conclusion:null}})).toBe(true);
  expect(pipelineDisplayIsReliable(parsePipelineStatus(status()),undefined)).toBe(true);
  expect(pipelineDisplayIsReliable(parsePipelineStatus(status({targets:[{id:'tzuyang',status:'future'}]})),undefined)).toBe(false);
+});
+
+describe('hosted execution receipt display', () => {
+  const now = Date.parse('2026-10-20T12:00:00Z');
+  const githubRun = { id: '99', runAttempt: '2', headSha: 'a'.repeat(40), status: 'completed', conclusion: 'success' };
+  const view = { source: 'github_actions', runId: '99', runAttempt: '2', headSha: 'a'.repeat(40),
+    stage: 'pending_preview', state: 'dry_run', exitCode: 0, finishedAt: '2026-10-20T11:20:00Z',
+    dryRun: true, reviewRequested: false, reviewConfirmed: false, publicationVerified: false };
+  const payload = (overrides: Record<string, unknown> = {}) => status({ source: 'github_actions',
+    jobs: [{ id: '99', target: 'tzuyang', profile: 'lite_gha', status: 'Succeeded' }], targets: [],
+    githubRun, hostedExecution: { status: 'artifact_bound', view }, ...overrides });
+  test('only an exact bound receipt provides a short result, stage and finish time; publication remains unknown', () => {
+    const cases = [
+      { stage: 'pending_preview', state: 'dry_run', exitCode: 0, dryRun: true, reviewRequested: false, reviewConfirmed: false, label: '테스트 종료' },
+      { stage: 'finished', state: 'execution_completed', exitCode: 0, dryRun: false, reviewRequested: true, reviewConfirmed: true, label: '처리 종료' },
+      { stage: 'pending_apply', state: 'review_unconfirmed', exitCode: 1, dryRun: false, reviewRequested: true, reviewConfirmed: false, label: '검수 응답 미확인' },
+      { stage: 'evaluation', state: 'failed', exitCode: 2, dryRun: true, reviewRequested: false, reviewConfirmed: false, label: '실행 실패' },
+    ] as const;
+    for (const { label, ...variant } of cases) {
+      const result = parsePipelineStatus(payload({ hostedExecution: { status: 'artifact_bound', view: { ...view, ...variant, diagnostic: 'private@example.test', artifactPath: '/private/path' } } }), now);
+      expect(result.hostedExecution).toEqual({ runId: '99', stage: variant.stage, state: variant.state, finishedAt: '2026-10-20T11:20:00.000Z', dryRun: variant.dryRun });
+      expect(HOSTED_EXECUTION_LABELS[result.hostedExecution!.state]).toBe(label);
+      expect(JSON.stringify(result)).not.toContain('private@');
+      expect(JSON.stringify(result)).not.toContain('/private/path');
+      expect(buildPipelineStages(manifest()).at(-1)?.state).toBe('manual');
+    }
+    expect(pipelineJobLabel('github_actions', 'Succeeded')).toBe('Actions 완료');
+    expect(pipelineJobLabel('github_actions', 'Failed')).toBe('Actions 실패');
+    expect(pipelineJobLabel('job_api', 'Succeeded')).toBe('완료');
+  });
+  test('legacy, unavailable, mismatched, malformed and stale receipts remain unconfirmed', () => {
+    const malformed = [
+      null, undefined, { status: 'unavailable' }, { status: 'invalid' },
+      { status: 'artifact_bound' }, { status: 'artifact_bound', view: { ...view, source: 'job_api' } },
+      { status: 'artifact_bound', view: { ...view, runId: '98' } },
+      { status: 'artifact_bound', view: { ...view, runAttempt: '1' } },
+      { status: 'artifact_bound', view: { ...view, headSha: 'b'.repeat(40) } },
+      { status: 'artifact_bound', view: { ...view, stage: '../../../private' } },
+      { status: 'artifact_bound', view: { ...view, state: 'approved' } },
+      { status: 'artifact_bound', view: { ...view, exitCode: '0' } },
+      { status: 'artifact_bound', view: { ...view, exitCode: 256 } },
+      { status: 'artifact_bound', view: { ...view, publicationVerified: true } },
+      { status: 'artifact_bound', view: { ...view, finishedAt: '2026-10-21T12:00:00Z' } },
+      { status: 'artifact_bound', view: { ...view, finishedAt: '2026-10-18T11:00:00Z' } },
+      { status: 'artifact_bound', view: { ...view, finishedAt: '2026-02-30T11:00:00Z' } },
+      { status: 'artifact_bound', view: { ...view, state: 'execution_completed', stage: 'pending_preview' } },
+      { status: 'artifact_bound', view: { ...view, state: 'dry_run', exitCode: 1 } },
+      { status: 'artifact_bound', view: { ...view, reviewConfirmed: true } },
+      { status: 'artifact_bound', view: { ...view, stage: 'pending_apply', state: 'failed', exitCode: 1 } },
+    ];
+    for (const hostedExecution of malformed) expect(parsePipelineStatus(payload({ hostedExecution }), now).hostedExecution).toBeNull();
+    for (const run of [null, {}, { ...githubRun, id: '100' }, { ...githubRun, runAttempt: '1' },
+      { ...githubRun, headSha: 'b'.repeat(40) }, { ...githubRun, headSha: 'secret' },
+      { ...githubRun, status: 'in_progress', conclusion: null }, { ...githubRun, conclusion: 'secret@example.test' }]) {
+      expect(parsePipelineStatus(payload({ githubRun: run }), now).hostedExecution).toBeNull();
+    }
+    expect(parsePipelineStatus(payload({ jobs: [{ id: '98', target: 'tzuyang', profile: 'lite_gha', status: 'Succeeded' }] }), now).hostedExecution).toBeNull();
+    expect(parsePipelineStatus(payload({ jobs: [{ id: '99', target: 'tzuyang', profile: 'heavy_local', status: 'Succeeded' }] }), now).hostedExecution).toBeNull();
+    expect(parsePipelineStatus(payload({ jobs: [{ id: '99', target: 'tzuyang', profile: 'lite_gha', status: 'Fetching' }] }), now).hostedExecution).toBeNull();
+    expect(parsePipelineStatus(payload({ source: 'job_api' }), now).hostedExecution).toBeNull();
+    expect(parsePipelineStatus(payload({ source: 'future' }), now).hostedExecution).toBeNull();
+    expect(parsePipelineStatus(payload({ hostedExecution: undefined }), now).jobs[0].status).toBe('Succeeded');
+  });
 });

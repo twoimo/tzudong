@@ -92,6 +92,31 @@ reader must bind artifact, run, attempt, workflow, ref and head SHA independentl
 Local/Mac receipts never inherit incidental GitHub env values. Guard:
 `backend.bin.tests.test_restaurant_review_automation.PipelineExecutionReceiptTests`.
 
+
+The guarded admin pipeline GET can read the exact current `Crawler` main-run
+attempt's `hosted-pipeline-execution-{runId}-{attempt}` artifact. A producer
+receipt first yields only `metadata_matched`; only the server reader can return
+`artifact_bound` after independently matching run, attempt, source, hosted job
+execution times, artifact ownership/name/expiry and archive SHA-256. A missing,
+old, malformed, mismatched or inaccessible receipt stays unverified even when
+the overall Actions run succeeds. This composite receipt does not supply the
+legacy eight-node stage events, automatic-approval counts or public marker
+readback; the diagram must not synthesize them.
+
+The reader shares the existing eight-second GitHub deadline, limits API JSON
+and ZIP bytes separately to 256 KiB (at most 4,096 non-empty stream chunks),
+reads one in-memory ZIP32 `hosted-run.json`
+entry (store/deflate, output at most 64 KiB), and then admits at most 4 KiB of
+strict UTF-8 receipt JSON. Other entries, unsupported/encrypted/ZIP64 layouts,
+inconsistent boundaries/CRC/lengths and ambiguous metadata are rejected. Signed
+download URLs never receive GitHub authorization or cookies. The parser's
+36-hour age, 24-hour duration and 10-second elapsed-clock tolerance are
+conservative display validation policies, not measured latency or retention
+periods. Guarded GET, parsing, archive, transport and display fixtures live in
+`apps/web/tests-unit/admin-pipeline-control.test.ts`,
+`hosted-pipeline-receipt.test.ts`, `hosted-pipeline-archive.test.ts`,
+`hosted-pipeline-github.test.ts` and `pipeline-flow-view-model.test.ts`.
+
 The hosted CLI uses preview `schemaVersion=2` to bind candidate counts and
 allowed `trace_id` values to payload/preview hashes. Legacy video-level preview
 and snapshot callers remain compatible. An invalid existing trace holds its

@@ -11,7 +11,7 @@ export const PIPELINE_FLOW_STAGES = [
   { id: 'select', label: '선정 · 주소', input: '식당 후보', output: '평가 대상·위치 검증', steps: ['Step 09 (Target)', 'Step 10 (Rule Eval)'], source: 'backend/restaurant-evaluation/scripts/10-rule-evaluation.py', contract: '선정 키는 origin_name과 일치해야 합니다. 위치 일치에는 독립 근거가 필요합니다.' },
   { id: 'evaluate', label: 'Gemini 평가', input: '선정·규칙 평가 결과', output: '방문·근거·리뷰 평가', steps: ['Step 11 (LAAJ Evaluation)'], source: 'backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh', contract: '방문 진위·근거·리뷰 충실도·카테고리 평가를 검증합니다.' },
   { id: 'persist', label: '변환 · 저장', input: '평가 결과', output: '검수 가능한 식당 데이터', steps: ['Step 12 (Transform)', 'Step 13 (Supabase)', 'Step 13.1 (Admin Data Quality Gate)'], source: 'backend/restaurant-evaluation/scripts/13-supabase-insert.py', contract: 'trace_id는 배치 안에서 유일해야 합니다. 관리자 수정 필드와 보호 상태를 덮어쓰지 않습니다.' },
-  { id: 'review', label: '관리자 검수', input: '저장된 후보와 평가 근거', output: '승인·보류·반려 결정', steps: [], source: 'apps/web/components/admin/RestaurantManagementWorkspace.tsx', contract: '사람의 승인 단계입니다. 배치 완료나 품질 검사 통과를 관리자 승인으로 간주하지 않습니다.' },
+  { id: 'review', label: '검수 · 승인', input: '저장된 후보와 평가 근거', output: '승인·보류·반려 결정', steps: [], source: 'backend/bin/run_restaurant_review_automation.py', contract: 'Gemini 권고와 정책 검증을 거친 자동 승인 또는 관리자 검수를 추적합니다. 실행 완료를 승인으로 간주하지 않습니다.' },
 ] as const;
 export type PipelineStageId = (typeof PIPELINE_FLOW_STAGES)[number]['id'];
 export const PIPELINE_FLOW_EDGES: Array<{ from: PipelineStageId; to: PipelineStageId; label: string }> = [
@@ -95,10 +95,57 @@ export function buildPipelineStages(manifest: PipelineManifestView | undefined) 
 }
 export type PipelineStageView = ReturnType<typeof buildPipelineStages>[number];
 export const PIPELINE_JOB_LABELS: Record<string, string> = { Queued: '대기', Fetching: '수집 중', Inserting: '저장 중', Paused: '일시 정지', Cancelled: '취소', Failed: '실패', Succeeded: '완료', Unknown: '미확인' };
+const ACTIONS_JOB_LABELS: Record<string, string> = { Queued: 'Actions 대기', Fetching: 'Actions 진행 중', Inserting: 'Actions 진행 중', Paused: 'Actions 일시 정지', Cancelled: 'Actions 취소', Failed: 'Actions 실패', Succeeded: 'Actions 완료', Unknown: 'Actions 미확인' };
+export function pipelineJobLabel(source: PipelineStatusView['source'] | undefined, status: string) {
+  return source === 'github_actions' ? ACTIONS_JOB_LABELS[status] ?? 'Actions 미확인' : PIPELINE_JOB_LABELS[status] ?? '미확인';
+}
+const hostedStages = ['preflight', 'evaluation', 'pending_preview', 'pending_apply', 'review_followup', 'finished'] as const;
+const hostedStates = ['failed', 'dry_run', 'review_unconfirmed', 'execution_completed'] as const;
+type HostedStage = (typeof hostedStages)[number];
+type HostedState = (typeof hostedStates)[number];
+export const HOSTED_STAGE_LABELS: Record<HostedStage, string> = {
+  preflight: '사전 확인', evaluation: '평가', pending_preview: '후보 미리보기',
+  pending_apply: '후보 저장', review_followup: '재검수 확인', finished: '처리 종료',
+};
+export const HOSTED_EXECUTION_LABELS: Record<HostedState, string> = {
+  failed: '실행 실패', dry_run: '테스트 종료', review_unconfirmed: '검수 응답 미확인', execution_completed: '처리 종료',
+};
+export type HostedExecutionDisplay = { runId: string; stage: HostedStage; state: HostedState; finishedAt: string; dryRun: boolean };
+const githubRunNumber = (value: unknown): value is string => typeof value === 'string' && /^[1-9][0-9]{0,15}$/.test(value) && Number.isSafeInteger(Number(value));
+const hostedTime = (value: unknown, now: number) => {
+  if (typeof value !== 'string' || !/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.\d{1,6})?(?:Z|\+00:00)$/.test(value)) return null;
+  const time = Date.parse(value);
+  return Number.isFinite(time) && time <= now && now - time <= 36 * 60 * 60 * 1000
+    && new Date(time).toISOString().slice(0, 19) === value.slice(0, 19) ? new Date(time).toISOString() : null;
+};
+function parseHostedExecution(value: unknown, run: unknown, jobs: PipelineJobView[], now: number): HostedExecutionDisplay | null {
+  if (!isRecord(value) || value.status !== 'artifact_bound' || !isRecord(value.view) || !isRecord(run)) return null;
+  const view = value.view;
+  const githubState = parseGithubWorkflowState(run);
+  if (!githubRunNumber(run.id) || !githubRunNumber(run.runAttempt) || typeof run.headSha !== 'string'
+    || !/^[0-9a-f]{40}$/.test(run.headSha) || jobs.length !== 1 || jobs[0].id !== run.id || jobs[0].profile !== 'lite_gha'
+    || githubState.status !== 'completed' || githubState.failed === null || jobs[0].status !== githubState.jobStatus
+    || view.source !== 'github_actions' || view.runId !== run.id || view.runAttempt !== run.runAttempt
+    || view.headSha !== run.headSha || view.publicationVerified !== false
+    || !hostedStages.includes(view.stage as HostedStage) || !hostedStates.includes(view.state as HostedState)
+    || typeof view.dryRun !== 'boolean' || typeof view.reviewRequested !== 'boolean'
+    || typeof view.reviewConfirmed !== 'boolean' || typeof view.exitCode !== 'number'
+    || !Number.isSafeInteger(view.exitCode) || view.exitCode < -255 || view.exitCode > 255) return null;
+  const finishedAt = hostedTime(view.finishedAt, now);
+  if (!finishedAt) return null;
+  const stage = view.stage as HostedStage, state = view.state as HostedState;
+  if (view.dryRun && !['preflight', 'evaluation', 'pending_preview'].includes(stage)) return null;
+  if (view.reviewConfirmed && (!view.reviewRequested || view.dryRun)) return null;
+  if (state === 'failed' && (view.exitCode === 0 || stage === 'finished')) return null;
+  if (state === 'dry_run' && (stage !== 'pending_preview' || view.exitCode !== 0 || !view.dryRun || view.reviewConfirmed)) return null;
+  if (state === 'review_unconfirmed' && (stage !== 'pending_apply' || view.exitCode !== 1 || view.dryRun || !view.reviewRequested || view.reviewConfirmed)) return null;
+  if (state === 'execution_completed' && (stage !== 'finished' || view.exitCode !== 0 || view.dryRun || (view.reviewRequested && !view.reviewConfirmed))) return null;
+  return { runId: run.id, stage, state, finishedAt, dryRun: view.dryRun };
+}
 export type PipelineJobView = { id: string; target: string; profile: 'heavy_local' | 'lite_gha' | 'unknown'; status: string; dry_run?: boolean; adapter_index: number | null; hasError: boolean };
-export type PipelineStatusView = { source: 'job_api' | 'github_actions' | 'unknown'; partial: boolean; jobs: PipelineJobView[]; failures: PipelineJobView[]; targets: Array<{ id: string; status: string }>; gauges: Partial<Record<PipelineGaugeKey, number>>; environment: string; hardware: string };
+export type PipelineStatusView = { source: 'job_api' | 'github_actions' | 'unknown'; partial: boolean; jobs: PipelineJobView[]; failures: PipelineJobView[]; targets: Array<{ id: string; status: string }>; gauges: Partial<Record<PipelineGaugeKey, number>>; environment: string; hardware: string; hostedExecution: HostedExecutionDisplay | null };
 
-export function parsePipelineStatus(value: unknown): PipelineStatusView {
+export function parsePipelineStatus(value: unknown, now = Date.now()): PipelineStatusView {
   if (!isRecord(value) || !Array.isArray(value.jobs) || !Array.isArray(value.failures) || !Array.isArray(value.targets) || value.jobs.length > 1000 || value.failures.length > 20 || value.targets.length > 1000) throw new Error('pipeline_response_invalid');
   let partial = false;
   const source = value.source === 'job_api' || value.source === 'github_actions' ? value.source : 'unknown';
@@ -119,7 +166,8 @@ export function parsePipelineStatus(value: unknown): PipelineStatusView {
   if (isRecord(value.gauges)) for (const key of PIPELINE_GAUGE_KEYS) { const n = value.gauges[key]; if (typeof n === 'number' && Number.isFinite(n) && n >= 0) gauges[key] = n; }
   return { source, partial: partial || source === 'unknown', jobs, failures, targets, gauges,
     environment: value.dataEnv === 'local_db' ? '로컬 DB' : value.dataEnv === 'hosted_read' ? '호스팅 조회' : '미확인',
-    hardware: value.hardware === 'macbook_m5_max' ? 'MacBook M5 Max' : value.hardware === 'github_actions' ? 'GitHub Actions' : '미확인' };
+    hardware: value.hardware === 'macbook_m5_max' ? 'MacBook M5 Max' : value.hardware === 'github_actions' ? 'GitHub Actions' : '미확인',
+    hostedExecution: source === 'github_actions' ? parseHostedExecution(value.hostedExecution, value.githubRun, jobs, now) : null };
 }
 
 export function pipelineJobsForDisplay(snapshot: PipelineStatusView | undefined, manifest: PipelineManifestView | undefined): PipelineJobView[] {
