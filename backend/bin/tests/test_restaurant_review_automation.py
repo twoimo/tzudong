@@ -374,11 +374,29 @@ class ReviewWorkerTests(unittest.TestCase):
                 self.assertIn('--request-id', reviews[0])
 
     def test_no_recheck_preserves_all_three_new_video_slots(self):
-        def completed(command,**kwargs):
-            receipt=Path(command[command.index('--receipt-file')+1]);receipt.write_text('{"recheckAttempted":false,"recheckOutstanding":false}')
-            return 0
-        with patch.object(runner,'_run',side_effect=completed):self.assertEqual(runner._review_reserved_slot(),runner.ReviewReservation(0,True))
+        for receipt in [
+            {'disabled':False,'recheckAttempted':False,'recheckOutstanding':False},
+            {'recheckAttempted':False,'recheckOutstanding':False},
+        ]:
+            with self.subTest(receipt=receipt):
+                def completed(command,**kwargs):
+                    Path(command[command.index('--receipt-file')+1]).write_text(json.dumps(receipt))
+                    return 0
+                with patch.object(runner,'_run',side_effect=completed):
+                    self.assertEqual(runner._review_reserved_slot(),runner.ReviewReservation(0,True))
         with patch.object(runner,'_run',return_value=1):self.assertEqual(runner._review_reserved_slot(),runner.ReviewReservation(1,False))
+
+    def test_disabled_receipt_is_known_and_malformed_disabled_stays_unknown(self):
+        for receipt,expected in [
+            ({'disabled':True,'recheckAttempted':False,'recheckOutstanding':False}, runner.ReviewReservation(1,False,True)),
+            ({'disabled':'true','recheckAttempted':False,'recheckOutstanding':False}, runner.ReviewReservation(1,False)),
+        ]:
+            with self.subTest(receipt=receipt):
+                def completed(command,**kwargs):
+                    Path(command[command.index('--receipt-file')+1]).write_text(json.dumps(receipt))
+                    return 0
+                with patch.object(runner,'_run',side_effect=completed):
+                    self.assertEqual(runner._review_reserved_slot(),expected)
 
     def test_active_recheck_reserves_one_slot_and_an_incomplete_receipt_fails_closed(self):
         for outstanding,expected in [(True,runner.ReviewReservation(1,True)),(None,runner.ReviewReservation(1,False))]:
@@ -395,7 +413,7 @@ class ReviewWorkerTests(unittest.TestCase):
         def completed(command,**kwargs):
             commands.append(command)
             if '--receipt-file' in command:
-                Path(command[command.index('--receipt-file')+1]).write_text('{"recheckAttempted":true}')
+                Path(command[command.index('--receipt-file')+1]).write_text('{"disabled":false,"recheckAttempted":true}')
             return 0
         with patch.object(runner,'_load_backend_env'),patch.object(runner,'cadence_source_preflight'),patch.object(runner,'env_contract_preflight'),patch.object(runner,'_apply_local_runtime_environment'),patch.object(runner,'_run',side_effect=completed),contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(runner.main(['--review-automation','--limit','3']),0)
@@ -534,6 +552,36 @@ class PipelineExecutionReceiptTests(unittest.TestCase):
             self.assertEqual((receipt['stage'], receipt['exitCode']), ('pending_apply', 2))
             self.assertEqual(receipt['state'], 'failed')
             self.assertFalse(any(c[1] == str(runner.REVIEW) for c in commands))
+
+    def test_disabled_review_policy_stops_before_evaluate_apply_or_followup(self):
+        import contextlib, io
+        with tempfile.TemporaryDirectory() as folder:
+            receipt_path = Path(folder) / 'run-receipt.json'
+            preview_path = Path(folder) / 'preview.json'
+            commands = []
+            def run(command, **kwargs):
+                commands.append(command[1])
+                self.assertEqual(command[1], str(runner.REVIEW))
+                Path(command[command.index('--receipt-file') + 1]).write_text(json.dumps({
+                    'disabled': True, 'recheckAttempted': False, 'recheckOutstanding': False,
+                }))
+                return 0
+            with patch.dict(os.environ, {'TZUDONG_PIPELINE_SOURCE': 'local'}), \
+                 patch.object(runner, '_load_backend_env'), patch.object(runner, 'cadence_source_preflight'), \
+                 patch.object(runner, 'env_contract_preflight'), patch.object(runner, '_apply_local_runtime_environment'), \
+                 patch.object(runner, '_run', side_effect=run), contextlib.redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(runner.main(['--review-automation', '--limit', '3',
+                    '--preview-out', str(preview_path), '--receipt-out', str(receipt_path)]), 1)
+            self.assertEqual(commands, [str(runner.REVIEW)])
+            self.assertEqual(output.getvalue().splitlines(), ['source=local', 'error=review_automation_disabled'])
+            receipt = json.loads(receipt_path.read_text())
+            self.assertEqual((receipt['state'], receipt['stage'], receipt['exitCode']), ('failed', 'preflight', 1))
+            self.assertTrue(receipt['reviewRequested'])
+            self.assertFalse(receipt['reviewConfirmed'])
+            self.assertFalse(receipt['publicationVerified'])
+            self.assertNotIn('newVideoLimit', receipt)
+            self.assertNotIn('evaluateExit', receipt)
+            self.assertFalse(preview_path.exists())
 
     def test_preflight_string_exit_receipt_matches_python_exit_status(self):
         import contextlib, io

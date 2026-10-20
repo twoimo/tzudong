@@ -99,6 +99,7 @@ def _run(argv: list[str], *, required: bool = True) -> int:
 class ReviewReservation(NamedTuple):
     reserved_slots: int
     confirmed: bool
+    disabled: bool = False
 
 
 _GITHUB_RUN_NUMBER = re.compile(r"[1-9][0-9]{0,15}\Z")
@@ -133,6 +134,8 @@ def _review_reserved_slot() -> ReviewReservation:
         if status!=0 or not receipt.is_file() or receipt.stat().st_size>2048:return ReviewReservation(1, False)
         try:
             result=json.loads(receipt.read_text(encoding='utf-8'))
+            if result.get('disabled') is True:return ReviewReservation(1, False, True)
+            if 'disabled' in result and type(result['disabled']) is not bool:return ReviewReservation(1, False)
             if result.get('recheckAttempted') is True:return ReviewReservation(1, True)
             if result.get('recheckAttempted') is False and type(result.get('recheckOutstanding')) is bool:
                 return ReviewReservation(int(result['recheckOutstanding']), True)
@@ -209,6 +212,10 @@ def main(argv: list[str] | None = None) -> int:
             # Reserve one of this invocation's video slots for a queued recheck.
             # The three-slot limit is per invocation, not a shared daily budget.
             reservation = _review_reserved_slot()
+            if reservation.disabled:
+                print("error=review_automation_disabled")
+                report["exitCode"] = 1
+                return 1
             new_limit -= reservation.reserved_slots
             review_confirmed = reservation.confirmed
         evaluate_command = [
