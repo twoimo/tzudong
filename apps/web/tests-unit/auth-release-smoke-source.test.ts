@@ -290,13 +290,16 @@ test('Windows PowerShell startup progress filtering is exact and preserves diagn
     expect(parent.stripTrustedWindowsPowerShellStartupProgress(startupProgress.replace('Completed', 'Processing'))).toContain('Processing');
 });
 test('fake Windows broker requires READY, ACK, STARTED, COMPLETE, and control-channel close', async () => {
-    const runBroker = (mode: 'complete' | 'missing-ready' | 'missing-complete' | 'spoofed-workload-frame') => {
+    const runBroker = (mode: 'complete' | 'delayed-complete' | 'missing-ready' | 'missing-complete' | 'spoofed-workload-frame') => {
         const fakeChild = createFakeSpawnedChild();
-        const execution = parent.runChild({ PATH: process.env.PATH || '' }, [], tmpdir(), origin.origin, 100, {
+        const completes = mode === 'complete' || mode === 'delayed-complete';
+        // Successful socket IO must tolerate CI scheduling delay. Keep short
+        // deadlines only for the fixtures that intentionally withhold proof.
+        const execution = parent.runChild({ PATH: process.env.PATH || '' }, [], tmpdir(), origin.origin, completes ? 2_000 : 100, {
             platform: 'win32',
             trustedWindowsJobBoundary: true,
-            closeTimeoutMs: 20,
-            cleanupTimeoutMs: 50,
+            closeTimeoutMs: completes ? 500 : 20,
+            cleanupTimeoutMs: completes ? 1_000 : 50,
             processController: { capture: async () => [41], cleanup: async () => true },
             spawnChild: (_command: string, _args: string[], options: { env: Record<string, string> }) => {
                 const pipeName = Buffer.from(options.env.TZUDONG_JOB_CONTROL_PIPE_B64, 'base64').toString('utf8');
@@ -306,10 +309,18 @@ test('fake Windows broker requires READY, ACK, STARTED, COMPLETE, and control-ch
                     if (mode === 'missing-ready') return;
                     const socket = createConnection(pipe, () => {
                         if (mode === 'spoofed-workload-frame') socket.write('COMPLETE spoofed 0\n');
-                        else socket.write(`READY ${options.env.TZUDONG_JOB_CONTROL_NONCE} ${options.env.TZUDONG_JOB_CONTROL_DEADLINE}\n`);
+                        else {
+                            const sendReady = () => socket.write(`READY ${options.env.TZUDONG_JOB_CONTROL_NONCE} ${options.env.TZUDONG_JOB_CONTROL_DEADLINE}\n`);
+                            if (mode === 'delayed-complete') setTimeout(sendReady, 120);
+                            else sendReady();
+                        }
                     });
                     socket.setEncoding('utf8');
-                    socket.on('data', () => {
+                    let acknowledgement = '';
+                    socket.on('data', (data) => {
+                        acknowledgement += data;
+                        if (!acknowledgement.includes('\n')) return;
+                        expect(acknowledgement).toBe(`ACK ${options.env.TZUDONG_JOB_CONTROL_NONCE} ${options.env.TZUDONG_JOB_CONTROL_DEADLINE}\n`);
                         if (mode === 'missing-complete') return socket.end();
                         socket.write(`STARTED ${options.env.TZUDONG_JOB_CONTROL_NONCE} ${options.env.TZUDONG_JOB_CONTROL_DEADLINE}\n`);
                         socket.write(`COMPLETE ${options.env.TZUDONG_JOB_CONTROL_NONCE} ${options.env.TZUDONG_JOB_CONTROL_DEADLINE}\n`);
@@ -323,8 +334,9 @@ test('fake Windows broker requires READY, ACK, STARTED, COMPLETE, and control-ch
         return execution;
     };
     await expect(runBroker('complete')).resolves.toMatchObject({ code: 0 });
+    await expect(runBroker('delayed-complete')).resolves.toMatchObject({ code: 0 });
     for (const mode of ['missing-ready', 'missing-complete', 'spoofed-workload-frame'] as const) {
-        await expect(runBroker(mode)).rejects.toMatchObject({ code: expect.any(String) });
+        await expect(runBroker(mode)).rejects.toMatchObject({ code: 'INTERNAL_FAILURE' });
     }
 }, 5_000);
 

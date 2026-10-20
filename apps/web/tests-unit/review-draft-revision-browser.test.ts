@@ -29,7 +29,7 @@ async function bundle(sourceRoot: string) {
         import { createRoot } from 'react-dom/client';
         import { flushSync } from 'react-dom';
         import * as db from '@revision/db';
-        import { ReviewSaveOperation } from '@revision/operation';
+        import { REVIEW_FOOD_PHOTO_MAX_COUNT, ReviewSaveOperation } from '@revision/operation';
         import { buildReviewPhotoObjectPath, normalizeReviewPhotoFilename, cleanupCanonicalReviewPhotoObjects } from './lib/review-photo-url';
         import { FEATURE_DATABASE_HELD, FEATURE_DATABASE_HELD_MESSAGE, FEATURE_DATABASE_READY } from './lib/runtime-feature-readiness-contract';
         const { prepareDraftDeletion } = db;

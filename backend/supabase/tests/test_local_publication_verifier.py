@@ -771,7 +771,7 @@ complete_lifecycle_stage
             "platform_bootstrap_evidence_sha256": digest,
             "prerequisite_sha256": digest,
             "closure_binding_sha256": digest,
-            "ledger": [["private"]] * verifier.EXPECTED_LEDGER_UNITS,
+            "ledger": [["private"]] * manifest["source"]["migrationCount"],
             "ledger_sha256": digest,
             "replay_proofs": fixture_replay_proofs(),
             "readback": readback,
@@ -804,7 +804,7 @@ complete_lifecycle_stage
                 summary = builder.build_summary(state)
         serialized = json.dumps(summary, sort_keys=True, separators=(",", ":"))
         self.assertEqual(summary["readback_row_count"], len(readback))
-        self.assertEqual(summary["ledger_count"], verifier.EXPECTED_LEDGER_UNITS)
+        self.assertEqual(summary["ledger_count"], manifest["source"]["migrationCount"])
         self.assertNotIn("readback", summary)
         self.assertNotIn("ledger", summary)
         self.assertEqual(summary["replay_proofs"], receipt["replay_proofs"])
@@ -1024,7 +1024,7 @@ complete_lifecycle_stage
             for ordinal, marker in enumerate(verifier.SEQUENCE_MARKERS, 1)
         ]
         section_counts = {section: 1 for section in verifier.READBACK_SECTIONS}
-        section_counts.update(review_media_functions=15, storage_policies=22, storage_buckets=7, seed_buckets=7)
+        section_counts.update(review_media_functions=17, storage_policies=23, storage_buckets=7, seed_buckets=7)
         payloads["local-migration-summary.json"].update({
             "schema": "local-migration-publication-summary-v1",
             "project_name": "tzudong-local-123456abcdef",
@@ -1049,7 +1049,7 @@ complete_lifecycle_stage
             "env_provenance_sha256": digest,
             "environment_contract_sha256": digest,
             "commit_sha256": self.FIXTURE_GITHUB_SHA,
-            "ledger_count": verifier.EXPECTED_LEDGER_UNITS,
+            "ledger_count": manifest["source"]["migrationCount"],
             "ledger_sha256": verifier.sha256_bytes(verifier.serialize_rows(
                 local_migrate._expected_ledger_records(manifest)
             )),
@@ -1086,11 +1086,12 @@ complete_lifecycle_stage
             self._write_bundle(root)
             verifier.verify(root)
 
-    def test_publication_uses_the_current_140_unit_manifest(self) -> None:
-        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 140)
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 140)
-        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 140)
-        self.assertEqual(builder.EXPECTED_LEDGER_UNITS, 140)
+    def test_publication_uses_the_current_migration_list(self) -> None:
+        count = len(local_migrate.migration_files())
+        manifest = local_migrate.verify_manifest()
+        self.assertEqual(manifest["source"]["migrationCount"], count)
+        self.assertEqual(len(manifest["source"]["files"]), count)
+
     def test_publication_rejects_review_media_catalog_counts_even_with_matching_total(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -1395,7 +1396,8 @@ complete_lifecycle_stage
                 ):
                     verifier.verify(root)
 
-    def test_typegen_preflight_binds_cli_ecr_digest_and_tag_readback(self) -> None:
+    @staticmethod
+    def _typegen_preflight_script() -> str:
         source = WORKFLOW_PATH.read_text(encoding="utf-8")
         step = source.split("      - name: Pull pinned Compose images\n", 1)[1].split(
             "      - name: Probe Compose container creation\n", 1,
@@ -1403,11 +1405,13 @@ complete_lifecycle_stage
         script = step.split("          python3 - <<'PY'\n", 1)[1].rsplit(
             "          PY\n", 1,
         )[0]
-        script = "\n".join(
+        return "\n".join(
             line[10:] if line.startswith("          ") else line
             for line in script.splitlines()
         ) + "\n"
 
+    def test_typegen_preflight_binds_mirror_digest_and_cli_tag_readback(self) -> None:
+        script = self._typegen_preflight_script()
         calls: list[tuple[str, ...]] = []
         expected = verifier.EXPECTED_TYPEGEN_IMAGE
         readback = "\t".join((
@@ -1457,6 +1461,37 @@ complete_lifecycle_stage
         )
         inspected = [call[3] for call in calls if call[:3] == ("docker", "image", "inspect")]
         self.assertEqual(inspected, [expected["pull_reference"], expected["image"]])
+
+    def test_typegen_pull_failure_never_retains_verified_cli_status(self) -> None:
+        script = self._typegen_preflight_script()
+        expected = verifier.EXPECTED_TYPEGEN_IMAGE
+        calls = []
+
+        def run(command, **_kwargs):
+            calls.append(tuple(command))
+            if command[-1] == expected["pull_reference"]:
+                return types.SimpleNamespace(returncode=1, stdout="", stderr="toomanyrequests")
+            return types.SimpleNamespace(returncode=0, stdout="2.117.0\n", stderr="")
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "nightly-artifacts").mkdir()
+            previous = Path.cwd()
+            try:
+                os.chdir(root)
+                with mock.patch("subprocess.run", side_effect=run), mock.patch("time.sleep"):
+                    with self.assertRaises(SystemExit) as caught:
+                        exec(compile(script, str(WORKFLOW_PATH), "exec"), {})
+                    self.assertEqual(caught.exception.code, 2)
+            finally:
+                os.chdir(previous)
+            receipt = json.loads((root / "nightly-artifacts/local-image-pull-preflight.json").read_text())
+        self.assertEqual(receipt["typegen"]["status"], "failed")
+        self.assertEqual(receipt["typegen"]["failure_class"], "image_rate_limited")
+        self.assertEqual(sum(call[-1] == expected["pull_reference"] for call in calls), 4)
+        self.assertFalse(any(call[:3] == ("docker", "image", "tag") for call in calls))
+        with self.assertRaises(SystemExit):
+            verifier.verify_image_preflight(receipt)
 
     def test_rejects_truncated_migration_ledger_count(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

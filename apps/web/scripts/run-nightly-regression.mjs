@@ -1314,6 +1314,12 @@ function parseDockerServiceRows(stdout) {
   return services;
 }
 
+function migrationLedgerUnitCount() {
+  return readdirSync(path.join(repositoryRoot, 'backend', 'supabase', 'migrations'))
+    .filter((name) => /^\d{8,14}(?:_|\.)/.test(name) && name.toLowerCase().endsWith('.sql'))
+    .length;
+}
+
 function assertLocalMigrationReceiptEnvelope(receipt, stackReceipt) {
   if (
     !receipt
@@ -1323,7 +1329,7 @@ function assertLocalMigrationReceiptEnvelope(receipt, stackReceipt) {
     || receipt.serializer !== 'receipt-v1'
     || receipt.project_name !== localProjectName
     || !Array.isArray(receipt.ledger)
-    || receipt.ledger.length !== 140
+    || receipt.ledger.length !== migrationLedgerUnitCount()
     || !receipt.replay_proofs
     || typeof receipt.replay_proofs !== 'object'
     || Array.isArray(receipt.replay_proofs)

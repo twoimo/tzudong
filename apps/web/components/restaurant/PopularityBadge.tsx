@@ -1,16 +1,44 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Component, createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { useDevicePerformance } from "@/hooks/useDevicePerformance";
 import { shouldUseStaticBadgeViewer } from "@/lib/evidence-engineering/badge-device-capability";
 import { handleBadgeViewerCloseKey, restoreBadgeViewerFocus } from "@/lib/evidence-engineering/badge-viewer-lifecycle";
 
+const BadgeViewerLoadingContext = createContext<{
+  tier: "fire" | "rainbow";
+  onClose: () => void;
+} | null>(null);
+
+function LoadingBadgeViewer({ error }: { error?: Error | null }) {
+  const viewer = useContext(BadgeViewerLoadingContext);
+  return viewer ? <StaticBadgeViewer {...viewer} loading={!error} /> : null;
+}
+
 const Badge3DViewer = dynamic(
   () => import("./Badge3DViewer"),
-  { ssr: false, loading: () => null },
+  { ssr: false, loading: LoadingBadgeViewer },
 );
+
+class BadgeViewerErrorBoundary extends Component<{
+  tier: "fire" | "rainbow";
+  onClose: () => void;
+  children: ReactNode;
+}, { failed: boolean }> {
+  override state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  override render() {
+    return this.state.failed
+      ? <StaticBadgeViewer tier={this.props.tier} onClose={this.props.onClose} />
+      : this.props.children;
+  }
+}
 
 export const POPULARITY_BADGE_KINDS = ["fire", "rainbow"] as const;
 export const BADGE_BYTE_COUNT_IS_PASS_THRESHOLD = false;
@@ -26,7 +54,11 @@ export function badgeViewerPhase(experimental3D: boolean, open: boolean): BadgeV
   return open ? "open" : "offer";
 }
 
-function StaticBadgeViewer({ tier, onClose }: { tier: "fire" | "rainbow"; onClose: () => void }) {
+function StaticBadgeViewer({ tier, onClose, loading = false }: {
+  tier: "fire" | "rainbow";
+  onClose: () => void;
+  loading?: boolean;
+}) {
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => { rootRef.current?.focus(); }, []);
   return (
@@ -36,10 +68,10 @@ function StaticBadgeViewer({ tier, onClose }: { tier: "fire" | "rainbow"; onClos
       aria-label="3D 배지"
       tabIndex={0}
       data-badge-3d={tier}
-      data-badge-viewer="fallback"
+      data-badge-viewer={loading ? "loading" : "fallback"}
       onKeyDown={(event) => handleBadgeViewerCloseKey(event, onClose)}
     >
-      <p>정적 배지로 표시합니다.</p>
+      <p>{loading ? "3D 배지를 불러오는 중입니다." : "정적 배지로 표시합니다."}</p>
       <button type="button" onClick={onClose}>닫기</button>
     </div>
   );
@@ -110,7 +142,13 @@ export function PopularityBadge({
       {phase === "open" ? (
         useStaticViewer
           ? <StaticBadgeViewer tier={tier} onClose={closeViewer} />
-          : <Badge3DViewer tier={tier} onClose={closeViewer} lowPower={useStaticViewer} />
+          : (
+            <BadgeViewerLoadingContext.Provider value={{ tier, onClose: closeViewer }}>
+              <BadgeViewerErrorBoundary tier={tier} onClose={closeViewer}>
+                <Badge3DViewer tier={tier} onClose={closeViewer} lowPower={useStaticViewer} />
+              </BadgeViewerErrorBoundary>
+            </BadgeViewerLoadingContext.Provider>
+          )
       ) : null}
     </section>
   );

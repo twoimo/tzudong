@@ -4,6 +4,9 @@ import path from 'node:path';
 
 const root = path.resolve('tests-unit');
 const isolated = new Set([
+  // This partial React Query mock omits keepPreviousData and must not replace
+  // the real module used by the lazy overlay import boundary test.
+  'ad-banner-stored-read.test.ts',
   'admin-evaluation-page-api.test.ts',
   'admin-evaluation-page-server.test.ts',
   // Its module imports fail only in the combined mock-heavy group; keep the

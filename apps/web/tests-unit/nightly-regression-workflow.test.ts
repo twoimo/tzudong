@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -622,7 +622,7 @@ describe("nightly regression package and source contracts", () => {
       "async function assertLocalMigrationReceipt(stateRoot, stackReceipt)",
       "receipt.schema !== 'local-receipt-v2'",
       "receipt.serializer !== 'receipt-v1'",
-      "receipt.ledger.length !== 140",
+      "receipt.ledger.length !== migrationLedgerUnitCount()",
       "localReceiptSequenceMarkers = ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed']",
       "  'platform_bootstrap_evidence_sha256',",
       "  'platform_bootstrap_sha256',",
@@ -639,7 +639,7 @@ describe("nightly regression package and source contracts", () => {
     expect(createHash("sha256").update(localThumbnailRpcAllowlistMigrationSource).digest("hex")).toBe(
       "33735c6661ff8b555424bc2ccc28467baee182dd455f8283bfced356c0793ff7",
     );
-    expect(nightlyRunnerSource).toContain("receipt.ledger.length !== 140");
+    expect(nightlyRunnerSource).toContain("receipt.ledger.length !== migrationLedgerUnitCount()");
   });
 
   test("keeps nightly web log custody owner-only and symlink-safe", () => {
@@ -920,10 +920,10 @@ describe("nightly regression package and source contracts", () => {
       "for attempt in range(4)",
       "cli_returncode != 0",
       "'image': 'public.ecr.aws/supabase/postgres-meta:v0.96.6'",
-      "public.ecr.aws/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed",
+      "ghcr.io/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed",
       "sha256:c496f84f24947250e706f03aca4af956a099d8f7e5521279f47e4077964d339a",
       "'platform': 'linux/amd64'",
-      "'registry': 'public.ecr.aws'",
+      "'registry': 'ghcr.io'",
       "['docker', 'image', 'tag'",
       "'docker', 'image', 'inspect'",
       "source_readback[:4] != tag_readback[:4]",
@@ -1147,7 +1147,7 @@ describe("nightly regression package and source contracts", () => {
       "files != allowed",
       "publication artifact exceeds size bound",
       "CREDENTIAL_VALUE = re.compile(",
-      "EXPECTED_LEDGER_UNITS = 140",
+      'source.get("migrationCount") != count',
       "def verify_manifest(",
       "def verify_migration_summary(",
       "def verify_runtime_receipt(",
@@ -1158,7 +1158,7 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(publicationVerifierSource).toContain(token);
     }
-    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 140");
+    expect(publicationBuilderSource).toContain('len(ledger) != manifest["source"]["migrationCount"]');
     expect(localWorkflowSource.match(/verify-nightly-local-publication\.py/g)).toHaveLength(3);
     expect(localWorkflowSource.indexOf("Verify publication bundle before artifact persistence"))
       .toBeLessThan(localWorkflowSource.indexOf("Upload allowlisted publication bundle"));
@@ -1659,13 +1659,22 @@ describe('local migration v2 receipt envelope', () => {
     'const localMigrationReceiptExpectedKeys =', 'const localStackProvenanceExpectedKeys =');
   const envelope = sourceBlock(nightlyRunnerSource,
     'function assertLocalMigrationReceiptEnvelope(', 'async function assertLocalMigrationReceipt(');
-  const { validate, keys } = new Function('localProjectName', 'localReceiptSequenceMarkers',
+  const migrationLedgerUnits = readdirSync(resolve(appRoot, '../../backend/supabase/migrations'))
+    .filter((name) => /^\d{8,14}(?:_|\.)/.test(name) && name.toLowerCase().endsWith('.sql')).length;
+  const bindEnvelope = (count: number) => new Function(
+    'localProjectName',
+    'localReceiptSequenceMarkers',
+    'migrationLedgerUnitCount',
     `${keysDeclaration}\n${envelope}\nreturn { validate: assertLocalMigrationReceiptEnvelope, keys: localMigrationReceiptExpectedKeys.split(',') };`,
-  )('fixture-project', ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed']);
-  const receipt = (): Record<string, unknown> => ({
+  )('fixture-project', ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed'], () => count) as {
+    validate: (receipt: Record<string, unknown>, stack: Record<string, string>) => void;
+    keys: string[];
+  };
+  const { validate, keys } = bindEnvelope(migrationLedgerUnits);
+  const receipt = (units = migrationLedgerUnits): Record<string, unknown> => ({
     ...Object.fromEntries(keys.map((key: string) => [key, 'fixture'])),
     schema: 'local-receipt-v2', serializer: 'receipt-v1', project_name: 'fixture-project',
-    ledger: Array(140).fill(null), sequence: Array(5).fill(null), replay_proofs: {},
+    ledger: Array(units).fill(null), sequence: Array(5).fill(null), replay_proofs: {},
   });
   const stack = { config_sha256: 'fixture', input_provenance_sha256: 'fixture', env_provenance_sha256: 'fixture' };
 
@@ -1673,6 +1682,12 @@ describe('local migration v2 receipt envelope', () => {
     expect(() => validate(receipt(), stack)).not.toThrow();
     expect(nightlyRunnerSource).toContain("const localMigrationReceiptFilename = 'local-receipt-v1.json'");
     expect(nightlyRunnerSource).toContain('module._load_receipt_file(pathlib.Path(sys.argv[2]))');
+  });
+
+  test('admits one simulated added migration and rejects that length against the current directory', () => {
+    const added = migrationLedgerUnits + 1;
+    expect(() => bindEnvelope(added).validate(receipt(added), stack)).not.toThrow();
+    expect(() => validate(receipt(added), stack)).toThrow('local-receipt-v2');
   });
 
   test('rejects stale counts/schema, absent proofs, extra fields and provenance drift', () => {

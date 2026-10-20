@@ -1,5 +1,6 @@
 import hashlib
 import importlib.util
+import io
 import json
 import re
 import stat
@@ -8,6 +9,7 @@ import tempfile
 from types import SimpleNamespace
 from unittest.mock import patch
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 
 
@@ -29,7 +31,19 @@ local_migrate = _load_module()
 
 
 class LocalMigrationContractTests(unittest.TestCase):
-    def test_psql_capture_role_does_not_change_migration_actor(self) -> None:
+    def test_psql_failure_exposes_only_fixed_sqlstate_and_actor(self) -> None:
+        executor = local_migrate.PsqlExecutor("docker", "fixture-db", "postgres")
+        output = io.StringIO()
+        with patch.object(local_migrate.PsqlExecutor, "_admit_container"), \
+             patch.object(local_migrate.PsqlExecutor, "_base", return_value=["psql"]), \
+             patch.object(local_migrate.PsqlExecutor, "_docker_env", return_value={}), \
+             patch.object(local_migrate.subprocess, "run", return_value=SimpleNamespace(returncode=3, stderr=b"ERROR: 42501\nprivate-canary", stdout=b"")), \
+             redirect_stderr(output):
+            with self.assertRaisesRegex(local_migrate.LocalMigrationError, "psql_failed"):
+                executor.run(b"private-sql-canary", role="postgres")
+        self.assertEqual(output.getvalue(), 'local psql failure: {"actor": "postgres", "sqlstate": "42501"}\n')
+
+    def test_psql_roles_are_explicit_and_do_not_leak_between_commands(self) -> None:
         executor = local_migrate.PsqlExecutor("docker", "fixture-db", "postgres")
         calls = []
         def command_run(command, **kwargs):
@@ -44,9 +58,17 @@ class LocalMigrationContractTests(unittest.TestCase):
             executor.capture(b"SELECT 1;", role="postgres")
             executor.run(b"SELECT 2;")
             executor.capture(b"SELECT 3;")
+            executor.run(b"SELECT 4;", role="postgres")
+            executor.run(b"SELECT 5;")
             with self.assertRaisesRegex(local_migrate.LocalMigrationError, "psql_role_denied"):
-                executor.capture(b"SELECT 4;", role="service_role")
-        self.assertEqual(calls, [("postgres", b"SELECT 1;"), ("supabase_admin", b"SELECT 2;"), ("supabase_admin", b"SELECT 3;")])
+                executor.capture(b"SELECT 6;", role="service_role")
+            with self.assertRaisesRegex(local_migrate.LocalMigrationError, "psql_role_denied"):
+                executor.run(b"SELECT 7;", role="service_role")
+        self.assertEqual(calls, [
+            ("postgres", b"SELECT 1;"), ("supabase_admin", b"SELECT 2;"),
+            ("supabase_admin", b"SELECT 3;"), ("postgres", b"SELECT 4;"),
+            ("supabase_admin", b"SELECT 5;"),
+        ])
 
     def test_function_source_evidence_binds_both_exact_edge_functions(self) -> None:
         functions = {
@@ -90,6 +112,33 @@ class LocalMigrationContractTests(unittest.TestCase):
                     local_migrate._function_source_evidence(
                         invalid_functions, invalid_records
                     )
+
+    def test_service_registry_prerequisites_are_applied_immediately_before_it(self) -> None:
+        names = [path.name for path in local_migrate.migration_files()]
+        order = (
+            "20261001123253_app_web_vitals_aggregate.sql",
+            "20261001152740_app_web_vitals_ingest_budget.sql",
+            "20261003065735_app_web_vitals_postgres_owner.sql",
+            "20261003095444_restore_service_identity_helpers.sql",
+            "20261003065736_g014_current_service_rpc_registry.sql",
+            "20261003081915_restaurant_review_automation.sql",
+        )
+        indexes = [names.index(name) for name in order]
+        self.assertEqual(indexes, sorted(indexes))
+        self.assertEqual(indexes[4] - indexes[3], 1)
+        self.assertLess(
+            names.index("20260417_prevent_active_restaurant_identity_duplicates.sql"),
+            names.index("20260417_harden_submission_identity_duplicate_checks.sql"),
+        )
+        owner = (ROOT / "backend/supabase/migrations" / order[2]).read_text(encoding="utf-8")
+        self.assertIn(
+            "ALTER FUNCTION public.record_app_web_vitals(text, text, text, text, smallint) OWNER TO postgres;",
+            owner,
+        )
+        self.assertIn(
+            "ALTER FUNCTION public.record_app_web_vitals_bounded(text, text, text, text, smallint) OWNER TO postgres;",
+            owner,
+        )
 
     def test_manifest_is_source_bound_hash_bound_and_name_ordered(self) -> None:
         manifest = local_migrate.build_manifest()
@@ -136,6 +185,35 @@ class LocalMigrationContractTests(unittest.TestCase):
         self.assertEqual(manifest, json.loads((ROOT / local_migrate.PREREQUISITE_MANIFEST).read_text()))
         self.assertEqual(output.count(local_migrate.LOCAL_CREATOR_DEFAULT_ACL_SQL.encode()), 1)
         self.assertEqual(manifest["transformVersion"], "local-application-prerequisite-v2")
+
+    def test_prerequisite_roles_preserve_pinned_source_and_platform_acl_authority(self) -> None:
+        data = (ROOT / local_migrate.PREREQUISITE_OUTPUT).read_bytes()
+        sql = local_migrate._prerequisite_execution_sql(data)
+        acl = local_migrate.LOCAL_CREATOR_DEFAULT_ACL_SQL.encode()
+        self.assertIn(b"RESET ROLE;\n" + acl + b"SET LOCAL ROLE postgres;\n", sql)
+        self.assertEqual(sql.count(b"SET LOCAL ROLE postgres;\n"), 2)
+        self.assertEqual(
+            sql.replace(b"SET LOCAL ROLE postgres;\n", b"").replace(b"RESET ROLE;\n", b""),
+            b"BEGIN;\n" + data + b"\nCOMMIT;\n",
+        )
+        for bad in (data.replace(acl, b""), data + acl):
+            with self.assertRaisesRegex(local_migrate.LocalMigrationError, "prerequisite_manifest_mismatch"):
+                local_migrate._prerequisite_execution_sql(bad)
+
+    def test_source_adapters_match_existing_catalog_replay_hashes_and_reject_drift(self) -> None:
+        bundle = json.loads((ROOT / "backend/supabase/baselines/historical/pre-20260214-application/G026_RECONSTRUCTION_BUNDLE.v4.json").read_text())
+        bodies = local_migrate._canonical_source_replay_bodies()
+        for family in ("roleManagementReplayTransform", "replayMembershipWindows"):
+            for binding in bundle[family]["files"]:
+                path = "backend/supabase/migrations/" + binding["filename"]
+                original, transformed = bodies[path]
+                self.assertEqual(hashlib.sha256(original).hexdigest(), binding["sourceSha256"])
+                self.assertEqual(hashlib.sha256(transformed).hexdigest(), binding["transformedSha256"])
+        item = next(row for row in local_migrate.build_manifest()["source"]["files"]
+                    if row["path"] in bodies)
+        with patch.object(local_migrate, "_verified_migration_bytes", return_value=b"changed source"):
+            with self.assertRaisesRegex(local_migrate.LocalMigrationError, "migration_source_mismatch"):
+                local_migrate._execution_body(item)
 
     def test_ddl_prerequisite_is_ddl_only_and_localizes_extensions(self) -> None:
         sql = b"CREATE EXTENSION IF NOT EXISTS vector;\nCREATE TABLE sample(id integer);\n"

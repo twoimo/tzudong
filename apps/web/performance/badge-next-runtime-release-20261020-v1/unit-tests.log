@@ -1,0 +1,23 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/badge-ui-lifecycle.test.ts:
+(pass) badge UI lifecycle > keeps a 120px CSS canvas while sizing the DPR2 drawing buffer [0.22ms]
+(pass) badge UI lifecycle > renders reduced motion once without scheduling RAF [0.07ms]
+(pass) badge UI lifecycle > runs one animated RAF chain and cancels its pending frame [0.06ms]
+(pass) badge UI lifecycle > allows one real context-loss recreation, then falls back [0.07ms]
+(pass) badge UI lifecycle > removes the loss listener before disposal and intentional context loss [0.10ms]
+(pass) badge UI lifecycle > consumes Escape and restores focus to the captured opener [0.09ms]
+
+tests-unit/badge-device-capability.test.ts:
+(pass) optional badge viewer capability policy > does not let an OS-derived model override unknown mobile hardware [0.12ms]
+(pass) optional badge viewer capability policy > uses a static preview for desktop-UA iPads and unknown Android memory [0.01ms]
+(pass) optional badge viewer capability policy > reuses existing hardware tiers, rejecting invalid or mid/low mobile memory [0.04ms]
+(pass) optional badge viewer capability policy > preserves normal desktop opt-in and handles SSR without navigator
+
+tests-unit/evidence-badge-viewer-session.test.ts:
+(pass) badge viewer session > releases on close, recovers one renderer after context loss, and falls back on low power [0.11ms]
+
+ 11 pass
+ 0 fail
+ 59 expect() calls
+Ran 11 tests across 3 files. [220.00ms]

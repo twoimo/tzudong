@@ -255,20 +255,22 @@ def _normalize_identity_arguments(value: str) -> str:
 
 def _identity_arguments(args: str) -> str:
     """Derive PostgreSQL identity argument types without accepting defaults."""
-    known_first = {
-        "bigint", "bigserial", "bit", "boolean", "bool", "box", "bytea", "char", "character",
-        "cidr", "date", "decimal", "double", "float", "inet", "integer", "interval", "json",
-        "jsonb", "line", "lseg", "macaddr", "money", "numeric", "path", "pg_lsn", "point",
-        "real", "serial", "smallint", "text", "time", "timestamp", "timetz", "tsquery",
-        "tsvector", "uuid", "varbit", "varchar", "void", "xml", "vector",
-    }
     types: list[str] = []
     for argument in _split_top_level(args):
         item = _strip_default(argument)
         item = re.sub(r"^(?:INOUT|IN|OUT|VARIADIC)\s+", "", item, flags=re.I)
-        words = item.split(None, 1)
-        if len(words) > 1 and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_$]*", words[0]) and "." not in words[0] and words[0].lower() not in known_first:
-            item = words[1]
+        # A parameter may be named after a type (for example `path text`).
+        # Preserve actual multiword types, rather than treating every leading
+        # built-in type name as an unnamed argument.
+        multiword = re.match(
+            r"^(?:double\s+precision|(?:national\s+)?(?:character|char|bit)\s+varying|"
+            r"national\s+(?:character|char)|(?:time|timestamp)(?:\([^)]*\))?\s+(?:with|without)\s+time\s+zone|"
+            r"interval(?:\([^)]*\))?\s+(?:year|month|day|hour|minute|second))\b",
+            item, flags=re.I,
+        )
+        named = re.match(r'^(?:"(?:[^"]|"")*"|[A-Za-z_][A-Za-z0-9_$]*)\s+(.+)$', item)
+        if named and not multiword:
+            item = named.group(1)
         item = re.sub(r"\s+", " ", item).strip()
         if not item:
             raise RuntimeScanError("function_arguments_unresolved")
@@ -1790,6 +1792,42 @@ EXPECTED_CANDIDATE_SQLSTATES: dict[tuple[str, str, str], tuple[str, ...]] = {
 }
 
 
+# NULL probes must reach these exact, source-defined denial guards. A
+# different exception, including another P0001, remains a failed smoke.
+EXPECTED_CANDIDATE_GUARDS = {
+    ('pipeline_control', 'admin_record_assert_operator', 'uuid'): ('42501', 'RECORD_ACTION_FORBIDDEN'),
+    ('pipeline_control', 'admin_record_compose', 'jsonb,jsonb'): ('P0001', 'RECORD_ACTION_INVALID_PAYLOAD'),
+    ('pipeline_control', 'admin_record_create', 'jsonb,uuid'): ('P0001', 'RECORD_ACTION_INVALID_PAYLOAD'),
+    ('pipeline_control', 'admin_record_object_fence', ''): ('0A000', 'trigger functions can only be called as triggers'),
+    ('pipeline_control', 'admin_record_patch', 'uuid,jsonb,uuid,boolean'): ('P0001', 'RECORD_ACTION_STATE_CONFLICT'),
+    ('pipeline_control', 'admin_record_reference_fence', ''): ('0A000', 'trigger functions can only be called as triggers'),
+    ('pipeline_control', 'admin_record_validate_restaurant', 'jsonb,uuid[]'): ('P0001', 'RECORD_ACTION_INVALID_RESTAURANT'),
+    ('pipeline_control', 'assert_restaurant_review_operator', 'uuid'): ('42501', 'REVIEW_AUTOMATION_OPERATOR_INVALID'),
+    ('pipeline_control', 'clear_admin_eval_read_index', ''): ('0A000', 'trigger functions can only be called as triggers'),
+    ('pipeline_control', 'restaurant_review_manual_preview', 'uuid,text'): ('42501', 'REVIEW_AUTOMATION_OPERATOR_INVALID'),
+    ('pipeline_control', 'update_admin_eval_read_index', ''): ('0A000', 'trigger functions can only be called as triggers'),
+    ('public', 'admin_evaluation_page', 'jsonb,integer,uuid,text'): ('P0001', 'EVALUATION_QUERY_INVALID'),
+    ('public', 'admin_evaluation_raw_warning_groups', 'uuid[],text,jsonb,integer'): ('P0001', 'EVALUATION_QUERY_INVALID'),
+    ('public', 'admin_evaluation_warning_groups', 'uuid[],text'): ('P0001', 'EVALUATION_QUERY_INVALID'),
+    ('public', 'admin_record_action', 'uuid,text,uuid,text,uuid[],jsonb,text'): ('42501', 'RECORD_ACTION_FORBIDDEN'),
+    ('public', 'restaurant_review_automation_configure', 'uuid,text,text,text,integer,integer'): ('42501', 'REVIEW_AUTOMATION_OPERATOR_INVALID'),
+    ('public', 'restaurant_review_automation_manual', 'uuid,text,text,text,uuid'): ('42501', 'REVIEW_AUTOMATION_OPERATOR_INVALID'),
+    ('public', 'restaurant_review_automation_preview', 'uuid,integer,integer'): ('42501', 'REVIEW_AUTOMATION_OPERATOR_INVALID'),
+    ('public', 'restaurant_review_automation_tick', 'uuid'): ('P0001', 'REVIEW_AUTOMATION_REQUEST_INVALID'),
+    ('public', 'restaurant_review_automation_worker', 'text,uuid,uuid,jsonb'): ('P0001', 'REVIEW_AUTOMATION_LEASE_INVALID'),
+    ('storyboard_control', 'assert_owner', 'uuid'): ('P0001', 'owner_forbidden'),
+}
+
+# PG15 can verify closure and the missing-capability guard, but cannot
+# attest the Unicode behavior of this PG18 built-in. Keep the hold explicit.
+UNICODE_ASSIGNED_PG15_HOLDS = {
+    ('pipeline_control', 'admin_warning_info', 'jsonb'),
+    ('pipeline_control', 'admin_warning_key', 'text,boolean'),
+    ('pipeline_control', 'admin_warning_names_compatible', 'text,text'),
+    ('pipeline_control', 'admin_warning_nfkc', 'text'),
+    ('pipeline_control', 'admin_warning_tokens', 'text'),
+}
+
 def _smoke_candidate_blocks(candidates: Sequence[dict[str, Any]]) -> str:
     blocks: list[str] = []
     for candidate in candidates:
@@ -1828,7 +1866,27 @@ def _smoke_candidate_blocks(candidates: Sequence[dict[str, Any]]) -> str:
             (schema_name, proname_name, identity_arguments),
             (),
         )
-        if expected_states:
+        key = (schema_name, proname_name, identity_arguments)
+        guard = EXPECTED_CANDIDATE_GUARDS.get(key)
+        if guard is not None or key in UNICODE_ASSIGNED_PG15_HOLDS:
+            if guard is not None:
+                condition = f"SQLSTATE = {_sql_literal(guard[0])} AND SQLERRM = {_sql_literal(guard[1])}"
+                outcome = "expected_guard_sqlstate_" + guard[0]
+            else:
+                condition = (
+                    "SQLSTATE = '42883' AND SQLERRM = 'function unicode_assigned(text) does not exist' "
+                    "AND current_setting('server_version_num')::integer / 10000 = 15 "
+                    "AND pg_catalog.to_regprocedure('pg_catalog.unicode_assigned(text)') IS NULL"
+                )
+                outcome = "capability_hold_unicode_assigned_pg15"
+            exception_body = (
+                f"    IF {condition} THEN\n"
+                f"      INSERT INTO _local_rpc_smoke VALUES ({_sql_literal(signature)}, 'closure_candidate', 'passed', {_sql_literal(outcome)});\n"
+                "    ELSE\n"
+                f"      INSERT INTO _local_rpc_smoke VALUES ({_sql_literal(signature)}, 'closure_candidate', 'failed', 'sqlstate_' || SQLSTATE);\n"
+                "    END IF;\n"
+            )
+        elif expected_states:
             expected_state_sql = ", ".join(_sql_literal(state) for state in expected_states)
             exception_body = (
                 f"    IF SQLSTATE IN ({expected_state_sql}) THEN\n"

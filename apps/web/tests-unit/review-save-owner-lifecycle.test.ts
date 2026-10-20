@@ -11,20 +11,24 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
     const source = readFileSync(join(import.meta.dir, '../components/reviews/ReviewModal.tsx'), 'utf8');
     const tree = ts.createSourceFile('ReviewModal.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     let wrapper = '';
+    let reviseInputs = '';
     const lifecycle: string[] = [];
     function visit(node: ts.Node) {
         if (ts.isFunctionDeclaration(node) && node.name?.text === 'ReviewModal') wrapper = node.getText(tree);
+        if (ts.isVariableDeclaration(node) && node.name.getText(tree) === 'reviseLatestSaveInputs') reviseInputs = node.initializer!.getText(tree);
         if (ts.isCallExpression(node) && node.expression.getText(tree) === 'useLayoutEffect'
             && /saveOwnerRef|saveOperationRef/.test(node.getText(tree))) lifecycle.push(node.getText(tree));
         ts.forEachChild(node, visit);
     }
     visit(tree);
     expect(wrapper).toContain('key={user?.id'); expect(lifecycle.length).toBe(2);
+    expect(reviseInputs).toContain('saveInputRevisionRef');
     const script = `
-        import React, { useState, useRef, useLayoutEffect } from 'react';
+        import React, { useState, useRef, useLayoutEffect, useCallback } from 'react';
         import { createRoot } from 'react-dom/client';
         import { flushSync } from 'react-dom';
         import { ReviewSaveOperation } from './lib/reviews/review-save-operation';
+        import { createLatestSelection } from './lib/ocr/latest-selection';
         import { FEATURE_DATABASE_HELD, FEATURE_DATABASE_READY } from '@/lib/runtime-feature-readiness-contract';
         let owner = 'owner-a', nextInstance = 0, nextId = 0;
         let featureReadiness = FEATURE_DATABASE_READY;
@@ -73,11 +77,15 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
             const [foodPhotos] = useState(() => [new File(['food'], 'food.jpg')]);
             const reviewTargetRestaurant = { id: 'fixture-restaurant' };
             const ocrResultRef = null, ocrResultRevision = null;
+            const verificationInputMode = 'manual', isAnalyzing = false;
             const draftScopeRef = useRef({ ownerId: user?.id, restaurantId: reviewTargetRestaurant.id, revision: null });
             const saveOwnerRef = useRef(user?.id), saveOperationRef = useRef(null);
+            const verificationSelectionRef = useRef(createLatestSelection()), receiptOcrPreparationRef = useRef(createLatestSelection());
             const composerOpenRef = useRef(isOpen), closeRequestedRef = useRef(false), consumerNotifiedRef = useRef(false);
             const ocrRunGenerationRef = useRef(0), ocrAbortControllerRef = useRef(null), ocrRecoveryContextRef = useRef(null);
             const latestSaveInputsRef = useRef({ visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: reviewTargetRestaurant.id, ocrResultRef, ocrResultRevision });
+            const saveInputRevisionRef = useRef(0);
+            const reviseLatestSaveInputs = ${reviseInputs};
             ${lifecycle.join(';\n')};
             const submit = async () => {
                 if ((await fetchFeatureDatabaseReadiness()).status !== 'ready') {

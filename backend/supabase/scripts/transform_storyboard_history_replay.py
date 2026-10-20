@@ -15,13 +15,17 @@ BUNDLE_SHA256 = '15c849887cf3cd9641181545146bbf1226b3c0a2dc45f84d892022dd9041f5a
 
 
 def transform(source: bytes, bundle: bytes) -> bytes:
-    if hashlib.sha256(source).hexdigest() not in SOURCES:
-        raise ValueError('storyboard_history_source_drift')
     if hashlib.sha256(bundle).hexdigest() != BUNDLE_SHA256:
         raise ValueError('storyboard_history_bundle_drift')
+    return transform_window(source, json.loads(bundle)['replayMembershipWindows'])
+
+
+def transform_window(source: bytes, window: dict) -> bytes:
+    """Use a window already validated by the canonical G026 verifier."""
+    if hashlib.sha256(source).hexdigest() not in SOURCES:
+        raise ValueError('storyboard_history_source_drift')
     if source.count(b'BEGIN;\n') != 1 or source.count(b'COMMIT;\n') != 1:
         raise ValueError('storyboard_history_transaction_drift')
-    window = json.loads(bundle)['replayMembershipWindows']
     admission = ('\n'.join([window['precondition'], window['grantStatement']])+'\n').encode()
     cleanup = ('\n'.join([window['revokeStatement'], window['postcondition']])+'\n').encode()
     result = source.replace(b'BEGIN;\n', b'BEGIN;\n'+admission, 1).replace(b'COMMIT;\n', cleanup+b'COMMIT;\n', 1)

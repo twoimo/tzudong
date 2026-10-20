@@ -130,7 +130,7 @@ SELECT
   fixture.title,
   '프로필 경계 리더보드 로컬 트랜잭션 검증 내용입니다.',
   '2026-01-01T00:00:00Z'::timestamptz,
-  'local-only-profile-boundary.jpg',
+  fixture.user_id::text || '/reviews/' || fixture.id::text || '/verification/local-only-profile-boundary.jpg',
   fixture.is_verified,
   fixture.created_at,
   fixture.created_at,

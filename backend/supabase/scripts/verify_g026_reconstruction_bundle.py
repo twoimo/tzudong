@@ -1237,6 +1237,7 @@ ROLE_MANAGEMENT_BINDING = {
 
 
 def require_role_management_replay_transform(transform):
+    outputs = {}
     if transform != ROLE_MANAGEMENT_BINDING:
         raise ValueError('role-management transform binding drifted')
     for binding in transform['files']:
@@ -1387,8 +1388,11 @@ def require_role_management_replay_transform(transform):
             raise ValueError('role-management privilege drifted')
         if hashlib.sha256(transformed).hexdigest() != binding['transformedSha256']:
             raise ValueError('role-management transformed hash drifted')
+        outputs[binding['filename']] = transformed
+    return outputs
 
 def require_replay_membership_windows(window):
+    outputs = {}
     expected_names = (
         '20260713002100_g014_privacy_workflows.sql',
         '20260713002200_g014_marketing_state_machine.sql',
@@ -1520,6 +1524,8 @@ def require_replay_membership_windows(window):
             if (tuple(encoded.count(statement) for statement in catalog_statements) != expected_counts
                     or positions != sorted(positions)):
                 raise ValueError('catalog assertion privilege ordering drifted')
+        outputs[item['filename']] = encoded
+    return outputs
 
 
 def require_self_contained_replay(binding):
