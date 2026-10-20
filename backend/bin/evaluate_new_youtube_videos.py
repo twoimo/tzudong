@@ -8,10 +8,12 @@ scripts for those videos. Does not write to hosted Supabase.
 from __future__ import annotations
 
 import argparse
+from contextvars import ContextVar
 import hashlib
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -20,7 +22,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "backend" / "supabase" / "scripts"))
 sys.path.insert(0, str(REPO_ROOT / "backend"))
 
-from utils.stage_cache import certified, fingerprint, reusable  # noqa: E402
+from utils.stage_cache import atomic_write, certified, fingerprint, reusable, stage_lock  # noqa: E402
 
 from hosted_data_plane import (  # noqa: E402
     HostedDataPlaneError,
@@ -43,6 +45,9 @@ SCRIPTS = {
 }
 
 
+_BATCH_LOCK_FD: ContextVar[int | None] = ContextVar("new_video_batch_lock_fd", default=None)
+
+
 class _BatchFailure(Exception):
     def __init__(self, reason: str):
         self.reason = reason
@@ -50,10 +55,23 @@ class _BatchFailure(Exception):
 
 
 def _run(argv: list[str], env: dict[str, str], *, required: bool = True) -> int:
-    completed = subprocess.run(argv, cwd=REPO_ROOT, env=env, check=False)
-    if required and completed.returncode != 0:
-        raise SystemExit(completed.returncode)
-    return completed.returncode
+    lock_fd = _BATCH_LOCK_FD.get()
+    # A surviving stage must retain ownership if its evaluator is killed.
+    inherited = {"pass_fds": (lock_fd,)} if os.name != "nt" and lock_fd is not None else {}
+    with subprocess.Popen(argv, cwd=REPO_ROOT, env=env, **inherited) as child:
+        try:
+            returncode = child.wait()
+        except BaseException:
+            try:
+                child.kill()
+            except ProcessLookupError:
+                pass
+            finally:
+                child.wait()
+            raise
+    if required and returncode != 0:
+        raise SystemExit(returncode)
+    return returncode
 
 
 def _load_urls(path: Path) -> list[str]:
@@ -70,6 +88,13 @@ def _load_urls(path: Path) -> list[str]:
 def _write_urls(path: Path, urls: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(urls) + ("\n" if urls else ""), encoding="utf-8")
+
+
+def _restore_urls(path: Path, snapshot: bytes | None) -> None:
+    if snapshot is None:
+        path.unlink(missing_ok=True)
+    else:
+        atomic_write(path, snapshot)
 
 
 def _is_short_video(crawling: Path, video_id: str) -> bool:
@@ -308,6 +333,20 @@ def main(argv: list[str] | None = None) -> int:
         print("error=limit_invalid")
         return 2
 
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", args.channel):
+        print("error=channel_invalid")
+        return 2
+    crawling = REPO_ROOT / "backend/restaurant-crawling/data" / args.channel
+    # Hold the selection through every consumer and the final URL restoration.
+    with stage_lock(crawling / ".new-video-batch.json", release_on_close=True) as descriptor:
+        token = _BATCH_LOCK_FD.set(descriptor)
+        try:
+            return _evaluate(args)
+        finally:
+            _BATCH_LOCK_FD.reset(token)
+
+
+def _evaluate(args: argparse.Namespace) -> int:
     url = os.environ.get("SUPABASE_URL", "").strip()
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     try:
@@ -327,13 +366,21 @@ def main(argv: list[str] | None = None) -> int:
     urls_path = crawling / "urls.txt"
     transformed = _transformed_names(evaluation)
     local_done = _locally_evaluated_ids(evaluation, crawling, transformed or {}, args.channel)
+    before_bytes = urls_path.read_bytes() if urls_path.is_file() else None
     before = _load_urls(urls_path)
-    collect_exit = _run(
-        [python, str(SCRIPTS["collect_urls"]), "--channel", args.channel, "--latest-first"],
-        env,
-        required=False,
-    )
+    try:
+        collect_exit = _run(
+            [python, str(SCRIPTS["collect_urls"]), "--channel", args.channel, "--latest-first"],
+            env,
+            required=False,
+        )
+    except OSError:
+        collect_exit = 2
+    except BaseException:
+        _restore_urls(urls_path, before_bytes)
+        raise
     if collect_exit != 0:
+        _restore_urls(urls_path, before_bytes)
         print("collect=failed")
         print("completedVideoCount=0")
         print("excludedVideoCount=0")
@@ -370,7 +417,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"newVideoIds={[extract_youtube_video_id(item) for item in new_urls]}")
     print(f"partialRecoveryVideoCount={partial_selected}")
     if args.dry_run or not new_urls:
-        _write_urls(urls_path, before)
+        _restore_urls(urls_path, before_bytes)
         print("completedVideoCount=0")
         print("excludedVideoCount=0")
         print("failedVideoCount=0")

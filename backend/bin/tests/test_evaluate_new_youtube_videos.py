@@ -9,7 +9,7 @@ import json
 import unittest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from backend.utils.stage_cache import complete, fingerprint
 
@@ -78,6 +78,13 @@ def hosted_dry_run(root: Path, video_id: str) -> str:
 
 
 class EvaluateNewYoutubeVideosTests(unittest.TestCase):
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root_patch = patch.object(module, "REPO_ROOT", Path(temporary.name))
+        root_patch.start()
+        self.addCleanup(root_patch.stop)
+
     def test_shared_runner_failure_prevents_both_preview_and_apply(self) -> None:
         import contextlib
         import io
@@ -543,7 +550,10 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
         newest = "https://www.youtube.com/watch?v=nnnnnnnnnnn"
         old_failed = "https://www.youtube.com/watch?v=ooooooooooo"
         collected_calls: list[list[str]] = []
-        restored: list[list[str]] = []
+        urls = module.REPO_ROOT / "backend/restaurant-crawling/data/tzuyang/urls.txt"
+        urls.parent.mkdir(parents=True)
+        original = (old_failed + "\n").encode()
+        urls.write_bytes(original)
 
         def fake_run(argv: list[str], _env: dict[str, str], *, required: bool = True) -> int:
             collected_calls.append(argv)
@@ -556,17 +566,95 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
             ), patch.object(
                 module, "_load_urls", side_effect=[[old_failed], [newest, old_failed]]
             ), patch.object(
-                module, "_write_urls", side_effect=lambda _path, urls: restored.append(urls)
-            ), patch.object(
                 module, "_locally_evaluated_ids", return_value=local_done
             ), patch.object(module, "_run", side_effect=fake_run), contextlib.redirect_stdout(output):
                 self.assertEqual(module.main(["--limit", "1", "--dry-run"]), 0)
+            self.assertEqual(urls.read_bytes(), original)
             return output.getvalue()
 
         self.assertIn("newVideoIds=['nnnnnnnnnnn']", dry_run(set()))
         self.assertIn("newVideoIds=['ooooooooooo']", dry_run({"nnnnnnnnnnn"}))
         self.assertTrue(all("--latest-first" in call for call in collected_calls))
-        self.assertEqual(restored, [[old_failed], [old_failed]])
+
+    def test_invalid_channel_cannot_create_paths_or_read_hosted(self) -> None:
+        with patch.object(module, "stage_lock") as lock, patch.object(
+            module, "fetch_hosted_restaurant_snapshot"
+        ) as fetch, contextlib.redirect_stdout(io.StringIO()):
+            for channel in ("../escape", "/tmp/escape", "a/b", "a\\b", "", "a" * 65):
+                with self.subTest(channel=channel):
+                    self.assertEqual(module.main(["--channel", channel]), 2)
+            lock.assert_not_called()
+            fetch.assert_not_called()
+            self.assertEqual(list(module.REPO_ROOT.iterdir()), [])
+
+    def test_collection_failure_restores_urls_before_releasing_batch(self) -> None:
+        urls = module.REPO_ROOT / "backend/restaurant-crawling/data/tzuyang/urls.txt"
+        urls.parent.mkdir(parents=True)
+        prior = "https://www.youtube.com/watch?v=aaaaaaaaaaa\n"
+        urls.write_text(prior, encoding="utf-8")
+        def failed_collect(_argv, _env, *, required=True):
+            urls.write_text("https://www.youtube.com/watch?v=bbbbbbbbbbb\n", encoding="utf-8")
+            return 7
+        with patch.object(module, "assert_hosted_target"), patch.object(
+            module, "fetch_hosted_restaurant_snapshot", return_value=([], [])
+        ), patch.object(module, "_run", side_effect=failed_collect) as run, \
+            contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(module.main([]), 7)
+            self.assertEqual(urls.read_text(encoding="utf-8"), prior)
+            self.assertEqual(run.call_count, 1)
+
+    def test_failed_or_dry_collection_preserves_exact_bytes_or_absence(self) -> None:
+        urls = module.REPO_ROOT / "backend/restaurant-crawling/data/tzuyang/urls.txt"
+        urls.parent.mkdir(parents=True)
+        for prior in (None, b"  https://www.youtube.com/watch?v=aaaaaaaaaaa  \r\n\r\n"):
+            for dry in (False, True):
+                with self.subTest(prior_exists=prior is not None, dry=dry):
+                    urls.unlink(missing_ok=True)
+                    if prior is not None:
+                        urls.write_bytes(prior)
+                    def collect(_argv, _env, *, required=True):
+                        urls.write_text("https://www.youtube.com/watch?v=bbbbbbbbbbb\n", encoding="utf-8")
+                        return 0 if dry else 7
+                    with patch.object(module, "assert_hosted_target"), patch.object(
+                        module, "fetch_hosted_restaurant_snapshot", return_value=([], [])
+                    ), patch.object(module, "_run", side_effect=collect), \
+                        contextlib.redirect_stdout(io.StringIO()):
+                        self.assertEqual(module.main(["--dry-run"] if dry else []), 0 if dry else 7)
+                    if prior is None:
+                        self.assertFalse(urls.exists())
+                    else:
+                        self.assertEqual(urls.read_bytes(), prior)
+
+    def test_collection_interrupt_restores_prior_urls_and_preserves_exit(self) -> None:
+        urls = module.REPO_ROOT / "backend/restaurant-crawling/data/tzuyang/urls.txt"
+        urls.parent.mkdir(parents=True)
+        prior = "https://www.youtube.com/watch?v=aaaaaaaaaaa\n"
+        for interrupted in (KeyboardInterrupt(), SystemExit(9)):
+            with self.subTest(exception=type(interrupted).__name__):
+                urls.write_text(prior, encoding="utf-8")
+                def collect(_argv, _env, *, required=True):
+                    urls.write_text("https://www.youtube.com/watch?v=bbbbbbbbbbb\n", encoding="utf-8")
+                    raise interrupted
+                with patch.object(module, "assert_hosted_target"), patch.object(
+                    module, "fetch_hosted_restaurant_snapshot", return_value=([], [])
+                ), patch.object(module, "_run", side_effect=collect), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                    with self.assertRaises(type(interrupted)) as caught:
+                        module.main([])
+                    self.assertIs(caught.exception, interrupted)
+                    self.assertEqual(urls.read_text(encoding="utf-8"), prior)
+
+    def test_interrupted_child_exit_race_keeps_original_exception(self) -> None:
+        child = Mock()
+        child.wait.side_effect = [KeyboardInterrupt(), 0]
+        child.kill.side_effect = ProcessLookupError()
+        process = Mock()
+        process.__enter__ = Mock(return_value=child)
+        process.__exit__ = Mock(return_value=False)
+        with patch.object(module.subprocess, "Popen", return_value=process):
+            with self.assertRaises(KeyboardInterrupt):
+                module._run(["unused-synthetic-child"], {})
+        self.assertEqual(child.wait.call_count, 2)
 
     def test_rejects_invalid_limit(self) -> None:
         self.assertEqual(module.main(["--limit", "0"]), 2)
