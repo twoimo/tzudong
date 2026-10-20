@@ -1,0 +1,1145 @@
+{
+  "config": {
+    "argv": [
+      "/opt/homebrew/Cellar/node@24/24.22.0/bin/node",
+      "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/node_modules/@playwright/test/cli.js",
+      "test",
+      "tests/privacy-safeguards.spec.ts",
+      "--grep",
+      "device location controls",
+      "--project=chromium",
+      "--workers=1",
+      "--retries=0",
+      "--reporter=json"
+    ],
+    "configFile": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/playwright.config.ts",
+    "rootDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "admin-setup",
+        "name": "admin-setup",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/tests[\\\\/]setup[\\\\/]admin\\.setup\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [
+          "/responsive-overflow\\.spec\\.ts/",
+          "/tests[\\\\/]setup[\\\\/]admin\\.setup\\.ts/",
+          "/naver-live-marker\\.spec\\.ts$/"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [
+          "/responsive-overflow\\.spec\\.ts/",
+          "/tests[\\\\/]setup[\\\\/]admin\\.setup\\.ts/",
+          "/naver-live-marker\\.spec\\.ts$/"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [
+          "/responsive-overflow\\.spec\\.ts/",
+          "/tests[\\\\/]setup[\\\\/]admin\\.setup\\.ts/",
+          "/naver-live-marker\\.spec\\.ts$/"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPhone SE",
+        "name": "iPhone SE",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPhone SE Landscape",
+        "name": "iPhone SE Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPhone XR",
+        "name": "iPhone XR",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPhone XR Landscape",
+        "name": "iPhone XR Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPhone 12 Pro",
+        "name": "iPhone 12 Pro",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPhone 12 Pro Landscape",
+        "name": "iPhone 12 Pro Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPhone 14 Pro Max",
+        "name": "iPhone 14 Pro Max",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPhone 14 Pro Max Landscape",
+        "name": "iPhone 14 Pro Max Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Pixel 7",
+        "name": "Pixel 7",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Pixel 7 Landscape",
+        "name": "Pixel 7 Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Samsung Galaxy S8+",
+        "name": "Samsung Galaxy S8+",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Samsung Galaxy S8+ Landscape",
+        "name": "Samsung Galaxy S8+ Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Samsung Galaxy S20 Ultra",
+        "name": "Samsung Galaxy S20 Ultra",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Samsung Galaxy S20 Ultra Landscape",
+        "name": "Samsung Galaxy S20 Ultra Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPad Mini",
+        "name": "iPad Mini",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPad Mini Landscape",
+        "name": "iPad Mini Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPad Air",
+        "name": "iPad Air",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPad Air Landscape",
+        "name": "iPad Air Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPad Pro",
+        "name": "iPad Pro",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPad Pro Landscape",
+        "name": "iPad Pro Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Surface Pro 7",
+        "name": "Surface Pro 7",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Surface Pro 7 Landscape",
+        "name": "Surface Pro 7 Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Surface Duo",
+        "name": "Surface Duo",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Surface Duo Landscape",
+        "name": "Surface Duo Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Galaxy Z Fold 5",
+        "name": "Galaxy Z Fold 5",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Galaxy Z Fold 5 Landscape",
+        "name": "Galaxy Z Fold 5 Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Asus Zenbook Fold",
+        "name": "Asus Zenbook Fold",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Asus Zenbook Fold Landscape",
+        "name": "Asus Zenbook Fold Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Samsung Galaxy A51/71",
+        "name": "Samsung Galaxy A51/71",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Samsung Galaxy A51/71 Landscape",
+        "name": "Samsung Galaxy A51/71 Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Nest Hub",
+        "name": "Nest Hub",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Nest Hub Landscape",
+        "name": "Nest Hub Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Nest Hub Max",
+        "name": "Nest Hub Max",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "Nest Hub Max Landscape",
+        "name": "Nest Hub Max Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPhone X",
+        "name": "iPhone X",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "e2eAdminRouteBypassToken": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+          "actualWorkers": 1
+        },
+        "id": "iPhone X Landscape",
+        "name": "iPhone X Landscape",
+        "testDir": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/responsive-overflow\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": {
+      "command": "bun run dev:playwright",
+      "url": "http://127.0.0.1:18925",
+      "timeout": 180000,
+      "reuseExistingServer": true,
+      "env": {
+        "PATH": "/opt/homebrew/opt/node@24/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/opt/homebrew/bin:/Applications/ChatGPT.app/Contents/Resources/codex-cli/codex-path:/Users/twoimo/.codex/tmp/arg0-macos/codex-arg0ZCq649:/Users/twoimo/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Users/twoimo/.grok/bin:/Users/twoimo/.cap/bin:/Users/twoimo/.cargo/bin:/Users/twoimo/.local/bin:/Users/twoimo/.bun/bin:/opt/homebrew/sbin:/Users/twoimo/.docker/bin:/Users/twoimo/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:/Applications/ChatGPT.app/Contents/Resources:/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS:/Users/twoimo/.docker/bin",
+        "HOME": "/Users/twoimo",
+        "TMPDIR": "/var/folders/8d/nwv_19w124zbq0dxqx2r1jn40000gn/T/",
+        "NODE_ENV": "test",
+        "NIGHTLY_MODE": "local",
+        "NIGHTLY_LOCAL_ENV_ONLY": "1",
+        "NIGHTLY_ENV_FILE_ONLY": "1",
+        "NIGHTLY_ENV_PROVENANCE": "a1a6af5b4ed0b2832145431ff93657c0234ba40fbfe1ad09c73c29f8ef28dc5f",
+        "NIGHTLY_ENV_PROVENANCE_SHA256": "a1a6af5b4ed0b2832145431ff93657c0234ba40fbfe1ad09c73c29f8ef28dc5f",
+        "NIGHTLY_ENV_FILE": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/backend/supabase/volumes/.local-stack/tzudong-local-f175dbd00300/stack.env",
+        "NEXT_PUBLIC_SUPABASE_URL": "http://127.0.0.1:28000",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiZXhwIjo0MTAyNDQ0ODAwfQ.knt273Y8XYuKzaBjhnOxB-Mmk1pCTRyxMKxFQxEJGlQ",
+        "NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME": "1",
+        "NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL": "/__local/naver-maps.js",
+        "SUPABASE_URL": "http://127.0.0.1:28000",
+        "NIGHTLY_ADMIN_EMAIL": "nightly-ci@local.invalid",
+        "NIGHTLY_ADMIN_PASSWORD": "QF4a21wMGldojB6PTzLDAW0F7D8zWP3f",
+        "SUPABASE_PUBLIC_URL": "http://127.0.0.1:28000",
+        "API_EXTERNAL_URL": "http://127.0.0.1:28000",
+        "PLAYWRIGHT_BASE_URL": "http://127.0.0.1:18925",
+        "PLAYWRIGHT_WEB_SERVER_URL": "http://127.0.0.1:18925",
+        "PLAYWRIGHT_REUSE_EXISTING_SERVER": "1",
+        "E2E_ADMIN_ROUTE_BYPASS": "1",
+        "E2E_ADMIN_ROUTE_BYPASS_CONTEXT": "playwright",
+        "E2E_ADMIN_ROUTE_BYPASS_RUNTIME": "local-dev-server",
+        "E2E_ADMIN_ROUTE_BYPASS_TOKEN": "playwright-a61d7980-ea81-4b90-bee2-7d5d4504f849",
+        "TS7_RELEASE_ID": "playwright-32ab823b-82f0-4dfa-91b5-e45be98094b6",
+        "VERCEL_GIT_COMMIT_SHA": "0000000000000000000000000000000000000000",
+        "VERCEL_DEPLOYMENT_ID": "playwright-local-deployment",
+        "VERCEL_PROJECT_ID": "playwright-local-project"
+      }
+    }
+  },
+  "suites": [
+    {
+      "title": "privacy-safeguards.spec.ts",
+      "file": "privacy-safeguards.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "G010 privacy safeguards",
+          "file": "privacy-safeguards.spec.ts",
+          "line": 5,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "device location controls",
+              "file": "privacy-safeguards.spec.ts",
+              "line": 34,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "shows inline disclosure and locates with one click and no app dialog",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "failed",
+                          "duration": 5677,
+                          "error": {
+                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('10m', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('10m', { exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('10m', { exact: true })\u001b[22m\n",
+                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('10m', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('10m', { exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('10m', { exact: true })\u001b[22m\n\n    at /Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts:48:60",
+                            "location": {
+                              "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                              "column": 60,
+                              "line": 48
+                            },
+                            "snippet": "  46 |       await button.click();\n  47 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();\n> 48 |       await expect(page.getByText('10m', { exact: true })).toBeVisible();\n     |                                                            ^\n  49 |       expect(dialogs).toBe(0);\n  50 |       expect(fixture.readinessCalls()).toBe(1);\n  51 |       expect((await readDeviceLocationCounts(page)).getCalls).toBe(1);"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                                "column": 60,
+                                "line": 48
+                              },
+                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('10m', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('10m', { exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('10m', { exact: true })\u001b[22m\n\n\n  46 |       await button.click();\n  47 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();\n> 48 |       await expect(page.getByText('10m', { exact: true })).toBeVisible();\n     |                                                            ^\n  49 |       expect(dialogs).toBe(0);\n  50 |       expect(fixture.readinessCalls()).toBe(1);\n  51 |       expect((await readDeviceLocationCounts(page)).getCalls).toBe(1);\n    at /Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts:48:60"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:31.106Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results/privacy-safeguards-G010-pr-21c33-one-click-and-no-app-dialog-chromium/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                            "column": 60,
+                            "line": 48
+                          }
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-c2dc83efba1a654f740f",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 35,
+                  "column": 5
+                },
+                {
+                  "title": "denies readiness without calling permission APIs",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 559,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:37.099Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-777a369bd482a2241b6e",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 54,
+                  "column": 5
+                },
+                {
+                  "title": "locks duplicate clicks during readiness and ignores a cancelled readiness response",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 641,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:37.757Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-05c2ec784476a13bb55b",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 69,
+                  "column": 5
+                },
+                {
+                  "title": "late error after visibility cancellation cannot cancel a newer request",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "failed",
+                          "duration": 5801,
+                          "error": {
+                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('10m', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('10m', { exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('10m', { exact: true })\u001b[22m\n",
+                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('10m', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('10m', { exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('10m', { exact: true })\u001b[22m\n\n    at /Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts:114:60",
+                            "location": {
+                              "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                              "column": 60,
+                              "line": 114
+                            },
+                            "snippet": "  112 |       await page.evaluate(() => (window as unknown as DeviceLocationTestWindow).__deviceLocationProbe.resolve(1));\n  113 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();\n> 114 |       await expect(page.getByText('10m', { exact: true })).toBeVisible();\n      |                                                            ^\n  115 |     });\n  116 |\n  117 |     for (const outcome of ['denied', 'timeout'] as const) test(`${outcome} permits an explicit retry without another app dialog`, async ({ page }) => {"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                                "column": 60,
+                                "line": 114
+                              },
+                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('10m', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('10m', { exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('10m', { exact: true })\u001b[22m\n\n\n  112 |       await page.evaluate(() => (window as unknown as DeviceLocationTestWindow).__deviceLocationProbe.resolve(1));\n  113 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();\n> 114 |       await expect(page.getByText('10m', { exact: true })).toBeVisible();\n      |                                                            ^\n  115 |     });\n  116 |\n  117 |     for (const outcome of ['denied', 'timeout'] as const) test(`${outcome} permits an explicit retry without another app dialog`, async ({ page }) => {\n    at /Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts:114:60"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:38.403Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results/privacy-safeguards-G010-pr-13400-nnot-cancel-a-newer-request-chromium/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                            "column": 60,
+                            "line": 114
+                          }
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-7c80e2d877d5c94427a8",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 98,
+                  "column": 5
+                },
+                {
+                  "title": "denied permits an explicit retry without another app dialog",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 2,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 12841,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:44.441Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-f3cba1afa584705152fa",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 117,
+                  "column": 59
+                },
+                {
+                  "title": "timeout permits an explicit retry without another app dialog",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 2,
+                          "parallelIndex": 0,
+                          "status": "failed",
+                          "duration": 614,
+                          "error": {
+                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/현재 위치를 찾는 시간이 초과됐어요/)\nExpected: visible\nError: strict mode violation: getByText(/현재 위치를 찾는 시간이 초과됐어요/) resolved to 2 elements:\n    1) <div class=\"min-w-0 text-sm font-semibold leading-5 sm:whitespace-nowrap\">현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</div> aka getByText('현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.', { exact: true })\n    2) <span role=\"status\" aria-live=\"assertive\">Notification 현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</span> aka getByText('Notification')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText(/현재 위치를 찾는 시간이 초과됐어요/) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/현재 위치를 찾는 시간이 초과됐어요/)\u001b[22m\n",
+                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/현재 위치를 찾는 시간이 초과됐어요/)\nExpected: visible\nError: strict mode violation: getByText(/현재 위치를 찾는 시간이 초과됐어요/) resolved to 2 elements:\n    1) <div class=\"min-w-0 text-sm font-semibold leading-5 sm:whitespace-nowrap\">현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</div> aka getByText('현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.', { exact: true })\n    2) <span role=\"status\" aria-live=\"assertive\">Notification 현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</span> aka getByText('Notification')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText(/현재 위치를 찾는 시간이 초과됐어요/) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/현재 위치를 찾는 시간이 초과됐어요/)\u001b[22m\n\n    at /Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts:123:99",
+                            "location": {
+                              "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                              "column": 99,
+                              "line": 123
+                            },
+                            "snippet": "  121 |       page.on('dialog', async dialog => { dialogs++; await dialog.dismiss(); });\n  122 |       await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();\n> 123 |       await expect(page.getByText(outcome === 'denied' ? /위치 권한이 거부됐어요/ : /현재 위치를 찾는 시간이 초과됐어요/)).toBeVisible();\n      |                                                                                                   ^\n  124 |       await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();\n  125 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();\n  126 |       expect((await readDeviceLocationCounts(page)).getCalls).toBe(2);"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                                "column": 99,
+                                "line": 123
+                              },
+                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/현재 위치를 찾는 시간이 초과됐어요/)\nExpected: visible\nError: strict mode violation: getByText(/현재 위치를 찾는 시간이 초과됐어요/) resolved to 2 elements:\n    1) <div class=\"min-w-0 text-sm font-semibold leading-5 sm:whitespace-nowrap\">현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</div> aka getByText('현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.', { exact: true })\n    2) <span role=\"status\" aria-live=\"assertive\">Notification 현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</span> aka getByText('Notification')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText(/현재 위치를 찾는 시간이 초과됐어요/) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/현재 위치를 찾는 시간이 초과됐어요/)\u001b[22m\n\n\n  121 |       page.on('dialog', async dialog => { dialogs++; await dialog.dismiss(); });\n  122 |       await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();\n> 123 |       await expect(page.getByText(outcome === 'denied' ? /위치 권한이 거부됐어요/ : /현재 위치를 찾는 시간이 초과됐어요/)).toBeVisible();\n      |                                                                                                   ^\n  124 |       await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();\n  125 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();\n  126 |       expect((await readDeviceLocationCounts(page)).getCalls).toBe(2);\n    at /Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts:123:99"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:57.377Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results/privacy-safeguards-G010-pr-786bb--without-another-app-dialog-chromium/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                            "column": 99,
+                            "line": 123
+                          }
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-715ce044d7b550e11391",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 117,
+                  "column": 59
+                },
+                {
+                  "title": "heading toggles off and clears its watcher without another app confirmation",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 25147,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:58.204Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-e8cc21c0de369eaa16b0",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 130,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-20T20:00:30.587Z",
+    "duration": 52892.549999999996,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 3,
+    "flaky": 0
+  }
+}

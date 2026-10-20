@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-10-20T19:38:12.289Z",
+  "finishedAt": "2026-10-20T19:38:12.460Z",
+  "exitCode": 1,
+  "command": "npm run build",
+  "distDir": ".next-overseas-map-20261021",
+  "environment": "Existing verified owner-only local stack inputs; stack not started or reset; local Nightly test gate; no hosted credentials printed",
+  "deployment": false
+}

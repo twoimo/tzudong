@@ -1,0 +1,179 @@
+{
+  "observedAt": "2026-10-20T19:37:21.851Z",
+  "browser": "153.0.8010.12",
+  "sourceHashes": {
+    "components/map/OverseasMap.tsx": "89cc8f971492756881b0e84f34f9dd243b5d2496258ba2a004a6503e03cd0f5a",
+    "lib/overseas-map-loader.ts": "2dcd93386f818ce17dfe14e1b8c7a5551affb9d0831841dc0fe29b81e7151895",
+    "lib/overseas-map-provider.ts": "c480cc57caf50aa33d9b0bfdf3fa4efb8f330b56c03deb776de3c4d0dd619220",
+    "proxy.ts": "de3db6ac15728bc6219b685a98732c6e7d89ae9a0ebe6ceab59e367ff48a69ab",
+    "scripts/prepare-maplibre-worker-assets.mjs": "7735dedfbaede4b99a4e04e579bc9f03071afa331bb4e9ba670bdc838ab241de"
+  },
+  "network": "Real OpenFreeMap requests. New isolated context and disabled browser HTTP cache per case; CDN/OS/GPU-process caches and external network variance are not controlled.",
+  "scope": "Pinned Next production fixture, real OverseasMap/MapLibre/CSP and original versus candidate source; only the restaurant query is a controlled empty pending fixture. Not production deployment, field latency or physical-device evidence.",
+  "budgets": {
+    "absoluteMs": 5000,
+    "absoluteNoiseFloorMs": 250,
+    "relativeBudget": null,
+    "reason": "Baseline failed CSP/worker startup; no numeric speedup ratio can be inferred."
+  },
+  "mobile497": {
+    "samples": 0,
+    "medianMs": null,
+    "rangeMs": [],
+    "madMs": null
+  },
+  "failures": [],
+  "results": [
+    {
+      "input": {
+        "id": "baseline-497",
+        "width": 497,
+        "mobile": true,
+        "baseline": true
+      },
+      "facts": {
+        "attribution": "",
+        "attributionVisible": false,
+        "loadingCover": true,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "observationMs": 3000,
+      "readiness": "not_reached_with_observed_csp_failure",
+      "evidenceChannel": "browser_console",
+      "errors": [
+        "csp_block",
+        "csp_block",
+        "browser_error",
+        "browser_error",
+        "worker_error"
+      ],
+      "blocked": [],
+      "resources": []
+    },
+    {
+      "input": {
+        "id": "style-error-retry",
+        "width": 497,
+        "mobile": true
+      },
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "controlledStyleFailures": 1,
+      "retryAttempts": 1,
+      "oldCanvasRemoved": true,
+      "currentCountryPreserved": "일본(나고야)",
+      "countryTilePath": "/planet/20261018_080001_pt/11/1803/809.pbf",
+      "errors": [
+        "browser_error",
+        "OVERSEAS_MAP_RESOURCE_FAILED"
+      ],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 503,
+          "mime": "application/json"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        }
+      ]
+    }
+  ]
+}

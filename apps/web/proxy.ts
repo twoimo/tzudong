@@ -15,6 +15,7 @@ import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation
 import { resolveConfiguredSupabaseOrigin } from '@/lib/profile-avatar-url'
 import { sentryIngestionOrigin } from '@/lib/monitoring/sentry-dsn'
 import { hasSupabaseAuthCookieSessionHint } from '@/lib/supabase-auth-session-hints'
+import { OVERSEAS_MAP_RESOURCE_ORIGIN } from '@/lib/overseas-map-provider'
 
 const DEV_ADMIN_BYPASS_MODULES = new Set([
     'youtube-thumbnail-generator',
@@ -267,7 +268,7 @@ function buildContentSecurityPolicy(nonce: string) {
         "style-src 'self' 'unsafe-inline'",
         `img-src ${buildImageSources()}`,
         "font-src 'self' data: https://assets.tzudong.app",
-        `connect-src 'self'${developmentConnectSources} https://api.openai.com https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.naver.com https://*.naver.net https://*.pstatic.net${sentryConnectSource}`,
+        `connect-src 'self'${developmentConnectSources} ${OVERSEAS_MAP_RESOURCE_ORIGIN} https://api.openai.com https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.naver.com https://*.naver.net https://*.pstatic.net${sentryConnectSource}`,
         "media-src 'self' blob: https://*.supabase.co",
         "worker-src 'self' blob:",
         `frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com${loopbackGrafanaFrameSrc}`,
