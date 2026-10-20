@@ -73,7 +73,7 @@
   "toolchain": [
     {
       "path": "apps/web/scripts/receipt-ocr-post106-acl-admission-sql-successor.mjs",
-      "sha256": "5dd0c66725e14ee9584dd162dccda4419c304ddbda6f3f28b1e645b7aa686b21"
+      "sha256": "58082785a1ffdab1aafa887e2b681f1d997c7d3620df546988bcbf31089195d6"
     }
   ]
 }

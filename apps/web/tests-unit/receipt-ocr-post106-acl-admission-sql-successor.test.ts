@@ -56,6 +56,10 @@ describe('held receipt OCR 105 -> 106 -> 107 ACL admission successor', () => {
     const plan = compilePost106AclOperatingPlan(record);
 
     expect(plan.transactionMode).toBe('single-explicit-outer-transaction');
+    expect(plan.priorReadback).toEqual(plan.basePlan.priorReadback);
+    expect(plan.migration.expectedPriorState).toEqual(plan.basePlan.finalReadback);
+    expect(plan.priorReadback.expected.bundle.ledgerCount).toBe(105);
+    expect(plan.migration.expectedPriorState.expected.bundle.ledgerCount).toBe(106);
     expect(plan.sql.match(/\bBEGIN;/g)).toHaveLength(1);
     expect(plan.sql.match(/\bCOMMIT;/g)).toHaveLength(1);
     expect(plan.sql.match(/INSERT INTO supabase_migrations\.schema_migrations/g)).toHaveLength(2);

@@ -447,7 +447,7 @@ function compilePlan(record, { mode }) {
     id: record.manifest.id,
     migration,
     plan,
-    priorReadback: migration.expectedPriorState,
+    priorReadback: basePlan.priorReadback,
     sql: `BEGIN;\nSET LOCAL idle_in_transaction_session_timeout='30s';\nDO ${lockTag} BEGIN PERFORM pg_advisory_xact_lock(${record.manifest.advisoryLockKey}::bigint); END ${lockTag};\n${basePlan.sql}\n${atomic107}\nCOMMIT;\n`,
     stateQuery: terminalQuery,
     transactionMode: 'single-explicit-outer-transaction',
