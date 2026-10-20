@@ -279,13 +279,15 @@ describe('privacy onboarding challenge', () => {
     expect(callbackRoute).not.toContain('export async function revokeRejectedCallbackSession');
   });
 
-  test('no-challenge OAuth sessions without a live receipt enter only exact onboarding without revocation', () => {
+  test('no-challenge OAuth sessions require a live receipt and reject without entering onboarding', () => {
     const callbackRoute = source('app/auth/callback/route.ts');
     const authContext = source('contexts/AuthContext.tsx');
     const onboardingPage = source('app/privacy/onboarding/page.tsx');
 
-    expect(callbackRoute).toContain('return redirectWithOnboardingCookiesCleared(origin, buildHomePrivacyOnboardingPath(next));');
-    expect(callbackRoute).toContain('if (userError || !user?.id || !UUID_PATTERN.test(user.id))');
+    expect(callbackRoute).toContain('return rejectedCallbackRedirect(request, origin, buildHomeAuthLoginErrorPath(next));');
+    expect(callbackRoute).not.toContain('buildHomePrivacyOnboardingPath');
+    expect(callbackRoute).toContain('hasEligibleOrdinaryOAuthSession(supabase, code)');
+    expect(source('lib/auth/callback-session.ts')).toContain('if (userError || !user?.id || !UUID_PATTERN.test(user.id))');
     expect(authContext).toContain('function isLiteralLoopSafePrivacyOnboarding()');
     expect(authContext).toContain("window.location.pathname === '/privacy/onboarding'");
     expect(authContext).toContain('isHomePrivacyOnboardingRequest(window.location)');
@@ -360,9 +362,10 @@ describe('privacy onboarding challenge', () => {
     expect(passwordLogin.indexOf('toast.success("로그인 성공!")')).toBeGreaterThan(loginEligibilityIndex);
     expect(passwordLogin.indexOf('dispatchHomeAuthSessionUpdated({')).toBeGreaterThan(loginEligibilityIndex);
     expect(passwordLogin.indexOf('redirectAfterRequestedLogin()')).toBeGreaterThan(loginEligibilityIndex);
-    expect(passwordLogin).toContain('setAuthTab("signup")');
-    expect(passwordLogin).toContain('setIsExistingAccountRecovery(true)');
-    expect(passwordLogin).toContain('현재 개인정보 처리방침과 연령 확인을 완료해주세요.');
+    expect(passwordLogin).toContain('if (hasSignedInSession) await rejectPrivacyIneligibleSession(signedInUserId);');
+    expect(passwordLogin).toContain('toast.error(AUTH_LOGIN_FAILED_MESSAGE);');
+    expect(passwordLogin).not.toContain('setAuthTab("signup")');
+    expect(passwordLogin).not.toContain('setIsExistingAccountRecovery(true)');
 
     const signupEligibilityIndex = passwordSignup.indexOf('const eligibility = await getCurrentPrivacyEligibility(supabase);');
     expect(signupEligibilityIndex).toBeGreaterThan(-1);
@@ -643,8 +646,8 @@ describe('G014 server session release boundaries', () => {
     expect(callback).toContain("searchParams.getAll(key).length !== 1");
     expect(callback).toContain("!CALLBACK_QUERY_KEYS.has(key)");
     expect(callback).toContain('MAX_OAUTH_CODE_LENGTH');
-    expect(authModal).toContain('setIsExistingAccountRecovery(true)');
-    expect(authModal).toContain('setAuthTab("signup")');
+    expect(authModal).toContain('onClick={() => setIsExistingAccountRecovery((current) => !current)}');
+    expect(authModal).toContain('기존 계정의 개인정보 확인');
     expect(authModal).toContain('const challenge = await startOnboardingChallenge("password");');
     expect(authModal).toContain('const { data: existingSession, error: existingSessionError } = await supabase.auth.signInWithPassword({ email, password });');
     expect(authModal).toContain('body: JSON.stringify({ action: "existing_account" })');

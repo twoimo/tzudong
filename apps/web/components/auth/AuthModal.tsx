@@ -21,6 +21,8 @@ import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import { dispatchHomeAuthSessionUpdated } from "@/lib/home-auth-events";
 import {
+  AUTH_LOGIN_FAILED_MESSAGE,
+  AUTH_LOGIN_FAILED_REASON,
   AUTH_PRIVACY_ONBOARDING_REASON,
   getSafeAuthNextPath,
   resolveRequestedAuthRedirect,
@@ -29,12 +31,12 @@ import {
   beginExistingAccountPrivacyRecovery,
   endExistingAccountPrivacyRecovery,
 } from "@/lib/auth/existing-account-recovery";
+import { rejectPrivacyIneligibleBrowserSession } from "@/lib/auth/rejected-browser-session";
 import { PrivacyPolicyContent } from "@/components/legal/PrivacyPolicyContent";
 import {
   getCurrentPrivacyEligibility,
   hasLivePrivacyEligibilityReceipt,
   privacyEligibilityGuidance,
-  signOutRejectedPrivacySession,
 } from "@/lib/privacy/eligibility";
 import { cn } from "@/lib/utils";
 
@@ -416,15 +418,10 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     }
     onClose();
   }, [onAuthSuccess, onClose]);
-  const rejectPrivacyIneligibleSession = useCallback(async (userId: string) => {
-    await signOutRejectedPrivacySession(supabase);
-    try {
-      const { clearBrowserDraftsForUser } = await import("@/lib/privacy/browser-draft-cleanup");
-      await clearBrowserDraftsForUser(userId);
-    } catch {
-      // Rejecting an ineligible session must not retain published auth state.
-    }
-  }, []);
+  const rejectPrivacyIneligibleSession = useCallback(
+    (userId?: string | null) => rejectPrivacyIneligibleBrowserSession(supabase, userId),
+    [],
+  );
 
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -434,20 +431,19 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     }
 
     setIsLoading(true);
+    let signedInUserId: string | null = null;
+    let hasSignedInSession = false;
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      const signedInUserId = data.session?.user?.id;
+      signedInUserId = data.session?.user?.id ?? null;
+      hasSignedInSession = Boolean(data.session);
       if (error || !signedInUserId) {
-        if (signedInUserId) await rejectPrivacyIneligibleSession(signedInUserId);
         throw new Error("password_login_failed");
       }
 
       const eligibility = await getCurrentPrivacyEligibility(supabase);
       if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
-        setAuthTab("signup");
-        setIsExistingAccountRecovery(true);
-        toast.error("현재 개인정보 처리방침과 연령 확인을 완료해주세요.");
-        return;
+        throw new Error("privacy_eligibility_rejected");
       }
 
       toast.success("로그인 성공!");
@@ -461,7 +457,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       }
       closeAfterAuthSuccess();
     } catch {
-      toast.error("로그인에 실패했습니다");
+      if (hasSignedInSession) await rejectPrivacyIneligibleSession(signedInUserId);
+      toast.error(AUTH_LOGIN_FAILED_MESSAGE);
     } finally {
       setIsLoading(false);
     }
@@ -634,6 +631,16 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     });
   }, []);
   const isPrivacyOnboarding = reason === AUTH_PRIVACY_ONBOARDING_REASON;
+  const isLoginFailure = reason === AUTH_LOGIN_FAILED_REASON;
+  const existingAccountRecoveryControl = (
+    <button
+      type="button"
+      className="min-h-6 text-sm text-primary underline-offset-4 hover:underline"
+      onClick={() => setIsExistingAccountRecovery((current) => !current)}
+    >
+      {isExistingAccountRecovery ? "새 계정 가입으로 돌아가기" : "기존 계정의 개인정보 확인"}
+    </button>
+  );
   const privacyOnboardingContent = (
     <div className="space-y-4" data-testid="privacy-onboarding-modal">
       <p className="rounded-lg border border-primary/25 bg-primary/5 p-3 text-sm leading-6" role="status">
@@ -729,6 +736,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
+                {isLoginFailure && <p role="alert" className="text-sm text-destructive">{AUTH_LOGIN_FAILED_MESSAGE}</p>}
                 <div className="space-y-2">
                   <Label htmlFor="login-email" className="text-sm">이메일</Label>
                   <Input
@@ -802,6 +810,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
+                {existingAccountRecoveryControl}
                 {isExistingAccountRecovery && (
                   <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm" role="status">
                     기존 계정의 개인정보 처리 확인을 완료합니다. 연령대와 최신 개인정보 처리방침을 선택해주세요.
@@ -994,6 +1003,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
+                {isLoginFailure && <p role="alert" className="text-sm text-destructive">{AUTH_LOGIN_FAILED_MESSAGE}</p>}
                 <div className="space-y-2">
                   <Label htmlFor="login-email" className="text-sm">이메일</Label>
                   <Input
@@ -1064,6 +1074,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
+                {existingAccountRecoveryControl}
                 {isExistingAccountRecovery && (
                   <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm" role="status">
                     기존 계정의 개인정보 처리 확인을 완료합니다. 연령대와 최신 개인정보 처리방침을 선택해주세요.

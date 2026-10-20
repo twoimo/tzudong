@@ -293,7 +293,8 @@ describe('public eligibility proxy', () => {
         eligible: false,
         reasonCode: 'PRIVACY_AGE_BLOCKED',
         policyVersionId: '11111111-1111-4111-8111-111111111111',
-        contentSha256: 'a'.repeat(64),
+        contentSha256: PRIVACY_POLICY_CONTENT_SHA256,
+        policyVersion: PRIVACY_POLICY_VERSION,
       },
     };
 
@@ -314,7 +315,8 @@ describe('public eligibility proxy', () => {
         eligible: false,
         reasonCode: 'PRIVACY_AGE_BLOCKED',
         policyVersionId: '11111111-1111-4111-8111-111111111111',
-        contentSha256: 'a'.repeat(64),
+        contentSha256: PRIVACY_POLICY_CONTENT_SHA256,
+        policyVersion: PRIVACY_POLICY_VERSION,
       },
     };
 
@@ -608,13 +610,15 @@ describe('admin middleware login redirect', () => {
             reasonCode,
             policyVersionId: null,
             contentSha256: null,
+            policyVersion: null,
           }
           : {
             schemaVersion: 1,
             eligible: false,
             reasonCode,
             policyVersionId: '11111111-1111-4111-8111-111111111111',
-            contentSha256: 'a'.repeat(64),
+            contentSha256: PRIVACY_POLICY_CONTENT_SHA256,
+            policyVersion: PRIVACY_POLICY_VERSION,
           },
       };
       const response = await updateSession(adminRequest());
