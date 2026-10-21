@@ -485,6 +485,22 @@ describe('trusted administrator receipt OCR workflow', () => {
     expect(processor).toContain('inferenceConfig,\n                    signal: input.signal');
   });
 
+  test('binds the existing server URL secret without substituting the funded OCR key', () => {
+    const root = join(import.meta.dir, '..');
+    const workflow = readFileSync(join(root, '../../.github/workflows/ocr-review-receipts.yml'), 'utf8');
+    const runner = readFileSync(join(root, 'scripts/run-admin-receipt-ocr-workflow.ts'), 'utf8');
+    const serviceRole = readFileSync(join(root, 'lib/supabase/service-role.ts'), 'utf8');
+
+    expect(workflow).toContain('NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}');
+    expect(workflow).not.toContain('secrets.NEXT_PUBLIC_SUPABASE_URL');
+    expect(workflow).toContain('SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}');
+    expect(workflow).toContain('GEMINI_CREDITS_API_KEY: ${{ secrets.GEMINI_CREDITS_API_KEY }}');
+    expect(workflow).not.toContain('GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}');
+    expect(serviceRole).toContain('process.env.NEXT_PUBLIC_SUPABASE_URL');
+    expect(runner.indexOf("required('GEMINI_CREDITS_API_KEY')")).toBeGreaterThan(-1);
+    expect(runner.indexOf("required('GEMINI_CREDITS_API_KEY')")).toBeLessThan(runner.indexOf("required('NEXT_PUBLIC_SUPABASE_URL')"));
+  });
+
   test('dispatches recovery with only the opaque operation and exact public execution policy', () => {
     const operationId = uuid(90, '30000000');
     const reviewId = uuid(91, '30000000');

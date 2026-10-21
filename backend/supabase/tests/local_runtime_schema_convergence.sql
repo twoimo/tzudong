@@ -3,6 +3,11 @@ BEGIN;
 
 DO $$
 BEGIN
+  -- The harness prepares private fixtures; each behavior probe below switches
+  -- to anon, authenticated or service_role before asserting its boundary.
+  IF session_user <> 'supabase_admin' THEN
+    RAISE EXCEPTION 'local_runtime_fixture_actor_required';
+  END IF;
   PERFORM pg_catalog.set_config(
     'tzudong.test_user_id',
     (
@@ -657,6 +662,7 @@ $$;
 -- fixture and are covered by the outer rollback.
 RESET ROLE;
 SAVEPOINT privacy_fixture_inactive;
+SET LOCAL ROLE privacy_workflow_owner;
 UPDATE privacy_retention.privacy_age_profiles
    SET status = 'blocked',
        updated_at = '2026-01-01T00:00:01Z'::timestamptz
@@ -681,6 +687,7 @@ ROLLBACK TO SAVEPOINT privacy_fixture_inactive;
 RELEASE SAVEPOINT privacy_fixture_inactive;
 
 SAVEPOINT privacy_fixture_removed;
+SET LOCAL ROLE privacy_workflow_owner;
 DELETE FROM privacy_retention.privacy_age_profiles
  WHERE user_id = pg_catalog.current_setting('tzudong.test_user_id')::uuid;
 SET LOCAL ROLE authenticated;
@@ -725,7 +732,7 @@ VALUES
   ),
   (
     'review-photos',
-    pg_catalog.current_setting('tzudong.test_user_id') || '/food.webp',
+    pg_catalog.current_setting('tzudong.test_user_id') || '/reviews/00000000-0000-4000-8000-000000000421/food/food.webp',
     pg_catalog.current_setting('tzudong.test_user_id')
   ),
   (
@@ -733,6 +740,22 @@ VALUES
     pg_catalog.current_setting('tzudong.test_user_id') || '/banner.webp',
     pg_catalog.current_setting('tzudong.test_user_id')
   );
+
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO storage.objects (bucket_id, name, owner_id)
+    VALUES (
+      'review-photos',
+      pg_catalog.current_setting('tzudong.test_user_id') || '/food.webp',
+      pg_catalog.current_setting('tzudong.test_user_id')
+    );
+    RAISE EXCEPTION 'local_runtime_legacy_review_upload_was_admitted';
+  EXCEPTION
+    WHEN insufficient_privilege THEN NULL;
+  END;
+END
+$$;
 
 DO $$
 BEGIN
@@ -799,7 +822,7 @@ BEGIN
     FROM storage.objects AS object_row
     WHERE object_row.name IN (
       pg_catalog.current_setting('tzudong.test_user_id') || '/avatar.jpg',
-      pg_catalog.current_setting('tzudong.test_user_id') || '/food.webp',
+      pg_catalog.current_setting('tzudong.test_user_id') || '/reviews/00000000-0000-4000-8000-000000000421/food/food.webp',
       pg_catalog.current_setting('tzudong.test_user_id') || '/banner.webp'
     )
   ) <> 3 THEN

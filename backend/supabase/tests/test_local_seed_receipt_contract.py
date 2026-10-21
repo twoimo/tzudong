@@ -1,6 +1,8 @@
 import importlib.util
+import hashlib
 import inspect
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -263,6 +265,40 @@ def _receipt_ndjson(rows) -> bytes:
 
 
 class LocalSeedReceiptContractTests(unittest.TestCase):
+    def test_immutable_verification_guards_bind_canonical_source_bodies(self) -> None:
+        source = (ROOT / "backend/supabase/migrations/20261013190200_review_verification_immutable_key_fence.sql").read_text()
+        expected = {row[0]: row for row in local_migrate.REVIEW_MEDIA_FUNCTIONS}
+        for name in ("reject_verification_object_update", "guard_verification_object_delete"):
+            body = re.search(
+                rf"CREATE FUNCTION review_media_private\.{name}\(\).*?AS (\$[a-zA-Z_]*\$)(.*?)\1;",
+                source, re.DOTALL,
+            ).group(2)
+            self.assertEqual(expected[f"review_media_private.{name}()"][6], hashlib.sha256(body.encode()).hexdigest())
+
+    def test_seed_receipt_rejects_weakened_immutable_verification_policy(self) -> None:
+        for field, replacement in ((4, "SELECT"), (5, ["anon"]), (6, "true"), (7, "true"), (8, True)):
+            rows = _receipt_rows()
+            policy = next(row for row in rows if row[0] == "storage_policies"
+                          and row[3] == "review_verifications_immutable_update")
+            policy[field] = replacement
+            with self.subTest(field=field), self.assertRaisesRegex(
+                local_migrate.LocalMigrationError, "receipt_review_media_storage_policy"
+            ):
+                local_migrate.parse_readback(_receipt_ndjson(rows))
+
+    def test_seed_bucket_admission_matches_final_receipt_catalog(self) -> None:
+        source = (ROOT / "backend/supabase/scripts/local-seed.sql").read_text(encoding="utf-8")
+        guard = source.split("SELECT 1 FROM storage.buckets", 1)[1].split(
+            "RAISE EXCEPTION 'local_seed_unexpected_storage_bucket'", 1
+        )[0]
+        allowed = set(re.findall(r"'([^']+)'", guard.split("]::text[])", 1)[0]))
+        expected = {row[1] for row in _receipt_rows() if row[0] == "seed_buckets"}
+        self.assertEqual(allowed, expected)
+        self.assertIn("NOT IN (6, 7)", guard)
+        self.assertIn("id = 'review-verifications' AND name = 'review-verifications'", guard)
+        self.assertIn("public = false AND file_size_limit = 5242880", guard)
+        self.assertIn("ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/avif']::text[]", guard)
+
     def test_receipt_v1_has_fixed_fields_and_canonical_order(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             raw = _write_deterministic_receipt(Path(directory))
@@ -484,16 +520,27 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
 
     def test_manifest_contains_exactly_current_immutable_units(self) -> None:
         manifest = local_migrate.build_manifest()
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 140)
-        self.assertEqual(len(manifest["source"]["files"]), 140)
+        paths = local_migrate.migration_files()
+        files = manifest["source"]["files"]
+        last = paths[-1]
+        self.assertEqual(local_migrate.expected_ledger_units(), len(paths))
+        self.assertEqual(len(files), len(paths))
         self.assertEqual(
-            manifest["source"]["files"][-1]["path"],
-            "backend/supabase/migrations/20261011175912_review_owner_cleanup_completion.sql",
+            files[-1]["path"],
+            local_migrate._relative_source(last, local_migrate.source_root()),
         )
         self.assertEqual(
-            manifest["source"]["files"][-1]["transaction"]["class"],
-            "self_committing",
+            files[-1]["transaction"]["class"],
+            local_migrate.transaction_control(last.read_bytes())["class"],
         )
+
+    def test_ledger_unit_count_follows_an_added_migration(self) -> None:
+        paths = local_migrate.migration_files()
+        added = [*paths, paths[-1]]
+        with mock.patch.object(local_migrate, "migration_files", return_value=added):
+            self.assertEqual(local_migrate.expected_ledger_units(), len(paths) + 1)
+            records = local_migrate._expected_ledger_records(local_migrate.build_manifest())
+            self.assertEqual(len(records), len(paths) + 1)
 
     def test_receipt_ledger_rejects_missing_extra_or_changed_current_units(self) -> None:
         manifest = local_migrate.build_manifest()

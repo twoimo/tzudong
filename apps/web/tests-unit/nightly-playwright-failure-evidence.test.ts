@@ -108,10 +108,10 @@ test('keeps all 64 located failure classifications inside the immutable 8 KiB bo
     stats: { expected: 0, flaky: 0, skipped: 0, unexpected: 64 },
     suites: [{ file: 'local-supabase-admin.spec.ts', specs: Array.from({ length: 64 }, () => ({
       file: 'local-supabase-admin.spec.ts', title: 'PRIVATE_PROVIDER_TITLE_MARKER',
-      tests: [testResult('unexpected', [result('failed', [{
+      tests: [testResult('unexpected', [{ ...result('failed', [{
         location: { ...adminErrorLocation, line: 100000, column: 10000 },
         message: 'PRIVATE_PROVIDER_MESSAGE_MARKER',
-      }])])],
+      }]), duration: 1 }])],
     })) }],
   };
   const evidence = buildNightlyPlaywrightFailureEvidence(report, 1);
@@ -121,6 +121,8 @@ test('keeps all 64 located failure classifications inside the immutable 8 KiB bo
   expect(located).toBeGreaterThan(0); expect(located).toBeLessThan(64);
   expect(Buffer.byteLength(`${JSON.stringify(evidence)}\n`)).toBeLessThanOrEqual(8192);
   expect(JSON.stringify(evidence)).not.toContain('PRIVATE_PROVIDER');
+  expect(evidence).not.toHaveProperty('slow_tests');
+  expect(evidence).not.toHaveProperty('reported_tests');
 });
 
 function adminFailureReport(location: unknown = adminErrorLocation) {
@@ -309,7 +311,9 @@ describe("nightly Playwright failure evidence", () => {
 
   test("round-trips located and legacy sanitizer output through the strict Python verifier", () => {
     const verifier = resolve(import.meta.dir, "../../../.github/scripts/verify-nightly-local-publication.py");
-    for (const report of [adminFailureReport(), privateFailureReport()]) {
+    const timed = privateFailureReport();
+    Object.assign(timed.suites[0].specs[0].tests[0].results[0], { duration: 12.3 });
+    for (const report of [adminFailureReport(), privateFailureReport(), timed]) {
       const evidence = buildNightlyPlaywrightFailureEvidence(report, 1);
       const verified = spawnSync("python3", ["-B", "-c", [
         "import json, runpy, sys",
@@ -320,6 +324,40 @@ describe("nightly Playwright failure evidence", () => {
       expect(verified.stdout).toBe("");
       expect(verified.stderr).toBe("");
     }
+  });
+
+  test("retains only bounded source IDs and numeric durations for the three slowest attempts", () => {
+    const report = privateFailureReport();
+    for (const [index, duration] of [5, 18.5, 12].entries()) {
+      Object.assign(report.suites[index].specs[0].tests[0].results[0], { duration });
+    }
+    const evidence = buildNightlyPlaywrightFailureEvidence(report, 1);
+    expect(evidence.slow_tests).toEqual([
+      { spec_id: "PW-NAV", test_index: 0, attempt_index: 0, duration_ms: 19 },
+      { spec_id: "PW-MAP", test_index: 0, attempt_index: 0, duration_ms: 12 },
+      { spec_id: "PW-SMOKE", test_index: 0, attempt_index: 0, duration_ms: 5 },
+    ]);
+    expect(JSON.stringify(evidence)).not.toContain("PRIVATE_");
+    for (const duration of [-1, 600_001, NaN, Infinity, "PRIVATE_DURATION"]) {
+      Object.assign(report.suites[0].specs[0].tests[0].results[0], { duration });
+      expect(() => buildNightlyPlaywrightFailureEvidence(report, 1)).toThrow("duration bound exceeded");
+    }
+  });
+
+  test("selects the slowest raw durations before rounding within one millisecond", () => {
+    const report = {
+      errors: [], stats: { expected: 4, flaky: 0, skipped: 0, unexpected: 0 },
+      suites: [{ file: "smoke.spec.ts", specs: [10.01, 10.02, 10.03, 10.99].map(duration => ({
+        file: "smoke.spec.ts",
+        tests: [testResult("expected", [{ ...result("passed"), duration }])],
+      })) }],
+    };
+    const evidence = buildNightlyPlaywrightFailureEvidence(report, 0);
+    expect(evidence.slow_tests.map(timing => timing.test_index)).toEqual([3, 2, 1]);
+    expect(evidence.slow_tests.map(timing => timing.duration_ms)).toEqual([11, 11, 11]);
+    expect(evidence.reported_tests).toEqual([0, 1, 2, 3].map(test_index => ({
+      spec_id: "PW-SMOKE", test_index, attempt_count: 1,
+    })));
   });
 
   test("reduces private JSON to curated IDs and fixed classifications", () => {

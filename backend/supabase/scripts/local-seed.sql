@@ -236,13 +236,20 @@ BEGIN
       'avatars',
       'profile-avatars',
       'review-photos',
+      'review-verifications',
       'storyboard-private',
       'youtube-thumbnail-releases'
     ]::text[])
-  ) OR (SELECT count(*) FROM storage.buckets) NOT IN (4, 5, 6)
+  ) OR (SELECT count(*) FROM storage.buckets) NOT IN (6, 7)
      OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'ad-banner-images')
      OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'profile-avatars')
      OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'review-photos')
+     OR NOT EXISTS (
+       SELECT 1 FROM storage.buckets
+       WHERE id = 'review-verifications' AND name = 'review-verifications'
+         AND public = false AND file_size_limit = 5242880
+         AND allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/avif']::text[]
+     )
      OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'storyboard-private')
      OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'youtube-thumbnail-releases') THEN
     RAISE EXCEPTION 'local_seed_unexpected_storage_bucket';

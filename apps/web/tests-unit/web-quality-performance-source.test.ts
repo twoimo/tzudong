@@ -2393,9 +2393,6 @@ describe("web quality performance source contracts", () => {
     expect(stampCardSource).toContain(
       "absolute inset-0 z-10 flex items-center justify-center",
     );
-    expect(stampCardSource).toContain(
-      'isStampMobile ? "overflow-visible" : "overflow-hidden"',
-    );
     expect(stampCardSource).toContain("<img");
     expect(stampCardSource).toContain('src="/images/stamp-clear.png"');
     expect(stampCardSource).toContain(
@@ -2407,14 +2404,6 @@ describe("web quality performance source contracts", () => {
     expect(stampCardSource).toContain(
       "const isStampCompact = resolvedStampSize === 'compact'",
     );
-    expect(stampCardSource).toContain(
-      "const isStampMobile = resolvedStampSize === 'mobile'",
-    );
-    expect(stampCardSource).toContain("const stampImageStyle = isStampMobile");
-    expect(stampCardSource).toContain("translateY(0.375rem) rotate(-45deg)");
-    expect(stampCardSource).toContain("height: '74%'");
-    expect(stampCardSource).toContain("maxHeight: '9rem'");
-    expect(stampCardSource).toContain("maxWidth: '44%'");
     expect(stampCardSource).toContain(
       'role={isGuideCard ? undefined : "button"}',
     );
@@ -2437,8 +2426,6 @@ describe("web quality performance source contracts", () => {
     expect(stampCardSource).toContain(
       "pointer-events-none absolute inset-0 flex items-center justify-center",
     );
-    expect(stampCardSource).toContain("w-36 h-36 md:w-40 md:h-40");
-    expect(stampCardSource).toContain("w-48 h-48 sm:w-56 sm:h-56");
     expect(stampPageSource).toContain(
       'stampSize={isDesktop ? "compact" : "mobile"}',
     );

@@ -10,6 +10,7 @@ admission flag.
 from __future__ import annotations
 
 import argparse
+import functools
 import importlib.util
 import os
 import hashlib
@@ -114,9 +115,13 @@ MIGRATION_ORDER_OVERRIDES = {
     "20260417_prevent_active_restaurant_identity_duplicates.sql": 0,
     "20260417_harden_submission_identity_duplicate_checks.sql": 1,
 }
+# Same splice as generate_g014_catalog_contract_baseline.sh. Filename order
+# runs the registry before the grant restore; the registry then rejects the
+# revoked service_role EXECUTE grants.
+SERVICE_IDENTITY_PREDECESSOR = "20261003095444_restore_service_identity_helpers.sql"
+SERVICE_IDENTITY_SUCCESSOR = "20261003065736_g014_current_service_rpc_registry.sql"
 SEED_SOURCE = Path("backend/supabase/scripts/local-seed.sql")
 READBACK_SOURCE = Path("backend/supabase/scripts/local_catalog_readback.sql")
-EXPECTED_LEDGER_UNITS = 140
 EXPECTED_SERVICES = (
     "analytics", "auth", "db", "functions", "imgproxy", "kong", "mail",
     "meta", "realtime", "rest", "storage", "studio", "supavisor", "vector",
@@ -396,6 +401,10 @@ REVIEW_MEDIA_FUNCTIONS = [['public.admin_review_verification_cleanup(uuid,text,t
   False,
   False,
   []],
+ ['review_media_private.guard_verification_object_delete()',
+  'privacy_workflow_owner', 'trigger', True, 'v', ['search_path=""'],
+  '24311fc7071597fbc78c4c54897690da5aaa70edb62c24f7912fd23fecf515b0',
+  False, False, False, []],
  ['review_media_private.guard_references()',
   'privacy_workflow_owner',
   'trigger',
@@ -440,6 +449,10 @@ REVIEW_MEDIA_FUNCTIONS = [['public.admin_review_verification_cleanup(uuid,text,t
   False,
   False,
   []],
+ ['review_media_private.reject_verification_object_update()',
+  'privacy_workflow_owner', 'trigger', False, 'v', ['search_path=""'],
+  'aa1d4951b8d5fdd15249b090c6d6efba897f39eaceee86bf09221eb1d942d545',
+  False, False, False, []],
  ['review_media_private.referenced(text)',
   'privacy_workflow_owner',
   'boolean',
@@ -451,7 +464,12 @@ REVIEW_MEDIA_FUNCTIONS = [['public.admin_review_verification_cleanup(uuid,text,t
   False,
   False,
   []]]
-REVIEW_MEDIA_STORAGE_POLICIES = {'review_media_safe_delete': ('DELETE',
+REVIEW_MEDIA_FUNCTIONS.sort(key=lambda row: row[0])
+REVIEW_MEDIA_STORAGE_POLICIES = {
+ 'review_verifications_immutable_update': ('UPDATE', ['authenticated'],
+    "(bucket_id <> 'review-verifications'::text)",
+    "(bucket_id <> 'review-verifications'::text)", False),
+ 'review_media_safe_delete': ('DELETE',
                               ['authenticated'],
                               "((bucket_id <> 'review-photos'::text) OR review_media_delete_allowed(name))",
                               None,
@@ -1233,7 +1251,28 @@ def migration_files(root: Path | None = None) -> list[Path]:
         result.append(path)
     if not result:
         raise LocalMigrationError("no_migrations")
-    return result
+    result = _place_predecessor_immediately_before(
+        result, SERVICE_IDENTITY_PREDECESSOR, SERVICE_IDENTITY_SUCCESSOR,
+    )
+    return _place_predecessor_immediately_before(
+        result, "20261003182338_storyboard_service_role_bridge.sql",
+        "20261003113923_g014_service_invoker_contract.sql",
+    )
+
+
+def _place_predecessor_immediately_before(files: list[Path], predecessor: str, successor: str) -> list[Path]:
+    names = [path.name for path in files]
+    if names.count(predecessor) != 1 or names.count(successor) != 1:
+        raise LocalMigrationError("migration_order_override_missing")
+    predecessor_index = names.index(predecessor)
+    moved = files.pop(predecessor_index)
+    names.pop(predecessor_index)
+    files.insert(names.index(successor), moved)
+    return files
+
+
+def expected_ledger_units() -> int:
+    return len(migration_files())
 
 
 def transaction_control(sql: str | bytes) -> dict[str, Any]:
@@ -2003,11 +2042,11 @@ class PsqlExecutor:
     def _admit_container(self) -> None:
         self._inspect()
 
-    def run(self, sql: bytes, variables: Mapping[str, str] | None = None) -> None:
+    def run(self, sql: bytes, variables: Mapping[str, str] | None = None, *, role: str = "supabase_admin") -> None:
         self._admit_container()
         try:
             result = subprocess.run(
-                self._base(), input=_psql_stdin(sql, variables), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                self._base(role=role) + ["--set", "VERBOSITY=sqlstate"], input=_psql_stdin(sql, variables), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 timeout=self.timeout, env=self._docker_env(),
             )
         except subprocess.TimeoutExpired as error:
@@ -2020,7 +2059,10 @@ class PsqlExecutor:
             raise LocalMigrationError("psql_ambiguous")
         if result.returncode != 0:
             stderr = result.stderr.decode("utf-8", "replace").lower()
-            if any(term in stderr for term in ("disconnect", "connection", "broken pipe", "server closed", "eof")):
+            state_match = re.search(rb"(?:ERROR|FATAL):\s+([0-9A-Z]{5})\b", result.stderr)
+            sqlstate = state_match.group(1).decode("ascii") if state_match else "unavailable"
+            print("local psql failure: " + json.dumps({"actor": role, "sqlstate": sqlstate}, sort_keys=True), file=sys.stderr)
+            if sqlstate.startswith("08") or any(term in stderr for term in ("disconnect", "connection", "broken pipe", "server closed", "eof")):
                 raise LocalMigrationError("psql_ambiguous")
             raise LocalMigrationError("psql_failed")
 
@@ -2482,6 +2524,85 @@ def _verified_migration_bytes(item: Mapping[str, Any]) -> bytes:
     return data
 
 
+@functools.lru_cache(maxsize=1)
+def _canonical_source_replay_bodies() -> dict[str, tuple[bytes, bytes]]:
+    """Reuse the catalog replay's checked PG15 adapters, never archived DDL."""
+    def load(name: str) -> Any:
+        path = _require_owned_regular_file(repository_root() / f"backend/supabase/scripts/{name}.py", "source_replay_invalid")
+        _reject_path_custody(path)
+        spec = importlib.util.spec_from_file_location(f"nightly_{name}", path)
+        if spec is None or spec.loader is None:
+            raise LocalMigrationError("source_replay_invalid")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    verifier = load("verify_g026_reconstruction_bundle")
+    bundle_path = _require_owned_regular_file(repository_root() / "backend/supabase/scripts/local_source_replay_windows.json", "source_replay_invalid")
+    _reject_path_custody(bundle_path)
+    binding = json.loads(bundle_path.read_bytes())
+    if set(binding) != {"schema", "catalog_binding_sha256", "windows"} or binding["schema"] != "local-source-replay-windows-v1":
+        raise LocalMigrationError("source_replay_invalid")
+    try:
+        outputs = verifier.require_role_management_replay_transform(verifier.ROLE_MANAGEMENT_BINDING)
+        outputs.update(verifier.require_replay_membership_windows(binding["windows"]))
+        advisor = "20260903174413_advisor_followup_hardening.sql"
+        # This local prerequisite already supplies all nine helpers. The separate
+        # historical catalog reconstruction needs recovery; applying it here
+        # would create overlapping definitions and must not be made idempotent.
+        outputs[advisor] = load("transform_advisor_replay").transform((source_root() / advisor).read_bytes())
+        adapters = {
+            "transform_registration_replay": (
+                "20261004190259_admin_record_guarded_actions.sql", "20261004194715_admin_evaluation_raw_warning_invoker_contract.sql"),
+            "transform_storyboard_owner_replay": (
+                "20260918021531_storyboard_mlx_worker.sql", "20260920021531_storyboard_historical_restore.sql"),
+            "transform_review_storage_pg15_replay": ("20261011105114_review_media_storage_retirement_fence.sql",),
+            "transform_feature_rpc_catalog_pg15_replay": ("20261013190100_g014_feature_rpc_catalog_contract.sql",),
+            "transform_receipt_ocr_credential_release_pg15_replay": ("20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",),
+            "transform_receipt_ocr_acl_admission_pg15_replay": ("20261019120000_receipt_ocr_credential_release_acl_admission_v2.sql",),
+            "transform_receipt_ocr_indeterminate_recovery_pg15_replay": ("20261019130000_receipt_ocr_indeterminate_recovery.sql",),
+            "transform_review_verification_readiness_pg15_replay": ("20261016090000_review_verification_delete_guard_readiness.sql",),
+        }
+        for module_name, names in adapters.items():
+            adapter = load(module_name)
+            for name in names:
+                outputs[name] = adapter.transform((source_root() / name).read_bytes(), name)
+        for name in ("20261003000812_storyboard_gemini_only.sql", "20261003182338_storyboard_service_role_bridge.sql"):
+            outputs[name] = load("transform_storyboard_history_replay").transform_window((source_root() / name).read_bytes(), binding["windows"])
+        for name in ("20261003113923_g014_service_invoker_contract.sql", "20261003172126_restaurant_review_manual_invoker_contract.sql", "20261003220841_admin_evaluation_page_invoker_contract.sql", "20261004050600_admin_evaluation_warning_invoker_contract.sql"):
+            outputs[name] = load("transform_service_invoker_replay").transform_window((source_root() / name).read_bytes(), binding["windows"])
+        guardian_name = "20260827084200_g014_8_guardian_provider_verification.sql"
+        outputs[guardian_name] = load("transform_g014_guardian_replay").transform((source_root() / guardian_name).read_bytes())
+        g016_name = "20260801000300_g016_onboarding_allowlist_freshness.sql"
+        g016 = (source_root() / g016_name).read_bytes()
+        if _sha256_bytes(g016) != "2fae840485d86385b6a97cd588ea09c1db13fb700b2b0b7e044fb6b35698ecd3":
+            raise ValueError("g016_source_drift")
+        needle = b"SET LOCAL ROLE privacy_workflow_owner;\nSELECT privacy_retention.assert_g014_catalog_contract();\nRESET ROLE;"
+        replacement = b"""SET LOCAL ROLE privacy_workflow_owner;
+CREATE OR REPLACE FUNCTION pg_temp.g016_catalog_assertion_bridge()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $bridge$
+BEGIN
+  PERFORM privacy_retention.assert_g014_catalog_contract();
+END
+$bridge$;
+RESET ROLE;
+REVOKE privacy_workflow_owner FROM postgres;
+SELECT pg_temp.g016_catalog_assertion_bridge();"""
+        if g016.count(needle) != 1:
+            raise ValueError("g016_anchor_drift")
+        outputs[g016_name] = b"BEGIN;\nGRANT privacy_workflow_owner TO postgres;\n" + g016.replace(needle, replacement) + b"\nCOMMIT;\n"
+    except (KeyError, ValueError, OSError) as error:
+        raise LocalMigrationError("source_replay_invalid") from error
+    return {
+        f"backend/supabase/migrations/{name}": ((source_root() / name).read_bytes(), output)
+        for name, output in outputs.items()
+    }
+
+
 def _execution_body(item: Mapping[str, Any]) -> bytes:
     body = _verified_migration_bytes(item)
     contract = _load_replay_contract()
@@ -2490,15 +2611,16 @@ def _execution_body(item: Mapping[str, Any]) -> bytes:
             return contract.generate_verification_sql(item["path"])
         except contract.ReplayContractError as error:
             raise LocalMigrationError(str(error)) from error
-    if item.get("path") == "backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql":
-        body = G014_OWNER_NORMALIZATION_SQL.encode("utf-8") + body
+    replay = _canonical_source_replay_bodies().get(item["path"])
+    if replay is not None:
+        if body != replay[0]:
+            raise LocalMigrationError("migration_source_mismatch")
+        return replay[1]
     return body
 
 
-def _execution_batch(item: Mapping[str, Any], index: int) -> tuple[str, bytes]:
+def _source_execution_parts(item: Mapping[str, Any], index: int) -> tuple[bytes, bytes]:
     migration_id = item["path"]
-    if migration_id in _load_replay_contract().supported_sources():
-        return migration_id, _execution_body(item)
     prefix = _ledger_ddl() + "\n" if index == 0 else ""
     setup = (
         "BEGIN;\n"
@@ -2512,9 +2634,16 @@ def _execution_batch(item: Mapping[str, Any], index: int) -> tuple[str, bytes]:
         + ";\nCOMMIT;\n"
     )
     body = _execution_body(item)
-    if item["transaction"]["class"] == "transactional":
+    if item["transaction"]["class"] == "transactional" and not transaction_control(body)["hasBegin"]:
         body = b"BEGIN;\n" + body + b"\nCOMMIT;\n"
-    return migration_id, (prefix + setup + "-- local-migrate source: " + migration_id + "\n").encode("utf-8") + body
+    return (prefix + setup + "-- local-migrate source: " + migration_id + "\n").encode("utf-8"), body
+
+
+def _execution_batch(item: Mapping[str, Any], index: int) -> tuple[str, bytes]:
+    if item["path"] in _load_replay_contract().supported_sources():
+        return item["path"], _execution_body(item)
+    setup, body = _source_execution_parts(item, index)
+    return item["path"], setup + body
 
 
 def _assert_execution_batch_fresh(item: Mapping[str, Any], sql: bytes) -> None:
@@ -3247,7 +3376,7 @@ def _validate_seed_invariants(records: list[list[Any]]) -> None:
     ]:
         _receipt_error("receipt_bucket_fixture")
     storage_policies = [row for row in records if row[0] == "storage_policies"]
-    if len(storage_policies) != 22 or any(row[1:3] != ["storage", "objects"] for row in storage_policies):
+    if len(storage_policies) != 12 + len(REVIEW_MEDIA_STORAGE_POLICIES) or any(row[1:3] != ["storage", "objects"] for row in storage_policies):
         _receipt_error("receipt_storage_policy_fixture")
     policy_names = {row[3] for row in storage_policies}
     expected_policy_names = {
@@ -3429,7 +3558,7 @@ def _expected_unit_evidence(item: Mapping[str, Any]) -> str:
 
 def _expected_ledger_records(manifest: Mapping[str, Any]) -> list[list[Any]]:
     files = manifest["source"]["files"]
-    if len(files) != EXPECTED_LEDGER_UNITS:
+    if len(files) != expected_ledger_units():
         raise LocalMigrationError("receipt_ledger_state")
     return [
         [
@@ -4121,7 +4250,7 @@ def build_receipt(executor: PsqlExecutor) -> dict[str, Any]:
         raise LocalMigrationError("receipt_ledger_empty")
     manifest = verify_manifest()
     expected_files = manifest["source"]["files"]
-    if len(ledger_rows) != EXPECTED_LEDGER_UNITS or len(expected_files) != EXPECTED_LEDGER_UNITS:
+    if len(ledger_rows) != expected_ledger_units() or len(expected_files) != expected_ledger_units():
         raise LocalMigrationError("receipt_ledger_state")
     ledger_records: list[list[Any]] = []
     for expected, row in zip(expected_files, ledger_rows):
@@ -4282,7 +4411,7 @@ def _load_receipt_file(path: Path) -> dict[str, Any]:
     records, ledger_records, service_records = _parse_receipt_payloads(value)
     manifest = verify_manifest()
     _validate_replay_proofs(manifest, value.get("replay_proofs"))
-    if len(ledger_records) != EXPECTED_LEDGER_UNITS:
+    if len(ledger_records) != expected_ledger_units():
         raise LocalMigrationError("receipt_ledger_state")
     payload_digests = _receipt_payload_digests(records, ledger_records, service_records, manifest)
     sequence = value.get("sequence")
@@ -4500,7 +4629,7 @@ def _capture_replay_proofs(executor: PsqlExecutor) -> dict[str, Any]:
 
 def _capture_replay_sql(executor: PsqlExecutor, migration_path: str, sql: bytes) -> bytes:
     # This pinned catalog-only verifier requires the postgres login identity.
-    # Source migrations and ledger operations retain their supabase_admin actor.
+    # Ledger and platform operations retain their supabase_admin actor.
     if migration_path in {
         "backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
         "backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql",
@@ -4647,6 +4776,17 @@ def _executor_from_args(args: argparse.Namespace) -> PsqlExecutor:
     )
 
 
+def _prerequisite_execution_sql(data: bytes) -> bytes:
+    """Keep pinned DDL bytes while applying application objects as postgres."""
+    application_start = b"SET search_path = public, extensions, pg_catalog;\n"
+    creator_acl = LOCAL_CREATOR_DEFAULT_ACL_SQL.encode()
+    if application_start not in data or data.count(creator_acl) != 1:
+        raise LocalMigrationError("prerequisite_manifest_mismatch")
+    data = data.replace(application_start, application_start + b"SET LOCAL ROLE postgres;\n", 1)
+    data = data.replace(creator_acl, b"RESET ROLE;\n" + creator_acl + b"SET LOCAL ROLE postgres;\n", 1)
+    return b"BEGIN;\n" + data + b"\nRESET ROLE;\nCOMMIT;\n"
+
+
 def _emit(value: Any, output: Path | None = None) -> None:
     data = canonical_json(value) + b"\n"
     if output is None:
@@ -4693,7 +4833,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             executor = _executor_from_args(args)
             _assert_no_ambiguity(executor)
             try:
-                executor.run(b"BEGIN;\n" + data + b"\nCOMMIT;\n")
+                executor.run(_prerequisite_execution_sql(data))
                 manifest = verify_manifest()
                 executor.run(
                     _sequence_marker_sql(
@@ -4835,7 +4975,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                     if migration_id in _load_replay_contract().supported_sources():
                         _apply_replay_verification(executor, item, sql)
                         continue
-                    executor.run(sql)
+                    # Match the canonical catalog replay's login identity. Source
+                    # SQL verifies postgres ownership, ACL grantors and, for
+                    # guarded registrations, session_user as well as current_user.
+                    setup, body = _source_execution_parts(item, item["ordinal"] - 1)
+                    executor.run(setup)
+                    executor.run(body, role="postgres")
                     evidence_sha256 = _unit_readback(executor, item)
                     _mark_applied(executor, migration_id, evidence_sha256)
                     _verify_applied_readback(executor, item, evidence_sha256)
@@ -4843,6 +4988,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                     _record_keyboard_interrupt(executor, migration_id)
                     raise
                 except LocalMigrationError as error:
+                    # Repository identity and a fixed error code only. Keep SQL,
+                    # database rows, credentials and provider diagnostics private.
+                    print("local migration failure: " + json.dumps({
+                        "migration_id": migration_id,
+                        "error_code": error.code,
+                    }, ensure_ascii=True, sort_keys=True), file=sys.stderr)
                     # The executor cannot distinguish a failed migration from a
                     # ledger update that was lost after the database accepted it.
                     # Preserve the only safe classification until a fresh reset.

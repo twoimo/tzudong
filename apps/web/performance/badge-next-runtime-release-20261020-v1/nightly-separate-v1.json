@@ -1,0 +1,20 @@
+{
+  "observed_at": "2026-10-20T09:41:31.813630+00:00",
+  "run_id": 39335785643,
+  "url": "https://github.com/twoimo/tzudong/actions/runs/39335785643",
+  "sha": "7d76c2b0a2e9566160a051f7c3520b3acc427923",
+  "workflow": "Nightly",
+  "job": "Local",
+  "conclusion": "failure",
+  "observed_error": "local_migrate_publication_contract.LocalMigrationError: receipt_ledger_state",
+  "failed_steps": [
+    "Verify publication boundary implementation",
+    "Aggregate local nightly lane outcomes",
+    "Write bounded nightly lane diagnostics"
+  ],
+  "release_required_checks": [
+    "Release",
+    "Promotion Path"
+  ],
+  "interpretation": "Separate existing local Nightly failure. Not deployment/READY/alias proof and not reclassified by local badge tests. No unrelated migration/DB/workflow mutation."
+}

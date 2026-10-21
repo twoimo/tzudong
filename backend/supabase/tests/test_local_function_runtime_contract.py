@@ -82,7 +82,8 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
 
     def test_admission_accepts_exact_current_source_replay_dispositions(self):
         snapshot, bindings = self._migration_admission_fixture()
-        self.assertEqual(len(snapshot["ledger"]), 140)
+        migrate = self.scanner._load_local_contract_module("local-migrate.py", "scanner_replay_test_authority")
+        self.assertEqual(len(snapshot["ledger"]), migrate.expected_ledger_units())
         self.assertEqual([row["status"] for row in snapshot["ledger"] if row["replayProof"]],
                          ["verified-existing", "verified-existing", "legacy-contract-preserved",
                           "verified-existing"])
@@ -156,6 +157,11 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
         self.assertEqual(events[1]["newKey"], ("public", "legacy_renamed", "text"))
 
     def test_candidate_smoke_binds_every_argument_with_explicit_types(self):
+        self.assertEqual(self.scanner._identity_arguments("path text, text uuid"), "text,uuid")
+        self.assertEqual(
+            self.scanner._identity_arguments('"display name" text, double precision, timestamp(3) with time zone, character varying(40)'),
+            "text,double precision,timestamp(3) with time zone,character varying(40)",
+        )
         sql = self.scanner._smoke_candidate_blocks(
             [
                 {
@@ -396,7 +402,19 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
             sql.index("ALTER FUNCTION %s SET search_path TO"),
         )
 
-    def test_frozen_source_closure_candidate_receipt_is_exact(self):
+    def test_candidate_denials_and_platform_holds_are_exact_not_generic(self):
+        sql = self.scanner._smoke_candidate_blocks([
+            {"schema": "public", "proname": "admin_evaluation_page", "identityArgumentsNormalized": "jsonb,integer,uuid,text", "signature": "fixture_guard"},
+            {"schema": "pipeline_control", "proname": "admin_warning_nfkc", "identityArgumentsNormalized": "text", "signature": "fixture_unicode"},
+        ])
+        self.assertIn("SQLSTATE = 'P0001' AND SQLERRM = 'EVALUATION_QUERY_INVALID'", sql)
+        self.assertIn("SQLSTATE = '42883' AND SQLERRM = 'function unicode_assigned(text) does not exist'", sql)
+        self.assertIn("current_setting('server_version_num')::integer / 10000 = 15", sql)
+        self.assertIn("pg_catalog.to_regprocedure('pg_catalog.unicode_assigned(text)') IS NULL", sql)
+        self.assertIn("capability_hold_unicode_assigned_pg15", sql)
+        self.assertNotIn("SQLSTATE IN ('P0001')", sql)
+
+    def test_current_source_closure_candidate_receipt_is_exact(self):
         candidates = self.scanner._candidate_functions(self.scanner._source_inventory())
         self.assertEqual(len(candidates), 107)
         self.assertEqual(
@@ -405,7 +423,7 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
                     candidates, ensure_ascii=True, sort_keys=True, separators=(",", ":")
                 ).encode("ascii")
             ).hexdigest(),
-            "d42754ee0c8e79c7f970072c87dbf96831ba505ff22441e298ca56b211c74884",
+            "c431ab6a834c7e2555437cdbfc31f207db938ea1c0c04e98b72496540a002c11",
         )
         target = [
             item for item in candidates

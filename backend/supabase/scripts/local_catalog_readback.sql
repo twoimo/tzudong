@@ -697,7 +697,7 @@ BEGIN
     JOIN pg_catalog.pg_namespace AS policy_schema ON policy_schema.oid = policy_relation.relnamespace
    WHERE policy_schema.nspname = 'storage'
      AND policy_relation.relname = 'objects';
-  IF policy_count <> 22 OR policy_names IS DISTINCT FROM ARRAY[
+  IF policy_count <> 23 OR policy_names IS DISTINCT FROM ARRAY[
     'local_nightly_avatar_insert',
     'local_nightly_avatar_read',
     'review_media_safe_delete',
@@ -706,6 +706,7 @@ BEGIN
     'review_media_workflow_read',
     'review_photos_food_insert',
     'review_photos_food_update',
+    'review_verifications_immutable_update',
     'review_verifications_owner_delete',
     'review_verifications_owner_insert',
     'review_verifications_owner_read',
@@ -752,7 +753,7 @@ BEGIN
       policy_record.polwithcheck, policy_record.polrelid
     ), '');
 
-    IF policy_record.polname = ANY(ARRAY['review_media_safe_delete','review_media_safe_insert','review_media_safe_update','review_media_workflow_read','review_photos_food_insert','review_photos_food_update','review_verifications_owner_delete','review_verifications_owner_insert','review_verifications_owner_read','review_verifications_safe_delete']) THEN
+    IF policy_record.polname = ANY(ARRAY['review_media_safe_delete','review_media_safe_insert','review_media_safe_update','review_media_workflow_read','review_photos_food_insert','review_photos_food_update','review_verifications_immutable_update','review_verifications_owner_delete','review_verifications_owner_insert','review_verifications_owner_read','review_verifications_safe_delete']) THEN
       CONTINUE; -- Checked by review_media_catalog_readback below.
     END IF;
 
@@ -1174,6 +1175,8 @@ BEGIN
     ('review_media_private.canonical(text,uuid,uuid,text)','87d8397c36cf4c7b986f75cbc2788979333a76be2cc26dc5522cd362f62414a9',false,'i','sql','boolean',ARRAY['p_path','p_owner','p_review','p_purpose']::text[]),
     ('review_media_private.enqueue_removed()','cbf6a87e453e8c2e14d67acd73a92e399fbba4b4f24ac27966806e13ef1fd905',true,'v','plpgsql','trigger',ARRAY[]::text[]),
     ('review_media_private.guard_references()','94113c8ae1231e8eae5a698f35a1370a38367e42c79cc87ac62db76c32e735b1',true,'v','plpgsql','trigger',ARRAY[]::text[]),
+    ('review_media_private.guard_verification_object_delete()','24311fc7071597fbc78c4c54897690da5aaa70edb62c24f7912fd23fecf515b0',true,'v','plpgsql','trigger',ARRAY[]::text[]),
+    ('review_media_private.reject_verification_object_update()','aa1d4951b8d5fdd15249b090c6d6efba897f39eaceee86bf09221eb1d942d545',false,'v','plpgsql','trigger',ARRAY[]::text[]),
     ('review_media_private.lock_changes()','381d89aa6bbf5a59c2ee0fef2a7392ef705147252b324527201b8b6f74376250',true,'v','plpgsql','trigger',ARRAY[]::text[]),
     ('review_media_private.owned_legacy(text,uuid,text)','a2d55f09f03fcaeedd77461198511673da7342a6a4873d37227f9cf612090980',false,'i','sql','boolean',ARRAY['p_path','p_owner','p_purpose']::text[]),
     ('review_media_private.reference_key(text)','a8910cb09bfd959951045e8b0b8233b1e2a8bdc45073abeebdfc26b552b1dae7',false,'i','plpgsql','text',ARRAY['p_value']::text[]),
@@ -1200,7 +1203,7 @@ BEGIN
       RAISE EXCEPTION 'review_media_catalog_function_drift';
     END IF;
   END LOOP;
-  IF (SELECT count(*) FROM pg_proc WHERE pronamespace='review_media_private'::regnamespace)<>7
+  IF (SELECT count(*) FROM pg_proc WHERE pronamespace='review_media_private'::regnamespace)<>9
      OR (SELECT count(*) FROM pg_class WHERE relnamespace='review_media_private'::regnamespace AND relkind IN ('r','p','v','m','f','S'))<>2
      OR NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname='review_media_private' AND nspowner='postgres'::regrole)
      OR NOT has_schema_privilege(v_owner,'review_media_private','USAGE')
@@ -1317,6 +1320,23 @@ BEGIN
     (SELECT * FROM wanted EXCEPT SELECT * FROM actual) UNION ALL (SELECT * FROM actual EXCEPT SELECT * FROM wanted)
   ) THEN RAISE EXCEPTION 'review_media_catalog_trigger_drift'; END IF;
   -- REVIEW_MEDIA_TRIGGER_READBACK_END
+  IF EXISTS (
+    WITH expected(name,function_oid,trigger_type) AS (VALUES
+      ('a01_review_verification_immutable_update',
+       'review_media_private.reject_verification_object_update()'::regprocedure::oid,19),
+      ('a01_review_verification_guard_delete',
+       'review_media_private.guard_verification_object_delete()'::regprocedure::oid,11)
+    ), actual AS (
+      SELECT tgname::text,tgfoid,tgtype::integer,tgenabled::text,tgnargs::integer,
+             tgattr::text,tgdeferrable,tginitdeferred,tgqual IS NULL
+      FROM pg_trigger WHERE tgrelid='storage.objects'::regclass
+        AND tgname LIKE 'a01_review_verification_%' AND NOT tgisinternal
+    ), wanted AS (
+      SELECT name,function_oid,trigger_type,'O'::text,0,''::text,false,false,true FROM expected
+    )
+    (SELECT * FROM wanted EXCEPT SELECT * FROM actual) UNION ALL
+    (SELECT * FROM actual EXCEPT SELECT * FROM wanted)
+  ) THEN RAISE EXCEPTION 'review_media_catalog_verification_trigger_drift'; END IF;
   -- Compare command, role, permissive/restrictive bit and BOTH complete predicates.
   IF EXISTS (
     WITH expected(name,cmd,permissive,role_name,using_expr,check_expr) AS (VALUES
@@ -1327,6 +1347,7 @@ BEGIN
       ('review_photos_food_insert','a',false,'authenticated',NULL::text,'((bucket_id <> ''review-photos''::text) OR ((split_part(name, ''/''::text, 4) = ''food''::text) AND ((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS uid))))'),
       ('review_photos_food_update','w',false,'authenticated','((bucket_id <> ''review-photos''::text) OR ((split_part(name, ''/''::text, 4) = ''food''::text) AND ((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS uid))))','((bucket_id <> ''review-photos''::text) OR ((split_part(name, ''/''::text, 4) = ''food''::text) AND ((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS uid))))'),
       ('review_verifications_owner_delete','d',true,'authenticated','((bucket_id = ''review-verifications''::text) AND ((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS uid)))',NULL::text),
+      ('review_verifications_immutable_update','w',false,'authenticated','(bucket_id <> ''review-verifications''::text)','(bucket_id <> ''review-verifications''::text)'),
       ('review_verifications_owner_insert','a',true,'authenticated',NULL::text,'((bucket_id = ''review-verifications''::text) AND ((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS uid)) AND (split_part(name, ''/''::text, 4) = ''verification''::text))'),
       ('review_verifications_owner_read','r',true,'authenticated','((bucket_id = ''review-verifications''::text) AND ((storage.foldername(name))[1] = ( SELECT (auth.uid())::text AS uid)))',NULL::text),
       ('review_verifications_safe_delete','d',false,'authenticated','((bucket_id <> ''review-verifications''::text) OR review_media_delete_allowed(name))',NULL::text)
@@ -1981,10 +2002,12 @@ WITH expected(signature) AS (VALUES
   ('review_media_private.canonical(text,uuid,uuid,text)'),
   ('review_media_private.enqueue_removed()'),
   ('review_media_private.guard_references()'),
+  ('review_media_private.guard_verification_object_delete()'),
   ('review_media_private.lock_changes()'),
   ('review_media_private.owned_legacy(text,uuid,text)'),
   ('review_media_private.reference_key(text)'),
-  ('review_media_private.referenced(text)')
+  ('review_media_private.referenced(text)'),
+  ('review_media_private.reject_verification_object_update()')
 )
 SELECT json_build_array('review_media_functions', e.signature, pg_get_userbyid(p.proowner),
   pg_get_function_result(p.oid), p.prosecdef, p.provolatile::text, p.proconfig,
@@ -1994,7 +2017,7 @@ SELECT json_build_array('review_media_functions', e.signature, pg_get_userbyid(p
   coalesce((SELECT array_agg(a.grantee::text ORDER BY a.grantee) FROM privacy_retention.g014_public_rpc_allowlist a
     WHERE a.source_signature=e.signature),ARRAY[]::text[]))::text
 FROM expected e JOIN pg_proc p ON p.oid=to_regprocedure(e.signature)
-ORDER BY e.signature;
+ORDER BY e.signature COLLATE "C";
 
 -- Seed sections.  Auth UUIDs are intentionally represented by the fixed
 -- logical ID; the independent checks above reject every extra/unknown identity.

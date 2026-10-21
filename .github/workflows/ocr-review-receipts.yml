@@ -54,7 +54,7 @@ jobs:
       OCR_MODEL_POLICY: ${{ inputs.modelPolicy }}
       OCR_THINKING_LEVEL: ${{ inputs.thinkingLevel }}
       OCR_RECOVERY_OPERATION_ID: ${{ inputs.recoveryOperationId }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       GEMINI_CREDITS_API_KEY: ${{ secrets.GEMINI_CREDITS_API_KEY }}
     steps:

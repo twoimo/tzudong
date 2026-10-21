@@ -1,0 +1,15 @@
+
+Running 7 tests using 1 worker
+
+(node:6148) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/7] [chromium] › tests/privacy-safeguards.spec.ts:35:5 › G010 privacy safeguards › device location controls › shows inline disclosure and locates with one click and no app dialog
+[2/7] [chromium] › tests/privacy-safeguards.spec.ts:54:5 › G010 privacy safeguards › device location controls › denies readiness without calling permission APIs
+[3/7] [chromium] › tests/privacy-safeguards.spec.ts:69:5 › G010 privacy safeguards › device location controls › locks duplicate clicks during readiness and ignores a cancelled readiness response
+[4/7] [chromium] › tests/privacy-safeguards.spec.ts:98:5 › G010 privacy safeguards › device location controls › late error after visibility cancellation cannot cancel a newer request
+[5/7] [chromium] › tests/privacy-safeguards.spec.ts:117:59 › G010 privacy safeguards › device location controls › denied permits an explicit retry without another app dialog
+[6/7] [chromium] › tests/privacy-safeguards.spec.ts:117:59 › G010 privacy safeguards › device location controls › timeout permits an explicit retry without another app dialog
+[7/7] [chromium] › tests/privacy-safeguards.spec.ts:130:5 › G010 privacy safeguards › device location controls › heading toggles off and clears its watcher without another app confirmation
+  7 passed (54.2s)

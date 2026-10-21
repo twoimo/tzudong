@@ -1345,6 +1345,13 @@ export type Database = {
             foreignKeyName: "admin_restaurant_map_overlay_audit_events_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_evaluation_related_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_restaurant_map_overlay_audit_events_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -1488,6 +1495,13 @@ export type Database = {
             foreignKeyName: "admin_restaurant_map_overlay_proposals_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_evaluation_related_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_restaurant_map_overlay_proposals_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -1544,6 +1558,13 @@ export type Database = {
           updated_by_admin_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "admin_restaurant_map_overlays_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_evaluation_related_rows"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "admin_restaurant_map_overlays_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -2061,6 +2082,13 @@ export type Database = {
             foreignKeyName: "admin_trend_signal_observations_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_evaluation_related_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_trend_signal_observations_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -2370,6 +2398,54 @@ export type Database = {
           show_on_banner?: boolean
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      app_web_vitals_histogram: {
+        Row: {
+          bucket: number
+          device: string
+          metric: string
+          navigation: string
+          observed_day: string
+          release_sha: string
+          sample_count: number
+        }
+        Insert: {
+          bucket: number
+          device: string
+          metric: string
+          navigation: string
+          observed_day: string
+          release_sha: string
+          sample_count: number
+        }
+        Update: {
+          bucket?: number
+          device?: string
+          metric?: string
+          navigation?: string
+          observed_day?: string
+          release_sha?: string
+          sample_count?: number
+        }
+        Relationships: []
+      }
+      app_web_vitals_ingest_budget: {
+        Row: {
+          accepted_count: number
+          id: number
+          window_start: string
+        }
+        Insert: {
+          accepted_count: number
+          id: number
+          window_start: string
+        }
+        Update: {
+          accepted_count?: number
+          id?: number
+          window_start?: string
         }
         Relationships: []
       }
@@ -3257,6 +3333,72 @@ export type Database = {
         }
         Relationships: []
       }
+      restaurant_evidence_frames: {
+        Row: {
+          confidence_level: string
+          content_sha256: string
+          created_at: string
+          detected_branch_name: string | null
+          detected_shop_name: string | null
+          evidence_level: string
+          frame_id: string
+          frame_type: string
+          moderation_status: string
+          restaurant_id: string
+          storage_object_key: string
+          timestamp_ms: number
+          video_id: string
+          youtube_seek_url: string
+        }
+        Insert: {
+          confidence_level: string
+          content_sha256: string
+          created_at?: string
+          detected_branch_name?: string | null
+          detected_shop_name?: string | null
+          evidence_level: string
+          frame_id: string
+          frame_type: string
+          moderation_status?: string
+          restaurant_id: string
+          storage_object_key: string
+          timestamp_ms: number
+          video_id: string
+          youtube_seek_url: string
+        }
+        Update: {
+          confidence_level?: string
+          content_sha256?: string
+          created_at?: string
+          detected_branch_name?: string | null
+          detected_shop_name?: string | null
+          evidence_level?: string
+          frame_id?: string
+          frame_type?: string
+          moderation_status?: string
+          restaurant_id?: string
+          storage_object_key?: string
+          timestamp_ms?: number
+          video_id?: string
+          youtube_seek_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_evidence_frames_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_evaluation_related_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "restaurant_evidence_frames_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurant_popular_rank_snapshots: {
         Row: {
           captured_at: string
@@ -3293,10 +3435,83 @@ export type Database = {
             foreignKeyName: "restaurant_popular_rank_snapshots_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_evaluation_related_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "restaurant_popular_rank_snapshots_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
+      }
+      restaurant_popularity_metrics: {
+        Row: {
+          canonical_key: string
+          cohort_version: string
+          computed_at: string
+          popularity_score: number | null
+          popularity_tier: string | null
+          scoring_version: string
+          source_revision: number
+        }
+        Insert: {
+          canonical_key: string
+          cohort_version: string
+          computed_at: string
+          popularity_score?: number | null
+          popularity_tier?: string | null
+          scoring_version: string
+          source_revision: number
+        }
+        Update: {
+          canonical_key?: string
+          cohort_version?: string
+          computed_at?: string
+          popularity_score?: number | null
+          popularity_tier?: string | null
+          scoring_version?: string
+          source_revision?: number
+        }
+        Relationships: []
+      }
+      restaurant_popularity_shadow: {
+        Row: {
+          candidate_freshness: number
+          candidate_visit_multiplier: number
+          canonical_key: string
+          cohort_version: string
+          compared_at: string
+          differs: boolean
+          operational_score: number | null
+          popularity_tier: string | null
+          scoring_version: string
+        }
+        Insert: {
+          candidate_freshness: number
+          candidate_visit_multiplier: number
+          canonical_key: string
+          cohort_version: string
+          compared_at: string
+          differs: boolean
+          operational_score?: number | null
+          popularity_tier?: string | null
+          scoring_version: string
+        }
+        Update: {
+          candidate_freshness?: number
+          candidate_visit_multiplier?: number
+          canonical_key?: string
+          cohort_version?: string
+          compared_at?: string
+          differs?: boolean
+          operational_score?: number | null
+          popularity_tier?: string | null
+          scoring_version?: string
+        }
+        Relationships: []
       }
       restaurant_refresh_candidates: {
         Row: {
@@ -3348,6 +3563,13 @@ export type Database = {
           run_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "restaurant_refresh_candidates_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_evaluation_related_rows"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "restaurant_refresh_candidates_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -3405,6 +3627,13 @@ export type Database = {
           status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "restaurant_refresh_runs_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_evaluation_related_rows"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "restaurant_refresh_runs_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -4673,6 +4902,28 @@ export type Database = {
       }
     }
     Views: {
+      admin_evaluation_related_rows: {
+        Row: {
+          approved_name: string | null
+          created_at: string | null
+          evaluation_results: Json | null
+          google_name: string | null
+          id: string | null
+          jibun_address: string | null
+          lat: number | null
+          lng: number | null
+          name: string | null
+          naver_name: string | null
+          origin_name: string | null
+          phone: string | null
+          road_address: string | null
+          status: string | null
+          updated_by_admin_id: string | null
+          video_id: string | null
+          youtube_link: string | null
+        }
+        Relationships: []
+      }
       mv_popular_reviews: {
         Row: {
           content: string | null
@@ -4794,6 +5045,46 @@ export type Database = {
           p_retention_period: string
           p_trigger_type: string
         }
+        Returns: Json
+      }
+      admin_evaluation_catalog_snapshot: { Args: never; Returns: Json }
+      admin_evaluation_page: {
+        Args: {
+          after_id: string
+          expected_revision: string
+          page_query: Json
+          page_size: number
+        }
+        Returns: Json
+      }
+      admin_evaluation_raw_warning_groups: {
+        Args: {
+          after_cursor?: Json
+          batch_size?: number
+          expected_revision: string
+          page_ids: string[]
+        }
+        Returns: Json
+      }
+      admin_evaluation_revision: { Args: never; Returns: string }
+      admin_evaluation_warning_groups: {
+        Args: { expected_revision: string; page_ids: string[] }
+        Returns: Json
+      }
+      admin_record_action: {
+        Args: {
+          p_action?: string
+          p_actor: string
+          p_operation_id: string
+          p_payload?: Json
+          p_phase: string
+          p_preview_hash?: string
+          p_target_ids?: string[]
+        }
+        Returns: Json
+      }
+      admin_review_verification_cleanup: {
+        Args: { p_paths?: string[]; p_phase: string; p_review_id: string }
         Returns: Json
       }
       admin_user_audit_counts_are_safe: {
@@ -5042,6 +5333,23 @@ export type Database = {
         Args: { p_data: Json; p_message: string; p_title: string }
         Returns: undefined
       }
+      authorize_review_receipt_ocr_execution: {
+        Args: {
+          p_generation: string
+          p_image_hash: string
+          p_input_context_hash: string
+          p_model_policy: Json
+          p_normalization_version: string
+          p_preprocess_version: string
+          p_prompt_version: string
+          p_recovery_operation_id: string
+          p_review_id: string
+          p_thinking_level: string
+          p_user_id: string
+          p_verification_photo_hash: string
+        }
+        Returns: Json
+      }
       batch_insert_restaurants_from_jsonl: {
         Args: { jsonl_array: Json[] }
         Returns: {
@@ -5204,6 +5512,39 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_receipt_ocr_recovery_result: {
+        Args: {
+          p_force_refresh?: boolean
+          p_generation: string
+          p_image_hash: string
+          p_input_context_hash: string
+          p_model_policy: Json
+          p_normalization_version: string
+          p_operation_id: string
+          p_preprocess_version: string
+          p_prompt_version: string
+          p_provider: string
+          p_recovery_operation_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      claim_receipt_ocr_result: {
+        Args: {
+          p_force_refresh?: boolean
+          p_generation: string
+          p_image_hash: string
+          p_input_context_hash: string
+          p_model_policy: Json
+          p_normalization_version: string
+          p_operation_id: string
+          p_preprocess_version: string
+          p_prompt_version: string
+          p_provider: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       cleanup_old_notifications: {
         Args: { days_to_keep?: number }
         Returns: number
@@ -5222,6 +5563,14 @@ export type Database = {
           p_request_id: string
           p_result_summary?: Json
           p_run_id: string
+        }
+        Returns: Json
+      }
+      complete_receipt_ocr_result: {
+        Args: {
+          p_claim_token: string
+          p_result_id: string
+          p_result_payload: Json
         }
         Returns: Json
       }
@@ -5315,6 +5664,27 @@ export type Database = {
           p_review_id: string
         }
         Returns: Json
+      }
+      create_review_with_receipt_ocr: {
+        Args: {
+          p_categories: string[]
+          p_content: string
+          p_food_photos: string[]
+          p_ocr_result_id: string
+          p_ocr_result_revision: string
+          p_restaurant_id: string
+          p_review_id: string
+          p_title: string
+          p_user_corrections?: Json
+          p_user_id: string
+          p_verification_object_id: string
+          p_verification_object_updated_at: string
+          p_verification_object_version: string
+          p_verification_photo: string
+          p_verification_photo_sha256: string
+          p_visited_at: string
+        }
+        Returns: string
       }
       create_user_notification: {
         Args: {
@@ -5520,6 +5890,7 @@ export type Database = {
         }
         Returns: Json
       }
+      finish_review_media_cleanup: { Args: never; Returns: number }
       g038_reserve_account_deletion_commitment: {
         Args: {
           p_aad: string
@@ -5634,6 +6005,10 @@ export type Database = {
       get_current_auth_session_id: { Args: never; Returns: string }
       get_current_privacy_eligibility: { Args: never; Returns: Json }
       get_current_privacy_policy_version: { Args: never; Returns: Json }
+      get_feature_runtime_capability: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       get_index_usage: {
         Args: never
         Returns: {
@@ -5663,6 +6038,25 @@ export type Database = {
           reset_at: string
           unlimited: boolean
           used_count: number
+        }[]
+      }
+      get_owned_review_storage_objects: {
+        Args: {
+          p_names: string[]
+          p_purpose: string
+          p_review_id: string
+          p_user_id: string
+        }
+        Returns: {
+          archived_at: string
+          bucket_id: string
+          id: string
+          is_delete_marker: boolean
+          metadata: Json
+          name: string
+          owner_id: string
+          updated_at: string
+          version: string
         }[]
       }
       get_popular_reviews: {
@@ -5704,6 +6098,14 @@ export type Database = {
           p_provider_verifier_ref: string
           p_run_id: string
         }
+        Returns: Json
+      }
+      get_receipt_ocr_credential_release_capability: {
+        Args: never
+        Returns: Json
+      }
+      get_receipt_ocr_indeterminate_recovery_capability: {
+        Args: never
         Returns: Json
       }
       get_restaurant_stats: {
@@ -5748,6 +6150,10 @@ export type Database = {
       get_review_like_count: {
         Args: { review_id_param: string }
         Returns: number
+      }
+      get_review_receipt_ocr_generation: {
+        Args: { p_review_id: string; p_user_id: string }
+        Returns: Json
       }
       get_table_sizes: {
         Args: never
@@ -5940,6 +6346,14 @@ export type Database = {
         Args: { notification_uuid: string }
         Returns: undefined
       }
+      mark_receipt_ocr_dispatched: {
+        Args: { p_claim_token: string; p_result_id: string }
+        Returns: Json
+      }
+      mark_receipt_ocr_result_indeterminate: {
+        Args: { p_claim_token: string; p_result_id: string }
+        Returns: Json
+      }
       marketing_campaign_receipt: {
         Args: { p_operation_id: string }
         Returns: Json
@@ -6043,11 +6457,32 @@ export type Database = {
           target_restaurant_id: string
         }[]
       }
+      mutate_review_with_media: {
+        Args: {
+          p_categories?: string[]
+          p_content?: string
+          p_expected_updated_at: string
+          p_food_photos?: string[]
+          p_kind: string
+          p_operation_id: string
+          p_review_id: string
+        }
+        Returns: string
+      }
       normalize_restaurant_identity_name: {
         Args: { raw_name: string }
         Returns: string
       }
       ocr_log_metadata_is_safe: { Args: { p_metadata: Json }; Returns: boolean }
+      pending_review_media_cleanup: {
+        Args: never
+        Returns: {
+          owner_id: string
+          path: string
+          purpose: string
+          review_id: string
+        }[]
+      }
       preflight_release_auth_session_family: {
         Args: {
           p_expires_at: number
@@ -6142,6 +6577,10 @@ export type Database = {
           p_class_code: string
           p_max_duration_ms?: number
         }
+        Returns: Json
+      }
+      preview_review_receipt_ocr_indeterminate_recovery: {
+        Args: { p_review_id: string }
         Returns: Json
       }
       privacy_append_audit_event: {
@@ -6241,6 +6680,19 @@ export type Database = {
         }
         Returns: Json
       }
+      publish_review_receipt_ocr_result: {
+        Args: {
+          p_generation: string
+          p_is_duplicate: boolean
+          p_receipt_data: Json
+          p_receipt_hash: string
+          p_result_id: string
+          p_result_revision: string
+          p_review_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       publish_youtube_thumbnail_release: {
         Args: {
           p_browser_image_path: string
@@ -6294,6 +6746,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      queue_review_upload_cleanup: {
+        Args: { p_paths: string[]; p_review_id: string }
+        Returns: string
       }
       reactivate_user: { Args: never; Returns: undefined }
       read_account_deletion_external_job: {
@@ -6421,6 +6877,20 @@ export type Database = {
           user_id: string
         }[]
       }
+      read_receipt_ocr_result: {
+        Args: {
+          p_generation: string
+          p_image_hash: string
+          p_input_context_hash: string
+          p_model_policy: Json
+          p_normalization_version: string
+          p_preprocess_version: string
+          p_prompt_version: string
+          p_provider: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       read_release_auth_revocation: {
         Args: {
           p_operation_id: string
@@ -6432,6 +6902,10 @@ export type Database = {
       read_release_auth_revocation_by_operation: {
         Args: { p_operation_id: string }
         Returns: Json
+      }
+      read_review_media_commit: {
+        Args: { p_kind: string; p_operation_id: string; p_review_id: string }
+        Returns: string
       }
       read_signup_profile_state: {
         Args: { p_expected_nickname: string; p_user_id: string }
@@ -6500,6 +6974,26 @@ export type Database = {
           source_manifest_hash: string
         }[]
       }
+      record_app_web_vitals: {
+        Args: {
+          p_bucket: number
+          p_device: string
+          p_metric: string
+          p_navigation: string
+          p_release: string
+        }
+        Returns: undefined
+      }
+      record_app_web_vitals_bounded: {
+        Args: {
+          p_bucket: number
+          p_device: string
+          p_metric: string
+          p_navigation: string
+          p_release: string
+        }
+        Returns: boolean
+      }
       record_marketing_campaign_audit: {
         Args: {
           p_actor_user_id: string
@@ -6547,6 +7041,21 @@ export type Database = {
         }
         Returns: Json
       }
+      recover_review_receipt_ocr_indeterminate: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_generation: string
+          p_input_snapshot_hash: string
+          p_model_policy: Json
+          p_normalization_version: string
+          p_preprocess_version: string
+          p_prompt_version: string
+          p_recovery_operation_id: string
+          p_review_id: string
+          p_thinking_level: string
+        }
+        Returns: Json
+      }
       refresh_materialized_views: { Args: never; Returns: undefined }
       reject_restaurant: {
         Args: {
@@ -6579,6 +7088,14 @@ export type Database = {
           p_rejection_reason: string
         }
         Returns: boolean
+      }
+      release_receipt_ocr_claim: {
+        Args: { p_claim_token: string; p_result_id: string }
+        Returns: Json
+      }
+      release_receipt_ocr_definitive_credential_rejection: {
+        Args: { p_claim_token: string; p_result_id: string }
+        Returns: Json
       }
       reserve_admin_provider_budget: {
         Args: {
@@ -6628,6 +7145,40 @@ export type Database = {
         }
         Returns: string
       }
+      restaurant_review_automation_configure: {
+        Args: {
+          action: string
+          actor: string
+          batch_size: number
+          daily_limit: number
+          expected_version: string
+          preview_hash: string
+        }
+        Returns: Json
+      }
+      restaurant_review_automation_manual: {
+        Args: {
+          action: string
+          actor: string
+          expected_version: string
+          preview_hash: string
+          request_id: string
+        }
+        Returns: Json
+      }
+      restaurant_review_automation_preview: {
+        Args: { actor: string; batch_size: number; daily_limit: number }
+        Returns: Json
+      }
+      restaurant_review_automation_status: { Args: never; Returns: Json }
+      restaurant_review_automation_tick: {
+        Args: { request_id: string }
+        Returns: Json
+      }
+      restaurant_review_automation_worker: {
+        Args: { action: string; item_id: string; result: Json; token: string }
+        Returns: Json
+      }
       review_admin_restaurant_map_overlay_proposal: {
         Args: {
           p_actor_user_id: string
@@ -6641,6 +7192,14 @@ export type Database = {
           p_transition: string
         }
         Returns: Json
+      }
+      review_media_delete_allowed: {
+        Args: { p_path: string }
+        Returns: boolean
+      }
+      review_media_upload_allowed: {
+        Args: { p_bucket: string; p_path: string }
+        Returns: boolean
       }
       review_restaurant_request: {
         Args: {
@@ -6815,10 +7374,6 @@ export type Database = {
           p_revision?: number
         }
         Returns: Json
-      }
-      storyboard_production_assert_owner: {
-        Args: { p_owner_id: string }
-        Returns: undefined
       }
       storyboard_production_auth_worker: {
         Args: { p_token_sha256: string }

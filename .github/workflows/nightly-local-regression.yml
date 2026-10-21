@@ -166,10 +166,10 @@ jobs:
 
           typegen = {
               'cli_version': 'observed',
-              'registry': 'public.ecr.aws',
+              'registry': 'ghcr.io',
               'image': 'public.ecr.aws/supabase/postgres-meta:v0.96.6',
-              'pull_reference': 'public.ecr.aws/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed',
-              'repo_digest': 'public.ecr.aws/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed',
+              'pull_reference': 'ghcr.io/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed',
+              'repo_digest': 'ghcr.io/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed',
               'image_id': 'sha256:c496f84f24947250e706f03aca4af956a099d8f7e5521279f47e4077964d339a',
               'platform': 'linux/amd64',
               'status': 'not_attempted',
@@ -271,6 +271,9 @@ jobs:
                   record['status'] = 'failed'
                   record['failure_class'] = classify(result.stderr)
                   time.sleep(5 * (attempt + 1))
+              if is_typegen and record['status'] != 'pulled':
+                  typegen['status'] = 'failed'
+                  typegen['failure_class'] = record['failure_class']
               if record['status'] == 'pulled' and is_typegen:
                   try:
                       tag_result = subprocess.run(
@@ -870,7 +873,7 @@ jobs:
           complete_lifecycle_stage
           begin_lifecycle_stage 11 schema_convergence
           docker exec -i "$LOCAL_DB_CONTAINER" \
-            psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            psql -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \
             < backend/supabase/tests/local_runtime_schema_convergence.sql \
             > "$state/local-runtime-contract.log"
           complete_lifecycle_stage

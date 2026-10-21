@@ -73,7 +73,7 @@ SELECT
   fixture.title,
   '프로필 페이지 로컬 트랜잭션 검증 내용입니다.',
   '2026-01-01T00:00:00Z'::timestamptz,
-  'local-only-profile-page.jpg',
+  fixture.user_id::text || '/reviews/' || fixture.id::text || '/verification/local-only-profile-page.jpg',
   true,
   fixture.created_at,
   fixture.created_at,

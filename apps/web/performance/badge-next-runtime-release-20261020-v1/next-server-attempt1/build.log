@@ -1,0 +1,15 @@
+▲ Next.js 16.3.8 (webpack)
+✓ Running next.config.mjs took 11ms
+- Experiments (use with caution):
+  · cpus: 2
+
+  Creating an optimized production build ...
+Failed to compile.
+
+./app/harness.tsx
+Module not found: Can't resolve '@/components/restaurant/PopularityBadge'
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+> Build failed because of webpack errors

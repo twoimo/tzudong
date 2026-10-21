@@ -50,6 +50,16 @@ const eslintConfig = [
         },
     },
     {
+        files: [
+            'performance/overseas-map-startup-20261021-v1/fixture-inputs/next.config.mjs',
+            'performance/overseas-map-startup-20261021-v1/fixture-inputs/postcss.config.mjs',
+        ],
+        rules: {
+            // Preserve the hash-bound measurement configuration; keep every other rule.
+            'import/no-anonymous-default-export': 'off',
+        },
+    },
+    {
         files: ['performance/home-provider-transition-20260925/browser-entry.jsx'],
         rules: {
             // Laboratory render counters/controls intentionally observe each render.

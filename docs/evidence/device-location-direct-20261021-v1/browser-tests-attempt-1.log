@@ -1,0 +1,110 @@
+
+Running 7 tests using 1 worker
+
+(node:89835) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/7] [chromium] › tests/privacy-safeguards.spec.ts:35:5 › G010 privacy safeguards › device location controls › shows inline disclosure and locates with one click and no app dialog
+  1) [chromium] › tests/privacy-safeguards.spec.ts:35:5 › G010 privacy safeguards › device location controls › shows inline disclosure and locates with one click and no app dialog 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('10m', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('10m', { exact: true }) with timeout 5000ms
+      - waiting for getByText('10m', { exact: true })
+
+
+      46 |       await button.click();
+      47 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();
+    > 48 |       await expect(page.getByText('10m', { exact: true })).toBeVisible();
+         |                                                            ^
+      49 |       expect(dialogs).toBe(0);
+      50 |       expect(fixture.readinessCalls()).toBe(1);
+      51 |       expect((await readDeviceLocationCounts(page)).getCalls).toBe(1);
+        at /Users/twoimo/.codex/worktrees/badge-next-runtime-[REDACTED:phone]/tzudong/apps/web/tests/privacy-safeguards.spec.ts:48:60
+
+    Error Context: test-results/privacy-safeguards-G010-pr-21c33-one-click-and-no-app-dialog-chromium/error-context.md
+
+
+(node:90449) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[2/7] [chromium] › tests/privacy-safeguards.spec.ts:54:5 › G010 privacy safeguards › device location controls › denies readiness without calling permission APIs
+[3/7] [chromium] › tests/privacy-safeguards.spec.ts:69:5 › G010 privacy safeguards › device location controls › locks duplicate clicks during readiness and ignores a cancelled readiness response
+[4/7] [chromium] › tests/privacy-safeguards.spec.ts:98:5 › G010 privacy safeguards › device location controls › late error after visibility cancellation cannot cancel a newer request
+  2) [chromium] › tests/privacy-safeguards.spec.ts:98:5 › G010 privacy safeguards › device location controls › late error after visibility cancellation cannot cancel a newer request 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('10m', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('10m', { exact: true }) with timeout 5000ms
+      - waiting for getByText('10m', { exact: true })
+
+
+      112 |       await page.evaluate(() => (window as unknown as DeviceLocationTestWindow).__deviceLocationProbe.resolve(1));
+      113 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();
+    > 114 |       await expect(page.getByText('10m', { exact: true })).toBeVisible();
+          |                                                            ^
+      115 |     });
+      116 |
+      117 |     for (const outcome of ['denied', 'timeout'] as const) test(`${outcome} permits an explicit retry without another app dialog`, async ({ page }) => {
+        at /Users/twoimo/.codex/worktrees/badge-next-runtime-[REDACTED:phone]/tzudong/apps/web/tests/privacy-safeguards.spec.ts:114:60
+
+    Error Context: test-results/privacy-safeguards-G010-pr-13400-nnot-cancel-a-newer-request-chromium/error-context.md
+
+
+(node:91266) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[5/7] [chromium] › tests/privacy-safeguards.spec.ts:117:59 › G010 privacy safeguards › device location controls › denied permits an explicit retry without another app dialog
+[6/7] [chromium] › tests/privacy-safeguards.spec.ts:117:59 › G010 privacy safeguards › device location controls › timeout permits an explicit retry without another app dialog
+  3) [chromium] › tests/privacy-safeguards.spec.ts:117:59 › G010 privacy safeguards › device location controls › timeout permits an explicit retry without another app dialog 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText(/현재 위치를 찾는 시간이 초과됐어요/)
+    Expected: visible
+    Error: strict mode violation: getByText(/현재 위치를 찾는 시간이 초과됐어요/) resolved to 2 elements:
+        1) <div class="min-w-0 text-sm font-semibold leading-5 sm:whitespace-nowrap">현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</div> aka getByText('현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.', { exact: true })
+        2) <span role="status" aria-live="assertive">Notification 현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</span> aka getByText('Notification')
+
+    Call log:
+      - Expect "toBeVisible" getByText(/현재 위치를 찾는 시간이 초과됐어요/) with timeout 5000ms
+      - waiting for getByText(/현재 위치를 찾는 시간이 초과됐어요/)
+
+
+      121 |       page.on('dialog', async dialog => { dialogs++; await dialog.dismiss(); });
+      122 |       await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();
+    > 123 |       await expect(page.getByText(outcome === 'denied' ? /위치 권한이 거부됐어요/ : /현재 위치를 찾는 시간이 초과됐어요/)).toBeVisible();
+          |                                                                                                   ^
+      124 |       await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();
+      125 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();
+      126 |       expect((await readDeviceLocationCounts(page)).getCalls).toBe(2);
+        at /Users/twoimo/.codex/worktrees/badge-next-runtime-[REDACTED:phone]/tzudong/apps/web/tests/privacy-safeguards.spec.ts:123:99
+
+    Error Context: test-results/privacy-safeguards-G010-pr-786bb--without-another-app-dialog-chromium/error-context.md
+
+
+(node:92757) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[7/7] [chromium] › tests/privacy-safeguards.spec.ts:130:5 › G010 privacy safeguards › device location controls › heading toggles off and clears its watcher without another app confirmation
+  3 failed
+    [chromium] › tests/privacy-safeguards.spec.ts:35:5 › G010 privacy safeguards › device location controls › shows inline disclosure and locates with one click and no app dialog 
+    [chromium] › tests/privacy-safeguards.spec.ts:98:5 › G010 privacy safeguards › device location controls › late error after visibility cancellation cannot cancel a newer request 
+    [chromium] › tests/privacy-safeguards.spec.ts:117:59 › G010 privacy safeguards › device location controls › timeout permits an explicit retry without another app dialog 
+  4 passed (52.9s)

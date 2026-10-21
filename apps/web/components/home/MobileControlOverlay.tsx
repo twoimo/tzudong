@@ -49,6 +49,7 @@ import { incrementSearchCount } from '@/lib/search-count';
 import type { User } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContextBase';
 import { resolveDeviceLocationButtonLabel, type DeviceMapLocation } from '@/lib/device-location-map';
+import { DeviceLocationDisclosure } from '@/components/home/DeviceLocationDisclosure';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
 import { useOverseasCountryCounts } from '@/components/home/use-overseas-country-counts';
 import { isPublicRestrictedMode, siteConfig } from "@/lib/site-config";
@@ -61,6 +62,7 @@ import {
     type HomeMapThemeFilterId,
 } from '@/lib/home-map-theme-filters';
 import { HomeMapThemeFilterIcon } from '@/components/home/home-map-theme-filter-icons';
+import { preloadOverseasMap } from '@/lib/overseas-map-loader';
 
 declare global {
     interface Window {
@@ -1103,6 +1105,9 @@ function MobileControlOverlayComponent({
                             variant="ghost"
                             size="sm"
                             onClick={() => onModeChange('overseas')}
+                            onPointerEnter={preloadOverseasMap}
+                            onPointerDown={preloadOverseasMap}
+                            onFocus={preloadOverseasMap}
                             aria-pressed={mapMode === 'overseas'}
                             aria-label="해외 맛집 지도 보기"
                             className={`rounded-full h-8 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
@@ -1240,34 +1245,39 @@ function MobileControlOverlayComponent({
                 {!isPublicRestrictedMode && (
                     <>
                         {/* 기기 위치 버튼: 첫 탭은 현재 위치, 두 번째 탭부터 방향 표시 */}
-                        <Button
-                            type="button"
-                            onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                onDeviceLocationClick?.();
-                            }}
-                            disabled={isDeviceLocationPending}
-                            aria-label={deviceLocationButtonLabel}
-                            className={cn(
-                                'h-12 w-12 rounded-full shadow-sm',
-                                'flex items-center justify-center',
-                                'border',
-                                isDeviceHeadingMode
-                                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70'
-                                    : deviceLocation
-                                        ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
-                                        : 'bg-background/95 hover:bg-secondary text-foreground border-border/70',
-                                isDeviceLocationPending && 'opacity-80'
-                            )}
-                            title={deviceLocationButtonLabel}
-                        >
-                            {isDeviceHeadingMode ? (
-                                <Navigation className="h-5 w-5" aria-hidden="true" />
-                            ) : (
-                                <LocateFixed className="h-5 w-5" aria-hidden="true" />
-                            )}
-                        </Button>
+                        <div className="relative">
+                            <DeviceLocationDisclosure id="mobile-device-location-disclosure" />
+                            <Button
+                                type="button"
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    onDeviceLocationClick?.();
+                                }}
+                                disabled={isDeviceLocationPending}
+                                aria-label={deviceLocationButtonLabel}
+                                aria-describedby="mobile-device-location-disclosure"
+                                aria-busy={isDeviceLocationPending}
+                                className={cn(
+                                    'h-12 w-12 rounded-full shadow-sm',
+                                    'flex items-center justify-center',
+                                    'border',
+                                    isDeviceHeadingMode
+                                        ? 'bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70'
+                                        : deviceLocation
+                                            ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+                                            : 'bg-background/95 hover:bg-secondary text-foreground border-border/70',
+                                    isDeviceLocationPending && 'opacity-80'
+                                )}
+                                title={deviceLocationButtonLabel}
+                            >
+                                {isDeviceHeadingMode ? (
+                                    <Navigation className="h-5 w-5" aria-hidden="true" />
+                                ) : (
+                                    <LocateFixed className="h-5 w-5" aria-hidden="true" />
+                                )}
+                            </Button>
+                        </div>
                     </>
                 )}
             </div>
