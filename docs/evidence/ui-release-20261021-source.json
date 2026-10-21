@@ -1,0 +1,145 @@
+{
+  "schema": "tzudong-ui-release-source-v1",
+  "observedAt": "2026-10-20T20:13:59.560615+00:00",
+  "baseSha": "de62e9426ffd761c4be974a4ca670c034d98489e",
+  "productionRollback": {
+    "sha": "62d9997f14c94690fdda6ce7cca6cfa27b2fa2fe",
+    "deploymentId": "dpl_FiWX1vhtFmMMuFxsjDGTGVTkbkVJ",
+    "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "url": "https://www.tzudong.app/"
+  },
+  "sources": [
+    {
+      "path": ".gitignore",
+      "bytes": 6336,
+      "sha256": "3b981f3c8efd01545d34ccb31d237b1f600eb0c492ecc35203506c1976381126"
+    },
+    {
+      "path": "apps/web/app/home-client.tsx",
+      "bytes": 49294,
+      "sha256": "efbdee255c00b67aa701a6e1f09b54256d86427db307f6fa501fdb7bd87656ea"
+    },
+    {
+      "path": "apps/web/components/home/DeviceLocationDisclosure.tsx",
+      "bytes": 546,
+      "sha256": "07508330fab6052617862f49dd7d163a90bf68741e352f85e8fa09a271a12632"
+    },
+    {
+      "path": "apps/web/components/home/MobileControlOverlay.tsx",
+      "bytes": 77984,
+      "sha256": "62798d583ee235f08eb5372a3ac12c18bd8d9aaca9488115ffe1e8dddef7f4ee"
+    },
+    {
+      "path": "apps/web/components/home/SubmissionFloatingButton.tsx",
+      "bytes": 7410,
+      "sha256": "7ed02d611505a748c6ab0d69a3e227a167f2c8e9d98ae4019b7e14a803d7751d"
+    },
+    {
+      "path": "apps/web/components/home/home-desktop-control-panel.tsx",
+      "bytes": 72404,
+      "sha256": "15496f65e3a33bcd72c093ab75fc90cd4a9836423a425d0a521fb1af8f995666"
+    },
+    {
+      "path": "apps/web/components/home/home-map-container.tsx",
+      "bytes": 70122,
+      "sha256": "97e2b43199a52a681ab5f30aaa130fe52565d6b8f0510d8369e486af01a5de7c"
+    },
+    {
+      "path": "apps/web/components/map/OverseasMap.tsx",
+      "bytes": 17498,
+      "sha256": "89cc8f971492756881b0e84f34f9dd243b5d2496258ba2a004a6503e03cd0f5a"
+    },
+    {
+      "path": "apps/web/components/restaurant/RestaurantDetailPanel.tsx",
+      "bytes": 82739,
+      "sha256": "d4f20b5873a7c13fd210ee36211c074eb412e5b723f8d0a536577740ffb86226"
+    },
+    {
+      "path": "apps/web/components/stamp/StampCard.tsx",
+      "bytes": 21295,
+      "sha256": "d7514a437ab6f51a915eb287d42b4773672fa99f02120a3fc51edbc99d459453"
+    },
+    {
+      "path": "apps/web/lib/overseas-map-loader.ts",
+      "bytes": 751,
+      "sha256": "2dcd93386f818ce17dfe14e1b8c7a5551affb9d0831841dc0fe29b81e7151895"
+    },
+    {
+      "path": "apps/web/lib/overseas-map-provider.ts",
+      "bytes": 414,
+      "sha256": "c480cc57caf50aa33d9b0bfdf3fa4efb8f330b56c03deb776de3c4d0dd619220"
+    },
+    {
+      "path": "apps/web/next.config.mjs",
+      "bytes": 15007,
+      "sha256": "f70c9fa51483a25863a297cae57c3abde09a634a15dfb0b76e1c81ed96cff41b"
+    },
+    {
+      "path": "apps/web/proxy.ts",
+      "bytes": 13282,
+      "sha256": "de3db6ac15728bc6219b685a98732c6e7d89ae9a0ebe6ceab59e367ff48a69ab"
+    },
+    {
+      "path": "apps/web/scripts/prepare-maplibre-worker-assets.mjs",
+      "bytes": 2121,
+      "sha256": "7735dedfbaede4b99a4e04e579bc9f03071afa331bb4e9ba670bdc838ab241de"
+    },
+    {
+      "path": "apps/web/tests-unit/device-location-privacy.test.ts",
+      "bytes": 18770,
+      "sha256": "e26420e803b7e42a61e89309de3933c188a62ff33da4517b73bc593e181c17b6"
+    },
+    {
+      "path": "apps/web/tests-unit/maplibre-worker-assets.test.ts",
+      "bytes": 3344,
+      "sha256": "ee645ea4c1b26bd165defd5f0615cf2b996fec640133e83548eb6fd5c46c7eab"
+    },
+    {
+      "path": "apps/web/tests-unit/proxy.test.ts",
+      "bytes": 24467,
+      "sha256": "176f790825bf852b09518d3d0981271c53c192f621332ab2c7c3513e4858e44d"
+    },
+    {
+      "path": "apps/web/tests-unit/web-quality-performance-source.test.ts",
+      "bytes": 228362,
+      "sha256": "57a4ca1fdd95cb276ee0bc609be23ff6946d0266ed989254d568eba6dbe6ed94"
+    },
+    {
+      "path": "apps/web/tests/device-location-helpers.ts",
+      "bytes": 3412,
+      "sha256": "9df8a00abd943fd46041c9a924f354c826f1441be1cd7054ea0c59d622c6086d"
+    },
+    {
+      "path": "apps/web/tests/device-location-local-probes.ts",
+      "bytes": 4019,
+      "sha256": "9cdd570eefd2e0664f88974168dcacea8b7afd8a87d5249f420acdec679b4442"
+    },
+    {
+      "path": "apps/web/tests/privacy-safeguards.spec.ts",
+      "bytes": 9934,
+      "sha256": "680cf33397c27fd2f0ab5cf7d958e3d673ac565b9372f9fa03c8d390e9bf1298"
+    },
+    {
+      "path": "apps/web/tsconfig.json",
+      "bytes": 1368,
+      "sha256": "cdbd2b57d55c77ea1ef2b81124b7007fec7df15d55cc917c8c9eca5704234c49"
+    },
+    {
+      "path": "apps/web/eslint.config.mjs",
+      "bytes": 3340,
+      "sha256": "405c9039f883d238a96e46d0764748a96b12ffbab8e49743cf820575097aebd4"
+    }
+  ],
+  "historicalEvidence": {
+    "overseasMap": "apps/web/performance/overseas-map-startup-20261021-v1/artifact-map.json",
+    "location": "docs/evidence/device-location-direct-20261021-v1/evidence-map.json"
+  },
+  "boundaries": {
+    "externalCrossAudit": "incomplete; existing queue preserved",
+    "nightly": "separate from deployment; no new full Nightly run claimed",
+    "physicalGPS": "unverified; synthetic browser fixtures only",
+    "deployment": "pending protected promotion and live readback"
+  },
+  "ciRepair": "Exclude frozen measurement fixture inputs from production app typecheck; retain original measured bytes and inspect production sources normally",
+  "ciLintRepair": "Only the two frozen map fixture config exports keep their measured syntax; all other lint rules remain enabled."
+}

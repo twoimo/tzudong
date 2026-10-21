@@ -197,3 +197,6 @@ backend/restaurant-evaluation-test/
 **/cookies.json.bak
 **/gemini_cookies.json
 **/.gemini/
+
+# Immutable dependency assets generated from the pinned MapLibre package.
+/apps/web/public/scripts/maplibre/

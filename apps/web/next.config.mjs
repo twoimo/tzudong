@@ -5,9 +5,11 @@ import { withSentryConfig } from '@sentry/nextjs/config';
 import { sentryBuildRelease } from './lib/monitoring/sentry-release.ts';
 import { resolveConfiguredSupabaseOrigin } from './lib/profile-avatar-url.ts';
 import { calculateStoryboardRuntimeSourceBinding } from './lib/admin/storyboard/runtime-source-binding.ts';
+import { prepareMapLibreWorkerAssets } from './scripts/prepare-maplibre-worker-assets.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const mapLibreWorkerAssets = prepareMapLibreWorkerAssets(__dirname);
 
 const withBundleAnalyzer = bundleAnalyzer({
     enabled: process.env.ANALYZE === 'true',
@@ -153,6 +155,7 @@ const nextConfig = {
         remotePatterns: buildImageRemotePatterns(),
     },
     env: {
+        NEXT_PUBLIC_MAPLIBRE_WORKER_URL: mapLibreWorkerAssets.workerUrl,
         // Computed from the executable storyboard provider/worker sources at build time.
         // Next inlines this server-only value so runtime readback never depends on source files.
         STORYBOARD_RUNTIME_SOURCE_BINDING_SHA256: storyboardRuntimeSourceBinding.sha256,
@@ -204,6 +207,13 @@ const nextConfig = {
             },
             {
                 source: '/images/:path*',
+                headers: [
+                    ...securityHeaders,
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
+            },
+            {
+                source: '/scripts/maplibre/:path*',
                 headers: [
                     ...securityHeaders,
                     { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },

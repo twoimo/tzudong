@@ -1,0 +1,146 @@
+{
+  "schema": "device-location-direct-evidence-v1",
+  "createdAt": "2026-10-20T20:06:46.835799+00:00",
+  "scope": "Local actual app build with synthetic position; no real user GPS, external audit completion or deployment",
+  "artifacts": [
+    {
+      "path": "REPORT.md",
+      "bytes": 4990,
+      "sha256": "d06f4f7f825b74f8017a0b270cc0223d5981904e9f4063c1dade0e26003c9e8a"
+    },
+    {
+      "path": "baseline.json",
+      "bytes": 437,
+      "sha256": "606640a5a63ba3731977dd3080dca5863454e9db39938006a97dd38bee61b95b"
+    },
+    {
+      "path": "browser-tests-attempt-1-receipt.json",
+      "bytes": 236,
+      "sha256": "ee32b651d212286a1f548d24226b57b942936e25c85fc7adeb8cbb35fbb58b29"
+    },
+    {
+      "path": "browser-tests-attempt-1.json",
+      "bytes": 25796,
+      "sha256": "2d4c26122b547138451110c8d67c2ec62533fac5f9fbe530a2a1665ad4a050a7"
+    },
+    {
+      "path": "browser-tests-attempt-1.log",
+      "bytes": 7495,
+      "sha256": "72f615bad30524a48420229af922735eed31e6b893cc6e2125830ba78272c81d"
+    },
+    {
+      "path": "browser-tests-receipt.json",
+      "bytes": 236,
+      "sha256": "e85ae59993c061778715ae4882e18e417cbc0a8bdc1d33200e059151829bd7ba"
+    },
+    {
+      "path": "browser-tests.log",
+      "bytes": 1531,
+      "sha256": "ae0c0a0a91b7494a74a02f23cfbedd75e9005d7748c35a33448af50878bf2380"
+    },
+    {
+      "path": "build-attempt-1-receipt.json",
+      "bytes": 228,
+      "sha256": "cdf2a02ee89a9705f8b2e502ed4e254201603987d05eb1d80a4a4ef538062139"
+    },
+    {
+      "path": "build-attempt-1.log",
+      "bytes": 197,
+      "sha256": "5f6c11b5743d0de89c887d8bc930e45a5cbf08b8b27e573ed3ed873525ddbc3c"
+    },
+    {
+      "path": "build-receipt.json",
+      "bytes": 228,
+      "sha256": "6288639681791edf7bc39a8068f1dc6f410a0715d3dd0c26b9d5a9f2d937c3d1"
+    },
+    {
+      "path": "build.log",
+      "bytes": 1077,
+      "sha256": "f3696afd13b504be476fc4469bf15d93386b3a8d33609f8dcd5aef40b500a672"
+    },
+    {
+      "path": "cleanup.json",
+      "bytes": 268,
+      "sha256": "8dc4add9f3f2d7f80932c63574a77f4daf3d4c0d18a8f2350ba5f892d75d58f8"
+    },
+    {
+      "path": "eslint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "inline-1440.png",
+      "bytes": 81513,
+      "sha256": "fe985e8c8255330dcf378f4c4b0735b17b24b10de18d9314e1094e8486f69d4c"
+    },
+    {
+      "path": "inline-320.png",
+      "bytes": 37778,
+      "sha256": "e3859c276b380b48f7f52a0eebe152b6f33998f59b9644d9c92e618c91399b6c"
+    },
+    {
+      "path": "inline-497.png",
+      "bytes": 42677,
+      "sha256": "26ab9236986b0f8d1c5b36e5f33d7d9c9b0135aa7d7bc7270f29900672de7f97"
+    },
+    {
+      "path": "inline-768.png",
+      "bytes": 45462,
+      "sha256": "cabb705f0a92c47754837785149d484f4f63f4d36a55ed034780332fff4115d9"
+    },
+    {
+      "path": "parity-source.log",
+      "bytes": 1986,
+      "sha256": "3d09033b1675b79b0570ee2d8426eba43d41b83484bec9b152a9a09cb253453d"
+    },
+    {
+      "path": "responsive.json",
+      "bytes": 1621,
+      "sha256": "5aba265204e1ca6d8630b9b0c2ad4ef324a5b4bf2c101248d42a41135b0c3359"
+    },
+    {
+      "path": "run-local.mjs",
+      "bytes": 3062,
+      "sha256": "6412b8b0bd0b34fc2f3aba1c82bcbbdac4747f5f166583c4a6ce6758c4c9bd66"
+    },
+    {
+      "path": "server-receipt.json",
+      "bytes": 231,
+      "sha256": "65dff013d42b663f3f491170f058fe479291450da83dccf9d00c00d40784ba92"
+    },
+    {
+      "path": "server.log",
+      "bytes": 156,
+      "sha256": "f1bd6789bee7578290f408f289f2c17395af6d87c699e7927488b138419a7844"
+    },
+    {
+      "path": "source-bindings.json",
+      "bytes": 1683,
+      "sha256": "48103ed78a121f2b754d63328aa963c007595471654d7c6d03ccada62181b59a"
+    },
+    {
+      "path": "source-snapshot.txt",
+      "bytes": 171952,
+      "sha256": "47bde9391bdf8c32559f7743eba631985bc716acda55cf42de0b3c478847e662"
+    },
+    {
+      "path": "typecheck.log",
+      "bytes": 510,
+      "sha256": "b1d94034e21709f5f84a0378fbe74c2fb1b88de8a0756f3b75b02df4a22ae035"
+    },
+    {
+      "path": "unit.log",
+      "bytes": 2310,
+      "sha256": "cea4bf7aff2106716e0fe86001047dc07d219b455f0ba1afa8b79787270c6b84"
+    }
+  ],
+  "sanitization": {
+    "observedAt": "2026-10-20T20:16:06.971643+00:00",
+    "reason": "Omit complete duplicated Playwright config, including project-level bypass metadata and local test environment",
+    "artifact": "browser-tests-attempt-1.json",
+    "priorArtifactSha256": "0d66e269cf9b4b17e07aaddabf4da81886edfe3cf1ccf2899862cbd0f8e16cad",
+    "priorMapSha256": "45bfe00bbef9bef0116a6eb4e32a4a9e16596ef085f71ddff454982f91093306",
+    "productSourcesChanged": false,
+    "productionCredentialsObserved": false
+  }
+}

@@ -1966,6 +1966,7 @@ async function runBrowserRegression(environment, mode) {
         'test',
         ...curatedBrowserSpecs,
         '--project=chromium',
+        '--retries=0',
         '--reporter=line,json',
       ],
       {

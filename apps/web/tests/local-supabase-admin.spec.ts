@@ -681,6 +681,9 @@ test.describe('real local Supabase and admin lifecycle', () => {
   });
 
   test('authenticates the real synthetic admin, hydrates the console, and proves guarded read, preview, apply, readback and audit', async ({ page }) => {
+    // Cold compilation, authentication and guarded mutations share this test's
+    // deadline. Keep individual 30-second waits while budgeting the full journey.
+    test.slow();
     const email = process.env.NIGHTLY_ADMIN_EMAIL;
     const password = process.env.NIGHTLY_ADMIN_PASSWORD;
     expect(email).toBe('nightly-ci@local.invalid');

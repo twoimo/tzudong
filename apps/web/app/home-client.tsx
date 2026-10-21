@@ -155,11 +155,6 @@ const DEVICE_LOCATION_UNAVAILABLE_TOAST = "현재 위치를 확인할 수 없어
 const DEVICE_LOCATION_READINESS_BLOCKED =
   "현재 위치를 지금 표시하지 못했어요. 잠시 후 다시 시도해 주세요.";
 
-const DEVICE_LOCATION_DISCLOSURE =
-  "현재 위치 좌표는 현재 React 메모리에만 보관되며 Tzudong에 저장되지 않습니다. 브라우저 지도 렌더링 및 화면 이동은 승인된 지도 제공자 경계를 통과할 수 있습니다. 브라우저 위치 권한을 요청할까요?";
-const DEVICE_LOCATION_DISCLOSURE_CANCELLED =
-  "위치 권한을 요청하지 않았어요. 지도는 계속 이용할 수 있어요.";
-
 function describeDeviceLocationFailure(error: unknown) {
   const code = typeof error === "object" && error !== null && "code" in error
     ? Number((error as { code?: unknown }).code)
@@ -249,6 +244,7 @@ export default function HomeClient() {
     useState<HomeStartupIntent | null>(null);
   const [isDeviceLocationPending, setIsDeviceLocationPending] = useState(false);
   const [isDeviceHeadingMode, setIsDeviceHeadingMode] = useState(false);
+  const deviceLocationRequestRef = useRef({ id: 0, pending: false });
   const deviceLocationFocusRequestIdRef = useRef(0);
   const deviceLocationWatchIdRef = useRef<number | null>(null);
   const deviceOrientationCleanupRef = useRef<(() => void) | null>(null);
@@ -906,6 +902,9 @@ export default function HomeClient() {
     stopDeviceHeadingWatchers();
   }, [stopDeviceHeadingWatchers]);
   const clearDeviceLocationState = useCallback(() => {
+    deviceLocationRequestRef.current.id += 1;
+    deviceLocationRequestRef.current.pending = false;
+    if (deviceLocationMountedRef.current) setIsDeviceLocationPending(false);
     const authorization = deviceLocationAuthorizationRef.current;
     const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
     if (expiryTimer !== null) {
@@ -1055,69 +1054,55 @@ export default function HomeClient() {
       return;
     }
 
-    const authorization = await acquireDeviceLocationUseAuthorization();
-    if (!authorization) {
-      clearDeviceLocationState();
-      toast.error(DEVICE_LOCATION_READINESS_BLOCKED);
-      return;
-    }
-
-    if (
-      !deviceLocationMountedRef.current ||
-      (typeof document !== "undefined" &&
-        document.visibilityState === "hidden")
-    ) {
-      revokeDeviceLocationUseAuthorization(authorization);
-      clearDeviceLocationState();
-      return;
-    }
-
-    const previousAuthorization = deviceLocationAuthorizationRef.current;
-    const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
-    if (expiryTimer !== null) {
-      globalThis.clearTimeout(expiryTimer);
-      deviceLocationAuthorizationExpiryTimerRef.current = null;
-    }
-    revokeDeviceLocationUseAuthorization(previousAuthorization);
-    deviceLocationAuthorizationRef.current = authorization;
-    const expiresIn = authorization.expiresAt - authorization.grantedAt;
-    deviceLocationAuthorizationExpiryTimerRef.current = globalThis.setTimeout(() => {
-      if (deviceLocationAuthorizationRef.current === authorization) {
-        clearDeviceLocationState();
-      }
-    }, expiresIn);
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      clearDeviceLocationState();
-      toast.error(DEVICE_LOCATION_ENABLE_TOAST);
-      return;
-    }
-
-    try {
-      if (
-        typeof window === "undefined" ||
-        !window.confirm(DEVICE_LOCATION_DISCLOSURE)
-      ) {
-        clearDeviceLocationState();
-        toast.info(DEVICE_LOCATION_DISCLOSURE_CANCELLED);
-        return;
-      }
-    } catch {
-      clearDeviceLocationState();
-      toast.info(DEVICE_LOCATION_DISCLOSURE_CANCELLED);
-      return;
-    }
-
-    if (deviceLocationAuthorizationRef.current !== authorization) {
-      clearDeviceLocationState();
-      return;
-    }
-
-    const nextMode: "position" | "heading" = deviceLocation
-      ? "heading"
-      : "position";
+    if (deviceLocationRequestRef.current.pending) return;
+    const requestId = ++deviceLocationRequestRef.current.id;
+    deviceLocationRequestRef.current.pending = true;
     setIsDeviceLocationPending(true);
 
     try {
+      const authorization = await acquireDeviceLocationUseAuthorization();
+      if (
+        deviceLocationRequestRef.current.id !== requestId ||
+        !deviceLocationMountedRef.current ||
+        (typeof document !== "undefined" && document.visibilityState === "hidden")
+      ) {
+        revokeDeviceLocationUseAuthorization(authorization);
+        return;
+      }
+      if (!authorization) {
+        clearDeviceLocationState();
+        toast.error(DEVICE_LOCATION_READINESS_BLOCKED);
+        return;
+      }
+
+      const previousAuthorization = deviceLocationAuthorizationRef.current;
+      const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
+      if (expiryTimer !== null) {
+        globalThis.clearTimeout(expiryTimer);
+        deviceLocationAuthorizationExpiryTimerRef.current = null;
+      }
+      revokeDeviceLocationUseAuthorization(previousAuthorization);
+      deviceLocationAuthorizationRef.current = authorization;
+      const expiresIn = authorization.expiresAt - authorization.grantedAt;
+      deviceLocationAuthorizationExpiryTimerRef.current = globalThis.setTimeout(() => {
+        if (deviceLocationAuthorizationRef.current === authorization) {
+          clearDeviceLocationState();
+        }
+      }, expiresIn);
+      if (typeof navigator === "undefined" || !navigator.geolocation) {
+        clearDeviceLocationState();
+        toast.error(DEVICE_LOCATION_ENABLE_TOAST);
+        return;
+      }
+
+      if (deviceLocationAuthorizationRef.current !== authorization) {
+        clearDeviceLocationState();
+        return;
+      }
+
+      const nextMode: "position" | "heading" = deviceLocation
+        ? "heading"
+        : "position";
       const position = await new Promise<GeolocationPosition>(
         (resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -1127,6 +1112,10 @@ export default function HomeClient() {
           });
         },
       );
+      if (
+        deviceLocationRequestRef.current.id !== requestId ||
+        deviceLocationAuthorizationRef.current !== authorization
+      ) return;
       if (
         !deviceLocationMountedRef.current ||
         (typeof document !== "undefined" &&
@@ -1140,6 +1129,7 @@ export default function HomeClient() {
         setIsDeviceHeadingMode(true);
         await startDeviceOrientationTracking();
 
+        if (deviceLocationRequestRef.current.id !== requestId) return;
         if (
           !deviceLocationMountedRef.current ||
           (typeof document !== "undefined" &&
@@ -1159,11 +1149,15 @@ export default function HomeClient() {
 
       applyDevicePosition(position, nextMode, { shouldFocus: true });
     } catch (error) {
+      if (deviceLocationRequestRef.current.id !== requestId) return;
       clearDeviceLocationState();
       toast.error(describeDeviceLocationFailure(error));
     } finally {
-      if (deviceLocationMountedRef.current) {
-        setIsDeviceLocationPending(false);
+      if (deviceLocationRequestRef.current.id === requestId) {
+        deviceLocationRequestRef.current.pending = false;
+        if (deviceLocationMountedRef.current) {
+          setIsDeviceLocationPending(false);
+        }
       }
     }
   }, [

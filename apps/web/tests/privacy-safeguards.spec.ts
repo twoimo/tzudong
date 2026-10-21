@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { hidePopupOverlay } from './helpers';
-import { readFileSync } from 'node:fs';
-
-const hasLocationReadinessGate = readFileSync(
-  new URL('../app/home-client.tsx', import.meta.url),
-  'utf8',
-).includes('/api/privacy/location-readiness');
+import { installDeviceLocationMocks, openDeviceLocationPage, readDeviceLocationCounts, type DeviceLocationTestWindow } from './device-location-helpers';
 
 test.describe('G010 privacy safeguards', () => {
   test('publishes truthful policy and deletion guidance without completion claims', async ({ page }) => {
@@ -36,128 +31,116 @@ test.describe('G010 privacy safeguards', () => {
     await expect(page.getByText(/만 14세 미만 가입은 운영자 승인 보호자 확인 경로가 배포되고 읽기검증될 때까지/)).toBeVisible();
   });
 
-  test('discloses memory-only device location before requesting permission', async ({ page }) => {
-    await page.goto('/');
-    await hidePopupOverlay(page);
-
-    let readinessCallCount = 0;
-    await page.route('/api/privacy/location-readiness', async (route) => {
-      readinessCallCount += 1;
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'available',
-          reasonCode: 'DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED',
-        }),
-      });
-    });
-    await page.addInitScript(() => {
-      const geo = navigator.geolocation;
-      if (!geo) return;
-
-      (window as any).__tzudongGeoCalls = {
-        getCurrentPosition: 0,
-        watchPosition: 0,
-      };
-      Object.defineProperty(geo, 'getCurrentPosition', {
-        configurable: true,
-        writable: true,
-        value: (success: (position: GeolocationPosition) => void) => {
-          (window as any).__tzudongGeoCalls.getCurrentPosition += 1;
-          success({
-            coords: {
-              latitude: 37.5665,
-              longitude: 126.978,
-              accuracy: 10,
-              altitude: null,
-              altitudeAccuracy: null,
-              heading: null,
-              speed: null,
-            },
-            timestamp: Date.now(),
-          } as GeolocationPosition);
-        },
-      });
-      Object.defineProperty(geo, 'watchPosition', {
-        configurable: true,
-        writable: true,
-        value: () => {
-          (window as any).__tzudongGeoCalls.watchPosition += 1;
-          return 1;
-        },
-      });
-    });
-    await page.reload();
-    await hidePopupOverlay(page);
-
-    let disclosureMessage = '';
-    page.once('dialog', async (dialog) => {
-      expect(dialog.type()).toBe('confirm');
-      disclosureMessage = dialog.message();
-      await dialog.accept();
-    });
-    await page.getByRole('button', { name: '현재 위치 보기' }).first().click();
-    expect(disclosureMessage).toContain('현재 React 메모리에만 보관');
-    expect(disclosureMessage).toContain('Tzudong에 저장되지 않습니다');
-    expect(disclosureMessage).toContain('승인된 지도 제공자 경계');
-    if (hasLocationReadinessGate) {
-      expect(readinessCallCount).toBe(1);
-      expect(await page.evaluate(() => (window as any).__tzudongGeoCalls?.getCurrentPosition ?? 0)).toBeGreaterThan(0);
-    } else {
-      expect(readinessCallCount).toBe(0);
-    }
-  });
-
-  test('denies readiness without calling permission APIs', async ({ page }) => {
-    if (!hasLocationReadinessGate) {
-      test.skip(true, 'Location readiness gate is not yet present in home-client source.');
-    }
-
-    await page.goto('/');
-    await hidePopupOverlay(page);
-
-    let readinessCallCount = 0;
-    await page.route('/api/privacy/location-readiness', async (route) => {
-      readinessCallCount += 1;
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'unavailable',
-          reasonCode: 'DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED',
-        }),
-      });
-    });
-    await page.addInitScript(() => {
-      const geo = navigator.geolocation;
-      if (!geo) return;
-
-      (window as any).__tzudongGeoCalls = {
-        getCurrentPosition: 0,
-        watchPosition: 0,
-      };
-      Object.defineProperty(geo, 'getCurrentPosition', {
-        configurable: true,
-        writable: true,
-        value: () => {
-          (window as any).__tzudongGeoCalls.getCurrentPosition += 1;
-          return undefined;
-        },
-      });
-      Object.defineProperty(geo, 'watchPosition', {
-        configurable: true,
-        writable: true,
-        value: () => {
-          (window as any).__tzudongGeoCalls.watchPosition += 1;
-          return 1;
-        },
-      });
+  test.describe('device location controls', () => {
+    test('shows inline disclosure and locates with one click and no app dialog', async ({ page }) => {
+      const fixture = await installDeviceLocationMocks(page);
+      await openDeviceLocationPage(page);
+      const button = page.getByRole('button', { name: '현재 위치 보기', exact: true });
+      const disclosure = page.locator('#' + await button.getAttribute('aria-describedby'));
+      await expect(disclosure).toBeVisible();
+      await expect(disclosure).toContainText('지도 제공자');
+      await expect(disclosure).toContainText('저장하지 않아요');
+      expect(await readDeviceLocationCounts(page)).toEqual({ getCalls: 0, watchCalls: 0, clearCalls: 0 });
+      let dialogs = 0;
+      page.on('dialog', async dialog => { dialogs++; await dialog.dismiss(); });
+      await button.click();
+      await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();
+      await expect(page.getByText('12m', { exact: true })).toBeVisible();
+      expect(dialogs).toBe(0);
+      expect(fixture.readinessCalls()).toBe(1);
+      expect((await readDeviceLocationCounts(page)).getCalls).toBe(1);
     });
 
-    await page.getByRole('button', { name: '현재 위치 보기' }).first().click();
-    expect(readinessCallCount).toBe(1);
-    expect(await page.evaluate(() => (window as any).__tzudongGeoCalls?.getCurrentPosition ?? 0)).toBe(0);
-    expect(await page.evaluate(() => (window as any).__tzudongGeoCalls?.watchPosition ?? 0)).toBe(0);
+    test('denies readiness without calling permission APIs', async ({ page }) => {
+      await installDeviceLocationMocks(page);
+      let readinessCalls = 0;
+      await page.route('**/api/privacy/location-readiness', route => {
+        readinessCalls++;
+        return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ status: 'unavailable', reasonCode: 'DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED' }) });
+      });
+      await openDeviceLocationPage(page);
+      await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();
+      await expect(page.getByText('현재 위치를 지금 표시하지 못했어요. 잠시 후 다시 시도해 주세요.', { exact: true })).toBeVisible();
+      expect(readinessCalls).toBe(1);
+      expect((await readDeviceLocationCounts(page)).getCalls).toBe(0);
+      await expect(page.getByRole('button', { name: '현재 위치 보기', exact: true })).toBeEnabled();
+    });
+
+    test('locks duplicate clicks during readiness and ignores a cancelled readiness response', async ({ page }) => {
+      await installDeviceLocationMocks(page);
+      let release!: () => void;
+      const held = new Promise<void>(resolve => { release = resolve; });
+      let readinessCalls = 0;
+      await page.route('**/api/privacy/location-readiness', async route => {
+        readinessCalls++;
+        if (readinessCalls === 1) await held;
+        await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ status: 'available', reasonCode: 'DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED' }) });
+      });
+      await openDeviceLocationPage(page);
+      await page.getByRole('button', { name: '현재 위치 보기', exact: true }).evaluate(button => {
+        (button as HTMLButtonElement).click();
+        (button as HTMLButtonElement).click();
+        (button as HTMLButtonElement).click();
+      });
+      await expect(page.getByRole('button', { name: '현재 위치 확인 중', exact: true })).toBeDisabled();
+      await expect.poll(() => readinessCalls).toBe(1);
+      await page.getByRole('button', { name: '해외 맛집 지도 보기', exact: true }).click();
+      release();
+      await page.getByRole('button', { name: '국내 맛집 지도 보기', exact: true }).click();
+      await expect(page.getByRole('button', { name: '현재 위치 보기', exact: true })).toBeEnabled();
+      expect((await readDeviceLocationCounts(page)).getCalls).toBe(0);
+      await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();
+      await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();
+      expect(readinessCalls).toBe(2);
+      expect((await readDeviceLocationCounts(page)).getCalls).toBe(1);
+    });
+
+    test('late error after visibility cancellation cannot cancel a newer request', async ({ page }) => {
+      await installDeviceLocationMocks(page, 'hold');
+      await openDeviceLocationPage(page);
+      await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();
+      await expect.poll(async () => (await readDeviceLocationCounts(page)).getCalls).toBe(1);
+      await page.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+        document.dispatchEvent(new Event('visibilitychange'));
+        Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+      });
+      await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();
+      await expect.poll(async () => (await readDeviceLocationCounts(page)).getCalls).toBe(2);
+      await page.evaluate(() => (window as unknown as DeviceLocationTestWindow).__deviceLocationProbe.reject(0, 1));
+      await expect(page.getByRole('button', { name: '현재 위치 확인 중', exact: true })).toBeDisabled();
+      await page.evaluate(() => (window as unknown as DeviceLocationTestWindow).__deviceLocationProbe.resolve(1));
+      await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();
+      await expect(page.getByText('12m', { exact: true })).toBeVisible();
+    });
+
+    for (const outcome of ['denied', 'timeout'] as const) test(`${outcome} permits an explicit retry without another app dialog`, async ({ page }) => {
+      await installDeviceLocationMocks(page, outcome);
+      await openDeviceLocationPage(page);
+      let dialogs = 0;
+      page.on('dialog', async dialog => { dialogs++; await dialog.dismiss(); });
+      await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();
+      await expect(page.getByText(outcome === 'denied' ? '위치 권한이 거부됐어요. 브라우저 설정에서 허용하면 현재 위치를 표시할 수 있어요.' : '현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.', { exact: true })).toBeVisible();
+      await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();
+      await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();
+      expect((await readDeviceLocationCounts(page)).getCalls).toBe(2);
+      expect(dialogs).toBe(0);
+    });
+
+    test('heading toggles off and clears its watcher without another app confirmation', async ({ page }) => {
+      await installDeviceLocationMocks(page);
+      await openDeviceLocationPage(page);
+      let dialogs = 0;
+      page.on('dialog', async dialog => { dialogs++; await dialog.dismiss(); });
+      await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();
+      await page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true }).click();
+      await expect(page.getByRole('button', { name: '현재 위치와 방향 다시 확인', exact: true })).toBeEnabled();
+      expect((await readDeviceLocationCounts(page)).watchCalls).toBe(1);
+      await page.getByRole('button', { name: '현재 위치와 방향 다시 확인', exact: true }).click();
+      await expect(page.getByRole('button', { name: '현재 위치 보기', exact: true })).toBeEnabled();
+      expect((await readDeviceLocationCounts(page)).clearCalls).toBe(1);
+      expect(dialogs).toBe(0);
+      await expect(page.getByText('12m', { exact: true })).toHaveCount(0);
+    });
   });
 });
