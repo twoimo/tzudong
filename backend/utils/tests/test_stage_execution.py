@@ -216,5 +216,103 @@ main() { process_channel tzuyang; }
                 self.assertEqual((data/'crawling'/f'{video}.jsonl').read_bytes(),original_output)
                 self.assertNotEqual(json.loads(receipt.read_text())['inputHash'],before)
 
+    @unittest.skipUnless(shutil.which('bash') and shutil.which('jq'), 'Bash and jq required')
+    def test_step08_main_only_calls_provider_for_uncached_work(self):
+        script_name = 'backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh'
+        files = [script_name, 'backend/bin/stage_cache.py']
+        files += ['backend/utils/' + name for name in (
+            'stage_cache.py', 'jsonl_utils.py', 'gemini-model.sh', 'gemini-model.mjs',
+            'gemini-client.mjs', 'provider-budget.mjs', 'provider_budget.py')]
+        files += ['backend/restaurant-crawling/scripts/' + name for name in (
+            'parse_result.py', 'chunk_planner.py', 'split_video_chunks.mjs',
+            'gemini_chunk_video_request.mjs', 'merge_chunk_results.py', 'final_merge_chunk.mjs')]
+        files += ['backend/restaurant-crawling/prompts/' + name for name in (
+            'chunk_crawling_prompt.txt', 'final_merge_prompt.txt')]
+        for name in files:
+            target = self.root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / name, target)
+
+        # Keep the original main, key checks, cache dispatch and failure aggregation.
+        # Only channel discovery, saved-session lookup and video work are synthetic.
+        copy = self.root / script_name
+        anchor = 'if [[ "${1:-}" == "--stage-worker" ]]; then\n    if [[ $# -ne 8'
+        overrides = '''get_channels() { echo fixture; return "${FX_CHANNEL_EXIT:-0}"; }
+get_channel_data_path() { echo data; }
+get_channel_name() { echo fixture; }
+has_gemini_web_fallback_session() { return "${FX_HAS_WEB_SESSION:-1}"; }
+process_video_chunks() { "$NODE_EXE" --fixture-analysis "$5/crawling/$3.jsonl" "$4"; }
+'''
+        source = copy.read_text()
+        self.assertEqual(source.count(anchor), 1)
+        copy.write_text(source.replace(anchor, overrides + '\n' + anchor, 1))
+        tools = self.root / 'tools'; tools.mkdir()
+        node = tools / 'node'
+        node.write_text('#!' + sys.executable + '\n' + '''import json,os,sys
+from pathlib import Path
+analysis = len(sys.argv) > 1 and sys.argv[1] == '--fixture-analysis'
+event = {'kind': 'analysis' if analysis else 'unexpected',
+         'forceWeb': os.environ.get('FORCE_WEB_FALLBACK'),
+         'url': sys.argv[3] if analysis else None}
+with Path(os.environ['FX_CALLS']).open('a') as stream:
+    stream.write(json.dumps(event) + '\\n')
+if not analysis: raise SystemExit(97)
+code = int(os.environ.get('FX_WORKER_EXIT', '0'))
+if code: raise SystemExit(code)
+Path(sys.argv[2]).write_text('{"restaurants":[{"name":"fixture"}]}\\n')
+''')
+        node.chmod(0o700)
+        # Prevent incidental runtime discovery from invoking node or user tools.
+        for name in ('ffmpeg', 'deno'):
+            tool = tools / name; tool.write_text('#!/bin/sh\nexit 0\n'); tool.chmod(0o700)
+        env = {'PATH': str(tools) + os.pathsep + os.environ.get('PATH', os.defpath),
+               'PYTHON_CMD': sys.executable, 'PYTHONDONTWRITEBYTECODE': '1',
+               'GEMINI_API_KEY': 'LOCAL_FAKE_PROVIDER_MARKER', 'FX_CALLS': str(self.calls)}
+        data = self.root / 'backend/data'
+        for name in ('meta', 'transcript', 'crawling'):
+            (data / name).mkdir(parents=True)
+        video = 'ABCDEFGHIJK'
+        meta = data / 'meta' / (video + '.jsonl')
+        meta.write_text('{"title":"fixture"}\n')
+        (data / 'transcript' / (video + '.jsonl')).write_text('{"transcript":["fixture"]}\n')
+        url = 'https://www.youtube.com/watch?v=' + video + '&t=9'
+        bash = '/opt/homebrew/bin/bash' if Path('/opt/homebrew/bin/bash').is_file() else shutil.which('bash')
+        command = [bash, str(copy), '--channel', 'fixture', '--url', url]
+        receipt = data / 'crawling/.receipts' / (video + '.json')
+
+        def run(expected_exit, expected_calls, *, extra=None, no_url=False, force_web='0'):
+            self.calls.write_text('')
+            result = subprocess.run(command[:-2] if no_url else command,
+                env={**env, **(extra or {})}, capture_output=True, text=True, timeout=15)
+            self.assertEqual(result.returncode, expected_exit)
+            events = [json.loads(line) for line in self.calls.read_text().splitlines()]
+            self.assertEqual(events, [{'kind': 'analysis', 'forceWeb': force_web, 'url': url}] * expected_calls)
+            return result
+
+        run(0, 1)
+        completed = receipt.read_bytes()
+        cached_output = (data / 'crawling' / (video + '.jsonl')).read_bytes()
+        cached = run(0, 0)
+        self.assertIn('already_processed: 1', cached.stderr)
+        self.assertEqual(receipt.read_bytes(), completed)
+        self.assertEqual((data / 'crawling' / (video + '.jsonl')).read_bytes(), cached_output)
+        run(0, 0, no_url=True)
+        meta.unlink()
+        run(0, 0)
+
+        meta.write_text('{"title":"changed fixture"}\n')
+        run(1, 1, extra={'FX_WORKER_EXIT': '43'})  # Synthetic provider authentication rejection.
+        self.assertEqual(receipt.read_bytes(), completed)
+        run(42, 1, extra={'FX_WORKER_EXIT': '42'})
+        self.assertEqual(receipt.read_bytes(), completed)
+        run(0, 1)
+        self.assertNotEqual(receipt.read_bytes(), completed)
+        run(0, 1, extra={'FORCE_WEB_FALLBACK': '1'}, force_web='1')
+        run(1, 0, extra={'GEMINI_API_KEY': ''})
+        run(47, 0, extra={'FX_CHANNEL_EXIT': '47'})
+        meta.write_text('{"title":"web session fixture"}\n')
+        run(0, 1, extra={'GEMINI_API_KEY': '', 'FX_HAS_WEB_SESSION': '0'}, force_web='1')
+        run(0, 1, extra={'GEMINI_API_KEY': '', 'GEMINI_API_KEY_BYEON': 'LOCAL_FAKE_PROVIDER_MARKER'})
+
 
 if __name__=='__main__':unittest.main()

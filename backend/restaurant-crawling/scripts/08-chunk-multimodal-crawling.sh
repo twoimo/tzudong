@@ -1166,53 +1166,12 @@ main() {
     log_info "모델: $CURRENT_MODEL (fallback: $FALLBACK_MODEL)"
     log_info "모드: 청크 비디오 멀티모달 (chunk thinkingLevel: $GEMINI_CHUNK_THINKING_LEVEL, final merge: $GEMINI_FINAL_MERGE_THINKING_LEVEL)"
 
-    # 헬스 체크 (임시 파일은 $TEMP_BASE 경로 통일)
-    local hc_response="$TEMP_BASE/hc_response.json"
-    local hc_stderr="$TEMP_BASE/hc_stderr.log"
+    # 실제 처리 대상의 worker가 API 인증 및 fallback을 처리합니다.
     if [ "${FORCE_WEB_FALLBACK:-0}" = "1" ] || [ $use_api_key -eq 0 ]; then
         export FORCE_WEB_FALLBACK=1
-        log_info "Health Check 생략: Web fallback 강제 모드"
     else
         export FORCE_WEB_FALLBACK=0
-        log_info "Health Check..."
-
-        set +e
-        (cd "$PROJECT_ROOT" && "$NODE_EXE" --input-type=module -e "
-import { GoogleGenAI } from '@google/genai';
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const r = await ai.models.generateContent({
-    model: process.env.CURRENT_MODEL || 'gemini-3.8-flash',
-    contents: '1+1=?'
-});
-console.log(r.text);
-" > "$hc_response" 2>"$hc_stderr")
-        local hc_exit=$?
         set -e
-
-        if [ $hc_exit -eq 0 ]; then
-            log_success "Health Check 성공. API 사용 가능."
-        else
-            log_warning "Health Check 실패. (exit: $hc_exit)"
-            if [ -f "$hc_stderr" ]; then
-                local err_msg=$(<"$hc_stderr")
-                local err_preview
-                err_preview=$(printf "%s" "$err_msg" \
-                    | tr '\r' '\n' \
-                    | head -n 1 \
-                    | sed -E 's/AIza[0-9A-Za-z_-]{20,}/[REDACTED_API_KEY]/g' \
-                    | cut -c1-240)
-                log_error "Stderr(요약): $err_preview"
-                # 429 Quota Exceeded 에러인지 확인
-                if [[ "$err_msg" == *"429"* ]] || [[ "$err_msg" == *"exceeded your current quota"* ]]; then
-                    log_warning "🚨 [QUOTA_ERROR] API 할당량 이슈가 감지되었습니다."
-                    log_warning "청크별 API 우선 시도 + 실패 시 웹 폴백으로 처리합니다. (전역 강제 폴백 비활성)"
-                else
-                    log_warning "일반 API 에러입니다. 청크별로 API 재시도 후 웹 폴백을 사용합니다."
-                fi
-            fi
-            rm -f "$hc_response" "$hc_stderr"
-        fi
-        rm -f "$hc_response" "$hc_stderr"
     fi
 
     # 쿼타 초과 방지 폴백용 플래그 초기화
