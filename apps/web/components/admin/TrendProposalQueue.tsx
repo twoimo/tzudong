@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { adminQueryLastReadFailed } from "@/lib/admin/query-read-state";
 import type { TrendProposalListItem } from "@/lib/admin/trend-proposals";
 
 type TrendProposalListResponse = {
@@ -181,9 +182,17 @@ export function TrendProposalQueue() {
     queryKey: ["admin", "trend-proposals", "pending"],
     queryFn: fetchTrendProposals,
     staleTime: 60 * 1000,
+    retry: false,
     refetchOnWindowFocus: false,
   });
   const proposals = useMemo(() => proposalsQuery.data?.items ?? [], [proposalsQuery.data?.items]);
+  const listReadFailed = adminQueryLastReadFailed(proposalsQuery);
+  const unreadList = listReadFailed && proposals.length === 0;
+  const countLabel = unreadList
+    ? "미확인"
+    : proposalsQuery.isPending && proposals.length === 0
+      ? "확인 중"
+      : `${proposals.length}건 대기`;
   const selectedProposal = useMemo(
     () => proposals.find((proposal) => proposal.id === selectedProposalId) ?? proposals[0] ?? null,
     [proposals, selectedProposalId],
@@ -193,8 +202,10 @@ export function TrendProposalQueue() {
     queryFn: () => fetchTrendProposalPreview(selectedProposal?.id ?? ""),
     enabled: Boolean(selectedProposal?.id),
     staleTime: 30 * 1000,
+    retry: false,
     refetchOnWindowFocus: false,
   });
+  const previewReadFailed = adminQueryLastReadFailed(previewQuery) && !previewQuery.data;
   const rejectMutation = useMutation({
     mutationFn: rejectTrendProposal,
     onSuccess: () => {
@@ -223,13 +234,28 @@ export function TrendProposalQueue() {
           <h3 className="break-words text-sm font-bold text-foreground [overflow-wrap:anywhere]">오버레이 제안 검토</h3>
         </div>
         <Badge variant="outline" className="shrink-0 rounded-full border-primary/25 text-primary">
-          {proposals.length}건 대기
+          {countLabel}
         </Badge>
       </div>
 
       <div className="mt-2 grid min-w-0 gap-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
         <div className="min-w-0 space-y-1.5">
-          {proposalsQuery.isLoading ? (
+          {unreadList ? (
+            <div className="rounded-xl bg-muted/30 p-2 text-xs text-muted-foreground">
+              <p role="alert">트렌드 제안을 불러오지 못했습니다.</p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="mt-2 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+                aria-disabled={proposalsQuery.isFetching || undefined}
+                aria-busy={proposalsQuery.isFetching || undefined}
+                onClick={() => { if (!proposalsQuery.isFetching) void proposalsQuery.refetch(); }}
+              >
+                다시 시도
+              </Button>
+            </div>
+          ) : proposalsQuery.isLoading ? (
             <p className="rounded-xl bg-muted/30 p-2 text-xs text-muted-foreground">제안 목록을 불러오는 중입니다.</p>
           ) : proposals.length === 0 ? (
             <p className="rounded-xl bg-muted/30 p-2 text-xs text-muted-foreground">검토 대기 중인 트렌드 제안이 없습니다.</p>
@@ -294,7 +320,7 @@ export function TrendProposalQueue() {
                 data-trend-proposal-preview="true"
               >
                 <p className="text-xs font-bold text-primary">미리보기 해시</p>
-                {previewQuery.isFetching ? (
+                {previewQuery.isFetching && !previewReadFailed ? (
                   <p className="mt-1 text-2xs text-muted-foreground">오버레이 미리보기를 계산하는 중입니다.</p>
                 ) : previewQuery.data ? (
                   <dl className="mt-1 space-y-1 text-2xs text-muted-foreground">
@@ -307,6 +333,21 @@ export function TrendProposalQueue() {
                       <dd className="break-all font-mono">{previewQuery.data.confirmation.payloadHash}</dd>
                     </div>
                   </dl>
+                ) : previewReadFailed ? (
+                  <div className="mt-1 space-y-2">
+                    <p role="alert" className="text-2xs text-destructive">오버레이 미리보기를 만들지 못했습니다.</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+                      aria-disabled={previewQuery.isFetching || undefined}
+                      aria-busy={previewQuery.isFetching || undefined}
+                      onClick={() => { if (!previewQuery.isFetching) void previewQuery.refetch(); }}
+                    >
+                      다시 계산
+                    </Button>
+                  </div>
                 ) : (
                   <p className="mt-1 text-2xs text-muted-foreground">미리보기 생성 실패 시 승인하지 않습니다.</p>
                 )}
@@ -381,6 +422,8 @@ export function TrendProposalQueue() {
                 ) : null}
               </div>
             </div>
+          ) : unreadList ? (
+            <p className="rounded-xl bg-muted/30 p-2 text-xs text-muted-foreground">목록을 확인한 뒤 제안을 검토합니다.</p>
           ) : (
             <p className="rounded-xl bg-muted/30 p-2 text-xs text-muted-foreground">제안을 선택하면 미리보기, 해시, 검토 사유를 확인합니다.</p>
           )}

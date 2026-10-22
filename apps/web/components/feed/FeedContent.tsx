@@ -586,6 +586,7 @@ export default function FeedContent({
                 {showHeader && (
                     <div className="shrink-0 bg-background">
                         <MapPanelHeader
+                            eyebrow={isOverlay ? undefined : '쯔양 맛집 방문 후기 모음'}
                             title={isOverlay ? '리뷰' : '쯔동여지도 리뷰'}
                             titleAs="h1"
                             variant={isOverlay ? "panel" : "page"}

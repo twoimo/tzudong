@@ -8,6 +8,7 @@
   },
   "packageManager": "npm@11.6.2",
   "scripts": {
+    "postinstall": "node scripts/apply-next-sync-patch.mjs",
     "dev": "node scripts/run-local-dev.mjs --port 3000",
     "dev:local": "node scripts/run-local-dev.mjs --port 3000",
     "dev:hosted": "node scripts/dev-prewarm.mjs --port 3000 --hosted",

@@ -5,7 +5,7 @@ import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 
 import { createPortal } from 'react-dom';
 import { useRestaurantManagementHeader } from '@/components/admin/RestaurantManagementWorkspace';
-import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense, type FocusEvent } from 'react';
 import { isEvaluationRecordStatus, isRecord, isNullableString, isStringArray, isNullableStringArray, isNullableRecord, parseNumericEvaluationMetric, parseBooleanEvaluationMetric, parseCategoryEvaluationMetric, parseCategoryValidityEvaluationMetric, isLocationMatchEvidenceFamily, isLocationMatchPendingReason, parseLocationMatchSecondPass, parseLocationMatchAddress, parseLocationMatchResult, parseEvaluationResults, parseYoutubeMeta, parseDbErrorDetails, getString, getNullableString, getNullableNumber, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
 import { fetchAdminEvaluationPage, isEvaluationCursorStale, type EvaluationWarnings } from '@/lib/admin/evaluation-page-client';
 import { filterEvaluationRecords } from '@/lib/admin/evaluation-query';
@@ -44,10 +44,11 @@ import { getAddressConsistencyStatus, hasUnconfirmedPublicMapLocation } from '@/
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
 import { buildCanonicalAdminEvaluationsHref, type AdminConsoleRouteModuleId } from '@/lib/admin/admin-module-routing';
 import { useRecordAction } from '@/lib/admin/use-record-action';
-import { isRecordActionCancelled, recordActionErrorMessage, recordActionMediaNotice, RECORD_VIEWS_INVALIDATED_EVENT, RECORD_ACTION_APPLIED_EVENT } from '@/lib/admin/record-action-client';
+import { shouldNotifyRecordActionError, recordActionErrorMessage, recordActionMediaNotice, RECORD_VIEWS_INVALIDATED_EVENT, RECORD_ACTION_APPLIED_EVENT } from '@/lib/admin/record-action-client';
 import { submissionApprovalInput, submissionEditInput } from '@/lib/admin/evaluation-record-actions';
 import type { RecordActionReceipt } from '@/lib/admin/record-action-contract';
 import { fetchAdminProfileSummariesLookup, resolveAdminReviewerDisplay } from '@/lib/admin/profile-summaries';
+import { adminQueryLastReadFailed } from '@/lib/admin/query-read-state';
 import {
   compareAdminEvaluationsByLatestDesc,
   isAdminEvaluationRecordMissing,
@@ -801,6 +802,9 @@ function AdminEvaluationPage({
   const legacyEvaluationLoad = isLegacyBrowserAdminMutationEnabled();
   const [serverFilteredTotal, setServerFilteredTotal] = useState(0);
   const [pageReadError, setPageReadError] = useState(false);
+  const statusAlertHadFocusRef = useRef(false);
+  const recordViewsRetryRef = useRef<HTMLButtonElement>(null);
+  const moduleContentRef = useRef<HTMLDivElement>(null);
   const [recordViewsInvalidated, setRecordViewsInvalidated] = useState(false);
   const [recordViewsRefreshing, setRecordViewsRefreshing] = useState(false);
   const recordViewsEpochRef = useRef(0);
@@ -906,6 +910,16 @@ function AdminEvaluationPage({
 
   // 사용자 제보 검수 상태 (URL 쿼리 파라미터로 초기화)
   const [showSubmissionView, setShowSubmissionView] = useState(false);
+  const showPageReadError = !recordViewsInvalidated && !legacyEvaluationLoad && pageReadError && !showSubmissionView;
+  useLayoutEffect(() => {
+    if (showPageReadError || recordViewsInvalidated || !statusAlertHadFocusRef.current) return;
+    statusAlertHadFocusRef.current = false;
+    if (document.activeElement === document.body) moduleContentRef.current?.focus();
+  }, [showPageReadError, recordViewsInvalidated]);
+  const trackStatusAlertFocus = {
+    onFocus: () => { statusAlertHadFocusRef.current = true; },
+    onBlur: (event: FocusEvent<HTMLDivElement>) => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) statusAlertHadFocusRef.current = false; },
+  };
   const [submissionInitialTab, setSubmissionInitialTab] = useState<'new' | 'edit' | 'recommend' | 'reviews'>('new');
 
   // Deep-link 필터 (운영지표/이슈보드 -> 검수 화면 이동)
@@ -1259,7 +1273,6 @@ function AdminEvaluationPage({
       nextCursorRef.current = null;
       pageRevisionRef.current = null;
       detailRequestsRef.current.clear();
-      setPageReadError(false);
       setAllRecords([]);
       setDisplayedRecords([]);
       setPageWarnings({});
@@ -1271,6 +1284,7 @@ function AdminEvaluationPage({
       try {
         const page = await fetchAdminEvaluationPage(evaluationPageQuery, null, pageAbortRef.current.signal);
         if (epoch !== pageEpochRef.current) return;
+        setPageReadError(false);
         setAllRecords(page.records.map(normalizeEvaluationRecord).filter((record): record is EvaluationRecord => record !== null).map(withAdminEvaluationDisplayName));
         setPageWarnings(page.warnings);
         pageRevisionRef.current = page.revision;
@@ -1288,7 +1302,6 @@ function AdminEvaluationPage({
         pageRevisionRef.current = null;
         nextCursorRef.current = null;
         hasMoreRef.current = false;
-        toast({ variant: 'destructive', title: '데이터 로드 실패', description: '검수 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.' });
       } finally { if (epoch === pageEpochRef.current) setLoading(false); }
       return;
     }
@@ -1643,7 +1656,7 @@ function AdminEvaluationPage({
       const userIds = [...new Set(typedSubmissions.map(s => s.user_id))];
 
       // 2. items / profile summaries 병렬 조회
-      const [{ data: itemsData }, profilesLookup] = await Promise.all([
+      const [{ data: itemsData, error: itemsError }, profilesLookup] = await Promise.all([
         supabase
           .from('restaurant_submission_items')
           .select(ADMIN_SUBMISSION_ITEM_SELECT)
@@ -1653,7 +1666,8 @@ function AdminEvaluationPage({
         fetchAdminProfileSummariesLookup(userIds),
       ]);
 
-      const typedItemsData = parseValidatedRows(itemsData ?? [], isSubmissionItem);
+      if (itemsError || !Array.isArray(itemsData)) throw new Error('admin-submission-items-failed');
+      const typedItemsData = parseValidatedRows(itemsData, isSubmissionItem);
 
       const itemsMap = new Map<string, SubmissionItem[]>();
       typedItemsData.forEach((item) => {
@@ -1814,6 +1828,8 @@ function AdminEvaluationPage({
     refetchOnWindowFocus: true,
   });
   const { data: recommendationRequestsData = [], isLoading: recommendationRequestsLoading } = recommendationRequestsQuery;
+  const submissionsReadFailed = adminQueryLastReadFailed(submissionsQuery);
+  const recommendationsReadFailed = adminQueryLastReadFailed(recommendationRequestsQuery);
 
   const allSubmissionRecords = useMemo(
     () => [...submissionsData, ...recommendationRequestsData],
@@ -1833,15 +1849,15 @@ function AdminEvaluationPage({
         .order('created_at', { ascending: false })
         .overrideTypes<Record<string, unknown>[], { merge: false }>();
 
-      if (reviewsError) throw reviewsError;
-      const typedReviewsData = (reviewsData ?? [])
+      if (reviewsError || !Array.isArray(reviewsData)) throw new Error('admin-review-read-failed');
+      const typedReviewsData = reviewsData
         .map(parseReview)
         .filter((review): review is Omit<Review, 'profiles' | 'restaurants'> => review !== null);
       if (!typedReviewsData.length) return [];
       const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
       const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 
-      const [profilesLookup, { data: restaurantsData }] = await Promise.all([
+      const [profilesLookup, restaurantsResult] = await Promise.all([
         fetchAdminProfileSummariesLookup(userIds),
         supabase
           .from('restaurants')
@@ -1850,7 +1866,8 @@ function AdminEvaluationPage({
           .overrideTypes<Record<string, unknown>[], { merge: false }>(),
       ]);
 
-      const typedRestaurantsData = parseValidatedRows(restaurantsData ?? [], isReviewRestaurantRow);
+      if (restaurantsResult.error || !Array.isArray(restaurantsResult.data)) throw new Error('admin-review-read-failed');
+      const typedRestaurantsData = parseValidatedRows(restaurantsResult.data, isReviewRestaurantRow);
 
       const restaurantsMap = new Map(typedRestaurantsData.map(r => [r.id, { name: r.approved_name || '이름 없음', address: r.road_address || r.jibun_address || '' }]));
 
@@ -1863,6 +1880,7 @@ function AdminEvaluationPage({
     enabled: !!user && isAdmin && !recordViewsInvalidated,
     refetchInterval: recordViewsInvalidated ? false : 30000,
   });
+  const reviewsReadFailed = adminQueryLastReadFailed(reviewsQuery);
   const { data: reviewsData = [], isLoading: reviewsLoading } = reviewsQuery;
 
   const pendingCountsQuery = useQuery({
@@ -1905,8 +1923,19 @@ function AdminEvaluationPage({
 
   // 전체 대기 건수 (제보 + 리뷰)
   const totalPendingCount = getAdminPendingCountsTotal(pendingCounts);
+  const pendingCountsReadFailed = adminQueryLastReadFailed(pendingCountsQuery);
+  const pendingQueueCountsUnknown = !canonicalPendingCounts && (
+    pendingCountsReadFailed || submissionsReadFailed || recommendationsReadFailed || reviewsReadFailed
+  );
+  const pendingQueueCountsLoading = !canonicalPendingCounts && !pendingQueueCountsUnknown && (
+    pendingCountsQuery.isLoading || submissionsQuery.isLoading || recommendationRequestsQuery.isLoading || reviewsQuery.isLoading
+  );
   const pendingQueueSummaryText = showSubmissionView
-    ? `제보/리뷰 대기: 제보 ${pendingRestaurantSubmissionCount}건 | 추천 ${pendingRecommendationCount}건 | 리뷰 ${pendingReviewCount}건 | 전체 ${totalPendingCount}건`
+    ? pendingQueueCountsUnknown
+      ? '제보/리뷰 대기: 미확인'
+      : pendingQueueCountsLoading
+        ? '제보/리뷰 대기: 확인 중'
+        : `제보/리뷰 대기: 제보 ${pendingRestaurantSubmissionCount}건 | 추천 ${pendingRecommendationCount}건 | 리뷰 ${pendingReviewCount}건 | 전체 ${totalPendingCount}건`
     : `필터링: ${legacyEvaluationLoad ? filteredRecords.length : serverFilteredTotal}개 | 현 ${stats.total}개 레코드 | 삭제한 레코드 ${stats.deleted}개`;
   const isInitialEvaluationDataLoading = !showSubmissionView && loading && allRecords.length === 0;
   const pendingQueueSummaryContent = recordViewsInvalidated ? '새 조회 필요' : !showSubmissionView && !legacyEvaluationLoad && pageReadError ? '검수 목록 조회 실패' : showSubmissionView || !isInitialEvaluationDataLoading
@@ -1970,14 +1999,14 @@ function AdminEvaluationPage({
   }, [invalidateRecordViews, refreshRecordViews, createRestaurantOpen]);
 
   const notifyRecordActionError = (error: unknown) => {
-    if (!isRecordActionCancelled(error)) toast({ variant: 'destructive', title: '변경 확인 필요', description: recordActionErrorMessage(error) });
+    if (shouldNotifyRecordActionError(error)) toast({ variant: 'destructive', title: '변경 확인 필요', description: recordActionErrorMessage(error) });
   };
   const onRecordApplied = async (receipt: RecordActionReceipt) => {
     toast({ title: '변경 확인 완료', description: [recordActionMediaNotice(receipt), `감사 ID: ${receipt.auditId}`].filter(Boolean).join(' ') });
     await Promise.all([refreshRecordViews(), invalidateRestaurantDiscoveryQueries(queryClient)]);
     invalidateAdminPendingCounts();
   };
-  const recordActions = useRecordAction(receipt => { void onRecordApplied(receipt); }, { recover: true });
+  const recordActions = useRecordAction(receipt => { void onRecordApplied(receipt); }, { recover: true, returnFocus: () => recordViewsRetryRef.current ?? moduleContentRef.current });
   const notifyTransactionalResult = (work: Promise<unknown>) => {
     void work.catch(() => toast({ title: '변경은 확인됐습니다', description: '작성자 알림 결과는 확인하지 못했습니다. 자동으로 다시 보내지 않습니다.' }));
   };
@@ -2238,9 +2267,17 @@ function AdminEvaluationPage({
         controlsTarget={compactReviewHeader ? managementHeader.automation : undefined}
         onApplied={() => { invalidateRecordViews(); void refreshRecordViews(); void invalidateRestaurantDiscoveryQueries(queryClient); }}
       />}
-      {recordViewsInvalidated && <div role="alert" data-admin-record-views-invalidated className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2 text-xs text-destructive"><span>변경 후 최신 정보를 다시 확인해야 합니다.</span><Button size="sm" variant="outline" disabled={recordActions.busy || recordViewsRefreshing} onClick={() => void refreshRecordViews()}>{recordViewsRefreshing ? '조회 중…' : '새로 조회'}</Button></div>}
-      <div className="flex-1 min-h-0 flex flex-col" data-admin-module-content={embedded ? "bounded" : undefined}>
-        {!recordViewsInvalidated && !legacyEvaluationLoad && pageReadError && !showSubmissionView ? <div role="alert" data-admin-evaluation-page-error="true" className="flex shrink-0 items-center gap-2 border-b px-3 py-2 text-xs text-destructive"><span>검수 목록 조회 실패</span><Button size="sm" variant="outline" disabled={loading} onClick={() => void loadAllRecords()}>다시 조회</Button></div> : null}
+      {recordViewsInvalidated && <div role="alert" data-admin-record-views-invalidated className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2 text-xs text-destructive" {...trackStatusAlertFocus}>
+        <span>변경 후 최신 정보를 다시 확인해야 합니다.</span>
+        <Button ref={recordViewsRetryRef} size="sm" variant="outline" aria-disabled={recordActions.busy || recordViewsRefreshing} aria-busy={recordViewsRefreshing}
+          onClick={() => { if (!recordActions.busy && !recordViewsRefreshing) void refreshRecordViews(); }}>{recordViewsRefreshing ? '조회 중…' : '새로 조회'}</Button>
+      </div>}
+      <div ref={moduleContentRef} tabIndex={-1} className="flex-1 min-h-0 flex flex-col focus-visible:outline-none" data-admin-module-content={embedded ? "bounded" : undefined}>
+        {showPageReadError ? <div role="alert" data-admin-evaluation-page-error="true" className="flex shrink-0 items-center gap-2 border-b px-3 py-2 text-xs text-destructive"
+          {...trackStatusAlertFocus}>
+          <span>검수 목록 조회 실패</span>
+          <Button size="sm" variant="outline" aria-disabled={loading} aria-busy={loading} onClick={() => { if (!loading) void loadAllRecords(); }}>{loading ? '조회 중…' : '다시 조회'}</Button>
+        </div> : null}
         {showSubmissionView ? (
           /* 사용자 제보 목록 검수 뷰 */
           <SubmissionListView
@@ -2253,12 +2290,20 @@ function AdminEvaluationPage({
               queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
               invalidateAdminPendingCounts();
             }}
-            loading={submissionsLoading || recommendationRequestsLoading || recordActions.busy || recordViewsInvalidated}
-            reviews={recordViewsInvalidated ? [] : reviewsData}
+            loading={submissionsLoading || recommendationRequestsLoading || (submissionsReadFailed && submissionsQuery.isFetching) || (recommendationsReadFailed && recommendationRequestsQuery.isFetching) || recordActions.busy || recordViewsInvalidated}
+            submissionsError={!recordViewsInvalidated && submissionsReadFailed}
+            recommendationsError={!recordViewsInvalidated && recommendationsReadFailed}
+            onRetrySubmissions={() => {
+              if (submissionsReadFailed) void submissionsQuery.refetch();
+              if (recommendationsReadFailed) void recommendationRequestsQuery.refetch();
+            }}
+            reviews={recordViewsInvalidated || reviewsReadFailed ? [] : reviewsData}
             onApproveReview={handleApproveReview}
             onRejectReview={handleRejectReview}
             onDeleteReview={handleDeleteReview}
-            reviewsLoading={reviewsLoading || recordActions.busy || recordViewsInvalidated}
+            reviewsLoading={reviewsLoading || (reviewsReadFailed && reviewsQuery.isFetching) || recordActions.busy || recordViewsInvalidated}
+            reviewsError={!recordViewsInvalidated && reviewsReadFailed}
+            onRetryReviews={() => void reviewsQuery.refetch()}
             initialTab={submissionInitialTab}
             toolbarTrailingAction={submissionInitialTab !== 'reviews' ? (
               <Button variant="outline" size="sm" disabled={recordActions.busy || recordViewsInvalidated || submissionsLoading || submissionsData.length === 0} onClick={() => setSubmissionEditorOpen(true)}>제보 수정</Button>
@@ -2276,6 +2321,7 @@ function AdminEvaluationPage({
             onResolveConflict={handleResolveConflict}
             onEdit={handleEdit}
             loading={loading || recordViewsInvalidated}
+            readFailed={showPageReadError}
           />
         ) : (
           /* 테이블 영역 (무한 스크롤) */
@@ -2289,6 +2335,7 @@ function AdminEvaluationPage({
               onResolveConflict={handleResolveConflict}
               onEdit={handleEdit}
               loading={loading || recordViewsInvalidated}
+              readFailed={showPageReadError}
               evalFilters={evalFilters}
               isDeletedFilterActive={evalFilters.status === 'deleted'}
               searchQuery={searchQuery}

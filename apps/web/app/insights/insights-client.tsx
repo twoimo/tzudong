@@ -1,18 +1,20 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode, useTransition } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, useTransition } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
-import { AlertTriangle, Lightbulb } from 'lucide-react';
+import { AlertTriangle, Info, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AdminEmbeddedModuleShell } from '@/components/admin/AdminEmbeddedModuleShell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth } from '@/contexts/AuthContext';
 import type { InsightTreemapPeriod, InsightTreemapResponse, InsightTreemapVideoRow } from '@/lib/public-insights/treemap';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
+import { adminQueryLastReadFailed } from '@/lib/admin/query-read-state';
 
 
 type ViewMode = 'all' | 'category' | 'change';
@@ -70,6 +72,7 @@ type ChartDimensions = {
 };
 
 type TreemapTileInteraction = (leaf: TreemapLeafNode, event: MouseEvent<HTMLDivElement>) => void;
+type TreemapTileActivation = (leaf: TreemapLeafNode, index: number) => void;
 
 type TreemapCellRenderInput = {
     leaf: TreemapLeafNode;
@@ -94,6 +97,7 @@ type TreemapTilesProps = {
     onCellEnter: TreemapTileInteraction;
     onCellMove: TreemapTileInteraction;
     onCellLeave: () => void;
+    onCellActivate: TreemapTileActivation;
 };
 type LeafRowsData = {
     leafRows: TreemapLeafNode[];
@@ -587,6 +591,7 @@ const TreemapTiles = memo(function TreemapTiles({
     onCellEnter,
     onCellMove,
     onCellLeave,
+    onCellActivate,
 }: TreemapTilesProps) {
     const renderedTiles = useMemo<TreemapCellRenderInput[]>(() => {
         return cells.map((cell) => {
@@ -671,12 +676,13 @@ const TreemapTiles = memo(function TreemapTiles({
 
     return (
         <div className="relative" style={{ width: containerWidth, height: containerHeight }}>
-            {renderedTiles.map((tile) => (
+            {renderedTiles.map((tile, index) => (
                 <div
                     key={`${tile.leaf.id}-${tile.x}-${tile.y}-${tile.leaf.value}`}
                     className="absolute flex items-center justify-center border border-white/30"
                     role="presentation"
                     aria-hidden="true"
+                    data-insights-treemap-tile-index={index}
                     style={{
                         left: tile.x,
                         top: tile.y,
@@ -689,6 +695,7 @@ const TreemapTiles = memo(function TreemapTiles({
                     onMouseEnter={(event) => onCellEnter(tile.leaf, event)}
                     onMouseMove={(event) => onCellMove(tile.leaf, event)}
                     onMouseLeave={onCellLeave}
+                    onClick={() => onCellActivate(tile.leaf, index)}
                 >
                     {tile.canShowBoth ? (
                         <div
@@ -754,6 +761,28 @@ const TreemapTiles = memo(function TreemapTiles({
     );
 });
 
+function TreemapDetailContent({ leaf, viewMode, period, metricMode }: {
+    leaf: TreemapLeafNode;
+    viewMode: ViewMode;
+    period: InsightTreemapPeriod;
+    metricMode: MetricMode;
+}) {
+    return (
+        <>
+            <p className="font-semibold">{leaf.title}</p>
+            <p>카테고리: {leaf.category}</p>
+            <p>조회수: {formatTooltipMetric('views', leaf.viewCount)}</p>
+            <p>좋아요: {formatTooltipMetric('likes', leaf.likeCount)}</p>
+            <p>댓글수: {formatTooltipMetric('comments', leaf.commentCount)}</p>
+            <p>영상 길이: {formatTooltipMetric('duration', leaf.duration)}</p>
+            <p>{viewMode === 'change' ? `${getPeriodLabel(period)} 증감률: ${leaf.percentText}` : `비율: ${leaf.percentText}`}</p>
+            {viewMode === 'change' ? (
+                <p>이전 {getMetricLabel(metricMode)}: {formatTooltipMetric(metricMode, leaf.previousMetricRaw ?? leaf.metricRaw)}</p>
+            ) : null}
+        </>
+    );
+}
+
 function InsightsClientLoadingSkeleton() {
     return (
         <div
@@ -817,10 +846,16 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
     const chartWidth = chartSize.width;
     const chartHeight = chartSize.height;
     const [tooltip, setTooltip] = useState<TreemapTooltipState | null>(null);
+    const [activeTileIndex, setActiveTileIndex] = useState(0);
+    const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
+    const [tileNavigatorFocused, setTileNavigatorFocused] = useState(false);
     const tooltipStateRef = useRef<TreemapTooltipState | null>(null);
     const tooltipRafRef = useRef<number | null>(null);
     const layoutRafRef = useRef<number | null>(null);
     const chartAreaRef = useRef<HTMLDivElement>(null);
+    const tileNavigatorRef = useRef<HTMLButtonElement>(null);
+    const treemapHelpRef = useRef<HTMLButtonElement>(null);
+    const tileDetailPanelRef = useRef<HTMLDivElement>(null);
     const treemapQuery = useQuery({
         queryKey: ['insight-treemap', viewMode, period, metricMode],
         queryFn: ({ signal }) => fetchTreemapData(viewMode, period, metricMode, signal),
@@ -832,6 +867,14 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         placeholderData: (previousData) => previousData,
         retry: 1,
     });
+    const canRender = Boolean(treemapQuery.data);
+    // Placeholder data from another period keeps the query in success while a failed period is refetched.
+    const treemapReadFailed = adminQueryLastReadFailed(treemapQuery) || (treemapQuery.isPlaceholderData && treemapQuery.errorUpdatedAt > 0);
+    const isRetryingTreemap = treemapReadFailed && treemapQuery.isFetching;
+    const insightsCardRef = useRef<HTMLDivElement>(null);
+    const treemapRetryButtonRef = useRef<HTMLButtonElement>(null);
+    const treemapRetryHadFocusRef = useRef(false);
+    const insightsCardHadFocusRef = useRef(false);
 
     const periodOptionsForView = useMemo(() => {
         if (viewMode === 'change') {
@@ -933,6 +976,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         [isMobile, isTablet],
     );
     useEffect(() => {
+        if (!canRender) return undefined;
         const chartArea = chartAreaRef.current;
         if (!chartArea) return undefined;
 
@@ -1031,7 +1075,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                 layoutRafRef.current = null;
             }
         };
-    }, [chartConstraints]);
+    }, [chartConstraints, canRender]);
 
     useEffect(() => {
         setChartSize((prev) => {
@@ -1229,10 +1273,52 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         if (treeData.length === 0) return [];
         return buildTreemapLayout(treeData, renderWidth, chartHeight);
     }, [treeData, renderWidth, chartHeight]);
+    const selectedTileIndex = useMemo(
+        () => selectedTileId ? treemapCells.findIndex((cell) => cell.node.id === selectedTileId) : -1,
+        [treemapCells, selectedTileId],
+    );
+    const boundedActiveTileIndex = selectedTileIndex >= 0
+        ? selectedTileIndex
+        : Math.min(activeTileIndex, Math.max(0, treemapCells.length - 1));
+    const selectedTile = selectedTileIndex >= 0 ? treemapCells[selectedTileIndex].node : null;
+    useEffect(() => {
+        if (selectedTileId === null) return;
+        if (selectedTileIndex < 0) {
+            setSelectedTileId(null);
+        } else if (activeTileIndex !== selectedTileIndex) {
+            setActiveTileIndex(selectedTileIndex);
+        }
+    }, [activeTileIndex, selectedTileId, selectedTileIndex]);
+    const handleTileActivate = useCallback<TreemapTileActivation>((leaf, index) => {
+        setTooltipThrottled(null);
+        setActiveTileIndex(index);
+        setSelectedTileId(leaf.id);
+        tileNavigatorRef.current?.focus();
+    }, [setTooltipThrottled]);
+    const handleTileNavigatorKeyDown = useCallback((event: KeyboardEvent<HTMLButtonElement>) => {
+        const lastIndex = treemapCells.length - 1;
+        if (lastIndex < 0) return;
+        let nextIndex = boundedActiveTileIndex;
+        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = Math.min(lastIndex, nextIndex + 1);
+        else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = Math.max(0, nextIndex - 1);
+        else if (event.key === 'PageDown') nextIndex = Math.min(lastIndex, nextIndex + 10);
+        else if (event.key === 'PageUp') nextIndex = Math.max(0, nextIndex - 10);
+        else if (event.key === 'Home') nextIndex = 0;
+        else if (event.key === 'End') nextIndex = lastIndex;
+        else return;
+        event.preventDefault();
+        setActiveTileIndex(nextIndex);
+        if (selectedTileId !== null) setSelectedTileId(treemapCells[nextIndex].node.id);
+    }, [boundedActiveTileIndex, selectedTileId, treemapCells]);
+    useEffect(() => {
+        setActiveTileIndex(0);
+        setSelectedTileId(null);
+    }, [viewMode, metricMode, period, clusterStep]);
 
     const selectedCount = treemapQuery.data?.totalVideos ?? 0;
     const metricLabel = getMetricLabel(metricMode);
-    const periodLabel = period === 'ALL' ? '전체 기간' : getPeriodLabel(period);
+    const visiblePeriod = treemapQuery.data?.period ?? period;
+    const periodLabel = visiblePeriod === 'ALL' ? '전체 기간' : getPeriodLabel(visiblePeriod);
     const modeLabel = viewMode === 'change' ? '증감률' : '비율';
     const clusterContextText = clusterStep === null
         ? '개별 영상'
@@ -1243,13 +1329,12 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
     const treemapLegendText = viewMode === 'change'
         ? `색상 범례: ${periodLabel} 대비 ${metricLabel} 증감률이 높을수록 밝은 초록색입니다.`
         : `색상 범례: 전체 ${metricLabel} 비중이 높을수록 밝은 초록색입니다.`;
-    const treemapSmallCellGuidance = '작은 칸 안내: 공간이 좁으면 지표나 …만 표시되고, 마우스를 올리면 제목과 상세 지표를 확인할 수 있습니다.';
+    const treemapSmallCellGuidance = '작은 칸은 지표나 …만 보일 수 있습니다. 칸에 마우스를 올리거나 터치해 상세를 열고, 키보드는 영상 탐색 버튼에서 화살표 키로 항목을 고릅니다.';
 
-    const canRender = Boolean(treemapQuery.data);
     const isWaitingForAuthorizedQuery = !embedded && (
-        isAuthLoading || (!!user && !canRender && !treemapQuery.isError)
+        isAuthLoading || (!!user && !canRender && !treemapReadFailed)
     );
-    const isLoading = isWaitingForAuthorizedQuery || (treemapQuery.isLoading && !canRender);
+    const isLoading = isWaitingForAuthorizedQuery || (treemapQuery.isLoading && !canRender && !treemapReadFailed);
 
     const handleCellEnter = useCallback(
         (leaf: TreemapLeafNode, event: MouseEvent<HTMLDivElement>) => {
@@ -1292,9 +1377,22 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         });
     }, [startTransition]);
 
-    const handleRetry = useCallback(() => {
+    const handleRetry = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+        if (isRetryingTreemap) return;
+        treemapRetryHadFocusRef.current = document.activeElement === event.currentTarget;
         void treemapQuery.refetch();
-    }, [treemapQuery]);
+    }, [isRetryingTreemap, treemapQuery]);
+
+    useLayoutEffect(() => {
+        if (document.activeElement !== document.body) return;
+        if (treemapReadFailed) {
+            if (insightsCardHadFocusRef.current) treemapRetryButtonRef.current?.focus();
+            insightsCardHadFocusRef.current = false;
+        } else if (treemapRetryHadFocusRef.current) {
+            insightsCardRef.current?.focus();
+        }
+        if (!treemapReadFailed) treemapRetryHadFocusRef.current = false;
+    }, [treemapReadFailed]);
 
 
     const renderEmbeddedShell = (children: ReactNode, summary: ReactNode = moduleSummaryText) => (
@@ -1319,7 +1417,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
 
         return <InsightsClientLoadingSkeleton />;
     }
-    if (treemapQuery.isError || !treemapQuery.data) {
+    if (treemapReadFailed || !treemapQuery.data) {
         const errorContent = (
             <div className="flex min-h-0 items-center justify-center p-6 h-full">
                 <div className="text-center max-w-md w-full px-4">
@@ -1328,10 +1426,13 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                     <p className="text-sm text-muted-foreground mb-6">일시적인 오류가 발생했습니다. 다시 시도해 주세요.</p>
                     <div className="flex gap-3 justify-center flex-wrap">
                         <Button
+                            ref={treemapRetryButtonRef}
                             onClick={handleRetry}
+                            aria-disabled={isRetryingTreemap || undefined}
+                            aria-busy={isRetryingTreemap || undefined}
                             className="h-10 px-4 py-2"
                         >
-                            다시 시도
+                            {isRetryingTreemap ? '다시 시도하는 중…' : '다시 시도'}
                         </Button>
                         {!embedded ? (
                             <Button
@@ -1358,7 +1459,15 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
 
 
     const insightsContent = (
-                <Card className="overflow-hidden border border-border h-full flex flex-col min-h-0">
+                <Card
+                    ref={insightsCardRef}
+                    tabIndex={-1}
+                    data-insights-card="true"
+                    onFocus={() => { insightsCardHadFocusRef.current = true; }}
+                    onBlur={(event) => {
+                        if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) insightsCardHadFocusRef.current = false;
+                    }}
+                    className="overflow-hidden border border-border h-full flex flex-col min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary">
                     <div className="border-b border-border p-2 md:p-3">
                         <div className={cn(embedded ? "pb-2" : "overflow-x-auto pb-2")}>
                             <div className={cn("flex w-full flex-wrap items-start md:items-center gap-2 md:gap-3", embedded ? "min-w-0" : "min-w-max")}>
@@ -1441,7 +1550,78 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                 </div>
 
                                 <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0 self-center order-99">
+                                    <Popover
+                                        open={selectedTile !== null}
+                                        onOpenChange={(open) => setSelectedTileId(open ? treemapCells[boundedActiveTileIndex]?.node.id ?? null : null)}
+                                    >
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                ref={tileNavigatorRef}
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-6 px-2 text-2xs"
+                                                disabled={treemapCells.length === 0}
+                                                aria-describedby="insights-treemap-navigation-help"
+                                                onFocus={() => setTileNavigatorFocused(true)}
+                                                onBlur={() => setTileNavigatorFocused(false)}
+                                                onKeyDown={handleTileNavigatorKeyDown}
+                                            >
+                                                영상 탐색
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                            ref={tileDetailPanelRef}
+                                            aria-label={selectedTile ? `영상 상세: ${selectedTile.title}` : '영상 상세'}
+                                            side="bottom"
+                                            align="end"
+                                            className="w-72 max-w-[calc(100vw-1rem)] space-y-1 p-3 text-xs"
+                                            onOpenAutoFocus={(event) => {
+                                                event.preventDefault();
+                                                tileDetailPanelRef.current?.focus();
+                                            }}
+                                            onCloseAutoFocus={(event) => {
+                                                if (tileNavigatorRef.current?.disabled && treemapHelpRef.current?.isConnected) {
+                                                    event.preventDefault();
+                                                    treemapHelpRef.current.focus();
+                                                }
+                                            }}
+                                        >
+                                            {selectedTile ? (
+                                                <>
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={boundedActiveTileIndex === 0} onClick={() => {
+                                                            const nextIndex = boundedActiveTileIndex - 1;
+                                                            setActiveTileIndex(nextIndex);
+                                                            setSelectedTileId(treemapCells[nextIndex].node.id);
+                                                        }}>이전</Button>
+                                                        <span className="text-muted-foreground">{boundedActiveTileIndex + 1} / {treemapCells.length}</span>
+                                                        <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={boundedActiveTileIndex === treemapCells.length - 1} onClick={() => {
+                                                            const nextIndex = boundedActiveTileIndex + 1;
+                                                            setActiveTileIndex(nextIndex);
+                                                            setSelectedTileId(treemapCells[nextIndex].node.id);
+                                                        }}>다음</Button>
+                                                        <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setSelectedTileId(null)}>닫기</Button>
+                                                    </div>
+                                                    <div role="status" aria-live="polite" className="space-y-1">
+                                                        <TreemapDetailContent leaf={selectedTile} viewMode={viewMode} period={visiblePeriod} metricMode={metricMode} />
+                                                    </div>
+                                                </>
+                                            ) : null}
+                                        </PopoverContent>
+                                    </Popover>
                                     <span className="text-2xs text-muted-foreground">색상</span>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button ref={treemapHelpRef} type="button" size="icon" variant="ghost" className="h-6 w-6 shrink-0" aria-label="트리맵 읽는 법">
+                                                <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent aria-label="트리맵 읽는 법" side="bottom" align="end" className="w-64 max-w-[calc(100vw-1rem)] p-2 text-xs" onOpenAutoFocus={(event) => event.preventDefault()}>
+                                            <p>{treemapLegendText}</p>
+                                            <p className="mt-1">{treemapSmallCellGuidance}</p>
+                                        </PopoverContent>
+                                    </Popover>
                                     <div className="inline-flex overflow-hidden rounded-md border border-border shrink-0">
                                         <div
                                             className="flex items-center justify-center h-6 px-2 text-2xs font-normal"
@@ -1487,14 +1667,17 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                 </div>
                             </div>
                         </div>
-                        <div
-                            id="insights-treemap-context"
-                            data-insights-treemap-context="true"
-                            className="flex flex-col gap-0.5 border-t border-border/60 pt-2 text-2xs leading-snug text-muted-foreground md:flex-row md:flex-wrap md:items-center md:gap-x-3"
-                        >
-                            <p className="font-medium text-foreground/80">{treemapContextText}</p>
-                            <p>{treemapLegendText}</p>
+                        <div className="sr-only">
+                            <p id="insights-treemap-legend">{treemapLegendText}</p>
                             <p id="insights-treemap-small-cell-guidance">{treemapSmallCellGuidance}</p>
+                            <p id="insights-treemap-navigation-help">
+                                화살표 키로 영상을 고르고 Enter로 상세를 엽니다. Page Up과 Page Down은 열 칸, Home과 End는 처음과 끝으로 이동합니다.
+                            </p>
+                            {tileNavigatorFocused && treemapCells.length > 0 ? (
+                                <div role="status" aria-live="polite">
+                                    {boundedActiveTileIndex + 1} / {treemapCells.length}: {treemapCells[boundedActiveTileIndex].node.title}
+                                </div>
+                            ) : null}
                         </div>
                     </div>
 
@@ -1508,7 +1691,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                             style={{ width: renderWidth, height: chartHeight }}
                             role="img"
                             aria-label={treemapContextText}
-                            aria-describedby="insights-treemap-context insights-treemap-small-cell-guidance"
+                            aria-describedby="insights-treemap-legend insights-treemap-small-cell-guidance"
                         >
                             {treeData.length === 0 ? (
                                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">대상 데이터가 없습니다.</div>
@@ -1520,29 +1703,28 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                     onCellEnter={handleCellEnter}
                                     onCellMove={handleCellMove}
                                     onCellLeave={handleCellLeave}
+                                    onCellActivate={handleTileActivate}
                                 />
                             )}
-                            {tooltip ? (
+                            {(tileNavigatorFocused || selectedTile) && treemapCells[boundedActiveTileIndex] ? (
+                                <div
+                                    className="pointer-events-none absolute z-10 ring-2 ring-inset ring-primary"
+                                    aria-hidden="true"
+                                    data-insights-treemap-active-outline="true"
+                                    style={{
+                                        left: treemapCells[boundedActiveTileIndex].x0,
+                                        top: treemapCells[boundedActiveTileIndex].y0,
+                                        width: treemapCells[boundedActiveTileIndex].x1 - treemapCells[boundedActiveTileIndex].x0,
+                                        height: treemapCells[boundedActiveTileIndex].y1 - treemapCells[boundedActiveTileIndex].y0,
+                                    }}
+                                />
+                            ) : null}
+                            {tooltip && !selectedTile ? (
                                 <div
                                     className="pointer-events-none fixed z-20 rounded-md border border-border bg-card p-2 text-xs text-card-foreground shadow-lg"
                                     style={{ left: tooltip.x, top: tooltip.y }}
                                 >
-                                    <p className="font-semibold">{tooltip.leaf.title}</p>
-                                    <p>카테고리: {tooltip.leaf.category}</p>
-                                    <p>조회수: {formatTooltipMetric('views', tooltip.leaf.viewCount)}</p>
-                                    <p>좋아요: {formatTooltipMetric('likes', tooltip.leaf.likeCount)}</p>
-                                    <p>댓글수: {formatTooltipMetric('comments', tooltip.leaf.commentCount)}</p>
-                                    <p>영상 길이: {formatTooltipMetric('duration', tooltip.leaf.duration)}</p>
-                                    <p>
-                                        {viewMode === 'change'
-                                            ? `${getPeriodLabel(period)} 증감률: ${tooltip.leaf.percentText}`
-                                            : `비율: ${tooltip.leaf.percentText}`}
-                                    </p>
-                                    {viewMode === 'change' ? (
-                                        <p>
-                                            이전 {getMetricLabel(metricMode)}: {formatTooltipMetric(metricMode, tooltip.leaf.previousMetricRaw ?? tooltip.leaf.metricRaw)}
-                                        </p>
-                                    ) : null}
+                                    <TreemapDetailContent leaf={tooltip.leaf} viewMode={viewMode} period={visiblePeriod} metricMode={metricMode} />
                                 </div>
                             ) : null}
                         </div>

@@ -1228,7 +1228,7 @@ function MobileControlOverlayComponent({
                             }}
                             className={cn(
                                 'h-12 w-12 rounded-full shadow-sm',
-                                'bg-red-800 hover:bg-red-900 text-white',
+                                'bg-brand-ink hover:bg-black text-white',
                                 'active:scale-95',
                                 'flex items-center justify-center',
                                 'border border-border/20'

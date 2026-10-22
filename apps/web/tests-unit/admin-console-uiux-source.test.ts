@@ -508,7 +508,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
 
     const loadingBranch =
       insightsSource.match(
-        /if \(isLoading && !canRender\) \{([\s\S]*?)if \(treemapQuery\.isError \|\| !treemapQuery\.data\)/,
+        /if \(isLoading && !canRender\) \{([\s\S]*?)if \(treemapReadFailed \|\| !treemapQuery\.data\)/,
       )?.[1] ?? "";
     expect(loadingBranch).toContain("if (embedded)");
     expect(loadingBranch).toContain("return renderEmbeddedShell(");
@@ -518,7 +518,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
 
     const errorBranch =
       insightsSource.match(
-        /if \(treemapQuery\.isError \|\| !treemapQuery\.data\) \{([\s\S]*?)const insightsContent =/,
+        /if \(treemapReadFailed \|\| !treemapQuery\.data\) \{([\s\S]*?)const insightsContent =/,
       )?.[1] ?? "";
     expect(errorBranch).toContain("const errorContent = (");
     expect(errorBranch).toContain("onClick={handleRetry}");
@@ -697,7 +697,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(overviewSource).not.toContain("ADMIN_MAP_MOCK_RESTAURANTS");
     expect(overviewSource).not.toContain("목업 데이터");
     expect(overviewSource).toContain("표시할 좌표 맛집이 없습니다");
-    expect(overviewSource).toContain("지도는 유지하고 실데이터만 재확인합니다");
+    expect(overviewSource).toContain("좌표 맛집 목록을 불러오지 못했습니다.");
     expect(overviewSource).not.toContain("overflow-y-auto lg:overflow-hidden");
     expect(overviewSource).not.toContain(
       "overflow-visible md:grid-cols-2 lg:grid-rows-2 lg:overflow-hidden",
@@ -746,7 +746,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'className="mt-1.5 rounded-xl bg-primary/5 p-1.5"',
     );
     expect(overviewSource).toContain(
-      'className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl bg-background/70 p-1.5 text-2xs text-muted-foreground"',
+      'className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl bg-background/70 p-1.5 text-2xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary"',
     );
     expect(overviewSource).not.toContain(
       'className="rounded-xl border border-border bg-card p-2.5 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto"',
@@ -1851,7 +1851,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("displayLimit={impactChartVideoLimit}");
     expect(consoleSource).toContain(
-      "전체 ${formatNumber(trendDisplayedPointCount)}개",
+      "전체 ${formatMetricNumber(trendDisplayedPointCount)}개",
     );
     expect(consoleSource).toContain(
       "표시: 그래프는 상위 ${formatNumber(impactDisplayedVideoCount)}/${formatNumber(dashboardUploadVideoBasisCount)}개, 표는 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.",
@@ -1872,7 +1872,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("metric={topContentCardMetric}");
     expect(consoleSource).toContain(
-      "metric={`진단 신호 ${formatNumber(topContentInsights.length)}개 · ${topContentCardMetric}`}",
+      "metric={`진단 신호 ${formatMetricNumber(topContentInsights.length)}개 · ${topContentCardMetric}`}",
     );
     expect(consoleSource).not.toContain("engagementChange");
     expect(consoleSource).toContain("const visibleRows = rows.slice(0, 5)");
@@ -2118,10 +2118,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "while (insights.length < ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT)",
     );
     expect(consoleSource).toContain(
-      "`${periodRatioCaptionPrefix} ${formatDashboardPercent(likeRate)} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`",
+      "`${periodRatioCaptionPrefix} ${formatDashboardPercent(likeRate)} · 현재 전체 누적 ${formatMetricNumber(cumulativeLikeValue)}`",
     );
     expect(consoleSource).toContain(
-      "`${periodRatioCaptionPrefix} ${formatDashboardPercent(commentRate)} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`",
+      "`${periodRatioCaptionPrefix} ${formatDashboardPercent(commentRate)} · 현재 전체 누적 ${formatMetricNumber(cumulativeCommentValue)}`",
     );
     expect(consoleSource).toContain("cumulativeViewValue");
     expect(consoleSource).toContain("cumulativeVideoTotal");
@@ -2207,7 +2207,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("isLoading={isChartLoading}");
     expect(consoleSource).toContain("isLoading={isSubscriberLoading}");
     expect(consoleSource).toContain(
-      "youtubeChannelQuery.isLoading || pendingSkeletonPeriod === period",
+      "youtubeChannelQuery.isLoading && !channelReadFailedWithoutData",
     );
     expect(consoleSource).toContain("youtubeChannelQuery.isFetching");
     expect(consoleSource).toContain("AdminDashboardInfoTooltip");
@@ -2615,8 +2615,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'data-admin-dashboard-ops-summary-visual="progress-bars"',
     );
-    expect(consoleSource).toContain("rawValue: stats.totalRestaurants ?? 0");
-    expect(consoleSource).toContain("rawValue: missingCoordinates ?? 0");
+    expect(consoleSource).toContain("rawValue: stats.totalRestaurants");
+    expect(consoleSource).toContain("rawValue: missingCoordinates");
+    expect(consoleSource).toContain("sumKnownNumbers");
     expect(consoleSource).toContain("const maxRawValue = Math.max");
     expect(consoleSource).toContain("const rowPercent = clampDashboardPercent");
     expect(consoleSource).toContain(
@@ -5893,7 +5894,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(overviewSource).toContain("AdminMapOverviewCanvas");
     expect(overviewSource).toContain("AdminMapInfoPanel");
     expect(overviewSource).toContain(
-      "네이버 지도 프레임은 유지한 채 맛집 관리에서 좌표 상태를 확인하세요.",
+      "지도는 기본 위치로 유지합니다. 목록을 다시 읽기 전에는 맛집 수와 동선을 확정하지 않습니다.",
     );
     expect(overviewSource).toContain("restaurants={realRestaurants}");
     expect(overviewSource).toContain(
@@ -6190,7 +6191,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "xl:grid-cols-[minmax(0,1fr)_360px]",
     );
     expect(bannersSource).toContain(
-      "bannersLoading ? <InlineCountSkeleton /> : formatBannerCount(sortedBanners.length, '개')",
+      "bannerListUnsettled ? <InlineCountSkeleton /> : formatBannerCount(sortedBanners.length, '개')",
     );
     expect(bannersSource).toContain('aria-label="배너 목록 로딩 중"');
     expect(bannersSource).toContain("function BannerListItemSkeleton");

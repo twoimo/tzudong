@@ -1181,9 +1181,9 @@ describe("web quality performance source contracts", () => {
     expect(desktopLeftPanelMapHomeSource).toContain(
       'data-desktop-left-panel-latest-restaurants="true"',
     );
-    expect(desktopLeftPanelMapHomeSource).toContain(
-      '<Clock className="h-4 w-4 text-primary"',
-    );
+    expect(desktopLeftPanelMapHomeSource).toContain("<BrandSectionHeading");
+    expect(desktopLeftPanelMapHomeSource).not.toContain('eyebrow="새로 지도에 올라온"');
+    expect(desktopLeftPanelMapHomeSource).not.toContain('eyebrow="지금 많이 찾는"');
     expect(desktopLeftPanelMapHomeSource).toContain("최근 추가된 맛집");
     expect(desktopLeftPanelMapHomeSource).toContain(
       "먼저 3곳을 보여주고 스크롤하면 이어서 불러와요",
@@ -1478,7 +1478,7 @@ describe("web quality performance source contracts", () => {
       "const returnRoute = getDesktopLeftPanelRoute(",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "(onDetailPanelBack ?? onPanelClose)?.()",
+      "if (onDetailPanelBack?.() === true) return;\n    if (!onDetailPanelBack) onPanelClose?.();",
     );
     expect(homeDesktopControlPanelSource).toContain(
       "router.replace(returnRoute, { scroll: false })",
@@ -4756,7 +4756,8 @@ describe("web quality performance source contracts", () => {
     expect(mobileBottomNavSource).toContain(
       "'text-[12px] font-medium leading-none tracking-normal'",
     );
-    expect(mobileBottomNavSource).toContain("isActive && 'font-semibold'");
+    expect(mobileBottomNavSource).toContain("isActive && 'font-bold'");
+    expect(mobileBottomNavSource).toContain("isActive && 'fill-brand-tangerine/40 scale-110'");
     expect(viewportFixSource).toContain(
       "if (window.CSS?.supports?.('height', '100dvh'))",
     );

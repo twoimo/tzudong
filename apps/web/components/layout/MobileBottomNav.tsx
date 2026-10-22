@@ -211,24 +211,24 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                             'min-h-[60px]',
                             'relative',
                             isActive
-                                ? 'text-red-800'
+                                ? 'text-foreground'
                                 : 'text-foreground/65 active:text-foreground'
                         )}
                     >
                         {/* 활성 상태 배경 원 */}
                         {isActive && (
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-red-50 rounded-full -z-10" />
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-brand-tangerine-tint rounded-full -z-10" />
                         )}
 
                         <Icon
                             className={cn(
                                 'h-6 w-6 mb-1',
-                                isActive && 'fill-red-800/20 scale-110'
+                                isActive && 'fill-brand-tangerine/40 scale-110'
                             )}
                         />
                         <span className={cn(
                             'text-[12px] font-medium leading-none tracking-normal',
-                            isActive && 'font-semibold'
+                            isActive && 'font-bold'
                         )}>
                             {item.label}
                         </span>

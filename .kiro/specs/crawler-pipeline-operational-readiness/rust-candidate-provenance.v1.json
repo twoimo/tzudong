@@ -113,15 +113,15 @@
     },
     {
       "path": "backend/rust/tzudong-media-compute/src/lib.rs",
-      "gitBlobSha1": "84b25dbba6f617dd2e051c9ccbe65f53313ed796",
-      "sha256": "ed6f2907db0f258acee1df36bff4738b7081b815246e5ec0d058ddc8b5107f86",
-      "bytes": 11530
+      "gitBlobSha1": "0d9f67fa032f0b0ad8b17af6a66bc0565e149696",
+      "sha256": "f573df7bac3135a2aa3041303dba3a2427407bec2ab8c0cccc6aa53d770075c9",
+      "bytes": 11571
     },
     {
       "path": "backend/rust/tzudong-media-compute/src/python.rs",
-      "gitBlobSha1": "978efd736c897a649b72e135546495fec541b856",
-      "sha256": "b47adb1caf02090a4396a309248fbbfd91842a1f9f255c363f39c648f09f718b",
-      "bytes": 3933
+      "gitBlobSha1": "69489370115f03ca6c46494733915b8f41a0c092",
+      "sha256": "c34f66dd98172e6c0fb2038880d9dcc95efa987f0dcf586a0736ba29fff8336d",
+      "bytes": 4009
     },
     {
       "path": "backend/rust/tzudong-normalize/Cargo.toml",

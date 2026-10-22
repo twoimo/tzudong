@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { RecordActionClientError, recordActionErrorMessage, recordActionMediaNotice, isRecordActionCancelled } from '../lib/admin/record-action-client';
+import { RecordActionClientError, recordActionErrorMessage, recordActionMediaNotice, shouldNotifyRecordActionError } from '../lib/admin/record-action-client';
 import type { RecordActionReceipt } from '../lib/admin/record-action-contract';
 
 const id = '11111111-1111-4111-8111-111111111111';
@@ -24,7 +24,7 @@ function harness(options: { busy?: boolean; isAdmin?: boolean; error?: boolean; 
     useMutation: (config: Config) => { mutations.push(config); return { isPending: false, mutate: (input: unknown) => { requests.push(input); } }; },
     useRecordAction: (callback: (receipt: RecordActionReceipt) => void, value: { recover: boolean }) => { recovery = callback; recoverOption = value.recover; return { busy: options.busy ?? false, dialog: React.createElement('div', { 'data-shared-confirmation': true }), run: async (input: unknown) => { requests.push(input); return input; } }; },
     createUserNotification: async (...args: unknown[]) => { notifications.push(args); },
-    toast: { success: () => {}, error: (message: string) => { errors.push(message); } }, recordActionErrorMessage, recordActionMediaNotice, isRecordActionCancelled,
+    toast: { success: () => {}, error: (message: string) => { errors.push(message); } }, recordActionErrorMessage, recordActionMediaNotice, shouldNotifyRecordActionError,
     RECORD_VIEWS_INVALIDATED_EVENT: 'fixture-invalidated',
     ADMIN_PENDING_COUNTS_QUERY_KEY: ['fixture-shared-counts'],
     MapPanelHeader: ({ title, description }: { title: string; description?: string }) => React.createElement('header', null, title, description),

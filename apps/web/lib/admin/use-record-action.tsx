@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
-import { createRecordActionClient, RECORD_VIEWS_INVALIDATED_EVENT, RECORD_ACTION_APPLIED_EVENT } from './record-action-client';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { createRecordActionClient, RECORD_VIEWS_INVALIDATED_EVENT, RECORD_ACTION_APPLIED_EVENT, type RecordActionInput } from './record-action-client';
 import { RECORD_ACTION_CONFIRMATION, type RecordActionReceipt } from './record-action-contract';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ function ProposedValue({ value }: { value: unknown }) {
   return <span>{typeof value === 'string' ? labels[value] ?? value : String(value)}</span>;
 }
 
-export function useRecordAction(onRecovered: (receipt: RecordActionReceipt) => void, options: { recover?: boolean } = {}) {
+export function useRecordAction(onRecovered: (receipt: RecordActionReceipt) => void, options: { recover?: boolean; returnFocus?: () => HTMLElement | null } = {}) {
   const { user, isAdmin } = useAuth();
   const [binding, setBinding] = useState<string | null>(null);
   const [client] = useState(() => createRecordActionClient({
@@ -44,6 +44,21 @@ export function useRecordAction(onRecovered: (receipt: RecordActionReceipt) => v
   useEffect(() => { client.setOnRecovered(onRecovered); }, [client, onRecovered]);
   const state = useSyncExternalStore(client.subscribe, client.getSnapshot, client.getSnapshot);
   const [confirmation, setConfirmation] = useState('');
+  const openerRef = useRef<HTMLElement | null>(null);
+  const returnFocusRef = useRef(options.returnFocus);
+  useEffect(() => { returnFocusRef.current = options.returnFocus; });
+  const run = useCallback((input: RecordActionInput) => {
+    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return client.run(input);
+  }, [client]);
+  // The dialog has no Radix trigger, so its default close focus is document.body.
+  const restoreFocus = (event: Event) => {
+    event.preventDefault();
+    const opener = openerRef.current;
+    openerRef.current = null;
+    if (opener?.isConnected && !opener.matches(':disabled')) opener.focus();
+    if (document.activeElement === document.body) returnFocusRef.current?.()?.focus();
+  };
   useEffect(() => {
     let current = true;
     client.setActor(null); setBinding(null);
@@ -62,10 +77,10 @@ export function useRecordAction(onRecovered: (receipt: RecordActionReceipt) => v
   const parts = (state.request?.action ?? state.receipt?.action ?? '').split('.');
   const canCancel = client.canCancel() && !['checking', 'applying'].includes(state.phase);
   return {
-    run: client.run,
+    run,
     busy: state.phase !== 'idle',
     dialog: <Dialog open={state.phase !== 'idle'} onOpenChange={open => { if (!open && canCancel) client.cancel(); }}>
-      <DialogContent className={`flex max-h-[90dvh] max-w-xl flex-col overflow-hidden ${canCancel ? '' : '[&>button:last-child]:hidden'}`} onEscapeKeyDown={event => { if (!canCancel) event.preventDefault(); }} onInteractOutside={event => event.preventDefault()} aria-busy={['previewing', 'applying', 'checking'].includes(state.phase)}>
+      <DialogContent className={`flex max-h-[90dvh] max-w-xl flex-col overflow-hidden ${canCancel ? '' : '[&>button:last-child]:hidden'}`} onEscapeKeyDown={event => { if (!canCancel) event.preventDefault(); }} onInteractOutside={event => event.preventDefault()} onCloseAutoFocus={restoreFocus} aria-busy={['previewing', 'applying', 'checking'].includes(state.phase)}>
         <DialogHeader><DialogTitle className="text-base font-semibold leading-6">{parts.map(part => labels[part] ?? part).join(' ') || '이전 작업'} 확인</DialogTitle>
           <DialogDescription>현재 상태와 변경 내용을 확인한 뒤 “{RECORD_ACTION_CONFIRMATION}”을 입력하세요.</DialogDescription></DialogHeader>
         <div className="min-h-0 space-y-3 overflow-y-auto text-sm" data-record-action-preview>

@@ -39,9 +39,11 @@ const messages: Record<string, string> = {
   RECORD_ACTION_MEDIA_PATH_INVALID: '리뷰 삭제는 확인됐지만 사진 정리를 확인하지 못했습니다.',
 };
 export class RecordActionClientError extends Error {
-  constructor(public readonly code: string, public readonly cleanupNotStarted = false) { super(messages[code] ?? '결과를 확인하지 못했습니다. 기존 작업의 결과를 조회하세요.'); }
+  constructor(public readonly code: string, public readonly cleanupNotStarted = false, public readonly shownInDialog = false) { super(messages[code] ?? '결과를 확인하지 못했습니다. 기존 작업의 결과를 조회하세요.'); }
 }
 export const isRecordActionCancelled = (error: unknown) => error instanceof RecordActionClientError && error.code === 'CANCELLED';
+/** False when the error was a cancel or is already the record-action dialog's alert. */
+export const shouldNotifyRecordActionError = (error: unknown) => !isRecordActionCancelled(error) && !(error instanceof RecordActionClientError && error.shownInDialog);
 export function recordActionErrorMessage(error: unknown) {
   return error instanceof RecordActionClientError ? error.message : '입력값을 확인하고 목록을 새로 조회하세요.';
 }
@@ -89,7 +91,7 @@ export function createRecordActionClient(options: {
   const listeners = new Set<() => void>();
   const publish = (patch: Partial<RecordActionClientState>) => { state = { ...state, ...patch }; listeners.forEach(listener => listener()); };
   const fail = (code: string) => {
-    const error = new RecordActionClientError(code);
+    const error = new RecordActionClientError(code, false, true);
     if (['RECORD_ACTION_STALE', 'RECORD_ACTION_STATE_CONFLICT', 'RECORD_ACTION_SUBMISSION_CONFLICT'].includes(code)) options.onInvalidate?.();
     publish({ phase: 'failed', message: error.message, nextAction: code === 'RECORD_ACTION_DUPLICATE_REVIEW' ? 'review-duplicates' : null }); reject?.(error); resolve = null; reject = null;
   };

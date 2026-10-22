@@ -150,8 +150,9 @@ pub fn format_transcript_range(segments: &[Segment], start_sec: f64, end_sec: f6
 
 /// Port of `chunk_planner.plan_chunks`.
 ///
-/// Split a video into subtitle-aligned chunks with a trailing overlap. Returns
-/// a single chunk covering the whole video when the adaptive chunk size is at
+/// Split a video into subtitle-aligned chunks. Media ranges do not overlap;
+/// `overlap_sec` is included only in each chunk's transcript text. Returns a
+/// single chunk covering the whole video when the adaptive chunk size is at
 /// least the duration.
 pub fn plan_chunks(duration: f64, segments: &[Segment], overlap_sec: f64) -> Vec<Chunk> {
     let chunk_sec = compute_chunk_duration(duration);
@@ -187,22 +188,22 @@ pub fn plan_chunks(duration: f64, segments: &[Segment], overlap_sec: f64) -> Vec
             aligned_end = raw_end;
         }
 
+        if aligned_end < duration && duration - aligned_end < 10.0 {
+            aligned_end = duration;
+        }
+
+        let transcript_start = (current_start - overlap_sec).max(0.0);
         chunks.push(Chunk {
             chunk_index,
             start_sec: py_round1(current_start),
             end_sec: py_round1(aligned_end),
-            transcript_text: format_transcript_range(segments, current_start, aligned_end),
+            transcript_text: format_transcript_range(segments, transcript_start, aligned_end),
         });
 
-        // Pull the next chunk back by overlap_sec for context continuity.
-        let next_start = aligned_end - overlap_sec;
-        current_start = (current_start + 1.0).max(next_start);
-
-        // Stop if the next start is too close to the end.
-        if duration - current_start < 10.0 {
+        if aligned_end >= duration {
             break;
         }
-
+        current_start = aligned_end;
         chunk_index += 1;
     }
 

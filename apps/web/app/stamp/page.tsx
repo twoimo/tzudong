@@ -932,6 +932,7 @@ export default function StampPage() {
                         <MapPanelHeader
                             variant="page"
                             titleAs="h1"
+                            eyebrow="쯔양이 다녀간 맛집 도장깨기"
                             title="쯔동여지도 도장"
                             titleIcon={<Trophy />}
                             count={isRestaurantsLoading || isRestaurantsError ? undefined : totalRestaurantCount}

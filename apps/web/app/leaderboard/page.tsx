@@ -118,6 +118,7 @@ export default function LeaderboardPage() {
                 <MapPanelHeader
                     variant="page"
                     titleAs="h1"
+                    eyebrow="리뷰로 쌓는 맛집 랭킹"
                     title="쯔동여지도 랭킹"
                     titleIcon={<Trophy />}
                     titleAddon={(

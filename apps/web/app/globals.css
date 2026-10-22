@@ -21,12 +21,12 @@
 
 .dark {
   color-scheme: dark;
-  --primary: 352 78% 62%;
-  --primary-foreground: 220 18% 9%;
+  --primary: 18 100% 63%;
+  --primary-foreground: 0 0% 11%;
   --popover: 220 16% 12%;
   --popover-foreground: 220 20% 96%;
   --input: 220 13% 32%;
-  --ring: 352 78% 62%;
+  --ring: 18 100% 63%;
   --background: 220 18% 9%;
   --foreground: 220 20% 96%;
   --card: 220 16% 12%;
@@ -38,6 +38,11 @@
   --muted-foreground: 220 12% 70%;
   --accent: 220 14% 18%;
   --accent-foreground: 220 20% 96%;
+  --brand-cream: 32 14% 18%;
+  --brand-tangerine-tint: 18 32% 18%;
+  --brand-tangerine-ink: 18 100% 74%;
+  --brand-garden-tint: 146 18% 16%;
+  --brand-garden-text: 146 42% 68%;
 }
 
 @supports (height: 100dvh) {

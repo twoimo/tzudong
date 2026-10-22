@@ -356,8 +356,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               <ChevronLeft className="h-3 w-3" />
             </Button>
           )}
-          <Megaphone className="h-4 w-4 text-red-700 flex-shrink-0" />
-          <span className="font-medium truncate group-hover:text-red-800 text-foreground flex-1 min-w-0 text-xs md:text-sm">
+          <Megaphone className="h-4 w-4 text-brand-tangerine-ink flex-shrink-0" />
+          <span className="font-medium truncate group-hover:text-brand-tangerine-ink text-foreground flex-1 min-w-0 text-xs md:text-sm">
             {currentBanner.title}
           </span>
           {bannerAnnouncements.length > 1 && (
@@ -412,7 +412,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   <Badge
                     variant="destructive"
                     aria-hidden="true"
-                    className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-white"
+                    className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-tangerine px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-brand-ink"
                   >
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </Badge>
@@ -492,7 +492,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                               {notification.title}
                             </p>
                             {!notification.isRead && (
-                              <span className="shrink-0 rounded-full bg-red-800 px-1.5 py-0.5 text-2xs font-bold leading-none text-white">새 알림</span>
+                              <span className="shrink-0 rounded-full bg-brand-tangerine px-1.5 py-0.5 text-2xs font-bold leading-none text-brand-ink">새 알림</span>
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground truncate">
@@ -637,7 +637,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               type="button"
               aria-label="로그인"
               className={cn(
-                "bg-red-800 hover:bg-red-900 text-white font-sans shadow-md",
+                "rounded-full bg-brand-ink hover:bg-black text-white font-sans font-bold shadow-sm",
                 "h-8 px-4 text-xs md:h-9 md:px-4 md:text-sm"
               )}
             >

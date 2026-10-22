@@ -60,7 +60,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(headerSource).toContain('isLoading: isNotificationsLoading');
     expect(headerSource).toContain('isError: isNotificationsError');
     expect(headerSource).toContain('aria-label={unreadCount > 0 ? `알림, 안 읽은 알림');
-    expect(headerSource).toContain('absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-white');
+    expect(headerSource).toContain('absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-tangerine px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-brand-ink');
     expect(headerSource).toContain("unreadCount > 99 ? '99+' : unreadCount");
     expect(headerSource).toContain('aria-label="알림 목록 로딩 중"');
     expect(headerSource).toContain('알림을 불러오지 못했습니다');
@@ -170,7 +170,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(mobileNotificationSource).toContain('h-8 shrink-0 rounded-full px-2.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground');
     expect(mobileNotificationSource).not.toContain('rounded-xl bg-muted/40 px-3 py-2.5 text-foreground');
     expect(mobileNotificationSource).toContain('알림, 안 읽은 알림');
-    expect(mobileNotificationSource).toContain('absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-white');
+    expect(mobileNotificationSource).toContain('absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-tangerine px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-brand-ink');
     expect(mobileNotificationSource).toContain('unreadCount > 99 ? "99+" : unreadCount');
     expect(mobileNotificationSource).toContain('aria-label="알림 목록 로딩 중"');
     expect(mobileNotificationSource).toContain('알림을 불러오지 못했습니다');

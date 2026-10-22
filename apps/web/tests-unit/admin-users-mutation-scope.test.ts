@@ -43,9 +43,9 @@ describe('admin users mutation result scope contract', () => {
     expect(panelSource).toContain('payload?.step ? `단계: ${payload.step}`');
     expect(panelSource).toContain('const auditText = getMutationAuditText(payload);');
     expect(panelSource).toContain('const nextUsers = await loadUsers();');
-    expect(panelSource).toContain('status: refreshed ? "success" : "warning"');
-    expect(panelSource).toContain('? `적용 완료: ${message}${auditText} 상태를 다시 확인했습니다.`');
-    expect(panelSource.indexOf('const nextUsers = await loadUsers();')).toBeLessThan(panelSource.indexOf('status: refreshed ? "success" : "warning"'));
+    expect(panelSource).toContain('message: `적용 완료: ${pendingAtReadStart.message}${pendingAtReadStart.auditText} 상태를 다시 확인했습니다.`');
+    expect(panelSource).toContain('if (nextUsers?.some((candidate) => candidate.id === pending.targetUserId)) return;');
+    expect(panelSource.indexOf('const nextUsers = await loadUsers();')).toBeLessThan(panelSource.indexOf('message: `변경 결과 재확인 필요: ${message}${auditText}'));
     expect(panelSource).not.toContain('목록을 다시 확인했습니다.');
     expect(panelSource).toContain(': `적용 실패: ${message}`');
   });
@@ -163,7 +163,7 @@ describe('admin users expected mutation readback', () => {
     expect(userReadbackSource).toContain('user_id: pendingAtReadStart.targetUserId');
     expect(userReadbackSource).toContain('params.set(isExactAdminUserId(normalizedSearch) ? "user_id" : "search", normalizedSearch);');
     expect(userReadbackSource).toContain('setUsers((current) => mergeExactUserReadback(current, latest));');
-    expect(userReadbackSource).toContain('const refreshed = matchesPendingUserReadback(nextUsers, pending);');
+    expect(userReadbackSource).toContain('if (nextUsers?.some((candidate) => candidate.id === pending.targetUserId)) return;');
     expect(userReadbackSource).toContain('if (isMutating || (pendingReadback && intent.type !== "refresh")) return;');
     expect(userReadbackSource).toContain('const uncertain = Boolean(pendingReadbackRef.current);');
     expect(userReadbackSource).toContain('if (response.status >= 400 && response.status < 500) {');

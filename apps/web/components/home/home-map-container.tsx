@@ -68,7 +68,7 @@ interface HomeMapContainerProps {
     onMapReady: (moveFunction: (restaurant: Restaurant) => void) => void;
     onMarkerClick: (restaurant: Restaurant) => void;
     onPanelClose: () => void;
-    onDetailPanelBack?: () => void;
+    onDetailPanelBack?: () => boolean | void;
     onReviewModalOpen: () => void;
     onTogglePanelCollapse?: () => void;
     activePanel?: 'map' | 'detail' | 'control';

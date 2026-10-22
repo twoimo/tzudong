@@ -56,6 +56,7 @@ import {
   type HomeRestoreCompactRestaurant,
   type HomeRestoreSnapshotV1,
 } from "@/lib/home-detail-route-state";
+import { findOverseasRegionKeyForRestaurant } from "@/lib/overseas-region-matching";
 
 function HomeMapContainerPendingShell() {
   return (
@@ -353,14 +354,14 @@ export default function HomeClient() {
   }, [clearRestaurantDetailSelection]);
 
   const returnToRestaurantListPanel = useCallback(() => {
-    if (
-      typeof window !== "undefined" &&
-      isHomeDetailHistoryState(window.history.state)
-    ) {
-      const { snapshot } = readHomeRestoreSnapshot(window.history.state.restoreKey);
-      if (snapshot) {
-        window.history.back();
-        return;
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("home:detail-user-closed"));
+      if (isHomeDetailHistoryState(window.history.state)) {
+        const { snapshot } = readHomeRestoreSnapshot(window.history.state.restoreKey);
+        if (snapshot) {
+          window.history.back();
+          return true;
+        }
       }
     }
 
@@ -369,6 +370,7 @@ export default function HomeClient() {
     setIsAnnouncementSheetOpen(false);
     setSelectedAnnouncement(null);
     clearAnnouncementPanelUrl();
+    return false;
   }, [closeRestaurantDetailPanel]);
 
   const createHomeRestoreSnapshot = useCallback(
@@ -609,6 +611,10 @@ export default function HomeClient() {
       }
 
       const detailMapMode = options?.mapMode ?? mapMode;
+      if (detailMapMode === "overseas") {
+        const regionKey = findOverseasRegionKeyForRestaurant(restaurant);
+        if (regionKey) setSelectedCountry(regionKey);
+      }
       if (typeof window !== "undefined") {
         const restoreKey =
           isHomeDetailHistoryState(window.history.state) &&
@@ -651,7 +657,7 @@ export default function HomeClient() {
         }
       }
     },
-    [createHomeRestoreSnapshot, mapMode, openRestaurantDetailSelection],
+    [createHomeRestoreSnapshot, mapMode, openRestaurantDetailSelection, setSelectedCountry],
   );
   useEffect(() => {
     openDetailPanelRef.current = openDetailPanel;

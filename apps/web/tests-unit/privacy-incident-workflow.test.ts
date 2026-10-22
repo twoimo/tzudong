@@ -277,8 +277,12 @@ describe('privacy incident workflow contract', () => {
       summary: '사고 현황 미확인',
     });
 
-    state = nextIncidentListReadState(state, 'start');
-    state = nextIncidentListReadState(state, 'success');
+    const retryingFailed = nextIncidentListReadState(state, 'start');
+    expect(retryingFailed).toBe('failed');
+    expect(getIncidentListPresentation(retryingFailed, 0, 0).summary).toBe('사고 현황 미확인');
+    expect(getIncidentListPresentation(retryingFailed, 0, 0).statusMessage).toBe('사고 목록을 불러오지 못했습니다. 새로고침하여 다시 확인하세요.');
+
+    state = nextIncidentListReadState(retryingFailed, 'success');
     expect(getIncidentListPresentation(state, 0, 0)).toEqual({
       emptyMessage: '표시할 사고가 없습니다. 위 탐지 등록으로 첫 사고를 기록한 뒤 상태 전환을 진행하세요.',
       hasKnownData: true,

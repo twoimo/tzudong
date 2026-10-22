@@ -10,6 +10,7 @@ import Supercluster, { type ClusterFeature, type PointFeature } from 'superclust
 import { REGION_MAP_CONFIG } from '@/config/maps';
 import type { Restaurant, Region } from '@/types/restaurant';
 import { getPerformanceBasedClusterOptions } from './device-performance';
+import { bestPopularityTier, publicPopularityTier } from './evidence-engineering/popularity-marker';
 
 // Supercluster 타입 정의 (패키지에서 export하지 않으므로 직접 정의)
 type BBox = [number, number, number, number];
@@ -28,6 +29,7 @@ export interface ClusterProperties extends GeoJsonProperties {
     cluster?: boolean;
     point_count?: number;
     point_count_abbreviated?: string | number;
+    popularityTier?: "fire" | "ember" | "rainbow" | "standard";
 }
 
 /**
@@ -127,6 +129,7 @@ export const restaurantsToGeoJSON = (restaurants: Restaurant[]): RestaurantFeatu
                 restaurantId: r.id,
                 category: (Array.isArray(r.categories) ? r.categories[0] : r.category || '기타') as string,
                 address: r.address,
+                popularityTier: publicPopularityTier(r.popularity_tier),
             },
             geometry: {
                 type: 'Point' as const,
@@ -171,6 +174,10 @@ export const createClusterIndex = (
         maxZoom: finalMaxZoom,
         minZoom: options.minZoom ?? 0,
         minPoints: options.minPoints ?? performanceOptions.minPoints,
+        map: (properties) => ({ popularityTier: publicPopularityTier(properties.popularityTier) }),
+        reduce: (accumulated, properties) => {
+            accumulated.popularityTier = bestPopularityTier(accumulated.popularityTier, properties.popularityTier);
+        },
     });
 };
 
@@ -325,6 +332,8 @@ export interface RegionalCluster {
     restaurantIds: string[];
     /** 해당 지역 카테고리 배열 (중복 제거) */
     categories: string[];
+    /** 묶인 맛집 중 가장 높은 공개 인기 등급 */
+    popularityTier: "fire" | "ember" | "rainbow" | "standard";
 }
 
 /**
@@ -581,11 +590,12 @@ export const getRegionalClusters = (restaurants: Restaurant[]): RegionalCluster[
     const regionMap = new Map<string, {
         restaurantIds: string[];
         categories: Map<string, number>;
+        popularityTier: "fire" | "ember" | "rainbow" | "standard";
     }>();
 
     // 모든 17개 행정구역 초기화
     for (let index = 0; index < REGIONAL_CENTER_NAMES.length; index += 1) {
-        regionMap.set(REGIONAL_CENTER_NAMES[index], { restaurantIds: [], categories: new Map() });
+        regionMap.set(REGIONAL_CENTER_NAMES[index], { restaurantIds: [], categories: new Map(), popularityTier: "standard" });
     }
 
     // 각 맛집을 행정구역에 할당 (주소 우선, 없으면 좌표로 가장 가까운 행정구역)
@@ -603,6 +613,7 @@ export const getRegionalClusters = (restaurants: Restaurant[]): RegionalCluster[
         if (!group) continue;
 
         group.restaurantIds.push(restaurant.id);
+        group.popularityTier = bestPopularityTier(group.popularityTier, restaurant.popularity_tier);
 
         // 카테고리 추가
         const category = entry.categoryLabel;
@@ -622,6 +633,7 @@ export const getRegionalClusters = (restaurants: Restaurant[]): RegionalCluster[
                 count: group.restaurantIds.length,
                 restaurantIds: group.restaurantIds,
                 categories: topCategories(group.categories),
+                popularityTier: group.popularityTier,
             });
         }
     }
@@ -645,6 +657,7 @@ type SeoulDistrictGroup = {
     categories: Map<string, number>;
     latSum: number;
     lngSum: number;
+    popularityTier: "fire" | "ember" | "rainbow" | "standard";
 };
 
 /**
@@ -673,6 +686,7 @@ const createSeoulDistrictGroups = (): Map<string, SeoulDistrictGroup> => {
             categories: new Map(),
             latSum: 0,
             lngSum: 0,
+            popularityTier: "standard",
         });
     }
 
@@ -733,6 +747,7 @@ const buildSeoulDistrictGroupingFromEntries = (
         group.restaurantIds.push(restaurant.id);
         group.latSum += lat;
         group.lngSum += lng;
+        group.popularityTier = bestPopularityTier(group.popularityTier, restaurant.popularity_tier);
 
         if (entry.categoryLabel) {
             group.categories.set(
@@ -790,6 +805,7 @@ const buildSeoulDistrictGroupingFromRestaurants = (
         group.restaurantIds.push(restaurant.id);
         group.latSum += lat;
         group.lngSum += lng;
+        group.popularityTier = bestPopularityTier(group.popularityTier, restaurant.popularity_tier);
 
         const categories = restaurant.categories;
         const category = (Array.isArray(categories)
@@ -847,6 +863,7 @@ const projectSeoulDistrictClusters = (
                 count,
                 restaurantIds: shared ? group.restaurantIds.slice() : group.restaurantIds,
                 categories: topCategories(group.categories),
+                popularityTier: group.popularityTier,
             });
         } else if (count > 0) {
             // minClusterSize 미만: 개별 마커로 표시

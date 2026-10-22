@@ -310,7 +310,7 @@ jobs:
       - name: Fail closed on benchmark evidence
         if: always()
         run: test "${{ steps.benchmark.outcome }}" = success -a "${{ steps.report.outcome }}" = success
-      - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+      - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts tests-unit/next-sync-patch.test.ts tests-unit/next-hmr-initial-sync.test.ts
 
   windows-npm-tooling:
     name: Windows npm
@@ -370,7 +370,7 @@ jobs:
       - name: Fail closed on benchmark evidence
         if: always()
         run: if ('${{ steps.benchmark.outcome }}' -ne 'success' -or '${{ steps.report.outcome }}' -ne 'success') { exit 1 }
-      - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+      - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts tests-unit/next-sync-patch.test.ts tests-unit/next-hmr-initial-sync.test.ts
 
   windows-bun-compatibility:
     name: Windows Bun
@@ -423,7 +423,7 @@ jobs:
       - name: Fail closed on benchmark evidence
         if: always()
         run: if ('${{ steps.benchmark.outcome }}' -ne 'success' -or '${{ steps.report.outcome }}' -ne 'success') { exit 1 }
-      - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+      - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts tests-unit/next-sync-patch.test.ts tests-unit/next-hmr-initial-sync.test.ts
   admin-address-consistency:
     name: Admin
     runs-on: ubuntu-latest

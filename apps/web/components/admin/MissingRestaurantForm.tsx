@@ -1,5 +1,5 @@
 import { useRecordAction } from '@/lib/admin/use-record-action';
-import { isRecordActionCancelled, recordActionErrorMessage } from '@/lib/admin/record-action-client';
+import { shouldNotifyRecordActionError, recordActionErrorMessage } from '@/lib/admin/record-action-client';
 import { RECORD_CATEGORIES, type RecordActionReceipt, type RestaurantRecordChanges } from '@/lib/admin/record-action-contract';
 import { isEvaluationRecordStatus, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
 import { useState, useEffect, useRef } from 'react';
@@ -274,7 +274,7 @@ function MissingRestaurantEditor({ record: incomingRecord, open, onOpenChange, o
       await registerNewRestaurant(geocodingData, trimmedName, trimmedPhone, trimmedCategory, trimmedTzuyangReview);
 
     } catch (error: unknown) {
-      if (isRecordActionCancelled(error)) return;
+      if (!shouldNotifyRecordActionError(error)) return;
       toast({
         variant: 'destructive',
         title: '등록 실패',
@@ -329,7 +329,7 @@ function MissingRestaurantEditor({ record: incomingRecord, open, onOpenChange, o
         pendingFormData.category,
         pendingFormData.tzuyang_review
       ); } catch (error) {
-        if (!isRecordActionCancelled(error)) toast({ variant: 'destructive', title: '등록 실패', description: recordActionErrorMessage(error) });
+        if (shouldNotifyRecordActionError(error)) toast({ variant: 'destructive', title: '등록 실패', description: recordActionErrorMessage(error) });
       } finally { setLoading(false); }
     }
   };

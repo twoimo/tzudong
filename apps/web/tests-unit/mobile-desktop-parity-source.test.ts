@@ -548,7 +548,7 @@ describe("mobile and desktop parity source contracts", () => {
       "const returnRoute = getDesktopLeftPanelRoute(",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "(onDetailPanelBack ?? onPanelClose)?.()",
+      "if (onDetailPanelBack?.() === true) return;\n    if (!onDetailPanelBack) onPanelClose?.();",
     );
     expect(homeDesktopControlPanelSource).toContain(
       "router.replace(returnRoute, { scroll: false })",

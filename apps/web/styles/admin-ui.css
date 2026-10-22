@@ -5,6 +5,8 @@
   --admin-surface-subtle: #f8f9fb;
   --admin-success: #176342;
   --admin-success-soft: #edf7f1;
+  --admin-danger: #a32d39;
+  --admin-danger-soft: #fff0f1;
   --background: 220 29% 97%;
   --foreground: 218 34% 14%;
   --card: 0 0% 100%;
@@ -23,6 +25,8 @@
   --admin-surface-subtle: #202834;
   --admin-success: #9cdbb5;
   --admin-success-soft: #172e24;
+  --admin-danger: #ffb6bc;
+  --admin-danger-soft: #352127;
   --background: 218 24% 9%;
   --foreground: 218 29% 95%;
   --card: 218 24% 13%;
@@ -36,6 +40,19 @@
   --ring: 348 100% 75%;
   --destructive: 0 85% 74%;
   --destructive-foreground: 218 34% 12%;
+}
+/* The standalone evaluation route renders the same records outside the console shell. */
+#scroll-container:not([data-admin-embedded-module-shell]) {
+  --admin-success: #176342;
+  --admin-success-soft: #edf7f1;
+  --admin-danger: #a32d39;
+  --admin-danger-soft: #fff0f1;
+}
+.dark #scroll-container:not([data-admin-embedded-module-shell]) {
+  --admin-success: #9cdbb5;
+  --admin-success-soft: #172e24;
+  --admin-danger: #ffb6bc;
+  --admin-danger-soft: #352127;
 }
 /* Administrator-only geometry; kept out of the public home CSS. */
 [data-admin-console-shell="true"] { --admin-sidebar-expanded-width: 13rem; --admin-sidebar-expanded-max-width: 13rem; font-size: 13px; font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
@@ -80,6 +97,28 @@
 [data-admin-dashboard-card-title-delta="true"] { font-size: 0.6875rem; font-weight: 450; }
 [data-admin-dashboard-card-title-row="single-line"] h3 { font-size: 0.8125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 [data-admin-dashboard-card-title-actions="single-line-scroll"] { max-width: 100%; }
+
+[data-admin-dashboard-widget-card="impact"],
+[data-admin-dashboard-widget-card="trend"],
+[data-admin-dashboard-skeleton-card="impact"],
+[data-admin-dashboard-skeleton-card="trend"] { container-type: inline-size; container-name: compact-overview-card; }
+@container compact-overview-card (max-width: 600px) {
+  [data-admin-dashboard-card-title-row="single-line"] { gap: 0.25rem; }
+  [data-admin-dashboard-card-title-row="single-line"] > div:first-child { flex: 0 0 auto; gap: 0.25rem; }
+  [data-admin-dashboard-card-title-text="true"] { flex: 0 0 auto; overflow: visible; text-overflow: clip; font-size: 0.8125rem; }
+  [data-admin-dashboard-card-title-delta="true"],
+  [data-admin-dashboard-rank-legend="impact"],
+  [data-admin-dashboard-series-label="true"],
+  [data-admin-dashboard-view-label="true"] { display: none; }
+  [data-admin-dashboard-metric-tooltip="beginner-plain"] { width: 1.25rem; height: 1.25rem; }
+  [data-admin-dashboard-card-title-actions="single-line-scroll"] { flex: 0 1 auto; min-width: 0; }
+  [data-admin-dashboard-series-toggle="true"] button,
+  [data-admin-dashboard-card-view-toggle="true"] button { width: 1.5rem; padding-inline: 0; }
+  [data-admin-dashboard-series-compact="true"] { position: relative; }
+  [data-admin-dashboard-series-compact="true"] > span:first-child { position: absolute; bottom: 1px; left: 5px; width: 0.875rem; height: 0.125rem; border-radius: 9999px; }
+  [data-admin-dashboard-series-compact-label="true"] { display: inline; font-size: 0.625rem; font-weight: 700; line-height: 1; letter-spacing: -0.06em; }
+  [data-admin-dashboard-card-view-toggle="true"] [data-admin-dashboard-view-icon="true"] { display: block; }
+}
 
 [data-admin-console-content="true"] h1 { font-size: 1rem; font-weight: 600; line-height: 1.5rem; letter-spacing: -0.0125em; }
 [data-admin-module-header="compact"] h2 { font-size: 1rem; font-weight: 600; line-height: 1.5rem; letter-spacing: -0.0125em; }
@@ -231,9 +270,38 @@
 .admin-record-status { border-radius: 0.25rem; padding: 0.125rem 0.375rem; font-weight: 500; font-size: 0.75rem; line-height: 1rem; }
 .admin-record-status[data-admin-record-status="approved"] { border-color: transparent; background: var(--admin-success-soft); color: var(--admin-success); }
 .admin-record-status[data-admin-record-status="pending"], .admin-record-status[data-admin-record-status="address_review_geocode_recovered"] { border-color: transparent; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
-@media (min-width: 1024px) {
-  [data-admin-moderation-table] .admin-records-meta:nth-child(2) { width: 11rem; }
-  [data-admin-moderation-table] .admin-records-meta:nth-child(3) { width: 10rem; }
+.admin-evaluation-signal { border-radius: 0.25rem; padding: 0.125rem 0.375rem; font-weight: 500; font-size: 0.75rem; line-height: 1rem; white-space: nowrap; }
+.admin-evaluation-score-meaning { font-size: 0.75rem; line-height: 1rem; }
+#scroll-container .admin-evaluation-positive,
+#scroll-container .admin-evaluation-positive:hover { border-color: transparent; background: var(--admin-success-soft); color: var(--admin-success); }
+#scroll-container .admin-evaluation-negative,
+#scroll-container .admin-evaluation-negative:hover { border-color: var(--admin-danger); background: var(--admin-danger-soft); color: var(--admin-danger); }
+#scroll-container .admin-evaluation-neutral,
+#scroll-container .admin-evaluation-neutral:hover { border-color: transparent; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+/* The inspector and sidebar reduce the list independently of the viewport. */
+.admin-moderation-records-container { container: admin-moderation-records / inline-size; }
+@container admin-moderation-records (width >= 40rem) {
+  .admin-moderation-author-cell { display: table-cell; width: 8rem; }
+  .admin-moderation-author-inline { display: none; }
+}
+@container admin-moderation-records (width < 40rem) {
+  .admin-moderation-author-cell { display: none; }
+  .admin-moderation-author-inline { display: block; }
+  [data-admin-moderation-table] .admin-records-status { width: 4.5rem; }
+}
+@container admin-moderation-records (width >= 55rem) {
+  .admin-moderation-signals-cell { display: table-cell; width: 11rem; }
+  .admin-moderation-author-cell { width: 10rem; }
+  .admin-moderation-signals-inline { display: none; }
+}
+@container admin-moderation-records (width < 55rem) {
+  .admin-moderation-signals-cell { display: none; }
+  .admin-moderation-signals-inline { display: flex; }
+}
+@container admin-moderation-records (40rem <= width < 55rem) {
+  .admin-moderation-record-button { display: grid; grid-template-columns: minmax(0, 1fr) fit-content(50%); align-items: center; column-gap: 0.5rem; }
+  .admin-moderation-record-button > :first-child { grid-column: 1 / -1; }
+  .admin-moderation-signals-inline { min-width: 0; margin-top: 0; }
 }
 @media (max-width: 767px) {
   .admin-records-table :is(td, [data-slot="table-cell"]) { padding-block: 0.625rem; }

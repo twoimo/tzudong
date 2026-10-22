@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import net from 'node:net';
 import { constants as osConstants } from 'node:os';
 import path from 'node:path';
+import { applyNextSyncPatch, nextSyncPatchErrorCode } from './apply-next-sync-patch.mjs';
 import { config as loadEnv } from 'dotenv';
 import {
     logCliError,
@@ -52,9 +53,19 @@ const readCommandArg = (name) => {
 };
 
 const isNextDevCommand = () => {
-    const commandText = commandArgs.join(' ');
+    const commandText = commandArgs.join(' ').replaceAll('\\', '/');
     return commandText.includes('node_modules/next/dist/bin/next') && commandArgs.includes('dev');
 };
+
+if (isNextDevCommand()) {
+    try {
+        applyNextSyncPatch(projectRoot, { verifyOnly: true });
+    } catch (error) {
+        process.stderr.write(`[clean-next] error=${nextSyncPatchErrorCode(error)}\n`);
+        process.stderr.write('[clean-next] run: node scripts/apply-next-sync-patch.mjs\n');
+        process.exit(1);
+    }
+}
 
 const getGuardedDevPort = () => {
     const isDevPrewarmCommand = commandArgs.some((arg) => arg.endsWith('scripts/dev-prewarm.mjs'));

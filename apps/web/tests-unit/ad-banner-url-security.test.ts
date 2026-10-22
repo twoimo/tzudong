@@ -274,9 +274,12 @@ const makeReadbackHarness = new Function('initialPending', 'getResult', 'selecte
     const hasRefreshConflict = false;
     const liveEditorSnapshotRef = { current: { revision: 1, editingBanner, isDirty } };
     const bannersError = false;
+    const bannerReadFailed = false;
     const bannerToDelete = selected;
     const deleteConfirmation = '배너삭제';
-    const editorRef = { current: { focus() {} } };
+    const editorRef = { current: { focus() {}, contains: () => false } };
+    const document = { activeElement: null, body: {} };
+    const isNarrow = false;
     const requestAnimationFrame = (callback) => callback();
     const setPendingEditor = (value) => { pendingEditor = value; };
     const setActionResult = (value) => { actionResult = value; };

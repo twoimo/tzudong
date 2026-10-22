@@ -704,7 +704,7 @@ function AnnouncementListItemSkeleton({ index }: { index: number }) {
                                 <Button
                                     onClick={handleSubmit}
                                     disabled={isSubmitting}
-                                    className="flex-1 bg-red-800 hover:bg-red-900"
+                                    className="flex-1"
                                 >
                                     {isSubmitting ? '저장 중…' : viewMode === 'create' ? '공지 작성 후 목록으로 돌아가기' : '수정 저장 후 목록으로 돌아가기'}
                                 </Button>

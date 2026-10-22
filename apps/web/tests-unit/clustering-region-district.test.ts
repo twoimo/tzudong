@@ -112,6 +112,16 @@ describe('getRegionalClusters', () => {
 
         expect(getRegionalClusters(rows)[0].categories).toEqual(['한식', '분식', '중식']);
     });
+
+    test('행정구역 클러스터는 묶인 맛집 중 가장 높은 불꽃 등급을 남긴다', () => {
+        const clusters = getRegionalClusters([
+            makeRestaurant({ id: 'low', road_address: '서울특별시 강남구 1', lat: 강남.lat, lng: 강남.lng, popularity_tier: 'rainbow' }),
+            makeRestaurant({ id: 'top', road_address: '서울특별시 강남구 2', lat: 강남.lat, lng: 강남.lng, popularity_tier: 'fire' }),
+            makeRestaurant({ id: 'mid', road_address: '서울특별시 강남구 3', lat: 강남.lat, lng: 강남.lng, popularity_tier: 'ember' }),
+        ]);
+
+        expect(clusters[0].popularityTier).toBe('fire');
+    });
 });
 
 describe('getSeoulDistrictClusters', () => {

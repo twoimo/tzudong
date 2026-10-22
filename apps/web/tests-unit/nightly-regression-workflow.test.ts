@@ -379,7 +379,7 @@ describe("nightly regression package and source contracts", () => {
       "'/api/dashboard/summary'",
       "const LOCAL_ADMIN_YOUTUBE_KPI_SEARCHES = new Set([",
       "'?period=1M&viewMode=all&metricMode=views&scope=channel-growth'",
-      "function isAllowedLocalAdminRead(url: URL, method: string): boolean",
+      "function isAllowedLocalAdminRead(url: URL, method: string, rscHeader?: string): boolean",
       "url.pathname === '/api/admin/evaluations'",
       "return !url.search;",
       "url.search === '?restaurantIds=00000000-0000-4000-8000-000000000101&types=trend'",

@@ -29,7 +29,7 @@ export const getRankIconElement = (rank: number) => {
         case 3:
             return React.createElement(Award, { className: "h-5 w-5 text-amber-600" });
         default:
-            return React.createElement("span", { className: "text-sm font-bold text-muted-foreground" }, rank);
+            return React.createElement("span", { className: "inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-garden-tint px-1.5 text-xs font-bold tabular-nums text-brand-garden-text" }, rank);
     }
 };
 

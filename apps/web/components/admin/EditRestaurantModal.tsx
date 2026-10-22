@@ -42,7 +42,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useRecordAction } from '@/lib/admin/use-record-action';
-import { isRecordActionCancelled, recordActionErrorMessage } from '@/lib/admin/record-action-client';
+import { shouldNotifyRecordActionError, recordActionErrorMessage } from '@/lib/admin/record-action-client';
 import type { RecordActionReceipt, RestaurantRecordChanges } from '@/lib/admin/record-action-contract';
 import { isEvaluationRecordStatus, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
 import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
@@ -482,7 +482,7 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
       }
       await performApproval();
     } catch (error) {
-      if (!isRecordActionCancelled(error)) toast({ variant: 'destructive', title: '승인 실패', description: recordActionErrorMessage(error) });
+      if (shouldNotifyRecordActionError(error)) toast({ variant: 'destructive', title: '승인 실패', description: recordActionErrorMessage(error) });
     } finally { setLoading(false); }
   };
 
@@ -510,7 +510,7 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
       if (Object.keys(changes).length === 0) { toast({ title: '변경한 내용이 없습니다' }); return; }
       await refreshAfterAction(await recordActions.run({ action: 'restaurant.edit', targetIds: [record.id], payload: { changes } }));
     } catch (error) {
-      if (!isRecordActionCancelled(error)) toast({ variant: 'destructive', title: '저장 실패', description: recordActionErrorMessage(error) });
+      if (shouldNotifyRecordActionError(error)) toast({ variant: 'destructive', title: '저장 실패', description: recordActionErrorMessage(error) });
     } finally { setLoading(false); }
   };
 
@@ -1144,7 +1144,7 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
                 try {
                   await performApproval();
                 } catch (error) {
-                  if (isRecordActionCancelled(error)) return;
+                  if (!shouldNotifyRecordActionError(error)) return;
                   toast({
                     variant: 'destructive',
                     title: '승인 실패',

@@ -11,6 +11,7 @@ import { PIPELINE_CONTROL_CONFIRMATION_TEXT, PIPELINE_LIVE_ENQUEUE_CONFIRMATION 
 import { parsePipelineActionPreview, pipelineApplyBody, type PipelineActionInput, type PipelineActionPreview } from "@/lib/admin/pipeline-action-preview";
 import { buildPipelineStages, canControlPipelineJob, parsePipelineManifest, parsePipelineStatus, pipelineJobsForDisplay, pipelineDisplayIsReliable, pipelineJobLabel, HOSTED_EXECUTION_LABELS, HOSTED_STAGE_LABELS, PIPELINE_FLOW_DOCUMENT, PIPELINE_JOB_LABELS, type PipelineStageId } from "@/lib/admin/pipeline-flow-view-model";
 import { isRecord } from "@/lib/admin/normalize-evaluation-record";
+import { adminQueryLastReadFailed } from "@/lib/admin/query-read-state";
 import { PipelineFlowDiagram, formatPipelineDuration, COMPACT_STAGE_LABELS } from "./PipelineFlowDiagram";
 import styles from "./PipelineFlowDiagram.module.css";
 
@@ -46,10 +47,21 @@ export function AdminPipelineDashboard() {
   const manifestQuery = useQuery({
     queryKey: ["admin-pipeline-manifest"],
     queryFn: async ({ signal }) => parsePipelineManifest(await readStatus("/api/admin/system-status", signal)),
-    staleTime: 30_000, retry: false,
+    // The server caches system status for 30 seconds, so polling faster cannot return newer records.
+    staleTime: 30_000, retry: false, refetchInterval: 30_000,
   });
-  const snapshot = query.isError ? undefined : query.data;
-  const manifest = manifestQuery.isError ? undefined : manifestQuery.data;
+  const statusReadFailed = adminQueryLastReadFailed(query);
+  const manifestReadFailed = adminQueryLastReadFailed(manifestQuery);
+  const snapshot = statusReadFailed ? undefined : query.data;
+  const manifest = manifestReadFailed ? undefined : manifestQuery.data;
+  const jobSignature = snapshot ? snapshot.jobs.map(job => `${job.id}:${job.status}`).join("|") : null;
+  const seenJobSignature = useRef<string | null>(null);
+  const refetchManifest = manifestQuery.refetch;
+  useEffect(() => {
+    if (jobSignature === null) return;
+    if (seenJobSignature.current !== null && seenJobSignature.current !== jobSignature) void refetchManifest();
+    seenJobSignature.current = jobSignature;
+  }, [jobSignature, refetchManifest]);
   const jobs = pipelineJobsForDisplay(snapshot, manifest);
   const stages = buildPipelineStages(manifest);
   const [selected, setSelected] = useState<PipelineStageId>("collect");
@@ -70,7 +82,11 @@ export function AdminPipelineDashboard() {
   const [grafanaAllowed, setGrafanaAllowed] = useState(false);
   useEffect(() => setGrafanaAllowed(allowLoopbackGrafanaIframe()), []);
   useEffect(() => { if (preview) previewPanel.current?.focus(); }, [preview]);
-  const refresh = async () => { await Promise.allSettled([query.refetch(), manifestQuery.refetch()]); };
+  const refreshing = query.isFetching || manifestQuery.isFetching;
+  const refresh = async () => {
+    if (refreshing) return;
+    await Promise.allSettled([query.refetch(), manifestQuery.refetch()]);
+  };
   const prepare = async (input: PipelineActionInput) => {
     if (inFlight.current) return;
     inFlight.current = true; setBusy(true); setMessage(null); setPreview(null); setConfirmationText(""); setLiveConfirmationText("");
@@ -103,11 +119,11 @@ export function AdminPipelineDashboard() {
   };
   const reliable = pipelineDisplayIsReliable(snapshot, manifest);
   const source = snapshot?.source === "job_api" ? "수집 서버" : snapshot?.source === "github_actions" ? "GitHub Actions" : "출처 미확인";
-  const manifestLabel = manifestQuery.isPending ? "기록 조회 중" : manifestQuery.isError ? "기록 조회 실패" : manifest?.availability === "available" ? (manifest.stale === true ? "이전 기록" : manifest.stale === false ? "최근 기록" : "기록 시점 미확인") : manifest?.availability === "missing" ? "기록 없음" : manifest?.availability === "unreadable" ? "기록 조회 실패" : "기록 미확인";
+  const manifestLabel = manifestReadFailed ? "기록 조회 실패" : manifestQuery.isPending ? "기록 조회 중" : manifest?.availability === "available" ? (manifest.stale === true ? "이전 기록" : manifest.stale === false ? "최근 기록" : "기록 시점 미확인") : manifest?.availability === "missing" ? "기록 없음" : manifest?.availability === "unreadable" ? "기록 조회 실패" : "기록 미확인";
   const controlsReady = snapshot?.source === "job_api" && reliable && !busy && !preview;
   const gauges = snapshot?.gauges ?? {};
   const failureCount = reliable && snapshot?.source === "job_api" ? snapshot.failures.length : null;
-  const statusLabel = query.isError ? "실행 조회 실패" : query.isPending ? "실행 조회 중" : snapshot && !reliable ? "일부 미확인" : source;
+  const statusLabel = statusReadFailed ? "실행 조회 실패" : query.isPending ? "실행 조회 중" : snapshot && !reliable ? "일부 미확인" : source;
   const changeControlsOpen = (open: boolean) => {
     if (inFlight.current) return;
     setControlsOpen(open);
@@ -119,14 +135,14 @@ export function AdminPipelineDashboard() {
         data-admin-module-header="compact" data-admin-module-header-module="pipeline"
         summary={<span role="status" className="text-xs text-muted-foreground">{statusLabel}</span>}
         actions={<>
-          <button type="button" aria-label="새로고침" title="새로고침" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border disabled:opacity-50" disabled={query.isFetching || manifestQuery.isFetching} onClick={() => void refresh()}><RefreshCw size={13} className={query.isFetching || manifestQuery.isFetching ? "animate-spin" : ""} /></button>
+          <button type="button" aria-label="새로고침" title="새로고침" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border aria-disabled:opacity-50" aria-disabled={refreshing || undefined} aria-busy={refreshing || undefined} onClick={() => void refresh()}><RefreshCw size={13} className={refreshing ? "animate-spin" : ""} /></button>
           <SheetTrigger asChild><button type="button" data-pipeline-open-controls className={buttonClass}><SlidersHorizontal size={13} />실행 관리</button></SheetTrigger>
         </>}
       />
       <SheetContent data-pipeline-controls-drawer className="w-full overflow-y-auto p-4 sm:max-w-xl" onEscapeKeyDown={event => { if (busy) event.preventDefault(); }} onInteractOutside={event => { if (busy) event.preventDefault(); }}>
         <SheetHeader className="pr-8 text-left"><SheetTitle className="text-base">실행 관리</SheetTitle><SheetDescription>{source} · {snapshot ? formatCheckedAt(new Date(query.dataUpdatedAt).toISOString()) : "조회 미확인"}</SheetDescription></SheetHeader>
         <div className="mt-4 space-y-3">
-          {query.isError ? <p role="status" className="rounded-md border border-destructive/30 p-3 text-xs">실행 상태를 불러올 수 없습니다.</p> : query.isPending ? <p role="status" className="text-xs text-muted-foreground">실행 상태 조회 중</p> : snapshot && !reliable ? <p role="status" className="text-xs text-muted-foreground">일부 상태 미확인 · 실행 제어 잠김</p> : null}
+          {statusReadFailed ? <p role="status" className="rounded-md border border-destructive/30 p-3 text-xs">실행 상태를 불러올 수 없습니다.</p> : query.isPending ? <p role="status" className="text-xs text-muted-foreground">실행 상태 조회 중</p> : snapshot && !reliable ? <p role="status" className="text-xs text-muted-foreground">일부 상태 미확인 · 실행 제어 잠김</p> : null}
     <section className="admin-detail-section min-w-0" aria-labelledby="pipeline-jobs-title">
       <div className="flex flex-wrap items-center justify-between gap-1 bg-muted/30 px-3 py-2"><h3 id="pipeline-jobs-title" className="text-sm font-semibold">{snapshot?.source === "github_actions" ? "최근 실행" : "현재 실행"}</h3><span className="text-[11px] text-muted-foreground">{snapshot ? formatCheckedAt(new Date(query.dataUpdatedAt).toISOString()) : "조회 미확인"}</span></div>
       <ul data-admin-pipeline-jobs="true" className="space-y-1 p-1">

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { getAdminEvaluationDisplayName } from '../lib/admin-evaluation-name';
 import { normalizeCanonicalYouTubeWatchUrl } from '../lib/youtube-url';
-import { createRecordActionClient, isRecordActionCancelled, recordActionErrorMessage, type RecordActionInput } from '../lib/admin/record-action-client';
+import { createRecordActionClient, shouldNotifyRecordActionError, recordActionErrorMessage, type RecordActionInput } from '../lib/admin/record-action-client';
 import { parseRecordActionRequest, type RecordActionReceipt } from '../lib/admin/record-action-contract';
 import { isEvaluationRecordStatus, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '../lib/admin/normalize-evaluation-record';
 const id = '11111111-1111-4111-8111-111111111111', second = '22222222-2222-4222-8222-222222222222', third = '33333333-3333-4333-8333-333333333333';
@@ -22,7 +22,7 @@ function editHarness(overrides: Record<string, unknown> = {}) {
   const deps = {
     record: { id, youtube_link: youtube, restaurant_info: {} }, loading: false, addressChanged: false,
     formData: form(), initialFormRef: { current: '{}' }, geocodingDirty: true, geocodingResults: [geo], selectedGeocodingIndex: 0,
-    normalizeCanonicalYouTubeWatchUrl, isRecordActionCancelled, recordActionErrorMessage,
+    normalizeCanonicalYouTubeWatchUrl, shouldNotifyRecordActionError, recordActionErrorMessage,
     toast: (notice: unknown) => notices.push(notice), setLoading: (value: boolean) => working.push(value),
     notifyRestaurantIdentityWarning: () => false, notifySameVideoDuplicateWarning: () => {},
     checkRestaurantDuplicate: async () => ({ isDuplicate: false }),
@@ -88,7 +88,7 @@ function adminHarness(restaurant: unknown, overrides: Record<string, unknown> = 
     deletedReviewIds: [second], normalizeCanonicalYouTubeWatchUrl, fetchYouTubeMeta: async () => null,
     setIsSubmitting: () => {}, refreshAfterAction: async () => {}, setShowDeleteConfirm: () => {},
     deleteReason: '검토 사유', deleteConfirmation: '삭제', RESTAURANT_DESTRUCTIVE_ACTION_CONFIRMATIONS: { soft_delete_restaurant: '삭제' },
-    isRecordActionCancelled, recordActionErrorMessage, initialFormRef: { current: '{}' },
+    shouldNotifyRecordActionError, recordActionErrorMessage, initialFormRef: { current: '{}' },
     toast: Object.fromEntries(['error', 'warning', 'success'].map(key => [key, (message: string) => notices.push(message)])),
     recordActions: { run: async (input: RecordActionInput) => { calls.push(input); return receipt(input.action); } }, ...overrides };
   return { ...actual<{ handleSubmit: (event: { preventDefault: () => void }) => Promise<void>; handleDelete: () => Promise<void> }>('AdminRestaurantModal', '    const handleSubmit =', '    const adminRestaurantTitle =', ['handleSubmit', 'handleDelete'], deps), calls, notices };
@@ -124,7 +124,7 @@ describe('actual multi-video editor and missing/conflict handlers', () => {
   test('conflict merge and hold share guarded client, with busy and empty-reason guards', async () => {
     const calls: RecordActionInput[] = [];
     const deps = { loading: false, targetRead: 'ready', holdReason: '검토 중', record: { id }, existing: { id: second }, newInfo: { category: '한식', tzuyang_review: '새 근거' }, canonicalYoutubeUrl: youtube,
-      setLoading: () => {}, refreshAfterAction: async () => {}, toast: () => {}, isRecordActionCancelled, recordActionErrorMessage,
+      setLoading: () => {}, refreshAfterAction: async () => {}, toast: () => {}, shouldNotifyRecordActionError, recordActionErrorMessage,
       recordActions: { run: async (input: RecordActionInput) => { calls.push(input); return receipt(input.action); } } };
     const get = (override = {}) => actual<{ handleUpdateExisting: () => Promise<void>; handleHoldNew: () => Promise<void> }>('DbConflictResolutionPanel', '  const handleUpdateExisting =', '  return (', ['handleUpdateExisting', 'handleHoldNew'], { ...deps, ...override });
     await get().handleUpdateExisting(); await get().handleHoldNew(); expect(calls.map(call => call.action)).toEqual(['restaurant.merge', 'restaurant.hold']);

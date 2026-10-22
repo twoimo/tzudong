@@ -209,7 +209,6 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
     expect(tableSource).toContain('data-admin-evaluation-mobile-card="true"');
     expect(tableSource).toContain('data-layout-primitives="stack frame"');
     expect(tableSource).toContain('<article');
-    expect(tableSource).toContain('flex min-w-max flex-nowrap gap-1.5');
     expect(tableSource).toContain('rounded-xl bg-muted/35 p-2.5 text-2xs');
     expect(pageSource).toContain('data-admin-evaluation-view-actions="top-right"');
     expect(pageSource).toContain('data-admin-evaluation-title-icon="true"');

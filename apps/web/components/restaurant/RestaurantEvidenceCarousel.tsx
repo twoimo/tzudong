@@ -26,6 +26,11 @@ export function evidenceFrameEmbedRow(item: unknown): unknown {
 }
 
 export function publicEvidenceFrames(groups: readonly unknown[][]): RestaurantEvidenceFrame[] {
+  return publicReviewedVideoFrames(groups).filter(isLevel1SourceObserved);
+}
+
+// Reviewed video context may be shown, but does not become L1 identity proof.
+export function publicReviewedVideoFrames(groups: readonly unknown[][]): RestaurantEvidenceFrame[] {
   const parsed = groups.map((group) => group.flatMap((item) => {
     try {
       return [parseEvidenceFrame(evidenceFrameEmbedRow(item))];
@@ -34,8 +39,19 @@ export function publicEvidenceFrames(groups: readonly unknown[][]): RestaurantEv
     }
   }));
   return unionApprovedEvidenceFrames(parsed).filter(
-    (frame) => frame.evidence_level !== "SYNTHETIC_MOCK_TESTED" && isLevel1SourceObserved(frame),
+    (frame) => frame.evidence_level === "SOURCE_OBSERVED",
   );
+}
+
+export function publicEvidenceImageSource(frame: RestaurantEvidenceFrame): string {
+  const valid = parseEvidenceFrame(frame);
+  return valid.image_url ?? `/evidence-frames/${valid.storage_object_key}`;
+}
+
+function frameLabel(frame: RestaurantEvidenceFrame): string {
+  if (frame.frame_type === "storefront_sign") return "매장 간판";
+  if (frame.frame_type === "publisher_location_caption") return "영상의 매장 안내";
+  return frame.frame_type === "menu_receipt" ? "메뉴·영수증 장면" : "영상 속 현장 장면";
 }
 
 export function publicFramePresentation(frame: RestaurantEvidenceFrame): {
@@ -53,12 +69,16 @@ export function publicFramePresentation(frame: RestaurantEvidenceFrame): {
 }
 
 export function RestaurantEvidenceCarousel({ frames }: { frames: readonly RestaurantEvidenceFrame[][] }) {
-  const visible = publicEvidenceFrames(frames);
+  const visible = publicReviewedVideoFrames(frames);
   if (visible.length === 0) return null;
   return (
-    <section className="px-4 pb-[env(safe-area-inset-bottom)]" aria-label="쯔양 방문 확정 근거">
-      <h3 className="mb-2 text-sm font-semibold">이 맛집이 등록된 이유 (영상 속 실제 간판·장면)</h3>
-      <div className="flex gap-2 overflow-x-auto">
+    <section className="py-2 pb-[env(safe-area-inset-bottom)]" aria-label="쯔양 영상 근거와 방문 장면">
+      <p className="text-2xs font-bold tracking-wide text-brand-garden-text">쯔양 영상 속 그 장면</p>
+      <h3 className="mb-2 text-sm font-black tracking-tight">영상에서 확인한 간판·방문 장면 📸</h3>
+      {visible.some((frame) => !isLevel1SourceObserved(frame)) && (
+        <p className="mb-2 text-xs text-muted-foreground">현장 장면은 영상의 맥락을 보여주며, 매장 신원을 확인하는 간판·매장 안내와 구분해요.</p>
+      )}
+      <div className="flex gap-3 overflow-x-auto pb-2" tabIndex={0} aria-label="영상 장면 가로 스크롤">
         {visible.map((frame) => {
           const presentation = publicFramePresentation(frame);
           return (
@@ -67,21 +87,23 @@ export function RestaurantEvidenceCarousel({ frames }: { frames: readonly Restau
             href={presentation.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="block w-40 shrink-0"
+            className="block w-[min(68vw,18rem)] shrink-0 rounded-xl border border-border bg-card sm:w-64 lg:w-72"
+            aria-label={`${frameLabel(frame)} ${Math.floor(frame.timestamp_ms / 60000)}분 ${Math.floor(frame.timestamp_ms / 1000) % 60}초 영상 열기`}
           >
-            {frame.image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element -- Approved evidence frames stay native lazy images so unknown storage hosts are not sent through the optimizer.
+              {/* eslint-disable-next-line @next/next/no-img-element -- Immutable reviewed frames use native lazy images. */}
               <img
-                src={frame.image_url}
-                alt={frame.detected_shop_name ?? "방문 근거 프레임"}
-                width={160}
-                height={90}
+                src={publicEvidenceImageSource(frame)}
+                alt={frame.detected_shop_name ?? frameLabel(frame)}
+                width={640}
+                height={360}
                 loading={presentation.loading}
-                className="aspect-video w-full rounded-md object-cover"
+                decoding="async"
+                className="aspect-video w-full rounded-t-xl object-cover"
               />
-            ) : (
-              <span className="flex aspect-video w-full items-center justify-center rounded-md bg-muted text-xs">장면</span>
-            )}
+              <span className="flex items-center justify-between gap-2 px-2 py-2 text-xs">
+                <span>{frameLabel(frame)}</span>
+                <span className="tabular-nums text-muted-foreground">{Math.floor(frame.timestamp_ms / 60000)}:{String(Math.floor(frame.timestamp_ms / 1000) % 60).padStart(2, "0")}</span>
+              </span>
           </a>
           );
         })}

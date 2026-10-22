@@ -35,7 +35,7 @@ import { toast } from "@/lib/no-toast";
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
 import { isEvaluationRecordStatus } from '@/lib/admin/normalize-evaluation-record';
 import { useRecordAction } from '@/lib/admin/use-record-action';
-import { isRecordActionCancelled, recordActionErrorMessage, type RecordActionInput } from '@/lib/admin/record-action-client';
+import { shouldNotifyRecordActionError, recordActionErrorMessage, type RecordActionInput } from '@/lib/admin/record-action-client';
 import type { RecordActionReceipt, RestaurantRecordChanges } from '@/lib/admin/record-action-contract';
 import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { RESTAURANT_DESTRUCTIVE_ACTION_CONFIRMATIONS } from "@/lib/admin/restaurant-destructive-action-contract";
@@ -838,7 +838,7 @@ function AdminRestaurantEditor({
             }
             await refreshAfterAction(await recordActions.run(input));
         } catch (error) {
-            if (!isRecordActionCancelled(error)) toast.error(recordActionErrorMessage(error));
+            if (shouldNotifyRecordActionError(error)) toast.error(recordActionErrorMessage(error));
         } finally { setIsSubmitting(false); }
     };
 
@@ -849,7 +849,7 @@ function AdminRestaurantEditor({
         try {
             await refreshAfterAction(await recordActions.run({ action: 'restaurant.delete', targetIds: [restaurant.id], payload: { reason: deleteReason.trim() } }));
         } catch (error) {
-            if (!isRecordActionCancelled(error)) toast.error(recordActionErrorMessage(error));
+            if (shouldNotifyRecordActionError(error)) toast.error(recordActionErrorMessage(error));
         } finally { setIsSubmitting(false); }
     };
 

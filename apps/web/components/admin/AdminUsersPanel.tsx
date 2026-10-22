@@ -186,6 +186,20 @@ function formatDateTime(value: string | null) {
   }).format(date);
 }
 
+const listDateTimeFormatter = new Intl.DateTimeFormat("ko-KR", {
+  dateStyle: "short",
+  timeStyle: "short",
+  hour12: false,
+});
+
+function formatListDateTime(value: string | null) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return listDateTimeFormatter.format(date);
+}
+
 function getProfileForm(user: ManagedUser): EditableProfile {
   return {
     nickname: user.nickname,
@@ -373,13 +387,14 @@ export default function AdminUsersPanel({
   const canReactivateAction = accountConfirmation === "재활성화";
   const isProfileDirty = Boolean(selectedUser && JSON.stringify(profileForm) !== JSON.stringify(getProfileForm(selectedUser)));
   const visibleUsers = users;
+  const countsUnknown = Boolean(errorMessage) && users.length === 0;
+  const showUnreadUsersSkeleton = isLoading && users.length === 0 && !countsUnknown;
 
   const loadUsers = useCallback(async (signal?: AbortSignal) => {
     const generation = ++usersReadGeneration.current;
     const pendingAtReadStart = pendingReadbackRef.current;
     let readbackUsers: ManagedUser[] | null = null;
     setIsLoading(true);
-    setErrorMessage("");
 
     try {
       if (pendingAtReadStart) {
@@ -399,6 +414,7 @@ export default function AdminUsersPanel({
           } else {
             setReadbackConflict({ pending: pendingAtReadStart, latest });
             setMutationResult({ action: pendingAtReadStart.action, targetUserId: pendingAtReadStart.targetUserId, status: "warning", message: `요청한 상태와 다른 최신 사용자 상태를 확인했습니다.${pendingAtReadStart.auditText} 최신 상태를 수용하면 추가 변경 없이 잠금을 해제합니다.` });
+            toast({ title: "최신 상태 확인 필요", description: "요청과 다른 최신 사용자 상태를 확인했습니다." });
           }
         }
       }
@@ -429,6 +445,7 @@ export default function AdminUsersPanel({
         throw new Error("사용자 목록 페이지 응답을 확인하지 못했습니다.");
       }
       if (generation !== usersReadGeneration.current || signal?.aborted) return null;
+      setErrorMessage("");
       const nextUsers = payload.users;
       const nextSummary = "summary" in (payload ?? {}) ? (payload as AdminUsersResponse).summary : DEFAULT_SUMMARY;
       setUsers(nextUsers);
@@ -566,16 +583,15 @@ export default function AdminUsersPanel({
       const pending = { ...expectedReadback, message, auditText };
       updatePendingReadback(pending);
       const nextUsers = await loadUsers();
-      const refreshed = matchesPendingUserReadback(nextUsers, pending);
+      // loadUsers already reported a returned exact readback, whether it matched or conflicted.
+      if (nextUsers?.some((candidate) => candidate.id === pending.targetUserId)) return;
       setMutationResult({
         action,
         targetUserId: selectedUser.id,
-        status: refreshed ? "success" : "warning",
-        message: refreshed
-          ? `적용 완료: ${message}${auditText} 상태를 다시 확인했습니다.`
-          : `변경 결과 재확인 필요: ${message}${auditText} 조회 결과가 요청한 상태와 일치하는지 새로고침으로 확인해 주세요.`,
+        status: "warning",
+        message: `변경 결과 재확인 필요: ${message}${auditText} 조회 결과가 요청한 상태와 일치하는지 새로고침으로 확인해 주세요.`,
       });
-      toast({ title: refreshed ? "적용 완료" : "적용 완료 · 재조회 필요", description: message });
+      toast({ title: "적용 완료 · 재조회 필요", description: message });
     } catch (error) {
       const message = error instanceof Error ? error.message : "사용자 변경을 적용하지 못했습니다.";
       const uncertain = Boolean(pendingReadbackRef.current);
@@ -761,11 +777,11 @@ export default function AdminUsersPanel({
       <AdminPageHeader title={getAdminModuleTitle("users")} titleId="admin-users-title" icon={UsersRound} className="admin-cms-page-header"
         data-admin-module-header="compact" data-admin-module-header-module="users"
         summary={<div className="flex flex-wrap gap-1" data-admin-users-summary data-admin-module-summary="true">
-            <SummaryMetric label="전체 사용자" value={pagination.sourceTotal} isLoading={isLoading && users.length === 0} />
-            <SummaryMetric label="조건 일치" value={pagination.total} isLoading={isLoading && users.length === 0} />
-            <SummaryMetric label="현재 페이지" value={summary.loadedUsers} isLoading={isLoading && users.length === 0} />
+            <SummaryMetric label="전체 사용자" value={countsUnknown ? "미확인" : pagination.sourceTotal} isLoading={showUnreadUsersSkeleton} />
+            <SummaryMetric label="조건 일치" value={countsUnknown ? "미확인" : pagination.total} isLoading={showUnreadUsersSkeleton} />
+            <SummaryMetric label="현재 페이지" value={countsUnknown ? "미확인" : summary.loadedUsers} isLoading={showUnreadUsersSkeleton} />
           </div>}
-        actions={<Button type="button" variant="ghost" size="sm" aria-label="사용자 목록 새로고침" onClick={() => requestIntent({ type: "refresh" })} disabled={isLoading || isMutating || Boolean(pendingReadback)} data-admin-users-refresh>
+        actions={<Button type="button" variant="ghost" size="sm" aria-label="사용자 목록 새로고침" onClick={() => { if (isLoading || isMutating || pendingReadback) return; requestIntent({ type: "refresh" }); }} disabled={isMutating || Boolean(pendingReadback)} aria-disabled={isLoading || isMutating || Boolean(pendingReadback)} aria-busy={isLoading} data-admin-users-refresh>
           <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} aria-hidden="true" />새로고침
         </Button>}
       />
@@ -806,7 +822,7 @@ export default function AdminUsersPanel({
             {errorMessage && (
               <div className="flex w-full flex-wrap items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive" role="alert">
                 <span className="flex-1">{errorMessage}{users.length > 0 && " 이전 목록을 표시합니다."}</span>
-                <Button type="button" variant="outline" size="sm" disabled={isLoading || isMutating} onClick={() => requestIntent({ type: "refresh" })}>다시 시도</Button>
+                <Button type="button" variant="outline" size="sm" aria-disabled={isLoading || isMutating} aria-busy={isLoading} onClick={() => { if (isLoading || isMutating) return; requestIntent({ type: "refresh" }); }}>다시 시도</Button>
               </div>
             )}
             {pagination.isPartial && !errorMessage && (
@@ -816,7 +832,7 @@ export default function AdminUsersPanel({
             )}
           </CardHeader>
           <CardContent className="admin-cms-table-container min-h-0 flex-1 space-y-0 overflow-y-auto p-0">
-            {isLoading && users.length === 0 ? (
+            {showUnreadUsersSkeleton ? (
               <UserTableSkeleton />
             ) : errorMessage && users.length === 0 ? (
               <div className="admin-empty-state p-4 text-center text-sm text-muted-foreground">목록을 확인한 후 사용자 작업을 진행할 수 있습니다.</div>
@@ -845,13 +861,14 @@ export default function AdminUsersPanel({
                             <p className="truncate text-sm font-semibold text-foreground">{managedUser.nickname}</p>
                             <p className="mt-0.5 truncate text-xs text-muted-foreground">{managedUser.email || managedUser.id}</p>
                           </div>
-                          <Button type="button" variant={isSelected ? "default" : "outline"} size="sm" className="h-11 shrink-0 rounded-md md:h-8" onClick={() => requestIntent({ type: "select", id: managedUser.id })} aria-pressed={isSelected} disabled={isMutating || Boolean(pendingReadback)} aria-label={`${managedUser.nickname} 상세 보기`} data-admin-users-detail-button>
+                          <Button type="button" variant={isSelected ? "default" : "outline"} size="sm" className="h-11 shrink-0 rounded-md md:h-8" onClick={() => requestIntent({ type: "select", id: managedUser.id })} aria-pressed={isSelected} disabled={isMutating || Boolean(pendingReadback)} aria-label={`${managedUser.nickname} 상세 보기${sortOrder === "lastSignIn" ? `, 최근 로그인 ${formatListDateTime(managedUser.lastSignInAt)}` : ""}`} data-admin-users-detail-button>
                             {isSelected ? "선택됨" : "상세"}
                           </Button>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-1.5" aria-label="사용자 상태 요약">
                           <RoleBadge isAdmin={managedUser.isAdmin} />
                           <StatusBadge user={managedUser} />
+                          {sortOrder === "lastSignIn" && <span className="self-center whitespace-nowrap text-xs tabular-nums text-muted-foreground">로그인 {formatListDateTime(managedUser.lastSignInAt)}</span>}
                         </div>
                       </article>
                     );
@@ -880,10 +897,13 @@ export default function AdminUsersPanel({
                                 onClick={() => requestIntent({ type: "select", id: managedUser.id })}
                                 disabled={isMutating || Boolean(pendingReadback)}
                                 aria-pressed={isSelected}
-                                aria-label={`${managedUser.nickname} 상세 보기`}
+                                aria-label={`${managedUser.nickname} 상세 보기${sortOrder === "lastSignIn" ? `, 최근 로그인 ${formatListDateTime(managedUser.lastSignInAt)}` : ""}`}
                               >
                                 <span className="block truncate font-semibold text-foreground">{managedUser.nickname}</span>
-                                <span className="block truncate text-xs text-muted-foreground">{managedUser.email || managedUser.id}</span>
+                                <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                                  <span className="min-w-0 truncate">{managedUser.email || managedUser.id}</span>
+                                  {sortOrder === "lastSignIn" && <span className="shrink-0 tabular-nums">· 로그인 {formatListDateTime(managedUser.lastSignInAt)}</span>}
+                                </span>
                               </button>
                             </td>
                             <td className="px-3 py-2 align-middle"><RoleBadge isAdmin={managedUser.isAdmin} /></td>
@@ -903,11 +923,11 @@ export default function AdminUsersPanel({
             )}
           </CardContent>
           <div className="admin-cms-footer shrink-0 justify-between gap-2" aria-live="polite">
-            <span className="tabular-nums">{visibleUsers.length}명 · 조건 일치 {pagination.total.toLocaleString()}명 · 전체 {pagination.sourceTotal.toLocaleString()}명</span>
+            <span className="tabular-nums">{countsUnknown ? "조회 실패" : `${visibleUsers.length}명 · 조건 일치 ${pagination.total.toLocaleString()}명 · 전체 ${pagination.sourceTotal.toLocaleString()}명`}</span>
             <div className="flex items-center gap-1">
-              <Button type="button" variant="outline" size="sm" className="h-11 px-2 md:h-8" aria-label="이전 사용자 페이지" disabled={!pagination.hasPreviousPage || isLoading || isMutating || Boolean(pendingReadback)} onClick={() => requestIntent({ type: "page", page: Math.max(1, page - 1) })}><ChevronLeft className="h-4 w-4" aria-hidden="true" />이전</Button>
+              <Button type="button" variant="outline" size="sm" className="h-11 px-2 md:h-8" aria-label="이전 사용자 페이지" disabled={!pagination.hasPreviousPage || isMutating || Boolean(pendingReadback) || undefined} aria-disabled={!pagination.hasPreviousPage || isLoading || isMutating || Boolean(pendingReadback) || undefined} aria-busy={isLoading || undefined} onClick={() => { if (!pagination.hasPreviousPage || isLoading || isMutating || pendingReadback) return; const target = pagination.page - 1; if (target === page) requestIntent({ type: "refresh" }); else requestIntent({ type: "page", page: target }); }}><ChevronLeft className="h-4 w-4" aria-hidden="true" />이전</Button>
               <span className="min-w-14 text-center tabular-nums">{pagination.page} / {Math.max(1, Math.ceil(pagination.total / pagination.perPage))}</span>
-              <Button type="button" variant="outline" size="sm" className="h-11 px-2 md:h-8" aria-label="다음 사용자 페이지" disabled={!pagination.hasNextPage || isLoading || isMutating || Boolean(pendingReadback)} onClick={() => requestIntent({ type: "page", page: page + 1 })}>다음<ChevronRight className="h-4 w-4" aria-hidden="true" /></Button>
+              <Button type="button" variant="outline" size="sm" className="h-11 px-2 md:h-8" aria-label="다음 사용자 페이지" disabled={!pagination.hasNextPage || isMutating || Boolean(pendingReadback) || undefined} aria-disabled={!pagination.hasNextPage || isLoading || isMutating || Boolean(pendingReadback) || undefined} aria-busy={isLoading || undefined} onClick={() => { if (!pagination.hasNextPage || isLoading || isMutating || pendingReadback) return; const target = pagination.page + 1; if (target === page) requestIntent({ type: "refresh" }); else requestIntent({ type: "page", page: target }); }}>다음<ChevronRight className="h-4 w-4" aria-hidden="true" /></Button>
             </div>
           </div>
         </Card>

@@ -37,7 +37,7 @@ if (input.mode === 'submission') {
     setIsSubmitting() {}, fetchYouTubeMeta: async () => input.value.meta ?? null,
     toast: { error: (v: unknown) => notices.push(v), warning: (v: unknown) => notices.push(v) },
     recordActions: { run: async (value: unknown) => { requests.push(parse(value)); return {}; } },
-    refreshAfterAction: async () => {}, isRecordActionCancelled: () => false,
+    refreshAfterAction: async () => {}, shouldNotifyRecordActionError: () => true,
     recordActionErrorMessage: () => 'AUDIT_UI_BUILDER_REJECTED',
   };
   const body = new Bun.Transpiler({ loader: 'tsx' }).transformSync(

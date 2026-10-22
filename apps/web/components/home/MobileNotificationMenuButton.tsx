@@ -104,7 +104,7 @@ export default function MobileNotificationMenuButton({
             <Badge
               variant="destructive"
               aria-hidden="true"
-              className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-white"
+              className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-tangerine px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-brand-ink"
             >
               {unreadCount > 99 ? "99+" : unreadCount}
             </Badge>
@@ -204,7 +204,7 @@ export default function MobileNotificationMenuButton({
                       </p>
                       {!notification.isRead && (
                         <span
-                          className="h-2 w-2 rounded-full bg-red-700 shrink-0"
+                          className="h-2 w-2 rounded-full bg-brand-tangerine shrink-0"
                           aria-hidden
                         />
                       )}

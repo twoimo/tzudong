@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -2025,8 +2026,9 @@ function formatThumbnailProviderBlockReason(reason: string | null | undefined) {
 function formatThumbnailProviderAvailability(
   availability: ProviderAvailability | null | undefined,
   sessionKeyBackedProviderAvailable: boolean,
+  readinessFailed: boolean,
 ) {
-  if (!availability) return "아직 확인 중";
+  if (!availability) return readinessFailed ? "상태 확인 실패 · 다시 확인 필요" : "아직 확인 중";
   if (availability.available) return "준비 완료";
   if (sessionKeyBackedProviderAvailable) return "이번 작업에서 사용 가능";
   return availability.reason
@@ -2042,6 +2044,7 @@ type ThumbnailImageApiRouterView = {
   codexOAuthStatus:
     | "active"
     | "checking"
+    | "check-failed"
     | "unavailable"
     | "api-key-active"
     | "local-bridge-active"
@@ -2050,6 +2053,7 @@ type ThumbnailImageApiRouterView = {
 
 function getThumbnailImageApiRouterView(
   readiness: ThumbnailReadiness | null,
+  readinessFailed: boolean,
   selectedRoute: ThumbnailImageRouteChoice,
   hasBrowserOpenAIApiKey: boolean,
   hasLocalBridgeToken: boolean,
@@ -2057,6 +2061,8 @@ function getThumbnailImageApiRouterView(
 ): ThumbnailImageApiRouterView {
   const localCodexAvailability = readiness?.providers.localCodex;
   const openAIApiKeyAvailability = readiness?.providers.openaiGptImage2;
+  const pendingReadinessLabel = readinessFailed ? "확인 실패" : "확인 중";
+  const pendingReadinessStatus = readinessFailed ? "check-failed" : "checking";
   const sessionKeyBackedOpenAIAvailable = canUseSessionApiKeyForProvider(
     "openai-gpt-image-2",
     openAIApiKeyAvailability,
@@ -2075,7 +2081,7 @@ function getThumbnailImageApiRouterView(
             ? "키 적용됨"
           : readiness
             ? "확인 필요"
-            : "확인 중",
+            : pendingReadinessLabel,
       summary: "이 탭 메모리에 적용한 키로 gpt-image-2를 호출합니다.",
       codexOAuthStatus: "api-key-active",
     };
@@ -2090,11 +2096,11 @@ function getThumbnailImageApiRouterView(
           ? "사용 중"
           : readiness
             ? "확인 필요"
-            : "확인 중",
+            : pendingReadinessLabel,
       summary: "서버 라우터가 Codex OAuth로 gpt-image-2 썸네일을 호출합니다.",
       codexOAuthStatus:
         !readiness
-          ? "checking"
+          ? pendingReadinessStatus
           : localCodexAvailability?.available
             ? "active"
             : "unavailable",
@@ -2119,9 +2125,9 @@ function getThumbnailImageApiRouterView(
   return {
     id: "setup-required",
     label: "설정 필요",
-    statusLabel: readiness ? "설정 필요" : "확인 중",
+    statusLabel: readiness ? "설정 필요" : pendingReadinessLabel,
     summary: "기본 OAuth, 고급 로컬, API Key 백업 중 하나를 확인해 주세요.",
-    codexOAuthStatus: readiness ? "unavailable" : "checking",
+    codexOAuthStatus: readiness ? "unavailable" : pendingReadinessStatus,
   };
 }
 
@@ -2132,7 +2138,7 @@ function formatThumbnailBackendAgentStatus(status: ThumbnailReadiness["backendAg
 }
 
 function formatThumbnailHistoryStatus(status: ThumbnailHistoryStatus, runs: ThumbnailHistoryRun[], error: string | null) {
-  if (status === "error") return `불러오기 실패 · ${error ?? "다시 시도해 주세요"}`;
+  if (status === "error" || (status === "loading" && error)) return `불러오기 실패 · ${error ?? "다시 시도해 주세요"}`;
   if (status === "loading") return `불러오는 중 · ${runs.length}건 확인됨`;
   return `저장된 결과 ${runs.length}건`;
 }
@@ -2666,6 +2672,9 @@ export function AdminYoutubeThumbnailGenerator() {
   const [lastExportMetadata, setLastExportMetadata] = useState<ThumbnailExportMetadata | null>(null);
   const [showSafeAreaGuide, setShowSafeAreaGuide] = useState(true);
   const [readiness, setReadiness] = useState<ThumbnailReadiness | null>(null);
+  const [readinessStatus, setReadinessStatus] = useState<"loading" | "failed" | "retrying" | "ready">("loading");
+  const readinessFailed = readinessStatus === "failed" || readinessStatus === "retrying";
+  const readinessRetryHadFocusRef = useRef(false);
   const [result, setResult] = useState<GenerationResult | null>(BUNDLED_THUMBNAIL_PREVIEW_RESULT);
   const [baseImageRenderRevision, setBaseImageRenderRevision] = useState(0);
   const [canvasDisplaySize, setCanvasDisplaySize] = useState({ width: TARGET_WIDTH, height: TARGET_HEIGHT });
@@ -3036,6 +3045,7 @@ export function AdminYoutubeThumbnailGenerator() {
   const shouldShowThumbnailLocalBridgeSettings = thumbnailImageRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID;
   const thumbnailImageApiRouterView = getThumbnailImageApiRouterView(
     readiness,
+    readinessFailed,
     thumbnailImageRouteChoice,
     isBrowserOpenAIApiKeyApplied,
     isThumbnailLocalBridgePaired,
@@ -3057,7 +3067,9 @@ export function AdminYoutubeThumbnailGenerator() {
         ? "ready"
         : readiness
           ? "needs-setup"
-          : "checking";
+          : readinessFailed
+            ? "check-failed"
+            : "checking";
   const thumbnailChatStatusLabel =
     thumbnailChatStatusState === "generating"
       ? "만드는 중"
@@ -3067,7 +3079,9 @@ export function AdminYoutubeThumbnailGenerator() {
           ? "준비됨"
           : thumbnailChatStatusState === "needs-setup"
             ? "준비 필요"
-            : "확인 중";
+            : thumbnailChatStatusState === "check-failed"
+              ? "확인 실패"
+              : "확인 중";
   const chatDraftIsNonMutating = isNonMutatingThumbnailChatPrompt(chatDraft);
   const currentThumbnailStreamingLabel = isGenerating
     ? "이미지 생성 중"
@@ -3119,6 +3133,7 @@ export function AdminYoutubeThumbnailGenerator() {
   }, [clearThumbnailCredentialLifecycle]);
 
   const loadReadiness = useCallback(async () => {
+    setReadinessStatus((current) => (current === "failed" ? "retrying" : current));
     try {
       const response = await fetch("/api/admin/youtube-thumbnail-generator", { cache: "no-store" });
       const payload = await response.json().catch(() => null) as ThumbnailReadiness | ThumbnailApiErrorPayload | null;
@@ -3126,7 +3141,9 @@ export function AdminYoutubeThumbnailGenerator() {
         throw new Error(getThumbnailErrorAction(payload && "error" in payload ? payload : null));
       }
       setReadiness(payload);
+      setReadinessStatus("ready");
     } catch (readinessError) {
+      setReadinessStatus("failed");
       toast({
         variant: "destructive",
         title: "모델 상태 확인 실패",
@@ -3138,6 +3155,14 @@ export function AdminYoutubeThumbnailGenerator() {
   useEffect(() => {
     void loadReadiness();
   }, [loadReadiness]);
+
+  useLayoutEffect(() => {
+    if (readinessStatus !== "ready" || !readinessRetryHadFocusRef.current) return;
+    readinessRetryHadFocusRef.current = false;
+    if (document.activeElement === document.body) {
+      document.getElementById("thumbnail-chat-composer")?.focus({ preventScroll: true });
+    }
+  }, [readinessStatus]);
 
   useEffect(() => {
     const viewport = canvasViewportRef.current;
@@ -3336,7 +3361,6 @@ export function AdminYoutubeThumbnailGenerator() {
     thumbnailHistoryRequestIdRef.current = requestId;
     if (!options.silent) {
       setHistoryStatus("loading");
-      setHistoryError(null);
     }
 
     try {
@@ -3400,10 +3424,10 @@ export function AdminYoutubeThumbnailGenerator() {
         });
         setActiveLayerId(null);
       }
-    } catch (error) {
+    } catch {
       if (thumbnailHistoryRequestIdRef.current !== requestId) return;
       setHistoryStatus("error");
-      setHistoryError(error instanceof Error ? error.message : "history_api_failed");
+      setHistoryError("다시 새로고침해 주세요.");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- pure canvas layout helpers are intentionally captured once so initial preview loading stays stable.
   }, [isGenerating]);
@@ -4397,7 +4421,7 @@ export function AdminYoutubeThumbnailGenerator() {
       : "확인된 이미지일 때만 실제 결과로 표시합니다.";
     const imageMakeStatus = thumbnailImageRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID
       ? (isThumbnailLocalBridgeConnected ? "고급 로컬 브릿지 연결됨" : "고급 로컬 브릿지 설정 필요")
-      : formatThumbnailProviderAvailability(selectedProviderAvailability, sessionKeyBackedProviderAvailable);
+      : formatThumbnailProviderAvailability(selectedProviderAvailability, sessionKeyBackedProviderAvailable, readinessFailed);
 
     return [
       "현재 상태를 쉽게 정리했어요.",
@@ -5505,12 +5529,16 @@ export function AdminYoutubeThumbnailGenerator() {
       : overrides.textLayers ?? textLayers;
 
     if (!isLocalBridgeRoute && !providerAvailability) {
+      if (readinessFailed) void loadReadiness();
+      const message = readinessFailed
+        ? "이미지 만들기 상태를 확인하지 못해 다시 확인하고 있어요. 확인되면 다시 생성해 주세요."
+        : "이미지 만들기 준비를 확인하고 있어요. 잠시 후 다시 시도해 주세요.";
       if (chatAssistantMessageId) {
-        updateThumbnailChatMessage(chatAssistantMessageId, "이미지 만들기 준비를 확인하고 있어요. 잠시 후 다시 시도해 주세요.", "live");
+        updateThumbnailChatMessage(chatAssistantMessageId, message, "live");
       }
       toast({
-        title: "이미지 준비 확인 중",
-        description: "잠시 후 다시 생성하세요.",
+        title: readinessFailed ? "모델 상태 다시 확인 중" : "이미지 준비 확인 중",
+        description: readinessFailed ? "확인되면 다시 생성하세요." : "잠시 후 다시 생성하세요.",
       });
       return false;
     }
@@ -6012,7 +6040,9 @@ export function AdminYoutubeThumbnailGenerator() {
                 ? "사용 가능"
                 : readiness
                   ? "확인 필요"
-                  : "확인 중"}
+                  : readinessFailed
+                    ? "확인 실패"
+                    : "확인 중"}
             </span>
           </button>
           <button
@@ -6087,7 +6117,9 @@ export function AdminYoutubeThumbnailGenerator() {
                   ? "Codex OAuth · 로컬"
                   : thumbnailImageApiRouterView.codexOAuthStatus === "checking"
                     ? "확인 중"
-                    : thumbnailImageApiRouterView.codexOAuthStatus === "api-key-active"
+                    : thumbnailImageApiRouterView.codexOAuthStatus === "check-failed"
+                      ? "확인 실패"
+                      : thumbnailImageApiRouterView.codexOAuthStatus === "api-key-active"
                       ? "브라우저 키"
                       : "설정 필요"}
             </p>
@@ -6347,7 +6379,7 @@ export function AdminYoutubeThumbnailGenerator() {
               <History className="h-3.5 w-3.5" />
               <span>생성 히스토리</span>
               <Badge variant="secondary" className="px-1.5 text-2xs">
-                {historyStatus === "loading" ? "불러오는 중" : `${historyRuns.length}건`}
+                {historyStatus === "loading" && !historyError && historyRuns.length === 0 ? "불러오는 중" : historyStatus === "error" || historyError ? "확인 실패" : `${historyRuns.length}건`}
               </Badge>
               <Badge variant="outline" className="px-1.5 text-2xs" data-thumbnail-history-source-label="true">
                 {getThumbnailInitialPreviewSourceLabel(initialPreviewSource)}
@@ -6363,8 +6395,9 @@ export function AdminYoutubeThumbnailGenerator() {
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              onClick={() => void loadThumbnailHistory({ replaceInitialPreview: false })}
-              disabled={historyStatus === "loading"}
+              onClick={() => { if (historyStatus !== "loading") void loadThumbnailHistory({ replaceInitialPreview: false }); }}
+              aria-disabled={historyStatus === "loading" || undefined}
+              aria-busy={historyStatus === "loading" || undefined}
               aria-label="생성 히스토리 새로고침"
               data-thumbnail-history-refresh="true"
             >
@@ -6384,7 +6417,7 @@ export function AdminYoutubeThumbnailGenerator() {
           </div>
         </div>
 
-        {historyStatus === "error" ? (
+        {historyError ? (
           <div className="admin-empty-state !min-h-0 !items-start !justify-start bg-destructive/10 px-2.5 py-2 !text-left text-2xs text-destructive" data-thumbnail-history-error="true">
             히스토리를 불러오지 못했습니다. {historyError ?? "API 상태를 확인하세요."}
           </div>
@@ -6466,11 +6499,16 @@ export function AdminYoutubeThumbnailGenerator() {
       </div>
     );
   }
+  const historyRecordLabel = historyStatus === "error" || (historyStatus === "loading" && Boolean(historyError))
+    ? "확인 실패"
+    : historyStatus === "idle" || (historyStatus === "loading" && historyRuns.length === 0)
+      ? "확인 중"
+      : `${historyRuns.length}개`;
   const thumbnailModuleSummary = isGenerating
     ? `이미지 생성 중 · ${thumbnailImageApiRouterView.label}`
     : isChatAgentStreaming
       ? "도우미 응답 중 · 캔버스 편집 맥락 반영"
-      : `상태 ${thumbnailChatStatusLabel} · 기록 ${historyRuns.length}개 · ${thumbnailImageApiRouterView.label}`;
+      : `상태 ${thumbnailChatStatusLabel} · 기록 ${historyRecordLabel} · ${thumbnailImageApiRouterView.label}`;
 
 
   return (
@@ -6520,6 +6558,26 @@ export function AdminYoutubeThumbnailGenerator() {
                 </Badge>
               </CardTitle>
               <div className="flex shrink-0 items-center gap-1" data-thumbnail-chat-header-actions="true">
+                {readinessFailed && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full"
+                    aria-label={readinessStatus === "retrying" ? "모델 상태 확인 중" : "모델 상태 다시 확인"}
+                    title="모델 상태 다시 확인"
+                    aria-busy={readinessStatus === "retrying"}
+                    data-thumbnail-readiness-retry="true"
+                    onClick={(event) => {
+                      readinessRetryHadFocusRef.current = document.activeElement === event.currentTarget;
+                      void loadReadiness();
+                    }}
+                  >
+                    {readinessStatus === "retrying"
+                      ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                      : <RotateCw className="h-4 w-4" aria-hidden="true" />}
+                  </Button>
+                )}
                 <DropdownMenu open={isHistoryPanelOpen} onOpenChange={handleHistoryDropdownOpenChange}>
                   <DropdownMenuTrigger asChild>
                     <Button

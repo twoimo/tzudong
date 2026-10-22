@@ -875,7 +875,7 @@ export default function RestaurantSubmissionModal({
                 <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="제보 단계 진행률">
                     {RESTAURANT_SUBMISSION_STEPS.map((step) => (
                         <div key={step.id} className="space-y-1">
-                            <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-red-800' : 'bg-muted'}`} />
+                            <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-brand-tangerine' : 'bg-muted'}`} />
                             <span className={`block text-center text-2xs ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
                                 {step.shortTitle}
                             </span>

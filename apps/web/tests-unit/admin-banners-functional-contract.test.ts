@@ -92,7 +92,7 @@ test('confirmed refresh conflicts block save and delete until explicit re-open',
   expect(isBannerRefreshConflictBlocking(null, selected)).toBe(false);
   expect(pageSource).toContain('setRefreshConflict({ bannerId: current.editingBanner.id, latest });');
   expect(pageSource).toContain('if (hasRefreshConflict)');
-  expect(pageSource).toContain('disabled={isBusy || bannersError || !isDirty || Boolean(pendingReadback) || hasRefreshConflict}');
+  expect(pageSource).toContain('disabled={isBusy || bannerReadFailed || !isDirty || Boolean(pendingReadback) || hasRefreshConflict}');
   expect(pageSource).toContain("'현재 입력 버리고 최신 상태 열기'");
   expect(pageSource).toContain("'현재 입력 버리고 상세 닫기'");
 });

@@ -129,14 +129,21 @@ browserTest("library filters, clears filters, sorts newest first and opens detai
   expect(await firstProject(page).getAttribute("aria-current")).toBe("true");
 }), 15_000);
 
-browserTest("library keeps loaded rows during refresh errors and exposes recovery and loading", () => run(async page => {
+browserTest("library keeps loaded rows during refresh errors and exposes recovery and loading", async () => {
+  const check = async (page: Page) => {
   await page.evaluate(() => { window.storyboardLibraryFixture.mode = "failure"; });
   await refresh(page).click();
   await page.getByRole("alert").waitFor();
   expect(await list(page).getByRole("button").count()).toBe(2);
   await page.evaluate(() => { window.storyboardLibraryFixture.mode = "pending"; });
   await refresh(page).click();
-  await page.getByText("프로젝트 목록 확인 중…", { exact: true }).waitFor();
+  await browserExpect(refresh(page)).toHaveAttribute("aria-busy", "true");
+  expect(await page.getByText("프로젝트 목록 확인 중…", { exact: true }).count()).toBe(0);
+  await page.getByText("목록을 다시 확인해 주세요.", { exact: true }).waitFor();
+  await page.getByRole("alert").waitFor();
+  expect(await refresh(page).evaluate(node => node === document.activeElement)).toBe(true);
+  expect(await refresh(page).getAttribute("disabled")).toBeNull();
+  expect(await refresh(page).getAttribute("aria-busy")).toBe("true");
   expect(await refresh(page).isDisabled()).toBe(true);
   await page.evaluate(() => { window.storyboardLibraryFixture.mode = "normal"; window.storyboardLibraryFixture.release(); });
   await browserExpect(refresh(page)).toBeEnabled();
@@ -145,7 +152,9 @@ browserTest("library keeps loaded rows during refresh errors and exposes recover
   await refresh(page).click();
   await page.getByRole("button", { name: "새 제작 요청 작성", exact: true }).click();
   await browserExpect(page.getByLabel("제작 요청", { exact: true })).toBeFocused();
-}), 15_000);
+  };
+  for (const width of [1423, 390]) await run(check, width);
+}, 30_000);
 
 browserTest("held readiness preserves project reads while blocking create and edit mutations", () => run(async page => {
   await page.evaluate(() => { window.storyboardLibraryFixture.readiness = "held"; });

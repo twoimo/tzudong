@@ -1,5 +1,6 @@
 import { test, expect } from './nightly/nightly-test';
 import { devices, type Locator, type Page } from '@playwright/test';
+import { writeFile } from 'node:fs/promises';
 import { hidePopupOverlay } from './helpers';
 import {
     clickAnyUnselectedMarker,
@@ -16,6 +17,26 @@ import {
 } from './mobile-home-map-helpers';
 
 const IPHONE_SE_DEVICE = devices['iPhone SE'];
+const mobilePageErrorClasses = new WeakMap<Page, Map<string, number>>();
+const mobileRequestFailureClasses = new WeakMap<Page, Map<string, number>>();
+const mobileMainFrameCounts = new WeakMap<Page, { documentRequests: number; loads: number }>();
+
+function incrementDiagnosticClass(counts: Map<string, number>, code: string) {
+    counts.set(code, (counts.get(code) ?? 0) + 1);
+}
+
+function classifyMobilePageError(error: Error): string {
+    if (error.name === 'ChunkLoadError' || /loading chunk .* failed/i.test(error.message)) {
+        return 'chunk-load-error';
+    }
+    if (/failed to fetch dynamically imported module/i.test(error.message)) {
+        return 'dynamic-import-error';
+    }
+    if (/react error|hydration failed/i.test(error.message)) {
+        return 'react-render-error';
+    }
+    return 'other-page-error';
+}
 
 test.use({
     userAgent: IPHONE_SE_DEVICE.userAgent,
@@ -99,7 +120,64 @@ async function expectRestoreLayoutSafe(page: Page, restore: Locator) {
 
 test.describe('Phase 1: mobile home map regressions', () => {
     test.beforeEach(async ({ page }) => {
+        const pageErrors = new Map<string, number>();
+        const requestFailures = new Map<string, number>();
+        const mainFrameCounts = { documentRequests: 0, loads: 0 };
+        mobilePageErrorClasses.set(page, pageErrors);
+        mobileRequestFailureClasses.set(page, requestFailures);
+        mobileMainFrameCounts.set(page, mainFrameCounts);
+        page.on('request', (request) => {
+            if (request.resourceType() !== 'document') return;
+            try {
+                if (request.frame() === page.mainFrame()) mainFrameCounts.documentRequests += 1;
+            } catch {
+                // A detached frame is not a main-frame document request.
+            }
+        });
+        page.on('load', () => { mainFrameCounts.loads += 1; });
+        page.on('pageerror', (error) => {
+            incrementDiagnosticClass(pageErrors, classifyMobilePageError(error));
+        });
+        page.on('requestfailed', (request) => {
+            const resourceType = request.resourceType();
+            const code = resourceType === 'script' || resourceType === 'document'
+                ? `${resourceType}-request-failed`
+                : 'other-request-failed';
+            incrementDiagnosticClass(requestFailures, code);
+        });
         await prepareMobileHomeMapPage(page);
+    });
+
+    test.afterEach(async ({ page }, testInfo) => {
+        if (testInfo.status === testInfo.expectedStatus) return;
+
+        const markerCounts = await page.evaluate(() => ({
+            documentReadyState: document.readyState,
+            mainChildren: document.querySelector('main')?.childElementCount ?? null,
+            mobileDetailSheet: document.querySelectorAll('[data-scroll-owner="home-mobile-detail-sheet"]').length,
+            restaurantDetailPanel: document.querySelectorAll('[data-testid="restaurant-detail-panel"]').length,
+            mapContainer: document.querySelectorAll('[data-testid="map-container"]').length,
+            loadingStatus: document.querySelectorAll('[role="status"]').length,
+            busy: document.querySelectorAll('[aria-busy="true"]').length,
+            alert: document.querySelectorAll('[role="alert"]').length,
+            nextDevPortal: document.querySelectorAll('nextjs-portal').length,
+        })).catch(() => null);
+        const diagnosticPath = testInfo.outputPath('mobile-detail-failure-diagnostic.json');
+        await writeFile(
+            diagnosticPath,
+            JSON.stringify({
+                schema: 'mobile-detail-failure-diagnostic-v1',
+                markerCounts,
+                mainFrameCounts: mobileMainFrameCounts.get(page) ?? null,
+                pageErrorClasses: Object.fromEntries(mobilePageErrorClasses.get(page) ?? []),
+                requestFailureClasses: Object.fromEntries(mobileRequestFailureClasses.get(page) ?? []),
+            }),
+            { encoding: 'utf8', mode: 0o600 },
+        );
+        await testInfo.attach('mobile-detail-failure-diagnostic.json', {
+            path: diagnosticPath,
+            contentType: 'application/json',
+        });
     });
 
     test('MHM-01: search-selected restaurant name remains in the mobile search input', async ({ page }) => {

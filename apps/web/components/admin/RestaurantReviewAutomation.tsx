@@ -109,7 +109,7 @@ export function RestaurantReviewAutomation({ onApplied, controlsTarget }: { onAp
       <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
         <ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" />
         <span className="text-xs font-medium">자동 운영</span>
-        <span className="text-xs text-muted-foreground" role="status">{policy ? snapshot?.judgmentEngine ? policy.enabled ? 'Gemini 검수 켜짐' : '중지됨' : `${policy.enabled ? '켜짐' : '중지됨'} · 판단 연결 미확인` : '상태 확인 중'}</span>
+        <span className="text-xs text-muted-foreground" role="status">{policy ? snapshot?.judgmentEngine ? policy.enabled ? 'Gemini 검수 켜짐' : '중지됨' : `${policy.enabled ? '켜짐' : '중지됨'} · 판단 연결 미확인` : error ? '상태 확인 실패' : '상태 확인 중'}</span>
       </span>
       {!controlsTarget && recent && <span className="text-xs tabular-nums">최근 승인 {recent.approved} · 보류 {recent.held} · 재검수 {recent.recheck} · 보호 {recent.protected}</span>}
       <div className="ml-auto flex shrink-0 items-center gap-1">

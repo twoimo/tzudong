@@ -1,4 +1,5 @@
 import { escapeHtmlAttribute, sanitizeMarkerImageUrl } from './html-escape';
+import { publicPopularityTier, wrapMarkerWithPopularityTier } from './evidence-engineering/popularity-marker';
 
 const OVERSEAS_MARKER_BASE_SIZE_CLASSES = ['!h-8', '!w-8'] as const;
 const OVERSEAS_MARKER_SELECTED_SIZE_CLASSES = ['!h-[42px]', '!w-[42px]'] as const;
@@ -6,18 +7,20 @@ const OVERSEAS_MARKER_SELECTED_SIZE_CLASSES = ['!h-[42px]', '!w-[42px]'] as cons
 export function buildOverseasMarkerHtml({
     imagePath,
     name,
+    popularityTier,
 }: {
     imagePath: string;
     name: string;
+    popularityTier?: unknown;
 }) {
     const safeImagePath = escapeHtmlAttribute(sanitizeMarkerImageUrl(imagePath));
     const safeName = escapeHtmlAttribute(name);
 
-    return `
+    return wrapMarkerWithPopularityTier(`
         <div class="marker-container relative h-full w-full cursor-pointer hover:scale-110">
             <img src="${safeImagePath}" class="h-full w-full object-contain" alt="${safeName}" draggable="false" />
         </div>
-    `;
+    `, publicPopularityTier(popularityTier));
 }
 
 export function getOverseasMarkerActiveId({

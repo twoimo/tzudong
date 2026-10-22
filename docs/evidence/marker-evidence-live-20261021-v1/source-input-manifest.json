@@ -1,0 +1,28 @@
+{
+  "repository": "twoimo/tzudong",
+  "baseCommit": "13ded67a820549ae51f5b966104bf900c22aeb1a",
+  "bundleSha256": "be13ebc0f2ee88d0384fe69b08d57578f4e88fddae0a28a98c4a06034ab61b4c",
+  "attachments": [
+    {
+      "path": "/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/docs/evidence/marker-evidence-live-20261021-v1/PLAN.md",
+      "sha256": "dd1bd783fe601304924d78574a607d3757d52b87d197a84fbe94fedfc39ca797",
+      "bytes": 4398
+    },
+    {
+      "path": "/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/docs/evidence/marker-evidence-live-20261021-v1/DELTA-SOURCE.md",
+      "sha256": "be13ebc0f2ee88d0384fe69b08d57578f4e88fddae0a28a98c4a06034ab61b4c",
+      "bytes": 32231
+    }
+  ],
+  "changedPaths": [
+    "apps/web/lib/evidence-engineering/popularity-marker.ts",
+    "apps/web/lib/overseas-map-marker-helpers.ts",
+    "apps/web/components/map/OverseasMap.tsx",
+    "apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx",
+    "apps/web/components/restaurant/PopularityBadge.tsx",
+    "apps/web/hooks/use-restaurant-detail.tsx",
+    "apps/web/scripts/publish-evidence-frames.ts",
+    "apps/web/scripts/build-public-popularity.ts",
+    "apps/web/tests-unit/evidence-publication-runtime.test.ts"
+  ]
+}

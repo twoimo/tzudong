@@ -7,7 +7,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { Clock, MapPin, TrendingUp } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 import { StampCard } from '@/components/stamp/StampCard';
 import {
@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { BrandSectionHeading } from '@/components/ui/brand-section-heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { incrementSearchCount } from '@/lib/search-count';
 import {
@@ -64,7 +65,7 @@ function getPopularRankTrendBadge(trend?: PopularRankTrend | null) {
     return {
       label: 'NEW',
       title: '이전 인기 검색 스냅샷에 없던 맛집',
-      className: 'bg-primary/10 text-primary',
+      className: 'bg-brand-tangerine-tint text-brand-tangerine-ink',
     };
   }
 
@@ -76,7 +77,7 @@ function getPopularRankTrendBadge(trend?: PopularRankTrend | null) {
     label: `${isUp ? '▲' : '▼'}${Math.abs(trend.rankDelta)}`,
     title: `이전 인기 검색 스냅샷 대비 ${Math.abs(trend.rankDelta)}위 ${isUp ? '상승' : '하락'}`,
     className: isUp
-      ? 'bg-emerald-50 text-emerald-700'
+      ? 'bg-brand-garden-tint text-brand-garden-text'
       : 'bg-muted text-muted-foreground',
   };
 }
@@ -371,17 +372,13 @@ export default function DesktopLeftPanelMapHome({
             className="bg-background px-3 pb-2 pt-3"
             data-desktop-left-panel-popular-restaurants="true"
           >
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-                <TrendingUp className="h-4 w-4 text-primary" aria-hidden="true" />
-                <span>인기 검색 맛집</span>
-              </h2>
-              <p className="mt-0.5 text-2xs leading-4 text-muted-foreground">
-                처음 방문해도 바로 눌러볼 만한 맛집 5곳
-              </p>
-            </div>
-            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-2xs font-semibold text-primary">
+          <div className="mb-2 flex items-end justify-between gap-2">
+            <BrandSectionHeading
+              title="인기 검색 맛집"
+              emoji="🔥"
+              description="처음 방문해도 바로 눌러볼 만한 맛집 5곳"
+            />
+            <span className="shrink-0 rounded-full bg-brand-ink px-2.5 py-1 text-2xs font-bold text-white">
               TOP 5
             </span>
           </div>
@@ -424,7 +421,7 @@ export default function DesktopLeftPanelMapHome({
                     aria-label={`${restaurant.name} 인기 맛집 상세 보기`}
                   >
                     <span
-                      className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary"
+                      className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-garden text-xs font-bold text-white"
                       aria-hidden="true"
                     >
                       {index + 1}
@@ -468,15 +465,11 @@ export default function DesktopLeftPanelMapHome({
           data-desktop-left-panel-latest-restaurants="true"
         >
           <div className="mb-2 flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-                <Clock className="h-4 w-4 text-primary" aria-hidden="true" />
-                <span>최근 추가된 맛집</span>
-              </h2>
-              <p className="mt-0.5 text-2xs leading-4 text-muted-foreground">
-                먼저 3곳을 보여주고 스크롤하면 이어서 불러와요
-              </p>
-            </div>
+            <BrandSectionHeading
+              title="최근 추가된 맛집"
+              emoji="🌱"
+              description="먼저 3곳을 보여주고 스크롤하면 이어서 불러와요"
+            />
             <Select
               value={latestRestaurantSort}
               onValueChange={(value) =>
@@ -484,7 +477,7 @@ export default function DesktopLeftPanelMapHome({
               }
             >
               <SelectTrigger
-                className="!h-7 !w-[4.75rem] shrink-0 gap-1 rounded-full border-primary/15 bg-primary/10 !px-2 !text-2xs !leading-none font-semibold text-primary shadow-none hover:bg-primary/15 focus:ring-1 focus:ring-primary [&>span]:line-clamp-1 [&>span]:text-2xs [&>svg]:!h-3 [&>svg]:!w-3"
+                className="!h-7 !w-[4.75rem] shrink-0 gap-1 rounded-full border-border bg-brand-cream !px-2 !text-2xs !leading-none font-bold text-foreground shadow-none hover:bg-secondary focus:ring-1 focus:ring-ring [&>span]:line-clamp-1 [&>span]:text-2xs [&>svg]:!h-3 [&>svg]:!w-3"
                 aria-label="최근 맛집 정렬"
               >
                 <SelectValue placeholder="정렬" />

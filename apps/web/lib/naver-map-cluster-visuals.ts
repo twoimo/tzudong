@@ -1,6 +1,7 @@
 import type { ClusterFeature } from 'supercluster';
 import { createClusterMarkerHTML } from '@/lib/cluster-marker';
 import type { ClusterProperties } from '@/lib/clustering';
+import { publicPopularityTier } from '@/lib/evidence-engineering/popularity-marker';
 
 const clusterVisualKeyCache = new Map<string, number>();
 
@@ -47,14 +48,16 @@ export function buildClusterMarkerContent({
     currentIndex,
     lat,
     lng,
+    popularityTier,
 }: {
     categories: string[];
     count: number;
     currentIndex: number;
     lat: number;
     lng: number;
+    popularityTier?: ClusterProperties["popularityTier"];
 }) {
-    const cacheKey = `${count}:${currentIndex}:${joinedClusterCategories(categories)}`;
+    const cacheKey = `${count}:${currentIndex}:${publicPopularityTier(popularityTier)}:${joinedClusterCategories(categories)}`;
     const cached = clusterMarkerHtmlCache.get(cacheKey);
     if (cached) return cached;
 
@@ -62,6 +65,7 @@ export function buildClusterMarkerContent({
         buildClusterMarkerFeature({ count, lat, lng }),
         categories,
         currentIndex,
+        popularityTier,
     );
     if (clusterMarkerHtmlCache.size >= CLUSTER_MARKER_HTML_CACHE_LIMIT) {
         const oldest = clusterMarkerHtmlCache.keys().next().value;
@@ -72,7 +76,7 @@ export function buildClusterMarkerContent({
 }
 
 const CLUSTER_MARKER_ANCHOR = { x: 24, y: 24 };
-const clusterVisualCache = new WeakMap<string[], Map<number, Map<number, { content: string; anchor: { x: number; y: number } }>>>();
+const clusterVisualCache = new WeakMap<string[], Map<number, Map<string, { content: string; anchor: { x: number; y: number } }>>>();
 
 export function getNaverClusterMarkerVisual({
     categories,
@@ -80,12 +84,14 @@ export function getNaverClusterMarkerVisual({
     currentIndex,
     lat,
     lng,
+    popularityTier,
 }: {
     categories: string[];
     count: number;
     currentIndex: number;
     lat: number;
     lng: number;
+    popularityTier?: ClusterProperties["popularityTier"];
 }) {
     let byCount = clusterVisualCache.get(categories);
     if (!byCount) {
@@ -97,14 +103,15 @@ export function getNaverClusterMarkerVisual({
         byIndex = new Map();
         byCount.set(count, byIndex);
     }
-    const cached = byIndex.get(currentIndex);
+    const visualKey = `${currentIndex}:${publicPopularityTier(popularityTier)}`;
+    const cached = byIndex.get(visualKey);
     if (cached) return cached;
 
     const visual = {
-        content: buildClusterMarkerContent({ categories, count, currentIndex, lat, lng }),
+        content: buildClusterMarkerContent({ categories, count, currentIndex, lat, lng, popularityTier }),
         anchor: CLUSTER_MARKER_ANCHOR,
     };
-    byIndex.set(currentIndex, visual);
+    byIndex.set(visualKey, visual);
     return visual;
 }
 
@@ -118,11 +125,13 @@ export function buildNaverClusterMarkerRenderPlan({
     categories,
     count,
     currentIndex,
+    popularityTier,
     position,
 }: {
     categories: string[];
     count: number;
     currentIndex: number;
+    popularityTier?: ClusterProperties["popularityTier"];
     position: { lat: number; lng: number };
 }) {
     const visual = getNaverClusterMarkerVisual({
@@ -131,6 +140,7 @@ export function buildNaverClusterMarkerRenderPlan({
         currentIndex,
         lat: position.lat,
         lng: position.lng,
+        popularityTier,
     });
     const cachedPlan = clusterPlanCache.get(visual);
     if (
@@ -154,12 +164,14 @@ export function buildNaverClusterAnimationIconPlan({
     categories,
     count,
     getCurrentIndex,
+    popularityTier,
     position,
     uniqueKey,
 }: {
     categories: string[];
     count: number;
     getCurrentIndex: (hash: number, categoryCount: number) => number;
+    popularityTier?: ClusterProperties["popularityTier"];
     position: { lat: number; lng: number };
     uniqueKey: string | number;
 }) {
@@ -169,6 +181,7 @@ export function buildNaverClusterAnimationIconPlan({
         categories,
         count,
         currentIndex,
+        popularityTier,
         position,
     });
 

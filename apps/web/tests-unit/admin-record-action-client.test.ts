@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { createRecordActionClient, recordActionMediaNotice, type RecordActionInput } from '../lib/admin/record-action-client';
+import { createRecordActionClient, recordActionMediaNotice, shouldNotifyRecordActionError, type RecordActionInput } from '../lib/admin/record-action-client';
 import { RECORD_ACTION_CONFIRMATION, type RecordActionReceipt, type RecordActionRequest } from '../lib/admin/record-action-contract';
 const target = '33333333-3333-4333-8333-333333333333';
 const operation = '22222222-2222-4222-8222-222222222222';
@@ -215,13 +215,19 @@ describe('guarded record action client over real loopback HTTP', () => {
   test('authentication failures use a bounded message without claiming an uncertain mutation or exposing prose', async () => {
     for (const denied of [401, 403]) {
       const f = fixture({ denied });
-      try { await expect(f.client.run(input)).rejects.toThrow('관리자 권한'); expect(f.client.getSnapshot().phase).toBe('failed'); expect(f.client.getSnapshot().message).not.toContain('provider'); } finally { f.close(); }
+      try {
+        const error = await f.client.run(input).catch(cause => cause);
+        expect(error.message).toContain('관리자 권한'); expect(f.client.getSnapshot().phase).toBe('failed'); expect(f.client.getSnapshot().message).not.toContain('provider');
+        expect(shouldNotifyRecordActionError(error)).toBe(false);
+      } finally { f.close(); }
     }
   });
   test('expired preview never applies; invalid UUID/fields fail before HTTP', async () => {
     const f = fixture({ mutateReceipt: receipt => ({ ...receipt, expiresAt: '2000-01-01T00:00:00Z' }) });
     try {
-      await expect(f.client.run({ ...input, targetIds: ['fake-id'] })).rejects.toThrow(); expect(f.calls).toHaveLength(0);
+      const invalid = await f.client.run({ ...input, targetIds: ['fake-id'] }).catch(cause => cause);
+      expect(invalid).toBeInstanceOf(Error); expect(f.calls).toHaveLength(0); expect(f.client.getSnapshot().phase).toBe('idle');
+      expect(shouldNotifyRecordActionError(invalid)).toBe(true);
       const done = f.client.run(input).catch(error => error.code); await phase(f.client, 'confirming'); await f.client.apply(RECORD_ACTION_CONFIRMATION);
       expect(await done).toBe('RECORD_ACTION_PREVIEW_EXPIRED'); expect(f.calls).toHaveLength(1);
     } finally { f.close(); }

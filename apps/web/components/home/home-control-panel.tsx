@@ -37,7 +37,7 @@ type HomeDesktopControlPanelProps = {
     contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;
     isMapFullscreen?: boolean;
     onPanelClose?: () => void;
-    onDetailPanelBack?: () => void;
+    onDetailPanelBack?: () => boolean | void;
     onReviewModalOpen?: () => void;
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
     onRequestEditRestaurant?: (restaurant: Restaurant) => void;
@@ -86,7 +86,7 @@ export interface HomeControlPanelProps {
     isMapFullscreen?: boolean;
     mapInteractionEpoch?: number;
     onPanelClose?: () => void;
-    onDetailPanelBack?: () => void;
+    onDetailPanelBack?: () => boolean | void;
     onReviewModalOpen?: () => void;
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
     onRequestEditRestaurant?: (restaurant: Restaurant) => void;

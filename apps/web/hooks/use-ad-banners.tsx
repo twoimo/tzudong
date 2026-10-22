@@ -417,18 +417,6 @@ export function useCreateAdBanner() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: AD_BANNERS_QUERY_KEY });
-            toast({
-                title: '배너 생성 완료',
-                description: '새 광고 배너가 생성되었습니다.',
-            });
-        },
-        onError: () => {
-            console.error('배너 생성 실패:');
-            toast({
-                title: '배너 생성 실패',
-                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
-                variant: 'destructive',
-            });
         },
     });
 }
@@ -446,18 +434,6 @@ export function useUpdateAdBanner() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: AD_BANNERS_QUERY_KEY });
-            toast({
-                title: '배너 수정 완료',
-                description: '광고 배너가 수정되었습니다.',
-            });
-        },
-        onError: () => {
-            console.error('배너 수정 실패:');
-            toast({
-                title: '배너 수정 실패',
-                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
-                variant: 'destructive',
-            });
         },
     });
 }
@@ -475,18 +451,6 @@ export function useDeleteAdBanner() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: AD_BANNERS_QUERY_KEY });
-            toast({
-                title: '배너 삭제 완료',
-                description: '광고 배너가 삭제되었습니다.',
-            });
-        },
-        onError: () => {
-            console.error('배너 삭제 실패:');
-            toast({
-                title: '배너 삭제 실패',
-                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
-                variant: 'destructive',
-            });
         },
     });
 }
@@ -594,14 +558,6 @@ export function useUploadBannerImage() {
                 path: data.path,
             };
         },
-        onError: () => {
-            console.error('이미지 업로드 실패:');
-            toast({
-                title: '이미지 업로드 실패',
-                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
-                variant: 'destructive',
-            });
-        },
     });
 }
 
@@ -618,14 +574,6 @@ export function useDeleteBannerImage() {
             if (error) {
                 throw error;
             }
-        },
-        onError: () => {
-            console.error('이미지 삭제 실패:');
-            toast({
-                title: '이미지 삭제 실패',
-                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
-                variant: 'destructive',
-            });
         },
     });
 }

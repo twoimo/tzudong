@@ -27,8 +27,6 @@ import {
     ChevronLeft
 } from "lucide-react";
 import { OperationalCautionNotice, cautionForDetailPanel } from "@/components/restaurant/OperationalCautionNotice";
-import { PopularityBadge } from "@/components/restaurant/PopularityBadge";
-import { resolvePublishedPopularityTier } from "@/lib/evidence-engineering/published-popularity";
 import { RestaurantEvidenceCarousel } from "@/components/restaurant/RestaurantEvidenceCarousel";
 import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { useAuth } from "@/contexts/AuthContext";
@@ -1071,15 +1069,19 @@ export function RestaurantDetailPanel({
                             <Image src={getCategoryImagePath(categories[0] || '')} alt="" fill sizes="16px" className="object-contain" />
                         </span>
                     ) : undefined}
-                    titleAddon={viewMode === 'detail' ? categories.map((cat, index) => (
-                        <Badge
-                            key={`${cat}-${index}`}
-                            variant={index === 0 ? "default" : "secondary"}
-                            className="shrink-0 text-xs whitespace-nowrap"
-                        >
-                            {cat}
-                        </Badge>
-                    )) : undefined}
+                    titleAddon={viewMode === 'detail' && categories.length > 0 ? (
+                        <span className="flex shrink-0 items-center gap-1" data-restaurant-detail-categories="true">
+                            {categories.map((cat, index) => (
+                                <Badge
+                                    key={`${cat}-${index}`}
+                                    variant={index === 0 ? "default" : "secondary"}
+                                    className="shrink-0 whitespace-nowrap px-2 py-0.5 text-2xs"
+                                >
+                                    {cat}
+                                </Badge>
+                            ))}
+                        </span>
+                    ) : undefined}
                     onClose={viewMode === 'reviews' ? handleBackToDetail : onClose}
                     closeLabel={viewMode === 'reviews' ? '상세 정보로 돌아가기' : (showDesktopBackButton && !isMobile ? '이전 목록으로 돌아가기' : isMobile ? '이전 화면으로 돌아가기' : '맛집 상세 닫기')}
                     closeAction={viewMode === 'reviews' || showDesktopBackButton || isMobile ? 'back' : 'close'}
@@ -1126,11 +1128,6 @@ export function RestaurantDetailPanel({
                 />
                 {viewMode === 'detail' && (
                     <div className="shrink-0 border-b border-border px-3 py-2 empty:hidden">
-                                        <PopularityBadge
-                                            key={`${restaurant.id}:${resolvePublishedPopularityTier(restaurant)}`}
-                                            tier={resolvePublishedPopularityTier(restaurant)}
-                                            experimental3D
-                                        />
                                         <OperationalCautionNotice
                                             caution={cautionForDetailPanel(restaurant)}
                                             shopName={restaurant.name}
@@ -1587,11 +1584,11 @@ export function RestaurantDetailPanel({
                                         <Button
                                             onClick={handleGetDirections}
                                             className={cn(
-                                                "h-14 min-w-0 flex-col gap-1 bg-primary px-1.5 text-xs font-semibold leading-tight text-primary-foreground shadow-sm hover:bg-primary/90",
+                                                "h-14 min-w-0 flex-col gap-1 bg-primary px-1.5 text-xs font-bold leading-tight text-primary-foreground shadow-sm hover:bg-primary/90",
                                                 isMobile ? "rounded-lg" : "rounded-xl"
                                             )}
                                         >
-                                            <Navigation className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                            <Navigation className="h-4 w-4 shrink-0 text-brand-tangerine dark:text-brand-ink" aria-hidden="true" />
                                             <span>길찾기</span>
                                         </Button>
                                     ) : null}

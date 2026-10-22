@@ -48,7 +48,7 @@ describe('evaluation reload publication boundary', () => {
     let attempts = 0; const h = harness(async () => { if (++attempts === 1) throw new Error('synthetic failure'); return page('retry', '3'); });
     await h.reload(); expect(h.state.readError).toBe(true); expect(h.state.total).toBe(0); expect(h.state.warnings).toEqual({});
     expect(h.refs.pageRevisionRef.current).toBeNull(); expect(h.refs.nextCursorRef.current).toBeNull(); expect(h.state.hasMore).toBe(false);
-    expect(h.notices.length).toBe(1); await h.reload(); expect(h.state.readError).toBe(false); expect(h.state.allRecords).toEqual([{ id: 'retry' }]);
+    expect(h.notices.length).toBe(0); await h.reload(); expect(h.state.readError).toBe(false); expect(h.state.allRecords).toEqual([{ id: 'retry' }]);
     expect(h.refs.pageRevisionRef.current).toBe('3'); expect(h.state.total).toBe(8);
   });
   test('late success and late failure from the previous epoch cannot restore or clear the new page', async () => {

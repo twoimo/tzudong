@@ -1,7 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
 import { useQuery } from "@tanstack/react-query";
 import { Image as ImageIcon, Layers3 } from "lucide-react";
@@ -11,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { AdminMapLoadErrorState } from "@/components/admin/admin-map-load-error-state";
 import { readAdminNaverCoordinate } from "@/lib/admin/naver-coordinate";
+import { adminQueryLastReadFailed } from "@/lib/admin/query-read-state";
 import { REGION_MAP_CONFIG } from "@/config/maps";
 import { getNaverIndividualMarkerVisual } from "@/lib/naver-map-marker-visuals";
 import "@/components/map/marker-icons.css";
@@ -175,6 +184,7 @@ function formatAdminDirectionsReadinessMessage(
 }
 
 type AdminDirectionsStatus = "idle" | "loading" | "ready" | "fallback";
+type AdminRouteCandidateStatus = "idle" | "loading" | "ready" | "failed";
 
 type AdminNaverLatLngLike = {
   lat?: (() => number) | number;
@@ -523,6 +533,10 @@ function AdminNaverMapSurface({
     isLoading: isNaverLoading,
     load: loadNaverMaps,
   } = useNaverMaps({ autoLoad: false, strategy: "lazyOnload" });
+  const [retainedMapError, setRetainedMapError] = useState<Error | null>(null);
+  if (loadError && retainedMapError !== loadError) setRetainedMapError(loadError);
+  if (isLoaded && retainedMapError) setRetainedMapError(null);
+  const visibleMapError = isLoaded ? null : loadError ?? retainedMapError;
 
   const scheduleViewportRefresh = useCallback(() => {
     if (viewportRefreshTimerRef.current != null) return;
@@ -729,6 +743,7 @@ function AdminNaverMapSurface({
           count: feature.properties.point_count || 0,
           currentIndex:
             getClusterVisualKey(clusterId) % markerCategories.length,
+          popularityTier: feature.properties.popularityTier,
           position: { lat, lng },
         });
         const marker = new maps.Marker({
@@ -880,10 +895,10 @@ function AdminNaverMapSurface({
         aria-label="네이버 지도 맛집 마커와 클러스터"
       />
 
-      {isMapPreparing && <AdminMapLoadingSkeleton />}
+      {isMapPreparing && !visibleMapError && <AdminMapLoadingSkeleton />}
 
-      {loadError && !isMapPreparing && (
-        <AdminMapLoadErrorState onRetry={loadNaverMaps} />
+      {visibleMapError && (
+        <AdminMapLoadErrorState onRetry={loadNaverMaps} isRetrying={isNaverLoading} />
       )}
     </div>
   );
@@ -994,12 +1009,12 @@ function AdminMapOverviewCanvas({
               <div className="admin-empty-state pointer-events-auto min-h-0 max-w-sm items-start rounded-md bg-card p-3 text-left shadow-none">
                 <p className="text-sm font-bold text-foreground">
                   {hasError
-                    ? "지도는 유지하고 실데이터만 재확인합니다"
+                    ? "좌표 맛집 목록을 불러오지 못했습니다."
                     : "표시할 좌표 맛집이 없습니다"}
                 </p>
                 <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
                   {hasError
-                    ? "요약 API가 실패하면 임의 수치를 만들지 않습니다. 네이버 지도 프레임은 유지한 채 맛집 관리에서 좌표 상태를 확인하세요."
+                    ? "지도는 기본 위치로 유지합니다. 목록을 다시 읽기 전에는 맛집 수와 동선을 확정하지 않습니다."
                     : "운영 콘솔에서는 빈 실데이터 상태를 목업으로 대체하지 않습니다. 지도는 기본 위치로 유지하고 좌표가 있는 맛집만 표시합니다."}
                 </p>
                 <Button
@@ -1067,6 +1082,9 @@ function AdminMapInfoPanel({
   routeMode,
   directionsRoute,
   routeCandidateReadback,
+  routeCandidateStatus,
+  isRouteCandidatesRetrying,
+  onRetryRouteCandidates,
   directionsStatus,
   directionsFallbackMessage,
   isLoading,
@@ -1080,7 +1098,10 @@ function AdminMapInfoPanel({
   routePlan: AdminRoutePlan;
   routeMode: AdminRouteMode;
   directionsRoute: AdminDirectionsRoute | null;
-  routeCandidateReadback: AdminRouteCandidateReadback;
+  routeCandidateReadback: AdminRouteCandidateReadback | null;
+  routeCandidateStatus: AdminRouteCandidateStatus;
+  isRouteCandidatesRetrying: boolean;
+  onRetryRouteCandidates: () => void;
   directionsStatus: AdminDirectionsStatus;
   directionsFallbackMessage: string | null;
   isLoading: boolean;
@@ -1104,26 +1125,34 @@ function AdminMapInfoPanel({
     directionsRoute?.summary?.duration,
   );
   const routeStops = routePlan.stops;
+  const shownDirectionsStatus =
+    directionsStatus === "loading" &&
+    directionsRoute?.provider === "naver-directions5" &&
+    directionsRoute.path.length >= 2
+      ? "ready"
+      : directionsStatus;
   const routeAhpAssessment = assessAdminRouteReadiness({
     mode: routeMode,
-    hasRoadRoute: directionsStatus === "ready",
+    hasRoadRoute: shownDirectionsStatus === "ready",
     routePlan,
   });
   const routeModeOption = ADMIN_ROUTE_MODE_OPTIONS.find(
     (option) => option.id === routeMode,
   );
-  const routeStatusLabel =
-    directionsStatus === "ready"
+  const restaurantListUnknown = hasError && coordinateRestaurantCount === 0;
+  const routeStatusLabel = restaurantListUnknown
+    ? "동선 미확인"
+    : shownDirectionsStatus === "ready"
       ? "실제 도로 경로"
-      : directionsStatus === "loading"
+      : shownDirectionsStatus === "loading"
         ? "경로 계산 중"
-        : directionsStatus === "fallback" && directionsFallbackMessage
+        : shownDirectionsStatus === "fallback" && directionsFallbackMessage
           ? "Directions 사용 불가"
           : routeMode === "driving"
             ? "거리 기반 후보"
             : "촬영 초안";
   const routeSummaryText =
-    directionsStatus === "ready" &&
+    shownDirectionsStatus === "ready" &&
     [routeDistanceText, routeDurationText].filter(Boolean).length > 0
       ? [routeDistanceText, routeDurationText].filter(Boolean).join(" · ")
       : routeStops.length >= 2
@@ -1145,19 +1174,35 @@ function AdminMapInfoPanel({
   );
   const routeExportPackage = useMemo(
     () =>
-      buildAdminRouteExportPackage({
-        routePlan,
-        candidateReadback: routeCandidateReadback,
-        directionsReadback: routeDirectionsReadback,
-      }),
+      routeCandidateReadback
+        ? buildAdminRouteExportPackage({
+            routePlan,
+            candidateReadback: routeCandidateReadback,
+            directionsReadback: routeDirectionsReadback,
+          })
+        : null,
     [routeCandidateReadback, routeDirectionsReadback, routePlan],
   );
   const routePlainTextExport = useMemo(
-    () => buildAdminRoutePlainTextExport(routeExportPackage),
+    () =>
+      routeExportPackage ? buildAdminRoutePlainTextExport(routeExportPackage) : "",
     [routeExportPackage],
   );
+  const routeQualityPanelRef = useRef<HTMLDivElement>(null);
+  const routeCandidatesRetryHadFocusRef = useRef(false);
+  const routeCandidatesReadFailed = routeCandidateStatus === "failed";
+  useLayoutEffect(() => {
+    if (routeCandidatesReadFailed || !routeCandidatesRetryHadFocusRef.current) return;
+    routeCandidatesRetryHadFocusRef.current = false;
+    if (document.activeElement === document.body) routeQualityPanelRef.current?.focus();
+  }, [routeCandidatesReadFailed]);
+  const retryRouteCandidates = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (isRouteCandidatesRetrying) return;
+    routeCandidatesRetryHadFocusRef.current = document.activeElement === event.currentTarget;
+    onRetryRouteCandidates();
+  };
   const routeJsonExport = useMemo(
-    () => JSON.stringify(routeExportPackage, null, 2),
+    () => (routeExportPackage ? JSON.stringify(routeExportPackage, null, 2) : ""),
     [routeExportPackage],
   );
 
@@ -1429,17 +1474,44 @@ function AdminMapInfoPanel({
           )}
         </div>
 
+        {routeCandidatesReadFailed ? (
+          <div
+            role="alert"
+            className="mt-1.5 rounded-xl border border-destructive/30 bg-destructive/5 p-2 text-2xs leading-4 text-destructive"
+            data-admin-route-candidates-read-failed="true"
+          >
+            <p className="font-bold">동선 후보를 불러오지 못했습니다.</p>
+            <p className="mt-0.5">
+              아래 동선은 지도에 불러온 맛집만으로 만든 임시 순서이며, 후보 readback과 내보내기는 조회가 확인된 뒤 표시합니다.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-1.5 h-11 min-h-11 md:h-7 md:min-h-0"
+              aria-disabled={isRouteCandidatesRetrying || undefined}
+              aria-busy={isRouteCandidatesRetrying || undefined}
+              onClick={retryRouteCandidates}
+              data-admin-route-candidates-retry="true"
+            >
+              {isRouteCandidatesRetrying ? "조회 중…" : "후보 다시 조회"}
+            </Button>
+          </div>
+        ) : null}
+
         <div
-          className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl bg-background/70 p-1.5 text-2xs text-muted-foreground"
+          ref={routeQualityPanelRef}
+          tabIndex={-1}
+          className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl bg-background/70 p-1.5 text-2xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary"
           data-admin-route-quality-panel="true"
         >
           <div>
             <p className="font-bold text-foreground">좌표 맛집</p>
-            <p>{adminNumberFormatter.format(coordinateRestaurantCount)}곳</p>
+            <p>{restaurantListUnknown ? "미확인" : `${adminNumberFormatter.format(coordinateRestaurantCount)}곳`}</p>
           </div>
           <div>
             <p className="font-bold text-foreground">추천 지점</p>
-            <p>{routeStops.length}/{routeStopLimit}곳</p>
+            <p>{restaurantListUnknown ? "미확인" : `${routeStops.length}/${routeStopLimit}곳`}</p>
           </div>
           <div>
             <p className="font-bold text-foreground">이동수단</p>
@@ -1447,18 +1519,25 @@ function AdminMapInfoPanel({
           </div>
           <div>
             <p className="font-bold text-foreground">도로 경로</p>
-            <p>{directionsStatus === "ready" ? "확보" : "로컬 후보"}</p>
+            <p>{restaurantListUnknown ? "미확인" : shownDirectionsStatus === "ready" ? "확보" : "로컬 후보"}</p>
           </div>
           <div>
             <p className="font-bold text-foreground">후보 출처</p>
-            <p>{routeCandidateReadback.candidateSource}</p>
+            <p>
+              {routeCandidateReadback?.candidateSource ??
+                (routeCandidateStatus === "failed"
+                  ? "조회 실패"
+                  : routeCandidateStatus === "loading"
+                    ? "확인 중"
+                    : "—")}
+            </p>
           </div>
           <div>
             <p className="font-bold text-foreground">후보 readback</p>
             <p>
-              {routeCandidateReadback.candidateReturned}/
-              {routeCandidateReadback.candidateTotal}
-              {routeCandidateReadback.truncated ? " · truncated" : ""}
+              {routeCandidateReadback
+                ? `${routeCandidateReadback.candidateReturned}/${routeCandidateReadback.candidateTotal}${routeCandidateReadback.truncated ? " · truncated" : ""}`
+                : "—"}
             </p>
           </div>
         </div>
@@ -1534,12 +1613,15 @@ function AdminMapInfoPanel({
             </p>
           )}
           <p className="mt-2 text-2xs leading-4 text-muted-foreground">
-            {directionsStatus === "ready"
-              ? "네이버 Directions 5 기준 실제 도로 주행 경로를 지도에 표시합니다."
-              : routeMode === "driving"
-                ? "도로 경로 계산 전이나 실패 시에는 같은 영상·카테고리·직선거리 기반 후보를 먼저 표시합니다."
-                : "네이버 Directions 5는 자동차만 지원하므로 도보·혼합은 근거리 촬영 초안으로 표시합니다."}
+            {restaurantListUnknown
+              ? "좌표 맛집 목록을 확인하기 전에는 동선을 만들지 않습니다."
+              : shownDirectionsStatus === "ready"
+                ? "네이버 Directions 5 기준 실제 도로 주행 경로를 지도에 표시합니다."
+                : routeMode === "driving"
+                  ? "도로 경로 계산 전이나 실패 시에는 같은 영상·카테고리·직선거리 기반 후보를 먼저 표시합니다."
+                  : "네이버 Directions 5는 자동차만 지원하므로 도보·혼합은 근거리 촬영 초안으로 표시합니다."}
           </p>
+          {routeCandidateReadback ? (
           <div
             className="mt-2 rounded-xl bg-background/70 p-2 text-2xs leading-4 text-muted-foreground"
             data-admin-route-export="tzudong-json-v1"
@@ -1560,6 +1642,14 @@ function AdminMapInfoPanel({
               dangerouslySetInnerHTML={{ __html: routeJsonExport.replace(/</g, "\\u003c") }}
             />
           </div>
+          ) : (
+            <p
+              className="mt-2 rounded-xl bg-background/70 p-2 text-2xs leading-4 text-muted-foreground"
+              data-admin-route-export="unavailable"
+            >
+              동선 후보 조회가 확인되면 Tzudong JSON/plain-text 내보내기를 표시합니다.
+            </p>
+          )}
           <div className="admin-detail-section mt-2 rounded-md bg-muted/20 pt-2">
             <TrendProposalQueue />
           </div>
@@ -1570,7 +1660,6 @@ function AdminMapInfoPanel({
 }
 
 export function AdminOverviewDashboard({
-  isLoading,
   hasError,
   onSelectModule,
 }: {
@@ -1620,12 +1709,15 @@ export function AdminOverviewDashboard({
     queryFn: fetchAdminMapRestaurants,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
   const adminMapOverlaysQuery = useQuery({
     queryKey: ["admin-overview", "map-overlays"],
     queryFn: fetchAdminMapOverlays,
     enabled: showAdminMapOverlays,
     staleTime: 60 * 1000,
+    retry: false,
     refetchOnWindowFocus: false,
   });
 
@@ -1676,17 +1768,15 @@ export function AdminOverviewDashboard({
         .filter(hasAdminMapCoordinates),
     [realRestaurants, routeCandidatesQuery.data?.items],
   );
-  const routeCandidateReadback: AdminRouteCandidateReadback =
-    routeCandidatesQuery.data?.candidateReadback ?? {
-      candidateTotal: realRestaurants.length,
-      candidateReturned: Math.min(realRestaurants.length, routeStopLimit),
-      candidateLimit: routeStopLimit,
-      truncated: realRestaurants.length > routeStopLimit,
-      candidateSource: "k-nearest",
-      excludedNoCoordinateCount: 0,
-      selectedAnchorIncluded: Boolean(selectedRestaurant),
-      exclusions: [],
-    };
+  const routeCandidateReadback =
+    routeCandidatesQuery.data?.candidateReadback ?? null;
+  const routeCandidateStatus: AdminRouteCandidateStatus = routeCandidateReadback
+    ? "ready"
+    : adminQueryLastReadFailed(routeCandidatesQuery)
+      ? "failed"
+      : selectedRestaurant
+        ? "loading"
+        : "idle";
   const routePlan = useMemo(
     () =>
       buildAdminRoutePlan({
@@ -1731,8 +1821,9 @@ export function AdminOverviewDashboard({
         .join("|"),
     [routeRequestPoints],
   );
-  const isMapLoading = isLoading || mapRestaurantsQuery.isLoading;
-  const hasMapError = hasError || mapRestaurantsQuery.isError;
+  const mapRestaurantsReadFailed = adminQueryLastReadFailed(mapRestaurantsQuery);
+  const isMapLoading = mapRestaurantsQuery.isLoading && !mapRestaurantsReadFailed;
+  const hasMapError = hasError || mapRestaurantsReadFailed;
 
   useEffect(() => {
     if (routeMode !== "driving" || routeRequestPoints.length < 2) {
@@ -1820,8 +1911,8 @@ export function AdminOverviewDashboard({
           directionsRoute={directionsRoute}
           overlays={adminMapOverlays}
           showAdminMapOverlays={showAdminMapOverlays}
-          isOverlayLoading={adminMapOverlaysQuery.isFetching}
-          hasOverlayError={adminMapOverlaysQuery.isError}
+          isOverlayLoading={adminMapOverlaysQuery.isFetching && adminMapOverlaysQuery.data === undefined && !adminQueryLastReadFailed(adminMapOverlaysQuery)}
+          hasOverlayError={adminQueryLastReadFailed(adminMapOverlaysQuery)}
           isLoading={isMapLoading}
           hasError={hasMapError}
           onSelectRestaurant={(restaurant) =>
@@ -1845,6 +1936,9 @@ export function AdminOverviewDashboard({
           routeMode={routeMode}
           directionsRoute={directionsRoute}
           routeCandidateReadback={routeCandidateReadback}
+          routeCandidateStatus={routeCandidateStatus}
+          isRouteCandidatesRetrying={routeCandidatesQuery.isFetching}
+          onRetryRouteCandidates={() => void routeCandidatesQuery.refetch()}
           directionsFallbackMessage={directionsFallbackMessage}
             directionsStatus={directionsStatus}
             isLoading={isMapLoading}

@@ -188,6 +188,7 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
   const [catalog, setCatalog] = useState<Catalog>({ ok: true, projects: [], workers: [], readiness: FEATURE_DATABASE_HELD });
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogBusy, setCatalogBusy] = useState(true);
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [catalogTick, setCatalogTick] = useState(0);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
@@ -201,6 +202,7 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
   const departure = useRef<DepartureState>(EMPTY_DEPARTURE);
   const acceptedLocation = useRef<{ href: string; state: unknown } | null>(null);
   const createController = useRef<AbortController | null>(null);
+  const catalogAbort = useRef<AbortController | null>(null);
   const onDepartureChange = useCallback((state: DepartureState) => { departure.current = state; }, []);
   const mayLeave = useCallback(() => {
     if (departure.current.busy) {
@@ -267,19 +269,30 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
     };
   }, [mayLeave]);
 
-  useEffect(() => {
+  const refreshCatalog = useCallback((visible: boolean) => {
+    if (!visible && catalogAbort.current) return;
+    catalogAbort.current?.abort();
     const controller = new AbortController();
-    setCatalogBusy(true);
+    catalogAbort.current = controller;
+    if (visible) setCatalogBusy(true);
     void json(API, controller.signal).then((body) => {
       const parsed = catalogSchema.safeParse(body);
       if (!parsed.success) throw new UiError("invalid_response");
-      if (!controller.signal.aborted) { setCatalog(parsed.data); setCatalogError(null); }
+      if (!controller.signal.aborted) { setCatalog(parsed.data); setCatalogLoaded(true); setCatalogError(null); }
     }).catch((error: unknown) => {
-      if (!controller.signal.aborted) setCatalogError(error instanceof UiError && error.code === "unauthorized"
+      if (controller.signal.aborted || !visible) return;
+      setCatalogError(error instanceof UiError && error.code === "unauthorized"
         ? failure(error) : "프로젝트 목록을 불러오지 못했습니다. 목록을 다시 불러와 확인하세요.");
-    }).finally(() => { if (!controller.signal.aborted) setCatalogBusy(false); });
-    return () => controller.abort();
-  }, [catalogTick]);
+    }).finally(() => {
+      if (catalogAbort.current === controller) catalogAbort.current = null;
+      if (!controller.signal.aborted && visible) setCatalogBusy(false);
+    });
+  }, []);
+  const refreshWorkers = useCallback(() => { refreshCatalog(false); }, [refreshCatalog]);
+  useEffect(() => {
+    refreshCatalog(true);
+    return () => { catalogAbort.current?.abort(); };
+  }, [catalogTick, refreshCatalog]);
 
   const selectProject = useCallback((id: string | null) => {
     if (id === projectId || !mayLeave()) return;
@@ -303,13 +316,16 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
   const selectedModelsAvailable = storyboardWorkerSupportsPair(
     catalog.workers, textProvider.model, imageProvider.model,
   );
-  const featureHeld = catalog.readiness.status !== 'ready';
+  const featureHeld = catalogLoaded && catalog.readiness.status !== 'ready';
+  // Readiness is unknown until a catalog read succeeds, so actions stay locked without claiming a database hold.
+  const actionsHeld = featureHeld || !catalogLoaded;
+  const readinessUnknownMessage = "제작 가능 여부를 확인하지 못했습니다. 목록을 다시 불러온 뒤 만들 수 있습니다.";
 
   async function create(event: FormEvent) {
     event.preventDefault();
     if (createController.current) return;
     setCreateError(null);
-    if (featureHeld) { setCreateError(message('feature_database_held')); return; }
+    if (actionsHeld) { setCreateError(featureHeld ? message('feature_database_held') : readinessUnknownMessage); return; }
     if (!selectedModelsAvailable) { setCreateError('선택한 모델을 사용할 수 없습니다.'); return; }
     const [imageWidth, imageHeight] = dimensions.split("x").map(Number);
     const fields = { workflow: STORYBOARD_WORKFLOW, prompt, sceneCount, providers: { externalAI: true as const, text: textProvider, image: imageProvider },
@@ -340,7 +356,14 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
   return <section aria-labelledby="local-storyboard-title" data-local-storyboard-workspace="true"
     className="h-full min-h-0 min-w-0 overflow-y-auto bg-background text-foreground">
     <AdminPageHeader title={getAdminModuleTitle("storyboard")} titleId="local-storyboard-title" icon={Clapperboard}
-      actions={projectId ? <button type="button" className={`${buttonClass} !border-primary !bg-primary !text-primary-foreground`} onClick={() => selectProject(null)}>새 프로젝트</button> : undefined}
+      actions={projectId ? <button type="button" className={`${buttonClass} !border-primary !bg-primary !text-primary-foreground`} onClick={() => {
+        selectProject(null);
+        requestAnimationFrame(() => {
+          if ((document.getElementById("local-project-select") as HTMLSelectElement | null)?.value === "") {
+            document.getElementById("local-storyboard-prompt")?.focus();
+          }
+        });
+      }}>새 프로젝트</button> : undefined}
     />
     <div className="admin-cms-toolbar admin-toolbar shrink-0" data-admin-storyboard-toolbar="true">
       <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
@@ -360,12 +383,20 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
     {featureHeld && <p role="status" className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">{message('feature_database_held')}</p>}
     {catalogError && projectId && !showLibrary && <div role="alert" className="mb-3 flex flex-wrap items-center gap-2 text-sm text-destructive">
       <span>{catalogError}</span>
-      <button type="button" className={buttonClass} disabled={catalogBusy} onClick={() => setCatalogTick((value) => value + 1)}>목록 다시 불러오기</button>
+      <button type="button" className={`${buttonClass} aria-disabled:cursor-not-allowed aria-disabled:opacity-50`} aria-disabled={catalogBusy || undefined} aria-busy={catalogBusy || undefined} onClick={() => { if (!catalogBusy) setCatalogTick((value) => value + 1); }}>목록 다시 불러오기</button>
     </div>}
     <div className={`grid min-w-0 items-start gap-4 ${!projectId || showLibrary ? "lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)] lg:!grid-cols-[minmax(0,1fr)_minmax(240px,300px)]" : ""}`}>
       <div className="order-2 min-w-0" hidden={!!projectId && !showLibrary}>
         <StoryboardProjectLibrary projects={catalog.projects} selectedId={projectId} statusLabels={STATUSES}
-          busy={catalogBusy} error={catalogError} onRefresh={() => setCatalogTick((value) => value + 1)} onSelect={selectProject}
+          busy={catalogBusy} error={catalogError} countUnknown={!catalogLoaded} onRefresh={() => setCatalogTick((value) => value + 1)} onSelect={(id) => {
+            selectProject(id);
+            if (!id) return;
+            requestAnimationFrame(() => {
+              const active = document.activeElement;
+              const hidden = active instanceof HTMLElement && Boolean(active.closest("[hidden]"));
+              if (active === document.body || hidden) document.getElementById("local-project-select")?.focus();
+            });
+          }}
           onStart={() => {
             selectProject(null);
             requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus());
@@ -375,7 +406,8 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
       {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${projectId ? "order-2" : "order-1 w-full"}`} aria-label="프로젝트 설정과 기록">
         {!projectId && <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title">
           <h3 id="local-request-title" className="font-semibold">새 제작 요청</h3>
-          <fieldset disabled={creating || featureHeld} className="mt-3 min-w-0 space-y-3">
+          {!catalogLoaded && catalogError && <p role="status" className="mt-2 text-sm text-muted-foreground">{readinessUnknownMessage}</p>}
+          <fieldset disabled={creating || actionsHeld} className="mt-3 min-w-0 space-y-3">
             <div className="text-sm">
               <label className="block" htmlFor="local-storyboard-prompt">제작 요청</label>
               <textarea id="local-storyboard-prompt" className={`${inputClass} break-keep`} rows={4} required maxLength={8000}
@@ -400,7 +432,7 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
               <ProviderField kind="text" value={textProvider} models={textModels} onChange={setTextProvider} />
               <ProviderField kind="image" value={imageProvider} models={imageModels} onChange={setImageProvider} />
             </div>
-            <button className={`${buttonClass} w-full !border-primary !bg-primary !text-primary-foreground sm:w-auto sm:min-w-48`} type="submit" disabled={creating || featureHeld || !selectedModelsAvailable}>
+            <button className={`${buttonClass} w-full !border-primary !bg-primary !text-primary-foreground sm:w-auto sm:min-w-48`} type="submit" disabled={creating || actionsHeld || !selectedModelsAvailable}>
               {creating ? "저장 요청 중…" : "프로젝트 만들기"}
             </button>
           </fieldset>
@@ -409,11 +441,11 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
         {showSetup && <section className={panelClass} aria-labelledby="local-workers-title">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 id="local-workers-title" className="font-semibold">제작 연결</h3>
-            <button type="button" className={buttonClass} disabled={catalogBusy} onClick={() => setCatalogTick((value) => value + 1)}>목록 새로고침</button>
+            <button type="button" className={`${buttonClass} aria-disabled:cursor-not-allowed aria-disabled:opacity-50`} aria-disabled={catalogBusy || undefined} aria-busy={catalogBusy || undefined} onClick={() => { if (!catalogBusy) setCatalogTick((value) => value + 1); }}>목록 새로고침</button>
           </div>
-          {catalogBusy && <p role="status" className="mt-2 text-sm">목록 확인 중…</p>}
+          {catalogBusy && !catalogError && !catalogLoaded && <p role="status" className="mt-2 text-sm">목록 확인 중…</p>}
           {catalogError && <p role="alert" className="mt-2 text-sm text-destructive">{catalogError}</p>}
-          {!catalogBusy && !catalogError && geminiWorkers.length === 0 && <p className="mt-2 text-sm text-muted-foreground">지원되는 Gemini 제작 워커가 없습니다. 연결 후 대기 중인 요청이 시작됩니다.</p>}
+          {!catalogError && geminiWorkers.length === 0 && (catalogLoaded || !catalogBusy) && <p className="mt-2 text-sm text-muted-foreground">지원되는 Gemini 제작 워커가 없습니다. 연결 후 대기 중인 요청이 시작됩니다.</p>}
           {geminiWorkers.map((worker) => <div key={worker.id} className="mt-3 break-words text-sm [overflow-wrap:anywhere]">
             <p className="font-medium">{worker.online ? "제작 워커 연결됨" : "제작 워커 연결 끊김"}</p>
             <p className="text-xs text-muted-foreground">마지막 연결: {when(worker.lastHeartbeat)}</p>
@@ -423,8 +455,8 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
           </div>)}
         </section>}
       </aside>}
-      {projectId && <div className="order-1 min-w-0"><SavedProjectWorkspace key={projectId} projectId={projectId} featureHeld={featureHeld}
-        onProject={updateSummary} onDepartureChange={onDepartureChange} /></div>}
+      {projectId && <div className="order-1 min-w-0"><SavedProjectWorkspace key={projectId} projectId={projectId} featureHeld={actionsHeld}
+        onProject={updateSummary} onDepartureChange={onDepartureChange} onActivePoll={refreshWorkers} /></div>}
     </div>
     </div>
     {archive}
@@ -432,9 +464,10 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
   </section>;
 }
 
-function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureChange }: {
+function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureChange, onActivePoll }: {
   projectId: string; featureHeld: boolean;
   onProject: (project: Project) => void; onDepartureChange: (state: DepartureState) => void;
+  onActivePoll: () => void;
 }) {
   const [view, setView] = useState<View | null>(null);
   const [workspaceView, setWorkspaceView] = useState<"scenes" | "history">("scenes");
@@ -454,6 +487,12 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
   const writeController = useRef<AbortController | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heading = useRef<HTMLHeadingElement | null>(null);
+  const returnCancelFocusRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!returnCancelFocusRef.current || document.activeElement !== document.body) return;
+    returnCancelFocusRef.current = false;
+    heading.current?.focus();
+  });
   const editReturnFocus = useRef<{ sceneNo: number; waiting: boolean } | null>(null);
   const endpoint = `${API}/${encodeURIComponent(projectId)}`;
 
@@ -491,7 +530,7 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
         setView(next); onProject(next.project); setReadError(null); setNeedsReadback(false);
         const pending = pendingEdit.current;
         if (pending && confirmsEdit(next, pending)) acceptEdit(next, pending);
-        if (isActive(next)) timer.current = setTimeout(() => { void load(); }, POLL_MS);
+        if (isActive(next)) timer.current = setTimeout(() => { onActivePoll(); void load(); }, POLL_MS);
       } catch (error) {
         if (!controller.signal.aborted) setReadError(failure(error));
         // A failed read stops polling; an explicit refresh resumes it.
@@ -499,7 +538,7 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
     }
     void load();
     return stopReading;
-  }, [endpoint, projectId, readTick, onProject, stopReading, acceptEdit]);
+  }, [endpoint, projectId, readTick, onProject, stopReading, acceptEdit, onActivePoll]);
   useEffect(() => () => writeController.current?.abort(), []);
   const loadedId = view?.project.id;
   useEffect(() => { if (loadedId) heading.current?.focus({ preventScroll: true }); }, [loadedId]);
@@ -605,12 +644,12 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
           <p className="mt-1 text-xs text-muted-foreground">{view && `버전 ${view.project.revision} · ${when(view.project.updatedAt)} 저장`}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className={buttonClass} disabled={busy || loading} onClick={() => setReadTick((value) => value + 1)}>새로고침</button>
+          <button type="button" className={`${buttonClass} aria-disabled:cursor-not-allowed aria-disabled:opacity-50`} disabled={busy || undefined} aria-disabled={busy || loading || undefined} aria-busy={loading || undefined} onClick={() => { if (busy || loading) return; setReadTick((value) => value + 1); }}>새로고침</button>
           {view && <button type="button" className={buttonClass} disabled={busy || !view.project.document} onClick={() => { void download(); }}>내보내기</button>}
         </div>
       </div>
       <div aria-live="polite" role="status" className="mt-3 text-sm">
-        {loading && !view ? "저장된 결과 확인 중…" : view ? STATUSES[view.project.status] : "아직 저장 결과를 확인하지 못했습니다."}
+        {loading && !view && !readError ? "저장된 결과 확인 중…" : view ? STATUSES[view.project.status] : "아직 저장 결과를 확인하지 못했습니다."}
         {busy && " · 요청 처리 중…"}{notice && <p className="mt-1">{notice}</p>}
       </div>
       {readError && <p role="alert" className="mt-2 text-sm text-destructive">{readError}</p>}
@@ -629,7 +668,11 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
         </details>
         <div className="mt-3 flex flex-wrap gap-2">
           {active && <button type="button" className={buttonClass} disabled={busy || !view.job || needsReadback || !!readError}
-            onClick={() => { if (view.job) void mutate({ action: "cancel", revision: view.project.revision, jobId: view.job.id }); }}>작업 취소</button>}
+            onClick={() => {
+              if (!view.job) return;
+              returnCancelFocusRef.current = true;
+              void mutate({ action: "cancel", revision: view.project.revision, jobId: view.job.id });
+            }}>작업 취소</button>}
           {!scenesComplete && <button type="button" className={buttonClass}
             disabled={locked || retryBlocked || scenesComplete
               || !["failed", "cancelled", "partial", "waiting_worker"].includes(view.project.status)}
@@ -659,7 +702,7 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
             className={`min-h-11 rounded-md px-3 py-2 text-sm ${workspaceView === id ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground hover:bg-background hover:text-foreground"}`}
             onClick={() => setWorkspaceView(id)}>{label}</button>)}
       </nav>
-      {workspaceView === "history" && <VersionHistory key={`${projectId}:${view.project.revision}`} projectId={projectId}
+      {workspaceView === "history" && <VersionHistory key={projectId} projectId={projectId}
         revision={view.project.revision} disabled={locked || !!editing || !view.project.document || archived} onRestore={mutate} />}
       {workspaceView === "scenes" && (view.project.document ? <section aria-labelledby="local-scenes-title" className="min-w-0 space-y-3">
         <div className="px-1">
@@ -756,46 +799,61 @@ function VersionHistory({ projectId, revision, disabled, onRestore }: {
   projectId: string; revision: number; disabled: boolean;
   onRestore: (body: Record<string, unknown>) => Promise<boolean>;
 }) {
-  const [history, setHistory] = useState<z.infer<typeof versionsSchema> | null>(null);
+  const [versions, setVersions] = useState<z.infer<typeof versionsSchema>["versions"] | null>(null);
+  const [preview, setPreview] = useState<z.infer<typeof versionsSchema>["preview"]>(null);
   const [target, setTarget] = useState("");
   const [sceneNo, setSceneNo] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(0);
+  const [loadedRevision, setLoadedRevision] = useState(revision);
+  const versionSelectRef = useRef<HTMLSelectElement>(null);
+  const refreshButtonRef = useRef<HTMLButtonElement>(null);
+  const hadFocusRef = useRef(false);
+  if (loadedRevision !== revision) {
+    setLoadedRevision(revision); setTarget(""); setSceneNo(""); setConfirmed(false); setPreview(null);
+  }
+  useLayoutEffect(() => {
+    if (!hadFocusRef.current || document.activeElement !== document.body) return;
+    versionSelectRef.current?.focus();
+    if (document.activeElement === document.body) refreshButtonRef.current?.focus();
+  });
   useEffect(() => {
     const controller = new AbortController();
     async function load() {
-      setLoading(true); setError(null); setHistory(null); setConfirmed(false);
+      setLoading(true); setPreview(null); setConfirmed(false);
       try {
         const query = target ? `&targetRevision=${encodeURIComponent(target)}` : "";
         const parsed = versionsSchema.safeParse(await json(`${API}/${projectId}?versions=1${query}`, controller.signal));
         if (!parsed.success || (target && (!parsed.data.preview || parsed.data.preview.projectId !== projectId
           || parsed.data.preview.revision !== Number(target)))) throw new UiError("invalid_response");
-        if (!controller.signal.aborted) setHistory(parsed.data);
+        if (!controller.signal.aborted) { setVersions(parsed.data.versions); setPreview(parsed.data.preview); setError(null); }
       } catch (cause) { if (!controller.signal.aborted) setError(failure(cause)); }
       finally { if (!controller.signal.aborted) setLoading(false); }
     }
     void load();
     return () => controller.abort();
-  }, [projectId, target, refresh]);
-  const preview = history?.preview;
-  return <section className={panelClass} aria-labelledby="local-version-title">
+  }, [projectId, target, refresh, revision]);
+  return <section className={panelClass} aria-labelledby="local-version-title"
+    onFocus={() => { hadFocusRef.current = true; }}
+    onBlur={(event) => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) hadFocusRef.current = false; }}>
     <h3 id="local-version-title" className="font-semibold">과거 버전 복원</h3>
     <p className="mt-1 text-sm text-muted-foreground">저장된 이력부터 복원할 수 있습니다. 복원 전 상태도 새 이력으로 남습니다.</p>
-    {loading && <p role="status" className="mt-2 text-sm">버전 불러오는 중…</p>}
+    {loading && !error && !versions && <p role="status" className="mt-2 text-sm">버전 불러오는 중…</p>}
     {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
-    <button type="button" className={`${buttonClass} mt-2`} disabled={loading} onClick={() => setRefresh((value) => value + 1)}>버전 목록 새로고침</button>
-    {history && <>
+    <button ref={refreshButtonRef} type="button" className={`${buttonClass} mt-2`} aria-disabled={loading} aria-busy={loading}
+      onClick={() => { if (!loading) setRefresh((value) => value + 1); }}>버전 목록 새로고침</button>
+    {versions && <>
       <label htmlFor="local-history-version" className="mt-3 block text-sm">저장된 버전</label>
-      <select id="local-history-version" className={inputClass} value={target} disabled={disabled || loading}
-        onChange={(event) => { setTarget(event.target.value); setSceneNo(""); setConfirmed(false); setHistory(null); }}>
+      <select ref={versionSelectRef} id="local-history-version" className={inputClass} value={target} disabled={disabled}
+        onChange={(event) => { setTarget(event.target.value); setSceneNo(""); setConfirmed(false); setPreview(null); }}>
         <option value="">복원할 버전 선택</option>
-        {history.versions.map((version) => <option key={version.revision} value={version.revision} disabled={version.revision >= revision}>
+        {versions.map((version) => <option key={version.revision} value={version.revision} disabled={version.revision >= revision}>
           v{version.revision} · {version.title} · {version.sceneCount}장면 · {when(version.createdAt)}
         </option>)}
       </select>
-      {!history.versions.some((version) => version.revision < revision) && <p className="mt-2 text-sm text-muted-foreground">아직 이전에 저장된 버전이 없습니다.</p>}
+      {!versions.some((version) => version.revision < revision) && <p className="mt-2 text-sm text-muted-foreground">아직 이전에 저장된 버전이 없습니다.</p>}
     </>}
     {preview && <>
       <h4 className="mt-3 font-medium">v{target} 미리보기 · {preview.title}</h4>

@@ -56,6 +56,7 @@ interface EvaluationTableProps {
   onResolveConflict?: (record: EvaluationRecord) => void;
   onEdit?: (record: EvaluationRecord) => void;
   loading?: boolean;
+  readFailed?: boolean;
   isDeletedFilterActive?: boolean; // 삭제 필터 활성화 여부
   searchQuery?: string; // 검색어
   onSearchChange?: (query: string) => void; // 검색어 변경 핸들러
@@ -140,6 +141,21 @@ const DESKTOP_TABLE_COLUMNS = {
 
 const DESKTOP_METRIC_CELL = 'px-2 text-center text-xs tabular-nums';
 
+type ScoreMetric = 'visit_authenticity' | 'rb_inference_score' | 'review_faithfulness_score';
+type BooleanMetric = 'rb_grounding_TF' | 'category_validity_TF' | 'category_TF';
+
+const SCORE_MEANINGS: Record<ScoreMetric, Record<string, string>> = {
+  visit_authenticity: { '0': '무관', '1': '직접 방문', '2': '지점 불명', '3': '포장·배달', '4': '언급/비식당' },
+  rb_inference_score: { '0': '근거 부족', '1': '명확', '2': '복합' },
+  review_faithfulness_score: { '0': '왜곡', '1': '충실' },
+};
+
+const BOOLEAN_MEANINGS: Record<BooleanMetric, { true: string; false: string }> = {
+  rb_grounding_TF: { true: '확인됨', false: '불일치' },
+  category_validity_TF: { true: '유효', false: '무효' },
+  category_TF: { true: '일치', false: '불일치' },
+};
+
 const getStatusBadge = (status: string) => {
   const config = STATUS_VARIANTS[status] || { label: status, variant: 'default' as const };
   return <Badge variant={config.variant} data-admin-record-status={status} className="admin-record-status whitespace-nowrap">{config.label}</Badge>;
@@ -166,40 +182,40 @@ const getMobileCardTone = (status: string): string => {
   }
 };
 
-const getBooleanLabel = (value: boolean | null | undefined): string => {
-  if (value === true) return '일치';
-  if (value === false) return '불일치';
-  return '-';
-};
-
-const getDisplayValue = (value: string | number | null | undefined): string => {
-  if (value === null || value === undefined || value === '') return '-';
-  return String(value);
-};
-
 const shouldShowMetricFallback = (record: EvaluationRecord) => (
   record.status === 'not_selected' || record.is_not_selected === true
 );
 
-const renderMetricScore = (record: EvaluationRecord, value: string | number | null | undefined) => {
+const renderMetricScore = (record: EvaluationRecord, metric: ScoreMetric, value: string | number | null | undefined) => {
   if (shouldShowMetricFallback(record)) return '-';
-  return value === null || value === undefined || value === '' ? '-' : value;
+  if (value === null || value === undefined || value === '') return '-';
+  const meaning = SCORE_MEANINGS[metric][String(value)];
+  if (!meaning) return value;
+  return <span className="inline-flex flex-col items-center leading-4">
+    <span className="font-semibold text-foreground">{value}<span className="sr-only">점</span></span>
+    <span className="admin-evaluation-score-meaning whitespace-nowrap text-muted-foreground">{meaning}</span>
+  </span>;
 };
 
-const renderMetricBoolean = (record: EvaluationRecord, value: boolean | null | undefined) => {
+const renderMetricBoolean = (record: EvaluationRecord, metric: BooleanMetric, value: boolean | null | undefined) => {
   if (shouldShowMetricFallback(record)) return '-';
   if (value === undefined || value === null) return '-';
 
   return value
-    ? <Badge variant="default" className="bg-green-600">일치</Badge>
-    : <Badge variant="destructive">불일치</Badge>;
+    ? <Badge variant="outline" className="admin-evaluation-signal admin-evaluation-positive">{BOOLEAN_MEANINGS[metric].true}</Badge>
+    : <Badge variant="outline" className="admin-evaluation-signal admin-evaluation-negative">{BOOLEAN_MEANINGS[metric].false}</Badge>;
 };
 
-const getMobileMetricDisplayValue = (record: EvaluationRecord, value: string | number | boolean | null | undefined): string => {
+const getMobileScoreDisplayValue = (record: EvaluationRecord, metric: ScoreMetric, value: string | number | null | undefined): string => {
   if (shouldShowMetricFallback(record)) return '-';
   if (value === null || value === undefined || value === '') return '-';
-  if (typeof value === 'boolean') return getBooleanLabel(value);
-  return getDisplayValue(value);
+  const meaning = SCORE_MEANINGS[metric][String(value)];
+  return meaning ? `${value}점 · ${meaning}` : String(value);
+};
+
+const getMobileBooleanDisplayValue = (record: EvaluationRecord, metric: BooleanMetric, value: boolean | null | undefined): string => {
+  if (shouldShowMetricFallback(record) || value === null || value === undefined) return '-';
+  return BOOLEAN_MEANINGS[metric][String(value) as 'true' | 'false'];
 };
 
 const getOriginAddress = (record: EvaluationRecord): string => {
@@ -438,19 +454,19 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
 
         {/* 평가 컬럼 값들 */}
         <TableCell className={cn(DESKTOP_TABLE_COLUMNS.score, DESKTOP_METRIC_CELL)}>
-          {renderMetricScore(record, record.evaluation_results?.visit_authenticity?.eval_value)}
+          {renderMetricScore(record, 'visit_authenticity', record.evaluation_results?.visit_authenticity?.eval_value)}
         </TableCell>
 
         <TableCell className={cn(DESKTOP_TABLE_COLUMNS.score, DESKTOP_METRIC_CELL, "hidden lg:table-cell")}>
-          {renderMetricScore(record, record.evaluation_results?.rb_inference_score?.eval_value)}
+          {renderMetricScore(record, 'rb_inference_score', record.evaluation_results?.rb_inference_score?.eval_value)}
         </TableCell>
 
         <TableCell className={cn(DESKTOP_TABLE_COLUMNS.boolean, DESKTOP_METRIC_CELL, "hidden lg:table-cell")}>
-          {renderMetricBoolean(record, record.evaluation_results?.rb_grounding_TF?.eval_value)}
+          {renderMetricBoolean(record, 'rb_grounding_TF', record.evaluation_results?.rb_grounding_TF?.eval_value)}
         </TableCell>
 
         <TableCell className={cn(DESKTOP_TABLE_COLUMNS.score, DESKTOP_METRIC_CELL, "hidden lg:table-cell")}>
-          {renderMetricScore(record, record.evaluation_results?.review_faithfulness_score?.eval_value)}
+          {renderMetricScore(record, 'review_faithfulness_score', record.evaluation_results?.review_faithfulness_score?.eval_value)}
         </TableCell>
 
         <TableCell className={cn(DESKTOP_TABLE_COLUMNS.address, DESKTOP_METRIC_CELL)}>
@@ -458,17 +474,17 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
             getAddressConsistencyDisplayLabel(record) === '-'
               ? '-'
               : (
-                <Badge className={getAddressConsistencyBadgeClass(record)}>{getAddressConsistencyDisplayLabel(record)}</Badge>
+                <Badge variant="outline" className={cn('admin-evaluation-signal', getAddressConsistencyBadgeClass(record))}>{getAddressConsistencyDisplayLabel(record)}</Badge>
               )
           )}
         </TableCell>
 
         <TableCell className={cn(DESKTOP_TABLE_COLUMNS.category, DESKTOP_METRIC_CELL, "hidden lg:table-cell")}>
-          {renderMetricBoolean(record, record.evaluation_results?.category_validity_TF?.eval_value)}
+          {renderMetricBoolean(record, 'category_validity_TF', record.evaluation_results?.category_validity_TF?.eval_value)}
         </TableCell>
 
         <TableCell className={cn(DESKTOP_TABLE_COLUMNS.category, DESKTOP_METRIC_CELL, "hidden lg:table-cell")}>
-          {renderMetricBoolean(record, record.evaluation_results?.category_TF?.eval_value)}
+          {renderMetricBoolean(record, 'category_TF', record.evaluation_results?.category_TF?.eval_value)}
         </TableCell>
 
         {/* 고정 컬럼: 상태 */}
@@ -614,6 +630,7 @@ export function EvaluationTable({
   onResolveConflict,
   onEdit,
   loading,
+  readFailed = false,
   isDeletedFilterActive = false,
   searchQuery = '',
   onSearchChange,
@@ -987,8 +1004,10 @@ export function EvaluationTable({
         >
           <div className="min-w-0 truncate px-0.5 text-xs text-muted-foreground">
             <span>검수 항목</span>
-            {loading && records.length === 0 ? (
+            {loading && records.length === 0 && !readFailed ? (
               <span className="ml-1 font-medium">집계 중</span>
+            ) : readFailed && records.length === 0 ? (
+              <strong className="ml-1 text-sm font-bold text-foreground">미확인</strong>
             ) : (
               <strong className="ml-1 text-sm font-bold text-foreground">{records.length}개</strong>
             )}
@@ -1062,7 +1081,7 @@ export function EvaluationTable({
               FILTER_TOOLTIPS.rb_grounding_TF,
               [
                 { value: 'all', label: '전체' },
-                { value: 'True', label: '일치' },
+                { value: 'True', label: '확인됨' },
                 { value: 'False', label: '불일치' },
               ]
             )}
@@ -1098,8 +1117,8 @@ export function EvaluationTable({
               FILTER_TOOLTIPS.category_validity_TF,
               [
                 { value: 'all', label: '전체' },
-                { value: 'True', label: '일치' },
-                { value: 'False', label: '불일치' },
+                { value: 'True', label: '유효' },
+                { value: 'False', label: '무효' },
               ]
             )}
             {renderFilterDropdown(
@@ -1188,13 +1207,13 @@ export function EvaluationTable({
         const mobileVideoLabel = hasAdminEvaluationYoutubeTitle(record)
           ? getAdminEvaluationVideoLabel(record)
           : '영상 제목 없음';
-        const visitValue = getMobileMetricDisplayValue(record, record.evaluation_results?.visit_authenticity?.eval_value);
-        const inferenceValue = getMobileMetricDisplayValue(record, record.evaluation_results?.rb_inference_score?.eval_value);
-        const groundingValue = getMobileMetricDisplayValue(record, record.evaluation_results?.rb_grounding_TF?.eval_value);
-        const reviewValue = getMobileMetricDisplayValue(record, record.evaluation_results?.review_faithfulness_score?.eval_value);
+        const visitValue = getMobileScoreDisplayValue(record, 'visit_authenticity', record.evaluation_results?.visit_authenticity?.eval_value);
+        const inferenceValue = getMobileScoreDisplayValue(record, 'rb_inference_score', record.evaluation_results?.rb_inference_score?.eval_value);
+        const groundingValue = getMobileBooleanDisplayValue(record, 'rb_grounding_TF', record.evaluation_results?.rb_grounding_TF?.eval_value);
+        const reviewValue = getMobileScoreDisplayValue(record, 'review_faithfulness_score', record.evaluation_results?.review_faithfulness_score?.eval_value);
         const geocodingText = getAddressConsistencyDisplayLabel(record);
-        const categoryValidity = getMobileMetricDisplayValue(record, record.evaluation_results?.category_validity_TF?.eval_value);
-        const categoryMatch = getMobileMetricDisplayValue(record, record.evaluation_results?.category_TF?.eval_value);
+        const categoryValidity = getMobileBooleanDisplayValue(record, 'category_validity_TF', record.evaluation_results?.category_validity_TF?.eval_value);
+        const categoryMatch = getMobileBooleanDisplayValue(record, 'category_TF', record.evaluation_results?.category_TF?.eval_value);
 
         const categoryText = formatCategoryText(record.categories, '') || formatCategoryText(record.restaurant_info?.category, '-');
         const originAddress = getOriginAddress(record);
@@ -1237,7 +1256,7 @@ export function EvaluationTable({
                 </h2>
                 <div className="mt-0.5 flex flex-wrap items-center gap-2 text-2xs text-muted-foreground">
                   <span>{publishedAt}</span>
-                  <Badge variant="outline" className="rounded-md text-2xs">주소 {geocodingText}</Badge>
+                  <Badge variant="outline" className={cn('admin-evaluation-signal', getAddressConsistencyBadgeClass(record))}>주소 {geocodingText}</Badge>
                 </div>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1">
@@ -1289,7 +1308,7 @@ export function EvaluationTable({
                     href={canonicalYoutubeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-1 inline-flex items-center gap-1 truncate text-2xs text-blue-600 hover:underline"
+                    className="mt-1 inline-flex items-center gap-1 truncate text-2xs text-blue-600 hover:underline dark:text-blue-300"
                     onClick={(e) => e.stopPropagation()}
                   >
                     영상 열기
@@ -1299,12 +1318,10 @@ export function EvaluationTable({
               </div>
             </div>}
 
-            {[visitValue,inferenceValue,groundingValue].some(value => value !== '-') && <div className="-mx-1 mt-2 overflow-x-auto px-1 scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="flex min-w-max flex-nowrap gap-1.5">
-                {visitValue !== '-' && <Badge variant="outline" className="shrink-0 rounded-full text-2xs">방문 {visitValue}</Badge>}
-                {inferenceValue !== '-' && <Badge variant="outline" className="shrink-0 rounded-full text-2xs">추론 {inferenceValue}</Badge>}
-                {groundingValue !== '-' && <Badge variant="outline" className="shrink-0 rounded-full text-2xs">근거 {groundingValue}</Badge>}
-              </div>
+            {[visitValue,inferenceValue,groundingValue].some(value => value !== '-') && <div className="mt-2 flex min-w-0 flex-wrap gap-1.5" data-admin-evaluation-mobile-metrics="wrap">
+                {visitValue !== '-' && <Badge variant="outline" className="admin-evaluation-signal admin-evaluation-neutral">방문 {visitValue}</Badge>}
+                {inferenceValue !== '-' && <Badge variant="outline" className="admin-evaluation-signal admin-evaluation-neutral">추론 {inferenceValue}</Badge>}
+                {groundingValue !== '-' && <Badge variant="outline" className={cn('admin-evaluation-signal', record.evaluation_results?.rb_grounding_TF?.eval_value === true ? 'admin-evaluation-positive' : 'admin-evaluation-negative')}>근거 {groundingValue}</Badge>}
             </div>}
 
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1528,11 +1545,11 @@ export function EvaluationTable({
         {shouldRenderMobile && (
           <>
             {mobileControls}
-            {loading && records.length === 0 ? (
+            {loading && records.length === 0 && !readFailed ? (
               mobileLoadingCards
             ) : records.length > 0 ? (
               mobileCards
-            ) : (
+            ) : readFailed ? null : (
               <div className="admin-empty-state flex min-h-0 flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground lg:hidden">
                 표시할 데이터가 없습니다
               </div>
@@ -1636,7 +1653,7 @@ export function EvaluationTable({
                   FILTER_TOOLTIPS.rb_grounding_TF,
                   [
                     { value: 'all', label: '전체' },
-                    { value: 'True', label: '일치' },
+                    { value: 'True', label: '확인됨' },
                     { value: 'False', label: '불일치' },
                   ]
                 )}
@@ -1681,8 +1698,8 @@ export function EvaluationTable({
                   FILTER_TOOLTIPS.category_validity_TF,
                   [
                     { value: 'all', label: '전체' },
-                    { value: 'True', label: '일치' },
-                    { value: 'False', label: '불일치' },
+                    { value: 'True', label: '유효' },
+                    { value: 'False', label: '무효' },
                   ]
                 )}
               </TableHead>
@@ -1718,9 +1735,9 @@ export function EvaluationTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading && records.length === 0 ? (
+            {loading && records.length === 0 && !readFailed ? (
               desktopLoadingRows
-            ) : records.length === 0 ? (
+            ) : records.length === 0 ? (readFailed ? null :
               <TableRow>
                 <TableCell colSpan={11} className="h-32 p-0 text-center text-muted-foreground">
                   <div className="admin-empty-state flex h-32 items-center justify-center">표시할 데이터가 없습니다</div>
@@ -1776,7 +1793,7 @@ export function EvaluationTable({
         </Table>
         <div className="h-8" /> {/* 마지막 레코드가 잘리지 않도록 충분한 하단 여백 */}
           </div>
-          <div className="admin-cms-footer shrink-0 justify-between"><span>{records.length}개 표시</span><span>{activeFilterCount > 0 ? `필터 ${activeFilterCount}개 적용` : '전체 조건'}</span></div>
+          <div className="admin-cms-footer shrink-0 justify-between"><span>{readFailed && records.length === 0 ? '미확인' : `${records.length}개 표시`}</span><span>{activeFilterCount > 0 ? `필터 ${activeFilterCount}개 적용` : '전체 조건'}</span></div>
           </div>
         )}
         {loadMoreSentinel}

@@ -39,8 +39,10 @@ describe('repo design contract source', () => {
     const headerSource = appSource('components/layout/Header.tsx');
     const announcementPanelSource = appSource('components/announcement/AnnouncementPanel.tsx');
 
-    expect(designSource).toContain('warm ivory');
-    expect(designSource).toContain('red primary');
+    expect(designSource).toContain('warm cream');
+    expect(designSource).toContain('ink primary');
+    expect(designSource).toContain('Goodtzu');
+    expect(designSource).toContain('Gardens');
     expect(designSource).toContain('Pretendard for Korean UI/body density');
     expect(designSource).toContain('Noto Serif KR remains the intentional display/editorial role');
     expect(appGlobalsSource).toContain('--font-sans: var(--font-pretendard');
@@ -49,7 +51,9 @@ describe('repo design contract source', () => {
     expect(appGlobalsSource).not.toContain("font-family: 'Noto Serif KR'");
     expect(appGlobalsSource).not.toContain('@apply bg-background text-foreground font-serif tracking-tight;');
     expect(appGlobalsSource).toContain('@import "../styles/light-root-tokens.css";');
-    expect(appSource('styles/light-root-tokens.css')).toContain('--primary: 352 74% 42%');
+    expect(appSource('styles/light-root-tokens.css')).toContain('--primary: 0 0% 11%');
+    expect(appSource('styles/light-root-tokens.css')).toContain('--brand-tangerine: 18 100% 63%');
+    expect(appSource('styles/light-root-tokens.css')).toContain('--brand-garden: 146 58% 30%');
     expect(appGlobalsSource).toContain('--shadow-primary');
     expect(adminConsoleSource).toContain('rounded-2xl border border-border');
     expect(adminConsoleSource).toContain('shadow-primary');
@@ -59,7 +63,7 @@ describe('repo design contract source', () => {
     expect(adminOverviewSource).toContain('aria-label="관리자 지도 운영 개요 2분할"');
     expect(adminOverviewSource).toContain('getNaverIndividualMarkerVisual');
     expect(headerSource).toContain('font-sans');
-    expect(headerSource).toContain('bg-red-800 hover:bg-red-900');
+    expect(headerSource).toContain('bg-brand-ink hover:bg-black');
     expect(designSource).toContain('StyleGallery');
     expect(designSource).toContain('data-horizontal-scroll-owner');
     expect(designSource).toContain('mobile-theme-filter-reel');

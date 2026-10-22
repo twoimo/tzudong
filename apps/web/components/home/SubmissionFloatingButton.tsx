@@ -114,7 +114,7 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                     // [Mobile] 돋보기 아이콘과 동일한 크기 (h-12 w-12)
                     isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
                     "rounded-full shadow-sm",
-                    "bg-red-800 hover:bg-red-900 text-white",
+                    "bg-brand-ink hover:bg-black text-white",
                     "active:scale-95",
                     "flex items-center justify-center",
                     "border border-border/20"

@@ -2947,7 +2947,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                 <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="리뷰 작성 단계 진행률">
                                     {REVIEW_FORM_STEPS.map((step) => (
                                         <div key={step.id} className="space-y-1">
-                                            <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-red-800' : 'bg-muted'}`} />
+                                            <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-brand-tangerine' : 'bg-muted'}`} />
                                             <span className={`block text-center text-2xs ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
                                                 {step.label}
                                             </span>
@@ -3560,7 +3560,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                             <div className="grid grid-cols-3 gap-1.5" aria-label="리뷰 작성 안내 단계">
                                 {REVIEW_FORM_STEPS.map((step) => (
                                     <div key={step.id} className="space-y-1">
-                                        <div className="h-1.5 rounded-full bg-red-800" />
+                                        <div className="h-1.5 rounded-full bg-brand-tangerine" />
                                         <span className="block text-center text-2xs font-medium text-muted-foreground">
                                             {step.label}
                                         </span>

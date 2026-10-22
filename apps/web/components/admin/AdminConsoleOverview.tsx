@@ -10,11 +10,13 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
   type DragEventHandler,
+  type MouseEvent as ReactMouseEvent,
   type ReactElement,
   type ReactNode,
   type TouchEventHandler,
@@ -106,6 +108,7 @@ import {
 } from "@/lib/admin/sidebar-order";
 import { getMobileScrollNavVisibilityAction } from "@/lib/mobile-scroll-nav-visibility";
 import {
+  ADMIN_PENDING_COUNT_DOMAIN_IDS,
   ADMIN_PENDING_COUNTS_QUERY_KEY,
   getAdminPendingCountsTotal,
   getAdminPendingReviewCount,
@@ -118,6 +121,7 @@ import { readBrowserStorageString, writeBrowserStorageString } from "@/lib/brows
 import { resolveGitHubActionsRunUrl } from "@/lib/open-external-url";
 import { buildScopedBrowserTitle } from "@/lib/seo";
 import type { DashboardSummaryResponse } from "@/types/dashboard";
+import { adminQueryLastReadFailed } from "@/lib/admin/query-read-state";
 import type {
   InsightTreemapPeriod,
   InsightTreemapDataQualityStatus,
@@ -1239,6 +1243,27 @@ function formatNumber(value: number | null | undefined) {
     : "—";
 }
 
+function sumKnownNumbers(values: Array<number | null | undefined>): number | null {
+  let sum = 0;
+  for (const value of values) {
+    if (typeof value !== "number" || !Number.isFinite(value)) return null;
+    sum += value;
+  }
+  return sum;
+}
+
+function pendingCountsOmitADomainCount(payload: unknown) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+  const domains = (payload as { domains?: unknown }).domains;
+  if (!domains || typeof domains !== "object" || Array.isArray(domains)) return false;
+  return ADMIN_PENDING_COUNT_DOMAIN_IDS.some((id) => {
+    const domain = (domains as Record<string, unknown>)[id];
+    if (!domain || typeof domain !== "object" || Array.isArray(domain)) return false;
+    const count = (domain as { count?: unknown }).count;
+    return typeof count !== "number" || !Number.isFinite(count);
+  });
+}
+
 function formatSignedNumber(value: number | null | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "—";
   if (value === 0) return "0";
@@ -1436,7 +1461,13 @@ async function fetchAdminPendingCounts(): Promise<AdminPendingCountsResponse> {
     throw new Error("admin-pending-counts-failed");
   }
 
-  return normalizeAdminPendingCountsResponse(await response.json());
+  const payload: unknown = await response.json();
+  // A domain object without a numeric count is not a confirmed zero.
+  if (pendingCountsOmitADomainCount(payload)) {
+    throw new Error("admin-pending-counts-failed");
+  }
+
+  return normalizeAdminPendingCountsResponse(payload);
 }
 
 async function fetchDashboardSummary(): Promise<DashboardSummaryResponse> {
@@ -1532,6 +1563,8 @@ function useAdminOverviewStats(isAdmin: boolean): {
   stats: AdminOverviewStats;
   isLoading: boolean;
   hasError: boolean;
+  isRetrying: boolean;
+  retryFailed: () => void;
 } {
   const pendingCountsQuery = useQuery({
     queryKey: ADMIN_PENDING_COUNTS_QUERY_KEY,
@@ -1549,6 +1582,7 @@ function useAdminOverviewStats(isAdmin: boolean): {
   });
 
   const bannersQuery = useAdBannersAdmin(isAdmin);
+  const statsQueries = [pendingCountsQuery, dashboardSummaryQuery, bannersQuery];
   const banners = bannersQuery.data ?? [];
   const pendingCounts = pendingCountsQuery.data ?? null;
 
@@ -1579,13 +1613,18 @@ function useAdminOverviewStats(isAdmin: boolean): {
       dashboardVideos: dashboardSummaryQuery.data?.videos ?? null,
     },
     isLoading:
-      pendingCountsQuery.isLoading ||
-      dashboardSummaryQuery.isLoading ||
-      bannersQuery.isLoading,
-    hasError:
-      pendingCountsQuery.isError ||
-      dashboardSummaryQuery.isError ||
-      bannersQuery.isError,
+      (pendingCountsQuery.isLoading && !adminQueryLastReadFailed(pendingCountsQuery)) ||
+      (dashboardSummaryQuery.isLoading && !adminQueryLastReadFailed(dashboardSummaryQuery)) ||
+      (bannersQuery.isLoading && !adminQueryLastReadFailed(bannersQuery)),
+    hasError: statsQueries.some(adminQueryLastReadFailed),
+    isRetrying: statsQueries.some(
+      (query) => adminQueryLastReadFailed(query) && query.isFetching,
+    ),
+    retryFailed: () => {
+      for (const query of statsQueries) {
+        if (adminQueryLastReadFailed(query)) void query.refetch();
+      }
+    },
   };
 }
 
@@ -3424,9 +3463,15 @@ function AdminDashboardViewToggle({
             value === view && "bg-background text-foreground shadow-none",
           )}
           aria-pressed={value === view}
+          aria-label={`${label} ${view === "chart" ? "그래프" : "표"} 보기`}
           onClick={() => onChange(view)}
         >
-          {view === "chart" ? "그래프" : "표"}
+          {view === "chart" ? (
+            <BarChart2 className="hidden h-3.5 w-3.5" aria-hidden="true" data-admin-dashboard-view-icon="true" />
+          ) : (
+            <LayoutList className="hidden h-3.5 w-3.5" aria-hidden="true" data-admin-dashboard-view-icon="true" />
+          )}
+          <span data-admin-dashboard-view-label="true">{view === "chart" ? "그래프" : "표"}</span>
         </button>
       ))}
     </div>
@@ -3493,6 +3538,7 @@ function AdminDashboardSeriesToggle<Key extends string>({
     key: Key;
     label: string;
     dotClassName: string;
+    compactLabel?: string;
   }>;
   visibility: AdminDashboardSeriesVisibility<Key>;
   onToggle: (key: Key) => void;
@@ -3529,6 +3575,8 @@ function AdminDashboardSeriesToggle<Key extends string>({
             )}
             aria-pressed={isVisible}
             aria-label={`${option.label} ${isVisible ? "숨기기" : "보이기"}`}
+            data-admin-dashboard-series-compact={option.compactLabel ? "true" : undefined}
+            title={option.label}
             disabled={isLastVisible}
             onClick={() => onToggle(option.key)}
           >
@@ -3539,7 +3587,12 @@ function AdminDashboardSeriesToggle<Key extends string>({
               )}
               aria-hidden="true"
             />
-            {option.label}
+            <span data-admin-dashboard-series-label="true">{option.label}</span>
+            {option.compactLabel ? (
+              <span className="hidden" data-admin-dashboard-series-compact-label="true" aria-hidden="true">
+                {option.compactLabel}
+              </span>
+            ) : null}
           </button>
         );
       })}
@@ -4117,16 +4170,19 @@ function AdminDashboardManagementSkeleton() {
                     {
                       key: "views",
                       label: "조회수",
+                      compactLabel: "조회",
                       dotClassName: "bg-teal-500",
                     },
                     {
                       key: "engagement",
                       label: "참여",
+                      compactLabel: "참여",
                       dotClassName: "bg-muted-foreground/45",
                     },
                     {
                       key: "engagementRate",
                       label: "참여율",
+                      compactLabel: "비율",
                       dotClassName: "bg-amber-500",
                     },
                   ]}
@@ -4588,14 +4644,8 @@ function AdminDashboardOpsSummaryCard({
       rawValue: row.rawValue,
     })),
   );
-  const riskTotal = sections.reduce(
-    (sum, section) =>
-      section.title === "검수 리스크"
-        ? sum +
-          section.rows.reduce((rowSum, row) => rowSum + (row.rawValue ?? 0), 0)
-        : sum,
-    0,
-  );
+  const riskRows = sections.find((section) => section.title === "검수 리스크")?.rows;
+  const riskTotal = riskRows ? sumKnownNumbers(riskRows.map((row) => row.rawValue)) : null;
 
   return (
     <div
@@ -5810,17 +5860,26 @@ function AdminDashboardCollectionLogPopover({
   const latestJobs = logs?.workflow.latestJobs.slice(0, 3) ?? [];
   const snapshot = logs?.snapshot;
   const hasSavedSnapshot = Boolean(snapshot?.available);
+  const readFailed = !isLoading && !logs;
+  const snapshotReadFailed = snapshot?.error === "SNAPSHOT_QUERY_FAILED";
+  const workflowAccessDenied = /^github-runs-(401|403|404)$/.test(
+    logs?.workflow.error ?? "",
+  );
   const isWorkflowHealthy = latestRun
     ? latestRun.status !== "completed" || latestRun.conclusion === "success"
     : logs?.workflow.available;
   const collectionStatusLabel = hasSavedSnapshot
     ? "수집 정상"
-    : "저장 확인 필요";
+    : snapshotReadFailed
+      ? "저장 확인 실패"
+      : "저장 확인 필요";
   const collectionStatusClassName = hasSavedSnapshot
     ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950/40 dark:text-emerald-300"
     : "border-border bg-secondary text-foreground";
   const workflowStatusLabel = !logs?.workflow.available
-    ? "로그 권한 필요"
+    ? workflowAccessDenied
+      ? "로그 권한 필요"
+      : "로그 확인 실패"
     : latestRun
       ? getCollectionLogStatusLabel(latestRun.status, latestRun.conclusion)
       : "실행 없음";
@@ -5869,8 +5928,11 @@ function AdminDashboardCollectionLogPopover({
             variant="ghost"
             size="sm"
             className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-2xs font-bold md:h-7 md:min-h-0 md:min-w-0"
-            disabled={isFetching}
-            onClick={onRefresh}
+            aria-disabled={isFetching || undefined}
+            aria-busy={isFetching || undefined}
+            onClick={() => {
+              if (!isFetching) onRefresh();
+            }}
           >
             <RefreshCw
               className={cn("mr-1 h-3.5 w-3.5", isFetching && "animate-spin")}
@@ -5888,7 +5950,15 @@ function AdminDashboardCollectionLogPopover({
             </div>
           ) : null}
 
-          {!isLoading ? (
+          {readFailed ? (
+            <p
+              role="alert"
+              className="rounded-2xl border border-destructive/30 bg-destructive/5 p-3 text-xs font-semibold leading-5 text-destructive"
+              data-admin-dashboard-kpi-collection-log-read-failed="true"
+            >
+              수집 상태를 불러오지 못했습니다. 갱신을 눌러 다시 확인해 주세요.
+            </p>
+          ) : !isLoading ? (
             <>
               <div className="rounded-2xl border border-border/70 bg-muted/20 p-3">
                 <div className="flex items-start justify-between gap-3">
@@ -5907,12 +5977,16 @@ function AdminDashboardCollectionLogPopover({
                       )}
                       {hasSavedSnapshot
                         ? "최근 스냅샷 저장됨"
-                        : "저장된 스냅샷 없음"}
+                        : snapshotReadFailed
+                          ? "스냅샷 조회 실패"
+                          : "저장된 스냅샷 없음"}
                     </p>
                     <p className="mt-1 text-2xs leading-5 text-muted-foreground">
                       {hasSavedSnapshot
                         ? `마지막 저장: ${formatDashboardDateTime(snapshot?.fetchedAt)}`
-                        : "수집 결과가 아직 저장되지 않았습니다."}
+                        : snapshotReadFailed
+                          ? "저장된 스냅샷을 조회하지 못했습니다. 잠시 후 갱신해 주세요."
+                          : "수집 결과가 아직 저장되지 않았습니다."}
                     </p>
                   </div>
                   <Badge
@@ -5973,7 +6047,9 @@ function AdminDashboardCollectionLogPopover({
                         ? latestRun
                           ? `최근 실행: #${latestRun.runNumber ?? "—"} · ${formatDashboardDateTime(latestRun.startedAt ?? latestRun.createdAt)}`
                           : "워크플로는 찾았지만 실행 기록은 아직 없습니다."
-                        : "수집 실패가 아니라, 이 서버가 GitHub 실행 로그를 읽을 권한이 없는 상태입니다."}
+                        : workflowAccessDenied
+                          ? "수집 실패가 아니라, 이 서버가 GitHub 실행 로그를 읽을 권한이 없는 상태입니다."
+                          : "GitHub 실행 로그를 읽지 못해 수집 실행 결과를 아직 확인할 수 없습니다. 잠시 후 갱신해 주세요."}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -6003,7 +6079,7 @@ function AdminDashboardCollectionLogPopover({
                   </div>
                 </div>
 
-                {!logs?.workflow.available ? (
+                {!logs?.workflow.available && workflowAccessDenied ? (
                   <p className="mt-2 rounded-xl bg-muted/40 px-2 py-1.5 text-2xs leading-4 text-muted-foreground">
                     서버 환경 변수에 GitHub 읽기 토큰이 없거나 권한이
                     부족합니다. GITHUB_ACTIONS_TOKEN 또는 GH_TOKEN을 설정하면
@@ -6052,17 +6128,23 @@ function AdminDashboardManagementPanel({
   stats,
   isLoading,
   hasError,
+  isRetrying,
+  onRetry,
   isAdmin,
 }: {
   stats: AdminOverviewStats;
   isLoading: boolean;
   hasError: boolean;
+  isRetrying: boolean;
+  onRetry: () => void;
   isAdmin: boolean;
 }) {
   const { toast } = useToast();
   const lastDashboardDataErrorKindRef = useRef<
     "metrics" | "operations" | null
   >(null);
+  const dashboardRetryHadFocusRef = useRef(false);
+  const dashboardSummaryRef = useRef<HTMLSpanElement | null>(null);
   const [period, setPeriod] = useState<AdminDashboardPeriod>("1M");
   const [pendingSkeletonPeriod, setPendingSkeletonPeriod] =
     useState<AdminDashboardPeriod | null>(null);
@@ -6090,6 +6172,7 @@ function AdminDashboardManagementPanel({
   const [dashboardOrderMessage, setDashboardOrderMessage] = useState(
     "카드 순서는 관리자 계정별로 저장됩니다.",
   );
+  const [pdfReportMessage, setPdfReportMessage] = useState<string | null>(null);
   const [isDashboardMobileViewport, setIsDashboardMobileViewport] = useState(
     () => getIsAdminDashboardMobileViewport(),
   );
@@ -6752,13 +6835,26 @@ function AdminDashboardManagementPanel({
       ),
     [videosByPublishedAt],
   );
+  const insightFailedWithoutData = adminQueryLastReadFailed(insightQuery) && !insightQuery.data;
+  const growthFailedWithoutData = adminQueryLastReadFailed(growthInsightQuery) && !growthInsightQuery.data;
   const isInsightDynamicLoading =
-    insightQuery.isLoading ||
-    growthInsightQuery.isLoading ||
+    (insightQuery.isLoading && !insightFailedWithoutData) ||
+    (growthInsightQuery.isLoading && !growthFailedWithoutData) ||
     pendingSkeletonPeriod === period;
   const isChartLoading = isInsightDynamicLoading;
+  const metricReadFailedWithoutData = !isChartLoading && (insightFailedWithoutData || growthFailedWithoutData);
+  const isMetricValueHidden = isChartLoading || metricReadFailedWithoutData;
+  const formatMetricNumber = useCallback(
+    (value: number) => (isMetricValueHidden ? "—" : formatNumber(value)),
+    [isMetricValueHidden],
+  );
+  const metricReadFailedPanelBody = (
+    <p className="admin-empty-state p-6 text-center text-sm text-muted-foreground" data-admin-dashboard-metric-read-failed="true">
+      지표를 불러오지 못했습니다. 머리글의 다시 조회로 확인하세요.
+    </p>
+  );
   const dashboardDataErrorKind =
-    insightQuery.isError || growthInsightQuery.isError
+    adminQueryLastReadFailed(insightQuery) || adminQueryLastReadFailed(growthInsightQuery)
       ? "metrics"
       : hasError
         ? "operations"
@@ -6843,11 +6939,11 @@ function AdminDashboardManagementPanel({
   const trendDisplayedPointCount = trendPoints.length;
   const impactMetricLabel =
     getDashboardCardView("impact") === "table"
-      ? `${dashboardViewMetricLabel} · 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개`
+      ? `${dashboardViewMetricLabel} · 전체 ${formatMetricNumber(dashboardUploadVideoBasisCount)}개`
       : impactDisplayedVideoCount < dashboardUploadVideoBasisCount
         ? `${dashboardViewMetricLabel} · 상위 ${formatNumber(impactDisplayedVideoCount)}/${formatNumber(dashboardUploadVideoBasisCount)}개`
-        : `${dashboardViewMetricLabel} · 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개`;
-  const trendMetricLabel = `${dashboardViewMetricLabel} · 전체 ${formatNumber(trendDisplayedPointCount)}개`;
+        : `${dashboardViewMetricLabel} · 전체 ${formatMetricNumber(dashboardUploadVideoBasisCount)}개`;
+  const trendMetricLabel = `${dashboardViewMetricLabel} · 전체 ${formatMetricNumber(trendDisplayedPointCount)}개`;
   const selectedPeriodLabel =
     ADMIN_DASHBOARD_PERIOD_OPTIONS.find((option) => option.value === period)
       ?.label ?? "선택 기간";
@@ -6888,8 +6984,9 @@ function AdminDashboardManagementPanel({
       ),
     [channelStats?.previousSubscriberCount, channelStats?.subscriberCount],
   );
+  const channelReadFailedWithoutData = adminQueryLastReadFailed(youtubeChannelQuery) && !youtubeChannelQuery.data;
   const isSubscriberLoading =
-    youtubeChannelQuery.isLoading || pendingSkeletonPeriod === period;
+    (youtubeChannelQuery.isLoading && !channelReadFailedWithoutData) || pendingSkeletonPeriod === period;
   const hasSubscriberCount = channelStats?.subscriberCount != null;
   const cumulativeVideoTotal = channelStats?.videoCount ?? stats.totalVideos;
   const hasSnapshotVideoCountComparison =
@@ -6926,8 +7023,8 @@ function AdminDashboardManagementPanel({
   );
   const topContentComparisonCount = topContentVideosByInsightScore.length;
   const topContentCardMetric = hasPeriodGrowthComparison
-    ? `업로드 영상 ${formatNumber(topContentComparisonCount)}개`
-    : `선택 영상 ${formatNumber(topContentComparisonCount)}개`;
+    ? `업로드 영상 ${formatMetricNumber(topContentComparisonCount)}개`
+    : `선택 영상 ${formatMetricNumber(topContentComparisonCount)}개`;
   const uploadCountCohortChange = calculateDashboardUploadCountChange(
     growthVideos,
     period,
@@ -6987,22 +7084,22 @@ function AdminDashboardManagementPanel({
     {
       label: "영상 수",
       value: formatNumber(visibleVideoTotal),
-      rawValue: visibleVideoTotal ?? 0,
+      rawValue: visibleVideoTotal ?? null,
     },
     {
       label: "맛집 데이터",
       value: formatNumber(stats.totalRestaurants),
-      rawValue: stats.totalRestaurants ?? 0,
+      rawValue: stats.totalRestaurants,
     },
     {
       label: "좌표 완료",
       value: formatNumber(stats.withCoordinates),
-      rawValue: stats.withCoordinates ?? 0,
+      rawValue: stats.withCoordinates,
     },
     {
       label: "영상 연결",
       value: formatNumber(stats.totalVideos),
-      rawValue: stats.totalVideos ?? 0,
+      rawValue: stats.totalVideos,
     },
   ];
   const operationalLiabilities = [
@@ -7024,12 +7121,12 @@ function AdminDashboardManagementPanel({
     {
       label: "좌표 미완료",
       value: formatNumber(missingCoordinates),
-      rawValue: missingCoordinates ?? 0,
+      rawValue: missingCoordinates,
     },
     {
       label: "비활성 배너",
       value: formatNumber(stats.inactiveBanners),
-      rawValue: stats.inactiveBanners ?? 0,
+      rawValue: stats.inactiveBanners,
     },
   ];
   const impactTableRows = useMemo(
@@ -7310,22 +7407,22 @@ function AdminDashboardManagementPanel({
       },
       {
         label: viewCardTitle,
-        value: isChartLoading ? "—" : formatNumber(periodViewDisplayValue),
-        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeViewValue)}`,
+        value: isMetricValueHidden ? "—" : formatNumber(periodViewDisplayValue),
+        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeViewValue)}`,
       },
       {
         label: likeCardTitle,
-        value: isChartLoading ? "—" : formatNumber(periodLikeDisplayValue),
-        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`,
+        value: isMetricValueHidden ? "—" : formatNumber(periodLikeDisplayValue),
+        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeLikeValue)}`,
       },
       {
         label: commentCardTitle,
-        value: isChartLoading ? "—" : formatNumber(periodCommentDisplayValue),
-        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`,
+        value: isMetricValueHidden ? "—" : formatNumber(periodCommentDisplayValue),
+        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeCommentValue)}`,
       },
       {
         label: "업로드 영상 수",
-        value: isChartLoading ? "—" : formatNumber(periodUploadVideoValue),
+        value: isMetricValueHidden ? "—" : formatNumber(periodUploadVideoValue),
         caption: periodVideoCaption,
       },
     ];
@@ -7358,7 +7455,8 @@ function AdminDashboardManagementPanel({
     cumulativeLikeValue,
     cumulativeViewValue,
     dashboardViewMetricLabel,
-    isChartLoading,
+    formatMetricNumber,
+    isMetricValueHidden,
     likeCardTitle,
     periodCommentDisplayValue,
     periodLikeDisplayValue,
@@ -7381,23 +7479,53 @@ function AdminDashboardManagementPanel({
       generatedAtLabel: formatAdminDashboardReportGeneratedAt(),
     });
 
-    if (!opened) {
-      setDashboardOrderMessage(
-        "PDF 보고서 창을 열지 못했습니다. 브라우저 팝업 허용 상태를 확인해 주세요.",
-      );
-    } else {
-      setDashboardOrderMessage(
-        "PDF 보고서 창을 열었습니다. 새 창에서 PDF로 저장/인쇄 버튼이나 브라우저 인쇄 대화상자를 확인해 주세요.",
-      );
-    }
+    setPdfReportMessage(
+      opened
+        ? "PDF 보고서 창을 열었습니다. 새 창에서 PDF로 저장/인쇄 버튼이나 브라우저 인쇄 대화상자를 확인해 주세요."
+        : "PDF 보고서 창을 열지 못했습니다. 브라우저 팝업 허용 상태를 확인해 주세요.",
+    );
   }, [pdfReportData]);
+  const overviewHeadlineKnown =
+    typeof stats.pendingTotal === "number" &&
+    typeof stats.totalRestaurants === "number" &&
+    typeof stats.totalVideos === "number";
   const shouldShowMobileDashboardLoadingPrompt =
-    isDashboardMobileViewport && (isLoading || isSubscriberLoading || isChartLoading);
-  const dashboardHeaderSummary = isLoading
-    ? "KPI 데이터 조회 중"
-    : hasError
-      ? "일부 운영 데이터 확인 필요"
-      : `대기 ${formatNumber(stats.pendingTotal)}건 · 맛집 ${formatNumber(stats.totalRestaurants)}곳 · 영상 ${formatNumber(stats.totalVideos)}개`;
+    isDashboardMobileViewport && ((isLoading && !overviewHeadlineKnown) || isSubscriberLoading || isChartLoading);
+  const isDashboardRetrying =
+    isRetrying ||
+    [insightQuery, growthInsightQuery, youtubeChannelQuery].some(
+      (query) => adminQueryLastReadFailed(query) && query.isFetching,
+    );
+  const retryDashboardData = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    dashboardRetryHadFocusRef.current = document.activeElement === event.currentTarget;
+    onRetry();
+    for (const query of [insightQuery, growthInsightQuery, youtubeChannelQuery]) {
+      if (adminQueryLastReadFailed(query)) void query.refetch();
+    }
+  };
+  useLayoutEffect(() => {
+    if (isDashboardRetrying || !dashboardRetryHadFocusRef.current) return;
+    dashboardRetryHadFocusRef.current = false;
+    if (!dashboardDataErrorKind && document.activeElement === document.body) {
+      dashboardSummaryRef.current?.focus({ preventScroll: true });
+    }
+  }, [dashboardDataErrorKind, isDashboardRetrying]);
+  const dashboardHeaderSummary = dashboardDataErrorKind
+    ? (
+      <span className="inline-flex flex-wrap items-center gap-2" role="alert" data-admin-dashboard-read-error={dashboardDataErrorKind}>
+        <span>{dashboardDataErrorKind === "metrics" ? "지표 데이터 확인 필요" : "일부 운영 데이터 확인 필요"}</span>
+        <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" aria-busy={isDashboardRetrying} onClick={retryDashboardData}>
+          {isDashboardRetrying ? "조회 중…" : "다시 조회"}
+        </Button>
+      </span>
+    )
+    : (
+      <span ref={dashboardSummaryRef} tabIndex={-1} className="focus-visible:outline-none">
+        {isLoading && !overviewHeadlineKnown
+          ? "KPI 데이터 조회 중"
+          : `대기 ${formatNumber(stats.pendingTotal)}건 · 맛집 ${formatNumber(stats.totalRestaurants)}곳 · 영상 ${formatNumber(stats.totalVideos)}개`}
+      </span>
+    );
 
   return (
     <section
@@ -7466,9 +7594,9 @@ function AdminDashboardManagementPanel({
             <AdminDashboardCollectionLogPopover
               open={isCollectionLogsOpen}
               logs={collectionLogsQuery.data}
-              isLoading={collectionLogsQuery.isLoading}
+              isLoading={collectionLogsQuery.isLoading && !adminQueryLastReadFailed(collectionLogsQuery)}
               isFetching={collectionLogsQuery.isFetching}
-              isError={collectionLogsQuery.isError}
+              isError={adminQueryLastReadFailed(collectionLogsQuery)}
               onOpenChange={setIsCollectionLogsOpen}
               onRefresh={() => void collectionLogsQuery.refetch()}
             />
@@ -7499,6 +7627,15 @@ function AdminDashboardManagementPanel({
           data-admin-dashboard-order-live-status="true"
         >
           {dashboardOrderMessage}
+        </p>
+      ) : null}
+      {pdfReportMessage ? (
+        <p
+          role="status"
+          className="admin-detail-section mb-2 shrink-0 px-3 py-2 text-xs font-medium text-muted-foreground"
+          data-admin-dashboard-pdf-report-status="true"
+        >
+          {pdfReportMessage}
         </p>
       ) : null}
 
@@ -7554,8 +7691,8 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("views")}
           reorderProps={getDashboardCardReorderProps("views")}
-          value={isChartLoading ? "—" : formatNumber(viewCardValue)}
-          caption={`${videoPeriodDeltasAreFlat ? `${selectedPeriodLabel} · 채널 조회 순증` : periodMetricCaption} · 현재 전체 누적 ${formatNumber(channelStats?.viewCount ?? cumulativeViewValue)}`}
+          value={isMetricValueHidden ? "—" : formatNumber(viewCardValue)}
+          caption={`${videoPeriodDeltasAreFlat ? `${selectedPeriodLabel} · 채널 조회 순증` : periodMetricCaption} · 현재 전체 누적 ${channelStats?.viewCount != null ? formatNumber(channelStats.viewCount) : formatMetricNumber(cumulativeViewValue)}`}
           delta={formatDashboardChangeLabel(viewCardChange)}
           deltaLabel="기간 대비"
           progress={getDashboardChangeProgress(viewCardChange)}
@@ -7582,11 +7719,11 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("likes")}
           reorderProps={getDashboardCardReorderProps("likes")}
-          value={isChartLoading ? "—" : formatNumber(periodLikeDisplayValue)}
+          value={isMetricValueHidden ? "—" : formatNumber(periodLikeDisplayValue)}
           caption={
             likeRate == null
-              ? `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`
-              : `${periodRatioCaptionPrefix} ${formatDashboardPercent(likeRate)} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`
+              ? `${periodMetricCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeLikeValue)}`
+              : `${periodRatioCaptionPrefix} ${formatDashboardPercent(likeRate)} · 현재 전체 누적 ${formatMetricNumber(cumulativeLikeValue)}`
           }
           delta={formatDashboardChangeLabel(likeChange)}
           deltaLabel="기간 대비"
@@ -7614,11 +7751,11 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("comments")}
           reorderProps={getDashboardCardReorderProps("comments")}
-          value={isChartLoading ? "—" : formatNumber(periodCommentDisplayValue)}
+          value={isMetricValueHidden ? "—" : formatNumber(periodCommentDisplayValue)}
           caption={
             commentRate == null
-              ? `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`
-              : `${periodRatioCaptionPrefix} ${formatDashboardPercent(commentRate)} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`
+              ? `${periodMetricCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeCommentValue)}`
+              : `${periodRatioCaptionPrefix} ${formatDashboardPercent(commentRate)} · 현재 전체 누적 ${formatMetricNumber(cumulativeCommentValue)}`
           }
           delta={formatDashboardChangeLabel(commentChange)}
           deltaLabel="기간 대비"
@@ -7646,7 +7783,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("videos")}
           reorderProps={getDashboardCardReorderProps("videos")}
-          value={isChartLoading ? "—" : formatNumber(periodUploadVideoValue)}
+          value={isMetricValueHidden ? "—" : formatNumber(periodUploadVideoValue)}
           caption={periodVideoCaption}
           delta={formatDashboardChangeLabel(videoCountChange)}
           deltaLabel="기간 대비"
@@ -7684,6 +7821,7 @@ function AdminDashboardManagementPanel({
             title="상위 영상 영향도"
             metric={impactMetricLabel}
             infoLines={[
+              `요약: ${impactMetricLabel}.`,
               hasPeriodGrowthComparison
                 ? "설명: 선택 기간 업로드 영상 안에서 오른쪽으로 갈수록 조회 증가가 크고, 위로 갈수록 좋아요와 댓글 증가가 큽니다."
                 : "설명: 선택 기간 업로드 영상 안에서 오른쪽으로 갈수록 조회수가 크고, 위로 갈수록 좋아요와 댓글 합계가 큽니다.",
@@ -7691,6 +7829,7 @@ function AdminDashboardManagementPanel({
                 ? `표시: 그래프는 상위 ${formatNumber(impactDisplayedVideoCount)}/${formatNumber(dashboardUploadVideoBasisCount)}개, 표는 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.`
                 : `표시: 그래프와 표 모두 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.`,
               "읽는 법: 원이 클수록 조회수와 반응을 합친 영향도가 큰 영상입니다. 색은 순위 구분입니다.",
+              "색상 범례: 진한 청록부터 옅은 회색까지 상위 1~5위 순입니다.",
               "계산식: 참여 = 좋아요 + 댓글.",
               hasPeriodGrowthComparison
                 ? "기간 비교 때는 현재값에서 이전값을 뺀 증가량으로 위치를 잡습니다."
@@ -7726,6 +7865,8 @@ function AdminDashboardManagementPanel({
                     : "bubble"
                 }
               />
+            ) : metricReadFailedWithoutData ? (
+              metricReadFailedPanelBody
             ) : getDashboardCardView("impact") === "table" ? (
               <AdminDashboardScrollTable
                 rows={progressiveImpactTableRows}
@@ -7807,7 +7948,9 @@ function AdminDashboardManagementPanel({
             title="영상별 성과 분포"
             metric={trendMetricLabel}
             infoLines={[
+              `요약: ${trendMetricLabel}.`,
               "설명: 선택 기간 업로드 영상을 게시일 순서로 놓고 조회수, 참여, 참여율을 비교합니다.",
+              "지표 범례: 청록은 조회수, 회색은 참여, 주황은 참여율입니다. 제목 옆 버튼으로 각 지표를 숨기거나 표시합니다.",
               `표시: 그래프와 표 모두 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.`,
               "읽는 법: 조회·반응(좋아요+댓글)·반응률을 각각 100점 기준으로 맞춰 같은 눈금에서 비교합니다.",
               "참고: 참여는 좋아요와 댓글을 더한 값이고, 참여율은 조회수 대비 참여 비중입니다.",
@@ -7825,16 +7968,19 @@ function AdminDashboardManagementPanel({
                     {
                       key: "views",
                       label: "조회수",
+                      compactLabel: "조회",
                       dotClassName: "bg-teal-500",
                     },
                     {
                       key: "engagement",
                       label: "참여",
+                      compactLabel: "참여",
                       dotClassName: "bg-muted-foreground/45",
                     },
                     {
                       key: "engagementRate",
                       label: "참여율",
+                      compactLabel: "비율",
                       dotClassName: "bg-amber-500",
                     },
                   ]}
@@ -7864,6 +8010,8 @@ function AdminDashboardManagementPanel({
                   getDashboardCardView("trend") === "table" ? "table" : "line"
                 }
               />
+            ) : metricReadFailedWithoutData ? (
+              metricReadFailedPanelBody
             ) : getDashboardCardView("trend") === "table" ? (
               <AdminDashboardScrollTable
                 rows={progressiveTrendTableRows}
@@ -7890,9 +8038,11 @@ function AdminDashboardManagementPanel({
               rows: operationalAssets,
               totalLabel: "합계",
               totalValue: formatNumber(
-                (stats.totalRestaurants ?? 0) +
-                  (stats.totalVideos ?? 0) +
-                  (stats.activeBanners ?? 0),
+                sumKnownNumbers([
+                  stats.totalRestaurants,
+                  stats.totalVideos,
+                  stats.activeBanners,
+                ]),
               ),
             },
             {
@@ -7900,11 +8050,11 @@ function AdminDashboardManagementPanel({
               rows: operationalLiabilities,
               totalLabel: "합계",
               totalValue: formatNumber(
-                pendingTotal === null
-                  ? null
-                  : pendingTotal +
-                      (missingCoordinates ?? 0) +
-                      (stats.inactiveBanners ?? 0),
+                sumKnownNumbers([
+                  pendingTotal,
+                  missingCoordinates,
+                  stats.inactiveBanners,
+                ]),
               ),
             },
           ]}
@@ -8006,6 +8156,8 @@ function AdminDashboardManagementPanel({
                     : "stacked"
                 }
               />
+            ) : metricReadFailedWithoutData ? (
+              metricReadFailedPanelBody
             ) : getDashboardCardView("topContent") === "table" ? (
               <AdminDashboardScrollTable
                 rows={progressiveTopContentTableRows}
@@ -8036,7 +8188,7 @@ function AdminDashboardManagementPanel({
         >
           <AdminDashboardCardTitle
             title="성과 진단"
-            metric={`진단 신호 ${formatNumber(topContentInsights.length)}개 · ${topContentCardMetric}`}
+            metric={`진단 신호 ${formatMetricNumber(topContentInsights.length)}개 · ${topContentCardMetric}`}
             infoLines={[
               "설명: 지금 확인할 만한 영상 성과 신호를 요약한 카드입니다.",
               "읽는 법: 성과 기여, 참여율, 초반 반응, 재상승 후보를 작은 카드로 분류합니다.",
@@ -8078,6 +8230,8 @@ function AdminDashboardManagementPanel({
                     : "diagnosis"
                 }
               />
+            ) : metricReadFailedWithoutData ? (
+              metricReadFailedPanelBody
             ) : getDashboardCardView("engagementRate") === "table" ? (
               <AdminDashboardScrollTable
                 rows={diagnosisTableRows}
@@ -9169,6 +9323,19 @@ function AuditPlaceholder() {
   });
   const auditPayload = auditEventsQuery.data;
   const events = auditPayload?.events ?? [];
+  const auditReadFailed = adminQueryLastReadFailed(auditEventsQuery);
+  const isAuditFirstLoad = auditEventsQuery.isLoading && !auditReadFailed;
+  const isAuditRetrying = auditEventsQuery.isFetching;
+  const auditSearchRef = useRef<HTMLInputElement>(null);
+  const auditRetryRef = useRef<HTMLButtonElement>(null);
+  const auditPanelHadFocusRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!auditPanelHadFocusRef.current || document.activeElement !== document.body) return;
+    (auditRetryRef.current ?? auditSearchRef.current)?.focus();
+  });
+  const retryAuditRead = () => {
+    if (!isAuditRetrying) void auditEventsQuery.refetch();
+  };
   const normalizedSearch = search.trim().toLocaleLowerCase("ko-KR");
   const visibleEvents = events.filter((event) => (!status || event.status === status) &&
     (!normalizedSearch || [getAdminAuditActionLabel(event.action), event.reasonCode, event.id, event.targetUserId]
@@ -9185,7 +9352,7 @@ function AuditPlaceholder() {
   const coverageBadgeLabel =
     isAuditAuthUnavailable
       ? "세션 확인 필요"
-      : unavailable || auditEventsQuery.isError
+      : unavailable || (auditReadFailed && events.length === 0)
         ? "읽기 확인 필요"
         : hasTruthfulCoverage
           ? `부분 감사 · ${events.length}개`
@@ -9199,14 +9366,20 @@ function AuditPlaceholder() {
       icon={ScrollText}
       summary={coverageBadgeLabel}
       actions={<>
-        <Button size="sm" variant="ghost" aria-label="감사 로그 새로고침" disabled={auditEventsQuery.isFetching} onClick={() => auditEventsQuery.refetch()}><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />새로고침</Button>
+        <Button size="sm" variant="ghost" aria-label="감사 로그 새로고침" aria-disabled={isAuditRetrying || undefined} aria-busy={isAuditRetrying || undefined} onClick={retryAuditRead}><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />새로고침</Button>
         <Button asChild size="sm" variant="outline"><Link href="/admin/privacy-incidents" title="사람이 검토하고 처리합니다. 자동 신고나 수리 완료를 주장하지 않습니다." data-admin-privacy-incidents-link="true">개인정보 사고 대응<ExternalLink aria-hidden="true" className="h-3 w-3" /></Link></Button>
       </>}
       contentClassName="overflow-y-auto"
     >
-      <div className="min-h-[480px]">
+      <div
+        className="min-h-[480px]"
+        onFocus={() => { auditPanelHadFocusRef.current = true; }}
+        onBlur={(event) => {
+          if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) auditPanelHadFocusRef.current = false;
+        }}
+      >
         <div className="admin-cms-toolbar admin-toolbar">
-          <label className="relative min-w-0 flex-1"><Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /><input aria-label="감사 로그 검색" placeholder="작업·대상·감사 ID 검색" value={search} maxLength={256} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full rounded-md border bg-background pl-7 pr-2 text-xs" /></label>
+          <label className="relative min-w-0 flex-1"><Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /><input ref={auditSearchRef} aria-label="감사 로그 검색" placeholder="작업·대상·감사 ID 검색" value={search} maxLength={256} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full rounded-md border bg-background pl-7 pr-2 text-xs" /></label>
           <select aria-label="감사 처리 상태" value={status} onChange={(event) => setStatus(event.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs"><option value="">전체 상태</option><option value="intent">적용 전</option><option value="applied">적용됨</option><option value="failed">실패</option></select>
         </div>
         <details
@@ -9228,7 +9401,7 @@ function AuditPlaceholder() {
           </p>
         </details>
 
-        {auditEventsQuery.isLoading ? (
+        {isAuditFirstLoad ? (
           <div className="admin-detail-section space-y-2 p-3" aria-label="감사 로그 로딩 중">
             <Skeleton className="h-16 rounded-2xl" />
             <Skeleton className="h-16 rounded-2xl" />
@@ -9236,7 +9409,7 @@ function AuditPlaceholder() {
           </div>
         ) : null}
 
-        {!auditEventsQuery.isLoading && (unavailable || auditEventsQuery.isError) ? (
+        {!isAuditFirstLoad && (unavailable || (auditReadFailed && events.length === 0)) ? (
           <div
             className={cn(
               "admin-empty-state p-4 text-sm leading-6",
@@ -9279,11 +9452,46 @@ function AuditPlaceholder() {
                   감사 로그 다시 확인
                 </Button>
               </div>
-            ) : null}
+            ) : (
+              <Button
+                ref={auditRetryRef}
+                type="button"
+                size="sm"
+                variant="outline"
+                className="mt-3 h-8 bg-background"
+                aria-disabled={isAuditRetrying || undefined}
+                aria-busy={isAuditRetrying || undefined}
+                onClick={retryAuditRead}
+              >
+                {isAuditRetrying ? "확인 중…" : "감사 로그 다시 확인"}
+              </Button>
+            )}
           </div>
         ) : null}
 
-        {!auditEventsQuery.isLoading && !unavailable && !auditEventsQuery.isError && events.length === 0 ? (
+        {auditReadFailed && events.length > 0 && !unavailable ? (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center gap-2 border-b border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900"
+            data-admin-audit-stale-read="true"
+          >
+            <span className="min-w-0 flex-1">감사 로그를 다시 읽지 못했습니다. 이전 목록을 표시하고 있습니다.</span>
+            <Button
+              ref={auditRetryRef}
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 bg-background"
+              aria-disabled={isAuditRetrying || undefined}
+              aria-busy={isAuditRetrying || undefined}
+              onClick={retryAuditRead}
+            >
+              {isAuditRetrying ? "확인 중…" : "다시 확인"}
+            </Button>
+          </div>
+        ) : null}
+
+        {!isAuditFirstLoad && !unavailable && !auditReadFailed && events.length === 0 ? (
           <div
             className="admin-empty-state bg-muted/25 p-4 text-sm leading-6 text-muted-foreground"
             role="status"
@@ -9294,7 +9502,7 @@ function AuditPlaceholder() {
           </div>
         ) : null}
 
-        {events.length > 0 && !unavailable && !auditEventsQuery.isError ? (
+        {events.length > 0 && !unavailable ? (
           <>
             <div className="admin-cms-table-container">
               <table className="admin-cms-table" data-admin-audit-event-list="admin_audit_events">
@@ -10367,6 +10575,8 @@ export function AdminConsoleOverview({
     stats,
     isLoading: statsLoading,
     hasError: statsHasError,
+    isRetrying: statsRetrying,
+    retryFailed: retryFailedStats,
   } = useAdminOverviewStats(canLoadAdminConsoleData);
   const [activeModuleId, setActiveModuleId] =
     useState<AdminModuleId>(requestedModuleId);
@@ -11002,6 +11212,8 @@ export function AdminConsoleOverview({
                 stats={stats}
                 isLoading={statsLoading}
                 hasError={statsHasError}
+                isRetrying={statsRetrying}
+                onRetry={retryFailedStats}
                 isAdmin={canLoadAdminConsoleData}
               />
             </AdminEmbeddedModuleShell>

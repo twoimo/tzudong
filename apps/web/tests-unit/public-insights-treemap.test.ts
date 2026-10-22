@@ -67,13 +67,14 @@ describe('public insights treemap route support', () => {
     expect(routeSource).toContain("'Cache-Control': buildTreemapApiCacheControl()");
   });
 
-  test('renders dense public insights treemap context and small-cell guidance', () => {
+  test('keeps public treemap guidance available without a duplicate visible summary', () => {
     const insightsSource = source('app/insights/insights-client.tsx');
 
-    expect(insightsSource).toContain('data-insights-treemap-context="true"');
-    expect(insightsSource).toContain('트리맵 기준: ${metricLabel} · ${periodLabel} · ${selectedCount.toLocaleString()}개 영상 · ${modeLabel} · ${clusterContextText}');
-    expect(insightsSource).toContain('색상 범례: 전체 ${metricLabel} 비중이 높을수록 밝은 초록색입니다.');
-    expect(insightsSource).toContain('작은 칸 안내: 공간이 좁으면 지표나 …만 표시되고');
+    expect(insightsSource).toContain('aria-label="트리맵 읽는 법"');
+    expect(insightsSource).toContain('<PopoverTrigger asChild>');
+    expect(insightsSource).toContain('className="sr-only"');
+    expect(insightsSource).toContain('aria-describedby="insights-treemap-legend insights-treemap-small-cell-guidance"');
+    expect(insightsSource).not.toContain('data-insights-treemap-context="true"');
   });
 
   test('chooses treemap label foreground from measured color contrast', () => {

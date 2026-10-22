@@ -707,6 +707,7 @@ function buildRegionalClusterSignature(cluster: RegionalCluster): string {
         roundClusterCoord(cluster.center.lng),
         cluster.restaurantIds.join(','),
         cluster.categories.join(','),
+        cluster.popularityTier,
     ].join(':');
 }
 
@@ -2702,6 +2703,7 @@ const NaverMapView = memo(({
             count: number,
             categories: string[],
             uniqueKey: string | number,
+            popularityTier: "fire" | "ember" | "rainbow" | "standard" | undefined,
             onClick: () => void
         ) => {
             const renderPlan = mapOptimization.clusterAnimationEnabled
@@ -2712,6 +2714,7 @@ const NaverMapView = memo(({
                         clusterAnimationManager.register(hash);
                         return clusterAnimationManager.getCurrentIndex(hash, categoryCount);
                     },
+                    popularityTier,
                     position,
                     uniqueKey,
                 })
@@ -2719,6 +2722,7 @@ const NaverMapView = memo(({
                     categories,
                     count,
                     currentIndex: 0,
+                    popularityTier,
                     position,
                 });
 
@@ -2850,6 +2854,7 @@ const NaverMapView = memo(({
                         cluster.count,
                         cluster.categories,
                         cluster.region,
+                        cluster.popularityTier,
                         () => {
                             activateNoncriticalMapEffects();
                             hasUserMovedMapRef.current = true;
@@ -2914,6 +2919,7 @@ const NaverMapView = memo(({
                         cluster.count,
                         cluster.categories,
                         cluster.region,
+                        cluster.popularityTier,
                         () => {
                             activateNoncriticalMapEffects();
                             hasUserMovedMapRef.current = true;
@@ -3005,6 +3011,7 @@ const NaverMapView = memo(({
                                 feature.properties.point_count || 0,
                                 categories,
                                 clusterId,
+                                feature.properties.popularityTier,
                                 () => {
                                     activateNoncriticalMapEffects();
                                     hasUserMovedMapRef.current = true;
@@ -3214,6 +3221,7 @@ const NaverMapView = memo(({
                             count: cluster.count,
                             getCurrentIndex: (hash, categoryCount) =>
                                 clusterAnimationManager.getCurrentIndex(hash, categoryCount),
+                            popularityTier: cluster.popularityTier,
                             position: cluster.center,
                             uniqueKey: cluster.region,
                         });
@@ -3235,6 +3243,7 @@ const NaverMapView = memo(({
                             count: cluster.count,
                             getCurrentIndex: (hash, categoryCount) =>
                                 clusterAnimationManager.getCurrentIndex(hash, categoryCount),
+                            popularityTier: cluster.popularityTier,
                             position: cluster.center,
                             uniqueKey: cluster.region,
                         });
@@ -3266,6 +3275,7 @@ const NaverMapView = memo(({
                                 count: feature.properties.point_count || 0,
                                 getCurrentIndex: (hash, categoryCount) =>
                                     clusterAnimationManager.getCurrentIndex(hash, categoryCount),
+                                popularityTier: feature.properties.popularityTier,
                                 position: { lat, lng },
                                 uniqueKey: clusterId,
                             });

@@ -280,7 +280,7 @@ interface HomeDesktopControlPanelProps {
   contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;
   isMapFullscreen?: boolean;
   onPanelClose?: () => void;
-  onDetailPanelBack?: () => void;
+  onDetailPanelBack?: () => boolean | void;
   onReviewModalOpen?: () => void;
   onAdminEditRestaurant?: (restaurant: Restaurant) => void;
   onRequestEditRestaurant?: (restaurant: Restaurant) => void;
@@ -1265,7 +1265,8 @@ export default function HomeDesktopControlPanel({
     const returnProfileUserId = returnState.profileUserId;
 
     pendingDetailReturnCaptureRef.current = false;
-    (onDetailPanelBack ?? onPanelClose)?.();
+    if (onDetailPanelBack?.() === true) return;
+    if (!onDetailPanelBack) onPanelClose?.();
 
     setDesktopSearchQuery(returnState.searchQuery);
     setDesktopSearchType(returnState.searchType);

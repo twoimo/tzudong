@@ -561,9 +561,8 @@ export default function PrivacyIncidentsPage() {
       setSelectedIncidentId((current) => current && sortedIncidents.some((incident) => incident.id === current)
         ? current
         : sortedIncidents[0]?.id ?? null);
-    } catch (error) {
+    } catch {
       setIncidentListReadState((current) => nextIncidentListReadState(current, 'failure'));
-      setMessage(errorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -831,9 +830,10 @@ export default function PrivacyIncidentsPage() {
         actions={(
           <button
             type="button"
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-muted disabled:opacity-50"
-            onClick={() => void load()}
-            disabled={loading}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-muted aria-disabled:opacity-50"
+            onClick={() => { if (!loading) void load(); }}
+            aria-disabled={loading}
+            aria-busy={loading}
             aria-label="개인정보 사고 목록 새로고침"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />

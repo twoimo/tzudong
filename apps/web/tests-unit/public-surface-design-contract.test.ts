@@ -172,9 +172,13 @@ const APPROVED_HORIZONTAL_SCROLL_OWNERS = [
 ] as const;
 
 const LIGHT_TOKEN_LITERALS = [
-  '--background: 220 27% 98%',
-  '--primary: 352 74% 42%',
-  '--radius: 0.625rem',
+  '--background: 36 33% 97%',
+  '--primary: 0 0% 11%',
+  '--radius: 0.75rem',
+  '--brand-tangerine: 18 100% 63%',
+  '--brand-garden: 146 58% 30%',
+  '--brand-garden-text: 146 58% 30%',
+  '--brand-cream: 35 41% 94%',
   '--app-header-height: 56px',
   '--mobile-bottom-nav-height: 60px',
 ] as const;
@@ -415,7 +419,7 @@ describe('public surface design contract', () => {
       expect(partial).toContain(literal);
     }
     expect(partial).not.toMatch(/^\.dark\s*\{/m);
-    expect(partial).not.toContain('--primary: 352 78% 62%');
+    expect(partial).not.toContain('--primary: 18 100% 63%');
     expect(partial).not.toContain('@import "tailwindcss"');
     expect(partial).not.toContain('@source');
 
@@ -441,7 +445,10 @@ describe('public surface design contract', () => {
       );
     }
 
-    expect(readApp('app/app-globals.css')).toContain('--primary: 352 78% 62%');
+    expect(readApp('app/app-globals.css')).toContain('--primary: 18 100% 63%');
+    expect(readApp('app/app-globals.css')).toContain('--brand-garden-text: 146 42% 68%');
+    expect(readApp('app/app-globals.css')).toContain('--brand-cream: 32 14% 18%');
+    expect(readApp('app/globals.css')).toContain('--brand-garden-text: 146 42% 68%');
     expect(readApp('app/app-globals.css')).toContain('--admin-sidebar-expanded-width: calc(8.75rem * var(--phi))');
   });
 

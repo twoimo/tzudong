@@ -28,6 +28,7 @@ interface EvaluationSlideViewProps {
     onResolveConflict?: (record: EvaluationRecord) => void;
     onEdit?: (record: EvaluationRecord) => void;
     loading?: boolean;
+    readFailed?: boolean;
 }
 
 export function EvaluationSlideView({
@@ -40,7 +41,8 @@ export function EvaluationSlideView({
     onRegisterMissing,
     onResolveConflict,
     onEdit,
-    loading
+    loading,
+    readFailed = false
 }: EvaluationSlideViewProps) {
     const currentRecord = records[currentIndex];
     const isMobile = useIsMobile();
@@ -194,6 +196,7 @@ export function EvaluationSlideView({
     }, [currentIndex, records.length, onNavigate]);
 
     if (!currentRecord) {
+        if (readFailed) return null;
         return (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
                 <AlertCircle className="w-12 h-12 mb-4" />

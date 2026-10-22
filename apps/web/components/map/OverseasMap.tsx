@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import * as maplibregl from 'maplibre-gl';
 import '@/styles/maplibre-gl.css';
 import type { Restaurant } from '@/types/restaurant';
+import { syncPopularityMarkerInteraction } from '@/lib/evidence-engineering/popularity-marker';
 import type { FilterState } from '@/components/filters/filter-state';
 import { useRestaurants } from '@/hooks/use-restaurants';
 import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
@@ -225,6 +226,13 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                 setMapIssue(null);
                 setIsMapLoaded(true);
             });
+            const interactionElement = mapContainer.current;
+            mapInstance.on('movestart', () => {
+                if (interactionElement) syncPopularityMarkerInteraction(interactionElement, true);
+            });
+            mapInstance.on('moveend', () => {
+                if (interactionElement) syncPopularityMarkerInteraction(interactionElement, false);
+            });
 
             mapInstance.on('error', () => {
                 if (!disposed && !loaded) setMapIssue('error');
@@ -368,6 +376,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                 el.innerHTML = buildOverseasMarkerHtml({
                     imagePath,
                     name: restaurant.name,
+                    popularityTier: restaurant.popularity_tier,
                 });
 
                 el.addEventListener('click', (e) => {
@@ -382,9 +391,18 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                     .addTo(map.current!);
 
                 markersRef.current.set(restaurant.id, marker);
+            } else {
+                const marker = markersRef.current.get(restaurant.id)!;
+                const element = marker.getElement();
+                const tier = restaurant.popularity_tier ?? 'standard';
+                if (element.querySelector('[data-popularity-tier]')?.getAttribute('data-popularity-tier') !== tier) {
+                    element.innerHTML = buildOverseasMarkerHtml({ imagePath: getRestaurantCategoryIcon(restaurant), name: restaurant.name, popularityTier: tier });
+                    const activeId = getOverseasMarkerActiveId({ searchedRestaurantId: searchedRestaurant?.id, selectedRestaurantId: selectedRestaurant?.id });
+                    applyOverseasMarkerSelectedState({ container: element.querySelector('.marker-container'), isSelected: restaurant.id === activeId, markerElement: element });
+                }
             }
         });
-    }, [restaurantsToShow, isMapLoaded, moveToRestaurant, onRestaurantSelect, onMarkerClick]);
+    }, [restaurantsToShow, isMapLoaded, moveToRestaurant, onRestaurantSelect, onMarkerClick, searchedRestaurant, selectedRestaurant]);
 
     // Handle Selection State (Update existing markers without re-creating)
     useEffect(() => {
