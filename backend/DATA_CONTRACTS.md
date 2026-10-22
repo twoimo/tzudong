@@ -58,18 +58,76 @@ Video timestamps and internal reference markers belong in `reasoning_basis`. The
 
 ## CI/runtime environment contract
 
-`backend/bin/check_env_contract.py` is the fail-closed preflight for GitHub Actions runtime env shape. It reports only env names and boolean presence, never secret values. The `daily` profile requires the canonical GitHub secret set mapped into runtime names (`YOUTUBE_API_KEY_BYEON`, `GEMINI_API_KEY`, Supabase, Naver/NCP, and `RCLONE_CONFIG_BASE64`) and rejects removed repository-secret names such as Gemini OAuth credential blobs and model override envs. The `gdrive-backfill` profile requires only `RCLONE_CONFIG_BASE64`. Workflow preflight steps must run this guard before expensive pipeline work.
+`backend/bin/check_env_contract.py` is the fail-closed preflight for GitHub Actions runtime env shape. It reports only env names and boolean presence, never secret values. The `daily` profile requires the canonical GitHub secret set mapped into runtime names (`YOUTUBE_API_KEY_BYEON`, `GEMINI_API_KEY`, Supabase, Naver/NCP, and `RCLONE_CONFIG_BASE64`) and rejects removed repository-secret names such as Gemini OAuth credential blobs and model override envs. The `gdrive-backfill` profile requires only `RCLONE_CONFIG_BASE64`. Workflow steps or their entrypoints must run this guard before expensive pipeline work.
 The `pipeline-control` profile additionally requires `TZUDONG_DATA_ENV` and
 `PIPELINE_CONTROL_DSN` (presence only; never print values). `TZUDONG_DATA_ENV=local_db`
 must reject hosted project ref `aqlcofblfxdrjhhdmarw`.
-The `hosted-pending-apply` job evaluates at most one youtube ID absent from
-hosted, then inserts preview-selected `pending` restaurants. Guard:
+The hosted runner defaults to one video and accepts `--limit` up to three per
+invocation. A video may produce several restaurants; an intermediate selection
+file or one existing restaurant does not certify completion of every candidate.
+The evaluator verifies stage receipts and transformed output coverage, selecting
+latest uploads first while retaining older failures for retry. Guard:
 `backend.bin.tests.test_evaluate_new_youtube_videos`.
+
 The `hosted-pending-apply` profile requires `SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY`, and `TZUDONG_HOSTED_DATA_PLANE_APPROVED` (presence
-only). It inserts only preview-selected `pending` restaurants for youtube IDs
-absent from hosted. It does not set `PIPELINE_HOSTED_APPLY_ENABLED` or overwrite
-approved rows. Guard: `backend.supabase.scripts.test_hosted_data_plane`.
+`SUPABASE_SERVICE_ROLE_KEY`, and `TZUDONG_HOSTED_DATA_PLANE_APPROVED` by presence;
+actual apply separately requires the approval value `1`. Runner preflight runs
+before any child work and records failure in the bounded execution receipt.
+Guard: `backend.utils.tests.test_env_contract_preflight_ordering`.
+
+`run_hosted_new_video_pipeline.py --receipt-out` atomically writes bounded
+execution metadata. `startedAt` and `finishedAt` bound the runner invocation;
+`generatedAt` is when the local receipt document was serialized, not an artifact
+upload, hosted readback, publication, or a second completion time. `exitCode`
+is the runner's final exit code, while `publicationVerified` remains false.
+`executionId` is local correlation and `runnerSha256` hashes only this runner
+file; neither proves the repository revision. For `source=github_actions` only,
+all five Actions env fields (`GITHUB_RUN_ID`, `GITHUB_RUN_ATTEMPT`, `GITHUB_SHA`,
+`GITHUB_WORKFLOW`, `GITHUB_REF`) must pass bounded allowlist parsing before the
+receipt contains `github` (`runId`, `runAttempt`, `headSha`, `workflow`, `ref`)
+and `githubMetadataStatus=metadata_available`. Missing or malformed metadata
+produces `githubMetadataStatus=unavailable` with no partial `github` object.
+These are producer metadata hints, not verified source proof: an authorized
+reader must bind artifact, run, attempt, workflow, ref and head SHA independently.
+Local/Mac receipts never inherit incidental GitHub env values. Guard:
+`backend.bin.tests.test_restaurant_review_automation.PipelineExecutionReceiptTests`.
+
+
+The guarded admin pipeline GET can read the exact current `Crawler` main-run
+attempt's `hosted-pipeline-execution-{runId}-{attempt}` artifact. A producer
+receipt first yields only `metadata_matched`; only the server reader can return
+`artifact_bound` after independently matching run, attempt, source, hosted job
+execution times, artifact ownership/name/expiry and archive SHA-256. A missing,
+old, malformed, mismatched or inaccessible receipt stays unverified even when
+the overall Actions run succeeds. This composite receipt does not supply the
+legacy eight-node stage events, automatic-approval counts or public marker
+readback; the diagram must not synthesize them.
+
+The reader shares the existing eight-second GitHub deadline, limits API JSON
+and ZIP bytes separately to 256 KiB (at most 4,096 non-empty stream chunks),
+reads one in-memory ZIP32 `hosted-run.json`
+entry (store/deflate, output at most 64 KiB), and then admits at most 4 KiB of
+strict UTF-8 receipt JSON. Other entries, unsupported/encrypted/ZIP64 layouts,
+inconsistent boundaries/CRC/lengths and ambiguous metadata are rejected. Signed
+download URLs never receive GitHub authorization or cookies. The parser's
+36-hour age, 24-hour duration and 10-second elapsed-clock tolerance are
+conservative display validation policies, not measured latency or retention
+periods. Guarded GET, parsing, archive, transport and display fixtures live in
+`apps/web/tests-unit/admin-pipeline-control.test.ts`,
+`hosted-pipeline-receipt.test.ts`, `hosted-pipeline-archive.test.ts`,
+`hosted-pipeline-github.test.ts` and `pipeline-flow-view-model.test.ts`.
+
+The hosted CLI uses preview `schemaVersion=2` to bind candidate counts and
+allowed `trace_id` values to payload/preview hashes. Legacy video-level preview
+and snapshot callers remain compatible. An invalid existing trace holds its
+video; an existing row with no resolvable video identity stops apply entirely.
+Apply inserts only preview-selected `pending` rows if absent and never updates
+existing approved, deleted, or administrator-edited rows. Only matching POST
+representation and readback `id`, `trace_id`, and `pending` status count as a new
+insert. `rowReceipts` expose partial results alongside the existing video-level
+`reflection`; unresolved rows or identity holds produce a nonzero CLI exit.
+This does not set `PIPELINE_HOSTED_APPLY_ENABLED`, approve rows, or prove public
+marker visibility. Guard: `backend.supabase.scripts.test_hosted_data_plane`.
 
 ## Admin/ops status contract
 

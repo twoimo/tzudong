@@ -519,10 +519,10 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("Install locked Node dependencies for evaluate", daily_workflow)
         hosted_apply = daily_workflow[daily_workflow.find("hosted-pending-apply"):]
         self.assertNotIn("python3 -m pip install --disable-pip-version-check --upgrade pip", hosted_apply)
-        self.assertIn("python3 backend/bin/check_env_contract.py --profile hosted-pending-apply", daily_workflow)
         self.assertIn("run_hosted_new_video_pipeline.py", hosted_apply)
         runner = (BACKEND_ROOT / "bin" / "run_hosted_new_video_pipeline.py").read_text(encoding="utf-8")
         self.assertIn("apply_hosted_pending_candidates.py", runner)
+        self.assertIn('env_contract_preflight("hosted-pending-apply")', runner)
         launchd_installer = (
             BACKEND_ROOT / "bin" / "install_mac_hosted_pipeline_launchd.sh"
         ).read_text(encoding="utf-8")

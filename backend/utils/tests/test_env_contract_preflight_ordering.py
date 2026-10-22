@@ -11,10 +11,10 @@ This test pins two observable contracts of the environment-contract preflight:
 
 2. Each runner validates its mapped env-contract profile (one of ``daily``,
    ``pipeline-control``, ``hosted-pending-apply``, ``gdrive-backfill``) in a
-   step that runs strictly before any pipeline-work step for that runner. Since
-   a GitHub Actions ``run`` step halts its job on a non-zero exit, ordering the
-   contract check ahead of the pipeline step guarantees the check must exit 0
-   before any pipeline work begins (Requirement 7.1).
+   separate step or inside its entrypoint before any pipeline work. External
+   steps must propagate failure. The hosted entrypoint is executed with the
+   real validator and mocked child work to prove missing configuration halts
+   before work and leaves a bounded failure receipt (Requirement 7.1).
 
 No secret values are constructed from real credentials; all values used here
 are synthetic and never emitted.
@@ -22,12 +22,16 @@ are synthetic and never emitted.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from typing import Dict, List
 
@@ -60,6 +64,7 @@ WORKFLOW_RUNNERS = [
         "job": "hosted-pending-apply",
         "profiles": {"hosted-pending-apply"},
         "pipeline_markers": ("run_hosted_new_video_pipeline.py",),
+        "preflight_entrypoint": "backend/bin/run_hosted_new_video_pipeline.py",
     },
     {
         "path": ".github/workflows/gdrive-frame-backfill.yml",
@@ -224,6 +229,11 @@ class PreflightOrderingTest(unittest.TestCase):
                 )
 
                 for profile in runner["profiles"]:
+                    if "preflight_entrypoint" in runner:
+                        self._assert_entrypoint_preflight(
+                            runner["preflight_entrypoint"], profile, steps[pipeline_index]
+                        )
+                        continue
                     check_index = _first_index(
                         steps,
                         lambda step: "check_env_contract.py" in step.get("run", "")
@@ -240,6 +250,60 @@ class PreflightOrderingTest(unittest.TestCase):
                         f"profile {profile} check must precede pipeline work "
                         f"in job {runner['job']}",
                     )
+
+    def _assert_entrypoint_preflight(self, relative_path, profile, step):
+        run_text = step.get("run", "")
+        self.assertIn(f"python3 {relative_path}", run_text)
+        self.assertNotIn("|| true", run_text)
+        self.assertNotIn("|| exit 0", run_text)
+        spec = importlib.util.spec_from_file_location(
+            "hosted_env_preflight_runner", REPO_ROOT / relative_path
+        )
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        runner = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = runner
+        spec.loader.exec_module(runner)
+        validator = runner.env_contract_preflight
+        for configured in (False, True):
+            with self.subTest(profile=profile, configured=configured), tempfile.TemporaryDirectory() as folder:
+                events = []
+                receipt = Path(folder) / "receipt.json"
+
+                def validate(mapped_profile):
+                    events.append("preflight")
+                    return validator(mapped_profile)
+
+                def child_work(*args, **kwargs):
+                    events.append("work")
+                    return 0
+
+                env = _satisfying_env(profile) if configured else {}
+                with patch.dict(os.environ, env, clear=True), \
+                     patch.object(runner, "_load_backend_env"), \
+                     patch.object(runner, "cadence_source_preflight"), \
+                     patch.object(runner, "_apply_local_runtime_environment"), \
+                     patch.object(runner, "env_contract_preflight", side_effect=validate) as check, \
+                     patch.object(runner, "_run", side_effect=child_work) as work, \
+                     contextlib.redirect_stdout(io.StringIO()):
+                    argv = ["--dry-run", "--receipt-out", str(receipt),
+                            "--preview-out", str(Path(folder) / "preview.json")]
+                    if configured:
+                        self.assertEqual(runner.main(argv), 0)
+                    else:
+                        with self.assertRaises(SystemExit):
+                            runner.main(argv)
+                        work.assert_not_called()
+                    check.assert_called_once_with(profile)
+                report = json.loads(receipt.read_text())
+                self.assertEqual(events[0], "preflight")
+                if configured:
+                    self.assertIn("work", events)
+                else:
+                    self.assertEqual(events, ["preflight"])
+                    self.assertEqual((report["state"], report["stage"], report["exitCode"]),
+                                     ("failed", "preflight", 1))
+                    self.assertFalse(report["publicationVerified"])
 
     def test_env_contract_step_does_not_swallow_nonzero_exit(self) -> None:
         # A preflight that ignores its own exit code cannot fail closed. Assert

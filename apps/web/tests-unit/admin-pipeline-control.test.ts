@@ -13,6 +13,7 @@ import {
 import { GUARDED_MUTATION_CONFIRMATION } from "../lib/admin/guarded-mutation-contract";
 import { sha256Hex } from "../lib/admin/sha256-hex";
 import { parseGithubWorkflowState, parseOperationsSnapshot } from "../lib/admin/operations-view-model";
+import { readBoundedGithubJson, readHostedPipelineGithub } from "../lib/admin/hosted-pipeline-github";
 import { canControlPipelineJob, parsePipelineStatus } from "../lib/admin/pipeline-flow-view-model";
 
 const root = process.cwd();
@@ -31,6 +32,7 @@ const getSource = pipelineRoute.slice(pipelineRoute.indexOf("function noStore(")
     .replace("export async function GET", "async function GET");
 const createPipelineGet = new Function("fetch", "requireAdmin", "process", "NextResponse", "PIPELINE_API_BASE", "PIPELINE_UPSTREAM_TIMEOUT_MS",
   "allowlistedGauges", "allowlistedFailureFrames", "parseGithubWorkflowState",
+  "readBoundedGithubJson", "readHostedPipelineGithub",
   new Bun.Transpiler({ loader: "ts" }).transformSync(`${getSource}\nreturn GET;`)) as (...args: unknown[]) => () => Promise<Response>;
 
 function githubGetFixture(run: unknown, denial?: number, githubStatus = 200, payloadOverride?: unknown) {
@@ -45,7 +47,7 @@ function githubGetFixture(run: unknown, denial?: number, githubStatus = 200, pay
     return Response.json(payloadOverride === undefined ? { workflow_runs: run === undefined ? [] : [run] } : payloadOverride, { status: githubStatus });
   }, async () => denial ? { ok: false, response: Response.json({ error: "Forbidden" }, { status: denial }) } : { ok: true },
   { env: { GITHUB_REPOSITORY: "synthetic/repo" } }, { json: Response.json }, "https://pipeline.fixture", 1000,
-  () => ({}), () => [], parseGithubWorkflowState);
+  () => ({}), () => [], parseGithubWorkflowState, readBoundedGithubJson, readHostedPipelineGithub);
   return { get, requests };
 }
 
@@ -147,7 +149,7 @@ describe("GitHub pipeline fallback GET semantics", () => {
           GITHUB_TOKEN: "fixture-token",
         },
       }, { json: Response.json }, "https://pipeline.fixture", 1000,
-      () => ({}), () => [], parseGithubWorkflowState);
+      () => ({}), () => [], parseGithubWorkflowState, readBoundedGithubJson, readHostedPipelineGithub);
 
       const response = await get();
       expect(response.status).toBe(200);
@@ -166,6 +168,65 @@ describe("GitHub pipeline fallback GET semantics", () => {
           authorization: null,
         },
       ]);
+    }
+  });
+});
+
+
+describe("hosted receipt route boundary", () => {
+  const run = { id: 523, run_attempt: 2, workflow_id: 227106272, head_sha: "a".repeat(40),
+    head_branch: "main", path: ".github/workflows/daily-crawler.yml", name: "Crawler · main",
+    status: "completed", conclusion: "success", diagnostics: "private run detail" };
+
+  function fixture(payload: unknown, denied = false) {
+    let receiptReads = 0;
+    const requests: string[] = [];
+    const view = { runId: "523", runAttempt: "2", headSha: run.head_sha,
+      stage: "finished", state: "execution_completed", publicationVerified: false };
+    const get = createPipelineGet(async (input: string, init: RequestInit = {}) => {
+      requests.push(String(input));
+      if (String(input) === "https://pipeline.fixture/v1/targets") return new Response(null, { status: 503 });
+      expect(init.redirect).toBe("manual");
+      expect(init.credentials).toBe("omit");
+      return typeof payload === "string" ? new Response(payload) : Response.json(payload);
+    }, async () => denied ? { ok: false, response: Response.json({ error: "Forbidden" }, { status: 403 }) } : { ok: true },
+    { env: { GITHUB_REPOSITORY: "synthetic/repo", GITHUB_TOKEN: "configured-token" } },
+    { json: Response.json }, "https://pipeline.fixture", 1000, () => ({}), () => [], parseGithubWorkflowState,
+    readBoundedGithubJson, async (input: { repository: string; token: string; latestRun: unknown; signal: AbortSignal }) => {
+      receiptReads += 1;
+      expect(input.repository).toBe("synthetic/repo");
+      expect(input.token).toBe("configured-token");
+      expect(input.latestRun).toEqual(run);
+      expect(input.signal.aborted).toBe(false);
+      return { status: "artifact_bound", view };
+    });
+    return { get, requests, reads: () => receiptReads, view };
+  }
+
+  test("reads a receipt only after admin auth and returns its independently bound outcome separately from Actions", async () => {
+    const f = fixture({ workflow_runs: [run] });
+    const response = await f.get();
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const body = await response.json();
+    expect(body.githubRun).toEqual({ id: "523", runAttempt: "2", headSha: run.head_sha,
+      status: "completed", conclusion: "success" });
+    expect(body.hostedExecution).toEqual({ status: "artifact_bound", view: f.view });
+    expect(body.hostedExecution.view.publicationVerified).toBe(false);
+    expect(f.reads()).toBe(1);
+    expect(JSON.stringify(body)).not.toContain("private run detail");
+    expect(JSON.stringify(body)).not.toContain("configured-token");
+
+    const denied = fixture({ workflow_runs: [run] }, true);
+    expect((await denied.get()).status).toBe(403);
+    expect(denied.requests).toHaveLength(0);
+    expect(denied.reads()).toBe(0);
+  });
+
+  test("oversized workflow JSON and ambiguous latest runs cannot trigger artifact reads", async () => {
+    for (const payload of [" ".repeat(256 * 1024 + 1), { workflow_runs: [run, run] }]) {
+      const f = fixture(payload);
+      expect((await f.get()).status).toBe(502);
+      expect(f.reads()).toBe(0);
     }
   });
 });

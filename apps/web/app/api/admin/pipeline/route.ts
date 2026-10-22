@@ -16,6 +16,7 @@ import {
 } from "@/lib/admin/pipeline-control";
 import { getAdminSafeErrorName } from "@/lib/admin/guarded-mutation-contract";
 import { parseGithubWorkflowState } from "@/lib/admin/operations-view-model";
+import { readBoundedGithubJson, readHostedPipelineGithub } from "@/lib/admin/hosted-pipeline-github";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { readBoundedJsonRequest } from "@/lib/security/bounded-json-request";
 import { isTrustedSameOriginMutation } from "@/lib/security/same-origin-mutation";
@@ -155,7 +156,8 @@ function githubRepository(): string | null {
       ? `${process.env.GITHUB_OWNER?.trim() || ""}/${process.env.GITHUB_REPO?.trim() || ""}`
       : "";
   const repository = explicit || split || "twoimo/tzudong";
-  return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) ? repository : null;
+  return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)
+    && !repository.split("/").some(part => part === "." || part === "..") ? repository : null;
 }
 
 async function readGithubCrawlerSnapshot() {
@@ -170,25 +172,30 @@ async function readGithubCrawlerSnapshot() {
     "User-Agent": "tzudong-admin-pipeline",
   };
   const headers = token ? { ...publicHeaders, Authorization: `Bearer ${token}` } : publicHeaders;
+  let receiptToken = token;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PIPELINE_UPSTREAM_TIMEOUT_MS);
   try {
     const url = `https://api.github.com/repos/${repository}/actions/workflows/daily-crawler.yml/runs?per_page=1&branch=main`;
     let response = await fetch(
       url,
-      { headers, signal: controller.signal, cache: "no-store" },
+      { headers, signal: controller.signal, cache: "no-store", redirect: "manual", credentials: "omit" },
     );
     if (token && [401, 403, 404].includes(response.status)) {
+      receiptToken = ""; // A public workflow read cannot authorize artifact access.
+      void response.body?.cancel().catch(() => undefined);
       response = await fetch(url, {
         headers: publicHeaders,
         signal: controller.signal,
         cache: "no-store",
+        redirect: "manual",
+        credentials: "omit",
       });
     }
-    if (!response.ok) {
+    if (response.status !== 200 || response.redirected) {
       return null;
     }
-    const payload = (await response.json()) as {
+    const payload = (await readBoundedGithubJson(response, controller.signal)) as {
       workflow_runs?: Array<{
         id?: number;
         status?: string;
@@ -196,9 +203,15 @@ async function readGithubCrawlerSnapshot() {
         html_url?: string;
         display_title?: string;
         created_at?: string;
+        run_attempt?: number;
+        workflow_id?: number;
+        head_sha?: string;
+        head_branch?: string;
+        path?: string;
+        name?: string;
       }>;
     };
-    if (!Array.isArray(payload?.workflow_runs)) {
+    if (!Array.isArray(payload?.workflow_runs) || payload.workflow_runs.length !== 1) {
       return null;
     }
     const run = payload.workflow_runs?.[0];
@@ -207,6 +220,10 @@ async function readGithubCrawlerSnapshot() {
     }
     const state = parseGithubWorkflowState(run);
     const failureFrames = state.failed === true ? [{ errorCode: "github_crawler", line: "1" }] : [];
+    const hostedExecution = await readHostedPipelineGithub({
+      repository, token: receiptToken, latestRun: run, fetchImpl: fetch,
+      now: new Date().toISOString(), signal: controller.signal,
+    });
     return {
       targets: [],
       jobs: [
@@ -218,7 +235,14 @@ async function readGithubCrawlerSnapshot() {
           error_code: state.failed === true ? "github_crawler" : null,
         },
       ],
-      githubRun: { id: String(run.id), status: state.status, conclusion: state.conclusion },
+      githubRun: {
+        id: String(run.id), status: state.status, conclusion: state.conclusion,
+        ...(Number.isSafeInteger(run.run_attempt) && Number(run.run_attempt) > 0
+          ? { runAttempt: String(run.run_attempt) } : {}),
+        ...(typeof run.head_sha === "string" && /^[0-9a-f]{40}$/.test(run.head_sha)
+          ? { headSha: run.head_sha } : {}),
+      },
+      hostedExecution,
       failures: failureFrames,
       gauges: {},
       failureFrames,
@@ -230,6 +254,7 @@ async function readGithubCrawlerSnapshot() {
     return null;
   } finally {
     clearTimeout(timer);
+    controller.abort();
   }
 }
 

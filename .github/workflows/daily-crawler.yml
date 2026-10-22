@@ -952,9 +952,8 @@ jobs:
       - name: Install locked Node dependencies for evaluate
         working-directory: backend
         run: npm ci --ignore-scripts
-      - name: Preflight hosted pending apply env
-        run: python3 backend/bin/check_env_contract.py --profile hosted-pending-apply
       - name: Evaluate new videos then pending-apply
+        id: hosted_pipeline
         env:
           TZUDONG_PIPELINE_SOURCE: github_actions
         run: |
@@ -964,4 +963,12 @@ jobs:
             --channel tzuyang \
             --limit 3 \
             --review-automation \
-            --preview-out backend/log/cron/hosted-apply-preview.json
+            --preview-out backend/log/cron/hosted-apply-preview.json \
+            --receipt-out backend/log/cron/hosted-run.json
+      - name: Preserve bounded hosted pipeline execution receipt
+        if: ${{ always() && (steps.hosted_pipeline.outcome == 'success' || steps.hosted_pipeline.outcome == 'failure') }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1
+        with:
+          name: hosted-pipeline-execution-${{ github.run_id }}-${{ github.run_attempt }}
+          path: backend/log/cron/hosted-run.json
+          if-no-files-found: error

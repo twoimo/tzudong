@@ -113,8 +113,8 @@ def retire_outputs(paths: list[Path]) -> None:
 
 
 @contextmanager
-def stage_lock(receipt: Path) -> Iterator[int]:
-    """Single writer; POSIX callers may pass the descriptor to a live child."""
+def stage_lock(receipt: Path, *, release_on_close: bool = False) -> Iterator[int]:
+    """Single writer; opt-in POSIX leases last until all inherited FDs close."""
     receipt.parent.mkdir(parents=True, exist_ok=True)
     with receipt.with_suffix(receipt.suffix + ".lock").open("a+b") as handle:
         if os.name == "nt":
@@ -134,7 +134,8 @@ def stage_lock(receipt: Path) -> Iterator[int]:
             try:
                 yield handle.fileno()
             finally:
-                fcntl.flock(handle, fcntl.LOCK_UN)
+                if not release_on_close:
+                    fcntl.flock(handle, fcntl.LOCK_UN)
 
 
 STAGE_REUSED_EXIT = 10
