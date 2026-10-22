@@ -11,8 +11,8 @@ const { readFileSync } = require('node:fs');
 const { createRequire } = require('node:module');
 
 const file = process.argv[1];
-const originalSha = 'dfe8d350b7d13436f8409892c992cf90f20d7795a25235c4ca30764353b6afcc';
-const patchedSha = 'a8e1623f41b8df1d17e6e90c4ae3d439b24b654ba035a03b3d91e8b22c11d56c';
+const originalSha = 'c62af1c040758e369dbdefbf6df5782bfc77124c52ce7be7cd8885078731b2ca';
+const patchedSha = 'a63c95269e086c50988f86bf17af91da106b688ffab72aa12640cd72510f3e1a';
 const oldCall = '                this.publish({\n                    type: _hotreloadertypes.HMR_MESSAGE_SENT_TO_BROWSER.SYNC,';
 const newCall = '                this.publishToClient(client, {\n                    type: _hotreloadertypes.HMR_MESSAGE_SENT_TO_BROWSER.SYNC,';
 const hash = (value) => createHash('sha256').update(value).digest('hex');
@@ -53,7 +53,7 @@ class Socket {
 const harness = (Middleware) => {
   const compilers = [compiler(), compiler(), compiler()];
   const middleware = new Middleware(compilers, {}, '',
-    { experimental: { requestInsights: false }, cacheComponents: false }, {});
+    { experimental: { requestInsights: false }, cacheComponents: false }, {}, Promise.resolve(false));
   return { compilers, middleware };
 };
 function evaluate(Middleware) {
@@ -178,7 +178,7 @@ const runProbe = () => {
   };
 };
 
-describe('Next 16.3.8 initial HMR SYNC targeting', () => {
+describe('Next 16.4.2 initial HMR SYNC targeting', () => {
   let result: ReturnType<typeof runProbe>;
   beforeAll(() => { result = runProbe(); });
 

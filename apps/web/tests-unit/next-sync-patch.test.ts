@@ -9,8 +9,8 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { applyNextSyncPatch, nextSyncPatchErrorCode } from '../scripts/apply-next-sync-patch.mjs';
 
-const ORIGINAL_SHA = 'dfe8d350b7d13436f8409892c992cf90f20d7795a25235c4ca30764353b6afcc';
-const PATCHED_SHA = 'a8e1623f41b8df1d17e6e90c4ae3d439b24b654ba035a03b3d91e8b22c11d56c';
+const ORIGINAL_SHA = 'c62af1c040758e369dbdefbf6df5782bfc77124c52ce7be7cd8885078731b2ca';
+const PATCHED_SHA = 'a63c95269e086c50988f86bf17af91da106b688ffab72aa12640cd72510f3e1a';
 const OLD = '                this.publish({\n                    type: _hotreloadertypes.HMR_MESSAGE_SENT_TO_BROWSER.SYNC,';
 const NEW = '                this.publishToClient(client, {\n                    type: _hotreloadertypes.HMR_MESSAGE_SENT_TO_BROWSER.SYNC,';
 const appRoot = join(import.meta.dir, '..');
@@ -37,11 +37,11 @@ function fixture() {
   const next = join(root, 'node_modules', 'next');
   const target = join(next, 'dist', 'server', 'dev', 'hot-middleware.js');
   mkdirSync(join(next, 'dist', 'server', 'dev'), { recursive: true });
-  writeFileSync(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.8' } }));
+  writeFileSync(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.4.2' } }));
   writeFileSync(join(root, 'package-lock.json'), JSON.stringify({
-    packages: { '': { dependencies: { next: '16.3.8' } }, 'node_modules/next': { version: '16.3.8' } },
+    packages: { '': { dependencies: { next: '16.4.2' } }, 'node_modules/next': { version: '16.4.2' } },
   }));
-  writeFileSync(join(next, 'package.json'), JSON.stringify({ name: 'next', version: '16.3.8' }));
+  writeFileSync(join(next, 'package.json'), JSON.stringify({ name: 'next', version: '16.4.2' }));
   writeFileSync(target, originalNextModule());
   return { root, next, target };
 }
@@ -59,7 +59,7 @@ function rejects(action: () => unknown, code: string) {
   expect(observed).toBe(`NEXT_SYNC_PATCH_${code}`);
 }
 
-describe('Next 16.3.8 initial SYNC installer trust boundary', () => {
+describe('Next 16.4.2 initial SYNC installer trust boundary', () => {
   test('maps unexpected native errors to one fixed code', () => {
     expect(nextSyncPatchErrorCode(new Error('private/path or content'))).toBe('NEXT_SYNC_PATCH_FAILED');
   });
@@ -86,7 +86,7 @@ describe('Next 16.3.8 initial SYNC installer trust boundary', () => {
       writeFileSync(target, 'unknown module');
       rejects(() => applyNextSyncPatch(root), 'UNKNOWN_SOURCE');
       expect(readFileSync(target, 'utf8')).toBe('unknown module');
-      expect(readFileSync(join(root, 'package.json'), 'utf8')).toContain('16.3.8');
+      expect(readFileSync(join(root, 'package.json'), 'utf8')).toContain('16.4.2');
     });
     withFixture(({ root, target }) => {
       writeFileSync(target, Buffer.alloc(64 * 1024 + 1));
@@ -103,8 +103,8 @@ describe('Next 16.3.8 initial SYNC installer trust boundary', () => {
   test('rejects wrong manifest, npm lock, or installed package identity', () => {
     for (const [relative, body] of [
       ['package.json', JSON.stringify({ dependencies: { next: '16.3.9' } })],
-      ['package-lock.json', JSON.stringify({ packages: { '': { dependencies: { next: '16.3.8' } }, 'node_modules/next': { version: '16.3.9' } } })],
-      ['node_modules/next/package.json', JSON.stringify({ name: 'not-next', version: '16.3.8' })],
+      ['package-lock.json', JSON.stringify({ packages: { '': { dependencies: { next: '16.4.2' } }, 'node_modules/next': { version: '16.3.9' } } })],
+      ['node_modules/next/package.json', JSON.stringify({ name: 'not-next', version: '16.4.2' })],
     ] as const) {
       withFixture(({ root, target }) => {
         writeFileSync(join(root, relative), body);
