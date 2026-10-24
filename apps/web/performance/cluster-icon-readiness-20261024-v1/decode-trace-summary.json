@@ -1,0 +1,1825 @@
+{
+  "baseline": "1b5230ac93021c72499f4950bff6cda24e2515e5",
+  "recordedAt": "2026-10-24T04:51:58.844Z",
+  "scope": "Six separate local mechanism traces; event duration sums may overlap threads and are not interaction elapsed times or production measurements.",
+  "results": [
+    {
+      "width": 1440,
+      "height": 1000,
+      "candidate": false,
+      "expandMarkObserved": true,
+      "imageEvents": [
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -39.674,
+          "durationMs": 0.617,
+          "thread": 105742363
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -39.41,
+          "durationMs": 0.279,
+          "thread": 105742363
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 93.998,
+          "durationMs": 0.265,
+          "thread": 105742363
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94,
+          "durationMs": 0.292,
+          "thread": 105742417
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.004,
+          "durationMs": 0.223,
+          "thread": 105742351
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.024,
+          "durationMs": 0.216,
+          "thread": 105742363
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.025,
+          "durationMs": 0.171,
+          "thread": 105742351
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.032,
+          "durationMs": 0.246,
+          "thread": 105742417
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.079,
+          "durationMs": 0.265,
+          "thread": 105742423
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.103,
+          "durationMs": 0.222,
+          "thread": 105742423
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.236,
+          "durationMs": 0.282,
+          "thread": 105742351
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.241,
+          "durationMs": 0.26,
+          "thread": 105742351
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.267,
+          "durationMs": 0.172,
+          "thread": 105742363
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.272,
+          "durationMs": 0.156,
+          "thread": 105742363
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.297,
+          "durationMs": 0.163,
+          "thread": 105742417
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.304,
+          "durationMs": 0.148,
+          "thread": 105742417
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.35,
+          "durationMs": 0.279,
+          "thread": 105742423
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.354,
+          "durationMs": 0.242,
+          "thread": 105742423
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.442,
+          "durationMs": 0.285,
+          "thread": 105742363
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.45,
+          "durationMs": 0.237,
+          "thread": 105742363
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.464,
+          "durationMs": 0.254,
+          "thread": 105742417
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.468,
+          "durationMs": 0.233,
+          "thread": 105742417
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.527,
+          "durationMs": 0.284,
+          "thread": 105742351
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.533,
+          "durationMs": 0.261,
+          "thread": 105742351
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.641,
+          "durationMs": 0.256,
+          "thread": 105742423
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.652,
+          "durationMs": 0.227,
+          "thread": 105742423
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.726,
+          "durationMs": 0.251,
+          "thread": 105742417
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.732,
+          "durationMs": 0.236,
+          "thread": 105742417
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.738,
+          "durationMs": 0.252,
+          "thread": 105742363
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.746,
+          "durationMs": 0.228,
+          "thread": 105742363
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.819,
+          "durationMs": 0.23,
+          "thread": 105742351
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.823,
+          "durationMs": 0.216,
+          "thread": 105742351
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.904,
+          "durationMs": 0.235,
+          "thread": 105742423
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.909,
+          "durationMs": 0.216,
+          "thread": 105742423
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 94.98,
+          "durationMs": 0.201,
+          "thread": 105742417
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 94.988,
+          "durationMs": 0.183,
+          "thread": 105742417
+        }
+      ],
+      "completeDecodeTaskDurationSumMs": 8.783000000000001
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "candidate": true,
+      "expandMarkObserved": true,
+      "imageEvents": [
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -53.526,
+          "durationMs": 0.707,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -53.365,
+          "durationMs": 0.527,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -52.77,
+          "durationMs": 0.357,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -52.757,
+          "durationMs": 0.34,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -52.387,
+          "durationMs": 0.326,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -52.361,
+          "durationMs": 0.295,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -52.032,
+          "durationMs": 0.343,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -52.018,
+          "durationMs": 0.322,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -48.911,
+          "durationMs": 0.6,
+          "thread": 105743016
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -48.793,
+          "durationMs": 0.475,
+          "thread": 105743016
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -45.175,
+          "durationMs": 0.374,
+          "thread": 105743016
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -45.12,
+          "durationMs": 0.315,
+          "thread": 105743016
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -44.759,
+          "durationMs": 0.428,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -44.748,
+          "durationMs": 0.411,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -44.291,
+          "durationMs": 0.23,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -44.274,
+          "durationMs": 0.211,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -41.216,
+          "durationMs": 0.245,
+          "thread": 105743016
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -41.193,
+          "durationMs": 0.218,
+          "thread": 105743016
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -40.92,
+          "durationMs": 0.314,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -40.873,
+          "durationMs": 0.26,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -40.579,
+          "durationMs": 0.356,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -40.569,
+          "durationMs": 0.342,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -40.196,
+          "durationMs": 0.237,
+          "thread": 105743016
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -40.182,
+          "durationMs": 0.22,
+          "thread": 105743016
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -39.937,
+          "durationMs": 0.2,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -39.929,
+          "durationMs": 0.189,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -39.704,
+          "durationMs": 0.311,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -39.697,
+          "durationMs": 0.3,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -39.365,
+          "durationMs": 0.167,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -39.35,
+          "durationMs": 0.149,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -39.172,
+          "durationMs": 0.232,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -39.166,
+          "durationMs": 0.224,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -38.919,
+          "durationMs": 0.149,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -38.912,
+          "durationMs": 0.14,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -38.735,
+          "durationMs": 0.217,
+          "thread": 105743010
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -38.727,
+          "durationMs": 0.206,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 37.458,
+          "durationMs": 0.027,
+          "thread": 105743124
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 37.475,
+          "durationMs": 0.093,
+          "thread": 105743016
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 37.529,
+          "durationMs": 0.004,
+          "thread": 105743124
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 37.539,
+          "durationMs": 0.002,
+          "thread": 105743124
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 37.539,
+          "durationMs": 0.019,
+          "thread": 105743126
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 37.542,
+          "durationMs": 0.002,
+          "thread": 105743124
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 37.544,
+          "durationMs": 0.002,
+          "thread": 105743124
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "I",
+          "relativeToExpansionMs": 37.547,
+          "durationMs": null,
+          "thread": 105743124
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 37.548,
+          "durationMs": 0.001,
+          "thread": 105743124
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 37.55,
+          "durationMs": 0.001,
+          "thread": 105743124
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 37.551,
+          "durationMs": 0.021,
+          "thread": 105743124
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 37.564,
+          "durationMs": 0.02,
+          "thread": 105743010
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 37.572,
+          "durationMs": 0.002,
+          "thread": 105743016
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 37.576,
+          "durationMs": 0.001,
+          "thread": 105743124
+        }
+      ],
+      "completeDecodeTaskDurationSumMs": 11.131999999999998
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "candidate": false,
+      "expandMarkObserved": true,
+      "imageEvents": [
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -36.236,
+          "durationMs": 0.661,
+          "thread": 105743330
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -36.045,
+          "durationMs": 0.402,
+          "thread": 105743330
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.281,
+          "durationMs": 0.296,
+          "thread": 105743320
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.312,
+          "durationMs": 0.312,
+          "thread": 105743330
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.372,
+          "durationMs": 0.222,
+          "thread": 105743330
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.372,
+          "durationMs": 0.175,
+          "thread": 105743320
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.441,
+          "durationMs": 0.308,
+          "thread": 105743398
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.444,
+          "durationMs": 0.323,
+          "thread": 105743413
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.474,
+          "durationMs": 0.253,
+          "thread": 105743398
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.499,
+          "durationMs": 0.246,
+          "thread": 105743413
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.589,
+          "durationMs": 0.231,
+          "thread": 105743320
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.596,
+          "durationMs": 0.21,
+          "thread": 105743320
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.634,
+          "durationMs": 0.202,
+          "thread": 105743330
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.641,
+          "durationMs": 0.176,
+          "thread": 105743330
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.77,
+          "durationMs": 0.275,
+          "thread": 105743413
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.776,
+          "durationMs": 0.25,
+          "thread": 105743413
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.822,
+          "durationMs": 0.23,
+          "thread": 105743320
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.831,
+          "durationMs": 0.198,
+          "thread": 105743320
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.84,
+          "durationMs": 0.239,
+          "thread": 105743330
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.845,
+          "durationMs": 0.218,
+          "thread": 105743330
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.879,
+          "durationMs": 0.426,
+          "thread": 105743398
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.902,
+          "durationMs": 0.38,
+          "thread": 105743398
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 98.053,
+          "durationMs": 0.272,
+          "thread": 105743413
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 98.058,
+          "durationMs": 0.222,
+          "thread": 105743320
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 98.06,
+          "durationMs": 0.25,
+          "thread": 105743413
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 98.064,
+          "durationMs": 0.203,
+          "thread": 105743320
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 98.086,
+          "durationMs": 0.249,
+          "thread": 105743330
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 98.09,
+          "durationMs": 0.234,
+          "thread": 105743330
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 98.287,
+          "durationMs": 0.235,
+          "thread": 105743320
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 98.293,
+          "durationMs": 0.213,
+          "thread": 105743320
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 98.314,
+          "durationMs": 0.239,
+          "thread": 105743398
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 98.322,
+          "durationMs": 0.212,
+          "thread": 105743398
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 98.333,
+          "durationMs": 0.239,
+          "thread": 105743413
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 98.338,
+          "durationMs": 0.205,
+          "thread": 105743330
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 98.338,
+          "durationMs": 0.217,
+          "thread": 105743413
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 98.342,
+          "durationMs": 0.183,
+          "thread": 105743330
+        }
+      ],
+      "completeDecodeTaskDurationSumMs": 9.406000000000002
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "candidate": true,
+      "expandMarkObserved": true,
+      "imageEvents": [
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -49.753,
+          "durationMs": 0.627,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -49.486,
+          "durationMs": 0.345,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -49.097,
+          "durationMs": 0.232,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -49.09,
+          "durationMs": 0.219,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -48.838,
+          "durationMs": 0.256,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -48.826,
+          "durationMs": 0.242,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -48.559,
+          "durationMs": 0.245,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -48.549,
+          "durationMs": 0.232,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -48.215,
+          "durationMs": 0.293,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -48.193,
+          "durationMs": 0.268,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -47.889,
+          "durationMs": 0.349,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -47.879,
+          "durationMs": 0.336,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -47.511,
+          "durationMs": 0.251,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -47.497,
+          "durationMs": 0.218,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -47.24,
+          "durationMs": 0.224,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -47.232,
+          "durationMs": 0.213,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -46.986,
+          "durationMs": 0.212,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -46.976,
+          "durationMs": 0.199,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -46.734,
+          "durationMs": 0.348,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -46.73,
+          "durationMs": 0.338,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -46.36,
+          "durationMs": 0.285,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -46.346,
+          "durationMs": 0.268,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -46.031,
+          "durationMs": 0.231,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -46.017,
+          "durationMs": 0.214,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -45.758,
+          "durationMs": 0.206,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -45.744,
+          "durationMs": 0.19,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -45.514,
+          "durationMs": 0.304,
+          "thread": 105743837
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -45.491,
+          "durationMs": 0.276,
+          "thread": 105743837
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -45.184,
+          "durationMs": 0.236,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -45.176,
+          "durationMs": 0.225,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -44.914,
+          "durationMs": 0.182,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -44.905,
+          "durationMs": 0.169,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -44.709,
+          "durationMs": 0.179,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -44.687,
+          "durationMs": 0.154,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -44.493,
+          "durationMs": 0.245,
+          "thread": 105743827
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -44.486,
+          "durationMs": 0.235,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.209,
+          "durationMs": 0.02,
+          "thread": 105743837
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.219,
+          "durationMs": 0.014,
+          "thread": 105743875
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.235,
+          "durationMs": 0.008,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.247,
+          "durationMs": 0.003,
+          "thread": 105743875
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.248,
+          "durationMs": 0.009,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.252,
+          "durationMs": 0.036,
+          "thread": 105743875
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.259,
+          "durationMs": 0.002,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.262,
+          "durationMs": 0.001,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.263,
+          "durationMs": 0.001,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.265,
+          "durationMs": 0.014,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.281,
+          "durationMs": 0.001,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.283,
+          "durationMs": 0.001,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.285,
+          "durationMs": 0.001,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.287,
+          "durationMs": 0.002,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.291,
+          "durationMs": 0.001,
+          "thread": 105743827
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 40.292,
+          "durationMs": 0.001,
+          "thread": 105743875
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "I",
+          "relativeToExpansionMs": 40.293,
+          "durationMs": null,
+          "thread": 105743827
+        }
+      ],
+      "completeDecodeTaskDurationSumMs": 9.360999999999995
+    },
+    {
+      "width": 820,
+      "height": 1180,
+      "candidate": false,
+      "expandMarkObserved": true,
+      "imageEvents": [
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -37.729,
+          "durationMs": 0.689,
+          "thread": 105744072
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -37.406,
+          "durationMs": 0.292,
+          "thread": 105744072
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 96.498,
+          "durationMs": 0.33,
+          "thread": 105744146
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 96.516,
+          "durationMs": 0.416,
+          "thread": 105744072
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 96.53,
+          "durationMs": 0.389,
+          "thread": 105744062
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 96.549,
+          "durationMs": 0.247,
+          "thread": 105744146
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 96.55,
+          "durationMs": 0.353,
+          "thread": 105744072
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 96.552,
+          "durationMs": 0.341,
+          "thread": 105744062
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 96.845,
+          "durationMs": 0.216,
+          "thread": 105744146
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 96.858,
+          "durationMs": 0.189,
+          "thread": 105744146
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 96.862,
+          "durationMs": 0.304,
+          "thread": 105744180
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 96.884,
+          "durationMs": 0.249,
+          "thread": 105744180
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 96.928,
+          "durationMs": 0.255,
+          "thread": 105744062
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 96.935,
+          "durationMs": 0.231,
+          "thread": 105744062
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 96.94,
+          "durationMs": 0.2,
+          "thread": 105744072
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 96.952,
+          "durationMs": 0.175,
+          "thread": 105744072
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.067,
+          "durationMs": 0.219,
+          "thread": 105744146
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.071,
+          "durationMs": 0.204,
+          "thread": 105744146
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.144,
+          "durationMs": 0.249,
+          "thread": 105744072
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.158,
+          "durationMs": 0.223,
+          "thread": 105744072
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.175,
+          "durationMs": 0.313,
+          "thread": 105744180
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.181,
+          "durationMs": 0.295,
+          "thread": 105744180
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.191,
+          "durationMs": 0.27,
+          "thread": 105744062
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.197,
+          "durationMs": 0.242,
+          "thread": 105744062
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.29,
+          "durationMs": 0.214,
+          "thread": 105744146
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.293,
+          "durationMs": 0.195,
+          "thread": 105744146
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.399,
+          "durationMs": 0.268,
+          "thread": 105744072
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.402,
+          "durationMs": 0.256,
+          "thread": 105744072
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.472,
+          "durationMs": 0.243,
+          "thread": 105744062
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.478,
+          "durationMs": 0.22,
+          "thread": 105744062
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.494,
+          "durationMs": 0.226,
+          "thread": 105744180
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.499,
+          "durationMs": 0.205,
+          "thread": 105744180
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.51,
+          "durationMs": 0.233,
+          "thread": 105744146
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.515,
+          "durationMs": 0.21,
+          "thread": 105744146
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 97.671,
+          "durationMs": 0.192,
+          "thread": 105744072
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": 97.674,
+          "durationMs": 0.177,
+          "thread": 105744072
+        }
+      ],
+      "completeDecodeTaskDurationSumMs": 9.530000000000003
+    },
+    {
+      "width": 820,
+      "height": 1180,
+      "candidate": true,
+      "expandMarkObserved": true,
+      "imageEvents": [
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -60.027,
+          "durationMs": 0.698,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -59.718,
+          "durationMs": 0.369,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -59.308,
+          "durationMs": 0.255,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -59.299,
+          "durationMs": 0.243,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -59.031,
+          "durationMs": 0.259,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -59.023,
+          "durationMs": 0.247,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -58.751,
+          "durationMs": 0.256,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -58.742,
+          "durationMs": 0.243,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -58.476,
+          "durationMs": 0.242,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -58.468,
+          "durationMs": 0.232,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -58.212,
+          "durationMs": 0.224,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -58.206,
+          "durationMs": 0.217,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -57.448,
+          "durationMs": 0.268,
+          "thread": 105744599
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -57.427,
+          "durationMs": 0.243,
+          "thread": 105744599
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -57.156,
+          "durationMs": 0.234,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -57.135,
+          "durationMs": 0.211,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -56.896,
+          "durationMs": 0.217,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -56.89,
+          "durationMs": 0.209,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -56.654,
+          "durationMs": 0.264,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -56.65,
+          "durationMs": 0.257,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -56.368,
+          "durationMs": 0.245,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -56.356,
+          "durationMs": 0.23,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -56.092,
+          "durationMs": 0.266,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -56.084,
+          "durationMs": 0.255,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -55.471,
+          "durationMs": 0.216,
+          "thread": 105744599
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -55.453,
+          "durationMs": 0.195,
+          "thread": 105744599
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -55.228,
+          "durationMs": 0.426,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -55.216,
+          "durationMs": 0.41,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -54.78,
+          "durationMs": 0.159,
+          "thread": 105744599
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -54.773,
+          "durationMs": 0.15,
+          "thread": 105744599
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -54.59,
+          "durationMs": 0.222,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -54.581,
+          "durationMs": 0.21,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -54.344,
+          "durationMs": 0.179,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -54.334,
+          "durationMs": 0.167,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": -54.142,
+          "durationMs": 0.145,
+          "thread": 105744594
+        },
+        {
+          "name": "Decode Image",
+          "phase": "X",
+          "relativeToExpansionMs": -54.135,
+          "durationMs": 0.135,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 35.748,
+          "durationMs": 0.01,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 35.765,
+          "durationMs": 0.004,
+          "thread": 105744599
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 35.767,
+          "durationMs": 0.004,
+          "thread": 105744594
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 35.771,
+          "durationMs": 0.001,
+          "thread": 105744599
+        },
+        {
+          "name": "ImageDecodeTask",
+          "phase": "X",
+          "relativeToExpansionMs": 35.772,
+          "durationMs": 0.002,
+          "thread": 105744594
+        }
+      ],
+      "completeDecodeTaskDurationSumMs": 9.019
+    }
+  ]
+}

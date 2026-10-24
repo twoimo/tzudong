@@ -1,0 +1,122 @@
+{
+  "schemaVersion": "cluster-icon-readiness.artifacts.v1",
+  "baselineProductionSha": "1b5230ac93021c72499f4950bff6cda24e2515e5",
+  "scope": "New local candidate; no external review or new deployment completion",
+  "artifacts": [
+    {
+      "path": "apps/web/components/map/NaverMapView.tsx",
+      "bytes": 172360,
+      "sha256": "4ebfb5b8d7ae928cf0fe33aee21a447be6ed7c2ed726df7b6766e0910a3de3e7"
+    },
+    {
+      "path": "apps/web/lib/category-marker-image-primer.ts",
+      "bytes": 1514,
+      "sha256": "f9848b75cfdbb1cef0b0124c352c96388fbc7b089ea1bc0e51b6988f0939855b"
+    },
+    {
+      "path": "apps/web/lib/cluster-marker.ts",
+      "bytes": 10108,
+      "sha256": "6b944f97088a79aaf3510dc1625a7209d407f1e6cb2af4c9fbdf0dca01b63b91"
+    },
+    {
+      "path": "apps/web/lib/marker-pool.ts",
+      "bytes": 14532,
+      "sha256": "7541c064ab4190abc0fc7500ee7d5f91ac862ca4e3429b56b8b9b59659c0db4e"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/REPORT.md",
+      "bytes": 6913,
+      "sha256": "6fb980c2a2d41bc3dc601afa582c4158359105ab1970c8ec23d64c79a242f652"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/baseline-cluster-marker.ts.txt",
+      "bytes": 9772,
+      "sha256": "43414721e67e9e4f33a44a8cbefbd2b17f81a9f7f5fbf49261952c7cc0e4690f"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/build-artifacts.py",
+      "bytes": 1395,
+      "sha256": "327b6b8addbadbef724e8487c580981c6871579b85ec1d7843692e8edeebd90e"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/decode-trace-summary.json",
+      "bytes": 48095,
+      "sha256": "82712b4ea9e043860d0a6ef51906a8bff7fd3a4dcfba93f445ac430f9aa9a0eb"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/fixture.mjs",
+      "bytes": 3878,
+      "sha256": "a1ff661d2cefc651df612a237d7f66fa376b2310abf30f81f457b1f2986ffc55"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/historical-first-run/baseline-cluster-marker.ts.txt",
+      "bytes": 9772,
+      "sha256": "43414721e67e9e4f33a44a8cbefbd2b17f81a9f7f5fbf49261952c7cc0e4690f"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/historical-first-run/fixture.ts",
+      "bytes": 3666,
+      "sha256": "3492869328ef544c236fd95c9cce48f672be7551e52998f9cc3eacbe3982f0bb"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/historical-first-run/raw.json",
+      "bytes": 427052,
+      "sha256": "042b75568f3005aff2063043062f92e3603d90bfb63529a60585947f678c6c68"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/historical-first-run/run-fixture.ts",
+      "bytes": 5020,
+      "sha256": "e024e04c2a1748233de5004967a6aa32aab6d8f3f36363f5d27d8eb38dbf2f19"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/historical-first-run/scored.json",
+      "bytes": 5125,
+      "sha256": "e8d0394b4915521e3642fe3d1de01b0df5d0d9415ef910f2f9545c507acf789f"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/plan.md",
+      "bytes": 4060,
+      "sha256": "e54737b73284fe54ecb0981e2603a43550d279d3d50c4cecfb8c2b28d4378f05"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/raw.json",
+      "bytes": 427737,
+      "sha256": "f04f0cfc1d4056f628aabe7d00dc1b5bbf511820d6ab7ea6e23713bed7826ce6"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/run-fixture.mjs",
+      "bytes": 5590,
+      "sha256": "425d541dcd5dc60733f51ff6beb48fc428cd378738bb51ce175680e000257931"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/score.py",
+      "bytes": 4543,
+      "sha256": "26b12556802559ae55bf6833a0ab54899e08bb2848ceacf400decdabdda43220"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/scored.json",
+      "bytes": 5179,
+      "sha256": "f5ae68fccbebda27293a7dcf849a5b70ce081fc5cefd9c67425642a3e4e3364c"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/trace-fixture.mjs",
+      "bytes": 3073,
+      "sha256": "02dac1436d453c554c8eae59026aa68742297a65b3c0303a7e3fa0832da7a305"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/validate.py",
+      "bytes": 2232,
+      "sha256": "6a3eacaf70da5418c64b363a84cef9f30a446da9e68c758c0e536f0ac59eae27"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/verification.json",
+      "bytes": 1199,
+      "sha256": "c66031d84ead03c80bb6944ed679a5c9871db8253f9e22c041249cf72cd3f26e"
+    },
+    {
+      "path": "apps/web/tests-unit/category-marker-image-primer-browser.test.ts",
+      "bytes": 4128,
+      "sha256": "5a8731cc639931f704cef3e19a6ebb4700c7bd7ecbf7084ad18a835bdd8e155e"
+    }
+  ]
+}

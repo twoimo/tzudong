@@ -1,0 +1,22 @@
+{
+  "productCandidateDeployed": false,
+  "overallComplete": false,
+  "tests": {
+    "markerPoolVisualsAndMask": {"passed": 40, "assertions": 1273},
+    "realChromiumPrimer": {"passed": 3, "assertions": 15},
+    "scopedLint": "passed",
+    "compilerParity": {"status": "passed", "diagnostics": 0, "logicalInputs": 3228, "logicalInputNamesSha256": "9206ee61eb60f5fe8e0d3db40e2678c521ebc2ec4deebaa2f0adf8df8e04d274", "nonLibraryContentSha256": "39345352cd1d68c7383e18082b62bf6198c5034619d922243094e9a89d006b55"}
+  },
+  "baselineOperatingReadback": {
+    "observedAtApproximateUtc": "2026-10-24T04:48:00Z",
+    "url": "https://www.tzudong.app/",
+    "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "deploymentId": "dpl_FiHvmpQdmnDLNYXL9dquSFTFMpoB",
+    "sha": "1b5230ac93021c72499f4950bff6cda24e2515e5",
+    "state": "READY",
+    "target": "production",
+    "source": "Official Vercel get_alias filtered by exact project then get_deployment"
+  },
+  "release": {"preview": "NOT_RUN", "newProduction": "NOT_RUN", "operatingRollback": "NOT_RUN", "externalDeltaReview": "NOT_DISPATCHED_SHARED_ADMISSION_BLOCKED"},
+  "nightly": {"runId": "39457197351", "state": "historical_failure", "rerun": false}
+}
