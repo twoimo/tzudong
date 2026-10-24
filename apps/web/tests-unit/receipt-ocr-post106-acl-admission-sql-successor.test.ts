@@ -12,9 +12,13 @@ import {
   loadPost106AclSuccessorManifest,
   validatePost106AclTerminalState,
 } from '../scripts/receipt-ocr-post106-acl-admission-sql-successor.mjs';
+import { statementSpans } from '../scripts/supabase-migration-transaction.mjs';
 
 const temporaryDirectories: string[] = [];
 const sha256 = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
+const transactionControls = (sql: string) => statementSpans(sql)
+  .map(({ token }) => /^(?:BEGIN|COMMIT|END|ROLLBACK|ABORT|SAVEPOINT|RELEASE|START\s+TRANSACTION|PREPARE\s+TRANSACTION)\b/i.exec(token.trim())?.[0]?.toUpperCase())
+  .filter(Boolean);
 
 afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) {
@@ -33,8 +37,8 @@ describe('held receipt OCR 105 -> 106 -> 107 ACL admission successor', () => {
     });
     expect(record.manifest.baseSuccessor).toMatchObject({
       state: 'held_unapplied',
-      manifestSha256: 'ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81',
-      compilerSha256: '4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda',
+      manifestSha256: '63d02226cafe385518be4d4f56a93eb7dbb110b091a0e7085b42c50556994ebf',
+      compilerSha256: '0515e7c2cf3cf28aa5fa370350b8aaa109f5dbc9969227ac3600cb536daa181a',
       operatingTargetIdentityRoot: '83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1',
     });
     expect(record.material.identity).toEqual({
@@ -56,6 +60,15 @@ describe('held receipt OCR 105 -> 106 -> 107 ACL admission successor', () => {
     const plan = compilePost106AclOperatingPlan(record);
 
     expect(plan.transactionMode).toBe('single-explicit-outer-transaction');
+    expect(plan.priorReadback).toEqual(plan.basePlan.priorReadback);
+    expect(plan.migration.expectedPriorState).toEqual(plan.basePlan.finalReadback);
+    expect(plan.priorReadback.expected.bundle.ledgerCount).toBe(105);
+    expect(plan.migration.expectedPriorState.expected.bundle.ledgerCount).toBe(106);
+    expect(plan.sql).toBe(`BEGIN;\n${plan.transactionBodySql}COMMIT;\n`);
+    expect(transactionControls(plan.transactionBodySql)).toEqual([]);
+    expect(transactionControls(plan.sql)).toEqual(['BEGIN', 'COMMIT']);
+    expect(statementSpans(plan.transactionBodySql).filter(({ token }) =>
+      /^INSERT INTO supabase_migrations\.schema_migrations\b/i.test(token.trim()))).toHaveLength(2);
     expect(plan.sql.match(/\bBEGIN;/g)).toHaveLength(1);
     expect(plan.sql.match(/\bCOMMIT;/g)).toHaveLength(1);
     expect(plan.sql.match(/INSERT INTO supabase_migrations\.schema_migrations/g)).toHaveLength(2);
@@ -81,6 +94,8 @@ describe('held receipt OCR 105 -> 106 -> 107 ACL admission successor', () => {
       '1b869222e1efc419e744eeabda52fd1d1900a6a71308a7227a583859136706f7',
     );
     for (const plan of [operating, rehearsal]) {
+      expect(plan.sql).toBe(`BEGIN;\n${plan.transactionBodySql}COMMIT;\n`);
+      expect(transactionControls(plan.transactionBodySql)).toEqual([]);
       expect(plan.finalReadback.expected).toMatchObject({
         aclAdmitted: true,
         ledgerCount: 107,

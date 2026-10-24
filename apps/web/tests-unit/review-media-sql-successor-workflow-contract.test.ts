@@ -197,9 +197,11 @@ do
       until mkdir "$SERIALIZER_TEST_LOCK" 2>/dev/null; do sleep 0.01; done
       printf '\n'
       ;;
+    *pg_backend_pid*) printf '%s\n' REVIEW_MEDIA_SQL_SUCCESSOR_BACKEND:12345:1790000000000000 ;;
     '\\echo REVIEW_MEDIA_SQL_SUCCESSOR_LOCKED')
       printf '%s\\n' REVIEW_MEDIA_SQL_SUCCESSOR_LOCKED
       ;;
+    '\\echo REVIEW_MEDIA_SQL_SUCCESSOR_HEARTBEAT_'*) printf '%s\\n' "$(printf '%s' "$line" | cut -d' ' -f2)" ;;
     'ROLLBACK;')
       rmdir "$SERIALIZER_TEST_LOCK"
       ;;
@@ -255,6 +257,152 @@ printf 'end:%s\\n' "$3" >> "$SERIALIZER_TEST_LOG"
     expect(statSync(join(dirname(outputs.operating_input), 'serializer.stderr')).mode & 0o777).toBe(0o600);
   });
 
+  test('stops new and in-flight work when the serializer exits after locking', () => {
+    const prepare = stepRun('Create private exclusive operating input and serialized runner');
+    const runnerTemp = mkdtempSync(join(tmpdir(), 'tzudong-successor-lock-loss-'));
+    temporaryDirectories.push(runnerTemp);
+    const output = join(runnerTemp, 'github-output');
+    const evidence = '{"kind":"sanitized-local-vercel-evidence"}\n';
+    writeFileSync(output, '');
+    expect(runBash(prepare, runnerTemp, {
+      GITHUB_OUTPUT: output,
+      LOCAL_VERCEL_BUNDLE_SHA256: createHash('sha256').update(evidence).digest('hex'),
+      LOCAL_VERCEL_EVIDENCE: evidence,
+      RUNNER_TEMP: runnerTemp,
+    }).status).toBe(0);
+    const outputs = Object.fromEntries(readFileSync(output, 'utf8').trim().split('\n').map((line) => {
+      const separator = line.indexOf('=');
+      return [line.slice(0, separator), line.slice(separator + 1)];
+    }));
+    const fakeBin = join(runnerTemp, 'bin');
+    expect(spawnSync('mkdir', ['-p', fakeBin]).status).toBe(0);
+    writeFileSync(join(fakeBin, 'psql'), `#!/usr/bin/env bash
+set -euo pipefail
+heartbeats=0
+while IFS= read -r line
+do
+  case "$line" in
+    *pg_backend_pid*) printf '%s\\n' REVIEW_MEDIA_SQL_SUCCESSOR_BACKEND:12345:1790000000000000 ;;
+    '\\echo REVIEW_MEDIA_SQL_SUCCESSOR_LOCKED') printf '%s\\n' REVIEW_MEDIA_SQL_SUCCESSOR_LOCKED ;;
+    '\\echo REVIEW_MEDIA_SQL_SUCCESSOR_HEARTBEAT_'*)
+      heartbeats=$((heartbeats + 1))
+      if [[ "$LOCK_LOSS_STAGE" = initial ]]; then exit 1; fi
+      if [[ "$LOCK_LOSS_STAGE" = in-flight && "$heartbeats" -gt 1 ]]
+      then
+        for _ in {1..100}; do if [[ -f "$MUTATION_LOG" ]]; then break; fi; sleep 0.01; done
+        exit 1
+      fi
+      printf '%s\\n' "$(printf '%s' "$line" | cut -d' ' -f2)"
+      ;;
+    '\\quit')
+      if [[ "$LOCK_LOSS_STAGE" = on-exit ]]; then exit 1; fi
+      exit 0
+      ;;
+  esac
+done
+`, { mode: 0o700 });
+    writeFileSync(join(fakeBin, 'node'), `#!/usr/bin/env bash
+set -euo pipefail
+printf 'started\\n' >> "$MUTATION_LOG"
+sleep "$MUTATION_SLEEP"
+printf 'mutated\\n' >> "$MUTATION_LOG"
+printf '{"code":"COMMITTED","status":"committed"}\\n'
+`, { mode: 0o700 });
+    const mutationLog = join(runnerTemp, 'mutation.log');
+    const command = `"${outputs.serialized_runner}" node ` +
+      'apps/web/scripts/review-media-operating-orchestrator.mjs ' +
+      `--mode observe --input "${outputs.operating_input}" --custody-dir "${outputs.custody_dir}"`;
+    const common = {
+      EXPECTED_SOURCE_SHA: 'a'.repeat(40),
+      MUTATION_LOG: mutationLog,
+      MUTATION_SLEEP: '5',
+      PATH: `${fakeBin}:${process.env.PATH}`,
+      SUPABASE_DB_URL: 'postgresql://workflow-contract.invalid/database',
+    };
+    const before = runBash(command, runnerTemp, { ...common, LOCK_LOSS_STAGE: 'initial' });
+    expect(before.status).not.toBe(0);
+    expect(before.stdout).toBe('');
+    expect(existsSync(mutationLog)).toBe(false);
+
+    const during = runBash(command, runnerTemp, { ...common, LOCK_LOSS_STAGE: 'in-flight' });
+    expect(during.status).not.toBe(0);
+    expect(during.stdout).toBe('');
+    expect(readFileSync(mutationLog, 'utf8')).toBe('started\n');
+
+    const onExit = runBash(command, runnerTemp, {
+      ...common, LOCK_LOSS_STAGE: 'on-exit', MUTATION_SLEEP: '0.1',
+    });
+    expect(onExit.status).not.toBe(0);
+    expect(onExit.stdout).toBe('');
+    expect(readFileSync(mutationLog, 'utf8')).toBe('started\nstarted\nmutated\n');
+  }, 15_000);
+
+  test('TERM on the wrapper stops the guarded workload group before releasing the serializer', async () => {
+    const runnerTemp = mkdtempSync(join(tmpdir(), 'tzudong-successor-term-cleanup-'));
+    temporaryDirectories.push(runnerTemp);
+    const output = join(runnerTemp, 'github-output');
+    const evidence = '{"kind":"sanitized-local-vercel-evidence"}\n';
+    writeFileSync(output, '');
+    expect(runBash(stepRun('Create private exclusive operating input and serialized runner'), runnerTemp, {
+      GITHUB_OUTPUT: output,
+      LOCAL_VERCEL_BUNDLE_SHA256: createHash('sha256').update(evidence).digest('hex'),
+      LOCAL_VERCEL_EVIDENCE: evidence,
+      RUNNER_TEMP: runnerTemp,
+    }).status).toBe(0);
+    const outputs = Object.fromEntries(readFileSync(output, 'utf8').trim().split('\n').map(line => {
+      const separator = line.indexOf('=');
+      return [line.slice(0, separator), line.slice(separator + 1)];
+    }));
+    const fakeBin = join(runnerTemp, 'bin');
+    expect(spawnSync('mkdir', ['-p', fakeBin]).status).toBe(0);
+    writeFileSync(join(fakeBin, 'psql'), `#!/usr/bin/env bash
+set -euo pipefail
+while IFS= read -r line
+do
+  case "$line" in
+    *pg_backend_pid*) printf '%s\\n' REVIEW_MEDIA_SQL_SUCCESSOR_BACKEND:12345:1790000000000000 ;;
+    '\\echo REVIEW_MEDIA_SQL_SUCCESSOR_LOCKED') printf '%s\\n' REVIEW_MEDIA_SQL_SUCCESSOR_LOCKED ;;
+    '\\echo REVIEW_MEDIA_SQL_SUCCESSOR_HEARTBEAT_'*) printf '%s\\n' "$(printf '%s' "$line" | cut -d' ' -f2)" ;;
+    'ROLLBACK;') printf 'released\\n' >> "$EVENT_LOG" ;;
+    '\\quit') exit 0 ;;
+  esac
+done
+`, { mode: 0o700 });
+    writeFileSync(join(fakeBin, 'node'), `#!/usr/bin/env bash
+set -euo pipefail
+trap '' TERM
+printf '%s\\n' "$BASHPID" > "$WORKLOAD_PID"
+printf 'started\\n' >> "$EVENT_LOG"
+sleep 30
+printf 'mutated\\n' >> "$EVENT_LOG"
+`, { mode: 0o700 });
+    const eventLog = join(runnerTemp, 'events.log');
+    const workloadPid = join(runnerTemp, 'workload.pid');
+    const child = spawn(outputs.serialized_runner, [
+      'node', 'apps/web/scripts/review-media-operating-orchestrator.mjs',
+      '--mode', 'observe', '--input', outputs.operating_input,
+      '--custody-dir', outputs.custody_dir,
+    ], {
+      cwd: runnerTemp,
+      env: { ...process.env, EVENT_LOG: eventLog, WORKLOAD_PID: workloadPid,
+        EXPECTED_SOURCE_SHA: 'a'.repeat(40), PATH: `${fakeBin}:${process.env.PATH}`,
+        SUPABASE_DB_URL: 'postgresql://workflow-contract.invalid/database' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const completion = waitForProcess(child);
+    for (let attempt = 0; attempt < 200 && !existsSync(workloadPid); attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    expect(existsSync(workloadPid)).toBe(true);
+    const groupPid = Number(readFileSync(workloadPid, 'utf8').trim());
+    expect(child.kill('SIGTERM')).toBe(true);
+    const result = await completion;
+    expect(result.code).not.toBe(0);
+    expect(result.stdout).toBe('');
+    expect(readFileSync(eventLog, 'utf8')).toBe('started\nreleased\n');
+    expect(() => process.kill(-groupPid, 0)).toThrow();
+  }, 10_000);
+
   test('freshly observes every feature rollback callback and fails closed before feature DB entry', () => {
     const sourceRevision = 'a'.repeat(40);
     const policySha256 = 'e'.repeat(64);
@@ -298,11 +446,13 @@ printf 'end:%s\\n' "$3" >> "$SERIALIZER_TEST_LOG"
     }))}\n`;
 
     const createScenario = ({
+      baseStderr = false,
       failurePhase = '',
       includePolicy = true,
       tokenAvailable = true,
       vendorMode = 'match',
     }: {
+      baseStderr?: boolean;
       failurePhase?: string;
       includePolicy?: boolean;
       tokenAvailable?: boolean;
@@ -341,7 +491,9 @@ while IFS= read -r line
 do
   case "$line" in
     *pg_advisory_xact_lock*) printf '\n' ;;
+    *pg_backend_pid*) printf '%s\n' REVIEW_MEDIA_SQL_SUCCESSOR_BACKEND:12345:1790000000000000 ;;
     '\\echo REVIEW_MEDIA_SQL_SUCCESSOR_LOCKED') printf '%s\\n' REVIEW_MEDIA_SQL_SUCCESSOR_LOCKED ;;
+    '\\echo REVIEW_MEDIA_SQL_SUCCESSOR_HEARTBEAT_'*) printf '%s\\n' "$(printf '%s' "$line" | cut -d' ' -f2)" ;;
     '\\quit') exit 0 ;;
   esac
 done
@@ -405,6 +557,7 @@ then
   mkdir "$custody"
   printf '%s\n' base >> "$BASE_DB_LOG"
   printf '{"code":"SUCCESSOR_COMMITTED","custodyDirectory":"%s","expiresAt":"2030-01-01T00:15:00.000Z","mode":"apply","sourceRevision":"%s","status":"committed"}\\n' "$custody" "$EXPECTED_SOURCE_SHA"
+  if [[ "$BASE_STDERR" = 1 ]]; then printf '%s\\n' raw-base-diagnostic >&2; fi
   exit 0
 fi
 if [[ "$script" != apps/web/scripts/review-media-feature-sql-successor.mjs ]]
@@ -453,6 +606,7 @@ esac
         env: {
           ...process.env,
           BASE_DB_LOG: baseDbLog,
+          BASE_STDERR: baseStderr ? '1' : '0',
           EXPECTED_SOURCE_SHA: sourceRevision,
           FAIL_FEATURE_PHASE: failurePhase,
           FEATURE_DB_LOG: featureDbLog,
@@ -512,6 +666,14 @@ esac
     expect(readFileSync(held.phaseLog, 'utf8')).toBe('prepare-rehearsal\nrehearsal\n');
     expect(readFileSync(join(dirname(held.outputs.operating_input), 'feature-rehearsal.stderr'), 'utf8')).toBe('raw-feature-diagnostic\n');
 
+    const noisy = createScenario({ baseStderr: true });
+    expect(noisy.result.status).not.toBe(0);
+    expect(noisy.result.stdout).toBe('{"code":"SUCCESSOR_BASE_OUTCOME_UNCONFIRMED","status":"failed"}\n');
+    expect(noisy.result.stderr).toBe('');
+    expect(readFileSync(join(dirname(noisy.outputs.operating_input), 'base-apply.stderr'), 'utf8'))
+      .toBe('raw-base-diagnostic\n');
+    expect(existsSync(noisy.phaseLog)).toBe(false);
+
     for (const scenario of [
       { includePolicy: true, vendorMode: 'wrong-identity' as const },
       { includePolicy: true, vendorMode: 'wrong-alias' as const },
@@ -565,14 +727,18 @@ esac
   });
 
   test('keeps observe and rehearse on the eleven-stage CLI and adds the feature chain only to apply', () => {
-    const invocations = [...workflow.matchAll(
-      /"\$SERIALIZED_RUNNER"\n\s+node apps\/web\/scripts\/review-media-operating-orchestrator\.mjs\n\s+--mode (observe|rehearse)\n\s+--input "\$OPERATING_INPUT"\n\s+--custody-dir "\$PRIVATE_CUSTODY_DIR"/g,
-    )].map((match) => match[1]);
-    expect(invocations).toEqual(['observe', 'rehearse']);
+    for (const [step, mode] of [
+      ['Observe held successor state', 'observe'],
+      ['Rehearse held successor transaction', 'rehearse'],
+    ] as const) {
+      const source = stepSource(step);
+      expect(source).toContain('node apps/web/scripts/review-media-operating-orchestrator.mjs');
+      expect(source).toContain(`--mode ${mode} --input "$OPERATING_INPUT" --custody-dir "$PRIVATE_CUSTODY_DIR"`);
+    }
     expect(stepSource('Observe held successor state')).not.toContain('review-media-feature-sql-successor.mjs');
     expect(stepSource('Rehearse held successor transaction')).not.toContain('review-media-feature-sql-successor.mjs');
     expect(stepSource('Apply explicitly confirmed successor transaction')).toContain(
-      '"$SERIALIZED_RUNNER" \\\n            apply-chain "$OPERATING_INPUT" "$PRIVATE_CUSTODY_DIR"',
+      'apply-chain "$OPERATING_INPUT" "$PRIVATE_CUSTODY_DIR"',
     );
     expect(workflow).toContain('for phase in prepare-rehearsal rehearsal prepare-apply apply');
     expect(workflow).toContain('apps/web/scripts/review-media-feature-sql-successor.mjs');
@@ -608,5 +774,95 @@ esac
     expect(workflow).toContain('VERCEL_VENDOR_CLI_PATH: ${{ steps.vercel-cli.outputs.cli_path }}');
     expect(workflow).not.toContain('upload-artifact');
     expect(workflow).not.toContain('download-artifact');
+  });
+
+  test('routes receipt OCR to its own source-bound controller without legacy apply fallthrough', () => {
+    expect(workflow).toContain('receipt_ocr_89_108');
+    expect(workflow).toContain('CHAIN_STAGE_ADMISSION_SHA256');
+    expect(workflow).toContain('apply:receipt_ocr_89_108:$EXPECTED_SOURCE_SHA:$LOCAL_VERCEL_BUNDLE_SHA256:$CHAIN_STAGE_ADMISSION_SHA256');
+    expect(workflow).toContain('operation=ocr-apply-chain');
+    expect(workflow).toContain('run_ocr_chain');
+    expect(workflow).toContain('emit_ocr_terminal_observed ocr-apply');
+    expect(workflow).toContain('RECEIPT_OCR_CHAIN_TERMINAL_OBSERVED');
+    expect(workflow.indexOf('Verify receipt OCR constituent launch gates before operating setup'))
+      .toBeLessThan(workflow.indexOf('Install pinned Vercel CLI readback authority'));
+    expect(workflow).toContain('apps/web/scripts/receipt-ocr-recovery108-operating-controller.mjs');
+    expect(stepSource('Apply explicitly confirmed successor transaction')).toContain(
+      'ocr-chain "$OPERATING_INPUT" "$CHAIN_STAGE_INPUT" "$PRIVATE_CUSTODY_DIR"',
+    );
+    expect(workflow).toContain('if [[ "$operation" = ocr-apply-chain ]]');
+    expect(workflow).toContain('run_apply_chain');
+  });
+
+  test('binds receipt OCR dispatch confirmation and private stage admission to exact hashes', () => {
+    const verify = stepRun('Verify authenticated owner dispatch and detached source');
+    const { directory, revision } = createDetachedRepository();
+    const stage = '{"featureAdmission":{},"manifestSha256s":{},"predecessorAdmission":{},"sourceRoot":"' +
+      'a'.repeat(64) + '"}\n';
+    const stageSha256 = createHash('sha256').update(stage).digest('hex');
+    const evidence = '{"kind":"sanitized-local-vercel-evidence"}\n';
+    const evidenceSha256 = createHash('sha256').update(evidence).digest('hex');
+    const common = {
+      APPLY_CONFIRMATION: '',
+      CHAIN_STAGE_ADMISSION_SHA256: stageSha256,
+      EXPECTED_MODE: 'observe', EXPECTED_TARGET: 'receipt_ocr_89_108',
+      EXPECTED_SOURCE_SHA: revision,
+      GITHUB_ACTOR: 'twoimo', GITHUB_EVENT_NAME: 'workflow_dispatch',
+      GITHUB_REF: 'refs/heads/main', GITHUB_REF_NAME: 'main',
+      GITHUB_REF_PROTECTED: 'true', GITHUB_REPOSITORY: 'twoimo/tzudong',
+      GITHUB_SHA: revision, LOCAL_VERCEL_BUNDLE_SHA256: evidenceSha256,
+      REPOSITORY_OWNER: 'twoimo', SENDER_LOGIN: 'twoimo', TRIGGERING_ACTOR: 'twoimo',
+    };
+    expect(runBash(verify, directory, common).status).toBe(0);
+    expect(runBash(verify, directory, { ...common, EXPECTED_MODE: 'apply',
+      APPLY_CONFIRMATION: `apply:receipt_ocr_89_108:${revision}:${evidenceSha256}:${stageSha256}` }).status).toBe(0);
+    expect(runBash(verify, directory, { ...common, EXPECTED_MODE: 'apply',
+      APPLY_CONFIRMATION: `apply:${revision}:${evidenceSha256}` }).status).not.toBe(0);
+
+    const prepare = stepRun('Create private exclusive operating input and serialized runner');
+    const runnerTemp = mkdtempSync(join(tmpdir(), 'tzudong-ocr-stage-input-'));
+    temporaryDirectories.push(runnerTemp);
+    const output = join(runnerTemp, 'github-output');
+    writeFileSync(output, '');
+    const prepared = runBash(prepare, runnerTemp, {
+      CHAIN_STAGE_ADMISSION: stage, CHAIN_STAGE_ADMISSION_SHA256: stageSha256,
+      GITHUB_OUTPUT: output, LOCAL_VERCEL_BUNDLE_SHA256: evidenceSha256,
+      LOCAL_VERCEL_EVIDENCE: evidence, RUNNER_TEMP: runnerTemp,
+      SELECTED_TARGET: 'receipt_ocr_89_108',
+    });
+    expect(prepared.status).toBe(0);
+    const outputs = Object.fromEntries(readFileSync(output, 'utf8').trim().split('\n').map(line => {
+      const separator = line.indexOf('=');
+      return [line.slice(0, separator), line.slice(separator + 1)];
+    }));
+    expect(readFileSync(outputs.chain_stage_input, 'utf8')).toBe(stage);
+    expect(statSync(outputs.chain_stage_input).mode & 0o777).toBe(0o600);
+    const fakeBin = join(runnerTemp, 'bin');
+    expect(spawnSync('mkdir', ['-p', fakeBin]).status).toBe(0);
+    const marker = join(runnerTemp, 'psql-started');
+    const fakePsql = join(fakeBin, 'psql');
+    writeFileSync(fakePsql, '#!/usr/bin/env bash\nprintf started > "$OCR_PSQL_MARKER"\n');
+    expect(spawnSync('chmod', ['755', fakePsql]).status).toBe(0);
+    const held = runBash(`"${outputs.serialized_runner}" node ` +
+      'apps/web/scripts/receipt-ocr-recovery108-operating-controller.mjs ' +
+      `operate --mode observe --input "${outputs.operating_input}" ` +
+      `--stage-admission "${outputs.chain_stage_input}" --custody-dir "${outputs.custody_dir}"`,
+    repositoryRoot, {
+      EXPECTED_SOURCE_SHA: revision,
+      OCR_PSQL_MARKER: marker,
+      PATH: `${fakeBin}:${process.env.PATH}`,
+      SUPABASE_DB_URL: 'fixture-target',
+    });
+    expect(held.status).not.toBe(0);
+    expect(existsSync(marker)).toBe(false);
+    const badOutput = join(runnerTemp, 'bad-github-output');
+    writeFileSync(badOutput, '');
+    expect(runBash(prepare, runnerTemp, {
+      CHAIN_STAGE_ADMISSION: stage, CHAIN_STAGE_ADMISSION_SHA256: 'f'.repeat(64),
+      GITHUB_OUTPUT: badOutput, LOCAL_VERCEL_BUNDLE_SHA256: evidenceSha256,
+      LOCAL_VERCEL_EVIDENCE: evidence, RUNNER_TEMP: runnerTemp,
+      SELECTED_TARGET: 'receipt_ocr_89_108',
+    }).status).not.toBe(0);
+    expect(readFileSync(badOutput, 'utf8')).toBe('');
   });
 });

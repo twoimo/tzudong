@@ -211,6 +211,24 @@ test('rejects evidence, historical variant, stage and ledger drift', () => {
   }
 });
 
+test('rejects contradictory phase identity and readiness in operating and rehearsal stages', () => {
+  for (const phase of ['predecessor', 'feature'] as const) {
+    const record = loadEvidencePrefixedSuccessorManifest(phase);
+    const contradictions = phase === 'predecessor'
+      ? [[0, 'predecessorReady', true], [0, 'predecessorIdentityRoot', 'f'.repeat(64)]] as const
+      : [[5, 'featureReady', false], [5, 'featureIdentityRoot', 'f'.repeat(64)]] as const;
+    for (const mode of ['operating', 'rehearsal'] as const) {
+      const baseline = stageStates(record, mode);
+      for (const [stageIndex, field, value] of contradictions) {
+        const stages = structuredClone(baseline);
+        stages[stageIndex].state[field] = value;
+        expect(() => validateEvidencePrefixedStageStates(stages, record, { mode }))
+          .toThrow('EVIDENCE_PREFIXED_STAGE_INVALID');
+      }
+    }
+  }
+});
+
 test('compiles distinct atomic apply plans only from operating admissions', () => {
   for (const phase of ['predecessor', 'feature'] as const) {
     const record = loadEvidencePrefixedSuccessorManifest(phase);

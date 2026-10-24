@@ -7,6 +7,11 @@ import {
   compileRecovery108OperatingPlan,
   loadRecovery108HeldManifest,
 } from '../scripts/receipt-ocr-recovery108-sql-successor.mjs';
+import { statementSpans } from '../scripts/supabase-migration-transaction.mjs';
+
+const transactionControls = (sql: string) => statementSpans(sql)
+  .map(({ token }) => /^(?:BEGIN|COMMIT|END|ROLLBACK|ABORT|SAVEPOINT|RELEASE|START\s+TRANSACTION|PREPARE\s+TRANSACTION)\b/i.exec(token.trim())?.[0]?.toUpperCase())
+  .filter(Boolean);
 
 describe('held receipt OCR recovery 107 to 108 successor', () => {
   test('binds exact migration, fixture, compiler, and statement vector source', () => {
@@ -30,6 +35,11 @@ describe('held receipt OCR recovery 107 to 108 successor', () => {
     const plan = compileRecovery108OperatingPlan(record);
     expect(plan.transactionMode).toBe('single-explicit-108-transaction-after-verified-107');
     expect(plan.priorReadback).toEqual(plan.predecessorPlan.finalReadback);
+    expect(plan.sql).toBe(`BEGIN;\n${plan.transactionBodySql}COMMIT;\n`);
+    expect(transactionControls(plan.transactionBodySql)).toEqual([]);
+    expect(transactionControls(plan.sql)).toEqual(['BEGIN', 'COMMIT']);
+    expect(statementSpans(plan.transactionBodySql).filter(({ token }) =>
+      /^INSERT INTO supabase_migrations\.schema_migrations\b/i.test(token.trim()))).toHaveLength(1);
     expect(plan.sql).toContain('RECEIPT_OCR_RECOVERY108_SEAL_LEDGER_MISMATCH');
     expect(plan.finalReadback.expected.credentialReleaseV2Rebound).toBe(true);
     const ledgerInsert = plan.sql.indexOf('INSERT INTO supabase_migrations.schema_migrations');
