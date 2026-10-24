@@ -48,6 +48,7 @@ type MobileSheetHeaderProps = {
     title: string;
     description?: string;
     icon?: ReactNode;
+    iconClassName?: string;
     titleId?: string;
     descriptionId?: string;
     compact?: boolean;
@@ -71,6 +72,7 @@ export function MobileSheetHeader({
     title,
     description,
     icon,
+    iconClassName,
     titleId,
     descriptionId,
     compact = false,
@@ -83,7 +85,7 @@ export function MobileSheetHeader({
             {children}
             <div className="flex items-start gap-3">
                 {icon ? (
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/40 text-primary">
+                    <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/40 text-primary", iconClassName)}>
                         {icon}
                     </div>
                 ) : null}

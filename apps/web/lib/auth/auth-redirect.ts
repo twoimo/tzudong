@@ -2,6 +2,8 @@ export const AUTH_LOGIN_QUERY_PARAM = 'auth';
 export const AUTH_LOGIN_QUERY_VALUE = 'login';
 export const AUTH_REDIRECT_REASON_PARAM = 'reason';
 export const AUTH_PRIVACY_ONBOARDING_REASON = 'privacy_onboarding';
+export const AUTH_LOGIN_FAILED_REASON = 'login_failed';
+export const AUTH_LOGIN_FAILED_MESSAGE = '로그인 정보를 확인할 수 없습니다. 잠시 후 다시 시도해주세요.';
 export const AUTH_REDIRECT_NEXT_PARAM = 'next';
 
 export type AuthRedirectReason = 'admin' | 'mypage' | 'review' | typeof AUTH_PRIVACY_ONBOARDING_REASON;
@@ -33,6 +35,7 @@ export function isAdminAuthRedirect(reason: string | null | undefined, nextPath:
 
 export function resolveRequestedAuthRedirect(reason: string | null | undefined, next: string | null | undefined): string | null {
   const safeNext = getSafeAuthNextPath(next);
+  if (reason === AUTH_LOGIN_FAILED_REASON && safeNext !== '/') return safeNext;
   if (isAdminAuthRedirect(reason, safeNext)) return safeNext;
   if (
     (reason === 'mypage' || reason === 'review' || reason === AUTH_PRIVACY_ONBOARDING_REASON)
@@ -83,6 +86,16 @@ export function buildHomePrivacyOnboardingPath(next?: string | null) {
     params.set(AUTH_REDIRECT_NEXT_PARAM, safeNext);
   }
 
+  return `/?${params.toString()}`;
+}
+
+export function buildHomeAuthLoginErrorPath(next?: string | null) {
+  const params = new URLSearchParams({
+    [AUTH_LOGIN_QUERY_PARAM]: AUTH_LOGIN_QUERY_VALUE,
+    [AUTH_REDIRECT_REASON_PARAM]: AUTH_LOGIN_FAILED_REASON,
+  });
+  const safeNext = getSafeAuthNextPath(next);
+  if (safeNext !== '/') params.set(AUTH_REDIRECT_NEXT_PARAM, safeNext);
   return `/?${params.toString()}`;
 }
 

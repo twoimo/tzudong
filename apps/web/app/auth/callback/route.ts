@@ -11,10 +11,11 @@ import {
   getCurrentPrivacyEligibility,
   hasLivePrivacyEligibilityReceipt,
 } from '@/lib/privacy/eligibility';
-import { buildHomePrivacyOnboardingPath, getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
+import { buildHomeAuthLoginErrorPath, getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
 import { getTrustedAuthCallbackOrigin } from '@/lib/auth/callback-origin';
 import {
   createCallbackSupabaseClient,
+  hasEligibleOrdinaryOAuthSession,
   revokeRejectedCallbackSession,
 } from '@/lib/auth/callback-session';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
@@ -83,8 +84,8 @@ function redirectWithOnboardingCookiesCleared(origin: string, path = '/') {
   return response;
 }
 
-function rejectedCallbackRedirect(request: Request, origin: string) {
-  const response = NextResponse.redirect(`${getTrustedAuthCallbackOrigin(origin)}/`);
+function rejectedCallbackRedirect(request: Request, origin: string, path = '/') {
+  const response = NextResponse.redirect(`${getTrustedAuthCallbackOrigin(origin)}${path}`);
   response.headers.set('Cache-Control', 'no-store');
   clearRejectedOnboardingCookies(response, request);
   return response;
@@ -136,31 +137,18 @@ export async function GET(request: Request) {
   if (!code) return rejectedCallbackRedirect(request, origin);
 
   if (!onboardingRequested) {
-
     let supabase: CallbackSupabaseClient | null = null;
     try {
       supabase = await createCallbackSupabaseClient();
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-      if (exchangeError) {
+      if (!await hasEligibleOrdinaryOAuthSession(supabase, code)) {
         await revokeRejectedCallbackSession(supabase);
-        return rejectedCallbackRedirect(request, origin);
+        return rejectedCallbackRedirect(request, origin, buildHomeAuthLoginErrorPath(next));
       }
-
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user?.id || !UUID_PATTERN.test(user.id)) {
-        await revokeRejectedCallbackSession(supabase);
-        return rejectedCallbackRedirect(request, origin);
-      }
-      const eligibility = await getCurrentPrivacyEligibility(supabase);
-      if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
-        return redirectWithOnboardingCookiesCleared(origin, buildHomePrivacyOnboardingPath(next));
-      }
-
       return redirectWithOnboardingCookiesCleared(origin, next);
     } catch {
-      if (!supabase) return rejectedCallbackRedirect(request, origin);
+      if (!supabase) return rejectedCallbackRedirect(request, origin, buildHomeAuthLoginErrorPath(next));
       await revokeRejectedCallbackSession(supabase);
-      return rejectedCallbackRedirect(request, origin);
+      return rejectedCallbackRedirect(request, origin, buildHomeAuthLoginErrorPath(next));
     }
   }
 
