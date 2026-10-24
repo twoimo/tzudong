@@ -1,0 +1,142 @@
+{
+  "scope": "Isolated real Chromium picture fixture, controlled 80ms transfer delay. Not SDK, preview, production, field or physical-device evidence.",
+  "rawSha256": "f04f0cfc1d4056f628aabe7d00dc1b5bbf511820d6ab7ea6e23713bed7826ce6",
+  "budgets": {
+    "allVisibleReadyMs": 250,
+    "absoluteReductionMs": 30,
+    "relativeReductionPercent": 25,
+    "noiseFloorMs": 16.7,
+    "noiseMadMultiplier": 2,
+    "maxPrimerPictures": 18
+  },
+  "results": [
+    {
+      "width": 1440,
+      "arms": [
+        {
+          "arm": "baseline",
+          "samples": 6,
+          "firstAllVisibleReadyMs": {
+            "median": 96.7999999821186,
+            "min": 96.30000001192093,
+            "max": 109.10000002384186,
+            "mad": 0.3999999761581421
+          },
+          "maxRafGapMs": 40.69999998807907,
+          "initialImageReadyMsMedian": 138.10000002384186,
+          "explicitDecodeAfterAlreadyReadyMsMedian": 0.30000001192092896,
+          "resourcesCompletedBeforeExpansionMedian": 1.0,
+          "resourcesCompletedAfterExpansionMedian": 17.0
+        },
+        {
+          "arm": "candidate",
+          "samples": 6,
+          "firstAllVisibleReadyMs": {
+            "median": 40.099999994039536,
+            "min": 38.40000003576279,
+            "max": 41.700000047683716,
+            "mad": 1.0500000417232513
+          },
+          "maxRafGapMs": 41.700000047683716,
+          "initialImageReadyMsMedian": 121.5,
+          "explicitDecodeAfterAlreadyReadyMsMedian": 0.09999996423721313,
+          "resourcesCompletedBeforeExpansionMedian": 18.0,
+          "resourcesCompletedAfterExpansionMedian": 0.0
+        }
+      ],
+      "absoluteReductionMs": 56.69999998807907,
+      "relativeReductionPercent": 58.57438016379441,
+      "noiseBudgetMs": 16.7,
+      "localBudgetPassed": true
+    },
+    {
+      "width": 390,
+      "arms": [
+        {
+          "arm": "baseline",
+          "samples": 6,
+          "firstAllVisibleReadyMs": {
+            "median": 96.60000002384186,
+            "min": 95.10000002384186,
+            "max": 97.09999996423721,
+            "mad": 0.29999998211860657
+          },
+          "maxRafGapMs": 46.60000002384186,
+          "initialImageReadyMsMedian": 128.90000000596046,
+          "explicitDecodeAfterAlreadyReadyMsMedian": 0.30000001192092896,
+          "resourcesCompletedBeforeExpansionMedian": 1.0,
+          "resourcesCompletedAfterExpansionMedian": 17.0
+        },
+        {
+          "arm": "candidate",
+          "samples": 6,
+          "firstAllVisibleReadyMs": {
+            "median": 41.80000001192093,
+            "min": 37.60000002384186,
+            "max": 44.39999997615814,
+            "mad": 1.5999999940395355
+          },
+          "maxRafGapMs": 44.39999997615814,
+          "initialImageReadyMsMedian": 132.35000002384186,
+          "explicitDecodeAfterAlreadyReadyMsMedian": 0.09999996423721313,
+          "resourcesCompletedBeforeExpansionMedian": 18.0,
+          "resourcesCompletedAfterExpansionMedian": 0.0
+        }
+      ],
+      "absoluteReductionMs": 54.80000001192093,
+      "relativeReductionPercent": 56.72877846624817,
+      "noiseBudgetMs": 16.7,
+      "localBudgetPassed": true
+    },
+    {
+      "width": 820,
+      "arms": [
+        {
+          "arm": "baseline",
+          "samples": 6,
+          "firstAllVisibleReadyMs": {
+            "median": 95.7999999821186,
+            "min": 95.30000001192093,
+            "max": 97.5,
+            "mad": 0.44999995827674866
+          },
+          "maxRafGapMs": 46.69999998807907,
+          "initialImageReadyMsMedian": 121.64999997615814,
+          "explicitDecodeAfterAlreadyReadyMsMedian": 0.30000001192092896,
+          "resourcesCompletedBeforeExpansionMedian": 1.0,
+          "resourcesCompletedAfterExpansionMedian": 17.0
+        },
+        {
+          "arm": "candidate",
+          "samples": 6,
+          "firstAllVisibleReadyMs": {
+            "median": 41.599999994039536,
+            "min": 37,
+            "max": 42.19999998807907,
+            "mad": 0.45000001788139343
+          },
+          "maxRafGapMs": 42.19999998807907,
+          "initialImageReadyMsMedian": 128.25000002980232,
+          "explicitDecodeAfterAlreadyReadyMsMedian": 0.04999998211860657,
+          "resourcesCompletedBeforeExpansionMedian": 18.0,
+          "resourcesCompletedAfterExpansionMedian": 0.0
+        }
+      ],
+      "absoluteReductionMs": 54.19999998807907,
+      "relativeReductionPercent": 56.57620041565311,
+      "noiseBudgetMs": 16.7,
+      "localBudgetPassed": true
+    }
+  ],
+  "localBudgetAllViewportsPassed": true,
+  "productionImprovementAdmittedSlices": 0,
+  "externalReviewComplete": false,
+  "deployed": false,
+  "limits": [
+    "Controlled 80 ms response delay is an experimental condition, not measured production RTT.",
+    "All images are ready before explicit decode timing; that timing cannot isolate decoder CPU work.",
+    "Readiness is complete plus naturalWidth sampled on rAF, not a pixel or compositor oracle.",
+    "Playwright routed responses do not establish production wire-byte or startup contention cost.",
+    "No real SDK, matched hosted preview, production, field or physical-device improvement established."
+  ]
+}
