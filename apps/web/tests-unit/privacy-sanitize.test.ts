@@ -187,11 +187,11 @@ describe('privacy sanitizer', () => {
     expect(authContextSource).toContain('DEBUG_LOG_EVENT.AUTH_SESSION_LOAD_FAILED');
     expect(authContextSource).not.toContain('console.error(');
     expect(resetPasswordSource).toContain(
-      'DEBUG_LOG_EVENT.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED',
+      'DEBUG_LOG_EVENT.PASSWORD_RECOVERY_SESSION_CHECK_FAILED',
     );
     expect(resetPasswordSource).toContain('DEBUG_LOG_EVENT.PASSWORD_UPDATE_FAILED');
     expect(resetPasswordSource).toContain(
-      "toast.error('비밀번호 변경에 실패했습니다. 잠시 후 다시 시도해주세요.');",
+      "toast.error('비밀번호 변경을 확인하지 못했습니다. 새 재설정 링크로 다시 확인해주세요.');",
     );
     expect(resetPasswordSource).not.toContain('console.error(');
     expect(resetPasswordSource).not.toContain('error instanceof Error');

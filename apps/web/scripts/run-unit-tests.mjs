@@ -22,6 +22,10 @@ const isolated = new Set([
   'storyboard-gemini-rag.test.ts',
   'admin-youtube-thumbnail-readiness-gate.test.ts',
   'auth-callback-session.test.ts',
+  // These contracts exercise the real session-aware server exports. Route
+  // mocks in the general process replace that module with createClient only.
+  'privacy-onboarding.test.ts',
+  'session-cookie-boundary.test.ts',
   'account-deletion-reauth-validation.test.ts',
   // This older contract replaces the whole Supabase SDK too. Linux ESM links
   // later StorageApiError imports against that mock unless its process ends.

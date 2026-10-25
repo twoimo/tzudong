@@ -184,6 +184,8 @@ jobs:
         if: always() && steps.scope.outputs.benchmark != 'false'
         run: test "${{ steps.benchmark.outcome }}" = success -a "${{ steps.report.outcome }}" = success
       - run: npm run lint
+      - name: Install pinned Chrome for Testing for browser unit tests
+        run: npx playwright install --with-deps chromium
       - run: npm run test:unit
       - run: npm run build
 

@@ -19,6 +19,7 @@ const SKIP_DIRS = new Set([
 ]);
 
 const PAGE_MATRIX = [
+  'app/auth/complete/page.tsx',
   'app/page.tsx',
   'app/home-frame/page.tsx',
   'app/feed/page.tsx',
@@ -278,11 +279,11 @@ function walkCssUnder(root: string): string[] {
 }
 
 describe('public surface design contract', () => {
-  test('page and share transport inventory preserves all 27 surfaces', () => {
+  test('page and share transport inventory preserves all 28 surfaces', () => {
     const actual = walkFiles(appDir, (name) => name === 'page.tsx');
     expect(actual).toEqual([...PAGE_MATRIX].sort());
     const transport = 'app/s/[code]/route.ts';
-    expect([...actual, transport]).toHaveLength(27);
+    expect([...actual, transport]).toHaveLength(28);
     expect(existsSync(join(appRoot, transport))).toBe(true);
     expect(readApp(transport)).toContain('export async function GET(');
     expect(existsSync(join(appRoot, 'app/s/[code]/page.tsx'))).toBe(false);

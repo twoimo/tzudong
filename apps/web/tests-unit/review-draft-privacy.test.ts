@@ -63,7 +63,7 @@ describe("review draft privacy persistence", () => {
     expect(cleanupSection).toContain("expiredRows < MAX_SWEEP_ROWS");
     expect(cleanupSection).toContain("scannedRows < MAX_SWEEP_ROWS");
     expect(listSection).toContain("scannedRows < MAX_DRAFTS_PER_USER");
-    expect(deleteSection).toContain("for (const ownerKey of [draftStorageOwnerKey(userId), userId])");
+    expect(deleteSection).toContain("for (const ownerKey of [draftStorageOwnerKey(userId), ...legacyDraftStorageOwnerKeys(userId)])");
     expect(deleteSection).toContain("deleted < 100");
     expect(deleteSection).toContain("let cursor = await index.openCursor(ownerKey)");
     expect(deleteSection).toContain("readNonNegativeSafeInteger(await index.count(ownerKey))");

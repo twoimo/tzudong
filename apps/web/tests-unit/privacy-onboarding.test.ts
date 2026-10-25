@@ -113,7 +113,7 @@ function oauthRejectionRequest() {
 }
 
 const { GET } = await import('../app/auth/callback/route.ts');
-const { revokeRejectedCallbackSession } = await import('../lib/auth/callback-session.ts');
+const { exchangeCallbackCode, revokeRejectedCallbackSession } = await import('../lib/auth/callback-session.ts');
 
 describe('privacy onboarding challenge', () => {
   test('fresh password and OAuth cookies roundtrip with the issuer signing context', () => {
@@ -272,7 +272,7 @@ describe('privacy onboarding challenge', () => {
     expect(callbackRoute).not.toContain("'onboarding'");
     expect(callbackRoute).toContain("const onboardingRequested = challenge?.intent === 'oauth'");
     expect(callbackRoute).toContain("if (!challenge || !challenge.oauthNonce || challenge.origin !== origin)");
-    expect(source('lib/auth/callback-session.ts')).toContain("await supabase.auth.signOut({ scope: 'local' })");
+    expect(source('lib/auth/callback-session.ts')).toContain("await client.auth.admin.signOut(captured.tokens.access_token, 'local')");
     expect(callbackRoute).not.toContain('export async function revokeRejectedCallbackSession');
   });
 
@@ -282,7 +282,7 @@ describe('privacy onboarding challenge', () => {
     const onboardingPage = source('app/privacy/onboarding/page.tsx');
 
     expect(callbackRoute).toContain('return await callbackSessionResponse(supabase, buildHomePrivacyOnboardingPath(next));');
-    expect(callbackRoute).toContain('if (userError || !user?.id || !UUID_PATTERN.test(user.id))');
+    expect(callbackRoute).toContain('if (userError || !user?.id || !UUID_PATTERN.test(user.id) || user.id !== exchanged.userId)');
     expect(authContext).toContain('function isLiteralLoopSafePrivacyOnboarding()');
     expect(authContext).toContain("window.location.pathname === '/privacy/onboarding'");
     expect(authContext).toContain('isHomePrivacyOnboardingRequest(window.location)');
@@ -627,8 +627,8 @@ describe('G014 server session release boundaries', () => {
     );
     expect(callback).toContain('eligibility.receipt.policyVersionId !== challenge.policyVersionId');
     expect(callback).toContain('eligibility.receipt.contentSha256 !== challenge.contentSha256');
-    expect(source('lib/auth/callback-session.ts')).toContain("await supabase.auth.signOut({ scope: 'global' })");
-    expect(source('lib/auth/callback-session.ts')).toContain("await supabase.auth.signOut({ scope: 'local' })");
+    expect(source('lib/auth/callback-session.ts')).not.toContain("scope: 'global'");
+    expect(source('lib/auth/callback-session.ts')).toContain("await client.auth.admin.signOut(captured.tokens.access_token, 'local')");
     expect(callback).not.toContain('export async function revokeRejectedCallbackSession');
     expect(callback).not.toContain('hold_privacy_onboarding_compensation');
     expect(callback).not.toContain('ONBOARDING_COMPENSATION_HOLD_UNAVAILABLE');
@@ -647,7 +647,7 @@ describe('G014 server session release boundaries', () => {
     expect(authModal).toContain('await rejectPrivacyIneligibleSession(existingUserId, existingPrivacySessionOwner)');
     expect(authModal).toContain('Google 개인정보 확인 계속하기');
   });
-  test('callback navigation does not exchange a code; rejection revocation still attempts both scopes', async () => {
+  test('callback navigation does not exchange a code or revoke an uncaptured incoming session', async () => {
     oauthRejectionSignOutFails = true;
     const supabase = {
       auth: {
@@ -662,24 +662,34 @@ describe('G014 server session release boundaries', () => {
     expect(response.status).toBe(307);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(new URL(response.headers.get('location')!).pathname).toBe('/auth/complete');
-    expect(oauthRejectionSignOutScopes).toEqual(['global', 'local']);
+    expect(oauthRejectionSignOutScopes).toEqual([]);
     expect(source('app/auth/callback/route.ts')).toContain('await revokeRejectedCallbackSession(supabase)');
     expect(source('app/auth/callback/route.ts')).toContain('await createCallbackSupabaseClient()');
   });
-  test('callback navigation remains no-store and revocation still uses both scopes', async () => {
+  test('callback navigation remains no-store after local revocation of its captured exchange', async () => {
+    const captured = { access_token: 'owned-callback-access', refresh_token: 'owned-callback-refresh', user: { id: POLICY_ID } };
+    let incomingSignOuts = 0;
+    const revokedTokens: string[] = [];
     const supabase = {
       auth: {
-        signOut: async ({ scope }: { scope: 'global' | 'local' }) => {
+        exchangeCodeForSession: async () => ({ data: { session: captured }, error: null }),
+        signOut: async () => { incomingSignOuts += 1; },
+        admin: { signOut: async (token: string, scope: string) => {
+          revokedTokens.push(token);
           oauthRejectionSignOutScopes.push(scope);
-        },
+        } },
       },
     };
+    await exchangeCallbackCode(supabase as never, 'one-use-fixture');
     await revokeRejectedCallbackSession(supabase as never);
+    await revokeRejectedCallbackSession(supabase as never);
+    expect(revokedTokens).toEqual([captured.access_token]);
+    expect(incomingSignOuts).toBe(0);
     const response = await GET(oauthRejectionRequest());
     expect(response.status).toBe(307);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(new URL(response.headers.get('location')!).pathname).toBe('/auth/complete');
-    expect(oauthRejectionSignOutScopes).toEqual(['global', 'local']);
+    expect(oauthRejectionSignOutScopes).toEqual(['local']);
   });
 
   test('password onboarding keeps explicit Auth absence checks for identity cleanup', () => {
@@ -792,7 +802,7 @@ describe('G014 server session release boundaries', () => {
     expect(authModal).toContain('await supabase.auth.refreshSession()');
     expect(authModal).toContain('endExistingAccountPrivacyRecovery(recoveryToken)');
     expect(authContext.indexOf('isExistingAccountPrivacyRecoveryActive(nextSession.user.email)')).toBeLessThan(
-      authContext.indexOf('await clearStaleSession(userId, true, generation)'),
+      authContext.indexOf('await clearStaleSession(userId, generation)'),
     );
     expect(recovery).not.toContain(".from('privacy_");
     expect(recovery).not.toContain('p_user_id: body.');
