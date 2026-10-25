@@ -21,7 +21,11 @@ export default function AuthCompletePage() {
       const next = getSafeAuthNextPath(query.get('next'));
       setRetryPath(buildHomeAuthLoginPath({ reason: isAdminAuthNextPath(next) ? 'admin' : 'mypage', next }));
       window.history.replaceState(window.history.state, '', '/auth/complete');
-      if (!code || code.length > 2048 || /[\u0000-\u0020]/.test(code)) { setFailed(true); return; }
+      if (query.getAll('code').length !== 1 || query.getAll('next').length > 1
+        || !code || code.length > 2048 || /[\u0000-\u0020]/.test(code) || window.location.hash) {
+        setFailed(true);
+        return;
+      }
       void completeBrowserOAuthCallback(code, next, controller.signal)
         .then(next => { if (active) window.location.replace(next); })
         .catch(() => { if (active) setFailed(true); });
