@@ -86,11 +86,11 @@ def parse_response_file(filepath: Path) -> tuple:
         (restaurants_list, no_restaurant_reason_or_none)
     """
     if not filepath.exists():
-        return [], None
+        raise ValueError("chunk_response_missing")
 
     text = filepath.read_text(encoding="utf-8").strip()
     if not text:
-        return [], None
+        raise ValueError("chunk_response_empty")
 
     if "```json" in text:
         start = text.find("```json") + 7
@@ -106,16 +106,21 @@ def parse_response_file(filepath: Path) -> tuple:
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
-        print("[WARN] op=chunk_response_json_invalid", file=sys.stderr)
-        return [], None
+        raise ValueError("chunk_response_json_invalid") from None
 
     if isinstance(data, dict) and "restaurants" in data:
         restaurants = data["restaurants"]
         reason = data.get("no_restaurant_reason")
         if isinstance(restaurants, list):
+            if any(not isinstance(row, dict) or "origin_name" not in row
+                   or (row["origin_name"] is not None and not isinstance(row["origin_name"], str))
+                   for row in restaurants):
+                raise ValueError("chunk_restaurant_invalid")
+            if not restaurants and (not isinstance(reason, str) or not reason.strip()):
+                raise ValueError("chunk_absence_unconfirmed")
             return restaurants, reason
 
-    return [], None
+    raise ValueError("chunk_response_invalid")
 
 
 def merge_all_restaurants(
@@ -127,6 +132,9 @@ def merge_all_restaurants(
     for restaurant in all_restaurants:
         name = restaurant.get("origin_name", "")
         if not name:
+            # Unknown-name candidates are part of the extraction contract.
+            # Preserve them for the all_names_null selection path.
+            merged.append(dict(restaurant))
             continue
 
         found_idx = next(
@@ -149,6 +157,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("files", nargs="*", help="응답 JSON 파일 목록")
     parser.add_argument("--dir", help="응답 파일이 있는 디렉토리 경로")
+    parser.add_argument("--expected-chunks", type=int, help="Require every planned chunk response")
     parser.add_argument(
         "--visual-location",
         help="Optional 03-2 visual-location JSONL. Screen names stay pending without a confirmed address.",
@@ -162,6 +171,13 @@ def main(argv: list[str] | None = None) -> None:
     if args.files:
         files.extend(Path(f) for f in args.files)
 
+    if args.expected_chunks is not None:
+        expected_names = {f"chunk_response_{index}.json" for index in range(max(0, args.expected_chunks))}
+        if (args.expected_chunks < 1 or len(files) != args.expected_chunks
+                or {path.name for path in files} != expected_names):
+            print("[ERROR] op=chunk_coverage_incomplete", file=sys.stderr)
+            raise SystemExit(1)
+
     if not files and not (args.visual_location and Path(args.visual_location).is_file()):
         print('{"restaurants": []}')
         return
@@ -169,7 +185,12 @@ def main(argv: list[str] | None = None) -> None:
     all_restaurants: List[Dict[str, Any]] = []
     all_reasons: List[str] = []
     for f in files:
-        restaurants, reason = parse_response_file(f)
+        try:
+            restaurants, reason = parse_response_file(f)
+        except (OSError, UnicodeError, ValueError) as error:
+            code = str(error) if isinstance(error, ValueError) and str(error).startswith("chunk_") else "chunk_response_unreadable"
+            print(f"[ERROR] op={code}", file=sys.stderr)
+            raise SystemExit(1) from None
         all_restaurants.extend(restaurants)
         if reason:
             all_reasons.append(reason)
@@ -209,7 +230,7 @@ def main(argv: list[str] | None = None) -> None:
             print("[WARN] op=visual_location_merge_skipped", file=sys.stderr)
     result: Dict[str, Any] = {"restaurants": merged}
     if not merged and all_reasons:
-        result["no_restaurant_reason"] = all_reasons[0]
+        result["no_restaurant_reason"] = "\n".join(dict.fromkeys(all_reasons))
     json.dump(result, sys.stdout, ensure_ascii=False)
 
 

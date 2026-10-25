@@ -933,6 +933,12 @@ jobs:
       NCP_MAPS_KEY_ID_BYEON: ${{ secrets.NCP_MAPS_KEY_ID_BYEON }}
       NCP_MAPS_KEY_BYEON: ${{ secrets.NCP_MAPS_KEY_BYEON }}
       LIVE_MAX_NEW_ITEMS: "3"
+      # npm ci --ignore-scripts does not download ffmpeg-static's executable.
+      ALLOW_CUSTOM_FFMPEG: "1"
+      FFMPEG_PATH: /usr/bin/ffmpeg
+      FFMPEG_TRUSTED_ROOT: /usr/bin
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+      TZUDONG_LAAJ_PROVIDER: gemini
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
@@ -949,6 +955,14 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: backend/package-lock.json
+      - name: Install trusted media tools for evaluate
+        run: |
+          set -euo pipefail
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends ffmpeg jq
+          test -x /usr/bin/ffmpeg
+          test -x /usr/bin/google-chrome
+          /usr/bin/ffmpeg -hide_banner -version >/dev/null
       - name: Install locked Node dependencies for evaluate
         working-directory: backend
         run: npm ci --ignore-scripts

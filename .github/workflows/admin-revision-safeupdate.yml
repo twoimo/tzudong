@@ -1,0 +1,62 @@
+name: Admin revision safeupdate
+run-name: Admin revision safeupdate · ${{ inputs.mode }} · ${{ inputs.source_sha }}
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        required: true
+        type: choice
+        default: observe
+        options: [observe, apply]
+      source_sha:
+        required: true
+        type: string
+      apply_confirmation:
+        required: false
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: admin-revision-safeupdate
+  cancel-in-progress: false
+jobs:
+  operate:
+    if: >-
+      github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' &&
+      github.ref_protected && github.actor == github.repository_owner &&
+      github.triggering_actor == github.repository_owner &&
+      github.event.sender.login == github.repository_owner && github.sha == inputs.source_sha &&
+      (inputs.mode == 'observe' || github.run_attempt == 1)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Admit exact protected source
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$EXPECTED_SOURCE_SHA" = "$GITHUB_SHA"
+          test "$EXPECTED_SOURCE_SHA" = "$(git rev-parse HEAD)"
+          test -z "$(git status --porcelain)"
+          test -z "$(git symbolic-ref -q HEAD || true)"
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '24.21.0'
+      - name: Install PostgreSQL client
+        run: |
+          set -euo pipefail
+          sudo apt-get -q update
+          sudo apt-get -q install --no-install-recommends -y postgresql-client
+      - name: Rehearse and apply one source-bound migration
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+          APPLY_CONFIRMATION: ${{ inputs.apply_confirmation }}
+          MODE: ${{ inputs.mode }}
+        run: node apps/web/scripts/admin-revision-safeupdate-operation.mjs "$MODE"

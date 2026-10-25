@@ -107,6 +107,9 @@ def main(argv: list[str] | None = None) -> int:
         "reflection="
         + json.dumps(reflection, ensure_ascii=False, sort_keys=True)
     )
+    if reflection["unresolved"]:
+        print("error=hosted_apply_unresolved")
+        return 2
     if APPROVAL_ENV not in os.environ:
         return 2
     return 0

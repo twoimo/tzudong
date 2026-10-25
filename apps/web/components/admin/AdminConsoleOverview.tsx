@@ -101,6 +101,7 @@ import {
   normalizeAdminDashboardWidgetOrder,
   type AdminDashboardWidgetId,
 } from "@/lib/admin/dashboard-widget-order";
+import { getDashboardKpiPresentation } from "@/lib/admin/dashboard-kpi-presentation";
 import {
   DEFAULT_ADMIN_SIDEBAR_ORDER,
   normalizeAdminSidebarOrder,
@@ -6953,9 +6954,6 @@ function AdminDashboardManagementPanel({
       : hasPeriodGrowthComparison
         ? `${selectedPeriodLabel} · 기간 순증`
         : `${selectedPeriodLabel} · 기간 영상 현재`;
-  const periodRatioCaptionPrefix = hasPeriodGrowthComparison
-    ? "조회 증가 대비"
-    : "조회수 대비";
   const channelStats = youtubeChannelQuery.data;
   const channelViewDelta =
     period !== "ALL" &&
@@ -7065,15 +7063,23 @@ function AdminDashboardManagementPanel({
         ? `현재 구독자 · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`
         : `${selectedPeriodLabel} 구독자 순증 ${formatSignedNumber(subscriberDelta)}`;
   const subscriberCardTitle = "현재 구독자";
-  const viewCardTitle = hasPeriodGrowthComparison
-    ? "기간 조회 증가"
-    : "기간 조회 합계";
-  const likeCardTitle = hasPeriodGrowthComparison
-    ? "기간 좋아요 증가"
-    : "기간 좋아요 합계";
-  const commentCardTitle = hasPeriodGrowthComparison
-    ? "기간 댓글 증가"
-    : "기간 댓글 합계";
+  const kpiPresentation = getDashboardKpiPresentation({
+    isAllPeriod: period === "ALL",
+    selectedPeriodLabel,
+    hasPeriodGrowthComparison,
+    videoPeriodDeltasAreFlat,
+    hasPeriodCohortVideos: (insightQuery.data?.videos.length ?? 0) > 0,
+    channelViewDelta,
+    viewDenominatorLabel: formatMetricNumber(periodViewDisplayValue),
+  });
+  const {
+    viewCardTitle,
+    periodViewCardTitle,
+    likeCardTitle,
+    commentCardTitle,
+    ratioCaptionPrefix: periodRatioCaptionPrefix,
+  } = kpiPresentation;
+  const kpiCurrentCaption = kpiPresentation.currentCaption ?? periodMetricCaption;
   const pendingTotal = stats.pendingTotal;
   const missingCoordinates =
     typeof stats.totalRestaurants === "number" &&
@@ -7406,19 +7412,19 @@ function AdminDashboardManagementPanel({
         caption: subscriberCaption,
       },
       {
-        label: viewCardTitle,
+        label: periodViewCardTitle,
         value: isMetricValueHidden ? "—" : formatNumber(periodViewDisplayValue),
-        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeViewValue)}`,
+        caption: `${kpiCurrentCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeViewValue)}`,
       },
       {
         label: likeCardTitle,
         value: isMetricValueHidden ? "—" : formatNumber(periodLikeDisplayValue),
-        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeLikeValue)}`,
+        caption: `${kpiCurrentCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeLikeValue)}`,
       },
       {
         label: commentCardTitle,
         value: isMetricValueHidden ? "—" : formatNumber(periodCommentDisplayValue),
-        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeCommentValue)}`,
+        caption: `${kpiCurrentCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeCommentValue)}`,
       },
       {
         label: "업로드 영상 수",
@@ -7457,10 +7463,11 @@ function AdminDashboardManagementPanel({
     dashboardViewMetricLabel,
     formatMetricNumber,
     isMetricValueHidden,
+    kpiCurrentCaption,
     likeCardTitle,
     periodCommentDisplayValue,
     periodLikeDisplayValue,
-    periodMetricCaption,
+    periodViewCardTitle,
     periodUploadVideoValue,
     periodVideoCaption,
     periodViewDisplayValue,
@@ -7471,7 +7478,6 @@ function AdminDashboardManagementPanel({
     topContentContributionFormula,
     topContentInsights,
     topContentTableRows,
-    viewCardTitle,
   ]);
   const handleExportPdfReport = useCallback(() => {
     const opened = openAdminDashboardPdfReport({
@@ -7692,7 +7698,7 @@ function AdminDashboardManagementPanel({
           style={getDashboardCardOrderStyle("views")}
           reorderProps={getDashboardCardReorderProps("views")}
           value={isMetricValueHidden ? "—" : formatNumber(viewCardValue)}
-          caption={`${videoPeriodDeltasAreFlat ? `${selectedPeriodLabel} · 채널 조회 순증` : periodMetricCaption} · 현재 전체 누적 ${channelStats?.viewCount != null ? formatNumber(channelStats.viewCount) : formatMetricNumber(cumulativeViewValue)}`}
+          caption={`${kpiPresentation.viewCaption ?? periodMetricCaption} · 현재 전체 누적 ${channelStats?.viewCount != null ? formatNumber(channelStats.viewCount) : formatMetricNumber(cumulativeViewValue)}`}
           delta={formatDashboardChangeLabel(viewCardChange)}
           deltaLabel="기간 대비"
           progress={getDashboardChangeProgress(viewCardChange)}
@@ -7701,10 +7707,12 @@ function AdminDashboardManagementPanel({
           sparklineData={viewSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
-            "설명: 선택 기간 영상들의 조회수 합계를 보여주는 카드입니다.",
-            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 조회수, 없으면 선택 기간 영상의 현재 조회수 합계입니다.",
-            "계산식: 기간 조회 증가 = 각 영상의 (현재 조회수 - 이전 조회수) 합계.",
-            "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            ...(kpiPresentation.viewInfoLines ?? [
+              "설명: 선택 기간 영상들의 조회수 합계를 보여주는 카드입니다.",
+              "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 조회수, 없으면 선택 기간 영상의 현재 조회수 합계입니다.",
+              "계산식: 기간 조회 증가 = 각 영상의 (현재 조회수 - 이전 조회수) 합계.",
+              "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            ]),
             `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 제목 옆 기간 대비는 이전 스냅샷 대비 증감률입니다.",
             "주의: 아래 작은 선은 영상 게시일 순서에 따른 조회수 흐름입니다.",
@@ -7722,7 +7730,7 @@ function AdminDashboardManagementPanel({
           value={isMetricValueHidden ? "—" : formatNumber(periodLikeDisplayValue)}
           caption={
             likeRate == null
-              ? `${periodMetricCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeLikeValue)}`
+              ? `${kpiCurrentCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeLikeValue)}`
               : `${periodRatioCaptionPrefix} ${formatDashboardPercent(likeRate)} · 현재 전체 누적 ${formatMetricNumber(cumulativeLikeValue)}`
           }
           delta={formatDashboardChangeLabel(likeChange)}
@@ -7733,10 +7741,13 @@ function AdminDashboardManagementPanel({
           sparklineData={likeSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
-            "설명: 선택 기간 영상들의 좋아요 합계를 보여주는 카드입니다.",
-            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 좋아요 수, 없으면 선택 기간 영상의 현재 좋아요 합계입니다.",
-            "계산식: 기간 좋아요 증가 = 각 영상의 (현재 좋아요 - 이전 좋아요) 합계.",
-            "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            ...(kpiPresentation.likeInfoLines ?? [
+              "설명: 선택 기간 영상들의 좋아요 합계를 보여주는 카드입니다.",
+              "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 좋아요 수, 없으면 선택 기간 영상의 현재 좋아요 합계입니다.",
+              "계산식: 기간 좋아요 증가 = 각 영상의 (현재 좋아요 - 이전 좋아요) 합계.",
+              "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            ]),
+            ...kpiPresentation.ratioInfoLines,
             `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 좋아요 비율은 조회수 중 좋아요로 반응한 비중입니다.",
             "주의: 조회 대비 비율은 조회수 중 좋아요로 반응한 비중을 뜻합니다.",
@@ -7754,7 +7765,7 @@ function AdminDashboardManagementPanel({
           value={isMetricValueHidden ? "—" : formatNumber(periodCommentDisplayValue)}
           caption={
             commentRate == null
-              ? `${periodMetricCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeCommentValue)}`
+              ? `${kpiCurrentCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeCommentValue)}`
               : `${periodRatioCaptionPrefix} ${formatDashboardPercent(commentRate)} · 현재 전체 누적 ${formatMetricNumber(cumulativeCommentValue)}`
           }
           delta={formatDashboardChangeLabel(commentChange)}
@@ -7765,10 +7776,13 @@ function AdminDashboardManagementPanel({
           sparklineData={commentSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
-            "설명: 선택 기간 영상들의 댓글 합계를 보여주는 카드입니다.",
-            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 댓글 수, 없으면 선택 기간 영상의 현재 댓글 합계입니다.",
-            "계산식: 기간 댓글 증가 = 각 영상의 (현재 댓글 - 이전 댓글) 합계.",
-            "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            ...(kpiPresentation.commentInfoLines ?? [
+              "설명: 선택 기간 영상들의 댓글 합계를 보여주는 카드입니다.",
+              "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 댓글 수, 없으면 선택 기간 영상의 현재 댓글 합계입니다.",
+              "계산식: 기간 댓글 증가 = 각 영상의 (현재 댓글 - 이전 댓글) 합계.",
+              "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            ]),
+            ...kpiPresentation.ratioInfoLines,
             `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 댓글 비율은 조회수 중 댓글로 반응한 비중입니다.",
             "주의: 조회 대비 댓글 비율은 조회수 중 댓글로 반응한 비중을 뜻합니다.",
