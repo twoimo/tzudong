@@ -3,6 +3,8 @@ import gzip
 import hashlib
 import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -226,6 +228,52 @@ class TerminalCompletionCacheTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.export()
         self.assertFalse(self.archive.exists())
+
+    def test_contact_data_in_metadata_excludes_whole_video(self):
+        for value in ("fixture@example.invalid", "010-0000-0000"):
+            with self.subTest(contact_kind="email" if "@" in value else "phone"):
+                self.write(self.paths["meta"], {"duration": 1000, "description": value})
+                self.assertEqual(self.export()["videos"], 0)
+
+    def test_contact_data_in_old_or_nested_transcript_record_excludes_whole_video(self):
+        self.write(self.paths["transcript"], {"segments": [{"text": "fixture@example.invalid"}]})
+        with (self.source / self.paths["transcript"]).open("a") as output:
+            output.write('{"transcript":"new public fixture"}\n')
+        self.assertEqual(self.export()["videos"], 0)
+
+    def test_restore_rejects_contact_data_in_allowed_path_before_any_write(self):
+        self.export()
+        for fields in ({"description": "fixture@example.invalid"}, {"key": "opaque-fixture"},
+                       {"api.key": "opaque-fixture"}):
+            with self.subTest(field=next(iter(fields))):
+                packet = self.packet()
+                content = json.dumps({"duration": 1000, **fields}).encode()
+                packet["files"][0].update(content=base64.b64encode(content).decode(),
+                                         sha256=hashlib.sha256(content).hexdigest())
+                self.replace_packet(packet)
+                with self.assertRaises(ValueError):
+                    cache.restore_cache(self.target, self.archive)
+                self.assertEqual(list(self.target.rglob("*")), [])
+
+    def test_shorts_metadata_with_contact_data_is_not_exported(self):
+        self.write(self.paths["marker"], {"notSelected_reason": "shorts:is_shorts_le_180"})
+        self.write(self.paths["meta"], {"duration": 60, "description": "010-0000-0000"})
+        self.assertEqual(self.export()["videos"], 0)
+
+    def test_normalized_sensitive_keys_and_unbounded_text_are_excluded(self):
+        for value in ({"key": "opaque-fixture"}, {"api.key": "opaque-fixture"},
+                      {"description": "x" * (cache.MAX_STRING + 1)}):
+            with self.subTest(field=next(iter(value))):
+                self.write(self.paths["meta"], {"duration": 1000, **value})
+                self.assertEqual(self.export()["videos"], 0)
+
+    def test_cli_cold_restore_from_outside_repository_loads_shared_privacy_boundary(self):
+        result = subprocess.run([sys.executable, str(Path(cache.__file__).resolve()), "restore",
+                                 "--cache-file", str(self.archive)], cwd=self.base,
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(json.loads(result.stdout)["cacheMissing"])
+        self.assertEqual(result.stderr, "")
 
 
 if __name__ == "__main__":

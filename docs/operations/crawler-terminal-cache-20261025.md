@@ -19,7 +19,11 @@ would not preserve the input set bound by the existing receipts. Crawl and selec
 can retain visual copies after that source is removed, so every JSONL record and
 nested object is also checked for nonempty `visual`, `texts`, `raw_ocr` and `ocr_text`
 fields. A tainted video is excluded; duplicate JSON keys fail closed. Shorts carry
-only metadata and their exclusion marker. Import enforces the same content and
+only metadata and their exclusion marker. The shared backend privacy boundary also
+checks every primitive and normalized field name for supported contact/credential
+patterns, including email and phone text in public descriptions/captions. Any match
+or string longer than 4,096 characters excludes the whole video; no authenticated
+input is redacted into a different input. Import enforces the same content and
 Shorts limits before writing any packet file. Credentials, environment files, provider
 logs, OCR/user submissions, media, pending-write payloads and delivery receipts are
 excluded. GitHub documents that fork pull requests may read default-branch caches;
@@ -42,19 +46,26 @@ The protected cache scope supplies that trust boundary. Packet-size accounting i
 linear in encoded content, rather than repeatedly serializing the growing packet.
 The existing evaluator's discovery/probe costs remain separate from these bounds.
 
-Validation so far: 23 transport/failure tests and 26 local freshness tests pass.
+Validation so far: 29 transport/failure tests and 26 local freshness tests pass.
 OCR path, historical-copy and stale-Shorts regressions failed against earlier
 candidates and pass with whole-video exclusion, minimal Shorts files and restore
-rejection. An archive
-of protected source `5df7c3f8` with no credential files restored 5 real public terminal
-outcomes from an 18-file, 109,331-byte packet. Current probes recognized 5; after a
-transcript input changed, 4; after the crawl prompt also changed, 3 Shorts remained.
+rejection. Public-description contact, historical/nested transcript contact,
+normalized sensitive-key and restore-before-write regressions also pass.
+An archive of protected source `5df7c3f8` with no credential files restored 2 of the
+5 actual terminal outcomes (one Short and one explicit no-restaurant video) from an
+8-file, 94,544-byte packet. Three videos were excluded by the privacy boundary;
+their content/matches were not retained in evidence. Changing the accepted transcript
+left only the Short reusable. Restoring that transcript then independently changing
+the crawl prompt also left only the Short. The older 5-outcome experiment predates
+the contact-data guard and is not the admitted packet or a current privacy proof.
 Those were cache probes, with no provider or hosted write. The workflow contract
 comparison preserved admission, permissions, model/environment, command/limit,
 schedule and serialization. The GitHub network cache roundtrip and scheduled
 execution remain unverified; local results do not establish them.
 
-Eviction or a cache miss may repeat bounded work. This is not durable shared custody,
+Eviction, bounds, privacy exclusions or a cache miss may repeat bounded work. This
+cache does not establish progress past a full batch of excluded videos; durable
+terminal custody remains a separate dependency. This is not durable shared custody,
 remote YouTube-edit detection, global exactly-once delivery, a repair for partial
 multi-restaurant inserts or a proof of liveness under arbitrary arrival/provider
 failure rates. The separate custody work and its legacy-uncertainty holds remain.
