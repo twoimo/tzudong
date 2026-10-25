@@ -7,7 +7,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createConnection, createServer } from 'node:net';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 const root = resolve(import.meta.dir, '..');
 const parent = await import(resolve(root, 'scripts/run-auth-release-smoke.mjs'));
@@ -19,12 +19,13 @@ const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('
 const userId = '11111111-1111-4111-8111-111111111111';
 const sessionId = '22222222-2222-4222-8222-222222222222';
 const now = Math.floor(Date.now() / 1000);
+const syntheticRefreshToken = `synthetic-refresh-${randomUUID()}`;
 const jwt = (claims: Record<string, unknown> = {}) => [
     Buffer.from(JSON.stringify({ alg: 'ES256', typ: 'JWT' })).toString('base64url'),
     Buffer.from(JSON.stringify({ sub: userId, session_id: sessionId, iat: now - 10, exp: now + 300, role: 'authenticated', ...claims })).toString('base64url'),
     Buffer.from('signature').toString('base64url'),
 ].join('.');
-const validState = (host = origin.hostname, value = `base64-${Buffer.from(JSON.stringify({ access_token: jwt(), refresh_token: 'refresh-1234567890123456' })).toString('base64')}`, httpOnly = true) => encode({ cookies: [cookieContract.key, cookieContract.marker].map(name => ({ name, value: name.startsWith('sb-') ? value : '1', domain: host, path: '/', expires: Math.floor(Date.now() / 1000) + 60, httpOnly, secure: true, sameSite: 'Lax' })), origins: [] });
+const validState = (host = origin.hostname, value = `base64-${Buffer.from(JSON.stringify({ access_token: jwt(), refresh_token: syntheticRefreshToken })).toString('base64')}`, httpOnly = true) => encode({ cookies: [cookieContract.key, cookieContract.marker].map(name => ({ name, value: name.startsWith('sb-') ? value : '1', domain: host, path: '/', expires: Math.floor(Date.now() / 1000) + 60, httpOnly, secure: true, sameSite: 'Lax' })), origins: [] });
 const jsonResponse = (body: unknown, url: string, headers: Record<string, string> = {}) => {
     const text = JSON.stringify(body);
     return { ok: true, status: 200, url, headers: new Headers({ 'content-type': 'application/json', ...headers }), text: async () => text };
@@ -512,7 +513,7 @@ linuxPidNamespaceTest('production controller tears down a real resistant descend
 }, 30_000);
 
 function stateWithAccessToken(accessToken: string) {
-    const cookieValue = `base64-${Buffer.from(JSON.stringify({ access_token: accessToken, refresh_token: 'refresh-1234567890123456' })).toString('base64')}`;
+    const cookieValue = `base64-${Buffer.from(JSON.stringify({ access_token: accessToken, refresh_token: syntheticRefreshToken })).toString('base64')}`;
     return parent.validateStorageState(validState(origin.hostname, cookieValue), origin);
 }
 
@@ -533,8 +534,8 @@ test('bound session identity requires canonical duplicate-free JWT claims and a 
         issuedAt: now - 10,
         expiresAt: now + 300,
     });
-    expect(JSON.stringify(identity)).not.toContain('refresh-1234567890123456');
-    expect(identity.refreshSha256).toBe(createHash('sha256').update('tzudong:release-auth-refresh-binding:v1\nrefresh-1234567890123456').digest('hex'));
+    expect(JSON.stringify(identity)).not.toContain(syntheticRefreshToken);
+    expect(identity.refreshSha256).toBe(createHash('sha256').update('tzudong:release-auth-refresh-binding:v1\n' + syntheticRefreshToken).digest('hex'));
 
     const refreshState = (refreshToken: unknown) => parent.validateStorageState(validState(origin.hostname, `base64-${Buffer.from(JSON.stringify({ access_token: jwt(), refresh_token: refreshToken })).toString('base64')}`), origin);
     for (const refreshToken of [undefined, '', 'short', 'has/a-slash', 'x'.repeat(4097)]) {
@@ -592,7 +593,7 @@ test('authoritative identity and preflight RPCs bind the dedicated user, refresh
     expect(userHeaders.apikey).toBe('anon-key');
     expect(userHeaders.authorization).toBe(`Bearer ${identity.accessToken}`);
     expect(calls[1].options.body).toBe(parent.canonicalJson({ p_expires_at: expiresAt, p_operation_id: operationId, p_refresh_sha256: identity.refreshSha256, p_session_id: sessionId, p_user_id: userId }));
-    expect(JSON.stringify(calls[1].options.body)).not.toContain('refresh-1234567890123456');
+    expect(JSON.stringify(calls[1].options.body)).not.toContain(syntheticRefreshToken);
     await expect(parent.preflightReleaseSessionFamily(identity, operationId, now + 901, 'service-key', fetcher)).rejects.toMatchObject({ code: 'SESSION_REVOCATION_FAILED' });
     await expect(parent.validateReleaseSessionIdentity(identity, 'anon-key', '33333333-3333-4333-8333-333333333333', fetcher)).rejects.toMatchObject({ code: 'SESSION_REVOCATION_FAILED' });
     const userUrl = 'https://aqlcofblfxdrjhhdmarw.supabase.co/auth/v1/user';
@@ -649,7 +650,7 @@ test('authoritative revocation retries idempotently and requires exact readback'
         expect(headers.authorization).toBe('Bearer service-key');
     }
     expect(JSON.stringify(calls)).not.toContain(identity.accessToken);
-    expect(JSON.stringify(calls)).not.toContain('refresh-1234567890123456');
+    expect(JSON.stringify(calls)).not.toContain(syntheticRefreshToken);
 
     let malformedCalls = 0;
     await expect(parent.revokeReleaseSessionFamily(
