@@ -7,6 +7,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -19,6 +20,11 @@ REV = 'a' * 40
 
 class RuntimeSourceTests(unittest.TestCase):
     def setUp(self):
+        # Exercise the Mac archive adapter on every test host. Replace only this
+        # module's platform view; changing global sys.platform affects imports.
+        self.platform_patch = patch.object(source, 'sys', SimpleNamespace(platform='darwin'))
+        self.platform_patch.start()
+        self.addCleanup(self.platform_patch.stop)
         # Keep fixture parents owner-only; system /tmp is intentionally rejected.
         self.temp = tempfile.TemporaryDirectory(prefix='source-fixture-', dir=HERE.parents[3])
         self.addCleanup(self.temp.cleanup)
@@ -79,6 +85,10 @@ class RuntimeSourceTests(unittest.TestCase):
             return original(path, *args, **kwargs)
         with patch.object(source.os, 'open', side_effect=guarded):
             self.assertEqual(source.observe_source_revision(self.root), REV)
+
+    def test_linux_host_cannot_admit_a_mac_archive_manifest(self):
+        with patch.object(source.sys, 'platform', 'linux'):
+            self.reject()
 
     def test_environment_revision_and_manifest_overrides_are_not_authority(self):
         with patch.dict(os.environ, {'SOURCE_REVISION': 'b' * 40, 'TZUDONG_PIPELINE_SOURCE_SHA': 'b' * 40,
