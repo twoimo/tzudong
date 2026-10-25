@@ -7,11 +7,14 @@ on:
       - '.github/workflows/**'
       - '.github/scripts/*ci*.py'
       - '.github/dependabot.yml'
+      - '.github/hosted-pending-custody-install.v1.json'
       - '.kiro/specs/crawler-pipeline-*/**'
       - 'apps/web/package.json'
       - 'apps/web/package-lock.json'
       - 'apps/web/bun.lock'
       - 'apps/web/scripts/verify-pin-contract.mjs'
+      - 'apps/web/scripts/hosted-pending-custody-operation.mjs'
+      - 'apps/web/scripts/__tests__/hosted-pending-custody-operation.test.mjs'
       - 'apps/web/scripts/collect-dependency-candidates.mjs'
       - 'apps/web/app/api/admin/publish-jobs/**'
       - 'apps/web/lib/admin-publish-jobs.ts'
@@ -34,6 +37,14 @@ on:
       - 'backend/bin/schema_mirror_report.py'
       - 'backend/bin/seed_fixture_guard.py'
       - 'backend/bin/tests/**'
+      - 'backend/bin/apply_hosted_pending_candidates.py'
+      - 'backend/bin/evaluate_new_youtube_videos.py'
+      - 'backend/bin/terminal_completion_cache.py'
+      - 'backend/supabase/scripts/hosted_data_plane.py'
+      - 'backend/supabase/scripts/hosted_pending_*.py'
+      - 'backend/supabase/scripts/test_hosted_pending_*.py'
+      - 'backend/supabase/candidates/*hosted_pending*.sql'
+      - 'backend/supabase/migrations/*hosted_pending*.sql'
       - 'backend/bin/run_parallel_laaj.py'
       - 'backend/utils/**'
       - 'backend/restaurant-evaluation/scripts/**'
@@ -330,10 +341,36 @@ jobs:
       - name: Install focused test dependencies
         run: python -m pip install --disable-pip-version-check -r backend/test-requirements.txt
 
+      - name: Verify shared pending custody and terminal cache
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import os
+          import stat
+          from backend.supabase.scripts.hosted_pending_source import observe_source_revision
+          root = Path.cwd()
+          parents = [{"depth": i, "uid": p.lstat().st_uid,
+                      "mode": stat.S_IMODE(p.lstat().st_mode)}
+                     for i, p in enumerate((root, *root.parents))]
+          print(json.dumps({"nativeUid": os.getuid(), "sourceParents": parents}))
+          print("pendingSource=" + observe_source_revision(root))
+          PY
+          python -m unittest \
+            backend.bin.tests.test_evaluate_new_youtube_videos \
+            backend.bin.tests.test_hosted_apply_cli \
+            backend.bin.tests.test_local_pipeline_freshness \
+            backend.bin.tests.test_terminal_completion_cache \
+            backend.utils.tests.test_privacy_log
+
       - name: Set up pinned pipeline Node runtime
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
         with:
           node-version: '24.21.0'
+
+      - name: Verify fixed pending custody SQL operation
+        run: node --test apps/web/scripts/__tests__/hosted-pending-custody-operation.test.mjs
 
       - name: Verify pipeline receipts, review completeness and resource limits
         run: |

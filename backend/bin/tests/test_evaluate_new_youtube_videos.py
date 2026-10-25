@@ -51,6 +51,21 @@ def terminal_rows(video_id: str, names: list[str]) -> list[dict]:
 
 
 class EvaluateNewYoutubeVideosTests(unittest.TestCase):
+    def setUp(self):
+        from backend.supabase.scripts import hosted_pending_operation as custody
+        source=patch.object(custody,'current_source_revision',return_value='03246a7c3351fd71eff4ff33d1579fb4dc4e36b8')
+        discovery=patch.object(custody,'observe_deliveries',side_effect=lambda videos,**kwargs:{v:{'state':'legacy_unresolved','requestId':None} for v in videos})
+        source.start();discovery.start();self.addCleanup(source.stop);self.addCleanup(discovery.stop)
+
+    def test_claimed_operation_without_restaurant_rows_blocks_provider_work(self):
+        from backend.supabase.scripts import hosted_pending_operation as custody
+        video='abcdefghijk'
+        with tempfile.TemporaryDirectory() as tmp, patch.object(module,'REPO_ROOT',Path(tmp)), patch.object(module,'assert_hosted_target'), patch.object(module,'fetch_hosted_restaurant_snapshot',return_value=([],[])), patch.object(module,'_load_urls',return_value=['https://youtu.be/'+video]), patch.object(module,'_write_urls'), patch.object(module,'_run',return_value=0) as stage, patch.object(custody,'observe_deliveries',return_value={video:{'state':'held','requestId':'00000000-0000-4000-8000-000000000001'}}) as discovery:
+            self.assertEqual(module.main(['--limit','1']),2)
+            self.assertEqual(discovery.call_args.args[0],{video})
+            self.assertEqual(stage.call_count,1)
+            self.assertEqual(stage.call_args.args[0][1],str(module.SCRIPTS['collect_urls']))
+
     def test_mixed_not_selection_transform_does_not_complete_selected_restaurant(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -298,14 +313,15 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
                 self.assertEqual(command.call_count, 1)
                 self.assertEqual(command.call_args.args[0][1], str(runner.EVALUATE))
 
-    def test_skips_when_all_urls_already_hosted(self) -> None:
+    def test_legacy_hosted_without_custody_is_reported_held_without_provider(self) -> None:
         calls: list[list[str]] = []
 
         def fake_run(argv: list[str], env: dict[str, str], *, required: bool = True) -> int:
             calls.append(argv)
             return 0
 
-        with patch.object(module, "assert_hosted_target"), patch.object(
+        from backend.supabase.scripts import hosted_pending_operation as custody
+        with patch.object(custody,'current_source_revision',return_value='1'*40), patch.object(custody,'observe_deliveries',return_value={'abcdefghijk':{'state':'legacy_unresolved','requestId':None}}), patch.object(module, "assert_hosted_target"), patch.object(
             module,
             "fetch_hosted_restaurant_snapshot",
             return_value=([], ["abcdefghijk"]),

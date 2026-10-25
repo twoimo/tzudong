@@ -62,14 +62,23 @@ Video timestamps and internal reference markers belong in `reasoning_basis`. The
 The `pipeline-control` profile additionally requires `TZUDONG_DATA_ENV` and
 `PIPELINE_CONTROL_DSN` (presence only; never print values). `TZUDONG_DATA_ENV=local_db`
 must reject hosted project ref `aqlcofblfxdrjhhdmarw`.
-The `hosted-pending-apply` job evaluates at most one youtube ID absent from
-hosted, then inserts preview-selected `pending` restaurants. Guard:
-`backend.bin.tests.test_evaluate_new_youtube_videos`.
-The `hosted-pending-apply` profile requires `SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY`, and `TZUDONG_HOSTED_DATA_PLANE_APPROVED` (presence
-only). It inserts only preview-selected `pending` restaurants for youtube IDs
-absent from hosted. It does not set `PIPELINE_HOSTED_APPLY_ENABLED` or overwrite
-approved rows. Guard: `backend.supabase.scripts.test_hosted_data_plane`.
+The `hosted-pending-apply` job admits a configured limit of one to three videos.
+An existing hosted restaurant does not establish that all of its video's current
+siblings were delivered. The custody caller binds the complete current eligible
+set, validated source and input fingerprints to one durable request, then sends
+apply only after winning its fresh claim. The database commits all sibling writes
+and the result together; an uncertain or already claimed request is read only.
+Administrator edits and deleted/ambiguous identities are preserved.
+
+The profile requires `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
+`TZUDONG_HOSTED_DATA_PLANE_APPROVED` (presence only). It does not set
+`PIPELINE_HOSTED_APPLY_ENABLED` or overwrite approved rows. The source candidate
+requires the separately admitted custody migration and compatible Mac/GHA
+activation; this document is not proof of operating installation. Guards:
+`backend.bin.tests.test_evaluate_new_youtube_videos`,
+`backend.supabase.scripts.test_hosted_data_plane`, and the custody/source modules
+in required orchestration readiness. Cutover and evidence scope:
+[`hosted-pending-custody-20261025.md`](../docs/operations/hosted-pending-custody-20261025.md).
 
 ## Admin/ops status contract
 
