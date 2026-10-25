@@ -30,10 +30,92 @@ export function lockfileChanges(before, after) {
   return { packages, incomplete };
 }
 
-export function descriptor(pr, files, lockfiles = {}) {
+
+// Narrow admission for explicitly governed companion files that must mirror
+// manifest version pins (currently the nightly-regression workflow contract
+// test). Fail-closed: anything outside the allowlist, any non-mirror change,
+// any missing evidence keeps metadataIncomplete = true.
+export const GOVERNED_COMPANION_PATHS = new Set([
+  'apps/web/tests-unit/nightly-regression-workflow.test.ts',
+]);
+
+const COMPANION_VERSION_TOKEN = /\d+\.\d+\.\d+(?:[-+][\w.-]+)?/g;
+const stripRange = (value) => String(value).replace(/^[~^<>=v ]+/, '');
+
+function companionLineMirrorsOnly(before, after, mirror, toSet, byName) {
+  const removed = before.match(COMPANION_VERSION_TOKEN) ?? [];
+  const added = after.match(COMPANION_VERSION_TOKEN) ?? [];
+  if (removed.length !== added.length) return false;
+  // Every admitted change must be anchored to at least one bumped package
+  // named on the line, and must mirror that package's own pair.
+  const named = byName.filter((pkg) => before.includes(pkg.name) || after.includes(pkg.name));
+  if (named.length === 0) return false;
+  for (const pkg of named) {
+    if (!before.includes(stripRange(pkg.fromVersion)) || !after.includes(stripRange(pkg.toVersion))) {
+      return false;
+    }
+  }
+  // Non-version text must be identical once mirrored tokens are masked.
+  const maskedBefore = before.replace(COMPANION_VERSION_TOKEN, (tok) => (mirror.has(tok) ? ' \0 ' : tok));
+  const maskedAfter = after.replace(COMPANION_VERSION_TOKEN, (tok) => (toSet.has(tok) ? ' \0 ' : tok));
+  if (maskedBefore !== maskedAfter) return false;
+  for (let i = 0; i < removed.length; i++) {
+    if (removed[i] === added[i]) continue;
+    if (mirror.get(removed[i]) !== added[i]) return false;
+  }
+  return true;
+}
+
+const companionPairs = (packages) => ({
+  mirror: new Map(packages.map((pkg) => [stripRange(pkg.fromVersion), stripRange(pkg.toVersion)])),
+  toSet: new Set(packages.map((pkg) => stripRange(pkg.toVersion))),
+  byName: packages,
+});
+
+export function companionPatchMirrorsOnly(patch, packages) {
+  if (typeof patch !== 'string' || !Array.isArray(packages) || packages.length === 0) return false;
+  const { mirror, toSet, byName } = companionPairs(packages);
+  const blocks = [];
+  let current = { minus: [], plus: [] };
+  let sawHunk = false;
+  const flush = () => {
+    if (current.minus.length || current.plus.length) { blocks.push(current); }
+    current = { minus: [], plus: [] };
+  };
+  for (const line of patch.split('\n')) {
+    if (line.startsWith('@@ ')) { flush(); sawHunk = true; continue; }
+    if (line.startsWith('-') && !line.startsWith('--')) { current.minus.push(line.slice(1)); continue; }
+    if (line.startsWith('+') && !line.startsWith('++')) { current.plus.push(line.slice(1)); continue; }
+    if (line.startsWith(' ') || line.startsWith('\\') || line === '') { flush(); continue; }
+    return false; // unknown patch grammar: fail closed
+  }
+  flush();
+  if (!sawHunk || blocks.length === 0) return false;
+  return blocks.every(({ minus, plus }) => minus.length === plus.length && minus.length > 0
+    && minus.every((line, index) => companionLineMirrorsOnly(line, plus[index], mirror, toSet, byName)));
+}
+
+export function companionContentMirrorsOnly(before, after, packages) {
+  if (typeof before !== 'string' || typeof after !== 'string'
+    || !Array.isArray(packages) || packages.length === 0) return false;
+  const { mirror, toSet, byName } = companionPairs(packages);
+  const beforeLines = before.split('\n');
+  const afterLines = after.split('\n');
+  if (beforeLines.length !== afterLines.length) return false;
+  let changes = 0;
+  for (let i = 0; i < beforeLines.length; i++) {
+    if (beforeLines[i] === afterLines[i]) continue;
+    changes += 1;
+    if (!companionLineMirrorsOnly(beforeLines[i], afterLines[i], mirror, toSet, byName)) return false;
+  }
+  return changes > 0;
+}
+
+export function descriptor(pr, files, lockfiles = {}, companionContents = {}) {
   const units = new Set();
   const packages = [];
   let incomplete = files.length === 0;
+  const companionFiles = [];
   for (const file of files) {
     const path = file.filename;
     if (/package-lock\.json$/.test(path)) {
@@ -55,7 +137,11 @@ export function descriptor(pr, files, lockfiles = {}) {
         u.ecosystem === 'npm' ? path === `${u.directory.slice(1)}/package.json`
           : u.ecosystem === 'cargo' ? /Cargo\.toml$/.test(path)
             : /requirements[^/]*\.txt$/.test(path)));
-    if (!unit || file.status !== 'modified' || typeof file.patch !== 'string') {
+    if (!unit) {
+      if (GOVERNED_COMPANION_PATHS.has(path)) { companionFiles.push(file); continue; }
+      incomplete = true; continue;
+    }
+    if (file.status !== 'modified' || typeof file.patch !== 'string') {
       incomplete = true; continue;
     }
     units.add(unit.directory);
@@ -76,6 +162,17 @@ export function descriptor(pr, files, lockfiles = {}) {
       if (fromVersion !== toVersion) packages.push({ name, fromVersion, toVersion });
     }
     if (after.size === 0 || [...before.keys()].some((name) => !after.has(name))) incomplete = true;
+  }
+  // Companion pass: an allowlisted file is admitted only when its entire diff
+  // (patch when present, verified full contents otherwise) mirrors manifest
+  // from/to pairs exactly. Anything else fails closed.
+  for (const file of companionFiles) {
+    if (file.status !== 'modified' || packages.length === 0) { incomplete = true; continue; }
+    const admitted = typeof file.patch === 'string'
+      ? companionPatchMirrorsOnly(file.patch, packages)
+      : companionContentMirrorsOnly(companionContents[file.filename]?.before,
+        companionContents[file.filename]?.after, packages);
+    if (!admitted) incomplete = true;
   }
   return { number: pr.number, headSha: pr.head.sha, targetBranch: pr.base.ref,
     unit: units.size === 1 ? [...units][0] : 'unknown', packages,
@@ -102,36 +199,55 @@ export async function collectCandidates(request, checkedCommit = null) {
       }
       const lockfiles = {};
       let mergeBase = null;
+      const ensureMergeBase = async () => {
+        if (mergeBase !== null) return mergeBase;
+        if (![pr.base?.sha, pr.head?.sha].every((sha) => /^[0-9a-f]{40}$/.test(sha ?? '')))
+          throw new Error('candidate_metadata_unavailable');
+        const comparison = await request(`/compare/${pr.base.sha}...${pr.head.sha}?per_page=1`);
+        if (comparison?.base_commit?.sha !== pr.base.sha
+          || !/^[0-9a-f]{40}$/.test(comparison?.merge_base_commit?.sha ?? ''))
+          throw new Error('candidate_metadata_unavailable');
+        mergeBase = comparison.merge_base_commit.sha;
+        return mergeBase;
+      };
+      const fetchVerifiedBytes = async (filename, sha) => {
+        if (!/^[0-9a-f]{40}$/.test(sha ?? '')) throw new Error('candidate_metadata_unavailable');
+        const blob = await request(`/contents/${filename}?ref=${sha}`);
+        if (blob?.encoding !== 'base64' || typeof blob.content !== 'string'
+          || !Number.isSafeInteger(blob.size) || blob.size < 0 || blob.size > LOCKFILE_LIMIT
+          || blob.content.length > Math.ceil(LOCKFILE_LIMIT / 3) * 4 * 1.1)
+          throw new Error('candidate_metadata_unavailable');
+        const bytes = Buffer.from(blob.content, 'base64');
+        const digest = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+        if (bytes.length !== blob.size || digest !== blob.sha) throw new Error('candidate_metadata_unavailable');
+        return bytes;
+      };
       for (const file of files) {
         const unit = UNITS.find((u) => u.ecosystem === 'npm'
           && file.filename === `${u.directory.slice(1)}/package-lock.json`);
         if (!unit || file.status !== 'modified'
           || files.some((entry) => entry.filename === `${unit.directory.slice(1)}/package.json`)) continue;
-        if (mergeBase === null) {
-          if (![pr.base?.sha, pr.head?.sha].every((sha) => /^[0-9a-f]{40}$/.test(sha ?? '')))
-            throw new Error('candidate_metadata_unavailable');
-          const comparison = await request(`/compare/${pr.base.sha}...${pr.head.sha}?per_page=1`);
-          if (comparison?.base_commit?.sha !== pr.base.sha
-            || !/^[0-9a-f]{40}$/.test(comparison?.merge_base_commit?.sha ?? ''))
-            throw new Error('candidate_metadata_unavailable');
-          mergeBase = comparison.merge_base_commit.sha;
-        }
+        const base = await ensureMergeBase();
         const pair = [];
-        for (const sha of [mergeBase, pr.head?.sha]) {
-          if (!/^[0-9a-f]{40}$/.test(sha ?? '')) throw new Error('candidate_metadata_unavailable');
-          const blob = await request(`/contents/${file.filename}?ref=${sha}`);
-          if (blob?.encoding !== 'base64' || typeof blob.content !== 'string'
-            || !Number.isSafeInteger(blob.size) || blob.size < 0 || blob.size > LOCKFILE_LIMIT
-            || blob.content.length > Math.ceil(LOCKFILE_LIMIT / 3) * 4 * 1.1)
-            throw new Error('candidate_metadata_unavailable');
-          const bytes = Buffer.from(blob.content, 'base64');
-          const digest = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
-          if (bytes.length !== blob.size || digest !== blob.sha) throw new Error('candidate_metadata_unavailable');
-          pair.push(JSON.parse(bytes.toString('utf8')));
+        for (const sha of [base, pr.head?.sha]) {
+          pair.push(JSON.parse((await fetchVerifiedBytes(file.filename, sha)).toString('utf8')));
         }
         lockfiles[file.filename] = { before: pair[0], after: pair[1] };
       }
-      candidates.push(descriptor(pr, files, lockfiles));
+      // A governed companion file whose patch the API omitted (oversized or
+      // unavailable) is verified from complete base/head contents instead;
+      // unavailable evidence fails closed inside the descriptor.
+      const companionContents = {};
+      for (const file of files) {
+        if (!GOVERNED_COMPANION_PATHS.has(file.filename) || file.status !== 'modified'
+          || typeof file.patch === 'string') continue;
+        const base = await ensureMergeBase();
+        companionContents[file.filename] = {
+          before: (await fetchVerifiedBytes(file.filename, base)).toString('utf8'),
+          after: (await fetchVerifiedBytes(file.filename, pr.head?.sha)).toString('utf8'),
+        };
+      }
+      candidates.push(descriptor(pr, files, lockfiles, companionContents));
     }
     if (prs.length < 100) return candidates;
   }
