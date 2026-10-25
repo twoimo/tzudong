@@ -191,8 +191,7 @@ describe('governed companion file narrow admission', () => {
       mirrorAfter.replace('toBe(true)', 'toBe(false)'), // semantic change on another line
       beforeText.replace('expect(other).toBe(true);', 'expect(lock).toContain(\'"supabase": ["supabase@2.121.0"\');')
         .replace('supabase@2.117.0', 'supabase@2.121.0').replace('2.121.0\');\n  });', '2.121.0\');\n    expect(other).toBe(true);\n  });'), // reordered lines
-      beforeText.replace('2.117.0', '2.121.0').replace('2.121.0\');\n', '2.121.0\');\n'), // identical (control: not in bad list)
-    ].slice(0, 9);
+    ];
     for (const after of bad) {
       expect(companionContentMirrorsOnly(beforeText, after, pairs)).toBe(false);
       expect(descriptor(pr, [manifest(), companion()], {}, contents(after)).metadataIncomplete).toBe(true);
@@ -216,6 +215,20 @@ describe('governed companion file narrow admission', () => {
     ];
     expect(companionContentMirrorsOnly(before, 'pin "alpha": "2.0.0"\n', dup)).toBe(true);
     expect(companionContentMirrorsOnly('pin: "1.0.0"\n', 'pin: "2.0.0"\n', dup)).toBe(false);
+  });
+
+  test('shared from-version pairs stay bound to their own to-version', () => {
+    const dup = [
+      { name: 'alpha', fromVersion: '1.0.0', toVersion: '2.0.0' },
+      { name: 'beta', fromVersion: '1.0.0', toVersion: '3.0.0' },
+    ];
+    // Each package's own pair is admitted regardless of pair order.
+    expect(companionContentMirrorsOnly('pin "alpha": "1.0.0"\n', 'pin "alpha": "2.0.0"\n', dup)).toBe(true);
+    expect(companionContentMirrorsOnly('pin "beta": "1.0.0"\n', 'pin "beta": "3.0.0"\n', dup)).toBe(true);
+    expect(companionContentMirrorsOnly('pin "alpha": "1.0.0"\n', 'pin "alpha": "2.0.0"\n', [...dup].reverse())).toBe(true);
+    // Cross-pair swaps are rejected even though every token is a real manifest version.
+    expect(companionContentMirrorsOnly('pin "alpha": "1.0.0"\n', 'pin "alpha": "3.0.0"\n', dup)).toBe(false);
+    expect(companionContentMirrorsOnly('pin "beta": "1.0.0"\n', 'pin "beta": "2.0.0"\n', dup)).toBe(false);
   });
 
   test('collection always verifies companion contents, even when a patch string exists', async () => {
