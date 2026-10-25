@@ -29,6 +29,7 @@ MINIMUM_ARTIFACTS = frozenset((
     "g026-behavior-receipt.json", "operational-archive-binding.json",
     "hosted-pending-custody-pg15-replay.sql", "hosted-pending-custody-pg15-replay.json",
     "hosted-pending-custody-pg15-assertions.json",
+    "hosted-pending-candidate-index-disposition.json",
 ))
 REQUIRED_METADATA = frozenset((
     "source_sha", "migration_chain_sha256", "jsonl_sha256", "tuple_evidence_sha256",

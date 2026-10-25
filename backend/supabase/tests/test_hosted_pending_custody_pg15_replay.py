@@ -30,6 +30,30 @@ class HostedPendingCustodyPg15ReplayTests(unittest.TestCase):
             with self.subTest(name=name), self.assertRaisesRegex(ValueError, "SOURCE_DRIFT"):
                 replay.transform(source, name)
 
+    def test_superseded_index_requires_both_exact_sources(self):
+        index = (ROOT / "backend/supabase/migrations" / replay.SUPERSEDED_INDEX_NAME).read_bytes()
+        receipt = replay.classify_superseded_index(index, self.source)
+        self.assertEqual(receipt["source_sha256"], hashlib.sha256(index).hexdigest())
+        self.assertEqual(receipt["successor_sha256"], hashlib.sha256(self.source).hexdigest())
+        self.assertFalse(receipt["operating_index_dropped"])
+        self.assertFalse(receipt["operating_ledger_admission_verified"])
+        for old, new, name, successor_name in (
+            (index + b"\n", self.source, replay.SUPERSEDED_INDEX_NAME, replay.NAME),
+            (index, self.source + b"\n", replay.SUPERSEDED_INDEX_NAME, replay.NAME),
+            (index, self.source, "other.sql", replay.NAME),
+            (index, self.source, replay.SUPERSEDED_INDEX_NAME, "other.sql"),
+        ):
+            with self.subTest(name=name, successor=successor_name), self.assertRaisesRegex(ValueError, "SOURCE_DRIFT"):
+                replay.classify_superseded_index(old, new, name, successor_name)
+
+    def test_superseded_disposition_never_executes_old_sql(self):
+        driver = DRIVER.read_text()
+        branch = driver.split(replay.SUPERSEDED_INDEX_NAME + ")", 1)[1].split(";;", 1)[0]
+        self.assertIn("--superseded-by", branch)
+        self.assertIn("g026_chain_apply", branch)
+        self.assertNotIn("psql", branch)
+        self.assertNotIn("DROP INDEX", branch)
+
     def test_replay_roundtrips_and_rejects_edited_output(self):
         self.assertEqual(replay.restore(self.adapted), self.source)
         for changed in (

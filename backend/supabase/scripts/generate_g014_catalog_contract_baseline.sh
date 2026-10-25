@@ -1424,6 +1424,20 @@ for migration in "${effective_migrations[@]}"; do
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
   printf '%s  %s  %s\n' "$previous_hash" "$file_hash" "$canonical_path" >>"$chain_file"
   case "${migration##*/}" in
+    20260828000100_hosted_candidate_identity_unique.sql)
+      # This unexecuted source enforces one restaurant per video. The custody
+      # successor requires the composite video/name index instead. Bind both
+      # immutable sources and the explicit source-only disposition; never drop
+      # an index or manufacture an operating migration-ledger entry here.
+      index_disposition="$staging_dir/hosted-pending-candidate-index-disposition.json"
+      python3 "$script_dir/transform_hosted_pending_custody_pg15_replay.py" \
+        --source "$migration" \
+        --superseded-by "$backend_migrations_dir/20261025063810_hosted_pending_atomic_delivery.sql" \
+        --receipt "$index_disposition"
+      g026_chain_apply 'hosted-pending-candidate-index-disposition-helper' \
+        "$script_dir/transform_hosted_pending_custody_pg15_replay.py"
+      g026_chain_apply 'hosted-pending-candidate-index-disposition' "$index_disposition"
+      ;;
     20261004190259_admin_record_guarded_actions.sql|20261004194715_admin_evaluation_raw_warning_invoker_contract.sql)
       registration_replay="$work_dir/${migration##*/}.pg15-registration-replay.sql"
       python3 "$script_dir/transform_registration_replay.py" --source "$migration" --output "$registration_replay"
@@ -1983,7 +1997,7 @@ jq -n --arg source_sha "$source_sha" --arg migration_chain_sha256 "$chain_hash" 
     admin-management-group-overlap-verification.sql admin-management-group-overlap-receipt.json \
     admin-user-rpc-forward-overlap-verification.sql admin-user-rpc-forward-overlap-receipt.json \
     hosted-pending-custody-pg15-replay.sql hosted-pending-custody-pg15-replay.json \
-    hosted-pending-custody-pg15-assertions.json \
+    hosted-pending-custody-pg15-assertions.json hosted-pending-candidate-index-disposition.json \
     g014-owner-pg15-verification.sql g014-owner-pg15-receipt.json \
     g014-owner-final-pg15-verification.sql g014-owner-final-pg15-receipt.json \
     g016-identity-pg15-verification.sql g016-identity-pg15-receipt.json \

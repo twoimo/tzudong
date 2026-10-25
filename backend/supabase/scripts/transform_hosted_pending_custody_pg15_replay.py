@@ -18,6 +18,35 @@ from pathlib import Path
 NAME = "20261025063810_hosted_pending_atomic_delivery.sql"
 SHA256 = "02bc9c5dab0e16a46a28a7993e9c75524813d0bc713c60782881eb4d5ddd2165"
 BYTE_LENGTH = 46_164
+SUPERSEDED_INDEX_NAME = "20260828000100_hosted_candidate_identity_unique.sql"
+SUPERSEDED_INDEX_SHA256 = "ff6d5035e1dd553a5fe2f9b230de629fd44c42914697669769dde5aa86aed320"
+
+
+def classify_superseded_index(source: bytes, successor: bytes,
+                              name: str = SUPERSEDED_INDEX_NAME,
+                              successor_name: str = NAME) -> dict:
+    """Retain the obsolete source as evidence, not as an operating migration.
+
+    Its one-video index prevents the sibling-restaurant contract and is absent
+    from the custody installer's exact preimage. This disposition is admitted
+    only with both immutable source files; it never drops an installed index.
+    """
+    if (name != SUPERSEDED_INDEX_NAME or len(source) != 1992
+            or hashlib.sha256(source).hexdigest() != SUPERSEDED_INDEX_SHA256
+            or successor_name != NAME or len(successor) != BYTE_LENGTH
+            or hashlib.sha256(successor).hexdigest() != SHA256):
+        raise ValueError("PENDING_CUSTODY_SUPERSEDED_INDEX_SOURCE_DRIFT")
+    return {
+        "schema": "hosted-pending-superseded-index-disposition-v1",
+        "source": SUPERSEDED_INDEX_NAME,
+        "source_sha256": SUPERSEDED_INDEX_SHA256,
+        "successor": NAME,
+        "successor_sha256": SHA256,
+        "disposition": "superseded-single-video-index-source-not-executed",
+        "scope": "source-only-reconstruction",
+        "operating_index_dropped": False,
+        "operating_ledger_admission_verified": False,
+    }
 
 PG17_MEMBERSHIP = b"""  IF pg_catalog.pg_has_role('postgres','privacy_workflow_owner','SET')
      OR pg_catalog.pg_has_role('postgres','privacy_workflow_owner','USAGE')
@@ -128,9 +157,23 @@ def restore(replay: bytes) -> bytes:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, type=Path)
-    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--receipt", required=True, type=Path)
+    parser.add_argument("--superseded-by", type=Path)
     args = parser.parse_args()
+    if args.superseded_by:
+        if args.output:
+            parser.error("a source disposition does not emit replacement SQL")
+        receipt = classify_superseded_index(
+            args.source.read_bytes(), args.superseded_by.read_bytes(),
+            args.source.name, args.superseded_by.name,
+        )
+        with args.receipt.open("x", encoding="utf-8") as destination:
+            json.dump(receipt, destination, sort_keys=True, indent=2)
+            destination.write("\n")
+        return
+    if not args.output:
+        parser.error("--output is required for the custody SQL replay")
     result = transform(args.source.read_bytes(), args.source.name)
     with args.output.open("xb") as destination:
         destination.write(result)
