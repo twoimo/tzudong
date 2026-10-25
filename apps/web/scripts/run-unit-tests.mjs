@@ -44,6 +44,12 @@ const isolated = new Set([
   // group and passed all four contracts alone. Preserve it in a fresh process;
   // isolation does not establish the cause of the combined-process timeout.
   'admin-knowledge-graph-retry-page-browser.test.ts',
+  // admin-youtube-thumbnail-generator.test.ts installs a process-global
+  // mock.module for the durable release registry that mock.restore() does not
+  // undo for files loaded afterward, and combined-process execution order is
+  // not the sorted file order, so these recovery contracts can receive the
+  // mock (nightly run 40132575511 failed all six). Keep in a fresh process.
+  'thumbnail-release-publish-recovery.test.ts',
 ]);
 
 const files = readdirSync(root, { recursive: true, withFileTypes: true })
