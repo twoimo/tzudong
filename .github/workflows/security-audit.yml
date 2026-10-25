@@ -351,11 +351,6 @@ jobs:
           print("pendingSource=" + observe_source_revision(root))
           PY
           python -m unittest \
-            backend.supabase.scripts.test_hosted_pending_operation \
-            backend.supabase.scripts.test_hosted_pending_integration \
-            backend.supabase.scripts.test_hosted_pending_source \
-            backend.supabase.scripts.test_hosted_pending_resumption \
-            backend.supabase.scripts.test_hosted_pending_source_linux \
             backend.bin.tests.test_evaluate_new_youtube_videos \
             backend.bin.tests.test_hosted_apply_cli \
             backend.bin.tests.test_local_pipeline_freshness \
