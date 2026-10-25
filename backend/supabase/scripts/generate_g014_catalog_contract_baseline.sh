@@ -1669,6 +1669,20 @@ for migration in "${effective_migrations[@]}"; do
     20261025063810_hosted_pending_atomic_delivery.sql)
       # Source reconstruction only. PG17 executor/ledger/membership admission is
       # proved separately by the unchanged atomic operating operation.
+      # Keep catalog-only witnesses in the private run log even if admission
+      # rejects the source chain before an evidence directory can be emitted.
+      compose exec -T db psql -X -At -v ON_ERROR_STOP=1 \
+        -h 127.0.0.1 -p 5432 -U postgres -d postgres <<'SQL'
+SELECT jsonb_build_object(
+ 'kind','hosted_pending_prerequisites',
+ 'executor_is_postgres',current_user='postgres',
+ 'server_major',current_setting('server_version_num')::int/10000,
+ 'extract_present',to_regprocedure('public.extract_youtube_video_id(text)') IS NOT NULL,
+ 'resolve_present',to_regprocedure('public.resolve_restaurant_identity_name(text,text,text,text)') IS NOT NULL,
+ 'normalize_present',to_regprocedure('public.normalize_restaurant_identity_name(text)') IS NOT NULL,
+ 'video_index',pg_get_indexdef(to_regclass('public.idx_restaurants_active_video_identity')),
+ 'candidate_index',pg_get_indexdef(to_regclass('public.idx_restaurants_active_candidate_identity')));
+SQL
       compose exec -T db psql -X -At -v ON_ERROR_STOP=1 \
         -h 127.0.0.1 -p 5432 -U postgres -d postgres <<'SQL' |
 SELECT jsonb_agg(jsonb_build_object(
