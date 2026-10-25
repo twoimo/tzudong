@@ -21,8 +21,14 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from backend.utils.privacy_log import redact_log_text, sanitize_log_value
+
 MAX_BYTES = 16 * 1024 * 1024
 MAX_FILE_BYTES = 2 * 1024 * 1024
+MAX_STRING = 4096
 MAX_FILES = 1600
 MAX_VIDEOS = 200
 REASONS = {"shorts:is_shorts_le_180", "no_restaurants", "all_names_null"}
@@ -64,7 +70,23 @@ def _unique_object(pairs: list[tuple]) -> dict:
     return result
 
 
-def _has_visual_material(content: bytes) -> bool:
+def _unsafe_text(value: str) -> bool:
+    # Reuse the backend privacy boundary; rejection preserves the exact source
+    # bytes and their receipts. Public captions/descriptions have no exemption.
+    return len(value) > MAX_STRING or redact_log_text(value, max_length=MAX_STRING) != value
+
+
+def _unsafe_key(key: str) -> bool:
+    if _unsafe_text(key + "=value"):
+        return True
+    # The structured boundary also normalizes keys such as "api.key" and "key"
+    # that the text assignment matcher deliberately treats differently.
+    sample = {key: "cache-field"}
+    return sanitize_log_value(sample, max_depth=2, max_entries=2,
+                              max_string_length=MAX_STRING) != sample
+
+
+def _has_excluded_material(content: bytes) -> bool:
     # Crawl/selection can retain copies after the visual source is removed.
     # Check EVERY JSONL record: freshness probes intentionally hash only the
     # latest record, while this transport preserves the entire file's bytes.
@@ -77,9 +99,13 @@ def _has_visual_material(content: bytes) -> bool:
             if isinstance(value, dict):
                 if any(value.get(key) for key in ("visual", "texts", "raw_ocr", "ocr_text")):
                     return True
+                if any(_unsafe_key(key) for key in value):
+                    return True
                 pending.extend(value.values())
             elif isinstance(value, list):
                 pending.extend(value)
+            elif isinstance(value, (str, int, float)) and _unsafe_text(str(value)):
+                return True
     return False
 
 
@@ -125,6 +151,7 @@ def export_cache(root: Path, cache: Path, environment: dict[str, str]) -> dict:
     serialized_size = len(json.dumps(packet, separators=(",", ":")).encode())
     skipped = 0
     skipped_visual = 0
+    skipped_private = 0
     for video in order:
         if not VIDEO.fullmatch(video) or len(packet["videos"]) >= MAX_VIDEOS:
             skipped += 1
@@ -151,7 +178,7 @@ def export_cache(root: Path, cache: Path, environment: dict[str, str]) -> dict:
         if reason == "shorts:is_shorts_le_180":
             paths = {key: paths[key] for key in ("meta", "marker")}
         entries = []
-        visual_material = False
+        private_material = False
         for relative in paths.values():
             source = _safe_target(root, relative)
             if not source.is_file():
@@ -164,13 +191,13 @@ def export_cache(root: Path, cache: Path, environment: dict[str, str]) -> dict:
             if len(content) > MAX_FILE_BYTES:
                 entries = []
                 break
-            if _has_visual_material(content):
-                visual_material = True
+            if _has_excluded_material(content):
+                private_material = True
                 break
             entries.append({"path": relative, "sha256": hashlib.sha256(content).hexdigest(),
                             "content": base64.b64encode(content).decode("ascii")})
-        if visual_material:
-            skipped_visual += 1
+        if private_material:
+            skipped_private += 1
             continue
         # Account for each encoded entry once, instead of reserializing an
         # ever-growing packet for every video (quadratic in the packet size).
@@ -200,7 +227,7 @@ def export_cache(root: Path, cache: Path, environment: dict[str, str]) -> dict:
         temporary.unlink(missing_ok=True)
     return {"videos": len(packet["videos"]), "files": len(packet["files"]),
             "bytes": cache.stat().st_size, "skippedByBounds": skipped,
-            "skippedVisualInputs": skipped_visual}
+            "skippedVisualInputs": skipped_visual, "skippedPrivateInputs": skipped_private}
 
 
 def restore_cache(root: Path, cache: Path) -> dict:
@@ -238,8 +265,8 @@ def restore_cache(root: Path, cache: Path) -> dict:
         decoded = base64.b64decode(content, validate=True)
         if len(decoded) > MAX_FILE_BYTES or hashlib.sha256(decoded).hexdigest() != digest:
             raise ValueError("terminal_cache_invalid")
-        if _has_visual_material(decoded):
-            raise ValueError("terminal_cache_visual_material")
+        if _has_excluded_material(decoded):
+            raise ValueError("terminal_cache_private_material")
         target = _safe_target(root, relative)
         if target.exists() and (not target.is_file() or target.read_bytes() != decoded):
             raise ValueError("terminal_cache_conflict")
