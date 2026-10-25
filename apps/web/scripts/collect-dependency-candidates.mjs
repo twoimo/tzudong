@@ -45,7 +45,7 @@ export const GOVERNED_COMPANION_PATHS = new Set([
 const COMPANION_VERSION_TOKEN = /\d+\.\d+\.\d+(?:[-+][\w.-]+)?/g;
 const stripRange = (value) => String(value).replace(/^[~^<>=v ]+/, '');
 
-function companionLineMirrorsOnly(before, after, mirror, toSet, byName) {
+function companionLineMirrorsOnly(before, after, pairSet, fromSet, toSet, byName) {
   const removed = before.match(COMPANION_VERSION_TOKEN) ?? [];
   const added = after.match(COMPANION_VERSION_TOKEN) ?? [];
   if (removed.length !== added.length) return false;
@@ -59,18 +59,22 @@ function companionLineMirrorsOnly(before, after, mirror, toSet, byName) {
     }
   }
   // Non-version text must be identical once mirrored tokens are masked.
-  const maskedBefore = before.replace(COMPANION_VERSION_TOKEN, (tok) => (mirror.has(tok) ? ' \0 ' : tok));
+  const maskedBefore = before.replace(COMPANION_VERSION_TOKEN, (tok) => (fromSet.has(tok) ? ' \0 ' : tok));
   const maskedAfter = after.replace(COMPANION_VERSION_TOKEN, (tok) => (toSet.has(tok) ? ' \0 ' : tok));
   if (maskedBefore !== maskedAfter) return false;
+  // Every changed token must be one package's exact from->to pair. Pairs stay
+  // identity-bound: two packages can share a from-version with different
+  // to-versions, so a from-keyed map would lose pairs and flip with ordering.
   for (let i = 0; i < removed.length; i++) {
     if (removed[i] === added[i]) continue;
-    if (mirror.get(removed[i]) !== added[i]) return false;
+    if (!pairSet.has(`${removed[i]}\0${added[i]}`)) return false;
   }
   return true;
 }
 
 const companionPairs = (packages) => ({
-  mirror: new Map(packages.map((pkg) => [stripRange(pkg.fromVersion), stripRange(pkg.toVersion)])),
+  pairSet: new Set(packages.map((pkg) => `${stripRange(pkg.fromVersion)}\0${stripRange(pkg.toVersion)}`)),
+  fromSet: new Set(packages.map((pkg) => stripRange(pkg.fromVersion))),
   toSet: new Set(packages.map((pkg) => stripRange(pkg.toVersion))),
   byName: packages,
 });
@@ -78,7 +82,7 @@ const companionPairs = (packages) => ({
 export function companionContentMirrorsOnly(before, after, packages) {
   if (typeof before !== 'string' || typeof after !== 'string'
     || !Array.isArray(packages) || packages.length === 0) return false;
-  const { mirror, toSet, byName } = companionPairs(packages);
+  const { pairSet, fromSet, toSet, byName } = companionPairs(packages);
   const beforeLines = before.split('\n');
   const afterLines = after.split('\n');
   if (beforeLines.length !== afterLines.length) return false;
@@ -86,7 +90,7 @@ export function companionContentMirrorsOnly(before, after, packages) {
   for (let i = 0; i < beforeLines.length; i++) {
     if (beforeLines[i] === afterLines[i]) continue;
     changes += 1;
-    if (!companionLineMirrorsOnly(beforeLines[i], afterLines[i], mirror, toSet, byName)) return false;
+    if (!companionLineMirrorsOnly(beforeLines[i], afterLines[i], pairSet, fromSet, toSet, byName)) return false;
   }
   return changes > 0;
 }
