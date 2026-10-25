@@ -2,9 +2,9 @@ import { afterEach, describe, expect, mock, test } from 'bun:test';
 
 let instance = 0;
 
-async function loadCallbackSessionModule(createClient: () => Promise<unknown>) {
+async function loadCallbackSessionModule(createClient: (options?: { allowSessionCookieWrites?: boolean }) => Promise<unknown>) {
   instance += 1;
-  mock.module('@/lib/supabase/server', () => ({ createClient }));
+  mock.module('@/lib/supabase/server', () => ({ createClient, getConsumedPkceCookieNames: () => ['synthetic-verifier'] }));
   try {
     return await import(`../lib/auth/callback-session.ts?test=${instance}`);
   } finally {
@@ -17,6 +17,16 @@ afterEach(() => {
 });
 
 describe('rejected callback session revocation', () => {
+  test('intentional code exchange remains request-local', async () => {
+    let allowed = false;
+    const { createCallbackSupabaseClient } = await loadCallbackSessionModule(async options => {
+      allowed = options?.allowSessionCookieWrites === true;
+      return {};
+    });
+    await createCallbackSupabaseClient();
+    expect(allowed).toBe(false);
+  });
+
   test('signs out globally first and then locally', async () => {
     const { revokeRejectedCallbackSession } = await loadCallbackSessionModule(async () => ({}));
     const scopes: string[] = [];
@@ -127,3 +137,9 @@ describe('rejected callback session revocation', () => {
   });
 });
 
+
+test('callback handoff contains only the session pair and consumed verifier names', async () => {
+  const {getCallbackSessionTokens}=await loadCallbackSessionModule(async()=>({}));
+  const result=await getCallbackSessionTokens({auth:{getSession:async()=>({data:{session:{access_token:'synthetic-access',refresh_token:'synthetic-refresh',provider_token:'must-not-expose'}},error:null})}} as never);
+  expect(result).toEqual({tokens:{access_token:'synthetic-access',refresh_token:'synthetic-refresh'},consumedVerifiers:['synthetic-verifier']});
+});

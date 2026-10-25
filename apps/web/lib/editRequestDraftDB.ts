@@ -1,3 +1,5 @@
+import { draftStorageOwnerKey, draftPublicOwnerId, legacyDraftStorageOwnerKeys } from '@/lib/privacy/draft-storage-owner';
+import { assertBrowserDraftWrite, beginBrowserDraftCleanup, captureBrowserDraftEpoch, isBrowserDraftEpochCurrent, type BrowserDraftEpoch } from '@/lib/privacy/browser-draft-lifecycle';
 import { openDB, DBSchema, IDBPDatabase, IDBPObjectStore } from 'idb';
 import {
     PRIVACY_UNSAFE_VALUE_REASON,
@@ -315,7 +317,7 @@ function readDraft(value: unknown, allowStoredFields: boolean, now = Date.now())
     }
 
     const draft: PersistedEditRequestDraft = {
-        userId,
+        userId: allowStoredFields ? userId : draftStorageOwnerKey(userId),
         restaurantId,
         currentStep: normalizedCurrentStep,
         requestKind: normalizedRequestKind,
@@ -333,12 +335,12 @@ function readDraft(value: unknown, allowStoredFields: boolean, now = Date.now())
 }
 
 function getDraftKey(userId: string, restaurantId: string): [string, string] {
-    return [userId, restaurantId];
+    return [draftStorageOwnerKey(userId), restaurantId];
 }
 
 function toPublicDraft(draft: PersistedEditRequestDraft): EditRequestDraft {
     const publicDraft: EditRequestDraft = {
-        userId: draft.userId,
+        userId: draftPublicOwnerId(draft.userId),
         restaurantId: draft.restaurantId,
         name: draft.name,
         address: draft.address,
@@ -384,9 +386,10 @@ async function sweepExpiredDrafts(db: IDBPDatabase<EditRequestDraftDB>): Promise
 async function enforceUserDraftLimit(
     store: IDBPObjectStore<EditRequestDraftDB, ['edit-request-drafts'], 'edit-request-drafts', 'readwrite'>,
     userId: string,
+    epoch: BrowserDraftEpoch,
 ): Promise<void> {
     const index = store.index('by-user-saved-at');
-    const range = IDBKeyRange.bound([userId, ''], [userId, '\uffff']);
+    const range = IDBKeyRange.bound([draftStorageOwnerKey(userId), ''], [draftStorageOwnerKey(userId), '\uffff']);
     const countedDrafts = readNonNegativeSafeInteger(await index.count(range));
     if (countedDrafts === null) throw new Error('임시 저장 데이터 수를 확인할 수 없습니다.');
 
@@ -394,6 +397,7 @@ async function enforceUserDraftLimit(
     let cursor = await index.openCursor(range);
 
     while (cursor && draftCount > MAX_DRAFTS_PER_USER) {
+        assertBrowserDraftWrite(userId, epoch);
         await cursor.delete();
         draftCount -= 1;
         cursor = await cursor.continue();
@@ -426,11 +430,20 @@ export async function saveDraft(draft: Omit<EditRequestDraft, 'savedAt'>): Promi
     const normalizedDraft = readDraft(draft, false);
     if (!normalizedDraft) throw new Error(PRIVACY_UNSAFE_VALUE_REASON);
 
+    const epoch = captureBrowserDraftEpoch(draft.userId);
+    assertBrowserDraftWrite(draft.userId, epoch);
+
     try {
         const db = await initDB();
+        assertBrowserDraftWrite(draft.userId, epoch);
         const transaction = db.transaction(STORE_NAME, 'readwrite');
+        // Wait for this readwrite transaction to acquire its store before
+        // admitting the write. A pre-transaction localStorage check alone
+        // leaves a gap while another tab can finish a cleanup transaction.
+        await transaction.store.get(getDraftKey(draft.userId, normalizedDraft.restaurantId));
+        assertBrowserDraftWrite(draft.userId, epoch);
         await transaction.store.put(normalizedDraft);
-        await enforceUserDraftLimit(transaction.store, normalizedDraft.userId);
+        await enforceUserDraftLimit(transaction.store, draft.userId, epoch);
         await transaction.done;
     } catch (error) {
         if (error instanceof PrivacyUnsafeValueError) throw new Error(PRIVACY_UNSAFE_VALUE_REASON);
@@ -441,18 +454,29 @@ export async function saveDraft(draft: Omit<EditRequestDraft, 'savedAt'>): Promi
 export async function getDraft(userId: string, restaurantId: string): Promise<EditRequestDraft | null> {
     if (!isBoundedIdentifier(userId) || !isBoundedIdentifier(restaurantId)) return null;
 
+    const epoch = captureBrowserDraftEpoch(userId);
+    if (!isBrowserDraftEpochCurrent(userId, epoch, true)) throw new Error('DRAFT_READ_UNAVAILABLE');
+
+    let transactionDone: Promise<unknown> | undefined;
     try {
         const db = await initDB();
         const key = getDraftKey(userId, restaurantId);
-        const stored = await db.get(STORE_NAME, key);
+        assertBrowserDraftWrite(userId, epoch);
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        transactionDone = transaction.done;
+        const stored = await transaction.store.get(key);
         const draft = readDraft(stored, true);
-        if (!draft || draft.userId !== userId || draft.restaurantId !== restaurantId) {
-            if (stored) await db.delete(STORE_NAME, key);
+        if (!draft || draft.userId !== draftStorageOwnerKey(userId) || draft.restaurantId !== restaurantId) {
+            if (stored) { assertBrowserDraftWrite(userId, epoch); await transaction.store.delete(key); }
+            await transaction.done;
             return null;
         }
-        return toPublicDraft(draft);
+        await transaction.done;
+        return isBrowserDraftEpochCurrent(userId, epoch, true) ? toPublicDraft(draft) : null;
     } catch {
-        return null;
+        await transactionDone?.catch(() => {});
+        if (!isBrowserDraftEpochCurrent(userId, epoch, true)) return null;
+        throw new Error('DRAFT_READ_UNAVAILABLE');
     }
 }
 
@@ -463,45 +487,76 @@ export async function hasDraft(userId: string, restaurantId: string): Promise<bo
 export async function deleteDraft(userId: string, restaurantId: string): Promise<void> {
     if (!isBoundedIdentifier(userId) || !isBoundedIdentifier(restaurantId)) return;
 
+    const epoch = captureBrowserDraftEpoch(userId);
+    let db: IDBPDatabase<EditRequestDraftDB> | undefined;
     try {
-        const db = await initDB();
-        await db.delete(STORE_NAME, getDraftKey(userId, restaurantId));
+        db = await initDB();
+        if (!isBrowserDraftEpochCurrent(userId, epoch)) return;
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const deletions: Promise<void>[] = [];
+        try {
+            // Acquire the transaction before checking the session, then remove both
+            // versions of this explicit discard atomically. Otherwise a later import
+            // could resurrect the old text.
+            await transaction.store.get(getDraftKey(userId, restaurantId));
+            if (isBrowserDraftEpochCurrent(userId, epoch)) {
+                deletions.push(transaction.store.delete(getDraftKey(userId, restaurantId)));
+                for (const legacyOwner of legacyDraftStorageOwnerKeys(userId)) {
+                    deletions.push(transaction.store.delete([legacyOwner, restaurantId]));
+                }
+                await Promise.all(deletions);
+            }
+            await transaction.done;
+        } catch {
+            try { transaction.abort(); } catch { /* It may already have completed. */ }
+            await Promise.allSettled(deletions);
+            await transaction.done.catch(() => {});
+            throw new Error('DRAFT_DELETE_FAILED');
+        }
     } catch {
         throw new Error('임시 저장 데이터 삭제에 실패했습니다.');
-    }
+    } finally { db?.close(); }
 }
 
-export async function deleteAllDraftsByUser(userId: string): Promise<boolean> {
+export async function deleteAllDraftsByUser(userId: string, cleanupEpoch?: BrowserDraftEpoch): Promise<boolean> {
     if (!isBoundedIdentifier(userId)) return false;
-
+    const epoch = cleanupEpoch ?? beginBrowserDraftCleanup(userId);
     try {
         const db = await initDB();
+        if (!isBrowserDraftEpochCurrent(userId, epoch)) return false;
         const transaction = db.transaction(STORE_NAME, 'readwrite');
         const index = transaction.store.index('by-user');
-        let cursor = await index.openCursor(userId);
-        let deletedRows = 0;
-        while (cursor && deletedRows < MAX_SWEEP_RECORDS) {
-            await cursor.delete();
-            deletedRows += 1;
-            cursor = await cursor.continue();
+        let remaining = 0;
+        for (const ownerKey of [draftStorageOwnerKey(userId), ...legacyDraftStorageOwnerKeys(userId)]) {
+            let cursor = await index.openCursor(ownerKey);
+            let deleted = 0;
+            while (cursor && deleted < 100) {
+                if (!isBrowserDraftEpochCurrent(userId, epoch)) { await transaction.done; return false; }
+                await cursor.delete();
+                deleted++;
+                cursor = await cursor.continue();
+            }
+            const count = readNonNegativeSafeInteger(await index.count(ownerKey));
+            if (count === null) { await transaction.done; return false; }
+            remaining += count;
         }
-
-        const remainingDrafts = readNonNegativeSafeInteger(await index.count(userId));
         await transaction.done;
-        return remainingDrafts === 0;
-    } catch {
-        return false;
-    }
+        return remaining === 0 && isBrowserDraftEpochCurrent(userId, epoch);
+    } catch { return false; }
 }
 
 export async function getAllDraftsByUser(userId: string): Promise<EditRequestDraft[]> {
     if (!isBoundedIdentifier(userId)) return [];
 
+    const epoch = captureBrowserDraftEpoch(userId);
+    if (!isBrowserDraftEpochCurrent(userId, epoch, true)) return [];
+
     try {
         const db = await initDB();
+        assertBrowserDraftWrite(userId, epoch);
         const transaction = db.transaction(STORE_NAME, 'readwrite');
         const index = transaction.store.index('by-user-saved-at');
-        const range = IDBKeyRange.bound([userId, ''], [userId, '\uffff']);
+        const range = IDBKeyRange.bound([draftStorageOwnerKey(userId), ''], [draftStorageOwnerKey(userId), '\uffff']);
         const drafts: EditRequestDraft[] = [];
         let cursor = await index.openCursor(range);
         let processed = 0;
@@ -509,7 +564,8 @@ export async function getAllDraftsByUser(userId: string): Promise<EditRequestDra
 
         while (cursor && processed < MAX_DRAFTS_PER_USER) {
             const draft = readDraft(cursor.value, true, now);
-            if (!draft || draft.userId !== userId) {
+            if (!draft || draft.userId !== draftStorageOwnerKey(userId)) {
+                assertBrowserDraftWrite(userId, epoch);
                 await cursor.delete();
             } else {
                 drafts.push(toPublicDraft(draft));
@@ -519,7 +575,7 @@ export async function getAllDraftsByUser(userId: string): Promise<EditRequestDra
         }
 
         await transaction.done;
-        return drafts;
+        return isBrowserDraftEpochCurrent(userId, epoch, true) ? drafts : [];
     } catch {
         return [];
     }
@@ -532,4 +588,53 @@ export async function cleanupOldDrafts(): Promise<void> {
     } catch {
         // Cleanup is best effort and never exposes stored values.
     }
+}
+
+// Explicit, owner-scoped recovery preserves timestamps/expiry and never replaces
+// an existing current draft. Old clients may still write legacy rows afterward;
+// those rows never become an automatic restore source.
+export async function recoverLegacyDrafts(userId: string): Promise<number> {
+    if (!isBoundedIdentifier(userId)) return 0;
+    const epoch = captureBrowserDraftEpoch(userId);
+    assertBrowserDraftWrite(userId, epoch);
+    const db = await initDB();
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    try {
+        const index = transaction.store.index('by-user');
+        const existingCount = readNonNegativeSafeInteger(await index.count(draftStorageOwnerKey(userId)));
+        if (existingCount === null) throw new Error('DRAFT_RECOVERY_FAILED');
+        let count = existingCount;
+        let imported = 0;
+        let scanned = 0;
+        for (const legacyOwner of legacyDraftStorageOwnerKeys(userId)) {
+            let cursor = await index.openCursor(legacyOwner);
+            while (cursor && scanned < MAX_DRAFTS_PER_USER && count < MAX_DRAFTS_PER_USER) {
+                const row = readDraft(cursor.value, true);
+                const candidate = row && readDraft({ ...row, userId: draftStorageOwnerKey(userId) }, true);
+                if (candidate && row && row.userId === legacyOwner) {
+                    const key = getDraftKey(userId, row.restaurantId);
+                    const existing = await transaction.store.get(key);
+                    assertBrowserDraftWrite(userId, epoch);
+                    if (existing === undefined) {
+                        await transaction.store.put(candidate);
+                        // Move only after the validated copy is admitted. Both operations
+                        // share this transaction; failure preserves the original.
+                        assertBrowserDraftWrite(userId, epoch);
+                        await cursor.delete();
+                        imported++;
+                        count++;
+                    }
+                }
+                scanned++;
+                cursor = await cursor.continue();
+            }
+        }
+        await transaction.done;
+        assertBrowserDraftWrite(userId, epoch);
+        return imported;
+    } catch {
+        try { transaction.abort(); } catch { /* It may already have completed. */ }
+        await transaction.done.catch(() => {});
+        throw new Error('DRAFT_RECOVERY_FAILED');
+    } finally { db.close(); }
 }

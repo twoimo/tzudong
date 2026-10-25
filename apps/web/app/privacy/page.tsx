@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { pageHeadingTitleClass } from '@/components/layout/page-heading-styles';
 
 import { PrivacyPolicyContent } from '@/components/legal/PrivacyPolicyContent';
 import { buildPublicMetadata } from '@/lib/seo';
@@ -23,7 +24,7 @@ export default function PrivacyPage() {
       <article className="mx-auto w-full min-w-0 max-w-3xl overflow-x-hidden rounded-2xl border border-border bg-background p-5 shadow-sm sm:p-8">
         <header className="mb-6 border-b pb-5">
           <p className="text-sm font-medium text-primary">{siteConfig.name}</p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">개인정보 처리방침</h1>
+          <h1 className={`mt-2 ${pageHeadingTitleClass}`}>개인정보 처리방침</h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
             앱 심사와 사용자가 모두 확인할 수 있도록 공개 URL에서 제공하는 개인정보 처리방침입니다.
           </p>

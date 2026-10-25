@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { pageHeadingTitleClass } from '@/components/layout/page-heading-styles';
 
 import { buildPublicMetadata } from '@/lib/seo';
 import { siteConfig, supportMailto } from '@/lib/site-config';
@@ -47,7 +48,7 @@ export default function DataDeletionPage() {
       <article className="mx-auto w-full min-w-0 max-w-3xl overflow-x-hidden rounded-2xl border border-border bg-background p-5 shadow-sm sm:p-8">
         <header className="mb-8 border-b pb-6">
           <p className="text-sm font-medium text-primary">{siteConfig.name}</p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">데이터 삭제 요청 안내</h1>
+          <h1 className={`mt-2 ${pageHeadingTitleClass}`}>데이터 삭제 요청 안내</h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
             계정 삭제 요청은 미리보기 → 확인 → 적용 → 독립 읽기검증 → 영수증 순서로 처리합니다. 이 안내는 모든 시스템 또는 제공자 백업에서의 삭제 완료를 단정하지 않습니다.
           </p>

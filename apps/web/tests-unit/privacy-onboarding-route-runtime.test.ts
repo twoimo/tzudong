@@ -130,6 +130,7 @@ function fixture(settings: {
   const client = { rpc: async (...args) => intoRealm(JSON.stringify(await rpc(...args))), auth: {
     exchangeCodeForSession: async () => { state.events.push('exchange'); return { error: null }; },
     getUser: async () => { state.events.push('getUser'); return { error: null, data: { user: state.active ? { id: state.userId } : null } }; },
+    getSession: async () => ({ error: null, data: { session: state.active ? { access_token: 'synthetic-captured-token', user: { id: state.userId } } : null } }),
     signUp: async (credentials) => {
       state.events.push('simulated-signup'); state.signupCalls++;
       state.signupEmailRedirectTo = credentials?.options?.emailRedirectTo ?? null;
@@ -137,6 +138,10 @@ function fixture(settings: {
     },
     signOut: async ({ scope }) => { state.events.push(`signOut-${scope}`); state.active = false; return { error: null }; },
     admin: {
+      signOut: async (token, scope) => {
+        if (token !== 'synthetic-captured-token') throw new Error('FIXTURE_UNCAPTURED_SESSION');
+        state.events.push(`signOut-${scope}`); state.active = false; return { error: null };
+      },
       updateUserById: async () => { state.simulatedIdentityMutations++; return { error: null }; },
       deleteUser: async () => { state.simulatedIdentityMutations++; return { error: null }; },
       getUserById: async () => ({ data: { user: null }, error: null }),
@@ -147,8 +152,11 @@ function fixture(settings: {
     '@supabase/supabase-js': {},
     '@supabase/ssr': {},
     '@/lib/supabase/server': {
+      commitSessionCookieWrites: () => { state.events.push('commit-session-cookies'); },
+      discardSessionCookieWrites: () => { state.events.push('discard-session-cookies'); },
       createClient: async () => client,
-      createClientForCookieStore: (cookieStore) => {
+      createClientForCookieStore: (cookieStore, _env, options) => {
+        if (options?.allowSessionCookieWrites !== true) throw new Error('FIXTURE_SIGNUP_COOKIE_WRITES_REQUIRED');
         state.signupUsesSsrClient = true;
         return {
           ...client,
@@ -165,6 +173,8 @@ function fixture(settings: {
       },
     },
     '@/lib/supabase/service-role': { createSupabaseServiceRoleClient: () => client },
+    '@/lib/auth/browser-logout': { captureBrowserLogout: deny },
+    '@/lib/home-auth-events': { dispatchHomeAuthSessionUpdated: deny },
     // Unexercised profile avatar/read helpers are denied, never substituted as successes.
     '@/lib/profile-avatar-url': { classifyProfileAvatarUrl: deny, getProfileAvatarVersionedReference: deny, getProfileAvatarVersionedStorageKey: deny },
     '@/lib/public-profile-read': { readPublicProfileSummaries: deny },

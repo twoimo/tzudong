@@ -1,3 +1,6 @@
+import { enqueueDraftWrite, waitForDraftAutosave, blockDraftUnload } from '@/lib/draft-write-queue';
+import { DraftLoadError } from '@/components/ui/draft-load-error';
+import { captureBrowserDraftEpoch, assertBrowserDraftWrite, isBrowserDraftEpochCurrent } from '@/lib/privacy/browser-draft-lifecycle';
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import Image from "next/image";
 import useSWR from "swr";
@@ -500,7 +503,7 @@ export function ReviewModal(props: ReviewModalProps) {
     const { user } = useAuth();
     // Owner transitions discard the previous composer's inputs and controller.
     // This is a memory boundary, not durable idempotency across remounts.
-    return <ReviewComposer key={user?.id ?? 'signed-out'} {...props} />;
+    return <ReviewComposer key={`${user?.id ?? 'signed-out'}:${captureBrowserDraftEpoch(user?.id ?? '').generation}:${props.restaurant?.id ?? 'choose'}`} {...props} />;
 }
 
 function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false, presentation = 'auto' }: ReviewModalProps) {
@@ -541,6 +544,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     // One bounded text revision, obtained only from our committed save or load.
     // Scope object identity also fences asynchronous completions across A -> B -> A.
     const draftScopeRef = useRef({ ownerId: user?.id, restaurantId: reviewTargetRestaurant?.id, revision: null as ReviewDraft | null });
+    const draftLoadKey = `${user?.id ?? ''}:${reviewTargetRestaurant?.id ?? ''}:${isOpen}`;
+    const [loadedDraftKey, setLoadedDraftKey] = useState<string | null>(null);
+    const [draftLoadFailed, setDraftLoadFailed] = useState(false);
     const saveOwnerRef = useRef(user?.id);
     const saveOperationRef = useRef<ReviewSaveOperation | null>(null);
     const submitInFlightRef = useRef(false);
@@ -579,6 +585,8 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     useLayoutEffect(() => {
         if (draftScopeRef.current.ownerId !== user?.id || draftScopeRef.current.restaurantId !== reviewTargetRestaurant?.id || !isOpen) {
             draftScopeRef.current = { ownerId: user?.id, restaurantId: reviewTargetRestaurant?.id, revision: null };
+            closeRequestedRef.current = false;
+            setLoadedDraftKey(null);
         }
         saveOwnerRef.current = user?.id;
         composerOpenRef.current = isOpen;
@@ -701,7 +709,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         if (!shouldRenderMapPanel || event.button !== 0) return;
 
         const target = event.target;
-        if (target instanceof HTMLElement && target.closest('button, input, textarea, select, a, [role="button"]')) return;
+        if (target instanceof Element && target.closest('button, input, textarea, select, a, [role="button"]')) return;
 
         const panel = desktopReviewMapPanelRef.current;
         if (!panel) return;
@@ -1914,9 +1922,17 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     };
 
     const handleClose = useCallback(async () => {
+        if (closeRequestedRef.current) return;
+        const ownerAtStart = saveOwnerRef.current;
+        const scopeAtStart = draftScopeRef.current;
+        const inputsAtStart = latestSaveInputsRef.current;
+        const stepAtStart = currentStep;
+        const stillCurrent = () => composerOpenRef.current && saveOwnerRef.current === ownerAtStart
+            && draftScopeRef.current === scopeAtStart;
         closeRequestedRef.current = true;
         verificationSelectionRef.current.invalidate();
         const cancellation = await saveOperationRef.current!.cancel();
+        if (!stillCurrent()) return;
         if (cancellation.status === 'blocked') {
             closeRequestedRef.current = false;
             if (saveOperationRef.current!.hasPendingConfirmation()) setSaveRecovery('result-check');
@@ -1924,7 +1940,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             return;
         }
         if (cancellation.status === 'saved') {
-            if (!await clearDraft()) {
+            const draftCleared = await clearDraft();
+            if (!stillCurrent()) return;
+            if (!draftCleared) {
                 closeRequestedRef.current = false;
                 setSaveRecovery('draft-cleanup');
                 toast({ title: "리뷰는 등록되었습니다", description: "임시 저장 정리를 완료하지 못했습니다. 이 창에서 다시 시도해주세요." });
@@ -1935,6 +1953,33 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             }
             notifySavedReview();
             saveOperationRef.current!.releaseSaved();
+        }
+        // Closing cancels the debounce. Flush the final bounded text revision
+        // before resetting the form; media remains excluded by the draft boundary.
+        if (cancellation.status !== 'saved' && ownerAtStart && inputsAtStart.restaurantId) {
+            await autoSaveInFlightRef.current;
+            if (!stillCurrent()) return;
+            const { visitedDate, visitedTime, categories, content } = inputsAtStart;
+            const previous = scopeAtStart.revision;
+            const hasChanges = !previous || previous.visitedDate !== visitedDate || previous.visitedTime !== visitedTime
+                || previous.content !== content || previous.currentStep !== stepAtStart
+                || JSON.stringify(previous.categories) !== JSON.stringify(categories);
+            if (hasChanges && (visitedDate || visitedTime || categories.length > 0 || content || previous)) {
+                try {
+                    const committed = await saveDraft({
+                        userId: ownerAtStart, restaurantId: inputsAtStart.restaurantId,
+                        visitedDate, visitedTime, categories, content, currentStep: stepAtStart,
+                    });
+                    if (!stillCurrent()) return;
+                    if (!committed) throw new Error('DRAFT_NOT_SAVED');
+                    scopeAtStart.revision = committed;
+                } catch {
+                    if (!stillCurrent()) return;
+                    closeRequestedRef.current = false;
+                    toast({ title: "임시 저장 실패", description: "마지막 입력을 저장하지 못했습니다. 입력을 유지했으니 다시 닫기를 시도해주세요.", variant: "destructive" });
+                    return;
+                }
+            }
         }
         setSaveRecovery(null);
         ocrAbortControllerRef.current?.abort();
@@ -1954,7 +1999,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         setAiFilledFields(new Set());
         setCurrentStep(1);
         onClose();
-    }, [onClose, replaceVerificationPhoto, clearDraft, notifySavedReview, setReceiptVerificationInputMode]);
+    }, [onClose, replaceVerificationPhoto, clearDraft, notifySavedReview, setReceiptVerificationInputMode, currentStep]);
 
     const saveRecoveryNotice = saveRecovery ? (
         <div role="status" className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
@@ -2047,7 +2092,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         if (scope.ownerId !== user.id || scope.restaurantId !== targetRestaurantId || !composerOpenRef.current
             || submitInFlightRef.current || closeRequestedRef.current) return;
         const previousRevision = scope.revision;
+        setDraftLoadFailed(false);
         try {
+            await waitForDraftAutosave(`${user.id}:review:${targetRestaurantId}`);
             const draft = await getDraft(user.id, targetRestaurantId);
             if (draftScopeRef.current !== scope || scope.revision !== previousRevision || !composerOpenRef.current
                 || saveOwnerRef.current !== user.id || submitInFlightRef.current || closeRequestedRef.current) return;
@@ -2072,10 +2119,11 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
 
                 setLastSavedAt(new Date(draft.savedAt));
             }
-        } catch (error) {
-            console.error('임시 저장 데이터 로드 실패:');
+            setLoadedDraftKey(draftLoadKey);
+        } catch {
+            if (draftScopeRef.current === scope && composerOpenRef.current) setDraftLoadFailed(true);
         }
-    }, [user?.id, selectedRestaurant?.id, restaurant?.id, replaceVerificationPhoto]);
+    }, [user?.id, selectedRestaurant?.id, restaurant?.id, replaceVerificationPhoto, draftLoadKey]);
 
     // 자동 저장 (IndexedDB)
     const autoSave = useCallback(async () => {
@@ -2085,49 +2133,73 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         // 내용이 하나라도 있을 때만 저장 (빈 문자열이라도 저장 - 지운 경우 대응)
         // 모든 필드가 초기값인 경우에만 저장 스킵
         const hasAnyContent = visitedDate || visitedTime || categories.length > 0 || content || verificationPhoto || foodPhotos.length > 0;
-        if (!hasAnyContent) {
-            return;
-        }
-
         const scope = draftScopeRef.current;
+        if (loadedDraftKey !== draftLoadKey) return;
+        // Clearing the last field is still a revision of an existing draft.
+        if (!hasAnyContent && !scope.revision) return;
         if (scope.ownerId !== user.id || scope.restaurantId !== targetRestaurantId || !composerOpenRef.current) return;
-        const previousSave = autoSaveInFlightRef.current;
-        const pendingSave = (async () => {
-            await previousSave;
-            if (submitInFlightRef.current || closeRequestedRef.current || draftScopeRef.current !== scope
-                || saveOwnerRef.current !== user.id || !composerOpenRef.current) return;
+        const epoch = captureBrowserDraftEpoch(user.id);
+        const pendingSave = enqueueDraftWrite(`${user.id}:review:${targetRestaurantId}`, { owner: scope, isCurrent: () => isBrowserDraftEpochCurrent(user.id, epoch, true), async run() {
+            if (submitInFlightRef.current || closeRequestedRef.current) return true;
             try {
-                setIsSaving(true);
+                assertBrowserDraftWrite(user.id, epoch);
+                if (draftScopeRef.current === scope && composerOpenRef.current) setIsSaving(true);
                 const committed = await saveDraft({
                     userId: user.id, restaurantId: targetRestaurantId,
                     visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep,
                 });
-                if (draftScopeRef.current !== scope || saveOwnerRef.current !== user.id || !composerOpenRef.current) return;
-                scope.revision = committed;
-                setLastSavedAt(committed ? new Date(committed.savedAt) : null);
+                if (draftScopeRef.current === scope && saveOwnerRef.current === user.id && composerOpenRef.current) {
+                    scope.revision = committed;
+                    setLastSavedAt(committed ? new Date(committed.savedAt) : null);
+                }
+                return true;
             } catch {
                 console.error('자동 저장 실패:');
+                return false;
             } finally {
                 if (draftScopeRef.current === scope && composerOpenRef.current) setIsSaving(false);
             }
-        })();
+        } }).then(() => {});
         autoSaveInFlightRef.current = pendingSave;
         await pendingSave;
         if (autoSaveInFlightRef.current === pendingSave) autoSaveInFlightRef.current = null;
-    }, [user?.id, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep]);
+    }, [user?.id, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep, loadedDraftKey, draftLoadKey]);
 
-    // 디바운스된 자동 저장 (500ms)
     useEffect(() => {
-        if (!isOpen || isSubmitting) return;
-        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
-        if (!targetRestaurantId) return;
+        const scope = draftScopeRef.current;
+        if (!isOpen || !user?.id || !scope.restaurantId) return;
+        const epoch = captureBrowserDraftEpoch(user.id);
+        const original = scope.revision;
+        const persisted = original && original.visitedDate === visitedDate && original.visitedTime === visitedTime
+            && JSON.stringify(original.categories) === JSON.stringify(categories) && original.content === content
+            && original.currentStep === currentStep;
+        if (!isSubmitting && !saveOperationRef.current?.hasPendingConfirmation() && !verificationPhoto && !foodPhotos.length
+            && (persisted || (!original && !(visitedDate || visitedTime || categories.length || content)))) return;
+        const beforeUnload = (event: BeforeUnloadEvent) => {
+            if (draftScopeRef.current !== scope || !composerOpenRef.current
+                || !isBrowserDraftEpochCurrent(user.id, epoch, true)) return;
+            if (isSubmitting || saveOperationRef.current?.hasPendingConfirmation()) {
+                blockDraftUnload(event);
+                return;
+            }
+            const revision = scope.revision;
+            const hasText = Boolean(visitedDate || visitedTime || categories.length || content);
+            const sameText = revision && revision.visitedDate === visitedDate && revision.visitedTime === visitedTime
+                && JSON.stringify(revision.categories) === JSON.stringify(categories) && revision.content === content
+                && revision.currentStep === currentStep;
+            // Media deliberately never enters text drafts. Do not imply that a
+            // completed text save can restore an in-memory attachment after reload.
+            if (verificationPhoto || foodPhotos.length || ((hasText || revision) && !sameText)) blockDraftUnload(event);
+        };
+        window.addEventListener('beforeunload', beforeUnload);
+        return () => window.removeEventListener('beforeunload', beforeUnload);
+    }, [isOpen, user?.id, visitedDate, visitedTime, categories, content, currentStep, verificationPhoto, foodPhotos, isSubmitting, lastSavedAt]);
 
-        const timer = setTimeout(() => {
-            autoSave();
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }, [isOpen, isSubmitting, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep, autoSave]);
+    // Admit committed text before switching to another restaurant unmounts
+    // this composer. The shared queue serializes/coalesces writes per target.
+    useLayoutEffect(() => {
+        if (isOpen && !isSubmitting) void autoSave();
+    }, [isOpen, isSubmitting, autoSave]);
 
     // SWR을 사용한 쿼터 조회 (자동 캐싱 및 중복 요청 제거)
     const { data: quota, mutate: mutateQuota } = useSWR(
@@ -2279,10 +2351,10 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
 
     // 초기 로딩 및 모달 열릴 때 임시 저장 불러오기
     useEffect(() => {
-        if (isOpen && user?.id && restaurant?.id) {
-            loadDraft();
+        if (isOpen && user?.id && reviewTargetRestaurant?.id) {
+            void loadDraft();
         }
-    }, [isOpen, user?.id, restaurant?.id, loadDraft]);
+    }, [isOpen, user?.id, reviewTargetRestaurant?.id, loadDraft]);
 
     useEffect(() => {
         if (!isOpen || !isMobileOrTablet) return;
@@ -2422,6 +2494,17 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             </p>
         </div>
     ), [content, getOcrFocusClass, markManualOcrInteraction, normalizedContentLength, renderAiFilledBadge]);
+
+    if (isOpen && user?.id && reviewTargetRestaurant?.id && loadedDraftKey !== draftLoadKey) {
+        const pendingContent = <div className="space-y-3 p-4">
+            {draftLoadFailed ? <DraftLoadError onRetry={() => void loadDraft()} /> : <p role="status">임시 저장 내용을 확인하고 있어요.</p>}
+            <Button type="button" variant="outline" onClick={onClose}>리뷰 작성 닫기</Button>
+        </div>;
+        if (inline) return pendingContent;
+        if (shouldRenderMapPanel) return <section role="dialog" aria-label="리뷰 작성" className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-auto rounded-3xl border border-border bg-background shadow-2xl">{pendingContent}</section>;
+        if (isMobileOrTablet) return <BottomSheet isOpen onClose={onClose} {...MOBILE_FULL_FORM_SHEET} ariaLabel="리뷰 작성">{pendingContent}</BottomSheet>;
+        return <Dialog open onOpenChange={open => { if (!open) onClose(); }}><DialogContent><DialogHeader><DialogTitle>리뷰 작성</DialogTitle><DialogDescription>이 기기의 임시 저장 내용을 확인합니다.</DialogDescription></DialogHeader>{pendingContent}</DialogContent></Dialog>;
+    }
 
     // inline 모드: Dialog 없이 콘텐츠만 렌더링
     if (inline) {

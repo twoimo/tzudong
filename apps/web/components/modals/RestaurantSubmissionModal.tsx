@@ -1,11 +1,15 @@
 'use client';
+import { DraftCleanupRetry } from '@/components/ui/draft-cleanup-retry';
+import { DraftLoadError } from '@/components/ui/draft-load-error';
+import { captureBrowserDraftEpoch, isBrowserDraftEpochCurrent, type BrowserDraftEpoch } from "@/lib/privacy/browser-draft-lifecycle";
 
-import { useState, useEffect, useCallback, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     getClientRequestKeyDecision,
     getRestaurantSubmissionPayloadFingerprint,
 } from "@/lib/restaurant-submission-submit-contract";
+import { useDraftAutosave, waitForDraftAutosave } from "@/hooks/use-draft-autosave";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -25,6 +29,7 @@ import {
     validateRestaurantSubmission,
     validateRestaurantSubmissionStep,
     type RestaurantSubmissionStep,
+    type RestaurantSubmissionFormData,
 } from "@/lib/restaurant-submission-flow";
 
 interface RestaurantSubmissionModalProps {
@@ -32,6 +37,13 @@ interface RestaurantSubmissionModalProps {
     onClose: () => void;
     presentation?: 'auto' | 'map-panel';
 }
+
+type SubmissionAttempt = {
+    userId: string;
+    scope: string;
+    epoch: BrowserDraftEpoch;
+    data: RestaurantSubmissionFormData;
+};
 
 type DesktopSubmissionPanelPosition = {
     x: number;
@@ -73,6 +85,7 @@ export default function RestaurantSubmissionModal({
     };
 
     const { user } = useAuth();
+    const draftEpoch = captureBrowserDraftEpoch(user?.id ?? '').generation;
     const isMobileOrTablet = useImmediateMobileOrTablet();
     const queryClient = useQueryClient();
     const [submissionMode, setSubmissionMode] = useState<'new' | 'request'>('new');
@@ -87,14 +100,19 @@ export default function RestaurantSubmissionModal({
         youtube_link: "",
         description: "", // new: 쯔양 리뷰, request: 추천 이유
     });
-    const [isSaving, setIsSaving] = useState(false);
-    const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+    const [restoredSavedAt, setLastSavedAt] = useState<Date | null>(null);
+    const [isClosing, setIsClosing] = useState(false);
+    const [draftLoadFailed, setDraftLoadFailed] = useState(false);
+    const [loadedDraftScope, setLoadedDraftScope] = useState<string | null>(null);
+    const [editedDraftScope, setEditedDraftScope] = useState<string | null>(null);
     const [pendingDraft, setPendingDraft] = useState<SubmissionDraft | null>(null);
     const [desktopSubmissionPanelPosition, setDesktopSubmissionPanelPosition] = useState<DesktopSubmissionPanelPosition>(DEFAULT_DESKTOP_SUBMISSION_PANEL_POSITION);
     const mobileFormRef = useRef<HTMLFormElement>(null);
     const desktopSubmissionPanelRef = useRef<HTMLElement>(null);
     const desktopSubmissionPanelDragRef = useRef<DesktopSubmissionPanelDragState | null>(null);
-    const requestSubmitInFlightRef = useRef(false);
+    const activeSubmissionRef = useRef<SubmissionAttempt | null>(null);
+    const cleanupSubmissionRef = useRef<SubmissionAttempt | null>(null);
+    const [completedSubmission, setCompletedSubmission] = useState<{ attempt: SubmissionAttempt; mode: 'new' | 'request' } | null>(null);
     const submissionClientKeysRef = useRef<Record<'new' | 'request', { key: string | null; fingerprint: string | null }>>({
         new: { key: null, fingerprint: null },
         request: { key: null, fingerprint: null },
@@ -110,6 +128,9 @@ export default function RestaurantSubmissionModal({
         });
         setCategoryInput("");
         setLastSavedAt(null);
+        setEditedDraftScope(null);
+        activeSubmissionRef.current = null;
+        cleanupSubmissionRef.current = null; setCompletedSubmission(null);
         submissionClientKeysRef.current = {
             new: { key: null, fingerprint: null },
             request: { key: null, fingerprint: null },
@@ -123,8 +144,9 @@ export default function RestaurantSubmissionModal({
             setCurrentStep(1);
             setValidationMessage(null);
             setPendingDraft(null);
+            setLoadedDraftScope(null);
         }
-    }, [isOpen, submissionMode, resetForm]);
+    }, [isOpen, submissionMode, resetForm, user?.id, draftEpoch]);
 
     useEffect(() => {
         setValidationMessage(null);
@@ -187,64 +209,92 @@ export default function RestaurantSubmissionModal({
         return result;
     }, [getRestaurantSubmissionClientKey, user]);
 
+    const ownsSubmissionAttempt = (attempt: SubmissionAttempt) =>
+        activeSubmissionRef.current === attempt
+        && currentDraftScope.current === attempt.scope
+        && isBrowserDraftEpochCurrent(attempt.userId, attempt.epoch, true);
+
+    const settleSubmissionAttempt = (_result: unknown, _error: unknown, attempt: SubmissionAttempt) => {
+        if (activeSubmissionRef.current === attempt && cleanupSubmissionRef.current !== attempt) activeSubmissionRef.current = null;
+    };
+
+    const finishSubmittedDraft = async (attempt: SubmissionAttempt, mode: 'new' | 'request') => {
+        if (!ownsSubmissionAttempt(attempt)) return;
+        cleanupSubmissionRef.current = attempt; setCompletedSubmission({ attempt, mode });
+        if (!await clearDraft() || !ownsSubmissionAttempt(attempt)) return;
+        clearRestaurantSubmissionClientKey(mode);
+        toast.success(mode === 'new' ? '맛집 제보가 성공적으로 제출되었습니다!' : '맛집 추천이 성공적으로 제출되었습니다!');
+        if (mode === 'new') void queryClient.invalidateQueries({ queryKey: ['my-submissions'] });
+        else {
+            void queryClient.invalidateQueries({ queryKey: ['my-requests'] });
+            void queryClient.invalidateQueries({ queryKey: ['myRecommendRequests', attempt.userId] });
+            void queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
+        }
+        onClose(); resetForm();
+    };
+
     // 신규 제보 (new) - server route owns parent/item atomic insert + readback
     const submitNewMutation = useMutation({
-        mutationFn: async (data: typeof formData) => {
-            await postRestaurantSubmission('new', data);
+        mutationFn: async (attempt: SubmissionAttempt) => {
+            if (!ownsSubmissionAttempt(attempt)) throw new Error('STALE_SUBMISSION');
+            await postRestaurantSubmission('new', attempt.data);
         },
-        onSuccess: async () => {
-            clearRestaurantSubmissionClientKey('new');
-            await clearDraft();
-            toast.success('맛집 제보가 성공적으로 제출되었습니다!');
-            queryClient.invalidateQueries({ queryKey: ['my-submissions'] });
-            onClose();
-            resetForm();
-        },
-        onError: (error: unknown) => {
+        onSuccess: async (_result, attempt) => { await finishSubmittedDraft(attempt, 'new'); },
+        onError: (error: unknown, attempt) => {
+            if (!ownsSubmissionAttempt(attempt)) return;
             toast.error(getErrorMessage(error, '제보 제출에 실패했습니다'));
         },
+        onSettled: settleSubmissionAttempt,
     });
 
     // 쯔양에게 맛집 제보 (request) - server route owns idempotent insert + readback
     const submitRequestMutation = useMutation({
-        mutationFn: async (data: typeof formData) => {
-            if (requestSubmitInFlightRef.current) {
-                return;
-            }
-            requestSubmitInFlightRef.current = true;
-            await postRestaurantSubmission('request', data);
+        mutationFn: async (attempt: SubmissionAttempt) => {
+            if (!ownsSubmissionAttempt(attempt)) throw new Error('STALE_SUBMISSION');
+            await postRestaurantSubmission('request', attempt.data);
         },
-        onSuccess: async () => {
-            requestSubmitInFlightRef.current = false;
-            clearRestaurantSubmissionClientKey('request');
-            await clearDraft();
-            toast.success('맛집 추천이 성공적으로 제출되었습니다!');
-            queryClient.invalidateQueries({ queryKey: ['my-requests'] });
-            queryClient.invalidateQueries({ queryKey: ['myRecommendRequests', user?.id] });
-            queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
-            onClose();
-            resetForm();
-        },
-        onError: (error: unknown) => {
-            requestSubmitInFlightRef.current = false;
+        onSuccess: async (_result, attempt) => { await finishSubmittedDraft(attempt, 'request'); },
+        onError: (error: unknown, attempt) => {
+            if (!ownsSubmissionAttempt(attempt)) return;
             toast.error(getErrorMessage(error, '추천 제출에 실패했습니다'));
         },
+        onSettled: settleSubmissionAttempt,
     });
 
 
-    // 임시 저장된 데이터 확인
+    const isPending = submitNewMutation.isPending || submitRequestMutation.isPending || completedSubmission !== null;
+    const draftScope = `${user?.id ?? ''}:${submissionMode}:${isOpen}:${draftEpoch}`;
+    const currentDraftScope = useRef(draftScope);
+    const transitionScope = useRef<string | null>(null);
+    useLayoutEffect(() => {
+        setDraftLoadFailed(false); cleanupSubmissionRef.current = null; setCompletedSubmission(null);
+        currentDraftScope.current = draftScope; transitionScope.current = null; activeSubmissionRef.current = null; setIsClosing(false);
+        return () => { currentDraftScope.current = ''; };
+    }, [draftScope]);
+    const draftValue = useMemo(() => ({ userId: user?.id ?? '', submissionMode, ...formData, currentStep }), [user?.id, submissionMode, formData, currentStep]);
+    const hasDraftInput = Boolean(formData.restaurant_name || formData.address || formData.phone || formData.categories.length || formData.youtube_link || formData.description);
+    // Only a transition to non-empty input marks this form as edited. A new
+    // account epoch must not adopt the previous session's soon-to-reset input.
+    useLayoutEffect(() => { if (hasDraftInput) setEditedDraftScope(currentDraftScope.current); }, [hasDraftInput]);
+    const draftAutosave = useDraftAutosave({ scope: draftScope, open: isOpen, value: draftValue, persist: saveDraft,
+        unpersistedChanges: completedSubmission !== null || (isPending && hasDraftInput),
+        enabled: loadedDraftScope === draftScope && Boolean(user?.id) && !pendingDraft && !isPending && (hasDraftInput || editedDraftScope === draftScope || restoredSavedAt !== null) });
+    const isSaving = draftAutosave.isSaving;
+    const lastSavedAt = draftAutosave.lastSavedAt ?? restoredSavedAt;
     const loadDraft = useCallback(async () => {
+        const scope = draftScope;
+        setDraftLoadFailed(false);
         if (!user?.id) return;
-
         try {
+            await waitForDraftAutosave(scope);
             const draft = await getDraft(user.id, submissionMode);
-            setPendingDraft(draft);
-            setLastSavedAt(null);
-        } catch (error) {
-            console.error('임시 저장 데이터 확인 실패:');
-            setPendingDraft(null);
+            if (currentDraftScope.current !== scope) return;
+            setPendingDraft(draft); setLastSavedAt(null);
+            setLoadedDraftScope(scope);
+        } catch {
+            if (currentDraftScope.current === scope) setDraftLoadFailed(true);
         }
-    }, [user?.id, submissionMode]);
+    }, [user?.id, submissionMode, draftScope]);
 
     const restoreDraft = useCallback(() => {
         if (!pendingDraft) return;
@@ -271,71 +321,41 @@ export default function RestaurantSubmissionModal({
     }, [pendingDraft]);
 
 
-    // 자동 저장
-    const autoSave = useCallback(async () => {
-        if (!user?.id) return;
-
-        if (pendingDraft) return;
-
-        // 내용이 하나라도 있을 때만 저장
-        if (!formData.restaurant_name && !formData.address && !formData.phone && formData.categories.length === 0 && !formData.youtube_link && !formData.description) {
-            return;
-        }
-
+    // A failed discard must keep the restore prompt and its input available.
+    const clearDraft = useCallback(async (): Promise<boolean> => {
+        if (!user?.id) return false;
+        const scope = currentDraftScope.current;
+        const epoch = captureBrowserDraftEpoch(user.id);
         try {
-            setIsSaving(true);
-            await saveDraft({
-                userId: user.id,
-                submissionMode,
-                restaurant_name: formData.restaurant_name,
-                address: formData.address,
-                phone: formData.phone,
-                categories: formData.categories,
-                youtube_link: formData.youtube_link,
-                description: formData.description,
-                currentStep,
-            });
-            setLastSavedAt(new Date());
-        } catch (error) {
-            console.error('자동 저장 실패:');
-        } finally {
-            setIsSaving(false);
-        }
-    }, [user?.id, submissionMode, formData, currentStep, pendingDraft]);
-
-    // 임시 저장 데이터 삭제
-    const clearDraft = useCallback(async () => {
-        if (!user?.id) return;
-
-        try {
+            draftAutosave.cancel(); await draftAutosave.settle();
+            if (currentDraftScope.current !== scope || !isBrowserDraftEpochCurrent(user.id, epoch, true)) return false;
             await deleteDraft(user.id, submissionMode);
+            if (currentDraftScope.current !== scope || !isBrowserDraftEpochCurrent(user.id, epoch, true)) return false;
             setLastSavedAt(null);
-        } catch (error) {
-            console.error('임시 저장 데이터 삭제 실패:');
+            return true;
+        } catch {
+            return false;
         }
-    }, [user?.id, submissionMode]);
+    }, [user?.id, submissionMode, draftAutosave]);
 
     const discardDraftAndStartNew = useCallback(async () => {
-        if (!pendingDraft || !user?.id) return;
-
-        await clearDraft();
+        if (!pendingDraft || !user?.id || transitionScope.current === draftScope) return;
+        const scope = draftScope;
+        transitionScope.current = scope; setIsClosing(true);
+        const cleared = await clearDraft();
+        if (currentDraftScope.current !== scope) return;
+        transitionScope.current = null; setIsClosing(false);
+        draftAutosave.resume();
+        if (!cleared) {
+            toast.error('임시 저장 내용을 삭제하지 못했습니다. 기존 내용을 유지했으니 다시 시도해주세요.');
+            return;
+        }
         resetForm();
         setCurrentStep(1);
         setValidationMessage(null);
         setPendingDraft(null);
         toast.success('임시 저장된 내용을 삭제했습니다');
-    }, [clearDraft, pendingDraft, resetForm, user?.id]);
-
-    // 디바운스된 자동 저장 (500ms)
-    useEffect(() => {
-        if (!isOpen) return;
-
-        const timer = setTimeout(() => {
-            autoSave();
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }, [isOpen, formData, currentStep, autoSave]);
+    }, [clearDraft, pendingDraft, resetForm, user?.id, draftAutosave, draftScope]);
 
     // 모달이 열릴 때 임시 저장된 데이터 확인
     useEffect(() => {
@@ -346,6 +366,7 @@ export default function RestaurantSubmissionModal({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (loadedDraftScope !== draftScope || pendingDraft) return;
 
         if (!user) {
             toast.error('로그인이 필요합니다');
@@ -358,28 +379,43 @@ export default function RestaurantSubmissionModal({
             toast.error(validationError);
             return;
         }
-        if (isPending) {
+        if (isPending || activeSubmissionRef.current) {
             return;
         }
-
-
+        const attempt: SubmissionAttempt = {
+            userId: user.id,
+            scope: currentDraftScope.current,
+            epoch: captureBrowserDraftEpoch(user.id),
+            data: { ...formData, categories: [...formData.categories] },
+        };
+        activeSubmissionRef.current = attempt;
         if (submissionMode === 'new') {
-            submitNewMutation.mutate(formData);
+            submitNewMutation.mutate(attempt);
         } else {
-            submitRequestMutation.mutate(formData);
+            submitRequestMutation.mutate(attempt);
         }
     };
 
-    const isPending = submitNewMutation.isPending || submitRequestMutation.isPending;
-
-    const handleModeChange = (mode: 'new' | 'request') => {
+    const handleClose = async () => {
+        if (isPending || transitionScope.current === draftScope) return;
+        const scope = draftScope; transitionScope.current = scope; setIsClosing(true);
+        const saved = await draftAutosave.flush();
+        if (currentDraftScope.current !== scope) return;
+        if (!saved) { transitionScope.current = null; setIsClosing(false); toast.error('임시 저장하지 못했습니다. 입력을 유지했으니 다시 닫기를 시도해주세요.'); return; }
+        onClose();
+    };
+    const handleModeChange = async (mode: 'new' | 'request') => {
+        if (mode === submissionMode || isPending || transitionScope.current === draftScope) return;
+        const scope = draftScope; transitionScope.current = scope; setIsClosing(true);
+        const saved = await draftAutosave.flush();
+        if (currentDraftScope.current !== scope) return;
+        if (!saved) { transitionScope.current = null; setIsClosing(false); toast.error('임시 저장하지 못했습니다. 현재 유형과 입력을 유지했습니다.'); return; }
         setSubmissionMode(mode);
-        setCurrentStep(1);
-        setPendingDraft(null);
-        setValidationMessage(null);
+        setCurrentStep(1); setPendingDraft(null); setValidationMessage(null);
     };
 
     const handleNextStep = () => {
+        if (isPending) return;
         const transitionStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
         const fromStep = currentStep;
         const validationError = validateRestaurantSubmissionStep(fromStep, submissionMode, formData);
@@ -405,6 +441,7 @@ export default function RestaurantSubmissionModal({
     };
 
     const handlePreviousStep = () => {
+        if (isPending) return;
         setCurrentStep((step) => Math.max(step - 1, 1) as RestaurantSubmissionStep);
     };
 
@@ -426,6 +463,7 @@ export default function RestaurantSubmissionModal({
         </div>
     );
 
+    const draftSaveFailure = draftAutosave.failed && <p role="alert" className="text-sm text-destructive">임시 저장하지 못했습니다. 입력을 유지했으니 닫기를 다시 시도해주세요.</p>;
     const draftRestorePrompt = pendingDraft && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
             <p className="font-semibold">임시 저장된 제보가 있습니다</p>
@@ -476,7 +514,7 @@ export default function RestaurantSubmissionModal({
         if (!shouldRenderMapPanel || event.button !== 0) return;
 
         const target = event.target;
-        if (target instanceof HTMLElement && target.closest('button, input, textarea, select, a')) return;
+        if (target instanceof Element && target.closest('button, input, textarea, select, a, [role="button"]')) return;
 
         const panel = desktopSubmissionPanelRef.current;
         if (!panel) return;
@@ -799,13 +837,13 @@ export default function RestaurantSubmissionModal({
             return (
                 <div className="space-y-4">
                     {renderModeSelector()}
-                    {renderBasicFields()}
+                    <fieldset disabled={loadedDraftScope !== draftScope || Boolean(pendingDraft) || isPending} className="min-w-0">{renderBasicFields()}</fieldset>
                 </div>
             );
         }
 
         if (currentStep === 2) {
-            return renderStoryFields();
+            return <fieldset disabled={loadedDraftScope !== draftScope || Boolean(pendingDraft) || isPending} className="min-w-0">{renderStoryFields()}</fieldset>;
         }
 
         return renderReviewStep();
@@ -813,10 +851,14 @@ export default function RestaurantSubmissionModal({
 
     const renderDesktopForm = () => (
         <form onSubmit={handleSubmit} className="space-y-4" data-layout-primitives="form-flow stack">
+            {draftLoadFailed && <DraftLoadError onRetry={() => void loadDraft()} />}
             {draftRestorePrompt}
+            {draftSaveFailure}{completedSubmission && <DraftCleanupRetry onRetry={() => void finishSubmittedDraft(completedSubmission.attempt, completedSubmission.mode)} />}
             {renderModeSelector()}
-            {renderBasicFields()}
-            {renderStoryFields()}
+            <fieldset disabled={loadedDraftScope !== draftScope || Boolean(pendingDraft) || isPending} className="min-w-0 space-y-4">
+                {renderBasicFields()}
+                {renderStoryFields()}
+            </fieldset>
             <div className="pt-4">
                 {renderValidationMessage()}
             </div>
@@ -824,7 +866,7 @@ export default function RestaurantSubmissionModal({
                 <Button
                     type="button"
                     variant="outline"
-                    onClick={onClose}
+                    disabled={isClosing} onClick={() => void handleClose()}
                     className="flex-1"
                 >
                     취소
@@ -835,7 +877,7 @@ export default function RestaurantSubmissionModal({
                     className={`${mobileSheetStyles.primaryAction} flex-1`}
                 >
                     <Send className="h-4 w-4 mr-2" />
-                    {isPending ? '제출 중...' : submissionMode === 'new' ? '제보하기' : '추천하기'}
+                    {completedSubmission ? '제출 완료' : isPending ? '제출 중...' : submissionMode === 'new' ? '제보하기' : '추천하기'}
                 </Button>
             </div>
         </form>
@@ -866,11 +908,12 @@ export default function RestaurantSubmissionModal({
                             {title}
                         </h2>
                     </div>
-                    <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="제보 닫기">
+                    <Button type="button" variant="ghost" size="icon" disabled={isClosing} onClick={() => void handleClose()} aria-label="제보 닫기">
                         <X className="h-5 w-5" />
                     </Button>
                 </div>
                 <p id={mobileDescriptionId} className="text-sm text-muted-foreground">{description}</p>
+                {draftLoadFailed && <DraftLoadError onRetry={() => void loadDraft()} />}
                 {draftRestorePrompt && <div className="mt-3">{draftRestorePrompt}</div>}
                 <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="제보 단계 진행률">
                     {RESTAURANT_SUBMISSION_STEPS.map((step) => (
@@ -882,7 +925,7 @@ export default function RestaurantSubmissionModal({
                         </div>
                     ))}
                 </div>
-                <div className="mt-2 min-h-4">{draftStatus}</div>
+                <div className="mt-2 min-h-4">{draftStatus}{draftSaveFailure}{completedSubmission && <DraftCleanupRetry onRetry={() => void finishSubmittedDraft(completedSubmission.attempt, completedSubmission.mode)} />}</div>
             </div>
 
             <div className={mobileSheetStyles.content}>
@@ -893,23 +936,23 @@ export default function RestaurantSubmissionModal({
                 {validationMessage && <div className="pb-2">{renderValidationMessage()}</div>}
                 <div className="flex gap-2">
                     {currentStep > 1 ? (
-                        <Button type="button" variant="outline" onClick={handlePreviousStep} className="min-w-24">
+                        <Button type="button" variant="outline" disabled={isPending} onClick={handlePreviousStep} className="min-w-24">
                             <ChevronLeft className="mr-1 h-4 w-4" />
                             이전
                         </Button>
                     ) : (
-                        <Button type="button" variant="outline" onClick={onClose} className="min-w-24">
+                        <Button type="button" variant="outline" disabled={isClosing} onClick={() => void handleClose()} className="min-w-24">
                             취소
                         </Button>
                     )}
                     {currentStep < 3 ? (
-                        <Button key={`next-${currentStep}`} type="button" onClick={handleNextStep} className={`${mobileSheetStyles.primaryAction} flex-1`}>
+                        <Button key={`next-${currentStep}`} type="button" disabled={isPending} onClick={handleNextStep} className={`${mobileSheetStyles.primaryAction} flex-1`}>
                             다음
                         </Button>
                     ) : (
                         <Button key="submit" type="submit" disabled={isPending} className={`${mobileSheetStyles.primaryAction} flex-1`}>
                             <Send className="mr-2 h-4 w-4" />
-                            {isPending ? '제출 중...' : submissionMode === 'new' ? '제보하기' : '추천하기'}
+                            {completedSubmission ? '제출 완료' : isPending ? '제출 중...' : submissionMode === 'new' ? '제보하기' : '추천하기'}
                         </Button>
                     )}
                 </div>
@@ -921,7 +964,7 @@ export default function RestaurantSubmissionModal({
         return (
             <BottomSheet
                 isOpen={isOpen}
-                onClose={onClose}
+                onClose={() => void handleClose()}
                 {...MOBILE_FULL_FORM_SHEET}
                 layoutSource="restaurant-submission"
                 className="z-[110]"
@@ -952,7 +995,7 @@ export default function RestaurantSubmissionModal({
     }
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <Dialog open={isOpen} onOpenChange={(open) => { if (!open) void handleClose(); }}>
             <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
                 <DialogHeader className="relative">
                     <div className="absolute -top-1 left-0">{draftStatus}</div>

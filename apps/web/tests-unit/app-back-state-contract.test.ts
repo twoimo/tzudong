@@ -67,11 +67,11 @@ describe("app back navigation state contracts", () => {
     const cleanupSource = source("lib/privacy/browser-draft-cleanup.ts");
     const accountDeletionSource = source("lib/privacy/account-deletion.ts");
 
-    expect(authContextSource).toContain("await clearBrowserDraftsForUser(signingOutUserId)");
-    expect(authContextSource.match(/await clearPrivateDrafts\(\);/g)).toHaveLength(2);
-    expect(cleanupSource).toContain("deleteAllSubmissionDraftsByUser(userId)");
-    expect(cleanupSource).toContain("deleteAllReviewDraftsByUser(userId)");
-    expect(cleanupSource).toContain("deleteAllEditRequestDraftsByUser(userId)");
+    expect(authContextSource).toContain("await clearBrowserDraftsForUser(signingOutUserId, cleanupEpoch)");
+    expect(authContextSource).toContain("await clearSigningOutDrafts();");
+    expect(cleanupSource).toContain("deleteAllSubmissionDraftsByUser(userId, epoch)");
+    expect(cleanupSource).toContain("deleteAllReviewDraftsByUser(userId, epoch)");
+    expect(cleanupSource).toContain("deleteAllEditRequestDraftsByUser(userId, epoch)");
     expect(accountDeletionSource).toContain("await clearBrowserDraftsForUser(deletedUserId)");
   });
 

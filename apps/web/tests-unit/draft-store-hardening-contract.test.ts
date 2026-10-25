@@ -79,6 +79,8 @@ function storeFor(state: FakeDatabaseState, storeName: string) {
   if (!records) throw new Error(`Missing fake store: ${storeName}`);
 
   return {
+    get: async (key: unknown) => records.get(JSON.stringify(key)),
+    delete: async (key: unknown) => { records.delete(JSON.stringify(key)); },
     put: async (value: StoredRecord) => {
       records.set(keyForRecord(value), value);
     },
@@ -257,7 +259,7 @@ describe("submission and edit-request draft stores", () => {
       const record = expiredSubmissionRecord(`expired-${String(index).padStart(3, "0")}`, expiresAt);
       records.set(keyForRecord(record), record);
     }
-    const target = expiredSubmissionRecord("target-user", now - 1);
+    const target = expiredSubmissionRecord("v3-target-user", now - 1);
     records.set(keyForRecord(target), target);
 
     expect(await submissionDraftStore.getDraft("target-user", "new")).toBeNull();

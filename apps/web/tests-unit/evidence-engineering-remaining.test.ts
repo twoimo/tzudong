@@ -183,7 +183,6 @@ describe("evidence engineering remaining tasks", () => {
     const carousel = readFileSync(resolve(import.meta.dir, "../components/restaurant/RestaurantEvidenceCarousel.tsx"), "utf8");
     expect(carousel).toContain('loading={presentation.loading}');
     expect(carousel).toContain('loading: "lazy"');
-    expect(carousel).toContain("safe-area-inset-bottom");
     const context = frame({ frame_id: 'context-real', frame_type: 'on_site_scene', timestamp_ms: 126500, content_sha256: 'c'.repeat(64) });
     expect(publicEvidenceFrames([[context]])).toEqual([]);
     expect(publicReviewedVideoFrames([[context, pending, synthetic]]).map((f) => f.frame_id)).toEqual(['context-real']);

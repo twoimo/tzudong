@@ -4,7 +4,7 @@
 
 import type { ClusterFeature } from 'supercluster';
 import type { ClusterProperties } from './clustering';
-import { popularityFlameMarkup, publicPopularityTier } from './evidence-engineering/popularity-marker';
+import { publicPopularityTier } from './evidence-engineering/popularity-marker';
 import { escapeHtmlAttribute } from './html-escape';
 
 /**
@@ -185,7 +185,6 @@ export const createClusterMarkerHTML = (
 ): string => {
   const count = cluster.properties.point_count || 0;
   const safeTier = publicPopularityTier(popularityTier);
-  const flame = popularityFlameMarkup(safeTier);
   const displayCategory = categories[currentIndex % categories.length] || '기타';
   const image = getCategoryImage(displayCategory);
 
@@ -229,7 +228,6 @@ export const createClusterMarkerHTML = (
         z-index: ${zIndex};
       "
     >
-      ${flame}
       <!-- 카테고리 이미지 (애니메이션) -->
       <div
         class="cluster-icon"

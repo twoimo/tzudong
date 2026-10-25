@@ -520,7 +520,7 @@ describe("mobile and desktop parity source contracts", () => {
       "captureDetailReturnView(activeLeftPanelViewRef.current, {",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "if (pendingDetailReturnCaptureRef.current) return;",
+      "if (pendingDetailReturnCaptureRef.current || hasCapturedDetailReturnRef.current) return;",
     );
     expect(homeDesktopControlPanelSource).toContain(
       'captureDetailReturnView("map", { pendingDetailOpen: true })',
@@ -556,7 +556,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       "replaceBrowserHistoryRoute(returnRoute)",
     );
-    expect(homeDesktopControlPanelSource).toContain(
+    expect(homeDesktopControlPanelSource).not.toContain(
       'replaceBrowserHistoryRoute("/")',
     );
     expect(homeDesktopControlPanelSource).toContain(
@@ -704,9 +704,7 @@ describe("mobile and desktop parity source contracts", () => {
       "showDesktopBackButton && !isMobile",
     );
     const sharedPanelHeaderSource = source("components/home/map-panel-chrome.tsx");
-    expect(sharedPanelHeaderSource.indexOf("{actions}")).toBeLessThan(
-      sharedPanelHeaderSource.indexOf("{onClose ?"),
-    );
+    // Header actions and close behavior are exercised in renewal-chrome-browser.test.ts.
     expect(restaurantDetailPanelSource).not.toContain(
       'className="mr-1 h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80"',
     );
@@ -828,7 +826,7 @@ describe("mobile and desktop parity source contracts", () => {
       "DESKTOP_MAP_MENU_ITEMS.map((item) =>",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "onClick={() => handleDesktopMapMenuItemSelect(item.id)}",
+      "onSelect={() => handleDesktopMapMenuItemSelect(item.id)}",
     );
     expect(homeDesktopControlPanelSource).not.toContain(
       "const desktopMapMenuItems = useMemo",
@@ -877,7 +875,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:flex md:flex-col lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"',
+      'className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-5 lg:col-span-2"',
     );
     expect(myPageProfileSource).not.toContain(
       'data-mypage-mobile-secondary-actions="true"',
@@ -1114,7 +1112,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-fixed-control-region="mobile-map-actions"',
     );
     expect(source("components/home/MobileControlOverlay.tsx")).toContain("event.stopPropagation();");
-    expect(source("components/home/MobileControlOverlay.tsx")).toContain("onDeviceLocationClick?.();");
+    expect(source("components/home/MobileControlOverlay.tsx")).toContain("onConfirm={() => onDeviceLocationClick?.()}");
     expect(source("components/home/MobileControlOverlay.tsx")).toContain("activeSheet !== 'search'");
     expect(source("app/home-client.tsx")).not.toContain(
       "현재 위치를 가져오지 못했어요. 잠시 후 다시 시도해주세요",

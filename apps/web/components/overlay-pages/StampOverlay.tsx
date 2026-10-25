@@ -76,7 +76,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
     });
 
     // 사용자 도장 데이터
-    const { data: userReviewData = [], isLoading: isUserStampsLoading, isFetched: isUserStampsFetched } = useQuery({
+    const { data: userReviewData = [], isLoading: isUserStampsLoading, isFetched: isUserStampsFetched, isError: isUserStampsError, isFetching: isUserStampsFetching, refetch: refetchUserStamps } = useQuery({
         queryKey: ['user-stamp-reviews-overlay', user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
@@ -112,7 +112,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
     });
 
     // 맛집 데이터
-    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading, isError: isRestaurantsError } = useRestaurants({ enabled: true });
+    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading, isError: isRestaurantsError, isFetching: isRestaurantsFetching, refetch: refetchRestaurants } = useRestaurants({ enabled: true });
     const userVisitedIds = useMemo(() => new Set(userReviewData.map(r => r.restaurant_id)), [userReviewData]);
     const reviewedRestaurantCandidates = useMemo(() => {
         return userReviewData
@@ -124,7 +124,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
         () => createVisitedRestaurantMatcher(reviewedRestaurantCandidates, userVisitedIds),
         [reviewedRestaurantCandidates, userVisitedIds]
     );
-    const isUserStampsReady = !user?.id || isUserStampsFetched;
+    const isUserStampsReady = !user?.id || (isUserStampsFetched && !isUserStampsError);
     const shouldWaitForStampState = !!user?.id && !isUserStampsFetched;
     const shouldShowStampOverlaySkeleton =
         isRestaurantsLoading || shouldWaitForStampState;
@@ -143,13 +143,13 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
             return;
         }
 
-        if (isUserStampsLoading) {
+        if (isUserStampsLoading || isUserStampsError) {
             setShowStampGuide(false);
             return;
         }
 
         setShowStampGuide(userReviewData.length === 0);
-    }, [isUserStampsLoading, user?.id, userReviewData.length]);
+    }, [isUserStampsLoading, isUserStampsError, user?.id, userReviewData.length]);
 
     const deferredSearchQuery = useDeferredValue(filters.searchQuery);
 
@@ -294,7 +294,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
             <MapPanelHeader
                 title="도장"
                 titleAs="h1"
-                count={allMergedRestaurants.length}
+                count={isRestaurantsError ? undefined : allMergedRestaurants.length}
                 description="맛집을 찾아 도장을 찍어보세요"
                 closeLabel="도장 패널 닫기"
                 onClose={onClose}
@@ -494,9 +494,9 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
                             columns={skeletonGridColumns}
                         />
                     </div>
-                ) : isRestaurantsError ? (
+                ) : isRestaurantsError || isUserStampsError ? (
                     <div
-                        role="status"
+                        role="alert"
                         className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-border bg-muted/30 p-5 text-center text-sm text-muted-foreground"
                     >
                         <div>
@@ -504,8 +504,12 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
                                 className="mx-auto mb-2 h-10 w-10 rounded-full bg-destructive/10 p-2 text-destructive/80"
                                 aria-hidden="true"
                             />
-                            <p className="font-medium text-foreground">도장 맛집을 불러오지 못했습니다</p>
-                            <p className="mt-1 text-xs leading-5">잠시 후 다시 열거나 필터를 초기화해 주세요.</p>
+                            <p className="font-medium text-foreground">{isUserStampsError ? "방문 기록을 불러오지 못했습니다" : "도장 맛집을 불러오지 못했습니다"}</p>
+                            <p className="mt-1 text-xs leading-5">잠시 후 다시 시도해 주세요.</p>
+                            <Button type="button" variant="outline" size="sm" className="mt-3" disabled={isRestaurantsFetching || isUserStampsFetching} onClick={() => {
+                                if (isRestaurantsError) void refetchRestaurants();
+                                if (isUserStampsError) void refetchUserStamps();
+                            }}>다시 시도</Button>
                         </div>
                     </div>
                 ) : displayedCards.length === 0 ? (

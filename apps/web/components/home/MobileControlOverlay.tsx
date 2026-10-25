@@ -1,5 +1,7 @@
 'use client';
 
+import { isSupersededLogout } from '@/lib/auth/logout-result';
+
 import { memo, useState, useCallback, useMemo, useRef, useEffect, type ComponentType, type KeyboardEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -50,7 +52,8 @@ import type { User } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContextBase';
 import { resolveDeviceLocationButtonLabel, type DeviceMapLocation } from '@/lib/device-location-map';
 import { DeviceLocationDisclosure } from '@/components/home/DeviceLocationDisclosure';
-import { useDeferredComponent } from '@/hooks/use-deferred-component';
+import { DeferredPanelFallback } from '@/components/home/DeferredPanelFallback';
+import { useDeferredComponentWithRetry } from '@/hooks/use-deferred-component';
 import { useOverseasCountryCounts } from '@/components/home/use-overseas-country-counts';
 import { isPublicRestrictedMode, siteConfig } from "@/lib/site-config";
 import {
@@ -152,20 +155,7 @@ const loadRestaurantSearch = async () => {
 
 
 // [OPTIMIZATION] 로딩 스켈레톤
-const SheetLoading = () => (
-    <div
-        className="flex items-center justify-center py-8"
-        role="status"
-        aria-live="polite"
-        aria-busy="true"
-    >
-        <div
-            className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin motion-reduce:animate-none"
-            aria-hidden="true"
-        />
-        <span className="sr-only">목록을 불러오는 중입니다</span>
-    </div>
-);
+
 
 interface MobileControlOverlayProps {
     mapMode: 'domestic' | 'overseas';
@@ -256,7 +246,7 @@ function MobileControlOverlayComponent({
 }: MobileControlOverlayProps) {
     const pathname = usePathname();
     const router = useRouter();
-    const { signOut } = useAuth();
+    const { signOut, isLoading: isAuthLoading } = useAuth();
 
     // 클라이언트 마운트 및 수화(Hydration) 완료 감지용 글로벌 플래그 설정 및 이벤트 발행
     useEffect(() => {
@@ -305,18 +295,21 @@ function MobileControlOverlayComponent({
     const handleBookmarkMenuOpenChange = useCallback((open: boolean) => setOpenTopDropdown(open ? 'bookmark' : null), []);
     const handleNotificationMenuOpenChange = useCallback((open: boolean) => setOpenTopDropdown(open ? 'notification' : null), []);
     const handleUserMenuOpenChange = useCallback((open: boolean) => setOpenTopDropdown(open ? 'user' : null), []);
-    const DeferredMobileBookmarkMenuButton = useDeferredComponent<MobileBookmarkMenuButtonProps>(
+    const bookmarkMenuLoad = useDeferredComponentWithRetry<MobileBookmarkMenuButtonProps>(
         !isPublicRestrictedMode && Boolean(user),
         loadMobileBookmarkMenuButton
     );
-    const DeferredMobileNotificationMenuButton = useDeferredComponent<MobileNotificationMenuButtonProps>(
+    const notificationMenuLoad = useDeferredComponentWithRetry<MobileNotificationMenuButtonProps>(
         !isPublicRestrictedMode && Boolean(user),
         loadMobileNotificationMenuButton
     );
-    const DeferredRestaurantSearch = useDeferredComponent<RestaurantSearchComponentProps>(
+    const searchLoad = useDeferredComponentWithRetry<RestaurantSearchComponentProps>(
         activeSheet === 'search',
         loadRestaurantSearch
     );
+    const DeferredMobileBookmarkMenuButton = bookmarkMenuLoad.Component;
+    const DeferredMobileNotificationMenuButton = notificationMenuLoad.Component;
+    const DeferredRestaurantSearch = searchLoad.Component;
     const countryCounts = useOverseasCountryCounts(mapMode);
     const deviceLocationButtonLabel = resolveDeviceLocationButtonLabel({
         hasLocation: Boolean(deviceLocation),
@@ -787,11 +780,11 @@ function MobileControlOverlayComponent({
             toast.success('로그아웃되었습니다');
             router.push('/');
         } catch (error) {
+            if (isSupersededLogout(error)) return;
             console.error('로그아웃 실패:');
             toast.error('로그아웃에 실패했습니다');
-        } finally {
-            closeUserMenu();
         }
+        closeUserMenu();
     }, [closeUserMenu, router, signOut]);
 
     const renderAnonymousBookmarkMenuButton = () => (
@@ -843,9 +836,25 @@ function MobileControlOverlayComponent({
         </DropdownMenu>
     );
 
+    const renderPendingMenuButton = (kind: 'bookmark' | 'notification', load: { failed: boolean; retry: () => void }) => {
+        const bookmark = kind === 'bookmark';
+        const title = bookmark ? '북마크' : '알림';
+        const open = bookmark ? isBookmarkMenuOpen : isNotificationMenuOpen;
+        const onOpenChange = bookmark ? handleBookmarkMenuOpenChange : handleNotificationMenuOpenChange;
+        return <DropdownMenu open={open} onOpenChange={onOpenChange}>
+            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className={mobileTopIconButtonWithBadgeClass} aria-label={title}>
+                {bookmark ? <Bookmark className={mobileTopIconGlyphClass} aria-hidden="true" /> : <Bell className={mobileTopIconGlyphClass} aria-hidden="true" />}
+            </Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="z-[110] w-[min(calc(100vw-1rem),22rem)]">
+                <DeferredPanelFallback title={title} failed={load.failed} onRetry={load.retry} onClose={() => onOpenChange(false)} />
+            </DropdownMenuContent>
+        </DropdownMenu>;
+    };
+
     const renderBookmarkMenuButton = () => {
         if (isPublicRestrictedMode) return null;
-        if (!user || !DeferredMobileBookmarkMenuButton) return renderAnonymousBookmarkMenuButton();
+        if (!user) return renderAnonymousBookmarkMenuButton();
+        if (!DeferredMobileBookmarkMenuButton) return renderPendingMenuButton('bookmark', bookmarkMenuLoad);
 
         return <DeferredMobileBookmarkMenuButton user={user} open={isBookmarkMenuOpen} onOpenChange={handleBookmarkMenuOpenChange} />;
     };
@@ -898,7 +907,8 @@ function MobileControlOverlayComponent({
 
     const renderNotificationMenuButton = () => {
         if (isPublicRestrictedMode) return null;
-        if (!user || !DeferredMobileNotificationMenuButton) return renderAnonymousNotificationMenuButton();
+        if (!user) return renderAnonymousNotificationMenuButton();
+        if (!DeferredMobileNotificationMenuButton) return renderPendingMenuButton('notification', notificationMenuLoad);
 
         return <DeferredMobileNotificationMenuButton user={user} open={isNotificationMenuOpen} onOpenChange={handleNotificationMenuOpenChange} />;
     };
@@ -1223,6 +1233,8 @@ function MobileControlOverlayComponent({
                     <>
                         {/* 제보 버튼 */}
                         <Button
+                            disabled={isAuthLoading}
+                            aria-busy={isAuthLoading}
                             onClick={() => {
                                 onSubmissionClick?.();
                             }}
@@ -1246,17 +1258,15 @@ function MobileControlOverlayComponent({
                     <>
                         {/* 기기 위치 버튼: 첫 탭은 현재 위치, 두 번째 탭부터 방향 표시 */}
                         <div className="relative">
-                            <DeviceLocationDisclosure id="mobile-device-location-disclosure" />
+                            <DeviceLocationDisclosure id="mobile-device-location-disclosure" onConfirm={() => onDeviceLocationClick?.()} skipDisclosure={Boolean(deviceLocation)}>
                             <Button
                                 type="button"
                                 onClick={(event) => {
                                     event.preventDefault();
                                     event.stopPropagation();
-                                    onDeviceLocationClick?.();
                                 }}
                                 disabled={isDeviceLocationPending}
                                 aria-label={deviceLocationButtonLabel}
-                                aria-describedby="mobile-device-location-disclosure"
                                 aria-busy={isDeviceLocationPending}
                                 className={cn(
                                     'h-12 w-12 rounded-full shadow-sm',
@@ -1277,6 +1287,7 @@ function MobileControlOverlayComponent({
                                     <LocateFixed className="h-5 w-5" aria-hidden="true" />
                                 )}
                             </Button>
+                            </DeviceLocationDisclosure>
                         </div>
                     </>
                 )}
@@ -1391,7 +1402,7 @@ function MobileControlOverlayComponent({
                                     className="h-full w-full"
                                 />
                             ) : (
-                                <SheetLoading />
+                                <DeferredPanelFallback title="검색" failed={searchLoad.failed} onRetry={searchLoad.retry} onClose={handleClose} />
                             )}
                         </div>
                     </div>

@@ -224,7 +224,7 @@ describe('privacy onboarding challenge', () => {
     }))).toBeNull();
   });
 
-  test('rejected onboarding responses expire all bounded Supabase auth chunks', () => {
+  test('rejected onboarding responses expire only their onboarding state', () => {
     const response = NextResponse.json({ code: 'REJECTED' }, { status: 403 });
     clearRejectedOnboardingCookies(response, new Request('https://www.tzudong.app/api/privacy/onboarding', {
       headers: {
@@ -240,13 +240,10 @@ describe('privacy onboarding challenge', () => {
     const expiredNames = response.cookies.getAll()
       .filter((cookie) => cookie.maxAge === 0)
       .map((cookie) => cookie.name);
-    expect(expiredNames).toEqual(expect.arrayContaining([
+    expect(expiredNames).toEqual([
       'tzudong_onboarding_challenge',
       'privacy_onboarding_password_recovery',
-      'sb-project-auth-token.0',
-      'sb-project-auth-token.1',
-      'sb-project-auth-token-code-verifier',
-    ]));
+    ]);
     expect(expiredNames).not.toContain('sb-project-other');
   });
 
@@ -284,7 +281,7 @@ describe('privacy onboarding challenge', () => {
     const authContext = source('contexts/AuthContext.tsx');
     const onboardingPage = source('app/privacy/onboarding/page.tsx');
 
-    expect(callbackRoute).toContain('return redirectWithOnboardingCookiesCleared(origin, buildHomePrivacyOnboardingPath(next));');
+    expect(callbackRoute).toContain('return await callbackSessionResponse(supabase, buildHomePrivacyOnboardingPath(next));');
     expect(callbackRoute).toContain('if (userError || !user?.id || !UUID_PATTERN.test(user.id))');
     expect(authContext).toContain('function isLiteralLoopSafePrivacyOnboarding()');
     expect(authContext).toContain("window.location.pathname === '/privacy/onboarding'");
@@ -294,7 +291,6 @@ describe('privacy onboarding challenge', () => {
     expect(authContext).toContain('allowPasswordRecovery && isLiteralPasswordRecoveryRoute()');
     expect(authContext).toContain('recordPasswordRecoveryProof(nextSession.user.id)');
     expect(authContext).toContain('isLiteralPasswordRecoveryRoute(),');
-    expect(authContext).toContain('isAuthSessionMissingError(error)');
     expect(onboardingPage).toContain('redirect(buildHomePrivacyOnboardingPath());');
     expect(onboardingPage).not.toContain('<AuthModal');
     const authModal = source('components/auth/AuthModal.tsx');
@@ -352,7 +348,7 @@ describe('privacy onboarding challenge', () => {
     expect(eligibilityLookupIndex).toBeGreaterThan(-1);
     expect(roleLookupIndex).toBeGreaterThan(eligibilityLookupIndex);
     expect(profileLookupIndex).toBeGreaterThan(eligibilityLookupIndex);
-    expect(authContext).toContain('await signOutRejectedPrivacySession(supabase)');
+    expect(authContext).toContain('await signOutRejectedPrivacySession(supabase, {');
     expect(authContext).toContain("dispatchHomeAuthSessionUpdated({ hasSession: true, source: 'auth-eligible-session' })");
 
     const loginEligibilityIndex = passwordLogin.indexOf('const eligibility = await getCurrentPrivacyEligibility(supabase);');
@@ -622,7 +618,7 @@ describe('G014 server session release boundaries', () => {
     const oauthFlowStart = callback.indexOf('let confirmed = false;');
     const oauthFlow = callback.slice(
       oauthFlowStart,
-      callback.indexOf('return redirectWithOnboardingCookiesCleared(origin, next);', oauthFlowStart),
+      callback.indexOf('return await callbackSessionResponse(supabase, next);', oauthFlowStart),
     );
 
     expect(oauthFlow.indexOf('confirmOAuthOnboarding(challenge, userId)')).toBeGreaterThan(-1);
@@ -648,10 +644,10 @@ describe('G014 server session release boundaries', () => {
     expect(authModal).toContain('const challenge = await startOnboardingChallenge("password");');
     expect(authModal).toContain('const { data: existingSession, error: existingSessionError } = await supabase.auth.signInWithPassword({ email, password });');
     expect(authModal).toContain('body: JSON.stringify({ action: "existing_account" })');
-    expect(authModal).toContain('await rejectPrivacyIneligibleSession(existingUserId)');
+    expect(authModal).toContain('await rejectPrivacyIneligibleSession(existingUserId, existingPrivacySessionOwner)');
     expect(authModal).toContain('Google 개인정보 확인 계속하기');
   });
-  test('rejected OAuth callbacks redirect no-store after attempting both sign-outs even when they fail', async () => {
+  test('callback navigation does not exchange a code; rejection revocation still attempts both scopes', async () => {
     oauthRejectionSignOutFails = true;
     const supabase = {
       auth: {
@@ -665,12 +661,12 @@ describe('G014 server session release boundaries', () => {
     const response = await GET(oauthRejectionRequest());
     expect(response.status).toBe(307);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
-    expect(response.headers.get('location')).toBe('https://www.tzudong.app/');
+    expect(new URL(response.headers.get('location')!).pathname).toBe('/auth/complete');
     expect(oauthRejectionSignOutScopes).toEqual(['global', 'local']);
     expect(source('app/auth/callback/route.ts')).toContain('await revokeRejectedCallbackSession(supabase)');
     expect(source('app/auth/callback/route.ts')).toContain('await createCallbackSupabaseClient()');
   });
-  test('rejected OAuth callbacks redirect no-store after both sign-outs resolve', async () => {
+  test('callback navigation remains no-store and revocation still uses both scopes', async () => {
     const supabase = {
       auth: {
         signOut: async ({ scope }: { scope: 'global' | 'local' }) => {
@@ -682,7 +678,7 @@ describe('G014 server session release boundaries', () => {
     const response = await GET(oauthRejectionRequest());
     expect(response.status).toBe(307);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
-    expect(response.headers.get('location')).toBe('https://www.tzudong.app/');
+    expect(new URL(response.headers.get('location')!).pathname).toBe('/auth/complete');
     expect(oauthRejectionSignOutScopes).toEqual(['global', 'local']);
   });
 
@@ -749,8 +745,8 @@ describe('G014 server session release boundaries', () => {
     expect(onboarding).toContain('isExactCompensationHoldReceipt');
     expect(recovery).toContain("code: PASSWORD_RECOVERY_CODE");
     expect(recovery).not.toContain('email');
-    expect(onboardingLibrary).toContain('SUPABASE_AUTH_COOKIE_PATTERN');
-    expect(onboardingLibrary).toContain('MAX_REJECTED_AUTH_COOKIE_CHUNKS');
+    expect(onboardingLibrary).not.toContain('SUPABASE_AUTH_COOKIE_PATTERN');
+    expect(onboardingLibrary).not.toContain('MAX_REJECTED_AUTH_COOKIE_CHUNKS');
     expect(onboardingLibrary).toContain('clearRejectedOnboardingCookies');
     expect(onboarding).toContain('clearRejectedOnboardingCookies(response, request)');
     expect(onboarding).not.toContain('ONBOARDING_ACCOUNT_CREATE_FAILED');
@@ -796,9 +792,20 @@ describe('G014 server session release boundaries', () => {
     expect(authModal).toContain('await supabase.auth.refreshSession()');
     expect(authModal).toContain('endExistingAccountPrivacyRecovery(recoveryToken)');
     expect(authContext.indexOf('isExistingAccountPrivacyRecoveryActive(nextSession.user.email)')).toBeLessThan(
-      authContext.indexOf('await clearStaleSession(userId, true)'),
+      authContext.indexOf('await clearStaleSession(userId, true, generation)'),
     );
     expect(recovery).not.toContain(".from('privacy_");
     expect(recovery).not.toContain('p_user_id: body.');
   });
+});
+
+test('a delayed onboarding rejection cannot expire the current auth namespace', () => {
+  const request = new Request('https://app.fixture.invalid/api/privacy/onboarding?unexpected=1', {
+    headers: { cookie: 'sb-current-v2-auth-token.0=synthetic-old; sb-current-auth-token=synthetic-legacy' },
+  });
+  const response = NextResponse.json({ error: 'rejected' }, { status: 400 });
+  clearRejectedOnboardingCookies(response, request);
+  expect(response.cookies.get('sb-current-v2-auth-token.0')).toBeUndefined();
+  expect(response.cookies.get('sb-current-auth-token')).toBeUndefined();
+  expect(response.cookies.get('tzudong_onboarding_challenge')?.maxAge).toBe(0);
 });

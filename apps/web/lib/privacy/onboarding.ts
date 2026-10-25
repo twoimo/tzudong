@@ -7,8 +7,6 @@ export const ONBOARDING_PASSWORD_RECOVERY_COOKIE = 'privacy_onboarding_password_
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const LOWER_SHA256_PATTERN = /^[0-9a-f]{64}$/;
-const SUPABASE_AUTH_COOKIE_PATTERN = /^sb-[A-Za-z0-9_-]{1,160}-(?:auth-token(?:\.\d+)?|auth-token-code-verifier(?:\.\d+)?|code-verifier(?:\.\d+)?)$/;
-const MAX_REJECTED_AUTH_COOKIE_CHUNKS = 32;
 const AGE_BANDS = new Set(['age_14_plus', 'under_14']);
 const ONBOARDING_INTENTS = new Set(['password', 'oauth']);
 const ONBOARDING_CHALLENGE_REQUIRED_KEYS = [
@@ -265,20 +263,10 @@ export function clearOnboardingCookies(response: NextResponse) {
   clearOnboardingPasswordRecovery(response);
 }
 
-export function clearRejectedOnboardingCookies(response: NextResponse, request: Request) {
+// A rejection response may arrive after a newer login. It owns onboarding
+// state only; expiring request auth-cookie names would erase that newer login.
+export function clearRejectedOnboardingCookies(response: NextResponse, _request: Request) {
   clearOnboardingCookies(response);
-
-  const cookieHeader = request.headers.get('cookie');
-  if (!cookieHeader) return;
-
-  const cookieNames = new Set<string>();
-  for (const part of cookieHeader.split(';')) {
-    if (cookieNames.size >= MAX_REJECTED_AUTH_COOKIE_CHUNKS) break;
-    const separator = part.indexOf('=');
-    const name = separator > 0 ? part.slice(0, separator).trim() : '';
-    if (SUPABASE_AUTH_COOKIE_PATTERN.test(name)) cookieNames.add(name);
-  }
-  for (const name of cookieNames) expireCookie(response, name);
 }
 
 export function under14SignupUnavailableResponse() {

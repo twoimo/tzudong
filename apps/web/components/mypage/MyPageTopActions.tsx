@@ -1,5 +1,7 @@
 "use client";
 
+import { isSupersededLogout } from "@/lib/auth/logout-result";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -92,6 +94,7 @@ export function MyPageTopActions() {
       toast.success("로그아웃되었습니다");
       router.push("/");
     } catch (error) {
+      if (isSupersededLogout(error)) return;
       console.error("로그아웃 실패:");
       toast.error("로그아웃에 실패했습니다");
     }

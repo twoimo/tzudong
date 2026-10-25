@@ -43,7 +43,10 @@ async function bundle() {
           return route.abort();
         });
         await page.goto('https://frame-failure.test/'); await page.addScriptTag({ content: script });
-        await ui(page.getByRole('heading', { name: '영상에서 확인한 방문·현장 장면 📸' })).toBeVisible();
+        await ui(page.locator('summary')).toHaveText('영상 속 장면1장');
+        await ui(page.locator('section img')).not.toBeVisible();
+        await page.locator('summary').press('Enter');
+        await ui(page.locator('section')).toContainText('현장 장면은 영상의 맥락');
         await ui(page.locator('section img')).toBeVisible();
         await ui.poll(() => page.locator('section img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(640);
         await page.getByRole('button', { name: '실패 재현' }).click();

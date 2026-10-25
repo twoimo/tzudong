@@ -13,6 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { LegacyDraftRecovery } from '@/components/mypage/LegacyDraftRecovery';
+import { captureBrowserDraftEpoch } from '@/lib/privacy/browser-draft-lifecycle';
+import { pageHeadingTitleClass } from "@/components/layout/page-heading-styles";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -984,15 +987,19 @@ export default function ProfilePage() {
 
   return (
     <div
-      className="grid min-w-0 gap-3 rounded-xl border border-border bg-card p-3 sm:p-4 lg:grid-cols-2 lg:auto-rows-auto lg:content-stretch lg:items-stretch 2xl:grid-cols-3"
+      className="grid min-w-0 gap-5 lg:grid-cols-2 lg:items-start"
       data-mypage-profile-page="true"
-      data-mypage-profile-density="dashboard-matrix"
+      data-mypage-profile-density="content-first"
       data-mypage-profile-viewport-fit="content"
       data-mypage-profile-matrix="content-2x2"
       data-mypage-profile-matrix-size="content-track"
       data-mypage-profile-mobile-flow="stack"
-      data-mypage-profile-desktop-flow="matrix-2x2"
+      data-mypage-profile-desktop-flow="activity-then-settings"
     >
+      <header className="hidden space-y-2 lg:col-span-2 md:block">
+        <h1 className={pageHeadingTitleClass}>내 프로필</h1>
+        <p className="text-sm leading-6 text-muted-foreground">맛집을 다녀온 기록과 다음 등급까지의 진행 상황을 확인하세요.</p>
+      </header>
       <div
         className="min-w-0 space-y-3 sm:space-y-5 md:contents md:space-y-0"
         data-mypage-profile-main-column="true"
@@ -1195,7 +1202,7 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="overflow-hidden rounded-2xl border-0 bg-muted/35 shadow-none md:order-1 lg:col-start-1 lg:row-start-1 lg:h-full lg:min-h-0"
+          className="overflow-hidden rounded-2xl border border-border bg-card shadow-none md:order-1 lg:col-start-1"
           data-mypage-next-actions="true"
           data-mypage-quick-actions="combined"
         >
@@ -1244,7 +1251,7 @@ export default function ProfilePage() {
             ))}
           </CardContent>
           <CardContent
-            className="hidden h-full min-h-0 overflow-y-auto overscroll-contain p-4 md:flex md:flex-col md:gap-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="hidden space-y-5 p-5 md:block"
             data-mypage-desktop-tier-dashboard="true"
           >
             <div className="flex items-start justify-between gap-3">
@@ -1264,7 +1271,7 @@ export default function ProfilePage() {
             </div>
 
             <div
-              className="space-y-2 lg:flex lg:flex-1 lg:flex-col lg:justify-center"
+              className="space-y-2"
               data-mypage-desktop-tier-progress="true"
             >
               <div className="flex items-center justify-between gap-3">
@@ -1328,13 +1335,13 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:flex md:flex-col lg:col-start-1 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"
+          className="hidden min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-2 md:flex md:flex-col lg:col-start-2"
           data-mypage-desktop-recent-activity="true"
         >
           <CardHeader className="shrink-0 pb-3 lg:p-3 lg:pb-1.5">
             <CardTitle className="text-base">최근 활동</CardTitle>
           </CardHeader>
-          <CardContent className="grid min-h-0 flex-1 md:grid-rows-3 lg:p-3 lg:pt-0">
+          <CardContent className="grid gap-1 px-5 pb-5">
             {recentActivityItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -1368,7 +1375,7 @@ export default function ProfilePage() {
       >
         {/* 비밀번호 변경 */}
         <Card
-          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:flex md:flex-col lg:col-start-2 lg:row-start-1 lg:h-full lg:min-h-0 lg:overflow-hidden"
+          className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-3"
           data-mypage-password-card="full-width"
         >
           <CardHeader className="shrink-0 lg:p-3 lg:pb-1.5">
@@ -1507,7 +1514,7 @@ export default function ProfilePage() {
 
         <Card
           aria-label="선택 마케팅 수신 설정"
-          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-5 lg:col-span-2 lg:row-start-3 2xl:col-span-1 2xl:col-start-3 2xl:row-span-2 2xl:row-start-1"
+          className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-4"
           data-privacy-consent-settings="true"
         >
           <CardContent className="space-y-4 p-4 lg:p-4">
@@ -1656,16 +1663,17 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
+        <LegacyDraftRecovery key={`${user.id}:${captureBrowserDraftEpoch(user.id).generation}`} userId={user.id} />
+
         <Card
           id="account-deletion"
-          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:flex md:flex-col lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"
+          className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-6 lg:col-span-2"
           data-mypage-danger-zone="true"
           data-layout-primitives="form-flow stack"
           data-mypage-danger-zone-layout="matrix-bottom-right"
         >
           <CardContent className="min-h-0 p-3 md:flex md:flex-1 md:flex-col lg:p-3">
             <details
-              open
               className="group p-1 md:flex md:flex-1 md:flex-col lg:p-0"
             >
               <summary className="flex min-h-10 cursor-pointer touch-manipulation list-none items-center justify-between gap-3 rounded-xl text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:min-h-9">

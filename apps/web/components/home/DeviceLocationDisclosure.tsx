@@ -1,12 +1,38 @@
-/** Visible before the location action; the button remains the only activation. */
-export function DeviceLocationDisclosure({ id }: { id: string }) {
+"use client";
+
+import { useState, type ReactNode } from "react";
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+/** Explain location use when requested, without covering the map while browsing. */
+export function DeviceLocationDisclosure({ id, children, onConfirm, skipDisclosure = false }: {
+    id: string;
+    children: ReactNode;
+    onConfirm: () => void;
+    skipDisclosure?: boolean;
+}) {
+    const [open, setOpen] = useState(false);
     return (
-        <p
-            id={id}
-            className="pointer-events-none absolute bottom-0 right-full mr-2 w-max max-w-[min(12rem,calc(100vw-14rem))] rounded-md bg-background/95 px-2 py-1 text-xs leading-snug text-muted-foreground shadow-sm"
-        >
-            위치는 지도 제공자에 전달돼요.<br />
-            앱에는 저장하지 않아요.
-        </p>
+        <AlertDialog open={open} onOpenChange={(nextOpen) => {
+            if (nextOpen && skipDisclosure) { onConfirm(); return; }
+            setOpen(nextOpen);
+        }}>
+            <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>현재 위치를 지도에서 볼까요?</AlertDialogTitle>
+                    <AlertDialogDescription id={id}>
+                        현재 위치를 표시하려면 위치 정보가 지도 제공자에 전달돼요. 앱에는 저장하지 않아요.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>취소</AlertDialogCancel>
+                    <AlertDialogAction onClick={onConfirm}>현재 위치 보기</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     );
 }

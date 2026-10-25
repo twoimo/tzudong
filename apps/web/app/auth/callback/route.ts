@@ -15,9 +15,12 @@ import { buildHomePrivacyOnboardingPath, getSafeAuthNextPath } from '@/lib/auth/
 import { getTrustedAuthCallbackOrigin } from '@/lib/auth/callback-origin';
 import {
   createCallbackSupabaseClient,
+  getCallbackSessionTokens,
   revokeRejectedCallbackSession,
 } from '@/lib/auth/callback-session';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
+import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
 
 export const runtime = 'nodejs';
 
@@ -76,15 +79,20 @@ function parseCallbackQuery(searchParams: URLSearchParams): CallbackQuery | null
 type CallbackSupabaseClient = Awaited<ReturnType<typeof createCallbackSupabaseClient>>;
 type OnboardingChallenge = NonNullable<ReturnType<typeof readOnboardingChallenge>>;
 
-function redirectWithOnboardingCookiesCleared(origin: string, path = '/') {
-  const response = NextResponse.redirect(`${getTrustedAuthCallbackOrigin(origin)}${path}`);
+async function callbackSessionResponse(supabase: CallbackSupabaseClient, path = '/') {
+  const handoff = await getCallbackSessionTokens(supabase);
+  const response = NextResponse.json({ ok: true, next: path, ...handoff });
   response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('Referrer-Policy', 'no-referrer');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
   clearOnboardingCookies(response);
   return response;
 }
 
 function rejectedCallbackRedirect(request: Request, origin: string) {
-  const response = NextResponse.redirect(`${getTrustedAuthCallbackOrigin(origin)}/`);
+  const response = request.method === 'POST'
+    ? NextResponse.json({ ok: false, error: 'AUTH_CALLBACK_FAILED' }, { status: 400 })
+    : NextResponse.redirect(`${getTrustedAuthCallbackOrigin(origin)}/`);
   response.headers.set('Cache-Control', 'no-store');
   clearRejectedOnboardingCookies(response, request);
   return response;
@@ -123,6 +131,32 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const callback = parseCallbackQuery(searchParams);
   if (!callback || callback.providerError) return rejectedCallbackRedirect(request, origin);
+  // A navigation response never publishes auth cookies. The new document
+  // exchanges the one-use code only with its locally saved OAuth intent.
+  const target = new URL('/auth/complete', getTrustedAuthCallbackOrigin(origin));
+  target.searchParams.set('code', callback.code!);
+  target.searchParams.set('next', callback.next);
+  return NextResponse.redirect(target, { headers: { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
+}
+
+export async function POST(request: Request) {
+  const { origin, searchParams } = new URL(request.url);
+  if (searchParams.size || !isTrustedSameOriginMutation(request)
+    || request.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') {
+    return NextResponse.json({ ok: false, error: 'INVALID_CALLBACK_REQUEST' }, { status: 403, headers: { 'Cache-Control': 'no-store' } });
+  }
+  let callback: CallbackQuery | null = null;
+  try {
+    const input = await readBoundedJsonRequest(request, 8192);
+    if (!input.ok) throw new Error();
+    const body = input.value;
+    if (!body || typeof body !== 'object' || Object.keys(body).some(key => !['code', 'next'].includes(key))
+      || !('code' in body) || typeof body.code !== 'string'
+      || ('next' in body && typeof body.next !== 'string')) throw new Error();
+    const query = new URLSearchParams({ code: body.code, next: 'next' in body ? body.next as string : '/' });
+    callback = parseCallbackQuery(query);
+  } catch { /* Invalid input never reaches the one-use exchange. */ }
+  if (!callback || callback.providerError) return rejectedCallbackRedirect(request, origin);
   const challengeCookie = request.headers.get('cookie')
     ?.split(';')
     .map((part) => part.trim())
@@ -153,10 +187,10 @@ export async function GET(request: Request) {
       }
       const eligibility = await getCurrentPrivacyEligibility(supabase);
       if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
-        return redirectWithOnboardingCookiesCleared(origin, buildHomePrivacyOnboardingPath(next));
+        return await callbackSessionResponse(supabase, buildHomePrivacyOnboardingPath(next));
       }
 
-      return redirectWithOnboardingCookiesCleared(origin, next);
+      return await callbackSessionResponse(supabase, next);
     } catch {
       if (!supabase) return rejectedCallbackRedirect(request, origin);
       await revokeRejectedCallbackSession(supabase);
@@ -203,7 +237,7 @@ export async function GET(request: Request) {
       return rejectedCallbackRedirect(request, origin);
     }
 
-    return redirectWithOnboardingCookiesCleared(origin, next);
+    return await callbackSessionResponse(supabase, next);
   } catch {
     if (!supabase) return rejectedCallbackRedirect(request, origin);
     await rejectOAuthCallbackSession(supabase);

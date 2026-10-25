@@ -227,7 +227,7 @@ function createPasswordSignupClient(request: NextRequest) {
     set(name, value, options) {
       cookieMutations.set(name, { name, value, options });
     },
-  });
+  }, process.env, { allowPkceCookieWrites: true });
   return { client, cookieMutations };
 }
 
