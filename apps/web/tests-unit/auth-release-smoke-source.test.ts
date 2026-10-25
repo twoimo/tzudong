@@ -1,3 +1,4 @@
+import { getAuthCookieContract } from '../lib/auth/session-cookies';
 import { expect, test } from 'bun:test';
 import { resolve, join } from 'node:path';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -12,6 +13,7 @@ const root = resolve(import.meta.dir, '..');
 const parent = await import(resolve(root, 'scripts/run-auth-release-smoke.mjs'));
 const child = await import(resolve(root, 'scripts/run-auth-release-smoke-child.mjs'));
 const origin = new URL('https://tzudong.app/');
+const cookieContract = getAuthCookieContract('https://aqlcofblfxdrjhhdmarw.supabase.co');
 const fixtureNodeExecutable = process.execPath;
 const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64');
 const userId = '11111111-1111-4111-8111-111111111111';
@@ -22,7 +24,7 @@ const jwt = (claims: Record<string, unknown> = {}) => [
     Buffer.from(JSON.stringify({ sub: userId, session_id: sessionId, iat: now - 10, exp: now + 300, role: 'authenticated', ...claims })).toString('base64url'),
     Buffer.from('signature').toString('base64url'),
 ].join('.');
-const validState = (host = origin.hostname, value = `base64-${Buffer.from(JSON.stringify({ access_token: jwt(), refresh_token: 'refresh-1234567890123456' })).toString('base64')}`, httpOnly = true) => encode({ cookies: ['sb-aqlcofblfxdrjhhdmarw-v3-auth-token', 'tz-auth-v3-aqlcofblfxdrjhhdmarw'].map(name => ({ name, value: name.startsWith('sb-') ? value : '1', domain: host, path: '/', expires: Math.floor(Date.now() / 1000) + 60, httpOnly, secure: true, sameSite: 'Lax' })), origins: [] });
+const validState = (host = origin.hostname, value = `base64-${Buffer.from(JSON.stringify({ access_token: jwt(), refresh_token: 'refresh-1234567890123456' })).toString('base64')}`, httpOnly = true) => encode({ cookies: [cookieContract.key, cookieContract.marker].map(name => ({ name, value: name.startsWith('sb-') ? value : '1', domain: host, path: '/', expires: Math.floor(Date.now() / 1000) + 60, httpOnly, secure: true, sameSite: 'Lax' })), origins: [] });
 const jsonResponse = (body: unknown, url: string, headers: Record<string, string> = {}) => {
     const text = JSON.stringify(body);
     return { ok: true, status: 200, url, headers: new Headers({ 'content-type': 'application/json', ...headers }), text: async () => text };
@@ -103,8 +105,8 @@ test('release proof requires the current complete cookie batch and excludes its 
         [token],
         [token, { ...marker, value: 'pending' }],
         [token, marker, marker],
-        [{ ...token, name: 'sb-aqlcofblfxdrjhhdmarw-auth-token' }, marker],
-        [token, marker, { ...token, name: 'sb-aqlcofblfxdrjhhdmarw-auth-token' }],
+        [{ ...token, name: cookieContract.legacyKey }, marker],
+        [token, marker, { ...token, name: cookieContract.legacyKey }],
         [{ ...token, name: token.name + '.1' }, marker],
         [token, { ...marker, domain: 'evil.example' }],
     ]) {
