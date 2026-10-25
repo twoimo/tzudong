@@ -29,19 +29,18 @@ REASONS = {"shorts:is_shorts_le_180", "no_restaurants", "all_names_null"}
 VIDEO = re.compile(r"[A-Za-z0-9_-]{11}")
 
 
-def _paths(video: str) -> tuple[str, ...]:
+def _paths(video: str) -> dict[str, str]:
     crawl = "backend/restaurant-crawling/data/tzuyang"
     evaluation = "backend/restaurant-evaluation/data/tzuyang/evaluation"
-    return (
-        f"{crawl}/meta/{video}.jsonl",
-        f"{crawl}/transcript/{video}.jsonl",
-        f"{crawl}/crawling/{video}.jsonl",
-        f"{crawl}/crawling/.receipts/{video}.json",
-        f"{crawl}/visual-location/{video}.jsonl",
-        f"{evaluation}/notSelection/{video}.jsonl",
-        f"{evaluation}/selection/{video}.jsonl",
-        f"{evaluation}/selection/.receipts/{video}.json",
-    )
+    return {
+        "meta": f"{crawl}/meta/{video}.jsonl",
+        "transcript": f"{crawl}/transcript/{video}.jsonl",
+        "crawl": f"{crawl}/crawling/{video}.jsonl",
+        "crawl_receipt": f"{crawl}/crawling/.receipts/{video}.json",
+        "marker": f"{evaluation}/notSelection/{video}.jsonl",
+        "selection": f"{evaluation}/selection/{video}.jsonl",
+        "selection_receipt": f"{evaluation}/selection/.receipts/{video}.json",
+    }
 
 
 def _latest(path: Path) -> dict:
@@ -54,6 +53,34 @@ def _latest(path: Path) -> dict:
     if not isinstance(value, dict):
         raise ValueError("terminal_cache_invalid")
     return value
+
+
+def _unique_object(pairs: list[tuple]) -> dict:
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("terminal_cache_invalid")
+        result[key] = value
+    return result
+
+
+def _has_visual_material(content: bytes) -> bool:
+    # Crawl/selection can retain copies after the visual source is removed.
+    # Check EVERY JSONL record: freshness probes intentionally hash only the
+    # latest record, while this transport preserves the entire file's bytes.
+    for line in content.decode("utf-8").splitlines():
+        if not line.strip():
+            continue
+        pending = [json.loads(line, object_pairs_hook=_unique_object)]
+        while pending:
+            value = pending.pop()
+            if isinstance(value, dict):
+                if any(value.get(key) for key in ("visual", "texts", "raw_ocr", "ocr_text")):
+                    return True
+                pending.extend(value.values())
+            elif isinstance(value, list):
+                pending.extend(value)
+    return False
 
 
 def _safe_target(root: Path, relative: str) -> Path:
@@ -97,20 +124,35 @@ def export_cache(root: Path, cache: Path, environment: dict[str, str]) -> dict:
     packet = {"schemaVersion": 1, "videos": [], "files": []}
     serialized_size = len(json.dumps(packet, separators=(",", ":")).encode())
     skipped = 0
+    skipped_visual = 0
     for video in order:
         if not VIDEO.fullmatch(video) or len(packet["videos"]) >= MAX_VIDEOS:
             skipped += 1
             continue
-        marker = _safe_target(root, _paths(video)[5])
+        # Visual inputs contain raw OCR. Dropping only that file would leave an
+        # incomplete source set behind its existing receipt; exclude the whole
+        # video instead. A symlink is rejected even if its target is missing.
+        visual = _safe_target(root, f"backend/restaurant-crawling/data/tzuyang/visual-location/{video}.jsonl")
+        if visual.exists():
+            skipped_visual += 1
+            continue
+        paths = _paths(video)
+        marker = _safe_target(root, paths["marker"])
         if not marker.is_file():
             continue
         if marker.stat().st_size > MAX_FILE_BYTES:
             skipped += 1
             continue
-        if _latest(marker).get("notSelected_reason") not in REASONS:
+        reason = _latest(marker).get("notSelected_reason")
+        if reason not in REASONS:
             continue
+        # Shorts freshness checks only metadata + marker. Stale unused files
+        # must not hitchhike on that certificate (including old OCR copies).
+        if reason == "shorts:is_shorts_le_180":
+            paths = {key: paths[key] for key in ("meta", "marker")}
         entries = []
-        for relative in _paths(video):
+        visual_material = False
+        for relative in paths.values():
             source = _safe_target(root, relative)
             if not source.is_file():
                 continue
@@ -122,8 +164,14 @@ def export_cache(root: Path, cache: Path, environment: dict[str, str]) -> dict:
             if len(content) > MAX_FILE_BYTES:
                 entries = []
                 break
+            if _has_visual_material(content):
+                visual_material = True
+                break
             entries.append({"path": relative, "sha256": hashlib.sha256(content).hexdigest(),
                             "content": base64.b64encode(content).decode("ascii")})
+        if visual_material:
+            skipped_visual += 1
+            continue
         # Account for each encoded entry once, instead of reserializing an
         # ever-growing packet for every video (quadratic in the packet size).
         addition = len(json.dumps(video).encode()) + bool(packet["videos"])
@@ -151,7 +199,8 @@ def export_cache(root: Path, cache: Path, environment: dict[str, str]) -> dict:
     finally:
         temporary.unlink(missing_ok=True)
     return {"videos": len(packet["videos"]), "files": len(packet["files"]),
-            "bytes": cache.stat().st_size, "skippedByBounds": skipped}
+            "bytes": cache.stat().st_size, "skippedByBounds": skipped,
+            "skippedVisualInputs": skipped_visual}
 
 
 def restore_cache(root: Path, cache: Path) -> dict:
@@ -173,8 +222,8 @@ def restore_cache(root: Path, cache: Path) -> dict:
     if (any(not isinstance(video, str) or not VIDEO.fullmatch(video) for video in videos)
             or len(set(videos)) != len(videos)):
         raise ValueError("terminal_cache_invalid")
-    allowed = {path for video in videos for path in _paths(video)}
-    planned, seen = [], set()
+    allowed = {path for video in videos for path in _paths(video).values()}
+    planned, seen, contents = [], set(), {}
     # Validate the entire bounded packet before writing any file. Existing local
     # evidence wins; a conflicting cache is rejected, never merged or overwritten.
     for entry in packet["files"]:
@@ -189,11 +238,26 @@ def restore_cache(root: Path, cache: Path) -> dict:
         decoded = base64.b64decode(content, validate=True)
         if len(decoded) > MAX_FILE_BYTES or hashlib.sha256(decoded).hexdigest() != digest:
             raise ValueError("terminal_cache_invalid")
+        if _has_visual_material(decoded):
+            raise ValueError("terminal_cache_visual_material")
         target = _safe_target(root, relative)
         if target.exists() and (not target.is_file() or target.read_bytes() != decoded):
             raise ValueError("terminal_cache_conflict")
         seen.add(relative)
+        contents[relative] = decoded
         planned.append((target, decoded))
+    for video in videos:
+        paths = _paths(video)
+        marker_bytes = contents.get(paths["marker"])
+        if marker_bytes is None:
+            raise ValueError("terminal_cache_invalid")
+        marker = json.loads(marker_bytes.decode("utf-8").strip().splitlines()[-1])
+        if not isinstance(marker, dict) or marker.get("notSelected_reason") not in REASONS:
+            raise ValueError("terminal_cache_invalid")
+        if marker["notSelected_reason"] == "shorts:is_shorts_le_180":
+            allowed_short = {paths["meta"], paths["marker"]}
+            if paths["meta"] not in contents or any(path in contents for path in set(paths.values()) - allowed_short):
+                raise ValueError("terminal_cache_invalid")
     for target, content in planned:
         if not target.exists():
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -212,7 +276,7 @@ def main() -> int:
                   if args.action == "export" else restore_cache(ROOT, args.cache_file))
         print(json.dumps(result, sort_keys=True))
         return 0
-    except (ValueError, OSError, EOFError, IndexError, TypeError, RuntimeError, ImportError, AttributeError):
+    except (ValueError, OSError, EOFError, IndexError, TypeError, RuntimeError, ImportError, AttributeError, RecursionError):
         print("error=terminal_cache_invalid")
         return 2
 
