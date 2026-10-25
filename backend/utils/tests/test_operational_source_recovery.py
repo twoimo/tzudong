@@ -171,6 +171,53 @@ class OperationalRecoveryProvenanceTests(unittest.TestCase):
         )
         self.assertFalse((ROOT / "backend/deploy/pipeline-control").exists())
 
+    def test_security_workflow_trigger_covers_every_pinned_candidate(self) -> None:
+        workflow = (
+            ROOT / ".github/workflows/security-audit.yml"
+        ).read_text(encoding="utf-8").splitlines()
+        patterns = []
+        collecting = False
+        for line in workflow:
+            if collecting:
+                entry = re.match(r"^      - '(.+)'\s*$", line)
+                if entry:
+                    patterns.append(entry.group(1))
+                    continue
+                break
+            if line == "    paths:":
+                collecting = True
+        self.assertTrue(patterns)
+
+        def _matches(pattern: str, path: str) -> bool:
+            out = []
+            i = 0
+            while i < len(pattern):
+                if pattern.startswith("**/", i):
+                    out.append("(?:.*/)?")
+                    i += 3
+                elif pattern.startswith("**", i):
+                    out.append(".*")
+                    i += 2
+                elif pattern[i] == "*":
+                    out.append("[^/]*")
+                    i += 1
+                elif pattern[i] == "?":
+                    out.append("[^/]")
+                    i += 1
+                else:
+                    out.append(re.escape(pattern[i]))
+                    i += 1
+            return re.match("^" + "".join(out) + "$", path) is not None
+
+        pinned = {entry["candidatePath"] for entry in self.document["files"]}
+        pinned |= {entry["path"] for entry in self.document["candidateOnlyFiles"]}
+        uncovered = sorted(
+            path
+            for path in pinned
+            if not any(_matches(pattern, path) for pattern in patterns)
+        )
+        self.assertEqual(uncovered, [])
+
 
 if __name__ == "__main__":
     unittest.main()
