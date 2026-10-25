@@ -1,9 +1,9 @@
 import { commitSupabaseBrowserSession } from '@/integrations/supabase/client';
 import { advanceBrowserAuthRevision, captureBrowserAuthState } from './browser-commit-state';
-import { getAuthCookieContract, migrateBrowserAuthCookies, withBrowserAuthCookieLock } from './session-cookies';
+import { getAuthCookieContract, getBrowserAuthCookieOptions, migrateBrowserAuthCookies, withBrowserAuthCookieLock } from './session-cookies';
 import { getSafeAuthNextPath } from './auth-redirect';
 import { parseSignupPkceCookies } from './signup-pkce-handoff';
-import { DEFAULT_COOKIE_OPTIONS, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr';
+import { parseCookieHeader, serializeCookieHeader } from '@supabase/ssr';
 
 type Intent = { version: 1; id: string; digest: string };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -81,7 +81,7 @@ export async function captureBrowserAuthIntent(signal = new AbortController().si
         if (names.some(name => name !== verifier && !name.startsWith(`${verifier}-`) && !name.startsWith(`${verifier}.`))) {
           throw new Error('AUTH_CALLBACK_FAILED');
         }
-        for (const name of names) document.cookie = serializeCookieHeader(name, '', { ...DEFAULT_COOKIE_OPTIONS, maxAge: 0 });
+        for (const name of names) document.cookie = serializeCookieHeader(name, '', { ...getBrowserAuthCookieOptions(), maxAge: 0 });
         if (parseCookieHeader(document.cookie).some(cookie => names.includes(cookie.name))) throw new Error('AUTH_COOKIE_WRITE_FAILED');
         localStorage.removeItem(intentKey);
         if (localStorage.getItem(intentKey) !== null) throw new Error('AUTH_CALLBACK_SUPERSEDED');
@@ -105,11 +105,11 @@ export async function publishBrowserSignupPkce(intent: Intent, input: unknown, s
     const stale = parseCookieHeader(document.cookie).filter(cookie =>
       cookie.name === verifier || cookie.name.startsWith(`${verifier}.`) || cookie.name.startsWith(`${verifier}-`));
     for (const cookie of stale) {
-      document.cookie = serializeCookieHeader(cookie.name, '', { ...DEFAULT_COOKIE_OPTIONS, maxAge: 0 });
+      document.cookie = serializeCookieHeader(cookie.name, '', { ...getBrowserAuthCookieOptions(), maxAge: 0 });
     }
     for (const item of mutations) {
       document.cookie = serializeCookieHeader(item.name, item.value,
-        item.remove ? { ...DEFAULT_COOKIE_OPTIONS, maxAge: 0 } : DEFAULT_COOKIE_OPTIONS);
+        item.remove ? { ...getBrowserAuthCookieOptions(), maxAge: 0 } : getBrowserAuthCookieOptions());
     }
     const actual = parseCookieHeader(document.cookie);
     if (mutations.some(item => item.remove ? actual.some(cookie => cookie.name === item.name)

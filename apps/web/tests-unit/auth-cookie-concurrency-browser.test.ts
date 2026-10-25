@@ -66,6 +66,11 @@ for(const operation of ['sdk-read','sdk-write','logout'] as const)test(`another 
   expect(await actor.evaluate(()=>(globalThis as unknown as {batchState:{done:boolean}}).batchState.done)).toBe(false);
   await holder.evaluate(()=>(globalThis as unknown as {lockState:{release():void}}).lockState.release());
   await actor.waitForFunction(()=>(globalThis as unknown as {batchState:{done:boolean}}).batchState.done);
+  if(operation==='sdk-write'){
+   const stored=await context.cookies();
+   expect(stored.some(cookie=>cookie.name===key&&cookie.value!=='synthetic-owned')).toBe(true);
+   expect(stored.filter(cookie=>cookie.name===key||cookie.name===marker||cookie.name.startsWith(key+'.')).every(cookie=>cookie.secure)).toBe(true);
+  }
  }finally{await browser.close();}
 },20000);
 

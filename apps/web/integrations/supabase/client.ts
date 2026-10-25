@@ -3,7 +3,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types'
 import { parseCookieHeader, serializeCookieHeader } from '@supabase/ssr'
-import { beginBrowserAuthCookieBatch, finishBrowserAuthCookieBatch, getAuthCookieContract, migrateBrowserAuthCookies, withBrowserAuthCookieLock } from '../../lib/auth/session-cookies'
+import { beginBrowserAuthCookieBatch, finishBrowserAuthCookieBatch, getAuthCookieContract, getBrowserAuthCookieOptions, migrateBrowserAuthCookies, withBrowserAuthCookieLock } from '../../lib/auth/session-cookies'
 import { createBrowserRefreshGuard } from '../../lib/auth/browser-refresh-guard'
 import { advanceBrowserAuthRevision } from '../../lib/auth/browser-commit-state'
 import { isChunkLike } from '@supabase/ssr'
@@ -27,7 +27,7 @@ function createSupabaseBrowserClient(): SupabaseClient<Database> {
   return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
     isSingleton: true,
     global: { fetch: refreshGuard.fetch },
-    cookieOptions: { name: getAuthCookieContract(supabaseUrl).key },
+    cookieOptions: { ...getBrowserAuthCookieOptions(), name: getAuthCookieContract(supabaseUrl).key },
     cookies: {
       async getAll() {
         if (typeof document === 'undefined') return []

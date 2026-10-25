@@ -2,6 +2,10 @@ import { DEFAULT_COOKIE_OPTIONS, isChunkLike, parseCookieHeader, serializeCookie
 
 type Cookie = { name: string; value: string };
 
+export function getBrowserAuthCookieOptions() {
+  return { ...DEFAULT_COOKIE_OPTIONS, secure: typeof window !== 'undefined' && window.location.protocol === 'https:' };
+}
+
 export function getAuthCookieContract(url: string) {
   const project = new URL(url).hostname.split('.')[0];
   return {
@@ -53,7 +57,7 @@ export async function withBrowserAuthCookieLock<T>(url: string, batch: () => T):
 
 function writeAuthMarker(url: string, value: 'pending' | '1') {
   const { marker } = getAuthCookieContract(url);
-  document.cookie = serializeCookieHeader(marker, value, DEFAULT_COOKIE_OPTIONS);
+  document.cookie = serializeCookieHeader(marker, value, getBrowserAuthCookieOptions());
   if (!parseCookieHeader(document.cookie).some(cookie => cookie.name === marker && cookie.value === value)) {
     throw new Error('AUTH_COOKIE_WRITE_FAILED');
   }
@@ -74,7 +78,7 @@ export function migrateBrowserAuthCookies(url: string) {
   // Cleanup is within the shared cookie lock; older HTTP writers use other keys.
   for (const cookie of all.filter(cookie => (!complete && belongsToKey(cookie.name, key))
       || belongsToKey(cookie.name, contract.legacyKey) || belongsToKey(cookie.name, contract.previousKey))) {
-    document.cookie = serializeCookieHeader(cookie.name, '', { ...DEFAULT_COOKIE_OPTIONS, maxAge: 0 });
+    document.cookie = serializeCookieHeader(cookie.name, '', { ...getBrowserAuthCookieOptions(), maxAge: 0 });
   }
   const stored = parseCookieHeader(document.cookie);
   if (stored.some(cookie => isPreviousCredential(cookie.name, contract))
