@@ -37,6 +37,8 @@ function fixture(settings: {
   emailConfirmation?: boolean;
   denyEligibility?: boolean;
   denyConfirm?: boolean;
+  exchangeError?: boolean;
+  signOutFails?: boolean;
   origin?: string;
   vercelUrl?: string;
   vercelBranchUrl?: string;
@@ -56,6 +58,7 @@ function fixture(settings: {
   const state = {
     policyId: crypto.randomUUID(), userId: crypto.randomUUID(), auditId: crypto.randomUUID(),
     events: [], challenges: new Map(), confirmed: false, active: true,
+    eligibilityMode: 'normal' as 'normal' | 'missing' | 'policy-mismatch' | 'blocked' | 'rpc-error',
     signupCalls: 0, simulatedIdentityMutations: 0, blockedExternalCalls: 0,
     confirmCalls: 0, confirmAccepted: 0, digestMatched: false, nonceMatched: false,
     argumentBindingsValid: true, signupEmailRedirectTo: null as string | null,
@@ -74,10 +77,11 @@ function fixture(settings: {
   let policy;
   const eligibility = () => ({
     schemaVersion: 1,
-    eligible: state.confirmed && !settings.denyEligibility,
-    reasonCode: state.confirmed && !settings.denyEligibility ? 'PRIVACY_ELIGIBLE' : 'PRIVACY_AGE_ATTESTATION_REQUIRED',
+    eligible: state.confirmed && !settings.denyEligibility && state.eligibilityMode !== 'blocked',
+    reasonCode: state.confirmed && !settings.denyEligibility && state.eligibilityMode !== 'blocked'
+      ? 'PRIVACY_ELIGIBLE' : state.eligibilityMode === 'blocked' ? 'PRIVACY_AGE_BLOCKED' : 'PRIVACY_AGE_ATTESTATION_REQUIRED',
     policyVersionId: state.policyId,
-    contentSha256: policy.PRIVACY_POLICY_CONTENT_SHA256,
+    contentSha256: state.eligibilityMode === 'policy-mismatch' ? 'a'.repeat(64) : policy.PRIVACY_POLICY_CONTENT_SHA256,
     policyVersion: policy.PRIVACY_POLICY_VERSION,
   });
   async function rpc(name, args = {}) {
@@ -123,19 +127,33 @@ function fixture(settings: {
     }
     if (name === 'get_privacy_eligibility_for_user' || name === 'get_current_privacy_eligibility') {
       if (name === 'get_privacy_eligibility_for_user') state.argumentBindingsValid &&= args.p_user_id === state.userId;
+      if (name === 'get_current_privacy_eligibility' && state.eligibilityMode === 'rpc-error') {
+        return { error: { code: 'PGRST999' }, data: null };
+      }
+      if (name === 'get_current_privacy_eligibility' && state.eligibilityMode === 'missing') {
+        return { error: null, data: null };
+      }
       return { error: null, data: eligibility() };
     }
     throw new Error('UNDECLARED_RPC');
   }
   const client = { rpc: async (...args) => intoRealm(JSON.stringify(await rpc(...args))), auth: {
-    exchangeCodeForSession: async () => { state.events.push('exchange'); return { error: null }; },
+    exchangeCodeForSession: async () => {
+      state.events.push('exchange');
+      return { error: settings.exchangeError ? { code: 'fixture_exchange_error' } : null };
+    },
     getUser: async () => { state.events.push('getUser'); return { error: null, data: { user: state.active ? { id: state.userId } : null } }; },
     signUp: async (credentials) => {
       state.events.push('simulated-signup'); state.signupCalls++;
       state.signupEmailRedirectTo = credentials?.options?.emailRedirectTo ?? null;
       return { error: null, data: { user: { id: state.userId, identities: [{}] }, session: settings.emailConfirmation ? null : {} } };
     },
-    signOut: async ({ scope }) => { state.events.push(`signOut-${scope}`); state.active = false; return { error: null }; },
+    signOut: async ({ scope }) => {
+      state.events.push(`signOut-${scope}`);
+      if (settings.signOutFails) throw new Error('fixture_signout_error');
+      state.active = false;
+      return { error: null };
+    },
     admin: {
       updateUserById: async () => { state.simulatedIdentityMutations++; return { error: null }; },
       deleteUser: async () => { state.simulatedIdentityMutations++; return { error: null }; },
@@ -329,25 +347,95 @@ describe('privacy onboarding full route runtime contracts', () => {
     assert('no network attempts', f.state.blockedExternalCalls === 0);
   });
 
-  test('stale no-challenge OAuth recovery keeps only a validated user continuation', async () => {
+  test('no-challenge OAuth login with a live receipt resumes its safe continuation', async () => {
     const f = fixture();
-    const next = '/mypage/reviews';
+    f.state.confirmed = true;
+    const next = '/admin?module=storyboard';
     const response = await f.callback.GET(new Request(`${origin}/auth/callback?code=fixture&next=${encodeURIComponent(next)}`));
     const location = new URL(response.headers.get('location'));
 
-    assert('privacy recovery route retained', response.status === 307
-      && location.pathname === '/'
-      && location.searchParams.get('auth') === 'login'
-      && location.searchParams.get('reason') === 'privacy_onboarding'
-      && location.searchParams.get('next') === next);
-    assert('stale recovery keeps the session for challenge completion', !f.state.events.some(x => x.startsWith('signOut')));
+    assert('valid login resumes requested destination', response.status === 307
+      && location.origin === origin && `${location.pathname}${location.search}` === next);
+    assert('ordinary login checks live eligibility before redirect', traceContainsInOrder(f.state.events,
+      ['exchange', 'getUser', 'get_current_privacy_eligibility']));
+    assert('valid login keeps the session', f.state.active && !f.state.events.some(x => x.startsWith('signOut')));
+  });
+
+  for (const mode of ['normal', 'missing', 'policy-mismatch', 'blocked', 'rpc-error'] as const) {
+    test(`no-challenge OAuth login rejects ${mode} with session cleanup and safe retry`, async () => {
+      const f = fixture();
+      f.state.confirmed = mode !== 'normal';
+      f.state.eligibilityMode = mode;
+      const next = '/admin?module=storyboard';
+      const response = await f.callback.GET(new Request(`${origin}/auth/callback?code=fixture&next=${encodeURIComponent(next)}`));
+      const location = new URL(response.headers.get('location'));
+
+      assert('fixed login error keeps canonical continuation', response.status === 307
+        && location.origin === origin && location.pathname === '/'
+        && location.searchParams.get('auth') === 'login'
+        && location.searchParams.get('reason') === 'login_failed'
+        && location.searchParams.get('next') === next);
+      assert('rejection revokes both scopes', traceContainsInOrder(f.state.events,
+        ['exchange', 'getUser', 'get_current_privacy_eligibility', 'signOut-global', 'signOut-local']));
+      assert('rejected callback does not keep session or confirm signup', !f.state.active && f.state.confirmCalls === 0);
+      assert('rejection response is not cacheable', response.headers.get('cache-control') === 'no-store');
+    });
+  }
+
+  test('no-challenge OAuth rejection drops an unsafe continuation', async () => {
+    const f = fixture();
 
     const unsafe = await f.callback.GET(new Request(`${origin}/auth/callback?code=fixture&next=${encodeURIComponent('https://attacker.example')}`));
     const unsafeLocation = new URL(unsafe.headers.get('location'));
     assert('external destination omitted', unsafeLocation.origin === origin
       && unsafeLocation.pathname === '/'
-      && unsafeLocation.searchParams.get('reason') === 'privacy_onboarding'
+      && unsafeLocation.searchParams.get('reason') === 'login_failed'
       && !unsafeLocation.searchParams.has('next'));
+    assert('unsafe continuation does not suppress revocation', traceContainsInOrder(f.state.events,
+      ['get_current_privacy_eligibility', 'signOut-global', 'signOut-local']));
+  });
+
+  test('OAuth code exchange failure returns a fixed login error and expires the incoming auth cookie', async () => {
+    const f = fixture({ exchangeError: true });
+    const next = '/admin?module=storyboard';
+    const cookieName = 'sb-fixture-auth-token';
+    const response = await f.callback.GET(new Request(
+      `${origin}/auth/callback?code=fixture&next=${encodeURIComponent(next)}`,
+      { headers: { cookie: `${cookieName}=fixture-session` } },
+    ));
+    const location = new URL(response.headers.get('location'));
+
+    assert('exchange failure is a bounded login error with safe retry', response.status === 307
+      && location.origin === origin && location.pathname === '/'
+      && location.searchParams.get('reason') === 'login_failed'
+      && location.searchParams.get('next') === next);
+    assert('failure revokes both scopes without user or eligibility lookup', traceContainsInOrder(f.state.events,
+      ['exchange', 'signOut-global', 'signOut-local'])
+      && !f.state.events.includes('getUser')
+      && !f.state.events.includes('get_current_privacy_eligibility'));
+    assert('incoming auth cookie expired even after exchange failure', cookieCleared(response, cookieName));
+    assert('no account or network action', f.state.confirmCalls === 0 && f.state.signupCalls === 0 && f.state.blockedExternalCalls === 0);
+  });
+
+  test('both server sign-outs failing still expire the incoming auth cookie and retain a safe retry', async () => {
+    const f = fixture({ signOutFails: true });
+    const next = '/admin?module=storyboard';
+    const cookieName = 'sb-fixture-auth-token';
+    const response = await f.callback.GET(new Request(
+      `${origin}/auth/callback?code=fixture&next=${encodeURIComponent(next)}`,
+      { headers: { cookie: `${cookieName}=fixture-session` } },
+    ));
+    const location = new URL(response.headers.get('location'));
+
+    assert('sign-out failure still returns fixed login error and safe retry', response.status === 307
+      && location.origin === origin && location.pathname === '/'
+      && location.searchParams.get('reason') === 'login_failed'
+      && location.searchParams.get('next') === next);
+    assert('both server revocations attempted in order', traceContainsInOrder(f.state.events,
+      ['exchange', 'getUser', 'get_current_privacy_eligibility', 'signOut-global', 'signOut-local']));
+    assert('incoming auth cookie expired despite server sign-out failures', cookieCleared(response, cookieName));
+    assert('fixture reports unresolved server session without claiming revocation', f.state.active);
+    assert('no confirmation or network action', f.state.confirmCalls === 0 && f.state.blockedExternalCalls === 0);
   });
 
   test('preview branch alias preserves cookie POST and OAuth callback redirect origin', async () => {
