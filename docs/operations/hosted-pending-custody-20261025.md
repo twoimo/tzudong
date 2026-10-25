@@ -71,3 +71,11 @@ The exact new source/vector completed a local compiler install 93→94 and indep
 Both catalog reads use an empty transaction-local `search_path`. Existing operating OIDs and role/default/function/relation digests remain actual operating values; only source-defined additions and explicit ACL deltas come from local proof. This is a scoped ordinary-table catalog contract, not a generic proof over every PostgreSQL property or future inherited/partitioned schema.
 
 Nine operator tests cover byte drift, wrong target, prior-state drift, missing confirmation, already-committed state, rollback drift, and lost acknowledgement without resubmission inside the invocation. They are deterministic checks, not production accuracy, latency, cost or 95-percent-confidence estimates. The new source still requires its own protected CI and hosted execution evidence.
+
+## Source-only PG15 catalog replay
+
+The first Catalog CI run at source `2cd2b8f9` rejected the unchanged operating installer with `pending_custody_install_executor_denied`. The canonical reconstruction database uses PostgreSQL 15 and the legacy G014 owner contract, not the operating PostgreSQL 17.6 catalog or migration ledger.
+
+The exact-source replay adapter changes only executor version admission, the legacy owner assertion body hash, PG15 membership syntax and baseline, and the table ACL spelling without PG17's MAINTAIN privilege. Its output must reverse to the identical original migration bytes. The replay rejects a database containing `supabase_migrations`, keeps the nonsuperuser/caller/read-write/READ COMMITTED guards, and executes the entire adapted migration with `psql --single-transaction`. Feature function bodies and wrappers, all source/identity checks, bounded cutover, before/after preservation snapshots, and G014 assertions still run. The original operating migration, 82-statement vector and fixed contract are unchanged.
+
+The generator binds the adapter and transformed SQL in its chain and retains the SQL and disposition receipt as artifacts. This replay verifies the reconstructed schema and ACL/cutover behavior. It does not verify operating ledger admission, PG17 membership options, operating execution, hosted RPC behavior, or producer activation. Those remain separate acceptance gates.

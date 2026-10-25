@@ -48,6 +48,7 @@ relevant_sources=(
   'backend/supabase/scripts/transform_receipt_ocr_acl_admission_pg15_replay.py'
   'backend/supabase/scripts/transform_receipt_ocr_indeterminate_recovery_pg15_replay.py'
   'backend/supabase/scripts/transform_review_verification_readiness_pg15_replay.py'
+  'backend/supabase/scripts/transform_hosted_pending_custody_pg15_replay.py'
   'backend/supabase/scripts/transform_registration_replay.py'
   'backend/supabase/scripts/transform_advisor_replay.py'
   'backend/supabase/scripts/verify_admin_user_ids_replay.py'
@@ -1665,6 +1666,20 @@ for migration in "${effective_migrations[@]}"; do
         "$transformed_migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
+    20261025063810_hosted_pending_atomic_delivery.sql)
+      # Source reconstruction only. PG17 executor/ledger/membership admission is
+      # proved separately by the unchanged atomic operating operation.
+      transformed_migration="$staging_dir/hosted-pending-custody-pg15-replay.sql"
+      replay_receipt="$staging_dir/hosted-pending-custody-pg15-replay.json"
+      python3 "$script_dir/transform_hosted_pending_custody_pg15_replay.py" \
+        --source "$migration" --output "$transformed_migration" --receipt "$replay_receipt"
+      g026_chain_apply 'hosted-pending-custody-pg15-replay-transformer' \
+        "$script_dir/transform_hosted_pending_custody_pg15_replay.py"
+      g026_chain_apply "hosted-pending-custody-pg15-replay:${migration##*/}" "$transformed_migration"
+      g026_chain_apply 'hosted-pending-custody-pg15-replay-receipt' "$replay_receipt"
+      compose exec -T db psql -X --single-transaction --file=- -v ON_ERROR_STOP=1 \
+        -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
+      ;;
     *)
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$migration"
       ;;
@@ -1936,6 +1951,7 @@ jq -n --arg source_sha "$source_sha" --arg migration_chain_sha256 "$chain_hash" 
     admin-user-ids-overlap-verification.sql admin-user-ids-overlap-receipt.json \
     admin-management-group-overlap-verification.sql admin-management-group-overlap-receipt.json \
     admin-user-rpc-forward-overlap-verification.sql admin-user-rpc-forward-overlap-receipt.json \
+    hosted-pending-custody-pg15-replay.sql hosted-pending-custody-pg15-replay.json \
     g014-owner-pg15-verification.sql g014-owner-pg15-receipt.json \
     g014-owner-final-pg15-verification.sql g014-owner-final-pg15-receipt.json \
     g016-identity-pg15-verification.sql g016-identity-pg15-receipt.json \

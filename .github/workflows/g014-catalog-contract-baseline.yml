@@ -21,12 +21,14 @@ on:
       - 'backend/supabase/scripts/transform_receipt_ocr_acl_admission_pg15_replay.py'
       - 'backend/supabase/scripts/transform_receipt_ocr_indeterminate_recovery_pg15_replay.py'
       - 'backend/supabase/scripts/transform_review_verification_readiness_pg15_replay.py'
+      - 'backend/supabase/scripts/transform_hosted_pending_custody_pg15_replay.py'
       - 'backend/supabase/tests/test_storyboard_owner_replay.py'
       - 'backend/supabase/tests/test_review_storage_pg15_replay.py'
       - 'backend/supabase/tests/test_receipt_ocr_credential_release_pg15_replay.py'
       - 'backend/supabase/tests/test_receipt_ocr_acl_admission_pg15_replay.py'
       - 'backend/supabase/tests/test_receipt_ocr_indeterminate_recovery_pg15_replay.py'
       - 'backend/supabase/tests/test_review_verification_readiness_pg15_replay.py'
+      - 'backend/supabase/tests/test_hosted_pending_custody_pg15_replay.py'
       - 'backend/supabase/tests/test_g014_guardian_replay.py'
       - 'backend/supabase/scripts/recover_advisor_replay_prerequisites.py'
       - 'backend/supabase/tests/test_advisor_replay_prerequisites.py'
@@ -121,6 +123,7 @@ jobs:
           backend.supabase.tests.test_storyboard_owner_replay
           backend.supabase.tests.test_review_storage_pg15_replay
           backend.supabase.tests.test_review_verification_readiness_pg15_replay
+          backend.supabase.tests.test_hosted_pending_custody_pg15_replay
           backend.supabase.tests.test_feature_rpc_catalog_pg15_replay
           backend.supabase.tests.test_receipt_ocr_credential_release_pg15_replay
           backend.supabase.tests.test_receipt_ocr_acl_admission_pg15_replay
