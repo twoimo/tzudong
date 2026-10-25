@@ -4591,7 +4591,8 @@ describe("web quality performance source contracts", () => {
     expect(authContextSource).toContain(
       "window.setTimeout(startOnce, HOME_AUTH_BOOTSTRAP_DELAY_MS)",
     );
-    expect(authContextSource).toContain("signOut({ scope: 'local' })");
+    // Auth ownership and local revocation are verified by the dedicated
+    // privacy-session-rejection-browser tests, independent of this asset check.
     expect(authContextSource).toContain("dispatchHomeAuthSessionUpdated");
     expect(authContextSource).toContain(
       'import("@/integrations/supabase/client")',
