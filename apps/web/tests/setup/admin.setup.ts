@@ -2,6 +2,8 @@ import { test as setup, expect, Page } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
+import { isChunkLike } from '@supabase/ssr';
+import { getAuthCookieContract, readServerAuthCookies } from '../../lib/auth/session-cookies';
 import { hidePopupOverlay } from '../helpers';
 
 const authFile = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.auth', 'admin.json');
@@ -64,11 +66,30 @@ function decodeBase64Url(value: string): string {
     return Buffer.from(padded, 'base64').toString('utf8');
 }
 
+function currentSessionCookieEntries(cookies: unknown, supabaseUrl: string): Array<{ name: string; value: string }> {
+    try {
+        if (!Array.isArray(cookies)) return [];
+        const contract = getAuthCookieContract(supabaseUrl);
+        const all = cookies.flatMap((cookie) => typeof cookie?.name === 'string' && typeof cookie?.value === 'string'
+            ? [{ name: cookie.name, value: cookie.value }] : []);
+        const markers = all.filter((cookie) => cookie.name === contract.marker);
+        if (markers.length !== 1 || markers[0].value !== '1') return [];
+        const credentials = readServerAuthCookies(all, supabaseUrl).filter((cookie) => isChunkLike(cookie.name, contract.key));
+        if (!credentials.length || new Set(credentials.map((cookie) => cookie.name)).size !== credentials.length) return [];
+        const single = credentials.find((cookie) => cookie.name === contract.key);
+        if (single ? credentials.length !== 1 : ![...credentials].sort((left, right) => Number(left.name.slice(contract.key.length + 1)) - Number(right.name.slice(contract.key.length + 1)))
+            .every((cookie, index) => cookie.name === `${contract.key}.${index}`)) return [];
+        return [...credentials, markers[0]];
+    } catch {
+        return [];
+    }
+}
+
 function hasUsableSupabaseCookieStorageState(filePath: string): boolean {
     try {
         const raw = fs.readFileSync(filePath, 'utf8');
         const parsed = JSON.parse(raw) as { cookies?: Array<{ name?: string; value?: string }> };
-        const cookies = Array.isArray(parsed?.cookies) ? parsed.cookies : [];
+        const cookies = currentSessionCookieEntries(parsed?.cookies, readEnvWithFallback(SUPABASE_URL_ENV));
         const groupedCookies = new Map<string, Array<{ index: number; value: string }>>();
 
         for (const cookie of cookies) {
@@ -129,7 +150,7 @@ function writeStorageStateFromCookieHeader(filePath: string, rawCookieHeader: st
 
             const name = entry.slice(0, separator).trim();
             const value = entry.slice(separator + 1).trim();
-            if (!name.startsWith('sb-') || !value) {
+            if (!name || !value) {
                 return null;
             }
 
@@ -159,8 +180,7 @@ function writeStorageStateFromCookieHeader(filePath: string, rawCookieHeader: st
         return false;
     }
 
-    fs.writeFileSync(filePath, JSON.stringify({ cookies: parsedCookies, origins: [] }, null, 2), 'utf8');
-    return true;
+    return writeStorageStateFromCookieEntries(filePath, parsedCookies);
 }
 
 function toBase64Url(value: string): string {
@@ -210,9 +230,9 @@ function createCookieChunks(key: string, value: string): Array<{ name: string; v
     }));
 }
 
-function writeStorageStateFromCookieEntries(filePath: string, cookies: Array<{ name: string; value: string }>): boolean {
-    const normalized = cookies
-        .filter((entry) => entry.name.startsWith('sb-') && entry.value.length > 0)
+function writeStorageStateFromCookieEntries(filePath: string, cookies: Array<{ name: string; value: string }>, supabaseUrl = readEnvWithFallback(SUPABASE_URL_ENV)): boolean {
+    const normalized = currentSessionCookieEntries(cookies, supabaseUrl)
+        .filter((entry) => entry.value.length > 0)
         .map((entry) => ({
             ...entry,
             domain: 'localhost',
@@ -227,13 +247,18 @@ function writeStorageStateFromCookieEntries(filePath: string, cookies: Array<{ n
         return false;
     }
 
-    fs.writeFileSync(filePath, JSON.stringify({ cookies: normalized, origins: [] }, null, 2), 'utf8');
+    fs.writeFileSync(filePath, JSON.stringify({ cookies: normalized, origins: [] }, null, 2), { encoding: 'utf8', mode: 0o600 });
     return true;
 }
 
 function getSupabaseStorageKey(supabaseUrl: string): string {
-    const projectRef = new URL(supabaseUrl).hostname.split('.')[0];
-    return `sb-${projectRef}-auth-token`;
+    return getAuthCookieContract(supabaseUrl).key;
+}
+
+function sessionCookieEntries(supabaseUrl: string, session: Record<string, unknown>) {
+    const contract = getAuthCookieContract(supabaseUrl);
+    const cookieValue = `base64-${toBase64Url(JSON.stringify(session))}`;
+    return [...createCookieChunks(getSupabaseStorageKey(supabaseUrl), cookieValue), { name: contract.marker, value: '1' }];
 }
 
 async function writeStorageStateViaSupabasePassword(
@@ -259,16 +284,9 @@ async function writeStorageStateViaSupabasePassword(
         });
 
         if (!response.ok) {
-            let apiErrorDetail = '';
-            try {
-                const errorPayload = await response.json() as { msg?: string; error?: string };
-                apiErrorDetail = String(errorPayload.msg ?? errorPayload.error ?? '').trim();
-            } catch {
-                // ignore json parse failure
-            }
             return {
                 ok: false,
-                reason: `auth api status ${response.status}${apiErrorDetail ? ` (${apiErrorDetail})` : ''}`,
+                reason: `auth api status ${response.status}`,
             };
         }
 
@@ -285,17 +303,13 @@ async function writeStorageStateViaSupabasePassword(
             session['expires_at'] = Math.floor(Date.now() / 1000) + expiresIn;
         }
 
-        const storageKey = getSupabaseStorageKey(supabaseUrl);
-        const cookieValue = `base64-${toBase64Url(JSON.stringify(session))}`;
-        const chunkedCookies = createCookieChunks(storageKey, cookieValue);
-        if (!writeStorageStateFromCookieEntries(filePath, chunkedCookies)) {
+        if (!writeStorageStateFromCookieEntries(filePath, sessionCookieEntries(supabaseUrl, session), supabaseUrl)) {
             return { ok: false, reason: 'failed to write chunked supabase cookie storage state' };
         }
 
         return { ok: true };
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return { ok: false, reason: `auth api request failed: ${message}` };
+    } catch {
+        return { ok: false, reason: 'auth api request failed' };
     }
 }
 
