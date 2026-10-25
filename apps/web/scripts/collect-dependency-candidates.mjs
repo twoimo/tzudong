@@ -33,8 +33,11 @@ export function lockfileChanges(before, after) {
 
 // Narrow admission for explicitly governed companion files that must mirror
 // manifest version pins (currently the nightly-regression workflow contract
-// test). Fail-closed: anything outside the allowlist, any non-mirror change,
-// any missing evidence keeps metadataIncomplete = true.
+// test). Admission always compares verified complete merge-base/head contents:
+// an API patch string is only a rendering and can be omitted or truncated, so
+// it is never trusted as evidence of the whole change. Fail-closed: anything
+// outside the allowlist, any non-mirror change, any missing evidence keeps
+// metadataIncomplete = true.
 export const GOVERNED_COMPANION_PATHS = new Set([
   'apps/web/tests-unit/nightly-regression-workflow.test.ts',
 ]);
@@ -71,29 +74,6 @@ const companionPairs = (packages) => ({
   toSet: new Set(packages.map((pkg) => stripRange(pkg.toVersion))),
   byName: packages,
 });
-
-export function companionPatchMirrorsOnly(patch, packages) {
-  if (typeof patch !== 'string' || !Array.isArray(packages) || packages.length === 0) return false;
-  const { mirror, toSet, byName } = companionPairs(packages);
-  const blocks = [];
-  let current = { minus: [], plus: [] };
-  let sawHunk = false;
-  const flush = () => {
-    if (current.minus.length || current.plus.length) { blocks.push(current); }
-    current = { minus: [], plus: [] };
-  };
-  for (const line of patch.split('\n')) {
-    if (line.startsWith('@@ ')) { flush(); sawHunk = true; continue; }
-    if (line.startsWith('-') && !line.startsWith('--')) { current.minus.push(line.slice(1)); continue; }
-    if (line.startsWith('+') && !line.startsWith('++')) { current.plus.push(line.slice(1)); continue; }
-    if (line.startsWith(' ') || line.startsWith('\\') || line === '') { flush(); continue; }
-    return false; // unknown patch grammar: fail closed
-  }
-  flush();
-  if (!sawHunk || blocks.length === 0) return false;
-  return blocks.every(({ minus, plus }) => minus.length === plus.length && minus.length > 0
-    && minus.every((line, index) => companionLineMirrorsOnly(line, plus[index], mirror, toSet, byName)));
-}
 
 export function companionContentMirrorsOnly(before, after, packages) {
   if (typeof before !== 'string' || typeof after !== 'string'
@@ -163,16 +143,13 @@ export function descriptor(pr, files, lockfiles = {}, companionContents = {}) {
     }
     if (after.size === 0 || [...before.keys()].some((name) => !after.has(name))) incomplete = true;
   }
-  // Companion pass: an allowlisted file is admitted only when its entire diff
-  // (patch when present, verified full contents otherwise) mirrors manifest
-  // from/to pairs exactly. Anything else fails closed.
+  // Companion pass: an allowlisted file is admitted only when its complete
+  // verified base/head contents mirror manifest from/to pairs exactly.
+  // Anything else fails closed.
   for (const file of companionFiles) {
     if (file.status !== 'modified' || packages.length === 0) { incomplete = true; continue; }
-    const admitted = typeof file.patch === 'string'
-      ? companionPatchMirrorsOnly(file.patch, packages)
-      : companionContentMirrorsOnly(companionContents[file.filename]?.before,
-        companionContents[file.filename]?.after, packages);
-    if (!admitted) incomplete = true;
+    if (!companionContentMirrorsOnly(companionContents[file.filename]?.before,
+      companionContents[file.filename]?.after, packages)) incomplete = true;
   }
   return { number: pr.number, headSha: pr.head.sha, targetBranch: pr.base.ref,
     unit: units.size === 1 ? [...units][0] : 'unknown', packages,
@@ -234,13 +211,12 @@ export async function collectCandidates(request, checkedCommit = null) {
         }
         lockfiles[file.filename] = { before: pair[0], after: pair[1] };
       }
-      // A governed companion file whose patch the API omitted (oversized or
-      // unavailable) is verified from complete base/head contents instead;
+      // Governed companion files are always verified from complete merge-base
+      // /head contents, whether or not the API supplied a patch string;
       // unavailable evidence fails closed inside the descriptor.
       const companionContents = {};
       for (const file of files) {
-        if (!GOVERNED_COMPANION_PATHS.has(file.filename) || file.status !== 'modified'
-          || typeof file.patch === 'string') continue;
+        if (!GOVERNED_COMPANION_PATHS.has(file.filename) || file.status !== 'modified') continue;
         const base = await ensureMergeBase();
         companionContents[file.filename] = {
           before: (await fetchVerifiedBytes(file.filename, base)).toString('utf8'),
