@@ -8,7 +8,7 @@ import { chromium, expect as ui } from '@playwright/test';
 
 const root = join(import.meta.dir, '..');
 const chrome = chromeForTestingExecutable();
-const output = resolve(root, 'performance/renewal-20261023/unified-media-v20');
+const output = resolve(process.env.TZUDONG_BROWSER_EVIDENCE_ROOT ?? resolve(root, 'performance/renewal-20261023'), 'unified-media-v20');
 const source = JSON.parse(readFileSync(resolve(root, '../../docs/evidence/marker-evidence-live-20261021-v1/reviewed-frames.json'), 'utf8'));
 const frames = source.frames.map((row: { frame: { video_id: string } }) => row.frame);
 const videoIds = [...new Set<string>(frames.map((frame: { video_id: string }) => frame.video_id))];
@@ -21,7 +21,7 @@ async function fixture() {
     '@/components/reviews/ReviewEditModal': 'export function ReviewEditModal(){return null}',
     '@/hooks/use-review-likes-realtime': 'export function useReviewLikesRealtime(){}',
     '@/hooks/use-bookmarks': 'export const useBookmarkIds=()=>({data:new Set()});export const useToggleBookmark=()=>({toggleBookmark(){},isLoading:false});export const useBookmarkCount=()=>({data:0});',
-    '@/integrations/supabase/client': `const result={data:[],error:null,count:0};const chain=new Proxy({}, {get(_,key){if(key==='then')return resolve=>Promise.resolve(result).then(resolve);return ()=>chain;}});export const supabase={from:()=>chain,rpc:()=>Promise.resolve(result)};`,
+    '@/integrations/supabase/client': `const result={data:[],error:null,count:0};const chain=new Proxy({}, {get(_,key){if(key==='then')return resolve=>Promise.resolve(result).then(resolve);return ()=>chain;}});export const getSupabaseBrowserClient=()=>supabase;export const commitSupabaseBrowserSession=async()=>{throw new Error('SYNTHETIC_AUTH_PUBLICATION_NOT_ALLOWED')};export const supabase={from:()=>chain,rpc:()=>Promise.resolve(result)};`,
     'next/image': `import React from 'react';export default function Image({fill,priority,unoptimized,loader,...props}){return <img {...props} style={{...props.style,...(fill?{position:'absolute',inset:0,width:'100%',height:'100%'}:{})}}/>;}`,
   };
   const entry = `import React,{useState} from 'react';import{createRoot}from'react-dom/client';import{QueryClient,QueryClientProvider}from'@tanstack/react-query';

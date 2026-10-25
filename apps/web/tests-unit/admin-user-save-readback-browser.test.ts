@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect, type Page } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 async function bundle() {
   const entry = `
@@ -60,7 +61,7 @@ async function saveProfile(page: Page, nickname: string, username: string) {
 }
 
 (existsSync(chrome) ? test : test.skip)('a saved user change reports its exact readback once, including a concurrent conflict', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });

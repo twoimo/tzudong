@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from '../tests-unit/fixtures/chrome-for-testing.ts';
 import { createHash } from 'node:crypto';
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
@@ -87,14 +88,14 @@ async function assertProofDenied(context, origin, cookieValue) {
     const proof = await requestProof(context, origin, 'A'.repeat(43));
     if (![401, 403].includes(proof.status)) fail('AUTH_PROOF_DENIED');
 }
-async function validateCanary(origin) { const state = parseSession(origin); const markers = [process.env.RELEASE_AUTH_CANARY_FAKE_COOKIE, process.env.RELEASE_AUTH_CANARY_FAKE_TOKEN, process.env.RELEASE_AUTH_CANARY_FAKE_ADMIN_TEXT]; if (markers.some((marker) => typeof marker !== 'string' || marker.length < 16) || !markers.every((marker) => JSON.stringify(state).includes(marker))) fail('INTERNAL_FAILURE'); const browser = await chromium.launch({ headless: true, env: scrubBrowserEnvironment() }); try { const context = await browser.newContext({ storageState: state, serviceWorkers: 'block', viewport: { width: 1440, height: 900 } }); try { const egress = await installEgressGuard(context, origin); const page = await context.newPage(); await page.goto(new URL('/admin', origin).toString(), { waitUntil: 'domcontentloaded', timeout: NAVIGATION_TIMEOUT_MS }); await page.waitForTimeout(STABILITY_TIMEOUT_MS); if (egress.size) fail('EXTERNAL_EGRESS'); } finally { await context.close(); } } finally { await browser.close(); } fail('CANARY_INTENTIONAL_FAILURE'); }
+async function validateCanary(origin) { const state = parseSession(origin); const markers = [process.env.RELEASE_AUTH_CANARY_FAKE_COOKIE, process.env.RELEASE_AUTH_CANARY_FAKE_TOKEN, process.env.RELEASE_AUTH_CANARY_FAKE_ADMIN_TEXT]; if (markers.some((marker) => typeof marker !== 'string' || marker.length < 16) || !markers.every((marker) => JSON.stringify(state).includes(marker))) fail('INTERNAL_FAILURE'); const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true, env: scrubBrowserEnvironment() }); try { const context = await browser.newContext({ storageState: state, serviceWorkers: 'block', viewport: { width: 1440, height: 900 } }); try { const egress = await installEgressGuard(context, origin); const page = await context.newPage(); await page.goto(new URL('/admin', origin).toString(), { waitUntil: 'domcontentloaded', timeout: NAVIGATION_TIMEOUT_MS }); await page.waitForTimeout(STABILITY_TIMEOUT_MS); if (egress.size) fail('EXTERNAL_EGRESS'); } finally { await context.close(); } } finally { await browser.close(); } fail('CANARY_INTENTIONAL_FAILURE'); }
 
 export async function main() {
     let terminalCode = 'INTERNAL_FAILURE'; let successMetadata; let primaryFailure;
     try {
         const origin = parseChildCli();
         if (process.env.RELEASE_AUTH_CANARY_MODE === 'intentional_failure') await validateCanary(origin);
-        const state = parseSession(origin); const expectedProof = parseProofExpectation(); const browser = await chromium.launch({ headless: true, env: scrubBrowserEnvironment() });
+        const state = parseSession(origin); const expectedProof = parseProofExpectation(); const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true, env: scrubBrowserEnvironment() });
         try {
             for (const invalidCookie of [null, 'invalid-release-auth-cookie']) { const control = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1440, height: 900 } }); try { await installEgressGuard(control, origin); await assertProofDenied(control, origin, invalidCookie); } finally { await control.close(); } }
             const context = await browser.newContext({ storageState: state, serviceWorkers: 'block', viewport: { width: 1440, height: 900 } });

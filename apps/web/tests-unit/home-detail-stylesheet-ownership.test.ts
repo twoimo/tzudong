@@ -95,13 +95,29 @@ describe('home detail stylesheet ownership', () => {
 
     const css = readFileSync(outputPath, 'utf8');
 
-    // The play badge and its `영상 N` chip retain their background, ring and
-    // placement while the removed one-pixel blur stays out of this CSS entry.
-    expect(css).toContain('.top-2');
-    expect(css).toContain('.bg-black\\/55');
-    expect(css).toContain('.bg-black\\/70');
+    const panel = source('components/restaurant/RestaurantDetailPanel.tsx');
+    const carousel = source('components/restaurant/RestaurantVideoCarousel.tsx');
+    expect(moduleSpecifiers(panel)).toContain('@/components/restaurant/RestaurantVideoCarousel');
+
+    // The carousel owns the centered play overlay, timestamp chip, thumbnail
+    // selection and keyboard focus. Its utilities must ship with the panel CSS.
+    for (const [utility, selector] of [
+      ['inset-0', '.inset-0'],
+      ['bg-black/60', '.bg-black\\/60'],
+      ['bottom-3', '.bottom-3'],
+      ['right-3', '.right-3'],
+      ['bg-black/75', '.bg-black\\/75'],
+      ['bg-black/20', '.bg-black\\/20'],
+      ['border-foreground', '.border-foreground'],
+      ['focus-visible:ring-2', '.focus-visible\\:ring-2'],
+      ['focus-visible:ring-inset', '.focus-visible\\:ring-inset'],
+      ['aspect-video', '.aspect-video'],
+    ]) {
+      expect(carousel).toContain(utility);
+      expect(css).toContain(selector);
+    }
+    // Map destination icons retain their rings; the removed blur stays absent.
     expect(css).toContain('.ring-1');
     expect(css).not.toContain('.backdrop-blur-\\[1px\\]');
-    expect(css).toContain('.aspect-video');
   }, 60_000);
 });

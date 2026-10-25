@@ -8,7 +8,7 @@ import { chromium, expect as browserExpect } from '@playwright/test';
 
 const root = join(import.meta.dir, '..');
 const chrome = chromeForTestingExecutable();
-const artifactDir = resolve(root, 'performance/renewal-20261023/chrome');
+const artifactDir = resolve(process.env.TZUDONG_BROWSER_EVIDENCE_ROOT ?? resolve(root, 'performance/renewal-20261023'), 'chrome');
 const entry = `
 import React, { useState } from 'react';import { createRoot } from 'react-dom/client';
 import { MapPanelHeader } from './components/home/map-panel-chrome';

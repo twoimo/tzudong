@@ -26,6 +26,10 @@ const isolated = new Set([
   // mocks in the general process replace that module with createClient only.
   'privacy-onboarding.test.ts',
   'session-cookie-boundary.test.ts',
+  // These import real lazy targets, including ephemeral auth client exports.
+  // Whole-module browser client mocks in the general group omit those exports.
+  'lazy-map-boundaries.test.ts',
+  'lazy-overlay-boundaries.test.ts',
   'account-deletion-reauth-validation.test.ts',
   // This older contract replaces the whole Supabase SDK too. Linux ESM links
   // later StorageApiError imports against that mock unless its process ends.

@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect, type Browser, type Page } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 const routeEntry = `
   import React from 'react';
@@ -73,7 +74,7 @@ async function bundle(entry: string, naverSource = "const state = { isLoaded: tr
 
 
 (existsSync(chrome) ? test : test.skip)('a failed restaurant read does not show an empty local route', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle(routeEntry);
     for (const width of [1280, 390]) {
@@ -144,7 +145,7 @@ const mapSdkNaver = `
 `;
 
 (existsSync(chrome) ? test : test.skip)('a failed admin map sdk load stays failed while retrying', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle(routeEntry, mapSdkNaver);
     for (const width of [1280, 390]) {

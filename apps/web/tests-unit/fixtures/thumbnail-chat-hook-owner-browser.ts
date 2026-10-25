@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './chrome-for-testing';
 /** Run from apps/web: bun tests-unit/fixtures/thumbnail-chat-hook-owner-browser.ts
  * Actual React hook, browser queue and schemas in isolated Chrome.
  * Only Auth and loopback API/data are synthetic. No hosted or provider execution proof.
@@ -183,7 +184,7 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 const results: Array<Record<string, unknown>> = [];
 try {
-  browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  browser = await chromium.launch({ executablePath: chromeForTestingExecutable(),
     headless: true, args: ['--disable-background-networking', '--disable-component-update', '--no-proxy-server'] });
   for (const mode of ['success', 'failure'] as const) {
     const ownerA = randomUUID(), ownerB = randomUUID(); let release!: () => void;

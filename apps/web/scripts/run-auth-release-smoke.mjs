@@ -1073,6 +1073,9 @@ export async function main() {
         directory = await mkdtemp(join(tmpdir(), 'tzudong-auth-smoke-'));
         await chmod(directory, 0o700);
         const baseEnv = { PATH: process.env.PATH || '', TMP: directory, TEMP: directory, TMPDIR: directory };
+        // This non-secret cache root locates the exact product/pin verified by
+        // the child; no parent credential or general environment is forwarded.
+        if (process.env.PLAYWRIGHT_BROWSERS_PATH) baseEnv.PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH;
         const canary = await runChild({ ...baseEnv, RELEASE_AUTH_CANARY_MODE: 'intentional_failure', RELEASE_AUTH_STORAGE_STATE_B64: fakeCanaryState(release.origin, canaryMarkers), RELEASE_AUTH_CANARY_FAKE_COOKIE: canaryMarkers[0], RELEASE_AUTH_CANARY_FAKE_TOKEN: canaryMarkers[1], RELEASE_AUTH_CANARY_FAKE_ADMIN_TEXT: canaryMarkers[2] }, [...secretMarkers, ...canaryMarkers], directory, release.origin.toString());
         if (canary.code !== 23 || canary.stderr) throw Object.assign(new Error('canary'), { code: 'INTERNAL_FAILURE' });
         validateMetadata(canary.stdout, true, [...secretMarkers, ...canaryMarkers]);

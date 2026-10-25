@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect, type Page } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 async function bundle(initialView: 'evaluations' | 'submissions' = 'evaluations') {
   const entry = `
@@ -92,7 +93,7 @@ const setFixture = (page: Page, patch: Record<string, unknown>) =>
   page.evaluate(next => Object.assign((globalThis as unknown as { __fixture: object }).__fixture, next), patch);
 
 (existsSync(chrome) ? test : test.skip)('submission retry uses server items, retains original restaurant reads and profile fallback, and accepts empty results', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle('submissions');
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -151,7 +152,7 @@ const setFixture = (page: Page, patch: Record<string, unknown>) =>
 }, 60_000);
 
 (existsSync(chrome) ? test : test.skip)('a failed review-list read reports once and keeps the retry control focused', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     for (const width of [1280, 390]) {
@@ -220,7 +221,7 @@ const setFixture = (page: Page, patch: Record<string, unknown>) =>
 }, 90_000);
 
 (existsSync(chrome) ? test : test.skip)('a failed submission queue does not show zero pending counts in the module summary', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle('submissions');
     for (const width of [1280, 390]) {

@@ -18,7 +18,7 @@ createRoot(document.getElementById('root')).render(<QueryClientProvider client={
     'next/image': `import React from 'react';export default function Image({unoptimized,fill,priority,...props}){return <img {...props}/>;}`,
     'next/link': `import React from 'react';export default function Link({prefetch,...props}){return <a {...props}/>;}`,
     '@/contexts/AuthContext': `const user={id:'11111111-1111-4111-8111-111111111111',email:'fixture@example.test',user_metadata:{}};export const useAuth=()=>({user,profileNickname:'레이아웃 검증 계정'});`,
-    '@/integrations/supabase/client': 'export const supabase={auth:{getSession:async()=>({data:{session:null}})}};',
+    '@/integrations/supabase/client': 'export const getSupabaseBrowserClient=()=>supabase;export const commitSupabaseBrowserSession=async()=>{throw new Error("SYNTHETIC_AUTH_PUBLICATION_NOT_ALLOWED")};export const supabase={auth:{getSession:async()=>({data:{session:null}})}};',
     '@/hooks/use-bookmarks': 'const data=[];export const useBookmarks=()=>({data});',
     '@/hooks/useUserProfile': `const data={qualityScore:0,reviewCount:0,verifiedReviewCount:0,totalLikes:0};export const useUserProfile=()=>({data});export const getNextUserTierProgress=()=>({nextTier:{name:'브론즈'},remainingScore:7,progressPercent:0});`,
     '@/lib/public-profile-read': 'export const readPublicProfileSummaries=async()=>[];',
@@ -35,7 +35,7 @@ createRoot(document.getElementById('root')).render(<QueryClientProvider client={
   const script=await built.outputs.find(output=>output.path.endsWith('.js'))!.text();
   const css=await postcss([tailwind()]).process('@import "./app/globals.css";\n@import "./app/home-app-globals.css";\n@source "./app/mypage";\n@source "./components/mypage";',{from:join(root,'profile-fixture.css')});
   const browser=await chromium.launch({executablePath:chrome,headless:true});
-  const out=resolve(root,'performance/renewal-20261023/profile');mkdirSync(out,{recursive:true});
+  const out=resolve(process.env.TZUDONG_BROWSER_EVIDENCE_ROOT ?? resolve(root, 'performance/renewal-20261023'), 'profile');mkdirSync(out,{recursive:true});
   try{
     for(const width of [390,768,1440]){
       const context=await browser.newContext({viewport:{width,height:1000}});
