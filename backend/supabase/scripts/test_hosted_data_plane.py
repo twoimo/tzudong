@@ -244,6 +244,31 @@ class HostedDataPlaneTests(unittest.TestCase):
         self.assertEqual(payload["status"], "pending")
         self.assertIn("newvideo111", payload["youtube_link"])
 
+    def test_pending_insert_survives_the_review_source_boundary(self) -> None:
+        from backend.bin.run_restaurant_review_automation import stored_extraction
+        from backend.pipeline_control.targets import admitted_target
+
+        payload = pending_insert_payload({
+            "youtube_link": "https://youtu.be/newvideo111",
+            "channel_name": "tzuyang",
+            "recollect_version": {"meta": 2, "transcript": 3},
+            "origin_name": "fixture restaurant",
+            "reasoning_basis": "public source evidence",
+            "youtuber_review": "public restaurant review",
+            "origin_address": {"address": "public business address"},
+            "youtube_meta": {"title": "fixture video"},
+            "category": ["한식"],
+            "status": "approved",
+            "updated_by_admin_id": "must-not-copy",
+        })
+        self.assertIn("evaluate", admitted_target(payload["channel_name"])["capabilities"])
+        extraction, metadata = stored_extraction(payload, "newvideo111")
+        self.assertEqual(extraction["recollect_version"], {"meta": 2, "transcript": 3})
+        self.assertEqual(extraction["restaurants"][0]["reasoning_basis"], "public source evidence")
+        self.assertEqual(metadata["recollect_id"], 2)
+        self.assertEqual(payload["status"], "pending")
+        self.assertNotIn("updated_by_admin_id", payload)
+
     def test_apply_pending_candidates_posts_only_preview_ids(self) -> None:
         preview = build_apply_preview(
             local_restaurant_ids=[],

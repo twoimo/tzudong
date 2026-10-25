@@ -15,7 +15,7 @@ import {
   resolveTrustedPythonCommand,
   runTranscriptYtDlp,
 } from '../transcript-command.mjs';
-import { collectChannelTranscripts, fetchTranscriptYtDlp, getTranscript } from '../03-collect-transcript.js';
+import { collectChannelTranscripts, fetchTranscriptYtDlp, getTranscript, main } from '../03-collect-transcript.js';
 
 const VIDEO_ID = 'AbCdEf123_-';
 
@@ -624,12 +624,14 @@ test('Windows collection loop releases its slot and stops after uncertain cleanu
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
-test('collection loop counts ordinary video failures and continues', async () => {
+test('main returns nonzero after ordinary failures while preserving later successful files', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'transcript-collection-loop-'));
   const dataPath = path.join(root, 'channel');
   const nextVideoId = 'ZyXwVu987_-';
   const attemptedVideoIds = [];
   const slotEvents = [];
+  const messages = [];
+  t.mock.method(console, 'log', (...args) => messages.push(args.join(' ')));
   fs.mkdirSync(path.join(dataPath, 'meta'), { recursive: true });
   fs.writeFileSync(
     path.join(dataPath, 'urls.txt'),
@@ -650,33 +652,80 @@ test('collection loop counts ordinary video failures and continues', async () =>
   });
 
   try {
-    const result = await collectChannelTranscripts('test', { name: 'test', data_path: 'ignored' }, {
-      dataPath,
-      acquireSlot: async () => {
-        slotEvents.push('acquire');
-      },
-      releaseSlot: () => {
-        slotEvents.push('release');
-      },
-      waitForDelay: async () => {},
-      getTranscriptForVideo: async (videoId) => {
-        attemptedVideoIds.push(videoId);
-        if (videoId === VIDEO_ID) throw ordinaryFailure;
-        return {
-          language: 'korean',
-          transcript: [{ text: 'test', start: 0, duration: 1 }],
-          source: 'test',
-        };
+    let result;
+    const exitCode = await main(['--channel', 'test'], {
+      loadEnvironmentForRun: async () => {},
+      loadConfig: async () => ({ channels: { test: { name: 'test', data_path: 'ignored' } } }),
+      collect: async (channelName, channelConfig) => {
+        result = await collectChannelTranscripts(channelName, channelConfig, {
+          dataPath,
+          acquireSlot: async () => {
+            slotEvents.push('acquire');
+          },
+          releaseSlot: () => {
+            slotEvents.push('release');
+          },
+          waitForDelay: async () => {},
+          getTranscriptForVideo: async (videoId) => {
+            attemptedVideoIds.push(videoId);
+            if (videoId === VIDEO_ID) throw ordinaryFailure;
+            return {
+              language: 'korean',
+              transcript: [{ text: 'test', start: 0, duration: 1 }],
+              source: 'test',
+            };
+          },
+        });
+        return result;
       },
     });
 
+    assert.equal(exitCode, 1);
+    assert.equal(messages.some(line => line.endsWith('TRANSCRIPT_COLLECTION_INCOMPLETE')), true);
     assert.deepEqual(attemptedVideoIds, [VIDEO_ID, nextVideoId]);
     assert.deepEqual(slotEvents, ['acquire', 'release', 'acquire', 'release']);
     assert.equal(result.failed, 1);
     assert.equal(result.success, 1);
+    assert.equal(result.noTranscript, 0);
+    assert.equal(fs.existsSync(path.join(dataPath, 'transcript', `${VIDEO_ID}.jsonl`)), false);
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dataPath, 'transcript', `${nextVideoId}.jsonl`), 'utf8')).transcript,
+      [{ text: 'test', start: 0, duration: 1 }]);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('main keeps legitimate no-transcript exclusions separate from collection failures', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'transcript-main-exclusion-'));
+  const exclusions = [];
+  const messages = [];
+  t.mock.method(console, 'log', (...args) => messages.push(args.join(' ')));
+  fs.mkdirSync(path.join(root, 'meta'));
+  fs.writeFileSync(path.join(root, 'urls.txt'), `https://www.youtube.com/watch?v=${VIDEO_ID}\n`);
+  fs.writeFileSync(path.join(root, 'meta', `${VIDEO_ID}.jsonl`), '{"recollect_id":1}\n');
+  let stats;
+  try {
+    const exitCode = await main(['--channel', 'test'], {
+      loadEnvironmentForRun: async () => {},
+      loadConfig: async () => ({ channels: { test: { name: 'test' } } }),
+      collect: async (channelName, channelConfig) => {
+        stats = await collectChannelTranscripts(channelName, channelConfig, {
+          dataPath: root,
+          getTranscriptForVideo: async () => null,
+          acquireSlot: async () => {}, releaseSlot: () => {}, waitForDelay: async () => {},
+          loadSkipUrls: () => new Set(), recordNoTranscript: async url => exclusions.push(url),
+        });
+        return stats;
+      },
+    });
+    assert.equal(exitCode, 0);
+    assert.equal(stats.noTranscript, 1);
+    assert.equal(stats.failed, 0);
+    assert.equal(stats.success, 0);
+    assert.deepEqual(exclusions, [`https://www.youtube.com/watch?v=${VIDEO_ID}`]);
+    assert.deepEqual(fs.readdirSync(path.join(root, 'transcript')), []);
+    assert.equal(messages.some(line => line.includes('TRANSCRIPT_COLLECTION_INCOMPLETE')), false);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
 test('transcript callsite retries after a drained runner failure and removes its temp root', async () => {

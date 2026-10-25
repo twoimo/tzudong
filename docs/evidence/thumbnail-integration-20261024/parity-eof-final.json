@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "diagnostics": 0,
+  "logicalInputs": 3427,
+  "logicalInputNamesSha256": "0c2743985b96e4f08b277a8b25c4312daf2f92108af5d7c6a926b24ed5d27488",
+  "nonLibraryContentSha256": "1693a54e14c8130cc91df6dee70d8ab78490ac0641150fc79ae2eb5d103f5a6a",
+  "standardLibraryContentSha256": {
+    "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+    "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+  }
+}

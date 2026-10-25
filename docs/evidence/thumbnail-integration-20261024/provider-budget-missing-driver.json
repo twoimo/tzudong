@@ -1,0 +1,8 @@
+{
+  "moduleLoaded": true,
+  "missingDriver": true,
+  "runtimeTestsRun": 0,
+  "skippedClass": 1,
+  "databaseStarted": false,
+  "scope": "Controlled missing prerequisite import; not a database pass."
+}

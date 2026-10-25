@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "diagnostics": 0,
+  "logicalInputs": 3427,
+  "logicalInputNamesSha256": "0c2743985b96e4f08b277a8b25c4312daf2f92108af5d7c6a926b24ed5d27488",
+  "nonLibraryContentSha256": "8ca377825eb8895890da3446f0e13e292367ecdcd1dac221dc0e016d3d12bdd0",
+  "standardLibraryContentSha256": {
+    "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+    "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+  },
+  "capture": "Verbatim result fields from Node24 scripts/run-typecheck.mjs --compiler parity tool completion."
+}

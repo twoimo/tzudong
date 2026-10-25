@@ -1,0 +1,100 @@
+{
+  "outcome": "local_candidate_verified_operating_unapplied",
+  "tests": {
+    "finalMethods": 17,
+    "failures": 0,
+    "errors": 0,
+    "initialRuns": [
+      {
+        "receipt": "initial-boundary-fixture-failure.json",
+        "methods": 9,
+        "failures": 1,
+        "errors": 4,
+        "acceptanceEligible": false,
+        "cause": "Fixture used implicit table ACL while hosted snapshot has an explicit ACL."
+      },
+      {
+        "receipt": "initial-probe-context-failure.json",
+        "methods": 10,
+        "failures": 2,
+        "errors": 3,
+        "acceptanceEligible": false,
+        "cause": "Extracted branch probe omitted original metadata lookup variables; actual declarations/prelude were restored."
+      }
+    ],
+    "priorVerifiedMethods": 16,
+    "finalSeconds": 1.303,
+    "finalReceipt": "post-review-owner-contract-pg17.json",
+    "ownerContractRegression": {
+      "sourceBodySha256": "345aed9acb1da06262740ef06d81e51855a44c7470aa8b431a23e6fa629aab1d",
+      "wrongPostOrderRejected": true,
+      "revokeBeforePostPassed": true,
+      "bootstrapMembershipPreserved": true,
+      "fullG014GraphExecuted": false
+    }
+  },
+  "artifacts": [
+    {
+      "path": "initial-boundary-fixture-failure.json",
+      "bytes": 2311,
+      "sha256": "b60cf48a630e090261a36a545f624ae8a3f7a100142fed9211e4fee0d356d66f"
+    },
+    {
+      "path": "initial-probe-context-failure.json",
+      "bytes": 2345,
+      "sha256": "71023ec9450fb852ca66a22e07ed91ecbd37acc89e7d0e32e8a671d36c1a1a45"
+    },
+    {
+      "path": "final-pg17.json",
+      "bytes": 3418,
+      "sha256": "b4ab33cd0a97c212f96cf336d4ab5fd3ff55f12f4da0637d5f13f3886aa773e1"
+    },
+    {
+      "path": "post-order-comment-pg17.json",
+      "bytes": 3419,
+      "sha256": "a9c8e84351f9d750d80ef2ed016a7c1115bc2f9e16cf82ab75fdaebc2c5ac996"
+    },
+    {
+      "path": "post-review-owner-contract-pg17.json",
+      "bytes": 3960,
+      "sha256": "4d7f0b6d800b249646c73cdd5e7547feabdf1e86f6e53f670f08b8405a97dd90"
+    },
+    {
+      "path": "hosted-preimage-readonly-065751.json",
+      "bytes": 1398,
+      "sha256": "e661172471b2f6dbb6c1165e9bd75b1d3679f6d4f39f9b5621a51b2b17d2b161"
+    },
+    {
+      "path": "ci-c9f49c22-terminal.json",
+      "bytes": 7607,
+      "sha256": "ac3157de1f7e23bc44e58437c9558b5f871a43a1b10a37884ae8432c1ec76dfc"
+    },
+    {
+      "path": "compiler-envelope-probe.json",
+      "bytes": 771,
+      "sha256": "cda6716277d0e11028a8567df45270c129c2ae1dfaed88009b5eafafdbd37470"
+    },
+    {
+      "path": "local-independent-review-summary.json",
+      "bytes": 1988,
+      "sha256": "486d6faeb3c415f907f4bc15c9bffc0b91db73e9eef58332ed14fe9185fe0009"
+    }
+  ],
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "limits": [
+    "Actual owned PostgreSQL 17.11 only, not hosted PG17.6.",
+    "Actual companion DO, actual queue RPC definitions and registry state; old 137 catalog identities are source-only snapshot rows.",
+    "Exact original declaration/metadata-prelude/invoker IF branch extracts are exercised for three new identities; complete G014 dependency graph is not executed.",
+    "No queue/bucket/ledger forward admission or full installation transaction is provided.",
+    "Cooperative registrations serialize; unrelated privileged DDL/writers require the separate current writer fence.",
+    "The added owner-contract regression executes the complete current owner function in an owned fixture via SET SESSION AUTHORIZATION postgres, not all four G014 assertions or a hosted call."
+  ],
+  "localIndependentReview": {
+    "kind": "native peer code review, not mandatory external audit",
+    "requestedModel": "gpt-6-astra",
+    "reasoning": "xhigh",
+    "summary": "local-independent-review-summary.json",
+    "acceptedOrderingFindingVerified": true
+  }
+}

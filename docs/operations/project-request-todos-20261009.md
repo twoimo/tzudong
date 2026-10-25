@@ -9,6 +9,29 @@
 
 상태 표기: **I 구현 / L 로컬 검증 / O 운영 반영 / R 실제 동작 확인**. `?`는 미확인이다. 검증 완료를 기록할 때 소스 SHA, 실제 실행 시각, 환경, 검증 결과와 증빙 경로를 함께 남긴다. 운영 대상이 없는 규칙·문서 항목은 이유를 적고 해당 칸을 적용 제외로 바꿀 수 있다. 과거 보고서는 탐색 근거이며 현재 운영 사실을 대신하지 않는다.
 
+## 2026-10-24 운영 대조와 복구 델타
+
+전체 범위와 기존 T/A·체크박스를 유지한다. 이번 단계는 `progress`이며 전체 완료 또는 운영 적용 완료로 표시하지 않는다.
+
+| 대상 | 현재 확인 | 남은 전달 |
+| --- | --- | --- |
+| PR #3215·Swift | PR은 2026-10-19에 develop으로 병합됐고 당시 최종 Swift는 SUCCESS다. 이미 끝난 검사·병합을 반복하지 않는다 | 새 후보의 CI·보호 승격은 별도 |
+| 현재 production | Vercel tzudong의 READY `dpl_FiHvmpQdmnDLNYXL9dquSFTFMpoB`, main `1b5230ac93021c72499f4950bff6cda24e2515e5`, www/apex alias 확인 | 새 SQL/썸네일 후보가 포함된 배포는 아님. 다음 적용 직전 재확인 |
+| 관리자 메뉴·사이드바 | production `1b5230ac` alias 확인 후 실제 탭을 새로고침하고 인증된 메뉴15개 화면 이동·공통 visible H1·1280×720 문서 가로 넘침0, 접기/복원을 다시 확인 | 읽기 렌더 검증이며 저장·삭제·승인·생성 기능 전체 또는 pixel 검증 아님. 동선 예산 제한은 최종 표시까지 확인 |
+| 동선 예산 장애 | 운영에서 local fallback. 기존 PG17.11 16개와 별도로, 썸네일 설치 이후 실제 PG17.6 전체 G0144개·종료23항목·후반 오류 rollback 통과. 실제 auth/공개 RPC에서 고유operation21건=허용20/차단1, 동일operation 재요청 추가변경0, 원래42501/42883·NULL guard 변형 검출 | [전체 증거와 한계](provider-budget-bridge-20261024.md). 새 budget forward·90→91 ledger 계약/새 admission/현재 writer fence 후 적용·HTTP/UI readback. 운영 쓰기·provider 호출0 |
+| 썸네일 큐 권한 | `174c6526`에서 신규 객체에 남는 service_role default ALL/GRANT OPTION을 제거. PG17.11 31개 통과·불필요한 쓰기9개 모두42501·기존 객체/default ACL 보존 | 운영에는 thumbnail schema/RPC/private bucket 부재. 새 forward 설치와 G014 수렴 필요 |
+| 소스 통합 | 기존 후보를 보존해 develop `b8210cbc`와 정상 merge `ec4bc932`로 통합. Zod4.6.6·동일 frozen lock 설치 후 영향289개/2167 assertions, parity3425입력·진단0, 대상ESLint0, 새 의존성의 실제 thumbnail PG31개 통과 | 폐기된 SSE를 기대하던 테스트2개는 auth seam과 현재410 계약·본문/저장/구모델 호출0 검사로 교정. 현재 head의 보호 CI와 독립 검토는 별도 |
+| PR #3515 후속 통합 | 웹이 작업자 전용 예산 모듈을 가져와 발생한 실제 webpack 실패를 입력 모듈 분리로 수정. 이전 모듈과 이미지12·채팅18건의 digest/provider 입력/정규화 bytes 동일. 격리 빌드 실행기가 기존 `.next`를 띄우던 결함도 수정. 전체 dependency proof와 기존 Chromium3개 통과 | [실패·성공 영수증과 전달 조건](thumbnail-integration-20261024.md). Ubuntu의 Mac 전용 SDK probe와 폐기 OAuth/SSE source 계약 교정. canonical4,386 pass/0 fail/12 skip·97,860 assertions, 지식 그래프 browser4개 유지. head `a287916a`의 Install·Ubuntu npm·Swift 포함 전체 CI terminal·실패/대기0. 독립 검토·보호 승격·운영 설치/배포는 별도 |
+| 썸네일 G014 등록·새 forward | 기존25개 invoker 분기/137등록행 보존·신규3개 identity 추가 [companion·전체 forward 후보](thumbnail-g014-registration-20261024.md). PG17.11 owner17 methods·entry/Storage component12 methods·compiler21 pass/145 assertions와 별도로, 실제 PG17.6에서 원문89행 ledger·무수정 보호 manifest1963행·G0144개를 복원해 정확한 전체 설치43문장 검증. 마지막 오류 뒤89행 복원·정상commit90행·새 연결 종료23항목/G014·reconciliation 2분기 통과. 244f886c CI 성공25/skip1·실패/대기0. 사용자 행/운영쓰기0. 비보호 index 표시 alias1개 차이와 별도 raw ACL 관측 한계 명시 | 실제 caller의 새 고정 admission, 외부 Pro/Gemini/Pro·현재 writer fence·worker provisioning·보호 승격·운영 반영·실제 생성 readback은 계속 필요. 실행 비활성 draft를 임의로 활성화하지 않음 |
+| 썸네일 고정 caller | 실제 원문/벡터/구성요소·별도 release bytes·owner/admission 검증, 전송 전 journal 배타 생성·fsync와 재전송 금지. PG17.6 client 종료 후 prior가 보였다가 commit되는 반례를 재현해 `prior_observed`를 결과 미확인으로 처리. 잘못된 분류 mutant 실패2개 | [수정·반례·한계](thumbnail-g014-registration-20261024.md#후속-이전-상태-관측과-적용-종료를-분리). 실제 운영 전송·readback은 미수행이며 draft false 유지 |
+| 썸네일 운영 경로 | PUBLIC repo의 Mac runner prototype을 활성화하지 않고 GitHub inspect와 local-owner v2 실행을 분리. 실제 기본 gh GET3회로 owner·admin·protected main 확인. native HOME custody·원래 journal 보존·권한 조건2개. caller21+collector17+owner13=51 pass/687 assertions·lint0·앱parity3427입력/진단0 | [현재 구현·조건·한계](thumbnail-g014-registration-20261024.md#후속-local-owner-v2--실제-로컬-신원과-원래-복구-기록). 실제 영속 custody·별도 v2 release·새 source CI/보호 승격·운영 적용/readback·hosted 생성은 남음. 새로운 계정/토큰/권한/runner 변경0 |
+| 외부 검토·협업 | 기존 원본 예약7건 보존. 두 native subagent는 429로 중단, quota·모델·계정 변경 없이 root가 로컬 검증을 이어감 | 현재 소스의 실제 독립 검토와 정확한 release bundle 결속이 미완료 |
+| 결제·전체 파이프라인 | 새 결제·카드 변경·키 등록·유료 호출0. 카드 삭제 보류와 기존 한도 보존 | 기존 전체 Todo, crawler→자동 판단/승인→marker, OCR/KG/생성 기능의 실제 운영 검증은 계속 열려 있음 |
+
+운영 catalog와 메뉴의 비개인 metadata는 `/Users/twoimo/.codex/visualizations/2026/10/18/01a14e99-c202-7fa1-90c1-2e9cb7da815f/thumbnail-forward-20261024/`에 보존했다. 16/31개 검사는 서로 다른 변경의 로컬 근거이며 전체 목표의 완료율이나 운영 성공률의 분자가 아니다. 결정적 fixture·단일 UI 관측에는 추정 95% 구간을 만들지 않는다.
+
+후속 실제 PG17.6 리허설과 실패·성공 입력은 `/Users/twoimo/.codex/runtime-cache/thumbnail-production-rehearsal-20261024`에 보존한다. 예산용 private schema의 explicit owner-default ACL이 논리 dump에서 NULL로 복원된 차이는 별도 read-only 원문 관측과 일반 DCL로 복원했고 제품 guard·assertion·registry 변경0이다. 썸네일89→90과 기존 review-media89→100은 같은 prior를 공유하므로 연달아 그대로 실행할 수 없다. 채택 순서 이후 새 prefix/terminal을 가진 계약과 증거를 준비하며 기존 frozen manifest의 수치만 바꾸지 않는다. `65394277`의 최신 CI는24 SUCCESS/1 SKIPPED·실패/대기0이며 새 caller 이전 소스의 결과다.
+
 ## 2026-10-15 현재 실행 델타
 
 전체 목표는 `active`다. 원문 범위와333개 완료 체크·T/A ID를 유지한다. 과거 관측과 실패는 Git `62c678af` 및 아래 날짜별 기록에 보존하며 최신 소스의 성공으로 재해석하지 않는다.

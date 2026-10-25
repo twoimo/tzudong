@@ -1,0 +1,75 @@
+{
+  "version": "postgres (PostgreSQL) 17.11 (Homebrew)",
+  "sourceBefore": {
+    "backend/supabase/tests/test_thumbnail_g014_contract_pg17.py": "a087fa0755d26ed45ffdef72ecf4a6580891cf25d3aa000b913fb77b1963d379",
+    "backend/supabase/candidates/20261024_thumbnail_g014_registration.sql": "c61ceaa8fb071a1cb59f9e85cfd931ed1b4075b5be825cb96f794cec5379716a",
+    "backend/supabase/candidates/20261023_thumbnail_gemini_queue.sql": "24fbdb8d1c99b0666de4b4f5c1b33896f6c7fa4ea20af4ad6ebd491722d4945a",
+    "backend/supabase/tests/fixtures/thumbnail-g014-hosted-preimage-20261024.json": "5c0a877eb8101967692de0067d1ee10c1401747447aa4377656fdf5713d0e4c1",
+    "backend/supabase/migrations/20261003182338_storyboard_service_role_bridge.sql": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436"
+  },
+  "sourceAfter": {
+    "backend/supabase/tests/test_thumbnail_g014_contract_pg17.py": "a087fa0755d26ed45ffdef72ecf4a6580891cf25d3aa000b913fb77b1963d379",
+    "backend/supabase/candidates/20261024_thumbnail_g014_registration.sql": "c61ceaa8fb071a1cb59f9e85cfd931ed1b4075b5be825cb96f794cec5379716a",
+    "backend/supabase/candidates/20261023_thumbnail_gemini_queue.sql": "24fbdb8d1c99b0666de4b4f5c1b33896f6c7fa4ea20af4ad6ebd491722d4945a",
+    "backend/supabase/tests/fixtures/thumbnail-g014-hosted-preimage-20261024.json": "5c0a877eb8101967692de0067d1ee10c1401747447aa4377656fdf5713d0e4c1",
+    "backend/supabase/migrations/20261003182338_storyboard_service_role_bridge.sql": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436"
+  },
+  "sourceStable": true,
+  "cases": {
+    "actualBranchNegativeControls": 2,
+    "commit": {
+      "oldRowsPreserved": 137,
+      "newRows": 3,
+      "realNonsuperuserSession": true,
+      "assertionMetadataAndRolesUnchanged": true,
+      "exactBranchesExecuted": 2
+    },
+    "sourceEarlyBounds": {
+      "sourceBytes": 65536,
+      "overRpcAndAssertionRejected": 2,
+      "overDefaultTreeRejected": true
+    },
+    "missingLeaseDenied": true,
+    "executorDenials": 5,
+    "registryBoundaryDriftsDenied": 4,
+    "grantOptionGuardMutation": {
+      "currentRejected": true,
+      "variantAdmittedHarm": true,
+      "actualBranchRejectedVariant": true,
+      "checkoutFilesMutated": 0
+    },
+    "registryDigestGuardMutation": {
+      "currentRejected": true,
+      "variantAdmittedExistingRowDrift": true,
+      "checkoutFilesMutated": 0
+    },
+    "outerLateFailureAndReplay": true,
+    "rpcDriftsDenied": 7,
+    "sameBodyWrongAssertionTypeDenied": true,
+    "secondAssertionFailureAtomic": true,
+    "repeatableReadDenied": true,
+    "concurrency": {
+      "calls": 2,
+      "committed": 1,
+      "replayRejected": 1,
+      "rows": 140
+    },
+    "registryEarlyBounds": {
+      "visibleRows": 137,
+      "extraVisibleRowRejected": true,
+      "fieldBytes": 4096,
+      "overFieldRejected": true
+    },
+    "unexpectedRegistryTriggerDenied": true
+  },
+  "cleanup": {
+    "ownedPid": 36290,
+    "statusExit": 3,
+    "pidFileAbsent": true,
+    "socketAbsent": true,
+    "tcpClosed": true
+  },
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "limits": "Owned PG17.11 registration checks using actual queue SQL and G014 bodies.\n\nThe complete hosted G014 prerequisite graph and hosted PG17.6 are NOT executed.\nTwo extracted, byte-matched invoker branches supplement actual metadata/rollback\nchecks; they are not a replacement for the full pre/post G014 release gate.\n"
+}

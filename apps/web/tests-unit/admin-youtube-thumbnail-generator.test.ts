@@ -1238,14 +1238,19 @@ describe("admin youtube thumbnail generator", () => {
     );
   });
 
-  test("requires a host/person reference before generating a Tzuyang-like host visual", () => {
-    const routeSource = readFileSync(new URL("../app/api/admin/youtube-thumbnail-generator/route.ts", import.meta.url), "utf8");
-    const componentSource = readFileSync(new URL("../components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx", import.meta.url), "utf8");
-    expect(routeSource.indexOf("host_reference_required")).toBeGreaterThan(routeSource.indexOf("readThumbnailRetrievalReferenceImages"));
-    expect(routeSource).toContain("shouldUseTzuyangHostReferences");
-    expect(routeSource).toContain("payload.stylePreset === TZUYANG_CHANNEL_PRESET");
-    expect(componentSource).toContain("shouldBlockSpecificCreatorGenerationRequest");
-    expect(routeSource).toContain("allowHostPersonFromRetrievedThumbnails: requestsSpecificCreatorHost");
+  test("requires a host/person reference before generating a Tzuyang-like host visual", async () => {
+    const { createThumbnailQueueApi } = await import('../lib/admin/youtube-thumbnail-generator/queue-api');
+    const api = createThumbnailQueueApi({ authorize: (async () => ({ ok: true,
+      userId: '6f5d42d6-d122-4d32-b8bb-2779de58b423' })) as never,
+      store: { enqueue: () => { throw new Error('Unreferenced likeness must never enqueue.'); } } as never });
+    const form = new FormData();
+    form.set('request', JSON.stringify({ requestId: 'eef65708-f0ea-4a0e-8598-05665d5e4f87',
+      model: 'gemini-3.1-flash-image', brief: { topic: '쯔양 야시장 먹방', headline: '역대급 먹방',
+        stylePreset: 'tzuyang-food-travel-collage', acknowledgedSafety: true }, roles: [] }));
+    const response = await api.listPOST(new Request('https://thumbnail.test/api/admin/youtube-thumbnail-generator/jobs', {
+      method: 'POST', headers: { Origin: 'https://thumbnail.test' }, body: form }));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: 'invalid_request' });
 
     const promptWithoutReference = buildYoutubeThumbnailPrompt({
       ...safePayload,
@@ -3479,7 +3484,7 @@ process.stdin.on("end", () => {
     expect(componentSource).toContain("normalizeGeneratedLayout?: boolean");
     expect(componentSource).toContain("const nextLayers = options.normalizeGeneratedLayout");
     expect(componentSource).toContain("createTextLayersWithGenerationLayout(\n        patchedLayers,");
-    expect(componentSource).toContain("normalizeGeneratedLayout: Boolean(nextAgentResult.shouldGenerate || shouldPreferSubmittedPromptCopy)");
+    expect(componentSource).toContain("normalizeGeneratedLayout: response.shouldGenerate");
     expect(componentSource).toContain("function updateTextLayer(");
     const updateTextLayerStart = componentSource.indexOf("function updateTextLayer(");
     const updateTextLayerEnd = componentSource.indexOf("\n\n  function applyChatRequirementToCanvas", updateTextLayerStart);
@@ -3877,39 +3882,19 @@ setTimeout(() => {}, 30_000);
     }
   }, 15_000);
 
-  test("returns JSON 400 for malformed thumbnail chat payloads without invoking the backend-agent", async () => {
-    let backendAgentCalls = 0;
-
-    mock.module("@/lib/auth/require-admin", () => ({
-      requireAdmin: async () => ({ ok: true, userId: "admin-user" }),
-    }));
-    mock.module("@/lib/admin/youtube-thumbnail-generator/backend-agent", () => ({
-      generateYoutubeThumbnailChatWithBackendAgent: async () => {
-        backendAgentCalls += 1;
-        throw new Error("backend-agent should not be invoked for invalid chat payloads");
-      },
-    }));
-
-    try {
-      const routeModule = await import(`../app/api/admin/youtube-thumbnail-generator/chat/route.ts?cache=${Math.random()}`);
-      const response = await routeModule.POST(new Request("http://localhost/api/admin/youtube-thumbnail-generator/chat", {
-        method: "POST",
-        body: JSON.stringify({ message: "   " }),
-        headers: {
-          "Content-Type": "application/json",
-          Origin: "http://localhost",
-          "Sec-Fetch-Site": "same-origin",
-        },
-      }) as unknown as NextRequest);
-      const payload = await response.json() as { error: string; detail?: string };
-
-      expect(response.status).toBe(400);
-      expect(payload.error).toBe("thumbnail_chat_message_required");
-      expect(payload.detail).toContain("채팅 메시지");
-      expect(backendAgentCalls).toBe(0);
-    } finally {
-      mock.restore();
-    }
+  test("retires the legacy chat transport before body parsing or any backend-agent execution", async () => {
+    const { createThumbnailQueueApi } = await import('../lib/admin/youtube-thumbnail-generator/queue-api');
+    const api = createThumbnailQueueApi({ authorize: async () => ({ ok: true, userId: "6f5d42d6-d122-4d32-b8bb-2779de58b423" }) });
+    const request = new Request("http://localhost/api/admin/youtube-thumbnail-generator/chat", {
+      method: "POST", body: "malformed legacy input", headers: { Origin: "http://localhost", "Content-Type": "application/json" },
+    });
+    const response = await api.chatLegacyPOST(request);
+    expect(response.status).toBe(410);
+    expect(await response.json()).toMatchObject({ error: "thumbnail_chat_route_retired", replacement: "/api/admin/youtube-thumbnail-generator/chat/jobs" });
+    expect(response.headers.get("Cache-Control")).toContain("private, no-store");
+    expect(request.bodyUsed).toBe(false);
+    const route = readFileSync(new URL('../app/api/admin/youtube-thumbnail-generator/chat/route.ts', import.meta.url), 'utf8');
+    expect(route).toContain('thumbnailQueueApi.chatLegacyPOST');
   });
 
 
@@ -4609,17 +4594,17 @@ test("youtube thumbnail durable publish does not mask registry constraint failur
       );
       throw new Error("expected constraint failure");
     } catch (error) {
-      expect(error).toBe(constraintError);
+      expect((error as Error).message).toBe("thumbnail_durable_release_publish_unconfirmed");
     }
 
-    expect(fake.uploads).toHaveLength(0);
+    expect(fake.uploads).toHaveLength(1);
     expect(fake.rows).toHaveLength(0);
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
 });
 
-test("youtube thumbnail durable publish maps missing registry RPC to unavailable and cleans uploaded asset", async () => {
+test("youtube thumbnail durable publish maps missing registry RPC to unavailable and preserves uploaded asset", async () => {
   const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-durable-release-missing-rpc-"));
   try {
     const repoRoot = tempDir;
@@ -4685,14 +4670,14 @@ test("youtube thumbnail durable publish maps missing registry RPC to unavailable
         hasRelease: false,
       },
     });
-    expect(fake.uploads).toHaveLength(0);
+    expect(fake.uploads).toHaveLength(1);
     expect(fake.rows).toHaveLength(0);
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
 });
 
-test("youtube thumbnail durable publish removes uploaded asset when registry publish fails", async () => {
+test("youtube thumbnail durable publish preserves uploaded asset when registry publish is unconfirmed", async () => {
   const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-durable-release-cleanup-"));
   try {
     const repoRoot = tempDir;
@@ -4748,10 +4733,10 @@ test("youtube thumbnail durable publish removes uploaded asset when registry pub
       throw new Error("expected publish failure");
     } catch (error) {
       expect(error).toBeInstanceOf(Error);
-      expect((error as Error).message).toBe("fake_publish_failed");
+      expect((error as Error).message).toBe("thumbnail_durable_release_publish_unconfirmed");
     }
 
-    expect(fake.uploads).toHaveLength(0);
+    expect(fake.uploads).toHaveLength(1);
     expect(fake.rows).toHaveLength(0);
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
@@ -5360,14 +5345,8 @@ test("youtube thumbnail release candidates stay hidden and auto-seed the initial
   expect(component).toContain("await loadThumbnailHistory({ replaceInitialPreview: true, silent: true, actualOnlyPreview: true })");
   expect(component).toContain("if (isCancelled || latestHistoryRunKeyRef.current) return");
   expect(component).toContain("userCanvasResultLockedRef.current = true");
-  expect(component).toContain("shouldPreferSubmittedPromptCopyForGeneration");
-  expect(component).toContain("item.data.shouldGenerate || shouldPreferSubmittedPromptCopyForGeneration");
-  expect(component).toContain("resolvedFinalResult.shouldGenerate || shouldPreferSubmittedPromptCopyForGeneration");
-  expect(component).toContain("const generationSafeTextLayerPatches = item.data.shouldGenerate");
-  expect(component).toContain("const nextAgentResult = shouldPreferSubmittedPromptCopy");
-  expect(component).toContain('patch.id !== "headline"');
-  expect(component).toContain('patch.id !== "subHeadline"');
-  expect(component).toContain("shouldPreserveSubmittedCreatorReference || shouldPreferSubmittedPromptCopy");
+  expect(component).toContain("const imageRequestId = queued.consume(editorRevisionRef.current, thumbnailChatThreadIdRef.current, chatRunId)");
+  expect(component).toContain("nextAssistantMessageId, imageRequestId");
   expect(component).toContain("return pool[0] ?? null");
   expect(component).toContain("compareThumbnailHistoryRunsByRecency");
   expect(component).toContain("getThumbnailHistoryRunTime(right) - getThumbnailHistoryRunTime(left)");
@@ -5437,72 +5416,23 @@ test('keeps thumbnail provenance labels honest for preview, history, and exact g
   expect(componentSource).toContain('data-thumbnail-history-source-label="true"');
   expect(componentSource).toContain('data-thumbnail-history-provenance-label="true"');
 });
-test("keeps thumbnail provider credentials in synchronously clearable component refs without Web Storage", () => {
-  const componentSource = readFileSync(
-    new URL(
-      "../components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
-      import.meta.url,
-    ),
-    "utf8",
-  );
-  const legacyStorageAliases = [
-    "THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY",
-    "THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY",
-    "readThumbnailBrowserModelKeysCache",
-    "writeThumbnailBrowserModelKeysCache",
-    "readThumbnailLocalBridgeSessionCache",
-    "writeThumbnailLocalBridgeSessionCache",
-    "browser_local_storage_only",
-    "browser_session_storage_only",
-  ];
-
-  for (const alias of legacyStorageAliases) {
-    expect(componentSource).not.toContain(alias);
-  }
-  expect(componentSource).not.toMatch(/\b(?:localStorage|sessionStorage)\b/);
-  expect(componentSource).toContain(
-    'data-thumbnail-browser-api-key-settings="memory-only"',
-  );
-  expect(componentSource).toContain(
-    'data-thumbnail-local-bridge-persistence="none"',
-  );
-  expect(componentSource).toContain(
-    "function handleApplyThumbnailBrowserOpenAIApiKey()",
-  );
-  expect(componentSource).toContain("const browserOpenAIApiKeyRef = useRef<string | null>(null);");
-  expect(componentSource).toContain("const thumbnailLocalBridgeTokenRef = useRef<string | null>(null);");
-  expect(componentSource).toContain("ref={browserOpenAIApiKeyInputRef}");
-  expect(componentSource).toContain("ref={thumbnailLocalBridgeTokenInputRef}");
-  const browserKeyInputSource = componentSource.slice(
-    componentSource.indexOf('id="thumbnail-browser-openai-api-key"'),
-    componentSource.indexOf('data-thumbnail-browser-api-key-input="true"'),
-  );
-  const localBridgeTokenInputSource = componentSource.slice(
-    componentSource.indexOf('id="thumbnail-local-bridge-token"'),
-    componentSource.indexOf('data-thumbnail-local-bridge-token-input="true"'),
-  );
-  expect(browserKeyInputSource).not.toContain("value=");
-  expect(localBridgeTokenInputSource).not.toContain("value=");
-  expect(componentSource).not.toContain("const [browserOpenAIApiKey, setBrowserOpenAIApiKey]");
-  expect(componentSource).not.toContain("const [browserOpenAIApiKeyDraft, setBrowserOpenAIApiKeyDraft]");
-  expect(componentSource).not.toContain("const [thumbnailLocalBridgeToken, setThumbnailLocalBridgeToken]");
-  expect(componentSource).not.toContain("const [thumbnailLocalBridgeTokenDraft, setThumbnailLocalBridgeTokenDraft]");
-  expect(componentSource).toContain('if (value.length <= 8) return "적용됨";');
-  expect(componentSource).toContain("browserOpenAIApiKeyRef.current = normalizedKey;");
-  expect(componentSource).toContain("thumbnailLocalBridgeTokenRef.current = token;");
-  expect(componentSource).toContain("browserOpenAIApiKeyRef.current = null;");
-  expect(componentSource).toContain("thumbnailLocalBridgeTokenRef.current = null;");
-  expect(componentSource).toContain('browserOpenAIApiKeyInputRef.current.value = "";');
-  expect(componentSource).toContain('thumbnailLocalBridgeTokenInputRef.current.value = "";');
-  expect(componentSource).toContain('window.addEventListener("pagehide", clearForPageLifecycle);');
-  expect(componentSource).toContain('window.addEventListener("pageshow", clearForPageLifecycle);');
-  expect(componentSource).toContain("clearThumbnailCredentialLifecycle();");
-  expect(componentSource).toContain("thumbnailLocalBridgeStatusAbortControllerRef.current?.abort();");
-  expect(componentSource).toContain("resetThumbnailLocalBridgeHelperTransport({ closePopup: true });");
-  expect(componentSource).toContain('cache: "no-store",');
-  expect(componentSource).toContain(
-    'method: "POST",\n        cache: "no-store",\n        signal: controller.signal,\n        body: formData,',
-  );
-  expect(componentSource).toContain("invokeThumbnailLocalBridgeHelper,\n        controller.signal,");
-  expect(componentSource).toContain("화면을 닫으면 키가 제거됩니다.");
+test("legacy image generation is retired before reading browser credentials or generation bodies", async () => {
+  const { createRetiredThumbnailGenerationApi } = await import('../lib/admin/youtube-thumbnail-generator/retired-api');
+  const authorized = createRetiredThumbnailGenerationApi(async () => ({ ok: true, userId: 'synthetic-admin' }));
+  const request = new Request('https://www.tzudong.app/api/admin/youtube-thumbnail-generator', {
+    method: 'POST', headers: { Origin: 'https://www.tzudong.app', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ legacyCredentialInput: 'synthetic-noncredential-marker', providerId: 'openai-gpt-image-2' }),
+  });
+  const response = await authorized.POST(request);
+  expect(response.status).toBe(410); expect(request.bodyUsed).toBe(false);
+  expect((await response.json()).error).toBe('thumbnail_legacy_generation_retired');
+  expect(response.headers.get('cache-control')).toBe('private, no-store');
+  const rejected = await authorized.POST(new Request(request.url, { method: 'POST', headers: { Origin: 'https://other.invalid' } }));
+  expect(rejected.status).toBe(403);
+  const unauthenticated = createRetiredThumbnailGenerationApi(async () => ({ ok: false,
+    response: Response.json({ error: 'Unauthorized' }, { status: 401 }) as never }));
+  expect((await unauthenticated.POST(new Request(request.url, { method: 'POST' }))).status).toBe(401);
+  const policy = await (await authorized.GET()).json();
+  expect(policy.providerId).toBe('gemini-api'); expect(policy.availability).toBe('unverified');
+  expect(policy.models.map((model: { id: string }) => model.id)).toEqual(['gemini-3.1-flash-image', 'gemini-3-pro-image']);
 });

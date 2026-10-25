@@ -933,6 +933,12 @@ jobs:
       NCP_MAPS_KEY_ID_BYEON: ${{ secrets.NCP_MAPS_KEY_ID_BYEON }}
       NCP_MAPS_KEY_BYEON: ${{ secrets.NCP_MAPS_KEY_BYEON }}
       LIVE_MAX_NEW_ITEMS: "3"
+      # npm ci --ignore-scripts does not download ffmpeg-static's executable.
+      ALLOW_CUSTOM_FFMPEG: "1"
+      FFMPEG_PATH: /usr/bin/ffmpeg
+      FFMPEG_TRUSTED_ROOT: /usr/bin
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+      TZUDONG_LAAJ_PROVIDER: gemini
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
@@ -949,12 +955,36 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: backend/package-lock.json
+      - name: Install trusted media tools for evaluate
+        run: |
+          set -euo pipefail
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends ffmpeg jq
+          test -x /usr/bin/ffmpeg
+          test -x /usr/bin/google-chrome
+          /usr/bin/ffmpeg -hide_banner -version >/dev/null
       - name: Install locked Node dependencies for evaluate
         working-directory: backend
         run: npm ci --ignore-scripts
       - name: Preflight hosted pending apply env
         run: python3 backend/bin/check_env_contract.py --profile hosted-pending-apply
+      # Cache transports public input/receipt bytes only. A hit never bypasses
+      # the evaluator's current source, recipe and terminal-output checks.
+      - name: Restore terminal input packet
+        id: terminal_cache
+        continue-on-error: true
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0, node24
+        with:
+          path: ${{ runner.temp }}/tzudong-terminal-cache/terminal-outcomes.json.gz
+          key: hosted-terminal-v1-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: hosted-terminal-v1-${{ runner.os }}-
+      - name: Import bounded terminal input packet
+        continue-on-error: true
+        run: |
+          python3 backend/bin/terminal_completion_cache.py restore \
+            --cache-file "$RUNNER_TEMP/tzudong-terminal-cache/terminal-outcomes.json.gz"
       - name: Evaluate new videos then pending-apply
+        id: hosted_eval
         env:
           TZUDONG_PIPELINE_SOURCE: github_actions
         run: |
@@ -965,3 +995,17 @@ jobs:
             --limit 3 \
             --review-automation \
             --preview-out backend/log/cron/hosted-apply-preview.json
+      - name: Export current terminal inputs
+        id: terminal_export
+        if: ${{ always() && !cancelled() && (steps.hosted_eval.outcome == 'success' || steps.hosted_eval.outcome == 'failure') }}
+        continue-on-error: true
+        run: |
+          python3 backend/bin/terminal_completion_cache.py export \
+            --cache-file "$RUNNER_TEMP/tzudong-terminal-cache/terminal-outcomes.json.gz"
+      - name: Save terminal input packet
+        if: ${{ always() && !cancelled() && steps.terminal_export.outcome == 'success' }}
+        continue-on-error: true
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0, node24
+        with:
+          path: ${{ runner.temp }}/tzudong-terminal-cache/terminal-outcomes.json.gz
+          key: hosted-terminal-v1-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}

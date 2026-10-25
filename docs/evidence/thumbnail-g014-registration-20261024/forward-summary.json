@@ -1,0 +1,172 @@
+{
+  "scope": "Draft source, compiler and actual PG17.11 entry/Storage component proof, not full G014 or hosted installation.",
+  "baseCommit": "818b615a39dbe318eed3c23f395e6cbc45591b09",
+  "candidate": {
+    "path": "backend/supabase/candidates/20261024071000_thumbnail_production_install.sql",
+    "sha256": "8019c4e7788cf6706094937a5d4111958201793192d918817e824791db471ac2",
+    "bytes": 64927,
+    "statements": 43
+  },
+  "manifest": {
+    "path": ".github/thumbnail-production-installation.draft.v1.json",
+    "sha256": "51a7c5b61cc268e7a8fe23261548d1950ecfda122e12a6b0d13645e297563bbc",
+    "executionEnabled": false
+  },
+  "runs": [
+    {
+      "receipt": "docs/evidence/thumbnail-g014-registration-20261024/forward-boundary-initial-fixture-failures.json",
+      "methods": 9,
+      "failures": 2,
+      "errors": 6,
+      "diagnosis": "Test fixture context manager committed role/privilege drift after expected rejection; fixed with always-rollback owned transactions. Not a product regression."
+    },
+    {
+      "receipt": "docs/evidence/thumbnail-g014-registration-20261024/forward-boundary-initial-9-pass.json",
+      "methods": 9,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "receipt": "docs/evidence/thumbnail-g014-registration-20261024/forward-boundary-readback-fixture-failures.json",
+      "methods": 12,
+      "failures": 1,
+      "errors": 1,
+      "diagnosis": "New checker expected an exception instead of actual partial_conflict outcome; readback fixture lacked observed effective catalog read authority. Both corrected in fixture/check, source guards retained."
+    },
+    {
+      "receipt": "docs/evidence/thumbnail-g014-registration-20261024/forward-boundary-final-12-pass.json",
+      "methods": 12,
+      "failures": 0,
+      "errors": 0,
+      "reportedSeconds": 1.051
+    }
+  ],
+  "unit": {
+    "runtime": "Bun 1.4.0",
+    "node": "24.22.0",
+    "file": "apps/web/tests-unit/supabase-migration-transaction.test.ts",
+    "sha256": "defdf2a43faa233319b7ae4be56ba3ca9c44a40ad978f3470951ae0269e2d39c",
+    "pass": 21,
+    "fail": 0,
+    "assertions": 145
+  },
+  "hostedReadOnly": {
+    "project": "aqlcofblfxdrjhhdmarw",
+    "expectedPriorFieldsMatched": 23,
+    "hostedWrites": 0,
+    "assertionsInvoked": 0,
+    "providerCalls": 0
+  },
+  "localPeerReview": {
+    "agent": "/root/thumbnail_install_atomicity_review",
+    "requestedModel": "gpt-6-astra",
+    "requestedReasoning": "xhigh",
+    "actualBackendIdentity": "unverified",
+    "report": {
+      "path": "docs/evidence/thumbnail-g014-registration-20261024/forward-native-review.md",
+      "bytes": 2468,
+      "sha256": "4e08349efff32b9efc5e2962bf160e163c1a3ec7b720fdf8d4c79dd3ff75d7fd"
+    },
+    "additionalConfirmedFindings": 0,
+    "mandatoryExternalAudit": false
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "decision": "ACCEPT",
+      "issue": "Session-dependent pg_get_expr hash rejects unchanged policy under empty search_path.",
+      "implementation": "Trusted deparser context and restore; readback exact visible/qualified full expressions only.",
+      "verification": [
+        "test_old_deparser_context_reproduces_nominal_policy_rejection",
+        "test_policy_digest_is_independent_of_incoming_search_path",
+        "test_manifest_readback_exact_components_and_policy_contexts"
+      ]
+    },
+    {
+      "id": "F2",
+      "decision": "ACCEPT",
+      "issue": "SELECT/INSERT does not prove SHARE/SHARE ROW EXCLUSIVE lock admission.",
+      "implementation": "Require existing MAINTAIN/UPDATE/DELETE/TRUNCATE effective privilege on both managed relations.",
+      "verification": [
+        "test_existing_select_insert_without_lock_privilege_is_denied",
+        "hosted-storage-capability-readonly-074330.json"
+      ]
+    },
+    {
+      "id": "F3",
+      "decision": "ACCEPT",
+      "issue": "Policy digest alone misses browser SUPER/BYPASS or effective owner membership.",
+      "implementation": "Require both browser roles to have no SUPER/BYPASS/Storage owner USAGE/SET; preserve role projection.",
+      "verification": [
+        "test_browser_bypass_and_superuser_are_denied",
+        "test_browser_effective_owner_or_set_membership_is_denied",
+        "test_private_bucket_commit_server_access_and_browser_denial"
+      ]
+    },
+    {
+      "id": "G1",
+      "decision": "DEFER",
+      "issue": "Full exact PG17.6/current G014 graph, old 89-row ledger commit/readback and late-failure have not been executed.",
+      "condition": "Retain original source and use an admitted owned exact catalog/runtime rehearsal, without stubs masquerading as full proof."
+    },
+    {
+      "id": "G2",
+      "decision": "DEFER",
+      "issue": "Existing fixed apply caller does not accept this disabled draft.",
+      "condition": "New narrow successor admission after validated source/independent review; preserve applied migrations and old fixed manifests."
+    },
+    {
+      "id": "G3",
+      "decision": "DEFER",
+      "issue": "Actual Pro thesis/Gemini maximum with scoped attachments/Pro reverse are incomplete.",
+      "condition": "Preserve seven original reservations, quota, FIFO, source bindings and report requirements; no lower-model substitution."
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/thumbnail-g014-registration-20261024/forward-boundary-initial-fixture-failures.json",
+      "bytes": 2844,
+      "sha256": "534e6bc2222323ae75a226fca96710a0882572609d772646fcc6c6f1cb020053"
+    },
+    {
+      "path": "docs/evidence/thumbnail-g014-registration-20261024/forward-boundary-initial-9-pass.json",
+      "bytes": 3631,
+      "sha256": "4fbb12adec25e48cb00e98d37bda6d15037c00517bb6176fe26d87af62e7f18f"
+    },
+    {
+      "path": "docs/evidence/thumbnail-g014-registration-20261024/forward-boundary-readback-fixture-failures.json",
+      "bytes": 4617,
+      "sha256": "6c9afdf0e8f3b5fa53cdd5a1afc89e3f02d13021a8044ecaffbbb4fec5e1d8a5"
+    },
+    {
+      "path": "docs/evidence/thumbnail-g014-registration-20261024/forward-boundary-final-12-pass.json",
+      "bytes": 5347,
+      "sha256": "b7795578cd45018d02e4ed01587fa5c41a524edeedade3f58787af3067c927f5"
+    },
+    {
+      "path": "docs/evidence/thumbnail-g014-registration-20261024/forward-prior-readonly.json",
+      "bytes": 2563,
+      "sha256": "fdf455053be5f1c0ef46be578cc328a055f4461e47bdec6605cfbc6ae62e937f"
+    },
+    {
+      "path": "docs/evidence/thumbnail-g014-registration-20261024/hosted-storage-capability-readonly-074330.json",
+      "bytes": 757,
+      "sha256": "698dafb8375b68777b8191c31c3d2356f72fed3b14d2cc7ca5a02bd54eae3c07"
+    },
+    {
+      "path": "docs/evidence/thumbnail-g014-registration-20261024/forward-native-review.md",
+      "bytes": 2468,
+      "sha256": "4e08349efff32b9efc5e2962bf160e163c1a3ec7b720fdf8d4c79dd3ff75d7fd"
+    },
+    {
+      "path": "docs/evidence/thumbnail-g014-registration-20261024/ci-818b615a-terminal.json",
+      "bytes": 4243,
+      "sha256": "d0215ab30785584a12dcc5ae2acaf836fa9339626f680c94574090d59b1f5072"
+    }
+  ],
+  "limits": [
+    "Deterministic tests and one catalog snapshot do not estimate population success, confidence intervals, speed, cost savings or operating completion.",
+    "All four owned test runs verified PID/socket/TCP cleanup and stable source hashes.",
+    "No new deployment, protected merge, hosted DB mutation, credential provisioning, billing or provider generation."
+  ]
+}

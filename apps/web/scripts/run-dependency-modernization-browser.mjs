@@ -54,7 +54,7 @@ function digest(source) {
     return createHash('sha256').update(source).digest('hex');
 }
 
-function run(command, args, { cwd, env = proofEnvironment, timeoutMs }) {
+function run(command, args, { cwd, env = proofEnvironment, timeoutMs, failureCode }) {
     return new Promise((resolve, reject) => {
         let child;
         try {
@@ -87,7 +87,7 @@ function run(command, args, { cwd, env = proofEnvironment, timeoutMs }) {
                 return;
             }
             if (code !== 0) {
-                fail('DEPENDENCY_MODERNIZATION_STEP_FAILED');
+                fail(failureCode);
                 return;
             }
             finish(resolve);
@@ -235,6 +235,7 @@ async function proveCandidateDependencyGraph() {
         await run(npmInstallCommandPath, npmInstallArgs, {
             cwd: proofRoot,
             timeoutMs: 8 * 60_000,
+            failureCode: 'DEPENDENCY_MODERNIZATION_INSTALL_FAILED',
         });
         const receipt = await readFile(join(proofRoot, 'node_modules', '.package-lock.json'), 'utf8');
         if (!receipt) {
@@ -273,13 +274,15 @@ try {
         await run(
             process.execPath,
             ['scripts/clean-next.mjs', '--', process.execPath, 'node_modules/next/dist/bin/next', 'build', '--webpack'],
-            { cwd: appRoot, timeoutMs: 8 * 60_000 },
+            { cwd: appRoot, timeoutMs: 8 * 60_000, failureCode: 'DEPENDENCY_MODERNIZATION_BUILD_FAILED' },
         );
-        await run(process.execPath, ['scripts/verify-route-css-boundaries.mjs'], { cwd: appRoot, timeoutMs: 60_000 });
+        await run(process.execPath, ['scripts/verify-route-css-boundaries.mjs'], {
+            cwd: appRoot, timeoutMs: 60_000, failureCode: 'DEPENDENCY_MODERNIZATION_CSS_FAILED',
+        });
         await run(
             process.execPath,
             ['node_modules/@playwright/test/cli.js', 'test', 'tests/dependency-modernization.spec.ts', '--project=chromium'],
-            { cwd: appRoot, timeoutMs: 5 * 60_000 },
+            { cwd: appRoot, timeoutMs: 5 * 60_000, failureCode: 'DEPENDENCY_MODERNIZATION_BROWSER_FAILED' },
         );
     }
 } catch (error) {

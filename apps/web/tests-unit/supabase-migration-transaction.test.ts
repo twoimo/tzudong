@@ -34,6 +34,31 @@ test('four exact source envelopes agree with pinned provider-source parser and p
     expect(p.originalVector).toEqual(v);expect(p.execution).not.toBe(bytes.toString());expect(p.sourceSha256).toBe(m.sha256);
   }
 });
+test('held thumbnail forward binds exact component bytes to one intact compiler payload and ledger readbacks',()=>{
+  const draft=JSON.parse(readFileSync(new URL('../../../.github/thumbnail-production-installation.draft.v1.json',import.meta.url),'utf8'));
+  const m=draft.migration;
+  expect(draft.executionEnabled).toBe(false);
+  const bytes=readFileSync(new URL(`../../../${m.candidatePath}`,import.meta.url));
+  expect(bytes.length).toBe(m.bytes);
+  for(const component of draft.components){
+    const input=readFileSync(new URL(`../../../${component.path}`,import.meta.url));
+    expect(input.length).toBe(component.bytes);
+    expect(createHash('sha256').update(input).digest('hex')).toBe(component.sha256);
+  }
+  const original=pinnedVector(bytes.toString('utf8'),'20261024071000');
+  expect(original).toHaveLength(m.statementCount);
+  expect(sha(JSON.stringify(original))).toBe(m.originalVectorSha256);
+  const compiledPlan=migrationEnvelope(bytes,m,original);
+  expect(compiledPlan.execution).toBe(bytes.toString('utf8'));
+  const compiled=atomicMigrationSql(compiledPlan,m);
+  expect(compiled).toContain(compiledPlan.execution);
+  expect(compiled.indexOf('LOCK TABLE supabase_migrations.schema_migrations IN EXCLUSIVE MODE')).toBeLessThan(compiled.indexOf(compiledPlan.execution));
+  expect(compiled.indexOf(compiledPlan.execution)).toBeLessThan(compiled.indexOf('INSERT INTO supabase_migrations.schema_migrations'));
+  expect(reconciliationSql(compiledPlan,m)).toContain('SET TRANSACTION READ ONLY');
+  expect(reconciliationOutcome({ledger_exists:true,ledger_equal:true,prior:null,terminal:m.terminalReadback.expected},m)).toBe('committed');
+  expect(reconciliationOutcome({ledger_exists:true,ledger_equal:false,prior:null,terminal:m.terminalReadback.expected},m)).toBe('partial_conflict');
+  expect(reconciliationOutcome({ledger_exists:false,ledger_equal:false,prior:m.expectedPriorState.expected,terminal:null},m)).toBe('not_applied');
+});
 test('hash/vector drift and all intermediate control aliases are rejected before a call',()=>{
   expect(()=>migrationEnvelope(Buffer.from(source+' '),migration,vector(source))).toThrow('DIGEST_MISMATCH');
   expect(()=>migrationEnvelope(Buffer.from(source),migration,['BEGIN'])).toThrow('VECTOR_MISMATCH');

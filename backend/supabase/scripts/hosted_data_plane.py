@@ -237,8 +237,13 @@ def pending_insert_payload(row: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "trace_id": row.get("trace_id"),
         "youtube_link": f"https://www.youtube.com/watch?v={video_id}",
+        "channel_name": row.get("channel_name"),
+        "recollect_version": row.get("recollect_version")
+        if isinstance(row.get("recollect_version"), Mapping)
+        else None,
         "status": "pending",
         "origin_name": row.get("origin_name"),
+        "reasoning_basis": row.get("reasoning_basis"),
         "naver_name": row.get("naver_name"),
         "google_name": row.get("google_name"),
         "categories": row.get("category") if isinstance(row.get("category"), list) else [],

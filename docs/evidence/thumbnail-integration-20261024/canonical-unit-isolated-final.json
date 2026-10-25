@@ -1,0 +1,213 @@
+{
+  "started": "2026-10-24T05:37:18.818Z",
+  "finished": "2026-10-24T05:44:41.876Z",
+  "exitCode": 0,
+  "errorCode": null,
+  "signal": null,
+  "timedOut": false,
+  "overflow": false,
+  "totals": [
+    {
+      "pass": 4126,
+      "skip": 4,
+      "fail": 0,
+      "assertions": 95210
+    },
+    {
+      "pass": 17,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 229
+    },
+    {
+      "pass": 7,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 43
+    },
+    {
+      "pass": 3,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 7
+    },
+    {
+      "pass": 5,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 519
+    },
+    {
+      "pass": 23,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 231
+    },
+    {
+      "pass": 6,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 107
+    },
+    {
+      "pass": 4,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 18
+    },
+    {
+      "pass": 3,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 13
+    },
+    {
+      "pass": 2,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 12
+    },
+    {
+      "pass": 63,
+      "skip": 8,
+      "fail": 0,
+      "assertions": 666
+    },
+    {
+      "pass": 13,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 73
+    },
+    {
+      "pass": 4,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 21
+    },
+    {
+      "pass": 7,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 9
+    },
+    {
+      "pass": 9,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 28
+    },
+    {
+      "pass": 10,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 126
+    },
+    {
+      "pass": 3,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 13
+    },
+    {
+      "pass": 17,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 133
+    },
+    {
+      "pass": 17,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 49
+    },
+    {
+      "pass": 6,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 166
+    },
+    {
+      "pass": 8,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 38
+    },
+    {
+      "pass": 1,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 9
+    },
+    {
+      "pass": 5,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 23
+    },
+    {
+      "pass": 16,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 36
+    },
+    {
+      "pass": 11,
+      "skip": 0,
+      "fail": 0,
+      "assertions": 81
+    }
+  ],
+  "failures": [],
+  "headBefore": "ee1a518d6017fc613749c613f4027a7ea0978896",
+  "headAfter": "a287916afe9f13cd2bae1fd0fcd1d6d145a30b57",
+  "sourceBefore": {
+    "apps/web/lib/admin/youtube-thumbnail-generator/chat-gemini-client.ts": "4037c9886365ebac0eee41a908aa564baa0c8f600f14fd17c01e35e1bd9d2889",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-chat-input.ts": "8bb424f7a39a84440590375c046cbf85011540eb072cd4758a31b047b523b3d4",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-image-input.ts": "e2e2b11c2ee622714890f924c439ce36ed997a7a0cc7b7e2ec42d322ac16f1e7",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-worker-client.ts": "d3b38c78cc9fbfde7ff4e9252952c88b7aa2b595dafd9e5b404c890aa54d0cd0",
+    "apps/web/lib/admin/youtube-thumbnail-generator/private-store.ts": "38fde8ca4468f3d4f4035bf71965a1f4b3f029bf3cb2f930c97126bba579fa45",
+    "apps/web/lib/admin/youtube-thumbnail-generator/queue-api.ts": "f902259fda8cdb56cdec06a2962bd38b7f21e57eb964e311c5110b9f551b14fb",
+    "apps/web/scripts/run-dependency-modernization-browser.mjs": "5f5ecebd6b4ad9298380f1c6bb066bf170a06cc542d2c8141a5813d8ea1b2240",
+    "apps/web/scripts/run-unit-tests.mjs": "b86fa86011eda5879378c86a7c3c017a412281d4948c91aa404bda12127514b7",
+    "apps/web/scripts/start-standalone.mjs": "25adfdfcc2e5f8514837a5ba0f2f7e914fe27c74501a1574338d391c2f7017c5",
+    "apps/web/scripts/sync-standalone-static.mjs": "a15d0b3d34d5a0c6e7fd3c6537c12a1a5d8edadc0e1e2797f89960ee8857bd1a",
+    "apps/web/tests-unit/admin-console-uiux-source.test.ts": "4dacea432d1b80e5440835fdc9b0cea8cc953477816627b0d2bafd48414a2c97",
+    "apps/web/tests-unit/admin-route-auth-contract.test.ts": "14775439b6f7d06f4d949638369b2555a1e79f4fda800e41d15c2450b20fc17f",
+    "apps/web/tests-unit/api-security-source.test.ts": "32052477b6edea87de037ebff96cdbdc33c7fe5c20905f3be95b4bd73521daf4",
+    "apps/web/tests-unit/dependency-modernization-server-compatibility.test.ts": "b88630b2dc5581ed71760cedec98c7737100a16635f2ad4fddd40242b3def1b3",
+    "apps/web/tests-unit/fixtures/thumbnail-private-storage-sdk.ts": "7ce498d248700a22c8400590a711014c0f509f53647a54b7668a43e5ea666b10",
+    "apps/web/tests-unit/fixtures/thumbnail-storage-immutability.ts": "d8030de625b5482fd0cb1016cbcdb5c2eb07e39eea6ff3fa3f2ee742134cb140",
+    "apps/web/tests-unit/standalone-static-source.test.ts": "9177fbc4ce7e467295ce2f9fe0047dca8ef887582884bff1a994b2a841a0bce2",
+    "apps/web/tests-unit/thumbnail-private-store.test.ts": "db52a1c4313c491455b14b299c7bd5d2cf1bab7041b19d7a84ca22a2d9352b71",
+    "apps/web/tests-unit/thumbnail-release-publish-recovery.test.ts": "ae44e1cd79c508f9589f0af8cffcd404c16668aeecd2d81d2d055c6da4c584b1",
+    "backend/supabase/tests/test_provider_budget_bridge_pg17.py": "7e30f01c59e5f1ecb5b86194dc98d918acc366001594fdf2d18a55b42c544388",
+    "backend/supabase/tests/test_thumbnail_gemini_queue_pg17.py": "1764ee367b418e961df6514196921fccf3e0a672b624b1a7d5196a6cce1efa02"
+  },
+  "sourceAfter": {
+    "apps/web/lib/admin/youtube-thumbnail-generator/chat-gemini-client.ts": "4037c9886365ebac0eee41a908aa564baa0c8f600f14fd17c01e35e1bd9d2889",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-chat-input.ts": "8bb424f7a39a84440590375c046cbf85011540eb072cd4758a31b047b523b3d4",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-image-input.ts": "e2e2b11c2ee622714890f924c439ce36ed997a7a0cc7b7e2ec42d322ac16f1e7",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-worker-client.ts": "d3b38c78cc9fbfde7ff4e9252952c88b7aa2b595dafd9e5b404c890aa54d0cd0",
+    "apps/web/lib/admin/youtube-thumbnail-generator/private-store.ts": "38fde8ca4468f3d4f4035bf71965a1f4b3f029bf3cb2f930c97126bba579fa45",
+    "apps/web/lib/admin/youtube-thumbnail-generator/queue-api.ts": "f902259fda8cdb56cdec06a2962bd38b7f21e57eb964e311c5110b9f551b14fb",
+    "apps/web/scripts/run-dependency-modernization-browser.mjs": "5f5ecebd6b4ad9298380f1c6bb066bf170a06cc542d2c8141a5813d8ea1b2240",
+    "apps/web/scripts/run-unit-tests.mjs": "b86fa86011eda5879378c86a7c3c017a412281d4948c91aa404bda12127514b7",
+    "apps/web/scripts/start-standalone.mjs": "25adfdfcc2e5f8514837a5ba0f2f7e914fe27c74501a1574338d391c2f7017c5",
+    "apps/web/scripts/sync-standalone-static.mjs": "a15d0b3d34d5a0c6e7fd3c6537c12a1a5d8edadc0e1e2797f89960ee8857bd1a",
+    "apps/web/tests-unit/admin-console-uiux-source.test.ts": "4dacea432d1b80e5440835fdc9b0cea8cc953477816627b0d2bafd48414a2c97",
+    "apps/web/tests-unit/admin-route-auth-contract.test.ts": "14775439b6f7d06f4d949638369b2555a1e79f4fda800e41d15c2450b20fc17f",
+    "apps/web/tests-unit/api-security-source.test.ts": "32052477b6edea87de037ebff96cdbdc33c7fe5c20905f3be95b4bd73521daf4",
+    "apps/web/tests-unit/dependency-modernization-server-compatibility.test.ts": "b88630b2dc5581ed71760cedec98c7737100a16635f2ad4fddd40242b3def1b3",
+    "apps/web/tests-unit/fixtures/thumbnail-private-storage-sdk.ts": "7ce498d248700a22c8400590a711014c0f509f53647a54b7668a43e5ea666b10",
+    "apps/web/tests-unit/fixtures/thumbnail-storage-immutability.ts": "d8030de625b5482fd0cb1016cbcdb5c2eb07e39eea6ff3fa3f2ee742134cb140",
+    "apps/web/tests-unit/standalone-static-source.test.ts": "9177fbc4ce7e467295ce2f9fe0047dca8ef887582884bff1a994b2a841a0bce2",
+    "apps/web/tests-unit/thumbnail-private-store.test.ts": "db52a1c4313c491455b14b299c7bd5d2cf1bab7041b19d7a84ca22a2d9352b71",
+    "apps/web/tests-unit/thumbnail-release-publish-recovery.test.ts": "ae44e1cd79c508f9589f0af8cffcd404c16668aeecd2d81d2d055c6da4c584b1",
+    "backend/supabase/tests/test_provider_budget_bridge_pg17.py": "7e30f01c59e5f1ecb5b86194dc98d918acc366001594fdf2d18a55b42c544388",
+    "backend/supabase/tests/test_thumbnail_gemini_queue_pg17.py": "1764ee367b418e961df6514196921fccf3e0a672b624b1a7d5196a6cce1efa02"
+  },
+  "sourceStable": true,
+  "rawLogsRetained": false,
+  "command": "Node24 scripts/run-unit-tests.mjs (canonical inventory; knowledge browser isolated unchanged)"
+}

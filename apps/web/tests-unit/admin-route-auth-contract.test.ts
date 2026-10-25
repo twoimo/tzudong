@@ -25,6 +25,58 @@ const delegatedProductionApiRoutes: ReadonlyArray<readonly [string, readonly str
   ['app/api/admin/storyboard/production/[id]/assets/[assetId]/route.ts', ['GET']],
 ];
 
+const thumbnailQueueDelegations: Record<string, Record<string, string>> = {
+  'chat/route.ts': { POST: 'chatLegacyPOST' },
+  'chat/jobs/route.ts': { GET: 'chatListGET', POST: 'chatListPOST' },
+  'chat/jobs/[jobId]/route.ts': { GET: 'chatJobGET', POST: 'chatJobPOST' },
+  'jobs/route.ts': { GET: 'listGET', POST: 'listPOST' },
+  'jobs/[jobId]/route.ts': { GET: 'jobGET', POST: 'jobPOST' },
+  'reference-candidates/route.ts': { POST: 'referenceCandidatesPOST' },
+  'worker/route.ts': { POST: 'workerPOST' },
+  'worker/references/route.ts': { GET: 'workerReferenceGET' },
+  'worker/images/route.ts': { POST: 'workerImagePOST' },
+  'worker/chat/route.ts': { GET: 'workerChatGET', POST: 'workerChatPOST' },
+};
+
+function assertThumbnailDelegation(file: string, source: string) {
+  const prefix = 'app/api/admin/youtube-thumbnail-generator/';
+  if (!file.startsWith(prefix)) return false;
+  const path = file.slice(prefix.length);
+  if (path === 'route.ts') {
+    expect(exportedHandlerBodies(source)).toHaveLength(0);
+    expect(source.match(/export const (?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s*=/g)).toHaveLength(2);
+    expect(source).toContain("from '@/lib/admin/youtube-thumbnail-generator/retired-api'");
+    for (const method of ['GET', 'POST']) expect(source).toContain(`export const ${method} = retiredThumbnailGenerationApi.${method};`);
+    const retired = appSource('lib/admin/youtube-thumbnail-generator/retired-api.ts');
+    expect(retired).toContain('authorize: typeof requireAdmin = requireAdmin');
+    expect(retired.match(/const auth = await authorize\(\); if \(!auth.ok\) return auth.response;/g)).toHaveLength(2);
+    expect(retired).toContain('status: 410');
+    expect(retired).not.toMatch(/createSupabaseServiceRoleClient|fetch\s*\(|request\.json\s*\(/);
+    return true;
+  }
+  const handlers = thumbnailQueueDelegations[path];
+  if (!handlers) return false;
+  expect(exportedHandlerBodies(source)).toHaveLength(0);
+  expect(source.match(/export const (?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s*=/g)).toHaveLength(Object.keys(handlers).length);
+  expect(source).toContain("from '@/lib/admin/youtube-thumbnail-generator/queue-api'");
+  const exports = [...source.matchAll(/export const (GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) = thumbnailQueueApi\.([A-Za-z]+);/g)];
+  expect(Object.fromEntries(exports.map((match) => [match[1], match[2]]))).toEqual(handlers);
+  const api = appSource('lib/admin/youtube-thumbnail-generator/queue-api.ts');
+  expect(api).toContain('const authorize = options.authorize ?? requireAdmin;');
+  expect(api).toMatch(/const auth = await authorize\(\);\s*if \(!auth.ok\) return new Response\(auth.response.body/);
+  expect(api.indexOf('const auth = await authorize()')).toBeLessThan(api.indexOf('return await work(owner)'));
+  expect(api).toContain("work(await store.authenticate(request.headers.get('authorization')))");
+  for (const member of Object.values(handlers)) {
+    const declaration = new RegExp(`^\\s+${member}: \\(request: Request(?:, context: JobContext)?\\) => (admin|worker)\\(request,`, 'm').exec(api);
+    expect(declaration, `${file} must delegate ${member} behind its authentication gate`).not.toBeNull();
+    // Outbound workers have a scoped token, owner, model and fence contract.
+    // Browser APIs continue to use the default requireAdmin-bound gate.
+    expect(declaration![1]).toBe(path.startsWith('worker/') ? 'worker' : 'admin');
+  }
+  expect(source).not.toMatch(/createSupabaseServiceRoleClient|fetch\s*\(|request\.(?:json|formData)\s*\(/);
+  return true;
+}
+
 const delegatedOperatingReadbackRoute =
   'app/api/admin/operating-readback/record-mutations-hold/route.ts';
 const delegatedOperatingReadbackModule =
@@ -228,6 +280,8 @@ describe('admin route auth source contract', () => {
       const source = routeSource(file);
       const isStoryboardRagRoute = storyboardRagRoutePaths.has(file);
 
+      if (assertThumbnailDelegation(file, source)) continue;
+
       if (file === delegatedOperatingReadbackRoute) {
         const moduleSource = appSource(delegatedOperatingReadbackModule);
         const moduleAuthIndex = firstCallIndex(moduleSource, 'requireAdminImpl');
@@ -337,6 +391,7 @@ describe('admin route auth source contract', () => {
 
     for (const file of listAdminRouteFiles()) {
       const source = routeSource(file);
+      if (assertThumbnailDelegation(file, source)) continue;
       if (/export const (?:GET|POST) = retiredStoryboardApi;/.test(source)) {
         expect(source).toContain("@/lib/admin/storyboard/retired-api");
         const retired = appSource('lib/admin/storyboard/retired-api.ts');

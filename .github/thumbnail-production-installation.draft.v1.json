@@ -1,0 +1,377 @@
+{
+  "schema": "thumbnail-production-installation-draft-v1",
+  "status": "DRAFT_UNAPPLIED",
+  "executionEnabled": false,
+  "sourceBase": "818b615a39dbe318eed3c23f395e6cbc45591b09",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "scope": "One new forward migration for the durable thumbnail queue, exact G014 extension and private bucket. No existing applied migration or fixed release manifest is changed.",
+  "migration": {
+    "candidatePath": "backend/supabase/candidates/20261024071000_thumbnail_production_install.sql",
+    "path": "backend/supabase/migrations/20261024071000_thumbnail_production_install.sql",
+    "sha256": "8019c4e7788cf6706094937a5d4111958201793192d918817e824791db471ac2",
+    "bytes": 64927,
+    "statementCount": 43,
+    "originalVectorSha256": "270ca9e0757641543f1d992ca526d2d9cb39324b4ebeb6b195a0b9f59226294e",
+    "expectedPriorState": {
+      "query": "SELECT jsonb_build_object(\n  'caller',current_user,\n  'nonSuperuser',pg_catalog.current_setting('is_superuser')='off',\n  'serverMajor',pg_catalog.current_setting('server_version_num')::integer/10000,\n  'ledgerCount',(SELECT count(*) FROM supabase_migrations.schema_migrations),\n  'ledgerPrefixCount',(SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version<>'20261024071000'),\n  'ledgerPrefixLatest',(SELECT max(version COLLATE \"C\") FROM supabase_migrations.schema_migrations WHERE version<>'20261024071000'),\n  'ledgerPrefixDigest',(SELECT pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(jsonb_agg(jsonb_build_array(version,name,statements) ORDER BY version COLLATE \"C\",name COLLATE \"C\")::text,'UTF8')),'hex') FROM supabase_migrations.schema_migrations WHERE version<>'20261024071000'),\n  'ledgerTargetPresent',EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20261024071000'),\n  'ownerBootstrap',NOT pg_catalog.pg_has_role('postgres','privacy_workflow_owner','USAGE') AND NOT pg_catalog.pg_has_role('postgres','privacy_workflow_owner','SET')\n    AND (SELECT count(*)=1 AND bool_and(grantor='supabase_admin'::regrole AND admin_option AND NOT inherit_option AND NOT set_option)\n      FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole AND member='postgres'::regrole),\n  'assertions',(SELECT COALESCE(jsonb_agg(jsonb_build_array(p.proname::text,pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc,'UTF8')),'hex'),p.prosecdef,pg_catalog.pg_get_userbyid(p.proowner)::text,p.proconfig,p.proacl::text) ORDER BY p.proname::text COLLATE \"C\"),'[]'::jsonb)\n    FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='privacy_retention'\n    AND p.proname IN ('assert_g014_workflow_owner_contract','assert_g014_public_rpc_allowlist','assert_g014_definer_contract','assert_g014_catalog_contract')),\n  'registryCount',(SELECT count(*) FROM privacy_retention.g014_public_rpc_allowlist),\n  'oldRegistryDigest',(SELECT pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(jsonb_agg(jsonb_build_array(function_schema,function_name,identity_arguments,grantee,source_signature)\n    ORDER BY function_schema::text COLLATE \"C\",function_name::text COLLATE \"C\",identity_arguments COLLATE \"C\",grantee::text COLLATE \"C\",source_signature COLLATE \"C\")::text,'UTF8')),'hex')\n    FROM privacy_retention.g014_public_rpc_allowlist WHERE NOT(source_signature=ANY(ARRAY['public.thumbnail_production_auth_worker(text)','public.thumbnail_production_admin(uuid,text,uuid,uuid,text,text,jsonb)','public.thumbnail_production_worker(text,text,uuid,uuid,bigint,text,jsonb)']::text[]))),\n  'registryNewRows',(SELECT COALESCE(jsonb_agg(jsonb_build_array(function_schema,function_name,identity_arguments,grantee,source_signature) ORDER BY source_signature COLLATE \"C\"),'[]'::jsonb)\n    FROM privacy_retention.g014_public_rpc_allowlist WHERE source_signature=ANY(ARRAY['public.thumbnail_production_auth_worker(text)','public.thumbnail_production_admin(uuid,text,uuid,uuid,text,text,jsonb)','public.thumbnail_production_worker(text,text,uuid,uuid,bigint,text,jsonb)']::text[])),\n  'queueSchema',EXISTS(SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname='thumbnail_control' AND nspowner='postgres'::regrole),\n  'queueTables',(SELECT COALESCE(jsonb_agg(jsonb_build_array(c.relname::text,pg_catalog.pg_get_userbyid(c.relowner)::text,c.relrowsecurity,c.relforcerowsecurity) ORDER BY c.relname::text COLLATE \"C\"),'[]'::jsonb)\n    FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname IN ('admin_thumbnail_workers','admin_thumbnail_jobs','admin_thumbnail_events') AND c.relkind='r'),\n  'queueFunctions',(SELECT COALESCE(jsonb_agg(jsonb_build_array(n.nspname::text,p.proname::text,pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc,'UTF8')),'hex'),l.lanname::text,p.prosecdef,pg_catalog.pg_get_userbyid(p.proowner)::text,p.proconfig,\n     pg_catalog.has_function_privilege('anon',p.oid,'EXECUTE'),pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE'),pg_catalog.has_function_privilege('service_role',p.oid,'EXECUTE'),pg_catalog.has_function_privilege('privacy_workflow_owner',p.oid,'EXECUTE'),\n     NOT EXISTS(SELECT 1 FROM pg_catalog.aclexplode(COALESCE(p.proacl,pg_catalog.acldefault('f',p.proowner))) a WHERE a.grantee NOT IN(p.proowner,'service_role'::regrole) OR a.is_grantable)) ORDER BY n.nspname::text COLLATE \"C\",p.proname::text COLLATE \"C\"),'[]'::jsonb)\n    FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace JOIN pg_catalog.pg_language l ON l.oid=p.prolang\n    WHERE n.nspname='thumbnail_control' OR (n.nspname='public' AND p.proname IN ('thumbnail_production_auth_worker','thumbnail_production_admin','thumbnail_production_worker'))),\n  'bucket',(SELECT COALESCE(jsonb_agg(jsonb_build_array(id,name,owner,owner_id,public,avif_autodetection,file_size_limit,allowed_mime_types,type::text,versioning_status,lifecycle_configuration,lifecycle_configuration_generation) ORDER BY id COLLATE \"C\"),'[]'::jsonb) FROM storage.buckets WHERE id='youtube-thumbnail-jobs' OR name='youtube-thumbnail-jobs'),\n  'storageManagedBoundary',(SELECT count(*)=2 AND bool_and(relowner='supabase_storage_admin'::regrole AND relrowsecurity AND NOT relforcerowsecurity AND relkind='r') FROM pg_catalog.pg_class WHERE oid IN ('storage.buckets'::regclass,'storage.objects'::regclass)),\n  'storagePolicyContract',((SELECT count(*) FROM pg_catalog.pg_policy WHERE polrelid IN ('storage.buckets'::regclass,'storage.objects'::regclass))=10\n    AND (SELECT bool_and(p.oid IS NOT NULL AND p.polcmd::text=e.cmd AND p.polpermissive=e.permissive\n      AND ARRAY(SELECT CASE WHEN r=0 THEN 'PUBLIC'::text ELSE pg_catalog.pg_get_userbyid(r)::text END FROM unnest(p.polroles) r ORDER BY r)=e.roles\n      AND (pg_catalog.pg_get_expr(p.polqual,p.polrelid) IS NOT DISTINCT FROM e.qual_visible OR pg_catalog.pg_get_expr(p.polqual,p.polrelid) IS NOT DISTINCT FROM e.qual_qualified)\n      AND (pg_catalog.pg_get_expr(p.polwithcheck,p.polrelid) IS NOT DISTINCT FROM e.check_visible OR pg_catalog.pg_get_expr(p.polwithcheck,p.polrelid) IS NOT DISTINCT FROM e.check_qualified))\n      FROM (VALUES ('objects','Admin delete access','d',true,ARRAY['PUBLIC']::text[],'((bucket_id = ''ad-banner-images''::text) AND is_user_admin(auth.uid()))','((bucket_id = ''ad-banner-images''::text) AND public.is_user_admin(auth.uid()))',NULL::text,NULL::text),\n        ('objects','Admin upload access','a',true,ARRAY['PUBLIC']::text[],NULL::text,NULL::text,'((bucket_id = ''ad-banner-images''::text) AND is_user_admin(auth.uid()))','((bucket_id = ''ad-banner-images''::text) AND public.is_user_admin(auth.uid()))'),\n        ('objects','Anyone can view review photos','r',true,ARRAY['PUBLIC']::text[],'(bucket_id = ''review-photos''::text)','(bucket_id = ''review-photos''::text)',NULL::text,NULL::text),\n        ('objects','Authenticated users can upload review photos','a',true,ARRAY['authenticated']::text[],NULL::text,NULL::text,'(bucket_id = ''review-photos''::text)','(bucket_id = ''review-photos''::text)'),\n        ('objects','Public read access','r',true,ARRAY['PUBLIC']::text[],'(bucket_id = ''ad-banner-images''::text)','(bucket_id = ''ad-banner-images''::text)',NULL::text,NULL::text),\n        ('objects','Public read access for profile-avatars','r',true,ARRAY['PUBLIC']::text[],'(bucket_id = ''profile-avatars''::text)','(bucket_id = ''profile-avatars''::text)',NULL::text,NULL::text),\n        ('objects','Users can delete own avatar','d',true,ARRAY['PUBLIC']::text[],'((bucket_id = ''profile-avatars''::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))','((bucket_id = ''profile-avatars''::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))',NULL::text,NULL::text),\n        ('objects','Users can delete own review photos','d',true,ARRAY['authenticated']::text[],'((bucket_id = ''review-photos''::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1]))','((bucket_id = ''review-photos''::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1]))',NULL::text,NULL::text),\n        ('objects','Users can update own review photos','w',true,ARRAY['authenticated']::text[],'((bucket_id = ''review-photos''::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1]))','((bucket_id = ''review-photos''::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1]))',NULL::text,NULL::text),\n        ('objects','Users can upload own avatar','a',true,ARRAY['PUBLIC']::text[],NULL::text,NULL::text,'((bucket_id = ''profile-avatars''::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))','((bucket_id = ''profile-avatars''::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))')) e(relation,name,cmd,permissive,roles,qual_visible,qual_qualified,check_visible,check_qualified)\n      LEFT JOIN pg_catalog.pg_class c ON c.oid=pg_catalog.to_regclass('storage.'||e.relation)\n      LEFT JOIN pg_catalog.pg_policy p ON p.polrelid=c.oid AND p.polname::text=e.name)),\n  'browserRoleBoundary',(SELECT count(*)=2 AND bool_and(NOT rolsuper AND NOT rolbypassrls AND NOT pg_catalog.pg_has_role(oid,'supabase_storage_admin'::regrole,'USAGE') AND NOT pg_catalog.pg_has_role(oid,'supabase_storage_admin'::regrole,'SET')) FROM pg_catalog.pg_roles WHERE rolname IN ('anon','authenticated')),\n  'storageServerBoundary',pg_catalog.has_schema_privilege('service_role','storage','USAGE') AND pg_catalog.has_table_privilege('service_role','storage.objects','SELECT') AND pg_catalog.has_table_privilege('service_role','storage.objects','INSERT') AND EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='service_role' AND rolbypassrls),\n  'storageLockCapability',pg_catalog.has_table_privilege(current_user,'storage.buckets','MAINTAIN,UPDATE,DELETE,TRUNCATE') AND pg_catalog.has_table_privilege(current_user,'storage.objects','MAINTAIN,UPDATE,DELETE,TRUNCATE'),\n  'temporaryObjectsAbsent',pg_catalog.to_regclass('pg_temp.thumbnail_install_before') IS NULL AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc WHERE pronamespace=pg_catalog.pg_my_temp_schema() AND proname='thumbnail_install_g014_check')\n) AS readback;",
+      "expected": {
+        "caller": "postgres",
+        "nonSuperuser": true,
+        "serverMajor": 17,
+        "ledgerCount": 89,
+        "ledgerPrefixCount": 89,
+        "ledgerPrefixLatest": "20261017160000",
+        "ledgerPrefixDigest": "7acfd9c3887fa67540cc0a9ed3487900cbccc6678cb69c29218bf5216e7aa4ec",
+        "ledgerTargetPresent": false,
+        "ownerBootstrap": true,
+        "assertions": [
+          [
+            "assert_g014_catalog_contract",
+            "50948ddce54dbba9497978964bebc535c27ebe98fb0f46bf05e2ec17ab0b9e01",
+            true,
+            "privacy_workflow_owner",
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}"
+          ],
+          [
+            "assert_g014_definer_contract",
+            "b9e2f7d812783deee6c91d27d22d6c2019be9aa04e4f1221cc7482567775354a",
+            true,
+            "privacy_workflow_owner",
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}"
+          ],
+          [
+            "assert_g014_public_rpc_allowlist",
+            "f23203a0a2366eca16b30b256729e859efc556952df8cb75485924153e1188ef",
+            true,
+            "privacy_workflow_owner",
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}"
+          ],
+          [
+            "assert_g014_workflow_owner_contract",
+            "345aed9acb1da06262740ef06d81e51855a44c7470aa8b431a23e6fa629aab1d",
+            false,
+            "privacy_workflow_owner",
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}"
+          ]
+        ],
+        "registryCount": 137,
+        "oldRegistryDigest": "e18337a71017c051d5e8dd1624806010a07d756aa11b2ffb1338005421ee2c16",
+        "registryNewRows": [],
+        "queueSchema": false,
+        "queueTables": [],
+        "queueFunctions": [],
+        "bucket": [],
+        "storageManagedBoundary": true,
+        "storagePolicyContract": true,
+        "browserRoleBoundary": true,
+        "storageServerBoundary": true,
+        "storageLockCapability": true,
+        "temporaryObjectsAbsent": true
+      }
+    },
+    "terminalReadback": {
+      "query": "SELECT jsonb_build_object(\n  'caller',current_user,\n  'nonSuperuser',pg_catalog.current_setting('is_superuser')='off',\n  'serverMajor',pg_catalog.current_setting('server_version_num')::integer/10000,\n  'ledgerCount',(SELECT count(*) FROM supabase_migrations.schema_migrations),\n  'ledgerPrefixCount',(SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version<>'20261024071000'),\n  'ledgerPrefixLatest',(SELECT max(version COLLATE \"C\") FROM supabase_migrations.schema_migrations WHERE version<>'20261024071000'),\n  'ledgerPrefixDigest',(SELECT pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(jsonb_agg(jsonb_build_array(version,name,statements) ORDER BY version COLLATE \"C\",name COLLATE \"C\")::text,'UTF8')),'hex') FROM supabase_migrations.schema_migrations WHERE version<>'20261024071000'),\n  'ledgerTargetPresent',EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20261024071000'),\n  'ownerBootstrap',NOT pg_catalog.pg_has_role('postgres','privacy_workflow_owner','USAGE') AND NOT pg_catalog.pg_has_role('postgres','privacy_workflow_owner','SET')\n    AND (SELECT count(*)=1 AND bool_and(grantor='supabase_admin'::regrole AND admin_option AND NOT inherit_option AND NOT set_option)\n      FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole AND member='postgres'::regrole),\n  'assertions',(SELECT COALESCE(jsonb_agg(jsonb_build_array(p.proname::text,pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc,'UTF8')),'hex'),p.prosecdef,pg_catalog.pg_get_userbyid(p.proowner)::text,p.proconfig,p.proacl::text) ORDER BY p.proname::text COLLATE \"C\"),'[]'::jsonb)\n    FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='privacy_retention'\n    AND p.proname IN ('assert_g014_workflow_owner_contract','assert_g014_public_rpc_allowlist','assert_g014_definer_contract','assert_g014_catalog_contract')),\n  'registryCount',(SELECT count(*) FROM privacy_retention.g014_public_rpc_allowlist),\n  'oldRegistryDigest',(SELECT pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(jsonb_agg(jsonb_build_array(function_schema,function_name,identity_arguments,grantee,source_signature)\n    ORDER BY function_schema::text COLLATE \"C\",function_name::text COLLATE \"C\",identity_arguments COLLATE \"C\",grantee::text COLLATE \"C\",source_signature COLLATE \"C\")::text,'UTF8')),'hex')\n    FROM privacy_retention.g014_public_rpc_allowlist WHERE NOT(source_signature=ANY(ARRAY['public.thumbnail_production_auth_worker(text)','public.thumbnail_production_admin(uuid,text,uuid,uuid,text,text,jsonb)','public.thumbnail_production_worker(text,text,uuid,uuid,bigint,text,jsonb)']::text[]))),\n  'registryNewRows',(SELECT COALESCE(jsonb_agg(jsonb_build_array(function_schema,function_name,identity_arguments,grantee,source_signature) ORDER BY source_signature COLLATE \"C\"),'[]'::jsonb)\n    FROM privacy_retention.g014_public_rpc_allowlist WHERE source_signature=ANY(ARRAY['public.thumbnail_production_auth_worker(text)','public.thumbnail_production_admin(uuid,text,uuid,uuid,text,text,jsonb)','public.thumbnail_production_worker(text,text,uuid,uuid,bigint,text,jsonb)']::text[])),\n  'queueSchema',EXISTS(SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname='thumbnail_control' AND nspowner='postgres'::regrole),\n  'queueTables',(SELECT COALESCE(jsonb_agg(jsonb_build_array(c.relname::text,pg_catalog.pg_get_userbyid(c.relowner)::text,c.relrowsecurity,c.relforcerowsecurity) ORDER BY c.relname::text COLLATE \"C\"),'[]'::jsonb)\n    FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname IN ('admin_thumbnail_workers','admin_thumbnail_jobs','admin_thumbnail_events') AND c.relkind='r'),\n  'queueFunctions',(SELECT COALESCE(jsonb_agg(jsonb_build_array(n.nspname::text,p.proname::text,pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc,'UTF8')),'hex'),l.lanname::text,p.prosecdef,pg_catalog.pg_get_userbyid(p.proowner)::text,p.proconfig,\n     pg_catalog.has_function_privilege('anon',p.oid,'EXECUTE'),pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE'),pg_catalog.has_function_privilege('service_role',p.oid,'EXECUTE'),pg_catalog.has_function_privilege('privacy_workflow_owner',p.oid,'EXECUTE'),\n     NOT EXISTS(SELECT 1 FROM pg_catalog.aclexplode(COALESCE(p.proacl,pg_catalog.acldefault('f',p.proowner))) a WHERE a.grantee NOT IN(p.proowner,'service_role'::regrole) OR a.is_grantable)) ORDER BY n.nspname::text COLLATE \"C\",p.proname::text COLLATE \"C\"),'[]'::jsonb)\n    FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace JOIN pg_catalog.pg_language l ON l.oid=p.prolang\n    WHERE n.nspname='thumbnail_control' OR (n.nspname='public' AND p.proname IN ('thumbnail_production_auth_worker','thumbnail_production_admin','thumbnail_production_worker'))),\n  'bucket',(SELECT COALESCE(jsonb_agg(jsonb_build_array(id,name,owner,owner_id,public,avif_autodetection,file_size_limit,allowed_mime_types,type::text,versioning_status,lifecycle_configuration,lifecycle_configuration_generation) ORDER BY id COLLATE \"C\"),'[]'::jsonb) FROM storage.buckets WHERE id='youtube-thumbnail-jobs' OR name='youtube-thumbnail-jobs'),\n  'storageManagedBoundary',(SELECT count(*)=2 AND bool_and(relowner='supabase_storage_admin'::regrole AND relrowsecurity AND NOT relforcerowsecurity AND relkind='r') FROM pg_catalog.pg_class WHERE oid IN ('storage.buckets'::regclass,'storage.objects'::regclass)),\n  'storagePolicyContract',((SELECT count(*) FROM pg_catalog.pg_policy WHERE polrelid IN ('storage.buckets'::regclass,'storage.objects'::regclass))=10\n    AND (SELECT bool_and(p.oid IS NOT NULL AND p.polcmd::text=e.cmd AND p.polpermissive=e.permissive\n      AND ARRAY(SELECT CASE WHEN r=0 THEN 'PUBLIC'::text ELSE pg_catalog.pg_get_userbyid(r)::text END FROM unnest(p.polroles) r ORDER BY r)=e.roles\n      AND (pg_catalog.pg_get_expr(p.polqual,p.polrelid) IS NOT DISTINCT FROM e.qual_visible OR pg_catalog.pg_get_expr(p.polqual,p.polrelid) IS NOT DISTINCT FROM e.qual_qualified)\n      AND (pg_catalog.pg_get_expr(p.polwithcheck,p.polrelid) IS NOT DISTINCT FROM e.check_visible OR pg_catalog.pg_get_expr(p.polwithcheck,p.polrelid) IS NOT DISTINCT FROM e.check_qualified))\n      FROM (VALUES ('objects','Admin delete access','d',true,ARRAY['PUBLIC']::text[],'((bucket_id = ''ad-banner-images''::text) AND is_user_admin(auth.uid()))','((bucket_id = ''ad-banner-images''::text) AND public.is_user_admin(auth.uid()))',NULL::text,NULL::text),\n        ('objects','Admin upload access','a',true,ARRAY['PUBLIC']::text[],NULL::text,NULL::text,'((bucket_id = ''ad-banner-images''::text) AND is_user_admin(auth.uid()))','((bucket_id = ''ad-banner-images''::text) AND public.is_user_admin(auth.uid()))'),\n        ('objects','Anyone can view review photos','r',true,ARRAY['PUBLIC']::text[],'(bucket_id = ''review-photos''::text)','(bucket_id = ''review-photos''::text)',NULL::text,NULL::text),\n        ('objects','Authenticated users can upload review photos','a',true,ARRAY['authenticated']::text[],NULL::text,NULL::text,'(bucket_id = ''review-photos''::text)','(bucket_id = ''review-photos''::text)'),\n        ('objects','Public read access','r',true,ARRAY['PUBLIC']::text[],'(bucket_id = ''ad-banner-images''::text)','(bucket_id = ''ad-banner-images''::text)',NULL::text,NULL::text),\n        ('objects','Public read access for profile-avatars','r',true,ARRAY['PUBLIC']::text[],'(bucket_id = ''profile-avatars''::text)','(bucket_id = ''profile-avatars''::text)',NULL::text,NULL::text),\n        ('objects','Users can delete own avatar','d',true,ARRAY['PUBLIC']::text[],'((bucket_id = ''profile-avatars''::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))','((bucket_id = ''profile-avatars''::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))',NULL::text,NULL::text),\n        ('objects','Users can delete own review photos','d',true,ARRAY['authenticated']::text[],'((bucket_id = ''review-photos''::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1]))','((bucket_id = ''review-photos''::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1]))',NULL::text,NULL::text),\n        ('objects','Users can update own review photos','w',true,ARRAY['authenticated']::text[],'((bucket_id = ''review-photos''::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1]))','((bucket_id = ''review-photos''::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1]))',NULL::text,NULL::text),\n        ('objects','Users can upload own avatar','a',true,ARRAY['PUBLIC']::text[],NULL::text,NULL::text,'((bucket_id = ''profile-avatars''::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))','((bucket_id = ''profile-avatars''::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))')) e(relation,name,cmd,permissive,roles,qual_visible,qual_qualified,check_visible,check_qualified)\n      LEFT JOIN pg_catalog.pg_class c ON c.oid=pg_catalog.to_regclass('storage.'||e.relation)\n      LEFT JOIN pg_catalog.pg_policy p ON p.polrelid=c.oid AND p.polname::text=e.name)),\n  'browserRoleBoundary',(SELECT count(*)=2 AND bool_and(NOT rolsuper AND NOT rolbypassrls AND NOT pg_catalog.pg_has_role(oid,'supabase_storage_admin'::regrole,'USAGE') AND NOT pg_catalog.pg_has_role(oid,'supabase_storage_admin'::regrole,'SET')) FROM pg_catalog.pg_roles WHERE rolname IN ('anon','authenticated')),\n  'storageServerBoundary',pg_catalog.has_schema_privilege('service_role','storage','USAGE') AND pg_catalog.has_table_privilege('service_role','storage.objects','SELECT') AND pg_catalog.has_table_privilege('service_role','storage.objects','INSERT') AND EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='service_role' AND rolbypassrls),\n  'storageLockCapability',pg_catalog.has_table_privilege(current_user,'storage.buckets','MAINTAIN,UPDATE,DELETE,TRUNCATE') AND pg_catalog.has_table_privilege(current_user,'storage.objects','MAINTAIN,UPDATE,DELETE,TRUNCATE'),\n  'temporaryObjectsAbsent',pg_catalog.to_regclass('pg_temp.thumbnail_install_before') IS NULL AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc WHERE pronamespace=pg_catalog.pg_my_temp_schema() AND proname='thumbnail_install_g014_check')\n) AS readback;",
+      "expected": {
+        "caller": "postgres",
+        "nonSuperuser": true,
+        "serverMajor": 17,
+        "ledgerCount": 90,
+        "ledgerPrefixCount": 89,
+        "ledgerPrefixLatest": "20261017160000",
+        "ledgerPrefixDigest": "7acfd9c3887fa67540cc0a9ed3487900cbccc6678cb69c29218bf5216e7aa4ec",
+        "ledgerTargetPresent": true,
+        "ownerBootstrap": true,
+        "assertions": [
+          [
+            "assert_g014_catalog_contract",
+            "5c5971a5578e09db25a41e88474f1da15acfbd658571ba28f29e8c226e4d1883",
+            true,
+            "privacy_workflow_owner",
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}"
+          ],
+          [
+            "assert_g014_definer_contract",
+            "bb8dc8d2e4020f70b2332cbdf6acf465a97cbc4d582f9f14415330247ae34131",
+            true,
+            "privacy_workflow_owner",
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}"
+          ],
+          [
+            "assert_g014_public_rpc_allowlist",
+            "f23203a0a2366eca16b30b256729e859efc556952df8cb75485924153e1188ef",
+            true,
+            "privacy_workflow_owner",
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}"
+          ],
+          [
+            "assert_g014_workflow_owner_contract",
+            "345aed9acb1da06262740ef06d81e51855a44c7470aa8b431a23e6fa629aab1d",
+            false,
+            "privacy_workflow_owner",
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}"
+          ]
+        ],
+        "registryCount": 140,
+        "oldRegistryDigest": "e18337a71017c051d5e8dd1624806010a07d756aa11b2ffb1338005421ee2c16",
+        "registryNewRows": [
+          [
+            "public",
+            "thumbnail_production_admin",
+            "2950 25 2950 2950 25 25 3802",
+            "service_role",
+            "public.thumbnail_production_admin(uuid,text,uuid,uuid,text,text,jsonb)"
+          ],
+          [
+            "public",
+            "thumbnail_production_auth_worker",
+            "25",
+            "service_role",
+            "public.thumbnail_production_auth_worker(text)"
+          ],
+          [
+            "public",
+            "thumbnail_production_worker",
+            "25 25 2950 2950 20 25 3802",
+            "service_role",
+            "public.thumbnail_production_worker(text,text,uuid,uuid,bigint,text,jsonb)"
+          ]
+        ],
+        "queueSchema": true,
+        "queueTables": [
+          [
+            "admin_thumbnail_events",
+            "postgres",
+            true,
+            true
+          ],
+          [
+            "admin_thumbnail_jobs",
+            "postgres",
+            true,
+            true
+          ],
+          [
+            "admin_thumbnail_workers",
+            "postgres",
+            true,
+            true
+          ]
+        ],
+        "queueFunctions": [
+          [
+            "public",
+            "thumbnail_production_admin",
+            "54cedae0c0196b81f512294745658a1467b055448565c4942947f88a56fe87db",
+            "plpgsql",
+            false,
+            "postgres",
+            [
+              "search_path=\"\""
+            ],
+            false,
+            false,
+            true,
+            false,
+            true
+          ],
+          [
+            "public",
+            "thumbnail_production_auth_worker",
+            "7f653bfab4f42410d3aee41128fe9f87ff0f139b1a78509633b39f70e73227c3",
+            "plpgsql",
+            false,
+            "postgres",
+            [
+              "search_path=\"\""
+            ],
+            false,
+            false,
+            true,
+            false,
+            true
+          ],
+          [
+            "public",
+            "thumbnail_production_worker",
+            "911c5d0b9aff9281dbc96b3719c62a011fe8a93b643604ddb112ad0ad5ce4e6f",
+            "plpgsql",
+            false,
+            "postgres",
+            [
+              "search_path=\"\""
+            ],
+            false,
+            false,
+            true,
+            false,
+            true
+          ],
+          [
+            "thumbnail_control",
+            "job_json",
+            "8e56f1303726235b32795b78c149e6234de8c1ef6728d3349d93888dd84301e8",
+            "sql",
+            false,
+            "postgres",
+            [
+              "search_path=\"\""
+            ],
+            false,
+            false,
+            true,
+            false,
+            true
+          ],
+          [
+            "thumbnail_control",
+            "preserve_input",
+            "f53b363434acc912eebebee634c42c09ea3bf79e1820a1c4d9afbc55db248dd1",
+            "plpgsql",
+            false,
+            "postgres",
+            [
+              "search_path=\"\""
+            ],
+            false,
+            false,
+            false,
+            false,
+            true
+          ],
+          [
+            "thumbnail_control",
+            "valid_input",
+            "911a7323ef11a10b985f5e190c7dcf82be58c1499dfdddbba6bfb86215bfa8bc",
+            "plpgsql",
+            false,
+            "postgres",
+            [
+              "search_path=\"\""
+            ],
+            false,
+            false,
+            true,
+            false,
+            true
+          ],
+          [
+            "thumbnail_control",
+            "valid_result",
+            "6be862e13fd6eb8efa7f06fedf77385749a24545de052977a9205ae47966d6f5",
+            "plpgsql",
+            false,
+            "postgres",
+            [
+              "search_path=\"\""
+            ],
+            false,
+            false,
+            true,
+            false,
+            true
+          ]
+        ],
+        "bucket": [
+          [
+            "youtube-thumbnail-jobs",
+            "youtube-thumbnail-jobs",
+            null,
+            null,
+            false,
+            false,
+            12582912,
+            [
+              "image/png",
+              "image/jpeg",
+              "image/webp",
+              "application/json"
+            ],
+            "STANDARD",
+            "DISABLED",
+            null,
+            null
+          ]
+        ],
+        "storageManagedBoundary": true,
+        "storagePolicyContract": true,
+        "browserRoleBoundary": true,
+        "storageServerBoundary": true,
+        "storageLockCapability": true,
+        "temporaryObjectsAbsent": true
+      }
+    }
+  },
+  "components": [
+    {
+      "path": "backend/supabase/candidates/20261023_thumbnail_gemini_queue.sql",
+      "sha256": "24fbdb8d1c99b0666de4b4f5c1b33896f6c7fa4ea20af4ad6ebd491722d4945a",
+      "bytes": 30397
+    },
+    {
+      "path": "backend/supabase/candidates/20261024_thumbnail_g014_registration.sql",
+      "sha256": "c61ceaa8fb071a1cb59f9e85cfd931ed1b4075b5be825cb96f794cec5379716a",
+      "bytes": 16406
+    },
+    {
+      "path": "backend/supabase/tests/fixtures/thumbnail-g014-hosted-preimage-20261024.json",
+      "sha256": "3a46e6ddc2417de05faabf923d2924f8e129f8daeaafae24cd7ceedbeac63540",
+      "bytes": 79893
+    },
+    {
+      "path": "backend/supabase/tests/fixtures/thumbnail-install-hosted-storage-20261024.json",
+      "sha256": "00072e1f2ecb6807a3ea5379a3b3d2472893b096a1b6a96cc9744408f6f9e369",
+      "bytes": 6878
+    },
+    {
+      "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+      "sha256": "c67bdff4c63b1bf1b4a157863b3eb5253b5973a8fb54b7fd49351270787bed26",
+      "bytes": 15819
+    },
+    {
+      "path": "backend/supabase/scripts/g037_supabase_statement_vector.mjs",
+      "sha256": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd",
+      "bytes": 7626
+    }
+  ],
+  "executionContract": {
+    "compiler": "apps/web/scripts/supabase-migration-transaction.mjs",
+    "caller": "apps/web/scripts/apply-supabase-migration.mjs",
+    "outerTransaction": "One caller-owned transaction; no internal transaction control. Exclusive ledger lock and unchanged 89-row prefix, exact source vector insert and terminal readback before commit.",
+    "ownerLease": "Full pre before queue creation without lease; self-granted SET-only row for exact registration, revoke only own grantor row, full post without lease; original provider ADMIN-only row unchanged.",
+    "storage": "Existing managed owners, ACL/RLS and ten exact policies remain. Fixed deparser context in source; readbacks accept only the two complete known visible/qualified policy expressions.",
+    "acknowledgementLoss": "Use existing reconciliationSql/reconciliationOutcome; exact target vector plus terminal means committed, absent target plus exact prior means not_applied, all other states uncertain and no automatic replay."
+  },
+  "requiredGates": [
+    "Full current hosted PG17.6/catalog pre -> complete candidate -> post, ledger commit/readback and injected late-error rollback rehearsal.",
+    "Actual independent Pro thesis -> Gemini maximum review with attached scoped bytes -> Pro reverse; preserve seven original reservations.",
+    "Protected develop -> data -> main source promotion and fresh production/deployment/domain/rollback readback.",
+    "Current complete writer fence, credential/worker provisioning and separately admitted exact source/ledger state before any hosted write.",
+    "Existing apply caller fixed manifest does not accept this draft. Prepare and verify its narrow successor admission; do not bypass or edit old contracts.",
+    "Authenticated post-deployment real job, provider budget/limit preservation, private result readback and all sidebar workflows."
+  ],
+  "limits": "Draft compile/component evidence is not hosted admission, full G014 proof, rollout success, provider generation or a performance claim."
+}

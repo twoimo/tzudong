@@ -1,0 +1,38 @@
+{
+  "started": "2026-10-24T05:16:15.452Z",
+  "finished": "2026-10-24T05:18:28.149Z",
+  "exitCode": 0,
+  "signal": null,
+  "errorCode": null,
+  "stdout": "",
+  "stderr": "",
+  "sourceBefore": {
+    "scripts/run-dependency-modernization-browser.mjs": "5f5ecebd6b4ad9298380f1c6bb066bf170a06cc542d2c8141a5813d8ea1b2240",
+    "scripts/start-standalone.mjs": "25adfdfcc2e5f8514837a5ba0f2f7e914fe27c74501a1574338d391c2f7017c5",
+    "scripts/sync-standalone-static.mjs": "a15d0b3d34d5a0c6e7fd3c6537c12a1a5d8edadc0e1e2797f89960ee8857bd1a",
+    "lib/admin/youtube-thumbnail-generator/gemini-image-input.ts": "195f8c3b0756e60885ebf578b14e03d5485dbedf98f7dfc43a8648e6fd6de34a",
+    "lib/admin/youtube-thumbnail-generator/gemini-chat-input.ts": "b8e86fe162495f0ff3acfbb0dc22da5aaa508dc4391659c8328ea71c44b04ba4",
+    "lib/admin/youtube-thumbnail-generator/chat-gemini-client.ts": "4037c9886365ebac0eee41a908aa564baa0c8f600f14fd17c01e35e1bd9d2889",
+    "lib/admin/youtube-thumbnail-generator/gemini-worker-client.ts": "d3b38c78cc9fbfde7ff4e9252952c88b7aa2b595dafd9e5b404c890aa54d0cd0",
+    "lib/admin/youtube-thumbnail-generator/queue-api.ts": "f902259fda8cdb56cdec06a2962bd38b7f21e57eb964e311c5110b9f551b14fb",
+    "lib/admin/youtube-thumbnail-generator/private-store.ts": "38fde8ca4468f3d4f4035bf71965a1f4b3f029bf3cb2f930c97126bba579fa45",
+    "package.json": "6e415fbeca740c4299bf3c2506981996825d131348c185a12975b6bced9f3e0a",
+    "package-lock.json": "e161fb64f78d4105f5077bce74fb63c1651672cfa4923d79c11d19b06e52ae8d",
+    "tests/dependency-modernization.spec.ts": "605be185bff7ffb91e4ed8d541adc1d089c60afd360b7d64f54cfa5a1782db22"
+  },
+  "sourceAfter": {
+    "scripts/run-dependency-modernization-browser.mjs": "5f5ecebd6b4ad9298380f1c6bb066bf170a06cc542d2c8141a5813d8ea1b2240",
+    "scripts/start-standalone.mjs": "25adfdfcc2e5f8514837a5ba0f2f7e914fe27c74501a1574338d391c2f7017c5",
+    "scripts/sync-standalone-static.mjs": "a15d0b3d34d5a0c6e7fd3c6537c12a1a5d8edadc0e1e2797f89960ee8857bd1a",
+    "lib/admin/youtube-thumbnail-generator/gemini-image-input.ts": "195f8c3b0756e60885ebf578b14e03d5485dbedf98f7dfc43a8648e6fd6de34a",
+    "lib/admin/youtube-thumbnail-generator/gemini-chat-input.ts": "b8e86fe162495f0ff3acfbb0dc22da5aaa508dc4391659c8328ea71c44b04ba4",
+    "lib/admin/youtube-thumbnail-generator/chat-gemini-client.ts": "4037c9886365ebac0eee41a908aa564baa0c8f600f14fd17c01e35e1bd9d2889",
+    "lib/admin/youtube-thumbnail-generator/gemini-worker-client.ts": "d3b38c78cc9fbfde7ff4e9252952c88b7aa2b595dafd9e5b404c890aa54d0cd0",
+    "lib/admin/youtube-thumbnail-generator/queue-api.ts": "f902259fda8cdb56cdec06a2962bd38b7f21e57eb964e311c5110b9f551b14fb",
+    "lib/admin/youtube-thumbnail-generator/private-store.ts": "38fde8ca4468f3d4f4035bf71965a1f4b3f029bf3cb2f930c97126bba579fa45",
+    "package.json": "6e415fbeca740c4299bf3c2506981996825d131348c185a12975b6bced9f3e0a",
+    "package-lock.json": "e161fb64f78d4105f5077bce74fb63c1651672cfa4923d79c11d19b06e52ae8d",
+    "tests/dependency-modernization.spec.ts": "605be185bff7ffb91e4ed8d541adc1d089c60afd360b7d64f54cfa5a1782db22"
+  },
+  "buildId": "_9s1Yvxiet9utAklEQgEf"
+}

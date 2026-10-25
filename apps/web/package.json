@@ -51,7 +51,8 @@
     "thumbnail:release-certify": "node scripts/thumbnail-release-readback-certification.mjs",
     "storyboard:quality-loop": "node scripts/storyboard-quality-loop.mjs",
     "image:readiness": "bun scripts/check-anycap-gpt-image-readiness.ts",
-    "storyboard:gemini-worker": "bun scripts/storyboard-gemini-worker.ts"
+    "storyboard:gemini-worker": "bun scripts/storyboard-gemini-worker.ts",
+    "thumbnail:gemini-worker": "bun scripts/thumbnail-gemini-worker.ts"
   },
   "dependencies": {
     "@emnapi/core": "^1.11.3",

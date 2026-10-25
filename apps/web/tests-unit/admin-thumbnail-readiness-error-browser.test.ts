@@ -14,16 +14,11 @@ async function bundle() {
     const fixture = { readinessOk: false, readinessDelayMs: 0, requests: [] };
     globalThis.__thumbnailFixture = fixture;
     const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } });
-    const readiness = {
-      target: { width: 1280, height: 720, aspectRatio: '16:9' },
-      providers: { localCodex: { available: true, model: 'gpt-image-2' } },
-      limits: { maxFiles: 4, maxFileBytes: 8388608, maxTotalBytes: 20971520, mimeTypes: ['image/png', 'image/jpeg', 'image/webp'] },
-      configuration: { liveApiGate: '', openaiModelEnv: '', geminiModelEnv: '', localCodexGate: '' },
-    };
+    const readiness = { jobs: [] };
     globalThis.fetch = async input => {
       const url = String(input);
       fixture.requests.push(url.split('?')[0]);
-      if (url === '/api/admin/youtube-thumbnail-generator') {
+      if (url === '/api/admin/youtube-thumbnail-generator/jobs') {
         await new Promise(resolve => setTimeout(resolve, fixture.readinessDelayMs));
         return fixture.readinessOk ? json(readiness) : json({ error: { code: 'unavailable' } }, 503);
       }
@@ -38,6 +33,8 @@ async function bundle() {
       builder.onResolve({ filter: /^thumbnail-fixture$/ }, () => ({ path: 'fixture', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: entry, loader: 'tsx', resolveDir: appRoot }));
       builder.onResolve({ filter: /^next\/image$/ }, () => ({ path: 'image', namespace: 'inert' }));
+      builder.onResolve({ filter: /^@\/contexts\/AuthContext$/ }, () => ({ path: 'auth', namespace: 'auth-seam' }));
+      builder.onLoad({ filter: /.*/, namespace: 'auth-seam' }, () => ({ loader: 'tsx', contents: "export const useAuth=()=>({user:{id:'6f5d42d6-d122-4d32-b8bb-2779de58b423'},isAdmin:true});" }));
       builder.onResolve({ filter: /^@\/integrations\/supabase\/client$/ }, () => ({ path: 'client', namespace: 'inert' }));
       // Under `bun test`, Bun.build misses tsconfig `paths` for this import graph.
       builder.onResolve({ filter: /^@\// }, args => ({ path: Bun.resolveSync(`./${args.path.slice(2)}`, appRoot) }));
@@ -55,7 +52,7 @@ const setFixture = (page: Page, changes: Partial<Fixture>) => page.evaluate(next
   Object.assign((globalThis as unknown as { __thumbnailFixture: Fixture }).__thumbnailFixture, next);
 }, changes);
 const readinessRequests = (page: Page) => page.evaluate(() => (globalThis as unknown as { __thumbnailFixture: Fixture }).__thumbnailFixture.requests
-  .filter(url => url === '/api/admin/youtube-thumbnail-generator').length);
+  .filter(url => url === '/api/admin/youtube-thumbnail-generator/jobs').length);
 
 (existsSync(chrome) ? test : test.skip)('a failed thumbnail readiness read is reported as failed and can be re-checked', async () => {
   const browser = await chromium.launch({ executablePath: chrome, headless: true });
@@ -101,7 +98,7 @@ const readinessRequests = (page: Page) => page.evaluate(() => (globalThis as unk
 
     await setFixture(page, { readinessOk: true });
     await page.keyboard.press('Enter');
-    await playwrightExpect(status).toHaveText('준비됨');
+    await playwrightExpect(status).toHaveText('접수 가능');
     await playwrightExpect(retry).toHaveCount(0);
     await playwrightExpect(page.locator('#thumbnail-chat-composer')).toBeFocused();
     expect(externalRequests).toBe(0);

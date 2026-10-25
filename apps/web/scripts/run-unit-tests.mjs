@@ -40,6 +40,10 @@ const isolated = new Set([
   // and pass unchanged alone. Keep their real runtime checks intact.
   'local-supabase-runtime.test.ts',
   'review-media-sql-successor-workflow-contract.test.ts',
+  // This unchanged native Chrome/Bun-build fixture timed out in the combined
+  // group and passed all four contracts alone. Preserve it in a fresh process;
+  // isolation does not establish the cause of the combined-process timeout.
+  'admin-knowledge-graph-retry-page-browser.test.ts',
 ]);
 
 const files = readdirSync(root, { recursive: true, withFileTypes: true })

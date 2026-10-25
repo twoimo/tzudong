@@ -83,13 +83,6 @@ async function expectRejectedReferenceImage(bytes: Uint8Array, name = 'reference
 
 const thumbnailMutationRoutes = [
   {
-    routePath: 'app/api/admin/youtube-thumbnail-generator/chat/route.ts',
-    maximumBytes: 64 * 1024,
-    maximumBytesDeclaration: 'const MAX_THUMBNAIL_CHAT_REQUEST_BYTES = 64 * 1024;',
-    readerCall: 'readBoundedJsonRequest(request, MAX_THUMBNAIL_CHAT_REQUEST_BYTES)',
-    mutationWork: 'getThumbnailProviderReadinessBlocker(process.env)',
-  },
-  {
     routePath: 'app/api/admin/youtube-thumbnail-generator/reference-image/route.ts',
     maximumBytes: 4 * 1024,
     maximumBytesDeclaration: 'const MAX_THUMBNAIL_REFERENCE_IMAGE_REQUEST_BYTES = 4 * 1024;',
@@ -134,20 +127,15 @@ describe('thumbnail route request security', () => {
   });
 
   test('canonicalizes complete static references before generation and rejects prefix, polyglot, decompression, and animation inputs', async () => {
-    const generatorRoute = source('app/api/admin/youtube-thumbnail-generator/route.ts');
-    const generatorPostSource = generatorRoute.slice(generatorRoute.indexOf('export async function POST'));
-    const requireAdminIndex = generatorPostSource.indexOf('await requireAdmin(');
-    const originGuardIndex = generatorPostSource.indexOf('isTrustedSameOriginMutation(request)');
-    const multipartGuardIndex = generatorPostSource.indexOf('getMultipartFieldRejection(formData)');
-    const canonicalizeIndex = generatorPostSource.indexOf('await readThumbnailReferenceImages(');
-    const generationIndex = generatorPostSource.lastIndexOf('runDirectThumbnailProviderGeneration(');
-
-    expect(generatorRoute).toContain('@/lib/security/same-origin-mutation');
-    expect(requireAdminIndex).toBeGreaterThan(-1);
-    expect(originGuardIndex).toBeGreaterThan(requireAdminIndex);
-    expect(multipartGuardIndex).toBeGreaterThan(originGuardIndex);
-    expect(canonicalizeIndex).toBeGreaterThan(multipartGuardIndex);
-    expect(generationIndex).toBeGreaterThan(canonicalizeIndex);
+    // Stale clients cannot reach any provider. The durable queue's actual image
+    // boundary is prepareThumbnailGeminiContent, exercised below and in its suite.
+    const { createRetiredThumbnailGenerationApi } = await import('../lib/admin/youtube-thumbnail-generator/retired-api');
+    const api = createRetiredThumbnailGenerationApi((async () => ({ ok: true,
+      userId: '6f5d42d6-d122-4d32-b8bb-2779de58b423' })) as never);
+    const retiredRequest = new Request('https://thumbnail.test/api/admin/youtube-thumbnail-generator', {
+      method: 'POST', headers: { Origin: 'https://thumbnail.test' }, body: 'malformed legacy body' });
+    expect((await api.POST(retiredRequest)).status).toBe(410);
+    expect(retiredRequest.bodyUsed).toBe(false);
 
     const validPng = await sharp({
       create: { width: 12, height: 8, channels: 3, background: { r: 32, g: 64, b: 96 } },

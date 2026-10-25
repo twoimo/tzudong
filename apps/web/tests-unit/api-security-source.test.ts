@@ -435,8 +435,6 @@ describe('public API security source contracts', () => {
     const restaurantRequestReviewSource = source('app/api/admin/restaurant-requests/[requestId]/review/route.ts');
     const directionsSource = source('app/api/admin/routes/directions/route.ts');
     const thumbnailRouteSources = [
-      source('app/api/admin/youtube-thumbnail-generator/route.ts'),
-      source('app/api/admin/youtube-thumbnail-generator/chat/route.ts'),
       source('app/api/admin/youtube-thumbnail-generator/history/route.ts'),
       source('app/api/admin/youtube-thumbnail-generator/reference-image/route.ts'),
       source('app/api/admin/youtube-thumbnail-generator/release-candidates/route.ts'),
@@ -445,6 +443,16 @@ describe('public API security source contracts', () => {
       source('app/api/admin/youtube-thumbnail-generator/releases/current/route.ts'),
       source('app/api/admin/youtube-thumbnail-generator/releases/publish/route.ts'),
     ];
+    const queueFailureSource = source('lib/admin/youtube-thumbnail-generator/queue-api.ts');
+    const retiredThumbnailSource = source('lib/admin/youtube-thumbnail-generator/retired-api.ts');
+    // Delegated queue/retirement handlers return bounded codes and retain no
+    // diagnostics. Do not require obsolete per-route error logging to return.
+    expect(queueFailureSource).toContain('Response.json({ ok: false, error: code }');
+    expect(queueFailureSource).toContain("'persistence_unavailable'");
+    for (const delegated of [queueFailureSource, retiredThumbnailSource]) {
+      expect(delegated).toContain('no-store');
+      expect(delegated).not.toMatch(/error\??\.message|console\.(?:log|error)|response\.text\(\)/);
+    }
 
     expect(naverSearchSource).not.toContain('NextResponse.json(errorData');
     expect(naverSearchSource).not.toContain("console.error('[API] Naver API Error Response:', errorData)");

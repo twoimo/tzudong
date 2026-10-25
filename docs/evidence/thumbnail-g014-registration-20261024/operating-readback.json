@@ -1,0 +1,131 @@
+{
+  "schema": "thumbnail-production-operating-readback-v1",
+  "observedAt": "2026-10-24T14:51:27.939Z",
+  "protectedPromotion": {
+    "featurePr": 3515,
+    "developToDataPr": 3517,
+    "dataToMainPr": 3518,
+    "finalMain": "6ccd33d5ccc09e607e8053a883087a9d0f3eab77",
+    "sourceTree": "c0f04e56c26cb71eb017b25844b5b81527436e11",
+    "forceOrAdminBypass": false,
+    "sourceChecks": {
+      "uniquePassed": 24,
+      "skipped": [
+        "Freshness"
+      ]
+    },
+    "promotionRequiredChecksPassed": true,
+    "sourceIdenticalChecksReused": true
+  },
+  "deployment": {
+    "observedAt": "2026-10-24T14:34:46.653Z",
+    "projectName": "tzudong",
+    "id": "dpl_4ppHwfZBk4yaiVCEAoG2Y1aaZqoU",
+    "url": "tzudong-o1c1urrtd-twoimos-projects.vercel.app",
+    "readyState": "READY",
+    "target": "production",
+    "gitSha": "6ccd33d5ccc09e607e8053a883087a9d0f3eab77",
+    "gitRef": "main",
+    "aliases": [
+      "www.tzudong.app",
+      "internal.tzudong.app",
+      "tzudong.app",
+      "tzudong-twoimos-projects.vercel.app",
+      "tzudong-git-main-twoimos-projects.vercel.app"
+    ],
+    "authorization": "exact-existing-production-sha-variable",
+    "sourceGuardRetained": true,
+    "rollbackSha": "1b5230ac93021c72499f4950bff6cda24e2515e5"
+  },
+  "database": {
+    "projectRef": "aqlcofblfxdrjhhdmarw",
+    "manifestSha256": "51a7c5b61cc268e7a8fe23261548d1950ecfda122e12a6b0d13645e297563bbc",
+    "sqlSha256": "8019c4e7788cf6706094937a5d4111958201793192d918817e824791db471ac2",
+    "statementCount": 43,
+    "ledgerBefore": 89,
+    "ledgerAfter": 90,
+    "registeredRpcBefore": 137,
+    "registeredRpcAfter": 140,
+    "attemptId": "d3b1a8d4-130d-4766-a1db-18f843e8ba8a",
+    "applyCode": "THUMBNAIL_COMMITTED",
+    "independentReconciliation": "committed",
+    "replayAllowed": false,
+    "clientTls": "verify-full-pinned-ca"
+  },
+  "browser": {
+    "viewport": {
+      "width": 1920,
+      "height": 929
+    },
+    "health": {
+      "ok": true,
+      "service": "tzudong-web",
+      "host": "www.tzudong.app",
+      "gitSha": "6ccd33d5ccc09e607e8053a883087a9d0f3eab77",
+      "deploymentId": "dpl_4ppHwfZBk4yaiVCEAoG2Y1aaZqoU",
+      "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl"
+    },
+    "navigation": {
+      "modules": [
+        "overview",
+        "restaurants",
+        "submissions",
+        "reviews",
+        "users",
+        "banners",
+        "insights",
+        "pipeline",
+        "knowledge-graph",
+        "sentry",
+        "youtube-thumbnail-generator",
+        "storyboard",
+        "routes",
+        "llm",
+        "audit"
+      ],
+      "titlesPresent": 15,
+      "titleStyle": {
+        "tag": "H1",
+        "fontSize": "18px",
+        "fontWeight": "650",
+        "lineHeight": "24px"
+      },
+      "horizontalViewportOverflow": 0,
+      "errorBufferAvailable": true,
+      "consoleErrors": 0
+    },
+    "cmsTablesWithData": 6,
+    "restaurantRowsLoaded": 1659,
+    "restaurantRowsTotal": 1659,
+    "knowledgeGraph": {
+      "visibleNodes": 71,
+      "totalNodes": 71,
+      "visibleEdges": 217,
+      "totalEdges": 217
+    },
+    "insightsVideos": 500,
+    "sentryDataTablePresent": true,
+    "scope": "authenticated desktop navigation and bounded reads only",
+    "automatedPythonHealthStatus": 403
+  },
+  "holds": {
+    "storyboardDatabaseTransition": true,
+    "thumbnailWorkerKeyLocationMissing": true,
+    "actualThumbnailGenerationNotVerified": true,
+    "budget90To91NotApplied": true,
+    "externalProGeminiProReviewIncomplete": true
+  },
+  "providerCalls": 0,
+  "mutatingUiActions": 0,
+  "receipts": {
+    "apply": "5fff834e107df10439e6392ba3e5c5a94f735f4339a2211ea5acfdfe0f08ac06",
+    "independentReconciliation": "9342dc8bc98ae9f43fd06fdcdcba2c0299f74cb69e56906540f126b8ef2e6a1c",
+    "deployment": "6b606365a6ae222a5ca4f7cc274073117a44f31a87250b7099fcea29519840a0",
+    "browser": "77f51af35c4cf42f51d31fa4a5b5e5277b4205a4ab23a785c6886b9cd5320e8d"
+  },
+  "claimLimits": [
+    "Deterministic coverage counts are not population success rates or performance/cost improvements.",
+    "No full mobile, mutating admin, OCR, generation or all-video analysis completion is claimed.",
+    "Python health HTTP 403 remains distinct from actual browser health success; protection was not weakened."
+  ]
+}

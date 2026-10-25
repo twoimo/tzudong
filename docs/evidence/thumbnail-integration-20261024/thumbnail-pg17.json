@@ -1,0 +1,625 @@
+{
+  "version": "postgres (PostgreSQL) 17.11 (Homebrew)",
+  "sourceBefore": {
+    "backend/supabase/candidates/20261023_thumbnail_gemini_queue.sql": "24fbdb8d1c99b0666de4b4f5c1b33896f6c7fa4ea20af4ad6ebd491722d4945a",
+    "backend/supabase/tests/test_thumbnail_gemini_queue_pg17.py": "1764ee367b418e961df6514196921fccf3e0a672b624b1a7d5196a6cce1efa02",
+    "backend/supabase/migrations/20261003182338_storyboard_service_role_bridge.sql": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436",
+    "backend/supabase/migrations/20260812000100_local_runtime_schema_convergence.sql": "47a0a8376479de44ed6b92d14403d2b6868ac357aa41005c595ad6f8a16d1f0d",
+    "apps/web/tests-unit/fixtures/thumbnail-queue-pg17.ts": "4d63bfcfa9c02aa8eed6b9b1f1d79a7afac6b2f7ac692c2fe1dc13c1c9a15706",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-worker-client.ts": "d3b38c78cc9fbfde7ff4e9252952c88b7aa2b595dafd9e5b404c890aa54d0cd0",
+    "apps/web/tests-unit/fixtures/thumbnail-private-store-pg17.ts": "9f7a878aa5b0bdf8279f5b5f7ae5105d2bcfa60fe201d2a1bbf06a98918e0b6f",
+    "apps/web/lib/admin/youtube-thumbnail-generator/queue-contract.ts": "9a66c480452f6759390d882d13d43f2df1295e1c0cd36e0fcd75ad782b0bc561",
+    "apps/web/lib/admin/youtube-thumbnail-generator/private-store.ts": "38fde8ca4468f3d4f4035bf71965a1f4b3f029bf3cb2f930c97126bba579fa45",
+    "apps/web/lib/admin/youtube-thumbnail-generator/queue-api.ts": "f902259fda8cdb56cdec06a2962bd38b7f21e57eb964e311c5110b9f551b14fb",
+    "apps/web/lib/admin/youtube-thumbnail-generator/prompt.ts": "b1a92eb0edc61acb2ee7c79b7a28046a2255dcfb58ccfa22bb2f0de2c654b114",
+    "apps/web/lib/admin/youtube-thumbnail-generator/safety.ts": "49c48ec8c230f2dccb699d6864e6916e91d2114b4bb599292b0fac4ca641242c",
+    "apps/web/lib/admin/youtube-thumbnail-generator/worker-outbox.ts": "5443e6a5a277d175d582b493e7cd2126564859a80dfcd13f4f81fdb141a39c7b",
+    "apps/web/lib/admin/youtube-thumbnail-generator/outbound-worker.ts": "0c480e499f1b73f85c8a44653ebc869db0bfc789adbf6fc76460f93a5da38ac9",
+    "apps/web/lib/admin/youtube-thumbnail-generator/browser-queue.ts": "0add8e835d246dd84ab594152715a08fc56c7cee7a97f7cd4e4f1defdf53e8d7",
+    "apps/web/lib/admin/youtube-thumbnail-generator/chat-browser-queue.ts": "a20c975f01a9a4c316adecb1637d184191ec7cd6aad362fc71a78eb90991447a",
+    "apps/web/lib/admin/youtube-thumbnail-generator/chat-contract.ts": "9ad99444b05be6ae05742ced2e3bf82826bc66793621f963fd408df53e6598a2",
+    "apps/web/lib/admin/youtube-thumbnail-generator/chat-gemini-client.ts": "4037c9886365ebac0eee41a908aa564baa0c8f600f14fd17c01e35e1bd9d2889",
+    "apps/web/lib/admin/youtube-thumbnail-generator/execution-contract.ts": "9d66464371c56f88ff79dbcc3e659b2e5ecfb9b78c2d4f1a5e5d84114abe17fb",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-image-input.ts": "195f8c3b0756e60885ebf578b14e03d5485dbedf98f7dfc43a8648e6fd6de34a",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-chat-input.ts": "b8e86fe162495f0ff3acfbb0dc22da5aaa508dc4391659c8328ea71c44b04ba4",
+    "apps/web/scripts/thumbnail-gemini-worker.ts": "8bc94e58711f90b7f7f89abb955ea2cdc8823862146764e080783df59b42193d",
+    "apps/web/package.json": "6e415fbeca740c4299bf3c2506981996825d131348c185a12975b6bced9f3e0a"
+  },
+  "sourceAfter": {
+    "backend/supabase/candidates/20261023_thumbnail_gemini_queue.sql": "24fbdb8d1c99b0666de4b4f5c1b33896f6c7fa4ea20af4ad6ebd491722d4945a",
+    "backend/supabase/tests/test_thumbnail_gemini_queue_pg17.py": "1764ee367b418e961df6514196921fccf3e0a672b624b1a7d5196a6cce1efa02",
+    "backend/supabase/migrations/20261003182338_storyboard_service_role_bridge.sql": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436",
+    "backend/supabase/migrations/20260812000100_local_runtime_schema_convergence.sql": "47a0a8376479de44ed6b92d14403d2b6868ac357aa41005c595ad6f8a16d1f0d",
+    "apps/web/tests-unit/fixtures/thumbnail-queue-pg17.ts": "4d63bfcfa9c02aa8eed6b9b1f1d79a7afac6b2f7ac692c2fe1dc13c1c9a15706",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-worker-client.ts": "d3b38c78cc9fbfde7ff4e9252952c88b7aa2b595dafd9e5b404c890aa54d0cd0",
+    "apps/web/tests-unit/fixtures/thumbnail-private-store-pg17.ts": "9f7a878aa5b0bdf8279f5b5f7ae5105d2bcfa60fe201d2a1bbf06a98918e0b6f",
+    "apps/web/lib/admin/youtube-thumbnail-generator/queue-contract.ts": "9a66c480452f6759390d882d13d43f2df1295e1c0cd36e0fcd75ad782b0bc561",
+    "apps/web/lib/admin/youtube-thumbnail-generator/private-store.ts": "38fde8ca4468f3d4f4035bf71965a1f4b3f029bf3cb2f930c97126bba579fa45",
+    "apps/web/lib/admin/youtube-thumbnail-generator/queue-api.ts": "f902259fda8cdb56cdec06a2962bd38b7f21e57eb964e311c5110b9f551b14fb",
+    "apps/web/lib/admin/youtube-thumbnail-generator/prompt.ts": "b1a92eb0edc61acb2ee7c79b7a28046a2255dcfb58ccfa22bb2f0de2c654b114",
+    "apps/web/lib/admin/youtube-thumbnail-generator/safety.ts": "49c48ec8c230f2dccb699d6864e6916e91d2114b4bb599292b0fac4ca641242c",
+    "apps/web/lib/admin/youtube-thumbnail-generator/worker-outbox.ts": "5443e6a5a277d175d582b493e7cd2126564859a80dfcd13f4f81fdb141a39c7b",
+    "apps/web/lib/admin/youtube-thumbnail-generator/outbound-worker.ts": "0c480e499f1b73f85c8a44653ebc869db0bfc789adbf6fc76460f93a5da38ac9",
+    "apps/web/lib/admin/youtube-thumbnail-generator/browser-queue.ts": "0add8e835d246dd84ab594152715a08fc56c7cee7a97f7cd4e4f1defdf53e8d7",
+    "apps/web/lib/admin/youtube-thumbnail-generator/chat-browser-queue.ts": "a20c975f01a9a4c316adecb1637d184191ec7cd6aad362fc71a78eb90991447a",
+    "apps/web/lib/admin/youtube-thumbnail-generator/chat-contract.ts": "9ad99444b05be6ae05742ced2e3bf82826bc66793621f963fd408df53e6598a2",
+    "apps/web/lib/admin/youtube-thumbnail-generator/chat-gemini-client.ts": "4037c9886365ebac0eee41a908aa564baa0c8f600f14fd17c01e35e1bd9d2889",
+    "apps/web/lib/admin/youtube-thumbnail-generator/execution-contract.ts": "9d66464371c56f88ff79dbcc3e659b2e5ecfb9b78c2d4f1a5e5d84114abe17fb",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-image-input.ts": "195f8c3b0756e60885ebf578b14e03d5485dbedf98f7dfc43a8648e6fd6de34a",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-chat-input.ts": "b8e86fe162495f0ff3acfbb0dc22da5aaa508dc4391659c8328ea71c44b04ba4",
+    "apps/web/scripts/thumbnail-gemini-worker.ts": "8bc94e58711f90b7f7f89abb955ea2cdc8823862146764e080783df59b42193d",
+    "apps/web/package.json": "6e415fbeca740c4299bf3c2506981996825d131348c185a12975b6bced9f3e0a"
+  },
+  "sourceStable": true,
+  "ownerCheckSourceSha256": "eecc83b6a569093ae8683a07cd02c3b84bc6db13a0d5eaf3389e1e18d9d1f5cc",
+  "cases": {
+    "actual_private_api_store_client": [
+      {
+        "mode": "normal",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "inputBound": true,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 1,
+        "completed": true,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "checkpoint-ack-lost",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "inputBound": true,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 1,
+        "completed": true,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "normalize-recovery",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "inputBound": true,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 1,
+        "completed": true,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "start-ack-lost",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "inputBound": true,
+        "sdkCalls": 0,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 0,
+        "completed": false,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "outbound-normal",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "realOutboundHttp": true,
+        "durableSqlite": true,
+        "inputBound": true,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 1,
+        "completed": true,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "outbound-delivery-lost",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "realOutboundHttp": true,
+        "durableSqlite": true,
+        "inputBound": true,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 2,
+        "completed": true,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "outbound-start-ack-lost",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "realOutboundHttp": true,
+        "durableSqlite": true,
+        "inputBound": true,
+        "sdkCalls": 0,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 0,
+        "completed": false,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "outbound-response-lost",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "realOutboundHttp": true,
+        "durableSqlite": true,
+        "inputBound": true,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 0,
+        "completed": false,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "outbound-stop-received",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "realOutboundHttp": true,
+        "durableSqlite": true,
+        "inputBound": true,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 1,
+        "completed": true,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "outbound-concurrent-observer",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "realOutboundHttp": true,
+        "durableSqlite": true,
+        "inputBound": true,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 1,
+        "completed": true,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "outbound-priority-recovery",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "realOutboundHttp": true,
+        "durableSqlite": true,
+        "inputBound": true,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 2,
+        "completed": true,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "browser-normal",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "realOutboundHttp": true,
+        "actualBrowserProtocolClient": true,
+        "renderedBrowser": false,
+        "admissionSynthetic": true,
+        "durableSqlite": true,
+        "inputBound": true,
+        "browserPosts": 1,
+        "cancelPosts": 0,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 1,
+        "completed": true,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "browser-ack-lost",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "realOutboundHttp": true,
+        "actualBrowserProtocolClient": true,
+        "renderedBrowser": false,
+        "admissionSynthetic": true,
+        "durableSqlite": true,
+        "inputBound": true,
+        "browserPosts": 1,
+        "cancelPosts": 0,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 1,
+        "completed": true,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "browser-cancel-lost",
+        "realPostgres": true,
+        "actualApiHandlers": true,
+        "realOutboundHttp": true,
+        "actualBrowserProtocolClient": true,
+        "renderedBrowser": false,
+        "admissionSynthetic": true,
+        "durableSqlite": true,
+        "inputBound": true,
+        "browserPosts": 1,
+        "cancelPosts": 1,
+        "sdkCalls": 0,
+        "startCalls": 0,
+        "enqueueCalls": 1,
+        "completeCalls": 0,
+        "completed": false,
+        "storageSynthetic": true,
+        "externalProviderCalls": 0
+      },
+      {
+        "mode": "chat-normal",
+        "actualApiHandlers": true,
+        "realPostgres": true,
+        "inputBound": true,
+        "actualHttp": true,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 1,
+        "browserPosts": 1,
+        "externalProviderCalls": 0,
+        "storageSynthetic": true
+      },
+      {
+        "mode": "chat-delivery-lost",
+        "actualApiHandlers": true,
+        "realPostgres": true,
+        "inputBound": true,
+        "actualHttp": true,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 2,
+        "browserPosts": 1,
+        "externalProviderCalls": 0,
+        "storageSynthetic": true
+      },
+      {
+        "mode": "chat-start-ack-lost",
+        "actualApiHandlers": true,
+        "realPostgres": true,
+        "inputBound": true,
+        "actualHttp": true,
+        "sdkCalls": 0,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 0,
+        "browserPosts": 1,
+        "externalProviderCalls": 0,
+        "storageSynthetic": true
+      },
+      {
+        "mode": "chat-stop-received",
+        "actualApiHandlers": true,
+        "realPostgres": true,
+        "inputBound": true,
+        "actualHttp": true,
+        "sdkCalls": 1,
+        "startCalls": 1,
+        "enqueueCalls": 1,
+        "completeCalls": 1,
+        "browserPosts": 1,
+        "externalProviderCalls": 0,
+        "storageSynthetic": true
+      }
+    ],
+    "actual_typescript_client": [
+      {
+        "mode": "success",
+        "bunVersion": "1.4.0",
+        "sdkCalls": 1,
+        "completed": true,
+        "inputBound": true,
+        "realPostgres": true,
+        "storageSynthetic": true
+      },
+      {
+        "mode": "stale-fence",
+        "bunVersion": "1.4.0",
+        "sdkCalls": 1,
+        "completed": true,
+        "inputBound": true,
+        "realPostgres": true,
+        "storageSynthetic": true
+      },
+      {
+        "mode": "start-ack-lost",
+        "bunVersion": "1.4.0",
+        "sdkCalls": 0,
+        "completed": false,
+        "inputBound": true,
+        "realPostgres": true,
+        "storageSynthetic": true
+      },
+      {
+        "mode": "response-lost",
+        "bunVersion": "1.4.0",
+        "sdkCalls": 1,
+        "completed": false,
+        "inputBound": true,
+        "realPostgres": true,
+        "storageSynthetic": true
+      },
+      {
+        "mode": "cancel-after-start",
+        "bunVersion": "1.4.0",
+        "sdkCalls": 1,
+        "completed": true,
+        "inputBound": true,
+        "realPostgres": true,
+        "storageSynthetic": true
+      }
+    ],
+    "chat_shared_slot": {
+      "freshStarts": 1,
+      "snapshotPermissions": 0,
+      "unknownBlocksImages": true,
+      "originalAttemptRecovery": true
+    },
+    "collected_references": {
+      "responseRows": 32,
+      "titleCharacters": 200,
+      "channelSourceBucketFiltered": true,
+      "queryCpuBoundProven": false
+    },
+    "default_acl_minimum": {
+      "inheritedDefaults": "ALL WITH GRANT OPTION on public tables and sequences",
+      "explicitServiceAcl": {
+        "public.admin_thumbnail_workers": [
+          "SELECT",
+          "UPDATE"
+        ],
+        "public.admin_thumbnail_jobs": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ],
+        "public.admin_thumbnail_events": [
+          "INSERT",
+          "SELECT"
+        ],
+        "public.admin_thumbnail_events_id_seq": [
+          "SELECT",
+          "USAGE"
+        ]
+      },
+      "effectivePrivilegesAndGrantOptions": {
+        "public.admin_thumbnail_workers": {
+          "DELETE": [
+            false,
+            false
+          ],
+          "INSERT": [
+            false,
+            false
+          ],
+          "MAINTAIN": [
+            false,
+            false
+          ],
+          "REFERENCES": [
+            false,
+            false
+          ],
+          "SELECT": [
+            true,
+            false
+          ],
+          "TRIGGER": [
+            false,
+            false
+          ],
+          "TRUNCATE": [
+            false,
+            false
+          ],
+          "UPDATE": [
+            true,
+            false
+          ]
+        },
+        "public.admin_thumbnail_jobs": {
+          "DELETE": [
+            false,
+            false
+          ],
+          "INSERT": [
+            true,
+            false
+          ],
+          "MAINTAIN": [
+            false,
+            false
+          ],
+          "REFERENCES": [
+            false,
+            false
+          ],
+          "SELECT": [
+            true,
+            false
+          ],
+          "TRIGGER": [
+            false,
+            false
+          ],
+          "TRUNCATE": [
+            false,
+            false
+          ],
+          "UPDATE": [
+            true,
+            false
+          ]
+        },
+        "public.admin_thumbnail_events": {
+          "DELETE": [
+            false,
+            false
+          ],
+          "INSERT": [
+            true,
+            false
+          ],
+          "MAINTAIN": [
+            false,
+            false
+          ],
+          "REFERENCES": [
+            false,
+            false
+          ],
+          "SELECT": [
+            true,
+            false
+          ],
+          "TRIGGER": [
+            false,
+            false
+          ],
+          "TRUNCATE": [
+            false,
+            false
+          ],
+          "UPDATE": [
+            false,
+            false
+          ]
+        },
+        "public.admin_thumbnail_events_id_seq": {
+          "SELECT": [
+            true,
+            false
+          ],
+          "USAGE": [
+            true,
+            false
+          ],
+          "UPDATE": [
+            false,
+            false
+          ]
+        }
+      },
+      "grantOptions": {
+        "public.admin_thumbnail_workers": [],
+        "public.admin_thumbnail_jobs": [],
+        "public.admin_thumbnail_events": [],
+        "public.admin_thumbnail_events_id_seq": []
+      },
+      "writeProbes": {
+        "public.admin_thumbnail_workers:DELETE": {
+          "allowed": false,
+          "sqlstate": "42501"
+        },
+        "public.admin_thumbnail_workers:TRUNCATE": {
+          "allowed": false,
+          "sqlstate": "42501"
+        },
+        "public.admin_thumbnail_jobs:DELETE": {
+          "allowed": false,
+          "sqlstate": "42501"
+        },
+        "public.admin_thumbnail_jobs:TRUNCATE": {
+          "allowed": false,
+          "sqlstate": "42501"
+        },
+        "public.admin_thumbnail_events:DELETE": {
+          "allowed": false,
+          "sqlstate": "42501"
+        },
+        "public.admin_thumbnail_events:TRUNCATE": {
+          "allowed": false,
+          "sqlstate": "42501"
+        },
+        "workers:INSERT": {
+          "allowed": false,
+          "sqlstate": "42501"
+        },
+        "events:UPDATE": {
+          "allowed": false,
+          "sqlstate": "42501"
+        },
+        "sequence:UPDATE": {
+          "allowed": false,
+          "sqlstate": "42501"
+        }
+      },
+      "serviceCanGrantBrowserSelect": false,
+      "existingObjectsAndDefaultsUnchanged": true
+    },
+    "owner_after_row_lock": {
+      "observedLockWait": true,
+      "revokedStartRejected": true
+    },
+    "request_idempotency": {
+      "sameJob": true,
+      "changedInputRejected": true
+    },
+    "request_owner_scope": {
+      "sameRequestDifferentOwners": true,
+      "missingReturnsNull": true
+    },
+    "request_late_commit": {
+      "uncommittedReturnsNull": true,
+      "lateCommitRecovered": true,
+      "jobs": 1
+    },
+    "request_readback": {
+      "generatedIdRecovered": true,
+      "currentStatesPreserved": true,
+      "freshPermissions": 0
+    },
+    "start_ack_loss": {
+      "freshPermissions": 1,
+      "readbackPermissions": 0
+    },
+    "deadline_after_row_lock": {
+      "observedLockWait": true,
+      "expiredStartRejected": true
+    },
+    "concurrent_claim": {
+      "workers": 2,
+      "claims": 1
+    },
+    "unknown_slot": {
+      "blockedDifferentInput": true,
+      "releasedAfterOriginalResult": true
+    }
+  },
+  "cleanup": {
+    "ownedPid": 8253,
+    "statusExit": 3,
+    "pidFileAbsent": true,
+    "socketAbsent": true,
+    "tcpClosed": true
+  },
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "scope": "Actual candidate SQL on owned PG17: concurrency, fencing, unknown and recovery.\n\nNo hosted writes, worker credential provisioning or product provider calls.\nStorage manifests here are synthetic; this is not Storage/PostgREST/G014 verification.\n"
+}

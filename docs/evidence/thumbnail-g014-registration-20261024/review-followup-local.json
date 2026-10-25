@@ -1,0 +1,100 @@
+{
+  "schema": "thumbnail-review-followup-local-v1",
+  "recordedAt": "2026-10-24T13:08:37.029632+00:00",
+  "sourceParent": "7cb6be5cb57b2cc5c706f1c4d8f9b323d5560dcd",
+  "files": [
+    {
+      "path": "apps/web/components/admin/thumbnail-generator/useThumbnailChatQueue.ts",
+      "sha256": "d069e21c81ffe496cbfcfcaf472c2949ccfc47834b4432b396de9dc3c9b2ca6a"
+    },
+    {
+      "path": "apps/web/components/admin/thumbnail-generator/useThumbnailGeminiQueue.ts",
+      "sha256": "16e0bba2bce6d071c25106939aee405acb0930d487cb8e813f4191dbb30d7d36"
+    },
+    {
+      "path": "apps/web/lib/admin/youtube-thumbnail-generator/chat-contract.ts",
+      "sha256": "8321b2e83c0de7412e69af6cd6f42383278839a138b270272c471efaa27bb6e0"
+    },
+    {
+      "path": "apps/web/lib/admin/youtube-thumbnail-generator/private-store.ts",
+      "sha256": "c756f42fb9156dcb60ac72c200d9428a6c8189ccae552f1366bf10b47de193f0"
+    },
+    {
+      "path": "apps/web/lib/privacy/sanitize.ts",
+      "sha256": "4c07b83e316af71046fa49b83a9504938127bc3880e5c0cd0aaa20b7024e41ce"
+    },
+    {
+      "path": "apps/web/tests-unit/fixtures/thumbnail-chat-hook-owner-browser.ts",
+      "sha256": "b4c9a7f2f0e5ab6c6a32653b5903905f140aa52b83ae86628a03881a735db20b"
+    },
+    {
+      "path": "apps/web/tests-unit/fixtures/thumbnail-editor-browser.ts",
+      "sha256": "38cccbe665969d1524092a8d2afc7875799ff8305a3de301580e9087ebe887a8"
+    },
+    {
+      "path": "apps/web/tests-unit/fixtures/thumbnail-hook-owner-browser.ts",
+      "sha256": "2f7c25b777d090ef7f8bba5c5c0e7a71d3871fd88e9d96bd60289d9dae38d047"
+    },
+    {
+      "path": "apps/web/tests-unit/privacy-sanitize.test.ts",
+      "sha256": "f3edbba83910a89f1f25a0b8dcadb4e5fe134f808e49c4b49eacf344cfe6bf2e"
+    },
+    {
+      "path": "apps/web/tests-unit/thumbnail-chat-browser-queue.test.ts",
+      "sha256": "2a90d5f5da277970c789ee44f4c59476e17ad0012a32759e7a6bd974246cfe8c"
+    },
+    {
+      "path": "apps/web/tests-unit/thumbnail-chat-gemini-client.test.ts",
+      "sha256": "61d462b4180123f57c7e335ae469a8112770677f3e605e62770c2e3844e1999b"
+    },
+    {
+      "path": "apps/web/tests-unit/thumbnail-private-store.test.ts",
+      "sha256": "c5e4e3bb5e2940a9665b26c856420291574351af456f1b4a386333c9eaa643fb"
+    }
+  ],
+  "rootChecks": {
+    "unitFiles": 6,
+    "pass": 124,
+    "fail": 0,
+    "assertions": 895,
+    "lintFiles": 12,
+    "lintErrors": 0,
+    "lintWarnings": 0,
+    "parity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3427,
+      "logicalInputNamesSha256": "0c2743985b96e4f08b277a8b25c4312daf2f92108af5d7c6a926b24ed5d27488",
+      "nonLibraryContentSha256": "43e5c9a4c5eb3ff59fb69aa38bca0d3463ff797922709cfc88557f9f16fb94a1"
+    }
+  },
+  "privacy": {
+    "redNewCasesFailed": 2,
+    "admittedPromptByteBoundary": 65536,
+    "typedTextPathsAndAssignmentLabels": 15,
+    "rejectedBeforeDatabaseAndStorage": true,
+    "genericObjectStringBoundaryUnchanged": 4096,
+    "errorsKeepOnlyFixedCodes": true,
+    "performanceClaim": false
+  },
+  "imageAndInitialChatBrowserReceiptSha256": "859ff1eb3f8dbf35f1e5723f9026295911221148db15f8ebd79a832f4a1eece0",
+  "chatPollingBrowserReceiptSha256": "b7efffcc433e5c82bb2ff716cd03bfb8271af8b70c1f0f6cb73d33a94d56fa9c",
+  "browserCases": {
+    "imageHook": 4,
+    "chatHook": 5,
+    "fullEditor": "passed",
+    "authApi": "synthetic loopback",
+    "scheduling": "virtual",
+    "recoveryGenerationPosts": 0
+  },
+  "limits": [
+    "Browser seams do not prove hosted OAuth/provider/Storage execution",
+    "Virtual scheduling and route rejection are not real elapsed network timeouts",
+    "Progress assumes same owner/pending handle, a visible mounted tab, settling status reads and event-loop progress",
+    "No global exactly-once or complete formal verification claim",
+    "New-head CI and protected promotion remain separate"
+  ],
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "operatingApplied": false
+}

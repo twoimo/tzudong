@@ -17,6 +17,7 @@ async function bundle() {
     globalThis.__thumbnailHistory = fixture;
     globalThis.fetch = async input => {
       const url = String(input).split('?')[0];
+      if (url === '/api/admin/youtube-thumbnail-generator/jobs') return new Response(JSON.stringify({jobs:[]}), {headers:{'Content-Type':'application/json'}});
       if (url === '/api/admin/youtube-thumbnail-generator/history') {
         fixture.historyReads += 1;
         if (fixture.hold) await new Promise(resolve => { waiters.push(resolve); });
@@ -44,6 +45,8 @@ async function bundle() {
       builder.onResolve({ filter: /^thumbnail-history-fixture$/ }, () => ({ path: 'fixture', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: entry, loader: 'tsx', resolveDir: appRoot }));
       builder.onResolve({ filter: /^next\/image$/ }, () => ({ path: 'image', namespace: 'inert' }));
+      builder.onResolve({ filter: /^@\/contexts\/AuthContext$/ }, () => ({ path: 'auth', namespace: 'auth-seam' }));
+      builder.onLoad({ filter: /.*/, namespace: 'auth-seam' }, () => ({ loader: 'tsx', contents: "export const useAuth=()=>({user:{id:'6f5d42d6-d122-4d32-b8bb-2779de58b423'},isAdmin:true});" }));
       builder.onResolve({ filter: /^@\/integrations\/supabase\/client$/ }, () => ({ path: 'client', namespace: 'inert' }));
       // Under `bun test`, Bun.build misses tsconfig `paths` for this import graph.
       builder.onResolve({ filter: /^@\// }, args => ({ path: Bun.resolveSync(`./${args.path.slice(2)}`, appRoot) }));

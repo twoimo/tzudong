@@ -1,0 +1,86 @@
+{
+  "schema": "thumbnail-operating-path-local-v1",
+  "observedAt": "2026-10-24T11:35:19.791369+00:00",
+  "sourceBase": "1b10fa82f8dad783b3cda193514a862fa9fbb2d9",
+  "status": "implemented-locally-verified-not-operated",
+  "sources": {
+    "apps/web/scripts/thumbnail-production-successor.mjs": "3ace45a14fca3a92260f5f3de52b06655fc64cab8cab15b82aba2c7f4e2447f5",
+    "apps/web/scripts/thumbnail-operating-collector.mjs": "1ba8a34085381ceeeba0b58ec7d24096bf5a424428e5a8346f1e6f606654e706",
+    "apps/web/tests-unit/thumbnail-production-successor.test.ts": "16980e9a586c73377b8f6ce4862d9487369128c5729a6bc4319538f9534f0b62",
+    "apps/web/tests-unit/thumbnail-operating-collector.test.ts": "f3086448d491613f7b45cb65ec8589f9b7fadc20f8b2c6784eacaf09984d6c9c",
+    ".github/workflows/thumbnail-production-successor.yml": "38b3c465113303bc899a1b1c64e2c61d31fa68137a7664694d54721f5a57f0b2"
+  },
+  "sourceStable": true,
+  "releaseAdmissionSha256": "67d46fe826c27b5f422ef0c32f886e6d1c43fabc40b8efbe6336401085b26480",
+  "releaseFileCreated": false,
+  "historicalDraftExecutionEnabled": false,
+  "ownerCustody": {
+    "privilegedCatalogWriters": "controlled",
+    "workerProvisioning": "withheld",
+    "basis": "authenticated-owner-custody",
+    "scope": "privileged-custody-until-reconciled",
+    "machineStoppedWriterProof": false,
+    "normalBusinessDmlMayContinue": true
+  },
+  "machineBoundary": [
+    "exact source/vector/components and target identity",
+    "bounded exact read-only prior before publication and caller send",
+    "same-transaction advisory/ledger locks and repeated prior",
+    "original full G014 pre/post, Storage table locks and target absence recheck",
+    "terminal readback, spent journal and read-only reconciliation"
+  ],
+  "checks": {
+    "tests": 38,
+    "failed": 0,
+    "assertions": 324,
+    "node": "24.22.0",
+    "bun": "1.4.0",
+    "eslintErrors": 0,
+    "eslintWarnings": 0,
+    "appParityInputs": 3427,
+    "appParityDiagnostics": 0,
+    "parityScope": "Application scope excludes tests-unit; runtime sources unchanged after the retained parity run.",
+    "syntax": "both modules passed",
+    "inspect": "held, disabled draft, 43 statements"
+  },
+  "workflow": {
+    "yamlParsed": true,
+    "steps": 8,
+    "bashBlocks": 6,
+    "mockRoutingCases": 6,
+    "onlyWorkflowDispatch": true,
+    "inspectDatabaseSecretMapped": false,
+    "applyReconcileRunner": "tzudong-sql-operator-twoimo-mac",
+    "registeredRepositoryRunners": 0,
+    "actualActionsExecution": false,
+    "repositoryVisibility": "PUBLIC",
+    "directPersonalMacRunnerAdmitted": false
+  },
+  "npmAuthority": {
+    "staged": "11.6.2",
+    "bootstrapBefore": "11.19.1",
+    "bootstrapAfter": "11.19.1",
+    "globalInstall": false,
+    "packageLifecycleScripts": false,
+    "scope": "Actual execution of the unchanged npm staging step locally on Node24.22; not the complete workflow or hosted runner proof."
+  },
+  "privateProofSha256": {
+    "callerCollector": "bbdb6d6a36740bd2044d8fea32e70d9c44df2ea8c3000811eae7c43928d514ca",
+    "workflowRouting": "dc30fb73e887a8ea942db7ea38e50c4980b42177cd05a25607ceb867ed37a191",
+    "npmStaging": "e531aacb84ff1f23428564cb6511e3c78ff0a27df5457b8dbb6b839c164b451a"
+  },
+  "limitations": [
+    "External owner custody and fixed runner name are trust assumptions, not machine observation of all writers or hardware identity.",
+    "The registered runner, persistent custody across actual workflow attempts, separate release file, protected promotion and hosted execution remain unverified.",
+    "Local transport and workflow metadata are substituted; actual PostgreSQL17.6 whole-installer receipts remain separately scoped to unchanged SQL.",
+    "No automatic retry, custody repair/deletion, worker provisioning, writer resume or provider calls.",
+    "Original external Pro to Gemini to Pro reservations remain incomplete and unchanged.",
+    "The inactive self-hosted prototype is not admitted for this PUBLIC repository. Direct personal-Mac runner registration is withheld; a separate local authenticated-owner path is under source review, not implemented or operating-verified."
+  ],
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "runnerRegistrations": 0,
+  "workflowDispatches": 0,
+  "operatingApplied": false,
+  "confidenceInterval": "Not applicable to deterministic scoped checks; no performance or operating success-rate claim."
+}

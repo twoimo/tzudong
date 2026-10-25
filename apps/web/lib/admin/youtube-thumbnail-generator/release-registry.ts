@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { readFile } from 'node:fs/promises';
 import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 
@@ -679,7 +680,7 @@ function createSupabaseRegistryAdapter(): ThumbnailReleaseRegistryAdapter {
     async uploadReleaseAsset(bucket: string, objectPath: string, bytes: Buffer) {
       const { error } = await storage.from(bucket).upload(objectPath, bytes, {
         contentType: 'image/png',
-        upsert: true,
+        upsert: false,
       });
       if (error) throw error;
     },
@@ -788,46 +789,66 @@ export async function publishThumbnailDurableRelease(
 
   if (!isReleaseStorageObjectPath(objectPath)) throw new Error('thumbnail_durable_release_storage_path_invalid');
   await adapter.uploadReleaseAsset(THUMBNAIL_RELEASE_STORAGE_BUCKET, objectPath, bytes);
+  const expectedRow: InsertReleaseRow = {
+    id: releaseId,
+    release_key: THUMBNAIL_RELEASE_KEY,
+    status: 'active',
+    candidate_id: candidate.id,
+    source_manifest_id: candidate.sourceManifestId,
+    source_image_id: candidate.sourceImageId,
+    storage_bucket: THUMBNAIL_RELEASE_STORAGE_BUCKET,
+    storage_object_path: objectPath,
+    browser_image_path: browserImagePath,
+    sha256: actualSha256,
+    width: 1280,
+    height: 720,
+    mime_type: 'image/png',
+    provider_id: 'local-codex',
+    model: 'gpt-image-2',
+    model_provenance: 'exact',
+    score: candidate.score,
+    issue_tags: ['none'],
+    text_layers: textLayers,
+    canvas: { width: 1280, height: 720 },
+    source_quality_gate: sourceQualityGate,
+    published_by: request.publishedBy ?? null,
+    published_at: now,
+    created_at: now,
+  };
+  let publishError: unknown;
   try {
-    await adapter.publishRelease({
-      id: releaseId,
-      release_key: THUMBNAIL_RELEASE_KEY,
-      status: 'active',
-      candidate_id: candidate.id,
-      source_manifest_id: candidate.sourceManifestId,
-      source_image_id: candidate.sourceImageId,
-      storage_bucket: THUMBNAIL_RELEASE_STORAGE_BUCKET,
-      storage_object_path: objectPath,
-      browser_image_path: browserImagePath,
-      sha256: actualSha256,
-      width: 1280,
-      height: 720,
-      mime_type: 'image/png',
-      provider_id: 'local-codex',
-      model: 'gpt-image-2',
-      model_provenance: 'exact',
-      score: candidate.score,
-      issue_tags: ['none'],
-      text_layers: textLayers,
-      canvas: { width: 1280, height: 720 },
-      source_quality_gate: sourceQualityGate,
-      published_by: request.publishedBy ?? null,
-      published_at: now,
-      created_at: now,
-    });
+    await adapter.publishRelease(expectedRow);
   } catch (error) {
-    try {
-      await adapter.deleteReleaseAsset(THUMBNAIL_RELEASE_STORAGE_BUCKET, objectPath);
-    } catch (cleanupError) {
-      console.error('[youtube-thumbnail/durable-release] failed to clean uploaded asset after publish error:', cleanupError instanceof Error ? cleanupError.name : 'unknown_error');
-    }
-    if (isMissingReleaseTableError(error)) return createUnavailablePayload(THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_TABLE);
-    throw error;
+    publishError = error;
   }
 
-  const payload = await readCurrentThumbnailDurableRelease(env, { ...options, adapter });
-  assertRedactedPublicPayload(payload);
-  return payload;
+  // A failed/missing ACK is not a rollback receipt. Never delete uploaded bytes:
+  // the transaction can have committed, or can still commit after this read.
+  let row: ReleaseRow | null;
+  try {
+    row = await adapter.readCurrentRelease(THUMBNAIL_RELEASE_KEY);
+  } catch (error) {
+    if (isMissingReleaseTableError(error) || isMissingReleaseTableError(publishError)) {
+      return createUnavailablePayload(THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_TABLE);
+    }
+    throw new Error('thumbnail_durable_release_publish_unconfirmed');
+  }
+  const expected = expectedRow as unknown as Record<string, unknown>;
+  const actual = row as unknown as Record<string, unknown> | null;
+  const matches = actual && RELEASE_ROW_SELECT.split(',').filter((key) => key !== 'updated_at').every((key) => {
+    if (key === 'score') return Number(actual[key]) === expected[key];
+    if (key === 'published_at') return Date.parse(String(actual[key])) === Date.parse(String(expected[key]));
+    return isDeepStrictEqual(actual[key], expected[key]);
+  });
+  const release = row && matches ? normalizeReleaseRow(row) : null;
+  if (!release) {
+    if (isMissingReleaseTableError(publishError)) return createUnavailablePayload(THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_TABLE);
+    throw new Error('thumbnail_durable_release_publish_unconfirmed');
+  }
+  return createThumbnailDurableReleasePayload('ready', release, {
+    durableRegistryAvailable: true, releaseKey: THUMBNAIL_RELEASE_KEY,
+    warnings: publishError ? ['publish-response-reconciled'] : [],
+  }, 'ready', 'ready');
 }
 
 export async function readThumbnailDurableReleaseAsset(

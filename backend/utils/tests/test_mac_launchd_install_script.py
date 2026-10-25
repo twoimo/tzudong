@@ -13,7 +13,7 @@ class MacLaunchdInstallScriptTests(unittest.TestCase):
     def test_launchd_program_is_bash_wrapper_outside_documents(self) -> None:
         text = INSTALL.read_text(encoding="utf-8")
         self.assertIn('WRAPPER="$SUPPORT/run-hosted-new-video.sh"', text)
-        self.assertIn("<string>/bin/bash</string>", text)
+        self.assertIn("'ProgramArguments': ['/bin/bash', wrapper]", text)
         self.assertIn("Library/Logs/tzudong", text)
         self.assertIn("TZUDONG_REPO_ROOT", text)
         self.assertIn("<key>Hour</key>\n    <integer>5</integer>", text)
@@ -30,7 +30,7 @@ class MacLaunchdInstallScriptTests(unittest.TestCase):
 
     def test_interpreter_selection_prefers_explicit_then_repository_venv(self) -> None:
         text = INSTALL.read_text()
-        selection = text[text.index('if [[ -n "${PYTHON_CMD:-}"') : text.index('mkdir -p')]
+        selection = text[text.index('if [[ -n "${PYTHON_CMD:-}"') : text.index('FREEZE_STATE=')]
         # Execute only selection/preflight; never touch a LaunchAgent or HOME.
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

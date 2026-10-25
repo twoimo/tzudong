@@ -1,0 +1,74 @@
+{
+  "schema": "thumbnail-fixed-successor-local-verification-v1",
+  "status": "passed-with-operating-hold",
+  "observedAt": "2026-10-24T10:41:04.224510+00:00",
+  "sourceBase": "6539427742b2542dcfe471a0c399c2ba7c4177cd",
+  "sources": {
+    "apps/web/scripts/thumbnail-production-successor.mjs": "05c1f45fe14b27e919bea075392990f8bd8305e11f47983e78785b6580429487",
+    "apps/web/tests-unit/thumbnail-production-successor.test.ts": "7c712fdc7a88b9bcc6eb20b51d15d2aaff3b10d087eeb00d0f74866ca55bda35"
+  },
+  "unit": {
+    "command": "bun test tests-unit/thumbnail-production-successor.test.ts",
+    "bun": "1.4.0",
+    "tests": 20,
+    "failed": 0,
+    "assertions": 157,
+    "rootReexecution": true,
+    "scope": "Real pinned source/vector/compiler and validation; synthetic owner/fence metadata and substituted DB transport. Not hosted fence evidence.",
+    "logSha256": "f5e9dab7c0009cb10dd5cd0948aeca9937cb849389c6410f73e3b2e11a9ecf5c",
+    "sourceStable": true
+  },
+  "syntax": {
+    "node": "24.22.0",
+    "command": "node --check scripts/thumbnail-production-successor.mjs",
+    "exitCode": 0
+  },
+  "inspect": {
+    "status": "held",
+    "executionEnabled": false,
+    "statementCount": 43,
+    "manifestSha256": "51a7c5b61cc268e7a8fe23261548d1950ecfda122e12a6b0d13645e297563bbc",
+    "sourceSha256": "8019c4e7788cf6706094937a5d4111958201793192d918817e824791db471ac2",
+    "vectorSha256": "270ca9e0757641543f1d992ca526d2d9cb39324b4ebeb6b195a0b9f59226294e"
+  },
+  "eslint": {
+    "files": [
+      "apps/web/scripts/thumbnail-production-successor.mjs",
+      "apps/web/tests-unit/thumbnail-production-successor.test.ts"
+    ],
+    "exitCode": 0,
+    "warnings": 0,
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "parity": {
+    "command": "node scripts/run-typecheck.mjs --compiler parity",
+    "node": "24.22.0",
+    "npmInvoked": false,
+    "exitCode": 0,
+    "logicalInputs": 3427,
+    "diagnostics": 0,
+    "sourceStable": true,
+    "privateReceiptSha256": "7cf563b12d72670ef2426c25abb73be422ed075d4e6ef79c6140b312580f029e",
+    "logSha256": "77f8babfd9064e3f913b74195b2a85a7371df88986ca5e68e1fec114096c983f"
+  },
+  "checkedFailures": [
+    "lost acknowledgement remains unconfirmed despite exact committed readback",
+    "spent journal prevents mutation resend even with a fresh admission attempt",
+    "partial terminal append permits read-only reconciliation only",
+    "hardlinked/widened/oversized/partial-start journal refused",
+    "prior ledger drift and extra terminal ledger row rejected",
+    "file fsync, parent fsync, terminal append failures",
+    "expired admission, stale/future fence, component/source/vector drift and owner/target mismatch"
+  ],
+  "releaseContractSha256": "2e4b3db3390d55a36f7e30c3d303ae7f32f2a973dafb5c737bd25eb43353c4c8",
+  "releaseFileCreated": false,
+  "existingDraftEnabled": false,
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "limits": [
+    "Actual owner workflow, collectors, current quiescence coverage, durable operating-host custody and release admission are not implemented/proven by these unit tests.",
+    "Trusted executor preserves fixed custody; global exactly-once across hosts, hermetic transitive runtime and network-loss recovery on a real transport are not proved.",
+    "No population confidence interval, performance, quota or money saving claim."
+  ],
+  "privateFinalChecksSha256": "7cf563b12d72670ef2426c25abb73be422ed075d4e6ef79c6140b312580f029e"
+}

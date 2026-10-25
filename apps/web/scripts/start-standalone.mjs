@@ -1,9 +1,16 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from 'node:child_process';
 import process from 'node:process';
+import path from 'node:path';
 import { logCliError, redactCliText } from './privacy-safe-cli-log.mjs';
 
 const args = process.argv.slice(2);
+const configuredNextDistDir = process.env.TZUDONG_NEXT_DIST_DIR?.trim();
+if (configuredNextDistDir && !/^\.next-[a-z0-9](?:[a-z0-9-]{0,47})$/.test(configuredNextDistDir)) {
+    process.stderr.write('[start-standalone] error=InvalidDistDir\n');
+    process.exit(1);
+}
+const nextDirectoryName = configuredNextDistDir || '.next';
 
 const readArg = (name, fallback) => {
     const exactIndex = args.indexOf(name);
@@ -73,7 +80,7 @@ const child = spawn(
         '--skip-clean',
         '--',
         process.execPath,
-        '.next/standalone/apps/web/server.js',
+        path.join(nextDirectoryName, 'standalone', 'apps', 'web', 'server.js'),
     ],
     {
         env: childEnv,

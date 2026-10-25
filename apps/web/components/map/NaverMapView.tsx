@@ -766,7 +766,8 @@ const NaverMapView = memo(({
     const previousSearchedRestaurantRef = useRef<Restaurant | null>(null); // 이전 searchedRestaurant 추적
     const releasedSearchSelectionIdRef = useRef<string | null>(null);
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
-    const prevSelectedRestaurantIdRef = useRef<string | null>(null); // 이전 선택된 레스토랑 ID 추적 (동일 마커 재클릭 감지용)
+    // Centering owns its selection history; marker styling has a separate ref.
+    const prevSelectedRestaurantIdRef = useRef<string | null>(null);
     const hasUserMovedMapRef = useRef<boolean>(false); // 사용자가 지도를 직접 움직였는지 추적
     const lastImmediateMarkerCenterRef = useRef<{
         restaurantId: string;
@@ -1622,6 +1623,7 @@ const NaverMapView = memo(({
             currentMapZoom,
             getDeviceAdjustedZoom,
             mapFocusZoom,
+            isSelectionChanged,
             selectedRegion,
             selectedRestaurant,
             urlLat,
@@ -3301,7 +3303,6 @@ const NaverMapView = memo(({
 
         // ref 업데이트
         prevSelectedMarkerIdRef.current = styleUpdatePlan.nextPreviousSelectedId;
-        prevSelectedRestaurantIdRef.current = styleUpdatePlan.nextPreviousSelectedId;
 
     }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, displayRestaurants, restaurantById, mergedRestaurantById, expandedClusterRestaurantIds, visibleMarkerReviewBubbles, isMobileOrTablet, resolveMarkerRestaurant]);
 
@@ -3366,6 +3367,7 @@ const NaverMapView = memo(({
             }
 
             mapInstanceRef.current = map;
+            prevSelectedRestaurantIdRef.current = null;
             setIsMapInitialized(true);
             const postInitPlan = resolveNaverPostInitPlan({
                 hasValidUrlState,

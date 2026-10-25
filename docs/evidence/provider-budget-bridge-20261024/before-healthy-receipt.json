@@ -1,0 +1,25 @@
+{
+  "version": "postgres (PostgreSQL) 17.11 (Homebrew)",
+  "sourceBefore": {
+    "backend/supabase/migrations/20260713000300_g013_admin_provider_budgets.sql": "05864ef9f088b51f4df7b504ad09a02f29303d9bf43350a4e0845b42afec2200",
+    "backend/supabase/candidates/20261024_provider_budget_private_bridge.sql": "82326ced9a12fc501b69d17adfb7fec2564a592384c58cfe752acd60e63e4cac",
+    "backend/supabase/tests/test_provider_budget_bridge_pg17.py": "f061d719810ca87cae4e83720c30845b0811192a6a5cd608a84b5a830ff2f4f7"
+  },
+  "sourceAfter": {
+    "backend/supabase/migrations/20260713000300_g013_admin_provider_budgets.sql": "05864ef9f088b51f4df7b504ad09a02f29303d9bf43350a4e0845b42afec2200",
+    "backend/supabase/candidates/20261024_provider_budget_private_bridge.sql": "82326ced9a12fc501b69d17adfb7fec2564a592384c58cfe752acd60e63e4cac",
+    "backend/supabase/tests/test_provider_budget_bridge_pg17.py": "f061d719810ca87cae4e83720c30845b0811192a6a5cd608a84b5a830ff2f4f7"
+  },
+  "sourceStable": true,
+  "cases": {},
+  "cleanup": {
+    "ownedPid": 92449,
+    "statusExit": 3,
+    "pidFileAbsent": true,
+    "socketAbsent": true,
+    "tcpClosed": true
+  },
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "limits": "Owned PG17 regression for the G014 provider-budget execution boundary.\n\nReal SQL/roles/RLS; synthetic auth rows. This is not full G014, hosted PG17.6,\nPostgREST, provider quota, release-admission or a proof over all schedules.\n"
+}

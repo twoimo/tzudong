@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 
 const appRoot = join(import.meta.dir, '..');
@@ -125,5 +126,26 @@ describe('dependency modernization release authority', () => {
       'error.message',
       'stderr ||',
     ]) expect(runner).not.toContain(unsafeSink);
+  });
+
+  test.skipIf(process.platform === 'win32')('a failed install reports its fixed phase without forwarding child diagnostics', () => {
+    // Controlled executable seams exercise the real runner. They do not prove
+    // an actual Node/npm version or a real dependency install.
+    const directory = mkdtempSync(join(tmpdir(), 'dependency-phase-'));
+    try {
+      const node = join(directory, 'node-fixture');
+      const npm = join(directory, 'npm-fixture');
+      writeFileSync(node, '#!/bin/sh\nprintf "v24.0.0\\n"\n', { mode: 0o700 });
+      writeFileSync(npm, '#!/bin/sh\nif [ "$1" = "--version" ]; then printf "11.6.2\\n"; exit 0; fi\nprintf "fixture-diagnostic-invisible\\n" >&2\nexit 42\n', { mode: 0o700 });
+      const result = spawnSync(process.execPath, ['scripts/run-dependency-modernization-browser.mjs', '--package-only'], {
+        cwd: appRoot,
+        env: { ...process.env, TZUDONG_NODE24_EXECUTABLE: node, TZUDONG_NPM_11_EXECUTABLE: npm },
+        encoding: 'utf8', timeout: 10_000,
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('DEPENDENCY_MODERNIZATION_INSTALL_FAILED');
+      expect(result.stderr).not.toContain('fixture-diagnostic-invisible');
+      expect(result.stdout).toBe('');
+    } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 });

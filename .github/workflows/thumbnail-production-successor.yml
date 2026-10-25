@@ -1,0 +1,86 @@
+name: Thumbnail installation inspection
+run-name: Thumbnail inspection · ${{ inputs.source_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Exact current protected-main commit SHA; inspection never applies SQL.'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  inspect:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'twoimo/tzudong' &&
+      github.event.repository.full_name == 'twoimo/tzudong' &&
+      github.event.repository.default_branch == 'main' &&
+      github.repository_owner == 'twoimo' &&
+      github.actor == github.repository_owner &&
+      github.triggering_actor == github.actor &&
+      github.event.sender.login == github.actor &&
+      github.ref == 'refs/heads/main' && github.ref_protected &&
+      github.sha == inputs.source_sha
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact protected source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up project Node authority
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24.21.0'
+
+      - name: Verify source and package authority
+        shell: bash
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$EXPECTED_SOURCE_SHA" = "$GITHUB_SHA"
+          test "$EXPECTED_SOURCE_SHA" = "$(git rev-parse HEAD)"
+          test -z "$(git symbolic-ref --quiet HEAD || true)"
+          test -z "$(git status --porcelain)"
+          test "$(git remote get-url origin)" = https://github.com/twoimo/tzudong.git
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const manifest = JSON.parse(readFileSync('apps/web/package.json', 'utf8'));
+          if (manifest.engines?.node !== '24.x' || manifest.packageManager !== 'npm@11.6.2'
+            || process.versions.node.split('.')[0] !== '24') process.exit(2);
+          NODE
+
+      - name: Stage exact npm authority inside this job only
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          npm_authority_dir="$(mktemp -d "$RUNNER_TEMP/thumbnail-npm.XXXXXXXX")"
+          npm_config_cache="$npm_authority_dir/cache" npm install --prefix "$npm_authority_dir" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund npm@11.6.2
+          test "$(node "$npm_authority_dir/node_modules/npm/bin/npm-cli.js" --version)" = 11.6.2
+          printf '%s\n' "$npm_authority_dir/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Install locked parser dependencies
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(npm --version)" = 11.6.2
+          npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Inspect pinned source without database credentials
+        working-directory: apps/web
+        shell: bash
+        run: node scripts/thumbnail-operating-collector.mjs --mode inspect

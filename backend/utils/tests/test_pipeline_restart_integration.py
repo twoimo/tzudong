@@ -393,7 +393,8 @@ complete(receipt,'fixture',[output])
             for relative in [
                 'backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh','backend/restaurant-evaluation/scripts/parse_laaj_evaluation.py',
                 'backend/restaurant-evaluation/scripts/gemini_api_request.mjs','backend/restaurant-evaluation/prompts/evaluation_prompt.txt',
-                'backend/bin/stage_cache.py','backend/bin/run_parallel_laaj.py','backend/utils/stage_cache.py','backend/utils/jsonl_utils.py',
+                'backend/bin/stage_cache.py','backend/bin/run_agy_prompt.py',
+                'backend/utils/pipeline_cache_contracts.py','backend/bin/run_parallel_laaj.py','backend/utils/stage_cache.py','backend/utils/jsonl_utils.py',
                 'backend/utils/provider_budget.py','backend/utils/provider-budget.mjs','backend/utils/gemini-client.mjs',
                 'backend/utils/gemini-model.mjs','backend/utils/gemini-model.sh']:
                 target=root/relative;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/relative,target)
@@ -402,7 +403,7 @@ complete(receipt,'fixture',[output])
             metrics={key:[{'name':'fixture','eval_value':True if key.endswith('TF') else 1,'eval_basis':'fixture'}]
                      for key in ['visit_authenticity','rb_inference_score','rb_grounding_TF','review_faithfulness_score','category_TF']}
             response=root/'response.json';response.write_text(json.dumps(metrics));calls=root/'calls'
-            provider=tools/'node';provider.write_text(f'#!{sys.executable}\n'+
+            provider=tools/'node';provider.write_text('#!/usr/bin/env python\n'+
                 'import os,sys,time\nfrom pathlib import Path\n'+
                 'with Path(os.environ["FX_CALLS"]).open("a") as f:f.write("request\\n")\n'+
                 'time.sleep(.2)\nPath(sys.argv[3]).write_text(Path(os.environ["FX_RESPONSE"]).read_text())\n')
@@ -450,7 +451,8 @@ complete(receipt,'fixture',[output])
                 'backend/restaurant-evaluation/scripts/parse_laaj_evaluation.py',
                 'backend/restaurant-evaluation/scripts/gemini_api_request.mjs',
                 'backend/restaurant-evaluation/prompts/evaluation_prompt.txt',
-                'backend/bin/stage_cache.py','backend/bin/run_parallel_laaj.py',
+                'backend/bin/stage_cache.py','backend/bin/run_agy_prompt.py',
+                'backend/utils/pipeline_cache_contracts.py','backend/bin/run_parallel_laaj.py',
                 'backend/utils/stage_cache.py','backend/utils/jsonl_utils.py','backend/utils/provider_budget.py',
                 'backend/utils/provider-budget.mjs','backend/utils/gemini-client.mjs',
                 'backend/utils/gemini-model.mjs','backend/utils/gemini-model.sh',
@@ -467,7 +469,7 @@ complete(receipt,'fixture',[output])
             with closing(sqlite3.connect(journal)) as db:
                 db.execute('CREATE TABLE events(provider TEXT, started REAL, ended REAL)')
                 db.commit()
-            helper=(f'#!{sys.executable}\n'
+            helper=('#!/usr/bin/env python\n'
                 'import json,os,sqlite3,time\n'
                 'from pathlib import Path\n'
                 'provider=Path(__file__).name;start=time.monotonic()\n'
