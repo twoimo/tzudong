@@ -73,6 +73,9 @@ jobs:
       - name: Authoritative clean install
         run: npm ci
 
+      - name: Install pinned Chrome for Testing for browser unit tests
+        run: npx playwright install --with-deps chromium
+
       - name: Collect current Dependabot candidates
         env:
           GH_TOKEN: ${{ github.token }}

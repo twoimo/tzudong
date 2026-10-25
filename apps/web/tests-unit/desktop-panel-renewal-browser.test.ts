@@ -1,4 +1,5 @@
 import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
+import { javascriptStringLiteral } from './fixtures/javascript-string-literal';
 import { expect, test } from 'bun:test';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -7,16 +8,32 @@ import { chromium, expect as browserExpect } from '@playwright/test';
 const root = join(import.meta.dir, '..');
 const chrome = chromeForTestingExecutable();
 const panels = { profile: '프로필', bookmarks: '북마크', notifications: '알림', feed: '리뷰', stamp: '도장', leaderboard: '랭킹' };
+
+test('generated JavaScript literals preserve values without closing an inline script', async () => {
+  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  try {
+    const page = await browser.newPage();
+    const value = '</script><script>globalThis.__injected = true</script>\u2028\u2029"\\\n';
+    await page.setContent(`<script>globalThis.__literal = ${javascriptStringLiteral(value)};</script>`);
+    const observed = await page.evaluate(() => {
+      const state = globalThis as unknown as { __literal: string; __injected?: boolean };
+      return { value: state.__literal, injected: state.__injected === true };
+    });
+    expect(observed).toEqual({ value, injected: false });
+  } finally {
+    await browser.close();
+  }
+});
 const entry = `
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Panel from './components/home/home-desktop-control-panel';
-const fixture = globalThis.__fixture = { held: new Set(globalThis.__heldPanels || []), failed: new Set(globalThis.__failedPanels || []), waiters: {}, calls: [], auth: [],
+const fixture = globalThis.__fixture = { held: new Set(globalThis.__heldPanels || []), failed: new Set(globalThis.__failedPanels || []), waiters: {}, calls: [], auth: [], locationCalls: 0,
   release(name) { this.held.delete(name); for (const resolve of (this.waiters[name] || [])) resolve(); this.waiters[name] = []; },
   async load(name, loader) { this.calls.push(name); if (this.held.has(name)) await new Promise(resolve => (this.waiters[name] ||= []).push(resolve)); if (this.failed.has(name)) throw new Error('offline-fixture'); return loader(); }
 };
-function Fixture(){const [auth,setAuth]=useState(globalThis.__holdAuth?{user:null,isAuthLoading:true}:{user:{id:'fixture-self'},isAuthLoading:false});const [detail,setDetail]=useState(null);fixture.setAuth=setAuth;fixture.setDetail=setDetail;fixture.closeDetail=()=>setDetail(null);return <Panel mapMode="domestic" selectedRegion={null} selectedCountry={null} selectedCategories={[]} filters={{}} onRegionChange={()=>{}} onCountryChange={()=>{}} onCategoryChange={()=>{}} onThemeChange={()=>{}} onRestaurantSelect={setDetail} onRestaurantSearch={setDetail} onSearchExecute={()=>{}} panelRestaurant={detail} isPanelOpen={Boolean(detail)} onDetailPanelBack={()=>{setDetail(null);return true;}} {...auth} />;}
+function Fixture(){const [auth,setAuth]=useState(globalThis.__holdAuth?{user:null,isAuthLoading:true}:{user:{id:'fixture-self'},isAuthLoading:false});const [detail,setDetail]=useState(null);fixture.setAuth=setAuth;fixture.setDetail=setDetail;fixture.closeDetail=()=>setDetail(null);return <Panel mapMode="domestic" onDeviceLocationClick={()=>{fixture.locationCalls++;}} deviceLocation={globalThis.__deviceLocation} selectedRegion={null} selectedCountry={null} selectedCategories={[]} filters={{}} onRegionChange={()=>{}} onCountryChange={()=>{}} onCategoryChange={()=>{}} onThemeChange={()=>{}} onRestaurantSelect={setDetail} onRestaurantSearch={setDetail} onSearchExecute={()=>{}} panelRestaurant={detail} isPanelOpen={Boolean(detail)} onDetailPanelBack={()=>{setDetail(null);return true;}} {...auth} />;}
 createRoot(document.getElementById('root')).render(<QueryClientProvider client={new QueryClient()}><Fixture/></QueryClientProvider>);
 `;
 
@@ -64,7 +81,7 @@ export async function renewalPanelBundle(surface: 'desktop' | 'mobile' | 'outer-
         // Replace only the dynamic-import transport boundary. State, events,
         // Radix menu, retry hook and rendered fallback are the actual source.
         contents: readFileSync(args.path, 'utf8').replace(/const mod = await import\(['"]([^'"]+)['"]\);/g,
-          (_, path) => `const mod = await globalThis.__fixture.load(${JSON.stringify(views[path] || path)}, () => import(${JSON.stringify(path)}));`),
+          (_, path) => `const mod = await globalThis.__fixture.load(${javascriptStringLiteral(views[path] || path)}, () => import(${javascriptStringLiteral(path)}));`),
         loader: 'tsx', resolveDir: join(root, 'components/home'),
       }));
     }}],
@@ -336,3 +353,31 @@ for (const surface of ['outer-mobile','outer-desktop','bookmark','notification',
   await browserExpect(page.locator('[data-loaded-panel="알림"]')).toBeVisible();
  }finally{await browser.close();}
 },20000);
+
+for (const hasLocation of [false, true]) test(`mobile location click ${hasLocation ? 'reuses granted disclosure' : 'opens disclosure before confirmation'}`, async () => {
+  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    await page.route('**/*', route => route.request().resourceType() === 'document'
+      ? route.fulfill({ contentType: 'text/html', body: '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>' })
+      : route.abort());
+    await page.goto('https://renewal.test/');
+    if (hasLocation) await page.evaluate(() => Object.assign(globalThis, { __deviceLocation: { lat: 37.5, lng: 127, accuracy: 20, focusRequestId: 1 } }));
+    await page.addScriptTag({ content: await renewalPanelBundle('mobile') });
+    const calls = () => page.evaluate(() => (globalThis as unknown as { __fixture: { locationCalls: number } }).__fixture.locationCalls);
+    const trigger = page.getByRole('button', { name: hasLocation ? '현재 위치 기준 방향 확인' : '현재 위치 보기', exact: true });
+    await trigger.tap();
+    if (hasLocation) {
+      await browserExpect(page.getByRole('alertdialog')).toHaveCount(0);
+    } else {
+      const dialog = page.getByRole('alertdialog');
+      await browserExpect(dialog).toBeVisible();
+      expect(await calls()).toBe(0);
+      await dialog.getByRole('button', { name: '현재 위치 보기', exact: true }).tap();
+      await browserExpect(dialog).toHaveCount(0);
+    }
+    expect(await calls()).toBe(1);
+  } finally {
+    await browser.close();
+  }
+}, 20000);

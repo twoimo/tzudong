@@ -186,6 +186,11 @@ jobs:
       - run: npm run lint
       - name: Install pinned Chrome for Testing for browser unit tests
         run: npx playwright install --with-deps chromium
+      - name: Verify crawler browser identity against the web browser pin
+        run: |
+          set -euo pipefail
+          executable="$(node --input-type=module -e 'import {chromium} from "@playwright/test"; console.log(chromium.executablePath())')"
+          python3 ../../backend/bin/chrome_for_testing.py --executable "$executable" >/dev/null
       - run: npm run test:unit
       - run: npm run build
 

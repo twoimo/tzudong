@@ -10,8 +10,12 @@ export function chromeForTestingExecutable() {
   const core = path.dirname(require.resolve('playwright-core/package.json'));
   const pins = JSON.parse(readFileSync(path.join(core, 'browsers.json'), 'utf8'));
   const pin = pins.browsers.find((entry: { name: string }) => entry.name === 'chromium');
+  const contract = JSON.parse(readFileSync(new URL('../../../../.github/chrome-for-testing.v1.json', import.meta.url), 'utf8'));
+  const coreVersion = JSON.parse(readFileSync(path.join(core, 'package.json'), 'utf8')).version;
   const executable = chromium.executablePath();
-  if (pin?.title !== 'Chrome for Testing' || !executable.includes(`chromium-${pin.revision}`)
+  if (contract.schemaVersion !== 1 || contract.product !== 'Google Chrome for Testing'
+    || contract.version !== pin?.browserVersion || contract.playwrightVersion !== coreVersion
+    || pin?.title !== 'Chrome for Testing' || !executable.includes(`chromium-${pin.revision}`)
     || !lstatSync(executable).isFile() || realpathSync(executable) !== executable) {
     throw new Error('CHROME_FOR_TESTING_PIN_UNVERIFIED');
   }

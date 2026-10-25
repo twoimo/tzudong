@@ -29,6 +29,11 @@ case "$FREEZE_STATE" in
   active|cleared) ;;
   *) echo 'invalid_write_freeze_state' >&2; exit 2 ;;
 esac
+CHROME_FOR_TESTING="${CHROME_FOR_TESTING_EXECUTABLE:-}"
+"$PYTHON" "$REPO_ROOT/backend/bin/chrome_for_testing.py" --executable "$CHROME_FOR_TESTING" >/dev/null 2>&1 || {
+  echo 'chrome_for_testing_unverified' >&2
+  exit 1
+}
 if [[ ! -d "$FFMPEG_ROOT" || -L "$FFMPEG_ROOT" || ! -f "$FFMPEG" || -L "$FFMPEG" || ! -x "$FFMPEG" ]]; then
   echo 'ffmpeg_runtime_unavailable' >&2
   exit 1
@@ -66,9 +71,8 @@ export TZUDONG_HOSTED_DATA_PLANE_APPROVED="1"
 export ALLOW_CUSTOM_FFMPEG="1"
 export FFMPEG_PATH=$(printf '%q' "$FFMPEG")
 export FFMPEG_TRUSTED_ROOT=$(printf '%q' "$FFMPEG_ROOT")
-if [[ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]]; then
-  export PUPPETEER_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-fi
+export PUPPETEER_EXECUTABLE_PATH=$(printf '%q' "$CHROME_FOR_TESTING")
+$(printf '%q' "$PYTHON") "\$TZUDONG_REPO_ROOT/backend/bin/chrome_for_testing.py" --executable "\$PUPPETEER_EXECUTABLE_PATH" >/dev/null
 cd "\$TZUDONG_REPO_ROOT"
 echo "\$(date -u +%Y-%m-%dT%H:%M:%SZ) start source=mac freeze=\${G037_WRITE_FREEZE} limit=3"
 set +e

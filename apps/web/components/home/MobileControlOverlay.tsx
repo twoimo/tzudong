@@ -1262,7 +1262,6 @@ function MobileControlOverlayComponent({
                             <Button
                                 type="button"
                                 onClick={(event) => {
-                                    event.preventDefault();
                                     event.stopPropagation();
                                 }}
                                 disabled={isDeviceLocationPending}
