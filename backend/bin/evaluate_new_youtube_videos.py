@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Evaluate youtube IDs that hosted restaurants do not already have.
+"""Evaluate videos admitted by current local inputs and shared request custody.
 
-Collects URLs, keeps only IDs absent from hosted, then runs numbered
+Collects URLs, reconciles known delivery/uncertainty, then runs numbered
 scripts for those videos. Does not write to hosted Supabase.
 """
 
@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "backend" / "supabase" / "scripts"))
 sys.path.insert(0, str(REPO_ROOT))
 
-from hosted_data_plane import (  # noqa: E402
+from backend.supabase.scripts.hosted_data_plane import (  # noqa: E402
     HostedDataPlaneError,
     assert_hosted_target,
     extract_youtube_video_id,
@@ -354,6 +354,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error={exc}")
         return 2
 
+    from functools import partial
+    from backend.supabase.scripts.hosted_pending_operation import (
+        current_source_revision, rpc_transport, observe_deliveries, local_video_inputs_present,
+    )
     hosted = set(hosted_youtube)
     env = os.environ.copy()
     python = env.get("PYTHON_CMD", "python3")
@@ -369,22 +373,39 @@ def main(argv: list[str] | None = None) -> int:
     before = _load_urls(urls_path)
     _run([python, str(SCRIPTS["collect_urls"]), "--channel", args.channel], env)
     after = _load_urls(urls_path)
+    observed_ids={v for item in after if (v:=extract_youtube_video_id(item)) and v not in local_done and v not in permanent_no_transcript}
+    try:
+        revision=current_source_revision(REPO_ROOT) if observed_ids else None
+    except HostedDataPlaneError as exc:
+        print(f"error={exc}")
+        return 2
+    deliveries=observe_deliveries(observed_ids,transport=partial(rpc_transport,service_role_key=key),revision=revision)
+    held=[]; delivered=[]; uncertain=[]
     new_urls: list[str] = []
     seen: set[str] = set()
     for item in after:
         video_id = extract_youtube_video_id(item)
         if (
             video_id is None
-            or video_id in hosted
             or video_id in seen
             or video_id in local_done
             or video_id in permanent_no_transcript
         ):
             continue
+        delivery=deliveries[video_id]
+        if delivery['state'] in ('legacy_held','held','unconfirmed') or (video_id in hosted and delivery['state']=='legacy_unresolved'):
+            held.append(video_id)
+            if delivery['state']!='legacy_unresolved':uncertain.append(video_id)
+            continue
+        if delivery['state']=='delivered_snapshot' and not local_video_inputs_present(crawling,evaluation,video_id):
+            delivered.append(video_id)
+            continue
         seen.add(video_id)
         new_urls.append(f"https://www.youtube.com/watch?v={video_id}")
         if len(new_urls) >= args.limit:
             break
+    print(f"legacyOrUnconfirmedHeld={len(set(held))}")
+    print(f"deliveredSnapshots={len(set(delivered))}")
     print(f"hostedYoutubeIds={len(hosted)}")
     print(f"localEvaluatedIds={len(local_done)}")
     print(f"permanentNoTranscriptIds={len(permanent_no_transcript)}")
@@ -393,6 +414,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run or not new_urls:
         _write_urls(urls_path, before)
         print("evaluate=skipped")
+        if uncertain and not args.dry_run:
+            print("error=pending_original_request_unconfirmed")
+            return 2
         return 0
 
     _write_urls(urls_path, new_urls)
@@ -506,6 +530,9 @@ def main(argv: list[str] | None = None) -> int:
         print("error=evaluation_output_incomplete")
         return 1
     print("evaluate=ok")
+    if uncertain:
+        print("error=pending_original_request_unconfirmed")
+        return 2
     return 0
 
 

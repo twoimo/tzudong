@@ -48,6 +48,7 @@ relevant_sources=(
   'backend/supabase/scripts/transform_receipt_ocr_acl_admission_pg15_replay.py'
   'backend/supabase/scripts/transform_receipt_ocr_indeterminate_recovery_pg15_replay.py'
   'backend/supabase/scripts/transform_review_verification_readiness_pg15_replay.py'
+  'backend/supabase/scripts/transform_hosted_pending_custody_pg15_replay.py'
   'backend/supabase/scripts/transform_registration_replay.py'
   'backend/supabase/scripts/transform_advisor_replay.py'
   'backend/supabase/scripts/verify_admin_user_ids_replay.py'
@@ -1423,6 +1424,20 @@ for migration in "${effective_migrations[@]}"; do
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
   printf '%s  %s  %s\n' "$previous_hash" "$file_hash" "$canonical_path" >>"$chain_file"
   case "${migration##*/}" in
+    20260828000100_hosted_candidate_identity_unique.sql)
+      # This unexecuted source enforces one restaurant per video. The custody
+      # successor requires the composite video/name index instead. Bind both
+      # immutable sources and the explicit source-only disposition; never drop
+      # an index or manufacture an operating migration-ledger entry here.
+      index_disposition="$staging_dir/hosted-pending-candidate-index-disposition.json"
+      python3 "$script_dir/transform_hosted_pending_custody_pg15_replay.py" \
+        --source "$migration" \
+        --superseded-by "$backend_migrations_dir/20261025063810_hosted_pending_atomic_delivery.sql" \
+        --receipt "$index_disposition"
+      g026_chain_apply 'hosted-pending-candidate-index-disposition-helper' \
+        "$script_dir/transform_hosted_pending_custody_pg15_replay.py"
+      g026_chain_apply 'hosted-pending-candidate-index-disposition' "$index_disposition"
+      ;;
     20261004190259_admin_record_guarded_actions.sql|20261004194715_admin_evaluation_raw_warning_invoker_contract.sql)
       registration_replay="$work_dir/${migration##*/}.pg15-registration-replay.sql"
       python3 "$script_dir/transform_registration_replay.py" --source "$migration" --output "$registration_replay"
@@ -1664,6 +1679,51 @@ for migration in "${effective_migrations[@]}"; do
       g026_chain_apply "review-verification-readiness-pg15-replay:${migration##*/}" \
         "$transformed_migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
+      ;;
+    20261025063810_hosted_pending_atomic_delivery.sql)
+      # Source reconstruction only. PG17 executor/ledger/membership admission is
+      # proved separately by the unchanged atomic operating operation.
+      # Keep catalog-only witnesses in the private run log even if admission
+      # rejects the source chain before an evidence directory can be emitted.
+      compose exec -T db psql -X -At -v ON_ERROR_STOP=1 \
+        -h 127.0.0.1 -p 5432 -U postgres -d postgres <<'SQL'
+SELECT jsonb_build_object(
+ 'kind','hosted_pending_prerequisites',
+ 'executor_is_postgres',current_user='postgres',
+ 'server_major',current_setting('server_version_num')::int/10000,
+ 'extract_present',to_regprocedure('public.extract_youtube_video_id(text)') IS NOT NULL,
+ 'resolve_present',to_regprocedure('public.resolve_restaurant_identity_name(text,text,text,text)') IS NOT NULL,
+ 'normalize_present',to_regprocedure('public.normalize_restaurant_identity_name(text)') IS NOT NULL,
+ 'video_index',pg_get_indexdef(to_regclass('public.idx_restaurants_active_video_identity')),
+ 'candidate_index',pg_get_indexdef(to_regclass('public.idx_restaurants_active_candidate_identity')));
+SQL
+      compose exec -T db psql -X -At -v ON_ERROR_STOP=1 \
+        -h 127.0.0.1 -p 5432 -U postgres -d postgres <<'SQL' |
+SELECT jsonb_agg(jsonb_build_object(
+ 'signature',p.proname||'()',
+ 'owner',pg_get_userbyid(p.proowner),
+ 'body_sha256',encode(sha256(convert_to(p.prosrc,'UTF8')),'hex'),
+ 'definer',p.prosecdef,'config',p.proconfig,'acl',p.proacl::text,
+ 'attributes',jsonb_build_array(p.prokind,p.prorettype,p.proretset,p.pronargs,
+  p.proargnames,p.proargmodes,p.proargdefaults,p.pronargdefaults,p.provariadic,
+  p.prosupport,p.procost,p.prorows,p.proisstrict,p.proleakproof,p.provolatile,p.proparallel,
+  (SELECT lanname FROM pg_language WHERE oid=p.prolang))) ORDER BY p.proname)
+FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+WHERE n.nspname='privacy_retention' AND p.proname IN (
+ 'assert_g014_workflow_owner_contract','assert_g014_public_rpc_allowlist',
+ 'assert_g014_definer_contract','assert_g014_catalog_contract');
+SQL
+        tee "$staging_dir/hosted-pending-custody-pg15-assertions.json"
+      transformed_migration="$staging_dir/hosted-pending-custody-pg15-replay.sql"
+      replay_receipt="$staging_dir/hosted-pending-custody-pg15-replay.json"
+      python3 "$script_dir/transform_hosted_pending_custody_pg15_replay.py" \
+        --source "$migration" --output "$transformed_migration" --receipt "$replay_receipt"
+      g026_chain_apply 'hosted-pending-custody-pg15-replay-transformer' \
+        "$script_dir/transform_hosted_pending_custody_pg15_replay.py"
+      g026_chain_apply "hosted-pending-custody-pg15-replay:${migration##*/}" "$transformed_migration"
+      g026_chain_apply 'hosted-pending-custody-pg15-replay-receipt' "$replay_receipt"
+      compose exec -T db psql -X --single-transaction --file=- -v ON_ERROR_STOP=1 \
+        -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
     *)
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$migration"
@@ -1936,6 +1996,8 @@ jq -n --arg source_sha "$source_sha" --arg migration_chain_sha256 "$chain_hash" 
     admin-user-ids-overlap-verification.sql admin-user-ids-overlap-receipt.json \
     admin-management-group-overlap-verification.sql admin-management-group-overlap-receipt.json \
     admin-user-rpc-forward-overlap-verification.sql admin-user-rpc-forward-overlap-receipt.json \
+    hosted-pending-custody-pg15-replay.sql hosted-pending-custody-pg15-replay.json \
+    hosted-pending-custody-pg15-assertions.json hosted-pending-candidate-index-disposition.json \
     g014-owner-pg15-verification.sql g014-owner-pg15-receipt.json \
     g014-owner-final-pg15-verification.sql g014-owner-final-pg15-receipt.json \
     g016-identity-pg15-verification.sql g016-identity-pg15-receipt.json \
