@@ -11,6 +11,8 @@ on:
       - 'backend/supabase/scripts/transform_registration_replay.py'
       - 'backend/supabase/tests/test_registration_replay.py'
       - 'backend/supabase/tests/test_g014_catalog_baseline_generator.py'
+      - 'backend/supabase/scripts/compare_g024_clean_replays.py'
+      - 'backend/supabase/tests/test_compare_g024_clean_replays.py'
       - 'backend/supabase/scripts/g014_catalog_diagnostic.py'
       - 'backend/supabase/tests/test_g014_diagnostic_admission.py'
       - 'backend/supabase/tests/test_restaurant_refresh_apply_boundary.py'

@@ -45,6 +45,32 @@ REPLACEMENTS = (
         b"5515d2269ddf0ffa26a414f21989b60dce1a41002440f0a81d3c646b34774b40",
         1,
     ),
+    # The clean source chain retains its own G014 bodies and direct assertion
+    # ACL. These exact preimages were read from the isolated PG15 replay, not
+    # copied into the operating contract. None of the functions is rewritten.
+    (
+        b"f23203a0a2366eca16b30b256729e859efc556952df8cb75485924153e1188ef",
+        b"18b6dc096500a92ba2c97b1fea5a6991423586a91e2f892ed3eb8f5e47146bd9",
+        1,
+    ),
+    (
+        b"bb8dc8d2e4020f70b2332cbdf6acf465a97cbc4d582f9f14415330247ae34131",
+        b"a19e2e07f8ae82246faa0a81c63a64be386c8333fb7558b772e5b1b1949ce6d1",
+        1,
+    ),
+    (
+        b"5c5971a5578e09db25a41e88474f1da15acfbd658571ba28f29e8c226e4d1883",
+        b"c8560d4128ac98ec83a26328b124e448a50266bdb638daaa9bed4b93d2abeb3f",
+        1,
+    ),
+    (
+        b"OR p.proacl::text IS DISTINCT FROM '{privacy_workflow_owner=X/privacy_workflow_owner}'",
+        b"""OR p.proacl::text IS DISTINCT FROM CASE
+         WHEN expected.signature='privacy_retention.assert_g014_public_rpc_allowlist()'
+         THEN '{privacy_workflow_owner=X/privacy_workflow_owner,postgres=X/privacy_workflow_owner}'
+         ELSE '{privacy_workflow_owner=X/privacy_workflow_owner}' END""",
+        1,
+    ),
     (
         b"GRANT privacy_workflow_owner TO postgres WITH ADMIN FALSE,INHERIT FALSE,SET TRUE GRANTED BY postgres;",
         b"GRANT privacy_workflow_owner TO postgres;",
