@@ -121,6 +121,8 @@ MIGRATION_ORDER_OVERRIDES = {
 SERVICE_IDENTITY_PREDECESSOR = "20261003095444_restore_service_identity_helpers.sql"
 SERVICE_IDENTITY_SUCCESSOR = "20261003065736_g014_current_service_rpc_registry.sql"
 SEED_SOURCE = Path("backend/supabase/scripts/local-seed.sql")
+PSQL_STDERR_TAIL_NAME = "local-migrate-psql.err"
+PSQL_STDERR_TAIL_BYTES = 2048
 READBACK_SOURCE = Path("backend/supabase/scripts/local_catalog_readback.sql")
 EXPECTED_SERVICES = (
     "analytics", "auth", "db", "functions", "imgproxy", "kong", "mail",
@@ -970,6 +972,7 @@ $owner_normalization$;
 _CLOUD_INPUT = re.compile(
     r"(?i)(?:postgres(?:ql)?://|supabase\.co|\.supabase\.in|PGHOST\s*=|DATABASE_URL\s*=|aws\.amazonaws\.com|cloud\.google\.com)"
 )
+_PSQL_DIAGNOSTIC = re.compile(r"(?:^|: )(?:ERROR|DETAIL|CONTEXT):")
 _PSQL_META = re.compile(r"(?m)^\s*\\(?:!|copy|connect|include|ir|i|gexec|gset|shell)\b")
 _EXTENSION = re.compile(
     r"(?is)\bCREATE\s+EXTENSION\s+(IF\s+NOT\s+EXISTS\s+)?(?P<name>\"?[^\s;\"]+\"?)(?P<tail>[^;]*);"
@@ -2058,6 +2061,7 @@ class PsqlExecutor:
         if result.returncode < 0:
             raise LocalMigrationError("psql_ambiguous")
         if result.returncode != 0:
+            self._write_stderr_tail(result.stderr)
             stderr = result.stderr.decode("utf-8", "replace").lower()
             state_match = re.search(rb"(?:ERROR|FATAL):\s+([0-9A-Z]{5})\b", result.stderr)
             sqlstate = state_match.group(1).decode("ascii") if state_match else "unavailable"
@@ -2067,7 +2071,7 @@ class PsqlExecutor:
             raise LocalMigrationError("psql_failed")
 
     def capture(self, sql: bytes, *, role: str = "supabase_admin") -> bytes:
-        """Run a read-only query and return stdout without exposing stderr."""
+        """Run a read-only query; stderr reaches only the redacted local tail."""
         self._admit_container()
         try:
             result = subprocess.run(
@@ -2083,8 +2087,22 @@ class PsqlExecutor:
         if result.returncode < 0:
             raise LocalMigrationError("psql_ambiguous")
         if result.returncode != 0:
+            self._write_stderr_tail(result.stderr)
             raise LocalMigrationError("psql_ambiguous")
         return result.stdout
+
+    def _write_stderr_tail(self, stderr: bytes) -> None:
+        """Best effort: keep a bounded, redacted psql error tail in the 0700 state dir."""
+        try:
+            _, state, _ = self._binding()
+            redact = _load_source_module("backend/utils/privacy_log.py", "tzudong_privacy_log", "privacy_log_invalid").redact_log_text
+            lines = [line for line in stderr[-PSQL_STDERR_TAIL_BYTES:].decode("utf-8", "replace").splitlines() if _PSQL_DIAGNOSTIC.search(line)]
+            data = (redact("\n".join(lines), max_length=PSQL_STDERR_TAIL_BYTES) + "\n").encode("utf-8")
+            fd = os.open(state / PSQL_STDERR_TAIL_NAME, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(data)
+        except Exception:
+            pass
 
 
 def _psql_stdin(sql: bytes, variables: Mapping[str, str] | None) -> bytes:
@@ -4559,15 +4577,19 @@ def compare_receipts(first: Path, second: Path) -> dict[str, Any]:
     }
 
 
-def _load_replay_contract() -> Any:
-    path = _require_owned_regular_file(repository_root() / "backend/supabase/scripts/local_replay_contract.py", "replay_contract_invalid")
+def _load_source_module(relative: str, name: str, error_code: str) -> Any:
+    path = _require_owned_regular_file(repository_root() / relative, error_code)
     _reject_path_custody(path)
-    spec = importlib.util.spec_from_file_location("tzudong_local_replay_contract", path)
+    spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
-        raise LocalMigrationError("replay_contract_invalid")
+        raise LocalMigrationError(error_code)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _load_replay_contract() -> Any:
+    return _load_source_module("backend/supabase/scripts/local_replay_contract.py", "tzudong_local_replay_contract", "replay_contract_invalid")
 
 
 def _expected_replay_proof(item: Mapping[str, Any]) -> dict[str, Any] | None:
