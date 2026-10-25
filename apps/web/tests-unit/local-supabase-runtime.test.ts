@@ -282,7 +282,7 @@ describe('local Supabase runtime source contract', () => {
       LC_ALL: 'C.UTF-8',
       TERM: 'xterm-256color',
       SUPABASE_DB_URL:
-        'postgresql://postgres.fixture-tenant:local-password@127.0.0.1:13432/postgres',
+        'postgresql://postgres.fixture-tenant:local-password@127.0.0.1:13432/postgres?sslmode=disable',
       SUPABASE_SCHEMAS: 'public,auth,storage',
       SUPABASE_CLI: path.join(
         '/fixture/repository',
@@ -293,6 +293,18 @@ describe('local Supabase runtime source contract', () => {
         process.platform === 'win32' ? 'supabase.cmd' : 'supabase',
       ),
     });
+  });
+
+  test('rejects non-loopback typegen targets before disabling SSL', () => {
+    for (const url of [
+      'postgresql://postgres:fixture-password@hosted.invalid:5432/postgres?sslmode=require',
+      'https://127.0.0.1:5432/postgres',
+    ]) {
+      expect(() => buildLocalTypeGenerationEnvironment({
+        repositoryRoot: '/fixture/repository',
+        values: { SUPABASE_DB_URL: url, POOLER_TENANT_ID: 'fixture-tenant' },
+      }, {})).toThrow('[local-supabase] database_url');
+    }
   });
 
   test('keeps local development isolated from ambient hosted credentials', () => {
