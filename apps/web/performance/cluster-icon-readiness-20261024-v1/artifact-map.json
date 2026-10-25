@@ -1,12 +1,14 @@
 {
   "schemaVersion": "cluster-icon-readiness.artifacts.v1",
   "baselineProductionSha": "1b5230ac93021c72499f4950bff6cda24e2515e5",
+  "measuredSourceRevision": "0b0ef0f8c6a6d0adf9eb92713e4dccf1b8fa60f2",
+  "sourceBinding": "Frozen measured-source inputs bind raw sourceHashes; live source entries bind the current integration separately.",
   "scope": "New local candidate; no external review or new deployment completion",
   "artifacts": [
     {
       "path": "apps/web/components/map/NaverMapView.tsx",
-      "bytes": 172360,
-      "sha256": "4ebfb5b8d7ae928cf0fe33aee21a447be6ed7c2ed726df7b6766e0910a3de3e7"
+      "bytes": 172363,
+      "sha256": "580618a30929738c165662da01f429756a1f9dfe71d4a3c30a0ed77ecf6a45c7"
     },
     {
       "path": "apps/web/lib/category-marker-image-primer.ts",
@@ -25,8 +27,8 @@
     },
     {
       "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/REPORT.md",
-      "bytes": 6913,
-      "sha256": "6fb980c2a2d41bc3dc601afa582c4158359105ab1970c8ec23d64c79a242f652"
+      "bytes": 8930,
+      "sha256": "5122e59790463b74b451b9c179c965db8daae18968d9f55e09e8ca4b208255a7"
     },
     {
       "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/baseline-cluster-marker.ts.txt",
@@ -35,8 +37,8 @@
     },
     {
       "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/build-artifacts.py",
-      "bytes": 1395,
-      "sha256": "327b6b8addbadbef724e8487c580981c6871579b85ec1d7843692e8edeebd90e"
+      "bytes": 1623,
+      "sha256": "88e3cf0aafdbdb0f0bb5fff6a1c374edfff8d5a9f009a3703e720bdbade7ac7c"
     },
     {
       "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/decode-trace-summary.json",
@@ -74,6 +76,41 @@
       "sha256": "e8d0394b4915521e3642fe3d1de01b0df5d0d9415ef910f2f9545c507acf789f"
     },
     {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/measured-source/components/map/NaverMapView.tsx.base64",
+      "bytes": 229817,
+      "sha256": "9ab0a3a99a128a556949f5f6800bbd9b6eea5b2292196b355033e35fd4e893f9"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/measured-source/lib/category-marker-image-primer.ts.txt",
+      "bytes": 1514,
+      "sha256": "f9848b75cfdbb1cef0b0124c352c96388fbc7b089ea1bc0e51b6988f0939855b"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/measured-source/lib/cluster-marker.ts.txt",
+      "bytes": 10108,
+      "sha256": "6b944f97088a79aaf3510dc1625a7209d407f1e6cb2af4c9fbdf0dca01b63b91"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/measured-source/performance/cluster-icon-readiness-20261024-v1/fixture.mjs.txt",
+      "bytes": 3878,
+      "sha256": "a1ff661d2cefc651df612a237d7f66fa376b2310abf30f81f457b1f2986ffc55"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/measured-source/performance/cluster-icon-readiness-20261024-v1/run-fixture.mjs.txt",
+      "bytes": 5590,
+      "sha256": "425d541dcd5dc60733f51ff6beb48fc428cd378738bb51ce175680e000257931"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/measured-source-contract.json",
+      "bytes": 1744,
+      "sha256": "d41ef1feefc7aed6784920f2931102b1e69549086a5c676bb8dbb7fd6d4ae879"
+    },
+    {
+      "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/measured_source_contract.py",
+      "bytes": 1412,
+      "sha256": "8ef5d553cede2caa4059f02378b72b8af0f7324a2baacd37b6e447fc1701f2ab"
+    },
+    {
       "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/plan.md",
       "bytes": 4060,
       "sha256": "e54737b73284fe54ecb0981e2603a43550d279d3d50c4cecfb8c2b28d4378f05"
@@ -90,8 +127,8 @@
     },
     {
       "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/score.py",
-      "bytes": 4543,
-      "sha256": "26b12556802559ae55bf6833a0ab54899e08bb2848ceacf400decdabdda43220"
+      "bytes": 4509,
+      "sha256": "bf63aee4d5e514f50463f767d0ed1424b0265afdc93c7e93daea94d2507c134d"
     },
     {
       "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/scored.json",
@@ -105,8 +142,8 @@
     },
     {
       "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/validate.py",
-      "bytes": 2232,
-      "sha256": "6a3eacaf70da5418c64b363a84cef9f30a446da9e68c758c0e536f0ac59eae27"
+      "bytes": 2252,
+      "sha256": "e26ced13adfa0fcd4653450bd07be4f486c56924f4d32b39b431cf3fa6dff3b3"
     },
     {
       "path": "apps/web/performance/cluster-icon-readiness-20261024-v1/verification.json",

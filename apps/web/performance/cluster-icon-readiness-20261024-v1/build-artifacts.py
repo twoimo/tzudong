@@ -17,6 +17,8 @@ for path in sorted(set(files)):
     items.append({'path': str(path.relative_to(REPO)), 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
 manifest = {'schemaVersion': 'cluster-icon-readiness.artifacts.v1',
             'baselineProductionSha': '1b5230ac93021c72499f4950bff6cda24e2515e5',
+            'measuredSourceRevision': '0b0ef0f8c6a6d0adf9eb92713e4dccf1b8fa60f2',
+            'sourceBinding': 'Frozen measured-source inputs bind raw sourceHashes; live source entries bind the current integration separately.',
             'scope': 'New local candidate; no external review or new deployment completion', 'artifacts': items}
 data = (json.dumps(manifest, indent=2) + '\n').encode()
 (ROOT / 'artifact-map.json').write_bytes(data)

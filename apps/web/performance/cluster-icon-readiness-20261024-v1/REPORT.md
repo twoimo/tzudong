@@ -43,3 +43,13 @@ Normal feature -> develop -> data -> main promotion must follow those review res
 Product candidate: finite map-owned category primer only. Tooling fixes: local source-readiness harness uses JS and retained baseline bytes, private dependency copy satisfies the existing path integrity guard. No new production deployment and no operating rollback were performed. Previous completed formal/scene-navigation release remains separate.
 
 Nightly `39457197351`: separate historical failure, not rerun, not made successful by these checks.
+
+## Retained-source binding after integration (2026-10-25)
+
+The original measured source is commit `0b0ef0f8c6a6d0adf9eb92713e4dccf1b8fa60f2`. Its `NaverMapView.tsx` is 172,360 bytes with SHA-256 `4ebfb5b8d7ae928cf0fe33aee21a447be6ed7c2ed726df7b6766e0910a3de3e7`. Merging current develop produced integration head `bdee08fb0c1746c7514ba7252c2162eabbf681e2`, whose retained selection-focus fix changes that file to 172,363 bytes and SHA-256 `580618a30929738c165662da01f429756a1f9dfe71d4a3c30a0ed77ecf6a45c7`. The old validators incorrectly compared historical measurement inputs with this later live integration file, so both failures were reproduced.
+
+`measured-source-contract.json` now binds the unchanged raw artifact and all five recorded source inputs to exact archived bytes under `measured-source/`. These snapshots were recovered from the original immutable Git commit and independently matched to every existing `raw.json.sourceHashes` digest. The scorer and validator verify those frozen inputs. The artifact map separately hashes current live integration files, the contract, verifier, and snapshots. The raw measurements, scored numerical results, and diagnostic trace bytes are unchanged. This repairs reproducibility without relabeling the old experiment as a measurement of the integrated source.
+
+The operator subsequently requested direct parallel execution instead of waiting for the external web-review queues. Direct code review, integration checks, and fresh actual SDK/host measurements are recorded separately; the original Pro/Gemini phases remain incomplete and are not claimed as completed external reviews. New production improvement requires the actual final-source measurements and protected release readback.
+
+The measured Naver component retains existing trailing spaces. Its snapshot uses canonical Base64 so those exact historical bytes survive without changing the repository's whitespace checks; the verifier decodes it strictly before checking the original byte count and SHA-256.

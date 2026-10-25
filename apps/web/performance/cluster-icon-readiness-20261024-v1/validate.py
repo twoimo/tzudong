@@ -3,6 +3,7 @@ import hashlib
 import json
 import pathlib
 import statistics
+from measured_source_contract import verify_measured_sources
 
 ROOT = pathlib.Path(__file__).resolve().parent
 REPO = ROOT.parents[3]
@@ -15,8 +16,7 @@ for item in manifest['artifacts']:
 raw = json.loads((ROOT / 'raw.json').read_text())
 scored = json.loads((ROOT / 'scored.json').read_text())
 assert sha((ROOT / 'raw.json').read_bytes()) == scored['rawSha256']
-for name, digest in raw['sourceHashes'].items():
-    assert sha((REPO / 'apps/web' / name).read_bytes()) == digest, name
+assert verify_measured_sources(ROOT, raw) == manifest['measuredSourceRevision']
 assert len(raw['trials']) == 36 and scored['productionImprovementAdmittedSlices'] == 0
 for row in scored['results']:
     for candidate, arm in zip([False, True], row['arms']):

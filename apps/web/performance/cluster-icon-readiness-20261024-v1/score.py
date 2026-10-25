@@ -3,14 +3,14 @@ import hashlib
 import json
 import pathlib
 import statistics
+from measured_source_contract import verify_measured_sources
 
 ROOT = pathlib.Path(__file__).resolve().parent
 APP = ROOT.parent.parent
 raw = json.loads((ROOT / 'raw.json').read_text())
 assert len(raw['trials']) == 36
 assert hashlib.sha256((ROOT / 'baseline-cluster-marker.ts.txt').read_bytes()).hexdigest() == raw['baselineSourceSha256']
-for name, digest in raw['sourceHashes'].items():
-    assert hashlib.sha256((APP / name).read_bytes()).hexdigest() == digest, name
+verify_measured_sources(ROOT, raw)
 
 
 def median(values):
