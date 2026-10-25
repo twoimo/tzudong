@@ -415,15 +415,34 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("SQLSTATE IN ('P0001')", sql)
 
     def test_current_source_closure_candidate_receipt_is_exact(self):
-        candidates = self.scanner._candidate_functions(self.scanner._source_inventory())
-        self.assertEqual(len(candidates), 107)
+        functions = self.scanner._source_inventory()
+        candidates = self.scanner._candidate_functions(functions)
+        legacy = self.scanner._candidate_functions([
+            item for item in functions
+            if item["path"] != "backend/supabase/migrations/20261025063810_hosted_pending_atomic_delivery.sql"
+        ])
+        self.assertEqual(len(legacy), 107)
         self.assertEqual(
             hashlib.sha256(
                 json.dumps(
-                    candidates, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+                    legacy, ensure_ascii=True, sort_keys=True, separators=(",", ":")
                 ).encode("ascii")
             ).hexdigest(),
             "c431ab6a834c7e2555437cdbfc31f207db938ea1c0c04e98b72496540a002c11",
+        )
+        self.assertEqual(len(candidates), 119)
+        self.assertEqual(
+            self.scanner._sha256(self.scanner.canonical_json(candidates)),
+            "ca13a9be491f5f85f90b23eb058988194e650cf0997edf70d0c62b693dc7f7d3",
+        )
+        key = lambda item: (item["schema"], item["proname"], item["identityArgumentsNormalized"])
+        self.assertEqual(
+            {key(item) for item in candidates} - {key(item) for item in legacy},
+            set(self.scanner.EXPECTED_CUSTODY_NULL_GUARDS) | {
+                ("pipeline_control", "pending_current", "jsonb"),
+                ("pipeline_control", "pending_digest", "jsonb"),
+                ("pipeline_control", "pending_request_read", "uuid"),
+            },
         )
         target = [
             item for item in candidates
@@ -432,6 +451,76 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
         ]
         self.assertEqual(len(target), 1)
         self.assertEqual(target[0]["reason"], "trusted_extension_omitted")
+
+    def test_custody_null_probes_require_exact_guards_and_body_identity(self):
+        expectations = {
+            ("pipeline_control", "pending_items", "jsonb"): "PENDING_INPUT_INVALID",
+        }
+        for schema in ("pipeline_control", "public"):
+            for name, arguments, message in (
+                ("hosted_pending_prepare", "uuid,text,jsonb,jsonb", "PENDING_FRESHNESS_INVALID"),
+                ("hosted_pending_claim", "uuid,uuid,text", "PENDING_SENDER_INVALID"),
+                ("hosted_pending_apply", "uuid,uuid,text,jsonb", "PENDING_APPLY_FAILED"),
+                ("hosted_pending_read", "uuid,text[]", "PENDING_READ_INVALID"),
+            ):
+                expectations[(schema, name, arguments)] = message
+        candidates = self.scanner._candidate_functions(self.scanner._source_inventory())
+        selected = {
+            (row["schema"], row["proname"], row["identityArgumentsNormalized"]): row
+            for row in candidates
+            if (row["schema"], row["proname"], row["identityArgumentsNormalized"]) in expectations
+        }
+        self.assertEqual(set(selected), set(expectations))
+        for key, message in expectations.items():
+            with self.subTest(signature=key):
+                sql = self.scanner._smoke_candidate_blocks([selected[key]])
+                self.assertIn("SQLSTATE = '22023' AND SQLERRM = '" + message + "'", sql)
+                self.assertIn("pg_catalog.convert_to(p.prosrc, 'UTF8')", sql)
+                self.assertIn("'closure_candidate', 'failed', 'guard_did_not_reject'", sql)
+                self.assertNotIn("SQLSTATE IN ('22023')", sql)
+
+    def test_custody_null_guard_body_pins_match_immutable_sql(self):
+        relative = "backend/supabase/migrations/20261025063810_hosted_pending_atomic_delivery.sql"
+        self.assertEqual(
+            hashlib.sha256((REPOSITORY_ROOT / relative).read_bytes()).hexdigest(),
+            "02bc9c5dab0e16a46a28a7993e9c75524813d0bc713c60782881eb4d5ddd2165",
+        )
+        actual = {}
+        for function in self.scanner._source_inventory():
+            if function["path"] != relative or not (
+                function["proname"].startswith("hosted_pending_")
+                or function["proname"] == "pending_items"
+            ):
+                continue
+            body = re.search(r"\bAS\s+(\$[A-Za-z_][A-Za-z0-9_]*\$|\$\$)(.*?)\1",
+                             function["body"], re.S | re.I)
+            self.assertIsNotNone(body)
+            schema = function["schema"]
+            if schema == "public" and not body[2].strip().startswith("SELECT pipeline_control."):
+                schema = "pipeline_control"  # The immutable migration moves each core.
+            key = (schema, function["proname"],
+                   self.scanner._normalize_identity_arguments(function["identityArguments"]))
+            actual[key] = hashlib.sha256(body[2].encode()).hexdigest()
+        expected = self.scanner.EXPECTED_CUSTODY_NULL_GUARDS
+        self.assertEqual(len(actual), 9)
+        self.assertEqual(set(actual), set(expected))
+        for key, digest in actual.items():
+            self.assertEqual(expected[key][1], digest, key)
+
+    def test_unrelated_or_overloaded_signature_does_not_accept_custody_22023(self):
+        for schema, name, arguments in (
+            ("public", "hosted_pending_read", "uuid,uuid[]"),
+            ("pipeline_control", "unrelated_function", "jsonb"),
+        ):
+            candidate = {"schema": schema, "proname": name,
+                         "identityArgumentsNormalized": arguments,
+                         "signature": f"{schema}.{name}({arguments})"}
+            with self.subTest(signature=candidate["signature"]):
+                sql = self.scanner._smoke_candidate_blocks([candidate])
+                self.assertNotIn("PENDING_", sql)
+                self.assertNotIn("expected_guard_sqlstate_22023", sql)
+                self.assertNotIn("SQLSTATE IN ('22023')", sql)
+                self.assertIn("'failed', 'sqlstate_' || SQLSTATE", sql)
 
     def test_runtime_validation_rejects_candidate_smoke_failures(self):
         scanner = self.scanner
