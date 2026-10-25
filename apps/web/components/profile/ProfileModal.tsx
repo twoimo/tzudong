@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { changeBrowserAccountPassword } from "@/lib/auth/isolated-browser-account";
 import { toast } from "@/lib/no-toast";
 import {
     Dialog,
@@ -131,12 +132,10 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
         setLoading(true);
         try {
-            // Supabase에서 비밀번호 변경
-            const { error } = await supabase.auth.updateUser({
-                password: newPassword
+            if (!user?.id || !user.email) throw new Error('AUTH_ACCOUNT_REQUIRED');
+            await changeBrowserAccountPassword({
+                userId: user.id, email: user.email, password: currentPassword, newPassword,
             });
-
-            if (error) throw error;
 
             // 비밀번호 변경 후 입력 필드 초기화
             setCurrentPassword("");

@@ -1,5 +1,6 @@
 import { captureBrowserLogout } from "@/lib/auth/browser-logout";
-import { beginBrowserOAuthIntent } from "@/lib/auth/browser-oauth-commit";
+import { beginBrowserAuthIntent, publishBrowserSignupPkce } from "@/lib/auth/browser-oauth-commit";
+import { requestBrowserPasswordRecovery, startBrowserGoogleOAuth } from "@/lib/auth/isolated-browser-pkce";
 import { beginBrowserDraftCleanup } from "@/lib/privacy/browser-draft-lifecycle";
 import { useState, useEffect, useCallback, memo, type CSSProperties } from "react";
 import Image from "next/image";
@@ -371,12 +372,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         callbackUrl.searchParams.set("next", requestedRedirect);
       }
 
-      await beginBrowserOAuthIntent();
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: callbackUrl.toString() },
-      });
-      if (error) throw new Error("oauth_start_failed");
+      await startBrowserGoogleOAuth(callbackUrl.toString());
     } catch {
       toast.error("Google 로그인에 실패했습니다");
       setIsGoogleLoading(false);
@@ -397,12 +393,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         callbackUrl.searchParams.set("next", requestedRedirect);
       }
 
-      await beginBrowserOAuthIntent();
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: callbackUrl.toString() },
-      });
-      if (error) throw new Error("oauth_start_failed");
+      await startBrowserGoogleOAuth(callbackUrl.toString());
     } catch {
       toast.error("Google 가입을 시작할 수 없습니다");
       setIsGoogleLoading(false);
@@ -549,6 +540,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         return;
       }
 
+      const signupIntent = await beginBrowserAuthIntent();
       const response = await fetch("/api/privacy/onboarding", {
         method: "POST",
         credentials: "same-origin",
@@ -567,8 +559,10 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       }
       const onboardingResult = await response.json().catch(() => null) as {
         emailConfirmationRequired?: unknown;
+        pkceCookies?: unknown;
       } | null;
       if (onboardingResult?.emailConfirmationRequired === true) {
+        await publishBrowserSignupPkce(signupIntent, onboardingResult.pkceCookies);
         toast.success("회원가입이 완료되었습니다. 이메일의 확인 링크를 열어주세요.");
         resetForm();
         closeAfterAuthSuccess();
@@ -615,10 +609,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     }
     setIsSendingReset(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      });
-      if (error) throw new Error("password_reset_failed");
+      await requestBrowserPasswordRecovery(forgotPasswordEmail);
       toast.success("비밀번호 재설정 링크를 이메일로 발송했습니다");
       setShowForgotPassword(false);
       setForgotPasswordEmail("");

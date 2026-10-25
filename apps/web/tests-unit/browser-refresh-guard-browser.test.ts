@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { chromium } from '@playwright/test';
 import { stringToBase64URL } from '@supabase/ssr';
@@ -5,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const root = path.resolve(import.meta.dir, '..');
-const key = 'sb-127-v2-auth-token', marker = 'tz-auth-v2-127';
+const key = 'sb-127-v3-auth-token', marker = 'tz-auth-v3-127';
 const oldOwner = '11111111-1111-4111-8111-111111111111';
 const newOwner = '22222222-2222-4222-8222-222222222222';
 function session(owner: string, refresh: string, chunked = false) {
@@ -33,6 +34,7 @@ async function fixture(replacement = newOwner, chunked = false, malformed: 'json
   const built = await Bun.build({ entrypoints: ['refresh-guard-fixture'], target: 'browser', format: 'iife', write: false,
     define: { 'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(url), 'process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY': '"synthetic-public"' },
     plugins: [{ name: 'fixture', setup(b) {
+      if (process.env.TZUDONG_AUTH_TOKEN_GUARD_BASELINE_FILE) b.onLoad({ filter: /\/lib\/auth\/browser-refresh-guard\.ts$/ }, () => ({ contents: readFileSync(process.env.TZUDONG_AUTH_TOKEN_GUARD_BASELINE_FILE!, 'utf8'), loader: 'ts' }));
       if (process.env.TZUDONG_REFRESH_GUARD_BASELINE_DIR) b.onLoad({ filter: /\/integrations\/supabase\/client\.ts$/ }, args => ({ contents: readFileSync(path.join(process.env.TZUDONG_REFRESH_GUARD_BASELINE_DIR!, path.relative(root, args.path)), 'utf8'), loader: 'ts' }));
       b.onResolve({ filter: /^refresh-guard-fixture$/ }, () => ({ path: 'entry', namespace: 'fixture' }));
       b.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ resolveDir: root, loader: 'ts', contents: `
@@ -47,7 +49,7 @@ async function fixture(replacement = newOwner, chunked = false, malformed: 'json
       ` }));
     } }] });
   if (!built.success) { await server.stop(true); throw new Error('REFRESH_GUARD_FIXTURE_BUILD_FAILED'); }
-  const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   const context = await browser.newContext();
   await context.addCookies([{ name: key, value: 'base64-' + stringToBase64URL(JSON.stringify(session(oldOwner, 'original-synthetic'))), url }, { name: marker, value: '1', url }]);
   const a = await context.newPage(), b = await context.newPage();
@@ -124,3 +126,33 @@ for (const replacement of ['other-account', 'same-account', 'logout'] as const) 
     } finally { await f.close(); }
   }, 20000);
 }
+
+for (const replacement of ['login', 'logout'] as const) test(`delayed password login cannot replace newer ${replacement}`, async () => {
+  const f = await fixture(newOwner);
+  try {
+    await f.a.evaluate(() => {
+      const g = globalThis as unknown as Fixture;
+      const state = g.held = { response: false, active: false, release: () => {}, settled: false, rejected: null };
+      const nativeFetch = globalThis.fetch.bind(globalThis);
+      globalThis.fetch = async (...args) => {
+        const r = await nativeFetch(...args);
+        if (String(args[0] instanceof Request ? args[0].url : args[0]).includes('grant_type=password')) {
+          state.active = true; await new Promise<void>(resolve => { state.release = resolve; });
+        }
+        return r;
+      };
+      void g.probe.login().then(() => { state.settled = true; }, error => { state.settled = true; state.rejected = error instanceof Error ? error.message : 'unknown'; });
+    });
+    await f.a.waitForFunction(() => (globalThis as unknown as Fixture).held.active);
+    if (replacement === 'logout') expect(await f.b.evaluate(() => (globalThis as unknown as Fixture).probe.logout())).toBe(true);
+    else expect(await f.b.evaluate(() => (globalThis as unknown as Fixture).probe.login().then(r => !!r.data.session))).toBe(true);
+    const before = (await f.context.cookies()).map(c => [c.name, c.value]).sort();
+    await f.a.evaluate(() => (globalThis as unknown as Fixture).held.release());
+    await f.a.waitForFunction(() => (globalThis as unknown as Fixture).held.settled);
+    expect(await f.a.evaluate(() => (globalThis as unknown as Fixture).held.rejected)).toBe('AUTH_REFRESH_SUPERSEDED');
+    expect((await f.context.cookies()).map(c => [c.name, c.value]).sort()).toEqual(before);
+    // Other tabs legitimately broadcast SIGNED_IN. Cookie equality and this
+    // request's rejection distinguish its publication from those broadcasts.
+    expect(await f.a.evaluate(() => (globalThis as unknown as Fixture).probe.read().then(r => !!r.data.session))).toBe(replacement === 'login');
+  } finally { await f.close(); }
+}, 20000);

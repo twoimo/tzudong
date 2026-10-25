@@ -2,7 +2,8 @@ import { commitSupabaseBrowserSession } from '@/integrations/supabase/client';
 import { advanceBrowserAuthRevision, captureBrowserAuthState } from './browser-commit-state';
 import { getAuthCookieContract, migrateBrowserAuthCookies, withBrowserAuthCookieLock } from './session-cookies';
 import { getSafeAuthNextPath } from './auth-redirect';
-import { parseCookieHeader, serializeCookieHeader } from '@supabase/ssr';
+import { parseSignupPkceCookies } from './signup-pkce-handoff';
+import { DEFAULT_COOKIE_OPTIONS, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr';
 
 type Intent = { version: 1; id: string; digest: string };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -18,7 +19,7 @@ const digest = async (value: string) => Array.from(new Uint8Array(
 
 function readIntent(key: string): Intent {
   try {
-    const value: unknown = JSON.parse(sessionStorage.getItem(key) ?? 'null');
+    const value: unknown = JSON.parse(localStorage.getItem(key) ?? 'null');
     if (value && typeof value === 'object' && Object.keys(value).length === 3
       && 'version' in value && value.version === 1 && 'id' in value && typeof value.id === 'string' && UUID.test(value.id)
       && 'digest' in value && typeof value.digest === 'string' && /^[0-9a-f]{64}$/.test(value.digest)) return value as Intent;
@@ -26,7 +27,7 @@ function readIntent(key: string): Intent {
   throw new Error('AUTH_CALLBACK_INTENT_REQUIRED');
 }
 
-export async function beginBrowserOAuthIntent() {
+export async function beginBrowserAuthIntent() {
   const { url, contract, intentKey } = config();
   const captured = await withBrowserAuthCookieLock(url, () => {
     migrateBrowserAuthCookies(url);
@@ -37,11 +38,16 @@ export async function beginBrowserOAuthIntent() {
   await withBrowserAuthCookieLock(url, () => {
     if (captureBrowserAuthState(contract) !== captured.state) throw new Error('AUTH_CALLBACK_SUPERSEDED');
     try {
-      sessionStorage.setItem(intentKey, JSON.stringify(intent));
+      // Email verification can open in a different tab. This record contains
+      // only a random revision and a digest, never credentials or account data.
+      localStorage.setItem(intentKey, JSON.stringify(intent));
       if (readIntent(intentKey).id !== intent.id) throw new Error();
     } catch { throw new Error('AUTH_CALLBACK_INTENT_REQUIRED'); }
   });
+  return intent;
 }
+
+export const beginBrowserOAuthIntent = beginBrowserAuthIntent;
 
 async function captureIntentPrecondition(intent: Intent, signal: AbortSignal) {
   const { url, contract, intentKey } = config();
@@ -55,6 +61,61 @@ async function captureIntentPrecondition(intent: Intent, signal: AbortSignal) {
       throw new Error('AUTH_CALLBACK_SUPERSEDED');
     }
     return state;
+  });
+}
+
+export async function captureBrowserAuthIntent(signal = new AbortController().signal) {
+  const { intentKey } = config();
+  const intent = readIntent(intentKey);
+  await captureIntentPrecondition(intent, signal);
+  return {
+    assertCurrent: () => captureIntentPrecondition(intent, signal),
+    async consumeVerifiers(names: string[]) {
+      const { url, contract } = config();
+      const expected = await captureIntentPrecondition(intent, signal);
+      await withBrowserAuthCookieLock(url, () => {
+        if (signal.aborted || readIntent(intentKey).id !== intent.id || captureBrowserAuthState(contract) !== expected) {
+          throw new Error('AUTH_CALLBACK_SUPERSEDED');
+        }
+        const verifier = `${contract.key}-code-verifier`;
+        if (names.some(name => name !== verifier && !name.startsWith(`${verifier}-`) && !name.startsWith(`${verifier}.`))) {
+          throw new Error('AUTH_CALLBACK_FAILED');
+        }
+        for (const name of names) document.cookie = serializeCookieHeader(name, '', { ...DEFAULT_COOKIE_OPTIONS, maxAge: 0 });
+        if (parseCookieHeader(document.cookie).some(cookie => names.includes(cookie.name))) throw new Error('AUTH_COOKIE_WRITE_FAILED');
+        localStorage.removeItem(intentKey);
+        if (localStorage.getItem(intentKey) !== null) throw new Error('AUTH_CALLBACK_SUPERSEDED');
+      });
+    },
+  };
+}
+
+export async function publishBrowserSignupPkce(intent: Intent, input: unknown, signal = new AbortController().signal) {
+  const { url, contract, intentKey } = config();
+  const verifier = `${contract.key}-code-verifier`;
+  const mutations = parseSignupPkceCookies(input, contract.key);
+  if (!mutations) throw new Error('AUTH_CALLBACK_FAILED');
+  const expected = await captureIntentPrecondition(intent, signal);
+  await withBrowserAuthCookieLock(url, () => {
+    if (signal.aborted || readIntent(intentKey).id !== intent.id || captureBrowserAuthState(contract) !== expected) {
+      throw new Error('AUTH_CALLBACK_SUPERSEDED');
+    }
+    // The request-local signup client has no incoming cookie jar. Remove an
+    // older verifier shape before publishing its replacement under this lock.
+    const stale = parseCookieHeader(document.cookie).filter(cookie =>
+      cookie.name === verifier || cookie.name.startsWith(`${verifier}.`) || cookie.name.startsWith(`${verifier}-`));
+    for (const cookie of stale) {
+      document.cookie = serializeCookieHeader(cookie.name, '', { ...DEFAULT_COOKIE_OPTIONS, maxAge: 0 });
+    }
+    for (const item of mutations) {
+      document.cookie = serializeCookieHeader(item.name, item.value,
+        item.remove ? { ...DEFAULT_COOKIE_OPTIONS, maxAge: 0 } : DEFAULT_COOKIE_OPTIONS);
+    }
+    const actual = parseCookieHeader(document.cookie);
+    if (mutations.some(item => item.remove ? actual.some(cookie => cookie.name === item.name)
+      : !actual.some(cookie => cookie.name === item.name && cookie.value === item.value))) {
+      throw new Error('AUTH_COOKIE_WRITE_FAILED');
+    }
   });
 }
 
@@ -87,15 +148,21 @@ export async function completeBrowserOAuthCallback(code: string, next: string, s
       || body.consumedVerifiers.some(name => typeof name !== 'string' || !isVerifier(name))) throw new Error('AUTH_CALLBACK_FAILED');
     const consumed = new Set<string>(body.consumedVerifiers);
     const expected = await captureIntentPrecondition(intent, signal);
+    // Finish fallible verifier cleanup before publishing credentials. Failure
+    // must not leave a persisted session whose tokens were then revoked.
+    await withBrowserAuthCookieLock(url, () => {
+      if (signal.aborted || readIntent(intentKey).id !== intent.id || captureBrowserAuthState(contract) !== expected) {
+        throw new Error('AUTH_CALLBACK_SUPERSEDED');
+      }
+      for (const cookie of verifiers) {
+        if (!consumed.has(cookie.name) || !parseCookieHeader(document.cookie).some(current => current.name === cookie.name && current.value === cookie.value)) continue;
+        document.cookie = serializeCookieHeader(cookie.name, '', { path: '/', maxAge: 0 });
+        if (parseCookieHeader(document.cookie).some(current => current.name === cookie.name && current.value === cookie.value)) throw new Error('AUTH_COOKIE_WRITE_FAILED');
+      }
+    });
     const result = await commitSupabaseBrowserSession(tokens, expected,
-      () => !signal.aborted && readIntent(intentKey).id === intent.id, () => {
-        for (const cookie of verifiers) {
-          if (!consumed.has(cookie.name) || !parseCookieHeader(document.cookie).some(current => current.name === cookie.name && current.value === cookie.value)) continue;
-          document.cookie = serializeCookieHeader(cookie.name, '', { path: '/', maxAge: 0 });
-          if (parseCookieHeader(document.cookie).some(current => current.name === cookie.name && current.value === cookie.value)) throw new Error('AUTH_COOKIE_WRITE_FAILED');
-        }
-      });
-    if (result.error || !result.data.session) throw new Error('AUTH_CALLBACK_FAILED');
+      () => !signal.aborted && readIntent(intentKey).id === intent.id);
+    if (!result.committed) throw new Error('AUTH_CALLBACK_FAILED');
   } catch {
     // Revoke only the unused session delivered to this attempt. Never call SDK
     // signOut against whatever account another tab has since committed.
@@ -107,7 +174,11 @@ export async function completeBrowserOAuthCallback(code: string, next: string, s
     } catch { /* The generic failure UI does not claim revocation succeeded. */ }
     throw new Error('AUTH_CALLBACK_FAILED');
   }
-  try { if (readIntent(intentKey).id === intent.id) sessionStorage.removeItem(intentKey); }
+  try {
+    await withBrowserAuthCookieLock(url, () => {
+      if (readIntent(intentKey).id === intent.id) localStorage.removeItem(intentKey);
+    });
+  }
   catch { /* A committed session does not depend on intent cleanup. */ }
   return getSafeAuthNextPath(body.next);
 }

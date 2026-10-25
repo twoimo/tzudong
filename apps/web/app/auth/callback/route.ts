@@ -15,6 +15,7 @@ import { buildHomePrivacyOnboardingPath, getSafeAuthNextPath } from '@/lib/auth/
 import { getTrustedAuthCallbackOrigin } from '@/lib/auth/callback-origin';
 import {
   createCallbackSupabaseClient,
+  exchangeCallbackCode,
   getCallbackSessionTokens,
   revokeRejectedCallbackSession,
 } from '@/lib/auth/callback-session';
@@ -174,14 +175,14 @@ export async function POST(request: Request) {
     let supabase: CallbackSupabaseClient | null = null;
     try {
       supabase = await createCallbackSupabaseClient();
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-      if (exchangeError) {
+      const exchanged = await exchangeCallbackCode(supabase, code);
+      if (!exchanged) {
         await revokeRejectedCallbackSession(supabase);
         return rejectedCallbackRedirect(request, origin);
       }
 
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user?.id || !UUID_PATTERN.test(user.id)) {
+      if (userError || !user?.id || !UUID_PATTERN.test(user.id) || user.id !== exchanged.userId) {
         await revokeRejectedCallbackSession(supabase);
         return rejectedCallbackRedirect(request, origin);
       }
@@ -205,8 +206,8 @@ export async function POST(request: Request) {
   let supabase: CallbackSupabaseClient | null = null;
   try {
     supabase = await createCallbackSupabaseClient();
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-    if (exchangeError) {
+    const exchanged = await exchangeCallbackCode(supabase, code);
+    if (!exchanged) {
       await rejectOAuthCallbackSession(supabase);
       return rejectedCallbackRedirect(request, origin);
     }
@@ -215,7 +216,7 @@ export async function POST(request: Request) {
     const candidateUserId = typeof user?.id === 'string' && UUID_PATTERN.test(user.id)
       ? user.id
       : null;
-    if (userError || !candidateUserId) {
+    if (userError || !candidateUserId || candidateUserId !== exchanged.userId) {
       await rejectOAuthCallbackSession(supabase);
       return rejectedCallbackRedirect(request, origin);
     }

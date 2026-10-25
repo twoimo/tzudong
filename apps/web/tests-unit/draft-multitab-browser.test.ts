@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { test, expect } from 'bun:test';
 import { chromium } from '@playwright/test';
 import { join } from 'node:path';
@@ -21,7 +22,7 @@ async function bundle(){
  }}]});if(!built.success)throw new Error(built.logs.map(String).join('\n'));return built.outputs[0].text();
 }
 for(const suspended of [false,true])for(const kind of ['review','submission','edit'])for(const operation of ['save','delete-one','delete-all','get','get-all'])test(`two ${suspended ? 'frozen' : 'active'} tabs protect ${kind} draft from stale ${operation} after logout and re-login`,async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const context=await browser.newContext();await context.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><div></div>'}));const a=await context.newPage(),b=await context.newPage();const source=await bundle();for(const p of [a,b]){await p.goto('https://draft-tabs.test/');await p.addScriptTag({content:source});}
   await a.evaluate(()=>(globalThis as unknown as TabFixture).__tab.activate());await a.evaluate(kind=>(globalThis as unknown as TabFixture).__tab.save(kind,'초기 합성 초안'),kind);await a.evaluate(({kind,operation})=>(globalThis as unknown as TabFixture).__tab.start(kind,operation),{kind,operation});await a.waitForFunction(()=>(globalThis as unknown as TabFixture).__tab.entered);
@@ -36,14 +37,14 @@ for(const suspended of [false,true])for(const kind of ['review','submission','ed
 },20000);
 
 for(const kind of ['review','submission','edit'])test(`revoked ${kind} session stays blocked in a freshly loaded tab`,async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const context=await browser.newContext();await context.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html>'}));const source=await bundle();const a=await context.newPage();await a.goto('https://draft-tabs.test/');await a.addScriptTag({content:source});await a.evaluate(()=>(globalThis as unknown as TabFixture).__tab.activate());await a.evaluate(kind=>(globalThis as unknown as TabFixture).__tab.save(kind,'삭제 전 합성 입력'),kind);await a.evaluate(()=>(globalThis as unknown as TabFixture).__tab.clear());
   const b=await context.newPage();await b.goto('https://draft-tabs.test/');await b.addScriptTag({content:source});expect(await b.evaluate(async kind=>{try{await (globalThis as unknown as TabFixture).__tab.save(kind,'재로딩 이전 계정 쓰기');return false}catch{return true}},kind)).toBe(true);expect(await b.evaluate(kind=>(globalThis as unknown as TabFixture).__tab.read(kind),kind)).toBeNull();
  }finally{await browser.close();}
 },20000);
 for(const kind of ['review','submission','edit'])test(`${kind} writes fail closed when shared authority is unavailable`,async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const page=await browser.newPage();await page.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html>'}));await page.goto('https://draft-tabs.test/');await page.addScriptTag({content:await bundle()});await page.evaluate(()=>(globalThis as unknown as TabFixture).__tab.activate());await page.evaluate(kind=>(globalThis as unknown as TabFixture).__tab.save(kind,'보존할 합성 입력'),kind);
   expect(await page.evaluate(async kind=>{const original=Storage.prototype.getItem;Storage.prototype.getItem=function(key){if(key==='tzudong-draft-authority-v3')throw new Error('SYNTHETIC_STORAGE_DENIED');return original.call(this,key)};try{await (globalThis as unknown as TabFixture).__tab.save(kind,'실패해야 할 합성 입력');return false}catch{return true}finally{Storage.prototype.getItem=original}},kind)).toBe(true);expect(await page.evaluate(kind=>(globalThis as unknown as TabFixture).__tab.read(kind),kind)).toBe('보존할 합성 입력');

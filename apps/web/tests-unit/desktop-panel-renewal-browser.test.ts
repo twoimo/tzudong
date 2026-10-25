@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as browserExpect } from '@playwright/test';
 
 const root = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromeForTestingExecutable();
 const panels = { profile: '프로필', bookmarks: '북마크', notifications: '알림', feed: '리뷰', stamp: '도장', leaderboard: '랭킹' };
 const entry = `
 import React, { useState } from 'react';

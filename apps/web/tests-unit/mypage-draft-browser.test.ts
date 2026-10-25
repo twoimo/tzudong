@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as browserExpect } from '@playwright/test';
 
-(existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome') ? test : test.skip)('submission mode round-trip cannot recreate an explicitly discarded draft', async () => {
-  const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+(existsSync(chromeForTestingExecutable()) ? test : test.skip)('submission mode round-trip cannot recreate an explicitly discarded draft', async () => {
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await prepare(page);
@@ -35,7 +36,7 @@ interface DraftFormGlobals {
  __draftUI:{target():void;leave():void};
 }
 const root = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromeForTestingExecutable();
 async function bundle(presentation: 'auto' | 'map-panel' = 'map-panel') {
   const entry = `import React,{useState,useMemo} from 'react';import {createRoot} from 'react-dom/client';import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
   import {ReviewModal} from './components/reviews/ReviewModal';import {saveDraft as seedReview,getDraft as readReview} from './lib/reviewDraftDB';globalThis.__readReview=()=>readReview('fixture-owner','11111111-1111-4111-8111-111111111111');globalThis.__seedReview=(owner='fixture-owner',contentOnly=false)=>seedReview({userId:owner,restaurantId:'11111111-1111-4111-8111-111111111111',currentStep:3,visitedDate:contentOnly?'':'2026-10-20',visitedTime:contentOnly?'':'12:00',categories:contentOnly?[]:['분식'],content:'첫 식당 합성 초안 원문'});import RestaurantSubmissionModal from './components/modals/RestaurantSubmissionModal';import {EditRestaurantModal} from './components/modals/EditRestaurantModal';import {ReviewEditModal} from './components/reviews/ReviewEditModal';import {getDraft as readSubmission} from './lib/submissionDraftDB';globalThis.__readSubmission=()=>readSubmission('fixture-owner','new');globalThis.__readOwnerSubmission=(owner,mode='new')=>readSubmission(owner,mode);

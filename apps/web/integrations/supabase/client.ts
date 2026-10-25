@@ -3,7 +3,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types'
 import { parseCookieHeader, serializeCookieHeader } from '@supabase/ssr'
-import { getAuthCookieContract, migrateBrowserAuthCookies, withBrowserAuthCookieLock } from '../../lib/auth/session-cookies'
+import { beginBrowserAuthCookieBatch, finishBrowserAuthCookieBatch, getAuthCookieContract, migrateBrowserAuthCookies, withBrowserAuthCookieLock } from '../../lib/auth/session-cookies'
 import { createBrowserRefreshGuard } from '../../lib/auth/browser-refresh-guard'
 import { advanceBrowserAuthRevision } from '../../lib/auth/browser-commit-state'
 import { isChunkLike } from '@supabase/ssr'
@@ -44,6 +44,7 @@ function createSupabaseBrowserClient(): SupabaseClient<Database> {
           if (cookies.some(cookie => isChunkLike(cookie.name, getAuthCookieContract(supabaseUrl).key))) {
             advanceBrowserAuthRevision(getAuthCookieContract(supabaseUrl))
           }
+          beginBrowserAuthCookieBatch(supabaseUrl)
           for (const { name, value, options } of cookies) {
             document.cookie = serializeCookieHeader(name, value, options)
           }
@@ -56,6 +57,7 @@ function createSupabaseBrowserClient(): SupabaseClient<Database> {
               throw new Error('AUTH_COOKIE_WRITE_FAILED')
             }
           }
+          finishBrowserAuthCookieBatch(supabaseUrl)
           committed()
         })
       },
@@ -63,7 +65,8 @@ function createSupabaseBrowserClient(): SupabaseClient<Database> {
     auth: {
       persistSession: true,
       autoRefreshToken: !completingOAuth,
-      detectSessionInUrl: !completingOAuth,
+      // Both OAuth and password recovery have explicit one-use exchanges.
+      detectSessionInUrl: false,
     },
     realtime: {
       params: {
@@ -91,8 +94,20 @@ export async function commitSupabaseBrowserSession(
 ) {
   const client = getSupabaseBrowserClient()
   if (!browserCommitGuard || !ownsRequest()) throw new Error('AUTH_CALLBACK_SUPERSEDED')
-  browserCommitGuard.registerCommit(tokens.refresh_token, expected, ownsRequest, cleanup)
-  return client.auth.setSession(tokens)
+  let published = false
+  browserCommitGuard.registerCommit(tokens.refresh_token, expected, ownsRequest, () => {
+    published = true
+    cleanup?.()
+  })
+  try {
+    const result = await client.auth.setSession(tokens)
+    if (!published && (result.error || !result.data.session)) throw new Error('AUTH_CALLBACK_FAILED')
+  } catch (error) {
+    // Subscriber failures happen after cookie publication. They cannot turn a
+    // saved session into an unused candidate that the callback then revokes.
+    if (!published) throw error
+  }
+  return { committed: published }
 }
 
 export const supabase = new Proxy({} as SupabaseClient<Database>, {

@@ -41,6 +41,8 @@ import {
   isSignupProfileStateReady,
   readSignupProfileState,
 } from '@/lib/profile-mutation';
+import { getAuthCookieContract } from '@/lib/auth/session-cookies';
+import { parseSignupPkceCookies } from '@/lib/auth/signup-pkce-handoff';
 import { getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
 
 export const runtime = 'nodejs';
@@ -223,7 +225,8 @@ type PasswordSignupCookieMutation = Readonly<{
 function createPasswordSignupClient(request: NextRequest) {
   const cookieMutations = new Map<string, PasswordSignupCookieMutation>();
   const client = createClientForCookieStore({
-    getAll: () => request.cookies.getAll(),
+    // Signup must never inherit an already signed-in account for cleanup.
+    getAll: () => [],
     set(name, value, options) {
       cookieMutations.set(name, { name, value, options });
     },
@@ -231,13 +234,13 @@ function createPasswordSignupClient(request: NextRequest) {
   return { client, cookieMutations };
 }
 
-function applyPasswordSignupCookies(
-  response: NextResponse,
+function passwordSignupCookieHandoff(
   cookieMutations: ReadonlyMap<string, PasswordSignupCookieMutation>,
 ) {
-  for (const { name, value, options } of cookieMutations.values()) {
-    response.cookies.set({ ...options, name, value });
-  }
+  return [...cookieMutations.values()].map(({ name, value, options }) => ({
+    name, value: options.maxAge === 0 ? '' : value,
+    remove: options.maxAge === 0 || value === '',
+  }));
 }
 
 type CurrentPolicyVersion = Readonly<{
@@ -510,20 +513,18 @@ function isExplicitAuthAbsence(user: unknown, error: unknown) {
 async function revokePasswordSignupSession(
   signupClient: SupabaseClient<Database>,
 ): Promise<Pick<PasswordCleanupProof, 'sessionAbsent'>> {
+  let capturedToken: string | undefined;
   try {
-    await signupClient.auth.signOut({ scope: 'global' });
-  } catch {
-    // Only the strict getUser readback below can prove that a session is absent.
-  }
+    const { data: { session }, error } = await signupClient.auth.getSession();
+    if (error) return { sessionAbsent: false };
+    capturedToken = session?.access_token;
+  } catch { return { sessionAbsent: false }; }
+  try {
+    if (capturedToken) await signupClient.auth.admin.signOut(capturedToken, 'local');
+  } catch { /* The issuer readback below, not local SDK removal, determines absence. */ }
 
   try {
-    await signupClient.auth.signOut({ scope: 'local' });
-  } catch {
-    // Only the strict getUser readback below can prove that a session is absent.
-  }
-
-  try {
-    const { data: { user }, error } = await signupClient.auth.getUser();
+    const { data: { user }, error } = await signupClient.auth.getUser(capturedToken);
     return { sessionAbsent: isExplicitAuthAbsence(user, error) };
   } catch {
     return { sessionAbsent: false };
@@ -725,6 +726,17 @@ async function createPasswordAccount(request: NextRequest, body: Record<string, 
     return passwordLoginRecoveryResponse(request);
   }
 
+  const pkceCookies = data.session ? null : parseSignupPkceCookies(
+    passwordSignupCookieHandoff(signupCookieMutations), getAuthCookieContract(supabaseUrl).key,
+  );
+  if (!data.session && !pkceCookies) {
+    const proof = await compensateFreshPasswordAccount(creationProvenance, signupClient);
+    if (!await enforcePasswordCompensation(challenge, creationProvenance.userId, proof)) {
+      return errorResponse('ONBOARDING_COMPENSATION_HOLD_UNAVAILABLE', 503, request);
+    }
+    return passwordLoginRecoveryResponse(request);
+  }
+
   let signupProfileReady = false;
   try {
     const admin = createSupabaseServiceRoleClient();
@@ -799,8 +811,8 @@ async function createPasswordAccount(request: NextRequest, body: Record<string, 
   const response = withNoStore(NextResponse.json({
     status: 'created',
     emailConfirmationRequired: !data.session,
+    ...(!data.session ? { pkceCookies } : {}),
   }, { status: 201 }));
-  if (!data.session) applyPasswordSignupCookies(response, signupCookieMutations);
   setPasswordRecovery(response, recoveryCookie);
   clearOnboardingChallenge(response);
   return response;

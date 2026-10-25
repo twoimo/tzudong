@@ -662,8 +662,8 @@ describe('admin middleware login redirect', () => {
 
 
 test('middleware forwards rotated request cookies through the nonce header clone without browser writes', async () => {
-  supabaseMockState = { userId: '11111111-1111-4111-8111-111111111111', refreshCookies: [{ name: 'sb-127-v2-auth-token', value: 'synthetic-rotated' }] };
-  const request = new NextRequest('https://app.fixture.invalid/mypage/profile', { headers: { cookie: 'sb-127-v2-auth-token=synthetic-old; unrelated=kept' } });
+  supabaseMockState = { userId: '11111111-1111-4111-8111-111111111111', refreshCookies: [{ name: 'sb-127-v3-auth-token', value: 'synthetic-rotated' }] };
+  const request = new NextRequest('https://app.fixture.invalid/mypage/profile', { headers: { cookie: 'sb-127-v3-auth-token=synthetic-old; unrelated=kept' } });
   const forwarded = new Headers(request.headers);
   forwarded.set('x-nonce', 'synthetic-nonce');
   forwarded.set('content-security-policy', "script-src 'nonce-synthetic-nonce'");
@@ -671,7 +671,7 @@ test('middleware forwards rotated request cookies through the nonce header clone
     const { updateSession } = await loadMiddleware();
     const response = await updateSession(request, forwarded);
     expect(response.status).toBe(200);
-    expect(response.headers.get('x-middleware-request-cookie')).toContain('sb-127-v2-auth-token=synthetic-rotated');
+    expect(response.headers.get('x-middleware-request-cookie')).toContain('sb-127-v3-auth-token=synthetic-rotated');
     expect(response.headers.get('x-middleware-request-cookie')).toContain('unrelated=kept');
     expect(response.headers.get('x-middleware-request-x-nonce')).toBe('synthetic-nonce');
     expect(response.headers.get('x-middleware-request-content-security-policy')).toContain('nonce-synthetic-nonce');

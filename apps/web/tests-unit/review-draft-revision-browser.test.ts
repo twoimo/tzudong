@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -5,7 +6,7 @@ import ts from 'typescript';
 import { chromium } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromeForTestingExecutable();
 
 async function bundle(sourceRoot: string) {
     const source = readFileSync(join(sourceRoot, 'components/reviews/ReviewModal.tsx'), 'utf8');

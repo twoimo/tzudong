@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { reauthenticateBrowserAccount } from '@/lib/auth/isolated-browser-account';
 import {
   isAccountDeletionIdempotencyKey,
   isAccountDeletionRequestId,
@@ -14,6 +14,7 @@ type AccountDeletionReauthBinding = Readonly<{
   idempotencyKey: string;
 }>;
 export type AccountDeletionReauthIssueReceipt = Readonly<{ proofId: string; expiresAt: string }>;
+export type AccountDeletionReauthenticationSession = Awaited<ReturnType<typeof reauthenticateBrowserAccount>>;
 
 const isRecord = (value: unknown): value is RecordValue =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -56,19 +57,16 @@ export async function createAccountDeletionReauthenticationSession(input: Readon
   email: string;
   password: string;
 }>) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: input.email,
-    password: input.password,
-  });
-  if (error || !data.session?.access_token || data.user?.id !== input.userId) return null;
-  return { bearerToken: data.session.access_token };
+  try { return await reauthenticateBrowserAccount(input); }
+  catch { return null; }
 }
 
-export async function issueAccountDeletionReauthenticationProof(userId: string) {
-  const { data, error } = await supabase.rpc('issue_account_deletion_reauth_proof', {
+export async function issueAccountDeletionReauthenticationProof(userId: string, session: AccountDeletionReauthenticationSession) {
+  if (!session.isCurrent()) return null;
+  const { data, error } = await session.client.rpc('issue_account_deletion_reauth_proof', {
     p_target_user_id: userId,
   });
-  if (error) return null;
+  if (error || !session.isCurrent()) return null;
   const row = asSingleRow(data);
   return parseAccountDeletionReauthIssueReceipt(row && {
     proofId: row.proof_id,

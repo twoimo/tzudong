@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { chromium } from '@playwright/test';
 import { stringToBase64URL } from '@supabase/ssr';
@@ -6,25 +7,6 @@ import { getAuthCookieContract, readServerAuthCookies } from '../lib/auth/sessio
 
 const url = 'https://current.supabase.co';
 const contract = getAuthCookieContract(url);
-
-for (const newer of ['login', 'logout'] as const) test(`migration cannot replace a committed ${newer} after its first native cookie snapshot`, async () => {
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
- try {
-  const page=await browser.newPage();await page.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html>'}));await page.goto('https://session-cookie.test/');await page.addScriptTag({content:await migrationBrowserBundle()});
-  const result=await page.evaluate(({url,contract,newer})=>{
-   document.cookie=`${contract.legacyKey}=old-synthetic; Path=/`;
-   const descriptor=Object.getOwnPropertyDescriptor(Document.prototype,'cookie')!;let first=true;
-   Object.defineProperty(document,'cookie',{configurable:true,get(){
-    const snapshot=descriptor.get!.call(document);
-    if(first){first=false;if(newer==='login')descriptor.set!.call(document,`${contract.key}=new-synthetic; Path=/`);descriptor.set!.call(document,`${contract.marker}=1; Path=/`);}
-    return snapshot;
-   },set(value){descriptor.set!.call(document,value);}});
-   try{(globalThis as unknown as {migrate(url:string):void}).migrate(url);}finally{delete (document as unknown as {cookie?:string}).cookie;}
-   return {newSessionPreserved:document.cookie.includes(`${contract.key}=new-synthetic`),oldSessionImported:document.cookie.includes(`${contract.key}=old-synthetic`),committed:document.cookie.includes(`${contract.marker}=1`)};
-  },{url,contract,newer});
-  expect(result).toEqual({newSessionPreserved:newer==='login',oldSessionImported:false,committed:true});
- }finally{await browser.close();}
-},15000);
 
 async function migrationBrowserBundle() {
     const built = await Bun.build({ entrypoints: ['boundary-fixture'], target: 'browser', format: 'iife', write: false,
@@ -37,41 +19,30 @@ async function migrationBrowserBundle() {
     return built.outputs[0].text();
 }
 
-test('server legacy read is allowed only before the upgraded marker', () => {
-  const old = { name: contract.legacyKey, value: 'synthetic' };
-  expect(readServerAuthCookies([old], url)).toContainEqual({ name: contract.key, value: old.value });
-  expect(readServerAuthCookies([old, { name: contract.marker, value: '1' }], url))
-    .not.toContainEqual({ name: contract.key, value: old.value });
+for (const legacyKey of [contract.legacyKey, contract.previousKey]) test(`server rejects old and mixed credentials: ${legacyKey}`, () => {
+  const old = { name: legacyKey, value: 'old-synthetic' }, current = { name: contract.key, value: 'new-synthetic' };
+  expect(readServerAuthCookies([old], url)).not.toContainEqual({ name: contract.key, value: old.value });
+  expect(readServerAuthCookies([old, current, { name: contract.marker, value: '1' }], url)).not.toContainEqual(current);
+  expect(readServerAuthCookies([current], url)).not.toContainEqual(current);
+  expect(readServerAuthCookies([current, { name: contract.marker, value: 'pending' }], url)).not.toContainEqual(current);
+  expect(readServerAuthCookies([current, { name: contract.marker, value: '1' }], url)).toContainEqual(current);
 });
 
-test('native browser migration preserves chunks and never reimports a late legacy write after logout', async () => {
-  const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
-  try {
-    const page = await browser.newPage();
-    await page.route('**/*', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }));
-    await page.goto('https://session-cookie.test/');
-    await page.addScriptTag({ content: await migrationBrowserBundle() });
-    const result = await page.evaluate(({ url, contract }) => {
-      const migrate = (globalThis as unknown as { migrate(url: string): void }).migrate;
-      document.cookie = `${contract.legacyKey}.0=first; Path=/`;
-      document.cookie = `${contract.legacyKey}.1=second; Path=/`;
-      document.cookie = `${contract.legacyKey}-code-verifier=verifier; Path=/`;
-      document.cookie = 'unrelated=kept; Path=/';
-      migrate(url);
-      const copied = document.cookie.includes(`${contract.key}.0=first`)
-        && document.cookie.includes(`${contract.key}.1=second`)
-        && document.cookie.includes(`${contract.key}-code-verifier=verifier`);
-      for (const name of [contract.key + '.0', contract.key + '.1', contract.key + '-code-verifier']) {
-        document.cookie = `${name}=; Path=/; Max-Age=0`;
-      }
-      document.cookie = `${contract.legacyKey}.0=late-old-tab; Path=/`;
-      migrate(url);
-      return { copied, marker: document.cookie.includes(`${contract.marker}=1`),
-        restored: document.cookie.includes(`${contract.key}.0=`), unrelated: document.cookie.includes('unrelated=kept') };
-    }, { url, contract });
-    expect(result).toEqual({ copied: true, marker: true, restored: false, unrelated: true });
-  } finally { await browser.close(); }
-}, 20000);
+test('native cutover requires fresh login and preserves unrelated draft storage', async () => {
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
+ try {
+  const page=await browser.newPage();await page.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html>'}));await page.goto('https://session-cookie.test/');await page.addScriptTag({content:await migrationBrowserBundle()});
+  const result=await page.evaluate(({url,contract})=>{
+   const migrate=(globalThis as unknown as {migrate(url:string):void}).migrate;
+   localStorage.setItem('owned-draft-fixture','draft-preserved');
+   for(const key of [contract.legacyKey,contract.previousKey])for(const suffix of ['.0','.1','-code-verifier'])document.cookie=`${key}${suffix}=old-synthetic; Path=/`;
+   migrate(url);
+   const first=document.cookie;
+   document.cookie=`${contract.legacyKey}=late-old-response; Path=/`;migrate(url);
+   return {noImport:!first.includes(contract.key+'='),noLegacy:!document.cookie.includes('old-synthetic')&&!document.cookie.includes('late-old-response'),complete:document.cookie.includes(contract.marker+'=1'),draft:localStorage.getItem('owned-draft-fixture')==='draft-preserved'};
+  },{url,contract});expect(result).toEqual({noImport:true,noLegacy:true,complete:true,draft:true});
+ }finally{await browser.close();}
+},15000);
 
 for (const intentionalExchange of [false, true]) test(`actual SSR never publishes auth cookies, stale opt-in=${!intentionalExchange}`, async () => {
   const savedFetch = globalThis.fetch;
@@ -82,7 +53,7 @@ for (const intentionalExchange of [false, true]) test(`actual SSR never publishe
   const writes: string[] = [];
   globalThis.fetch = (async () => { refreshes++; return new Response(JSON.stringify({ access_token: token, token_type: 'bearer', refresh_token: 'synthetic-rotated', expires_in: 3600, user }), { headers: { 'Content-Type': 'application/json' } }); }) as typeof fetch;
   try {
-    const client = Reflect.apply(createClientForCookieStore, undefined, [{ getAll: () => [{ name: contract.key, value: 'base64-' + stringToBase64URL(JSON.stringify(initial)) }], set: name => { writes.push(name); } },
+    const client = Reflect.apply(createClientForCookieStore, undefined, [{ getAll: () => [{ name: contract.key, value: 'base64-' + stringToBase64URL(JSON.stringify(initial)) }, { name: contract.marker, value: '1' }], set: name => { writes.push(name); } },
       { NEXT_PUBLIC_SUPABASE_URL: url, NEXT_PUBLIC_SUPABASE_ANON_KEY: 'synthetic-public-key' }, { allowSessionCookieWrites: intentionalExchange }]);
     expect((await client.auth.getSession()).error).toBeNull();
     expect((await client.auth.getSession()).data.session?.refresh_token).toBe('synthetic-rotated');
@@ -100,7 +71,7 @@ for (const accepted of [false, true]) test(`stale callback write/commit flags ca
   const writes: string[] = [];
   globalThis.fetch = (async () => new Response(JSON.stringify({ access_token: token, token_type: 'bearer', refresh_token: 'synthetic-rotated', expires_in: 3600, user }), { headers: { 'Content-Type': 'application/json' } })) as typeof fetch;
   try {
-    const client = Reflect.apply(createClientForCookieStore, undefined, [{ getAll: () => [{ name: contract.key, value: 'base64-' + stringToBase64URL(JSON.stringify(initial)) }], set: name => { writes.push(name); } },
+    const client = Reflect.apply(createClientForCookieStore, undefined, [{ getAll: () => [{ name: contract.key, value: 'base64-' + stringToBase64URL(JSON.stringify(initial)) }, { name: contract.marker, value: '1' }], set: name => { writes.push(name); } },
       { NEXT_PUBLIC_SUPABASE_URL: url, NEXT_PUBLIC_SUPABASE_ANON_KEY: 'synthetic-public-key' }, { allowSessionCookieWrites: true, deferSessionCookieWrites: true }]);
     expect((await client.auth.getSession()).data.session?.refresh_token).toBe('synthetic-rotated');
     expect(writes).toEqual([]);
@@ -113,38 +84,25 @@ for (const accepted of [false, true]) test(`stale callback write/commit flags ca
 });
 
 
-for (const failure of ['chunk', 'marker', 'preexisting-fragment'] as const) test(`incomplete native migration stays uncommitted and preserves recovery: ${failure}`, async () => {
-  const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
-  try {
-    const page = await browser.newPage();
-    await page.route('**/*', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }));
-    await page.goto('https://session-cookie.test/');
-    await page.addScriptTag({ content: await migrationBrowserBundle() });
-    const result = await page.evaluate(({ failure, url, contract }) => {
-      const migrate = (globalThis as unknown as { migrate(url: string): void }).migrate;
-      document.cookie = `${contract.legacyKey}.0=first; Path=/`;
-      document.cookie = `${contract.legacyKey}.1=second; Path=/`;
-      document.cookie = `${contract.legacyKey}-code-verifier=verifier; Path=/`;
-      if (failure === 'preexisting-fragment') document.cookie = `${contract.key}.0=partial; Path=/`;
-      const descriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')!;
-      if (failure !== 'preexisting-fragment') Object.defineProperty(document, 'cookie', { configurable: true, get: () => descriptor.get!.call(document), set(value: string) {
-        if (value.startsWith(failure === 'chunk' ? `${contract.key}.1=` : `${contract.marker}=`)) return;
-        descriptor.set!.call(document, value);
-      } });
-      let failed = false;
-      try { migrate(url); } catch { failed = true; }
-      const uncommitted = !document.cookie.includes(`${contract.marker}=1`);
-      const legacyPreserved = document.cookie.includes(`${contract.legacyKey}.0=first`) && document.cookie.includes(`${contract.legacyKey}.1=second`);
-      if (failure === 'preexisting-fragment') return { failed, uncommitted, legacyPreserved, retryComplete: true };
-      Reflect.deleteProperty(document, 'cookie');
-      migrate(url);
-      const retryComplete = document.cookie.includes(`${contract.key}.0=first`) && document.cookie.includes(`${contract.key}.1=second`)
-        && document.cookie.includes(`${contract.key}-code-verifier=verifier`) && document.cookie.includes(`${contract.marker}=1`);
-      return { failed, uncommitted, legacyPreserved, retryComplete };
-    }, { failure, url, contract });
-    expect(result).toEqual({ failed: true, uncommitted: true, legacyPreserved: true, retryComplete: true });
-  } finally { await browser.close(); }
-}, 20000);
+for (const failure of ['old-cookie-delete', 'marker', 'preexisting-fragment'] as const) test(`cutover recovery never imports credentials: ${failure}`, async () => {
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
+ try {
+  const page=await browser.newPage();await page.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html>'}));await page.goto('https://session-cookie.test/');await page.addScriptTag({content:await migrationBrowserBundle()});
+  const result=await page.evaluate(({url,contract,failure})=>{
+   const migrate=(globalThis as unknown as {migrate(url:string):void}).migrate;
+   document.cookie=`${contract.legacyKey}=old-synthetic; Path=/`;
+   if(failure==='preexisting-fragment')document.cookie=`${contract.key}.0=partial; Path=/`;
+   const native=Object.getOwnPropertyDescriptor(Document.prototype,'cookie')!;
+   if(failure!=='preexisting-fragment')Object.defineProperty(document,'cookie',{configurable:true,get:()=>native.get!.call(document),set:value=>{
+    if(failure==='marker'?String(value).startsWith(contract.marker+'='):String(value).startsWith(contract.legacyKey+'=')&&/max-age=0/i.test(String(value)))return;
+    native.set!.call(document,value);
+   }});
+   let failed=false;try{migrate(url)}catch{failed=true}
+   const uncommitted=!document.cookie.includes(contract.marker+'=1');Reflect.deleteProperty(document,'cookie');migrate(url);
+   return {failed,uncommitted,noCredential:!document.cookie.includes(contract.key+'=')&&!document.cookie.includes(contract.key+'.'),complete:document.cookie.includes(contract.marker+'=1')};
+  },{url,contract,failure});expect(result).toEqual({failed:failure!=='preexisting-fragment',uncommitted:failure!=='preexisting-fragment',noCredential:true,complete:true});
+ }finally{await browser.close();}
+},20000);
 
 for (const allowPkceCookieWrites of [false, true]) test(`SSR verifier-only opt-in preserves PKCE but blocks session publication: ${allowPkceCookieWrites}`, async () => {
   const savedFetch=globalThis.fetch;

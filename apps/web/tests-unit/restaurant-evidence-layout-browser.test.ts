@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -6,7 +7,7 @@ import tailwind from '@tailwindcss/postcss';
 import { chromium, expect as ui } from '@playwright/test';
 
 const root = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromeForTestingExecutable();
 const output = resolve(root, 'performance/renewal-20261023/unified-media-v20');
 const source = JSON.parse(readFileSync(resolve(root, '../../docs/evidence/marker-evidence-live-20261021-v1/reviewed-frames.json'), 'utf8'));
 const frames = source.frames.map((row: { frame: { video_id: string } }) => row.frame);

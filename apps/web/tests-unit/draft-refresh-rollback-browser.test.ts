@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import {test,expect,beforeAll,afterAll} from 'bun:test';
 import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
@@ -9,7 +10,7 @@ const kinds=['review','submission','edit'];
 const owner='11111111-1111-4111-8111-111111111111';
 const other='22222222-2222-4222-8222-222222222222';
 async function setup(){
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  const context=await browser.newContext();await context.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><div id="root"></div>'}));
  const page=await context.newPage();await page.goto('https://draft-refresh.test/');return {browser,context,page};
 }

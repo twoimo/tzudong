@@ -133,6 +133,10 @@ const allowLoopbackImageUpstreams = shouldAllowLoopbackImageUpstreams();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    // Auth URLs carry one-use codes; keep them out of development request logs.
+    logging: {
+        incomingRequests: { ignore: [/^\/auth(?:\/|\?|$)/, /^\/api\/auth(?:\/|\?|$)/] },
+    },
     ...(configuredNextDistDir ? { distDir: configuredNextDistDir } : {}),
     // Vercel resolves adapter output paths from the Git repository root.
     // Using apps/web here emits .next paths that cannot be found at that root.

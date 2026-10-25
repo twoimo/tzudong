@@ -196,7 +196,7 @@ type RejectedSessionOwner = {
   userId?: string;
   isCurrent?: () => boolean;
   browserLogout?: ReturnType<typeof captureBrowserLogout>;
-  scope?: 'global' | 'local';
+  scope?: 'local';
 };
 
 export async function signOutRejectedPrivacySession(
@@ -216,13 +216,12 @@ export async function signOutRejectedPrivacySession(
     if (session?.access_token) {
       // This public SDK API revokes the captured JWT without removing whichever
       // browser session occupies the mutable client's storage after its await.
-      for (const scope of owner.scope === 'local' ? ['local'] as const : ['global', 'local'] as const) {
-        if (!owns()) return false;
-        try {
-          const result = await client.auth.admin.signOut(session.access_token, scope);
-          if (!result.error) revoked = true;
-        } catch { /* The next captured-session scope is still attempted. */ }
-      }
+      // Automatic rejection owns this captured session only. An HTTP request
+      // cannot fence a newer login for the same account across browser tabs.
+      try {
+        const result = await client.auth.admin.signOut(session.access_token, 'local');
+        revoked = !result.error;
+      } catch { /* The response and browser cleanup still fail closed. */ }
     }
     if (!owns()) return false;
     if (browserLogout) {

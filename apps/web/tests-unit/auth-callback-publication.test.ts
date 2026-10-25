@@ -14,7 +14,7 @@ function fixture(mode:{onboarding?:boolean;eligible?:boolean;confirmed?:boolean;
   if(cache.has(relative))return cache.get(relative);const record={exports:{}};
   const imported=(name:string):unknown=>{
    if(name==='next/server')return next;
-   if(name==='@/lib/auth/callback-session')return {createCallbackSupabaseClient:async()=>{events.push('factory');return client;},getCallbackSessionTokens:async()=>{events.push('handoff');return {tokens:{access_token:'synthetic-access',refresh_token:'synthetic-refresh'},consumedVerifiers:['sb-fixture-v2-auth-token-code-verifier']};},revokeRejectedCallbackSession:async()=>{events.push('reject');}};
+   if(name==='@/lib/auth/callback-session')return {createCallbackSupabaseClient:async()=>{events.push('factory');return client;},exchangeCallbackCode:async()=>{const result=await client.auth.exchangeCodeForSession();return result.error?null:{userId:'11111111-1111-4111-8111-111111111111'};},getCallbackSessionTokens:async()=>{events.push('handoff');return {tokens:{access_token:'synthetic-access',refresh_token:'synthetic-refresh'},consumedVerifiers:['sb-fixture-v3-auth-token-code-verifier']};},revokeRejectedCallbackSession:async()=>{events.push('reject');}};
    if(name==='@/lib/privacy/eligibility')return {getCurrentPrivacyEligibility:async()=>{events.push('eligibility');return receipt;},hasLivePrivacyEligibilityReceipt:(value:any)=>value?.eligible===true};
    if(name==='@/lib/privacy/onboarding')return {ONBOARDING_CHALLENGE_COOKIE:'onboarding-fixture',clearOnboardingCookies:(r:any)=>r.cookies.delete('onboarding-fixture'),clearRejectedOnboardingCookies:(r:any)=>r.cookies.delete('onboarding-fixture'),sha256:()=> 'hash-fixture',readOnboardingChallenge:()=>mode.onboarding?{intent:'oauth',oauthNonce:'nonce-fixture',origin,challengeId:'challenge-fixture',challengeToken:'token-fixture',policyVersionId:'policy-fixture',contentSha256:'a'.repeat(64)}:null,parseFreshPrivacyOnboardingConfirmationReceipt:()=>mode.confirmed===false?null:{accepted:true}};
    if(name==='@/lib/supabase/service-role')return {createSupabaseServiceRoleClient:()=>({rpc:async()=>{events.push('confirm');return {data:{accepted:true},error:null};}})};
@@ -25,7 +25,7 @@ function fixture(mode:{onboarding?:boolean;eligible?:boolean;confirmed?:boolean;
   vm.runInContext(`(function(module,exports,require){${source}\n})`,context)(record,record.exports,imported);cache.set(relative,record.exports);return record.exports;
  }
  const route=load('app/auth/callback/route.ts');
- const request=(overrides:{origin?:string;body?:string;query?:string;type?:string}={})=>new Request(origin+'/auth/callback'+(overrides.query??''),{method:'POST',headers:{origin:overrides.origin??origin,'content-type':overrides.type??'application/json',cookie:'sb-fixture-v2-auth-token=old'+(mode.onboarding?'; onboarding-fixture=challenge':'')},body:overrides.body??JSON.stringify({code:'one-use-fixture',next:'/mypage'})});
+ const request=(overrides:{origin?:string;body?:string;query?:string;type?:string}={})=>new Request(origin+'/auth/callback'+(overrides.query??''),{method:'POST',headers:{origin:overrides.origin??origin,'content-type':overrides.type??'application/json',cookie:'sb-fixture-v3-auth-token=old'+(mode.onboarding?'; onboarding-fixture=challenge':'')},body:overrides.body??JSON.stringify({code:'one-use-fixture',next:'/mypage'})});
  return {events,route,request};
 }
 test('callback navigation is no-store/referrerless and never exchanges or publishes the code',async()=>{

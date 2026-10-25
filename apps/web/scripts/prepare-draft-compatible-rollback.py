@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Prepare an exact-base rollback patch retaining the current draft subsystem.
 
-Writes only a new output directory and a temporary Git index. Does not checkout,
+Writes a new output directory, Git objects and temporary private indexes. Does not checkout,
 commit, apply to the worktree, contact services or include runtime configuration.
 The resulting patch is a review candidate, not release approval.
 """
 import argparse
-import difflib
 import hashlib
 import json
 import os
@@ -34,7 +33,15 @@ def prepare(root: Path, base: str, output: Path) -> dict:
         'lib/supabase/server.ts', 'lib/supabase/middleware.ts', 'proxy.ts',
         'lib/auth/callback-session.ts', 'app/auth/callback/route.ts',
         'app/auth/complete/page.tsx',
+        'app/auth/reset-password/page.tsx',
         'app/api/privacy/onboarding/route.ts',
+        # Every caller of the browser auth adapter must retain its ownership
+        # protocol, including memory-only recovery and reauthentication.
+        'components/auth/AuthModal.tsx',
+        'components/profile/ProfileModal.tsx',
+        'app/mypage/profile/page.tsx',
+        'app/global-map/page.tsx',
+        'lib/privacy/account-deletion-reauth.ts',
         'components/home/HomeMapUserMenu.tsx',
         'components/home/MobileControlOverlay.tsx',
         'components/mypage/MyPageTopActions.tsx',
@@ -73,37 +80,37 @@ def prepare(root: Path, base: str, output: Path) -> dict:
             if found.suffix not in {'.ts', '.tsx', '.mjs', '.json', '.css'}:
                 raise ValueError('UNSUPPORTED_SOURCE: ' + str(found.relative_to(root)))
             pending.append(found)
-    changed = []
-    patch = []
-    for path, source in sorted(files.items()):
-        existing = subprocess.run(['git', 'show', revision + ':' + path], cwd=root, capture_output=True)
-        old = existing.stdout if existing.returncode == 0 else b''
-        if old == source:
-            continue
-        if not source.endswith(b'\n') or (old and not old.endswith(b'\n')):
-            raise ValueError('SOURCE_REQUIRES_CANONICAL_NEWLINE: ' + path)
-        changed.append(path)
-        patch.append(f'diff --git a/{path} b/{path}\n')
-        if existing.returncode != 0:
-            patch.append('new file mode 100644\n')
-        patch.extend(difflib.unified_diff(old.decode().splitlines(keepends=True), source.decode().splitlines(keepends=True),
-                                        fromfile='a/' + path if existing.returncode == 0 else '/dev/null', tofile='b/' + path))
-    patch_bytes = ''.join(patch).encode()
-    # A separate index proves the patch applies to exactly the requested base,
-    # without changing the candidate index or any worktree.
+    # Git's native diff preserves missing final newlines, modes and exact bytes.
+    # Do not normalize an immutable base just to make a Python text diff apply.
     with tempfile.TemporaryDirectory(prefix='tzudong-rollback-index-') as temporary:
-        env = dict(os.environ, GIT_INDEX_FILE=str(Path(temporary) / 'index'))
+        env = dict(os.environ, GIT_INDEX_FILE=str(Path(temporary) / 'build-index'))
+        subprocess.run(['git', 'read-tree', revision], cwd=root, env=env, check=True)
+        rows = []
+        for path, source in sorted(files.items()):
+            blob = subprocess.check_output(['git', 'hash-object', '-w', '--stdin'], cwd=root, input=source).decode().strip()
+            mode = '100755' if (root / path).stat().st_mode & 0o111 else '100644'
+            rows.append(f'{mode} {blob}\t{path}\0')
+        subprocess.run(['git', 'update-index', '-z', '--index-info'], cwd=root, env=env,
+                       input=''.join(rows).encode(), check=True)
+        tree = git('write-tree', env=env).decode().strip()
+        changed = git('diff', '--cached', '--name-only', '-z', revision, env=env).decode().rstrip('\0').split('\0')
+        changed = [path for path in changed if path]
+        patch_bytes = git('diff', '--cached', '--binary', revision, env=env)
+        # Independently apply the emitted patch from the base in a second index.
+        # Neither temporary index is the user's staging area.
+        env = dict(os.environ, GIT_INDEX_FILE=str(Path(temporary) / 'verify-index'))
         subprocess.run(['git', 'read-tree', revision], cwd=root, env=env, check=True)
         subprocess.run(['git', 'apply', '--cached', '--check', '-'], input=patch_bytes, cwd=root, env=env, check=True)
         subprocess.run(['git', 'apply', '--cached', '-'], input=patch_bytes, cwd=root, env=env, check=True)
-        tree = git('write-tree', env=env).decode().strip()
+        if git('write-tree', env=env).decode().strip() != tree:
+            raise ValueError('ROLLBACK_PATCH_TREE_MISMATCH')
     output.mkdir(parents=True, exist_ok=False)
     for path, source in files.items():
         destination = output / 'files' / path
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(source)
     (output / 'draft-compatible-rollback.patch').write_bytes(patch_bytes)
-    result = {'base_revision': revision, 'target_tree': tree, 'entries': entries,
+    result = {'base_revision': revision, 'target_tree': tree, 'entries': entries, 'patch_format': 'git-native-binary',
               'auth_boundary': auth_boundary,
               'changed_paths': changed, 'patch_sha256': hashlib.sha256(patch_bytes).hexdigest(),
               'files': {p: hashlib.sha256(b).hexdigest() for p, b in sorted(files.items())},

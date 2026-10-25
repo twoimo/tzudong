@@ -1,5 +1,5 @@
 import { DEFAULT_COOKIE_OPTIONS, clearAuthCookiesAtScopes, isChunkLike, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr';
-import { getAuthCookieContract, withBrowserAuthCookieLock } from './session-cookies';
+import { beginBrowserAuthCookieBatch, finishBrowserAuthCookieBatch, getAuthCookieContract, withBrowserAuthCookieLock } from './session-cookies';
 import { advanceBrowserAuthRevision, captureBrowserAuthState } from './browser-commit-state';
 
 // This adapter follows our browser client's default host-only, path=/ cookie
@@ -26,7 +26,7 @@ export function captureBrowserLogout() {
 
   return {
     isCurrent,
-    isCleared: () => read().length === 0,
+    isCleared: () => read().length === 0 && parseCookieHeader(document.cookie).some(cookie => cookie.name === marker && cookie.value === '1'),
     async clearIfCurrent(ownsRequest: () => boolean): Promise<boolean> {
       const keys = new Set([storageKey, `${storageKey}-user`, `${storageKey}-code-verifier`]);
       for (const cookie of snapshot) keys.add(cookie.name.replace(/\.\d+$/, ''));
@@ -42,18 +42,17 @@ export function captureBrowserLogout() {
       return withBrowserAuthCookieLock(url, () => {
         if (!ownsRequest() || !isCurrent()) return false;
         advanceBrowserAuthRevision(contract);
-        // A failed first migration can leave a pending marker. Logout commits
-        // suppression before deleting its partial/current credentials.
-        document.cookie = serializeCookieHeader(marker, '1', DEFAULT_COOKIE_OPTIONS);
-        if (!parseCookieHeader(document.cookie).some(cookie => cookie.name === marker && cookie.value === '1')) {
-          throw new Error('AUTH_LOCAL_LOGOUT_FAILED');
-        }
+        // HTTP readers must reject a partially applied logout too.
+        try { beginBrowserAuthCookieBatch(url); }
+        catch { throw new Error('AUTH_LOCAL_LOGOUT_FAILED'); }
         // The ownership check runs after lock admission. Keep every deletion in
         // this same batch so another cooperating tab cannot read partial chunks.
         for (const cookie of mutations) {
           document.cookie = serializeCookieHeader(cookie.name, cookie.value, cookie.options);
         }
         if (read().length > 0) throw new Error('AUTH_LOCAL_LOGOUT_FAILED');
+        try { finishBrowserAuthCookieBatch(url); }
+        catch { throw new Error('AUTH_LOCAL_LOGOUT_FAILED'); }
         return true;
       });
     },

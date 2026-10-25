@@ -19,6 +19,7 @@ import { Restaurant, RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDraftAutosave, waitForDraftAutosave } from "@/hooks/use-draft-autosave";
 import { supabase } from "@/integrations/supabase/client";
+import { readCurrentBrowserAuthUser } from "@/lib/auth/isolated-browser-account";
 import { toast } from "@/lib/no-toast";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/editRequestDraftDB";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -150,7 +151,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         setIsSubmitting(true);
 
         try {
-            const { data: { user: authenticatedUser } } = await supabase.auth.getUser();
+            const { data: { user: authenticatedUser } } = await readCurrentBrowserAuthUser();
             if (!ownsAttempt()) return;
             if (!authenticatedUser || authenticatedUser.id !== attempt.userId) {
                 throw new Error('로그인이 필요합니다.');

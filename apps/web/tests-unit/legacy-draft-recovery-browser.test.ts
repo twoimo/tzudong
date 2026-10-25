@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import {test,expect} from 'bun:test';
 import {chromium,expect as browserExpect,type Page} from '@playwright/test';
 import {bundle,type TabFixture} from './fixtures/draft-mixed-fixture';
@@ -29,7 +30,7 @@ test('review completion cleans its captured legacy revision even after the curre
  }finally{await f.browser.close();}
 },20000);
 async function setup(){
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  const context=await browser.newContext();await context.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><div id="root"></div>'}));
  const page=async(legacy:boolean,ui=false)=>{const p=await context.newPage();await p.goto('https://draft-recovery.test/');await p.addScriptTag({content:await bundle(legacy?'v6':null,ui)});return p;};
  return {browser,context,page};

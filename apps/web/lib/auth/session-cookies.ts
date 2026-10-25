@@ -6,8 +6,10 @@ export function getAuthCookieContract(url: string) {
   const project = new URL(url).hostname.split('.')[0];
   return {
     legacyKey: `sb-${project}-auth-token`,
-    key: `sb-${project}-v2-auth-token`,
-    marker: `tz-auth-v2-${project}`,
+    previousKey: `sb-${project}-v2-auth-token`,
+    previousMarker: `tz-auth-v2-${project}`,
+    key: `sb-${project}-v3-auth-token`,
+    marker: `tz-auth-v3-${project}`,
   };
 }
 
@@ -17,9 +19,18 @@ function belongsToKey(name: string, key: string) {
     || name.startsWith(`${key}-code-verifier.`);
 }
 
+function isSessionCredential(name: string, key: string) {
+  return isChunkLike(name, key) || isChunkLike(name, `${key}-user`);
+}
+
+function isPreviousCredential(name: string, contract: ReturnType<typeof getAuthCookieContract>) {
+  return isSessionCredential(name, contract.legacyKey) || isSessionCredential(name, contract.previousKey);
+}
+
 // Serializes cooperating browser cookie batches, including the migration that
 // reads can trigger. The SDK's default coordination does not acquire Web Locks.
-// Native Set-Cookie responses and already-loaded older clients do not participate.
+// Native legacy Set-Cookie responses and older clients do not participate. The
+// v3 namespace is browser-published only, so those writers cannot overwrite it.
 export async function withBrowserAuthCookieLock<T>(url: string, batch: () => T): Promise<T> {
   if (typeof navigator === 'undefined' || !navigator.locks) {
     throw new Error('AUTH_COOKIE_LOCK_UNAVAILABLE');
@@ -40,61 +51,45 @@ export async function withBrowserAuthCookieLock<T>(url: string, batch: () => T):
   }
 }
 
-// Only the first upgraded browser read may import legacy cookies. The marker
-// survives logout so a dormant old tab cannot resurrect its later writes.
+function writeAuthMarker(url: string, value: 'pending' | '1') {
+  const { marker } = getAuthCookieContract(url);
+  document.cookie = serializeCookieHeader(marker, value, DEFAULT_COOKIE_OPTIONS);
+  if (!parseCookieHeader(document.cookie).some(cookie => cookie.name === marker && cookie.value === value)) {
+    throw new Error('AUTH_COOKIE_WRITE_FAILED');
+  }
+}
+
+export function beginBrowserAuthCookieBatch(url: string) { writeAuthMarker(url, 'pending'); }
+export function finishBrowserAuthCookieBatch(url: string) { writeAuthMarker(url, '1'); }
+
+// The v3 cutover requires one fresh login. Native HTTP writers from older
+// releases cannot join this browser lock, so credentials are never imported.
 export function migrateBrowserAuthCookies(url: string) {
-  const { key, legacyKey, marker } = getAuthCookieContract(url);
-  let all = parseCookieHeader(document.cookie);
-  const state = all.find(cookie => cookie.name === marker)?.value;
-  if (state === '1') return;
-  if ((state !== undefined && state !== 'pending')
-      || (state === undefined && all.some(cookie => belongsToKey(cookie.name, key)))) {
-    throw new Error('AUTH_COOKIE_MIGRATION_INCOMPLETE');
-  }
-  const read = () => parseCookieHeader(document.cookie);
-  const committed = () => read().some(cookie => cookie.name === marker && cookie.value === '1');
-  if (state === undefined) {
-    // The first snapshot can precede another response's login/logout commit.
-    // Never reset its completed marker to pending using that older snapshot.
-    const live = read();
-    if (live.some(cookie => cookie.name === marker && cookie.value === '1')) return;
-    if (live.some(cookie => cookie.name === marker || belongsToKey(cookie.name, key))) {
-      throw new Error('AUTH_COOKIE_MIGRATION_INCOMPLETE');
-    }
-    all = live;
-    document.cookie = serializeCookieHeader(marker, 'pending', DEFAULT_COOKIE_OPTIONS);
-    if (!read().some(cookie => cookie.name === marker && cookie.value === 'pending')) {
-      throw new Error('AUTH_COOKIE_MIGRATION_FAILED');
-    }
-  }
-  const expected = all.filter(cookie => belongsToKey(cookie.name, legacyKey))
-    .map(cookie => ({ name: key + cookie.name.slice(legacyKey.length), value: cookie.value }));
-  // Only pending migration artifacts may be retried. An established session or
-  // logout tombstone is never reset to make legacy credentials readable again.
-  for (const cookie of all.filter(cookie => belongsToKey(cookie.name, key)
-      && !expected.some(candidate => candidate.name === cookie.name))) {
-    if (committed()) return;
+  const contract = getAuthCookieContract(url);
+  const { key, marker } = contract;
+  const all = parseCookieHeader(document.cookie);
+  const complete = all.some(cookie => cookie.name === marker && cookie.value === '1');
+  if (!complete) beginBrowserAuthCookieBatch(url);
+  // An interrupted v3 batch is discarded, never interpreted as a saved login.
+  // Cleanup is within the shared cookie lock; older HTTP writers use other keys.
+  for (const cookie of all.filter(cookie => (!complete && belongsToKey(cookie.name, key))
+      || belongsToKey(cookie.name, contract.legacyKey) || belongsToKey(cookie.name, contract.previousKey))) {
     document.cookie = serializeCookieHeader(cookie.name, '', { ...DEFAULT_COOKIE_OPTIONS, maxAge: 0 });
   }
-  for (const cookie of expected) {
-    if (committed()) return;
-    document.cookie = serializeCookieHeader(cookie.name, cookie.value, DEFAULT_COOKIE_OPTIONS);
-  }
-  if (committed()) return;
-  const copied = read().filter(cookie => belongsToKey(cookie.name, key));
-  if (copied.length !== expected.length
-      || expected.some(cookie => !copied.some(actual => actual.name === cookie.name && actual.value === cookie.value))) {
+  const stored = parseCookieHeader(document.cookie);
+  if (stored.some(cookie => isPreviousCredential(cookie.name, contract))
+    || (!complete && stored.some(cookie => belongsToKey(cookie.name, key)))) {
     throw new Error('AUTH_COOKIE_MIGRATION_FAILED');
   }
-  document.cookie = serializeCookieHeader(marker, '1', DEFAULT_COOKIE_OPTIONS);
-  if (!committed()) throw new Error('AUTH_COOKIE_MIGRATION_FAILED');
+  if (!complete) finishBrowserAuthCookieBatch(url);
 }
 
 export function readServerAuthCookies(all: Cookie[], url: string): Cookie[] {
-  const { key, legacyKey, marker } = getAuthCookieContract(url);
-  if (all.some(cookie => cookie.name === marker || belongsToKey(cookie.name, key))) return all;
-  // A navigation can precede hydration of the first upgraded browser tab.
-  // Read the old session for that request without emitting migration cookies.
-  return [...all, ...all.filter(cookie => belongsToKey(cookie.name, legacyKey))
-    .map(cookie => ({ name: key + cookie.name.slice(legacyKey.length), value: cookie.value }))];
+  const contract = getAuthCookieContract(url);
+  const complete = all.some(cookie => cookie.name === contract.marker && cookie.value === '1');
+  // An old tab can receive another HTTP credential after browser cleanup.
+  // Deny mixed/incomplete generations instead of serving a new account to it.
+  const mixed = all.some(cookie => isPreviousCredential(cookie.name, contract));
+  return all.filter(cookie => !isPreviousCredential(cookie.name, contract)
+    && !((!complete || mixed) && isSessionCredential(cookie.name, contract.key)));
 }

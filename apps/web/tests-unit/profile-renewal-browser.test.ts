@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -6,7 +7,7 @@ import tailwind from '@tailwindcss/postcss';
 import { chromium, expect as browserExpect } from '@playwright/test';
 
 const root = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromeForTestingExecutable();
 const entry = `import React from 'react';import {createRoot} from 'react-dom/client';import {QueryClient,QueryClientProvider} from '@tanstack/react-query';import Profile from './app/mypage/profile/page';
 globalThis.__writes=0;globalThis.fetch=async(input,init)=>{if(init?.method && init.method!=='GET')globalThis.__writes++;return new Response('',{status:503});};
 createRoot(document.getElementById('root')).render(<QueryClientProvider client={new QueryClient()}><main className="mx-auto max-w-5xl p-4" style={{overflow:'auto',height:'100dvh'}}><Profile/></main></QueryClientProvider>);`;

@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { test, expect } from 'bun:test';
 import { chromium } from '@playwright/test';
 import { join } from 'node:path';
@@ -47,7 +48,7 @@ async function bundle() {
   return built.outputs[0].text();
 }
 for(const kind of ['review','submission','edit'])test(`logout cleanup prevents a delayed ${kind} write from resurrecting the old owner's draft`,async()=>{
-  const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+  const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
   try{
     const page=await browser.newPage();const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/*',route=>route.request().resourceType()==='document'?route.fulfill({contentType:'text/html',body:'<!doctype html><div></div>'}):route.abort());await page.goto('https://draft-race.test/');await page.addScriptTag({content:await bundle()});
@@ -59,7 +60,7 @@ for(const kind of ['review','submission','edit'])test(`logout cleanup prevents a
 },20000);
 
 for(const kind of ['review','submission','edit'])for(const operation of ['delete-all','delete-one','old-save'])test(`same owner re-login protects fresh ${kind} text from delayed ${operation}`,async()=>{
-  const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+  const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
   try{
     const page=await browser.newPage();await page.route('**/*',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><div></div>'}));await page.goto('https://draft-race.test/');await page.addScriptTag({content:await bundle()});
     if(operation==='old-save'){
@@ -73,7 +74,7 @@ for(const kind of ['review','submission','edit'])for(const operation of ['delete
 },20000);
 
 for(const kind of ['review','submission','edit'])test(`expired ${kind} read cannot delete a fresh replacement at the same key`,async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const page=await browser.newPage();await page.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><div></div>'}));await page.goto('https://draft-race.test/');await page.addScriptTag({content:await bundle()});await page.evaluate(kind=>(globalThis as unknown as DraftRaceGlobals).__startRead(kind),kind);await page.waitForFunction(()=>(globalThis as unknown as DraftRaceGlobals).__draftRaceIO.entered);await page.evaluate(kind=>(globalThis as unknown as DraftRaceGlobals).__replaceExpired(kind),kind);await page.evaluate(()=>(globalThis as unknown as DraftRaceGlobals).__draftRaceIO.release());expect(await page.evaluate(()=>(globalThis as unknown as DraftRaceGlobals).__expiredRead)).toEqual({status:'unavailable',code:'DRAFT_READ_UNAVAILABLE'});expect(await page.evaluate(kind=>(globalThis as unknown as DraftRaceGlobals).__fresh(kind),kind)).toBe(true);
  }finally{await browser.close();}

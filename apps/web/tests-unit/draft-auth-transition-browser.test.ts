@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { test, expect } from 'bun:test';
 import { chromium, expect as browserExpect } from '@playwright/test';
 import { join } from 'node:path';
@@ -9,7 +10,7 @@ interface DraftAuthGlobals {
 }
 const root=join(import.meta.dir,'..');
 for (const replacement of ['different-owner', 'same-owner-new-family'] as const) test(`stale published auth cannot dispatch logout for ${replacement}`, async () => {
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try {
   const page=await browser.newPage();let requests=0;
   await page.route('**/*',route=>{
@@ -51,7 +52,7 @@ async function bundle(composer: 'submission' | 'edit' | 'review' | 'new-review' 
  if(!built.success)throw new Error(built.logs.map(String).join('\n'));return built.outputs[0].text();
 }
 for(const event of ['sign-out','switch-owner','relogin-during-logout','unmount-during-eligibility','relogin-before-cleanup','relogin-with-cleanup-failure'])test(`actual AuthProvider preserves draft ownership during ${event}`,async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const page=await browser.newPage();const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',r=>r.request().resourceType()==='document'?r.fulfill({contentType:'text/html',body:'<!doctype html><div id="root"></div>'}):r.request().url().endsWith('/api/auth/logout')?r.fulfill({status:200,body:'{}'}):r.abort());
@@ -82,7 +83,7 @@ for(const event of ['sign-out','switch-owner','relogin-during-logout','unmount-d
 },20000);
 
 for(const suspended of [false,true])for(const event of ['other-owner','same-owner-relogin','logout-pending'])test(`AuthProvider ${suspended?'frozen':'active'} tab resumes ${event} without SDK events`,async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const context=await browser.newContext();await context.route('**/*',r=>r.request().resourceType()==='document'?r.fulfill({contentType:'text/html',body:'<!doctype html><div id="root"></div>'}):r.abort());
   const a=await context.newPage(),b=await context.newPage();const source=await bundle();
@@ -111,7 +112,7 @@ for(const suspended of [false,true])for(const event of ['other-owner','same-owne
 },20000);
 
 for (const suspended of [false, true]) test(`${suspended ? 'frozen' : 'active'} resume admits B after A cleanup without reviving A`, async () => {
- const browser = await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser = await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try {
   const context = await browser.newContext();
   await context.route('**/*', route => route.request().resourceType() === 'document' ? route.fulfill({contentType:'text/html',body:'<!doctype html><div id="root"></div>'}) : route.abort());
@@ -143,7 +144,7 @@ for (const suspended of [false, true]) test(`${suspended ? 'frozen' : 'active'} 
 }, 20000);
 
 for (const nextOwner of ['other-owner', 'same-owner-renewal'] as const) test(`late HTTP logout cannot revoke ${nextOwner}`, async () => {
- const browser = await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser = await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try {
   const page = await browser.newPage();
   let releaseHttp: (() => Promise<void>) | undefined;
@@ -167,7 +168,7 @@ for (const nextOwner of ['other-owner', 'same-owner-renewal'] as const) test(`la
 
 
 test('old same-account eligibility rejection cannot acquire the renewed session draft epoch', async () => {
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try {
   const page=await browser.newPage();
   await page.route('**/*',r=>r.request().resourceType()==='document'?r.fulfill({contentType:'text/html',body:'<!doctype html><div id="root"></div>'}):r.abort());
@@ -186,7 +187,7 @@ test('old same-account eligibility rejection cannot acquire the renewed session 
 
 
 for (const composer of ['submission','edit','review','new-review'] as const) test(`blocked authenticated ${composer} composer requires a verified ownership retry before editing`, async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try {
   const page=await browser.newPage({viewport:{width:1440,height:900}});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   const script=await bundle(composer);
@@ -211,7 +212,7 @@ for (const composer of ['submission','edit','review','new-review'] as const) tes
 },20000);
 
 for(const transition of ['pagehide','beforeunload'] as const)test(`${transition} abandons a delayed eligibility rejection and pageshow restores the same draft`,async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const page=await browser.newPage();await page.route('**/*',r=>r.request().resourceType()==='document'?r.fulfill({contentType:'text/html',body:'<!doctype html><div id="root"></div>'}):r.abort());
   await page.goto('https://draft-auth.test/mypage/profile');await page.addScriptTag({content:await bundle()});
@@ -228,7 +229,7 @@ for(const transition of ['pagehide','beforeunload'] as const)test(`${transition}
 },15000);
 
 for(const logoutTransition of ['pagehide','beforeunload'] as const)test(`${logoutTransition} preserves an explicitly requested logout and its draft deletion`,async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   let release:()=>void=()=>{};let entered=false;const gate=new Promise<void>(resolve=>release=resolve);
   const page=await browser.newPage();await page.route('**/*',async r=>{if(r.request().url().endsWith('/api/auth/logout')){entered=true;await gate;return r.fulfill({status:200,body:'{}'});}return r.fulfill({contentType:'text/html',body:'<!doctype html><div id="root"></div>'});});
@@ -243,7 +244,7 @@ for(const logoutTransition of ['pagehide','beforeunload'] as const)test(`${logou
 },15000);
 
 test('cross-document navigation starts before pagehide and canceled navigation revalidates without deleting drafts',async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const page=await browser.newPage();await page.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><div id="root"></div>'}));await page.goto('https://draft-auth.test/mypage/profile');await page.addScriptTag({content:await bundle()});
   await browserExpect(page.locator('output')).toHaveText('11111111-1111-4111-8111-111111111111');

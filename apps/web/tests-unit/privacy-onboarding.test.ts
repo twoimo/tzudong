@@ -801,11 +801,11 @@ describe('G014 server session release boundaries', () => {
 
 test('a delayed onboarding rejection cannot expire the current auth namespace', () => {
   const request = new Request('https://app.fixture.invalid/api/privacy/onboarding?unexpected=1', {
-    headers: { cookie: 'sb-current-v2-auth-token.0=synthetic-old; sb-current-auth-token=synthetic-legacy' },
+    headers: { cookie: 'sb-current-v3-auth-token.0=synthetic-old; sb-current-auth-token=synthetic-legacy' },
   });
   const response = NextResponse.json({ error: 'rejected' }, { status: 400 });
   clearRejectedOnboardingCookies(response, request);
-  expect(response.cookies.get('sb-current-v2-auth-token.0')).toBeUndefined();
+  expect(response.cookies.get('sb-current-v3-auth-token.0')).toBeUndefined();
   expect(response.cookies.get('sb-current-auth-token')).toBeUndefined();
   expect(response.cookies.get('tzudong_onboarding_challenge')?.maxAge).toBe(0);
 });

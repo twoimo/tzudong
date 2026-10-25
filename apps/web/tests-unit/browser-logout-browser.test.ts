@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { chromium } from '@playwright/test';
 import path from 'node:path';
@@ -25,37 +26,37 @@ async function bundle() {
 
 for (const mode of ['clear', 'pending-migration', 'replaced-before', 'replaced-during-prepare', 'owner-rejected', 'cookie-write-denied'] as const) {
   test(`native cookies + actual SSR chunk cleanup: ${mode}`, async () => {
-    const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+    const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
     try {
       const page = await browser.newPage();
       await page.route('**/*', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><div>local synthetic cookies</div>' }));
       await page.goto('https://logout-cookie.test/');
       await page.addScriptTag({ content: await bundle() });
       const result = await page.evaluate(async mode => {
-        for (const name of ['sb-current-v2-auth-token.0', 'sb-current-v2-auth-token.1', 'sb-current-v2-auth-token-user', 'sb-current-v2-auth-token-code-verifier', 'sb-current-v2-auth-token-code-verifier-flow.0', 'sb-other-auth-token', 'sb-current-v2-auth-token.1x']) {
+        for (const name of ['sb-current-v3-auth-token.0', 'sb-current-v3-auth-token.1', 'sb-current-v3-auth-token-user', 'sb-current-v3-auth-token-code-verifier', 'sb-current-v3-auth-token-code-verifier-flow.0', 'sb-other-auth-token', 'sb-current-v3-auth-token.1x']) {
           document.cookie = `${name}=synthetic; Path=/; SameSite=Lax`;
         }
         if (mode === 'pending-migration') {
-          document.cookie = 'tz-auth-v2-current=pending; Path=/';
+          document.cookie = 'tz-auth-v3-current=pending; Path=/';
           document.cookie = 'sb-current-auth-token.0=legacy-synthetic; Path=/';
         }
         const captured = (globalThis as unknown as { __logout: Probe }).__logout.capture();
-        if (mode === 'replaced-before') document.cookie = 'sb-current-v2-auth-token.0=new-synthetic; Path=/';
+        if (mode === 'replaced-before') document.cookie = 'sb-current-v3-auth-token.0=new-synthetic; Path=/';
         if (mode === 'cookie-write-denied') {
           const descriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')!;
           Object.defineProperty(document, 'cookie', { get: () => descriptor.get!.call(document), set() {} });
         }
         const clearing = captured.clearIfCurrent(() => mode !== 'owner-rejected');
-        if (mode === 'replaced-during-prepare') queueMicrotask(() => { document.cookie = 'sb-current-v2-auth-token.0=new-synthetic; Path=/'; });
+        if (mode === 'replaced-during-prepare') queueMicrotask(() => { document.cookie = 'sb-current-v3-auth-token.0=new-synthetic; Path=/'; });
         let cleared = false, fixedFailure = false;
         try { cleared = await clearing; } catch (error) { fixedFailure = error instanceof Error && error.message === 'AUTH_LOCAL_LOGOUT_FAILED'; }
         if (mode === 'pending-migration') (globalThis as unknown as { __logout: Probe }).__logout.migrate();
         return {
           cleared, fixedFailure, targetAbsent: captured.isCleared(),
-          replacementPreserved: document.cookie.includes('sb-current-v2-auth-token.0=new-synthetic'),
-          originalPreserved: document.cookie.includes('sb-current-v2-auth-token.0=synthetic'),
-          unrelatedPreserved: document.cookie.includes('sb-other-auth-token=synthetic') && document.cookie.includes('sb-current-v2-auth-token.1x=synthetic'),
-          migrationSuppressed: document.cookie.includes('tz-auth-v2-current=1') && document.cookie.includes('sb-current-auth-token.0=legacy-synthetic'),
+          replacementPreserved: document.cookie.includes('sb-current-v3-auth-token.0=new-synthetic'),
+          originalPreserved: document.cookie.includes('sb-current-v3-auth-token.0=synthetic'),
+          unrelatedPreserved: document.cookie.includes('sb-other-auth-token=synthetic') && document.cookie.includes('sb-current-v3-auth-token.1x=synthetic'),
+          migrationSuppressed: document.cookie.includes('tz-auth-v3-current=1') && !document.cookie.includes('sb-current-auth-token.0=legacy-synthetic'),
         };
       }, mode);
       expect(result.unrelatedPreserved).toBe(true);

@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { chromium } from '@playwright/test';
 import path from 'node:path';
@@ -5,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { createChunks, stringToBase64URL } from '@supabase/ssr';
 
 const root=path.resolve(import.meta.dir,'..');
-const key='sb-current-v2-auth-token',marker='tz-auth-v2-current';
+const key='sb-current-v3-auth-token',marker='tz-auth-v3-current';
 const userId='11111111-1111-4111-8111-111111111111';
 async function bundle(){
  const r=await Bun.build({entrypoints:['concurrent-cookie-fixture'],target:'browser',format:'iife',write:false,
@@ -24,8 +25,8 @@ async function bundle(){
 }
 interface Probe {__cookieProbe:{read():Promise<{data:{session:{user:{id:string}}|null};error:unknown}>;migrate():void;capture():ReturnType<typeof import('../lib/auth/browser-logout').captureBrowserLogout>;login():Promise<unknown>}}
 
-for(let trial=0;trial<3;trial++)test(`two actual SDK tabs initialize shared legacy cookies concurrently: ${trial}`,async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+for(let trial=0;trial<3;trial++)test(`two actual SDK tabs require fresh login at the legacy cutover: ${trial}`,async()=>{
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const context=await browser.newContext();let authRequests=0;
   await context.route('**/*',route=>{if(new URL(route.request().url()).hostname==='current.supabase.co'){authRequests++;return route.abort();}return route.fulfill({contentType:'text/html',body:'<!doctype html>'});});
@@ -34,13 +35,13 @@ for(let trial=0;trial<3;trial++)test(`two actual SDK tabs initialize shared lega
   await context.addCookies(createChunks('sb-current-auth-token',legacy).map(c=>({name:c.name,value:c.value,url:'https://cookie-concurrency.test/'})));
   const pages=await Promise.all([context.newPage(),context.newPage()]);await Promise.all(pages.map(p=>p.goto('https://cookie-concurrency.test/')));const script=await bundle();await Promise.all(pages.map(p=>p.addScriptTag({content:script})));
   const reads=await Promise.all(pages.map(p=>p.evaluate(()=>(globalThis as unknown as Probe).__cookieProbe.read().then(r=>({owner:r.data.session?.user.id,failed:!!r.error})))));
-  expect(reads).toEqual([{owner:userId,failed:false},{owner:userId,failed:false}]);
-  const cookies=await context.cookies();expect(cookies.find(c=>c.name===marker)?.value).toBe('1');expect(cookies.find(c=>c.name===key)?.value).toBe(legacy);expect(authRequests).toBe(0);
+  expect(reads).toEqual([{owner:undefined,failed:false},{owner:undefined,failed:false}]);
+  const cookies=await context.cookies();expect(cookies.find(c=>c.name===marker)?.value).toBe('1');expect(cookies.some(c=>c.name===key||c.name.startsWith(key+'.'))).toBe(false);expect(cookies.some(c=>c.name==='sb-current-auth-token')).toBe(false);expect(authRequests).toBe(0);
  }finally{await browser.close();}
 },20000);
 
 for(const operation of ['sdk-read','sdk-write','logout'] as const)test(`another renderer's cookie batch excludes ${operation}`,async()=>{
- const script=await bundle();const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const script=await bundle();const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const context=await browser.newContext();await context.route('**/*',route=>{
    if(new URL(route.request().url()).hostname==='current.supabase.co')return route.fulfill({contentType:'application/json',body:JSON.stringify({access_token:'header.'+stringToBase64URL(JSON.stringify({sub:userId,exp:Math.floor(Date.now()/1000)+3600}))+'.signature',refresh_token:'new-synthetic',expires_in:3600,token_type:'bearer',user:{id:userId,aud:'authenticated'}})});
@@ -52,7 +53,7 @@ for(const operation of ['sdk-read','sdk-write','logout'] as const)test(`another 
   await actor.addScriptTag({content:script});
   await holder.evaluate(async()=>{
    const state={held:false,release:()=>{}};(globalThis as unknown as {lockState:typeof state}).lockState=state;
-   void navigator.locks.request('tz-auth-cookies:sb-current-v2-auth-token',async()=>{state.held=true;await new Promise<void>(r=>{state.release=r;});});
+   void navigator.locks.request('tz-auth-cookies:sb-current-v3-auth-token',async()=>{state.held=true;await new Promise<void>(r=>{state.release=r;});});
   });
   await holder.waitForFunction(()=>(globalThis as unknown as {lockState:{held:boolean}}).lockState.held);
   await actor.evaluate(operation=>{
@@ -69,12 +70,12 @@ for(const operation of ['sdk-read','sdk-write','logout'] as const)test(`another 
 },20000);
 
 test('logout rechecks captured ownership after waiting for another tab cookie batch',async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const context=await browser.newContext();await context.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html>'}));
   const holder=await context.newPage(),actor=await context.newPage();await holder.goto('https://cookie-owner.test/');await actor.goto('https://cookie-owner.test/');await actor.addScriptTag({content:await bundle()});
   await actor.evaluate(({key,marker})=>{document.cookie=`${key}=old-owned; Path=/`;document.cookie=`${marker}=1; Path=/`;}, {key,marker});
-  await holder.evaluate(async()=>{const state={held:false,release:()=>{}};(globalThis as unknown as {lockState:typeof state}).lockState=state;void navigator.locks.request('tz-auth-cookies:sb-current-v2-auth-token',async()=>{state.held=true;await new Promise<void>(r=>{state.release=r;});});});
+  await holder.evaluate(async()=>{const state={held:false,release:()=>{}};(globalThis as unknown as {lockState:typeof state}).lockState=state;void navigator.locks.request('tz-auth-cookies:sb-current-v3-auth-token',async()=>{state.held=true;await new Promise<void>(r=>{state.release=r;});});});
   await holder.waitForFunction(()=>(globalThis as unknown as {lockState:{held:boolean}}).lockState.held);
   await actor.evaluate(()=>{const state={done:false,cleared:true};(globalThis as unknown as {logoutState:typeof state}).logoutState=state;void (globalThis as unknown as Probe).__cookieProbe.capture().clearIfCurrent(()=>true).then(cleared=>{state.cleared=cleared;state.done=true;});});
   await actor.waitForTimeout(100);await holder.evaluate(key=>{document.cookie=`${key}=new-owned; Path=/`;(globalThis as unknown as {lockState:{release():void}}).lockState.release();},key);
@@ -84,7 +85,7 @@ test('logout rechecks captured ownership after waiting for another tab cookie ba
 },20000);
 
 test('missing Web Locks fails closed before a logout cookie mutation',async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const page=await browser.newPage();await page.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html>'}));await page.goto('https://cookie-no-lock.test/');await page.addScriptTag({content:await bundle()});
   const result=await page.evaluate(async({key,marker})=>{document.cookie=`${key}=owned; Path=/`;document.cookie=`${marker}=1; Path=/`;const before=document.cookie;Object.defineProperty(navigator,'locks',{configurable:true,value:undefined});let code='';try{await (globalThis as unknown as Probe).__cookieProbe.capture().clearIfCurrent(()=>true);}catch(e){code=e instanceof Error?e.message:'unknown';}return {code,unchanged:before===document.cookie};},{key,marker});
@@ -93,12 +94,12 @@ test('missing Web Locks fails closed before a logout cookie mutation',async()=>{
 },20000);
 
 for(const release of ['tab-closed','timeout'] as const)test(`cookie lock ${release} preserves a bounded, retryable logout`,async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const context=await browser.newContext();await context.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html>'}));
   const holder=await context.newPage(),actor=await context.newPage();await holder.goto('https://cookie-lock-lifetime.test/');await actor.goto('https://cookie-lock-lifetime.test/');await actor.addScriptTag({content:await bundle()});
   await actor.evaluate(({key,marker})=>{document.cookie=`${key}=owned; Path=/`;document.cookie=`${marker}=1; Path=/`;},{key,marker});
-  await holder.evaluate(async()=>{const state={held:false,release:()=>{}};(globalThis as unknown as {lockState:typeof state}).lockState=state;void navigator.locks.request('tz-auth-cookies:sb-current-v2-auth-token',async()=>{state.held=true;await new Promise<void>(r=>{state.release=r;});});});
+  await holder.evaluate(async()=>{const state={held:false,release:()=>{}};(globalThis as unknown as {lockState:typeof state}).lockState=state;void navigator.locks.request('tz-auth-cookies:sb-current-v3-auth-token',async()=>{state.held=true;await new Promise<void>(r=>{state.release=r;});});});
   await holder.waitForFunction(()=>(globalThis as unknown as {lockState:{held:boolean}}).lockState.held);
   const pending=actor.evaluate(async()=>{try{return {cleared:await (globalThis as unknown as Probe).__cookieProbe.capture().clearIfCurrent(()=>true),code:''};}catch(e){return {cleared:false,code:e instanceof Error?e.message:'unknown'};}});
   if(release==='tab-closed')await holder.close();
@@ -114,7 +115,7 @@ for(const release of ['tab-closed','timeout'] as const)test(`cookie lock ${relea
 },20000);
 
 for(const denied of ['all','second-chunk'] as const)test(`SDK cannot report a successful login when cookie persistence is denied: ${denied}`,async()=>{
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const context=await browser.newContext();
   const token='header.'+stringToBase64URL(JSON.stringify({sub:userId,exp:Math.floor(Date.now()/1000)+3600}))+'.signature';
@@ -134,14 +135,14 @@ for(const denied of ['all','second-chunk'] as const)test(`SDK cannot report a su
  }finally{await browser.close();}
 },20000);
 
-for(const newer of ['login','logout'] as const)test(`real HTTP cookie commit wins over an older migration snapshot: ${newer}`,async()=>{
+for(const newer of ['login','logout'] as const)test(`late legacy HTTP response cannot create a v3 session: ${newer}`,async()=>{
  const script=await bundle();let responseAccepted=0;
  const server=Bun.serve({hostname:'127.0.0.1',port:0,fetch(request){
   if(new URL(request.url).pathname==='/commit'){
-   responseAccepted++;const headers=new Headers();headers.append('Set-Cookie',`${marker}=1; Path=/`);if(newer==='login')headers.append('Set-Cookie',`${key}=new-synthetic; Path=/`);return new Response('ok',{headers});
+   responseAccepted++;const headers=new Headers();headers.append('Set-Cookie',newer==='login'?'sb-current-auth-token=new-synthetic; Path=/':'sb-current-auth-token=; Path=/; Max-Age=0');return new Response('ok',{headers});
   }return new Response('<!doctype html>',{headers:{'Content-Type':'text/html'}});
  }});
- const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
  try{
   const page=await browser.newPage();await page.goto(`http://127.0.0.1:${server.port}/`);await page.addScriptTag({content:script});
   const result=await page.evaluate(({key,marker,newer})=>{
@@ -150,6 +151,6 @@ for(const newer of ['login','logout'] as const)test(`real HTTP cookie commit win
    try{(globalThis as unknown as Probe).__cookieProbe.migrate();}finally{delete (document as unknown as {cookie?:string}).cookie;}
    return {newPreserved:document.cookie.includes(`${key}=new-synthetic`),oldImported:document.cookie.includes(`${key}=old-synthetic`),committed:document.cookie.includes(`${marker}=1`),expectedNew:newer==='login'};
   },{key,marker,newer});
-  expect(result.newPreserved).toBe(result.expectedNew);expect(result.oldImported).toBe(false);expect(result.committed).toBe(true);expect(responseAccepted).toBe(1);
+  expect(result.newPreserved).toBe(false);expect(result.oldImported).toBe(false);expect(result.committed).toBe(true);expect(responseAccepted).toBe(1);
  }finally{await browser.close();await server.stop(true);}
 },20000);

@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -6,7 +7,7 @@ import tailwind from '@tailwindcss/postcss';
 import { chromium, expect as browserExpect } from '@playwright/test';
 
 const root = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromeForTestingExecutable();
 const artifactDir = resolve(root, 'performance/renewal-20261023/chrome');
 const entry = `
 import React, { useState } from 'react';import { createRoot } from 'react-dom/client';

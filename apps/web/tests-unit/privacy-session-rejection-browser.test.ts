@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { chromium } from '@playwright/test';
 import path from 'node:path';
@@ -50,7 +51,7 @@ async function bundle() {
             return signOutRejectedPrivacySession(client,{
               userId:scenario==='mismatched-user'?'22222222-2222-4222-8222-222222222222':${JSON.stringify(ownerId)},
               isCurrent:()=>state.current,browserLogout:captureBrowserLogout(),
-              scope:scenario==='local-only'?'local':'global'
+              scope:scenario==='local-only'?'local':undefined
             });
           };
         `,
@@ -63,7 +64,7 @@ async function bundle() {
 
 for (const scenario of ['current', 'replaced', 'generation-changed', 'remote-failed', 'local-only', 'mismatched-user', 'lookup-failed', 'missing-session'] as const) {
   test(`rejected privacy session uses captured JWT + native cookie ownership: ${scenario}`, async () => {
-    const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+    const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
     try {
       const page = await browser.newPage();
       const errors: string[] = [];
@@ -72,7 +73,7 @@ for (const scenario of ['current', 'replaced', 'generation-changed', 'remote-fai
       await page.goto('https://rejected-session.test/');
       await page.addScriptTag({ content: await bundle() });
       await page.evaluate(scenario => {
-        document.cookie = 'sb-current-v2-auth-token=old-synthetic; Path=/';
+        document.cookie = 'sb-current-v3-auth-token=old-synthetic; Path=/';
         document.cookie = 'unrelated=preserve; Path=/';
         const state = (globalThis as unknown as { __rejection: Probe }).__rejection;
         (globalThis as unknown as { __pending: Promise<boolean> }).__pending = state.run(scenario);
@@ -81,7 +82,7 @@ for (const scenario of ['current', 'replaced', 'generation-changed', 'remote-fai
         await page.waitForFunction(() => (globalThis as unknown as { __rejection: Probe }).__rejection.entered);
         await page.evaluate(scenario => {
           const state = (globalThis as unknown as { __rejection: Probe }).__rejection;
-          if (scenario === 'replaced') document.cookie = 'sb-current-v2-auth-token=new-synthetic; Path=/';
+          if (scenario === 'replaced') document.cookie = 'sb-current-v3-auth-token=new-synthetic; Path=/';
           if (scenario === 'generation-changed') state.current = false;
           state.release();
         }, scenario);
@@ -90,16 +91,16 @@ for (const scenario of ['current', 'replaced', 'generation-changed', 'remote-fai
         const state = (globalThis as unknown as { __rejection: Probe }).__rejection;
         return { cleared: await (globalThis as unknown as { __pending: Promise<boolean> }).__pending,
           scopes: state.scopes, authorizationMatches: state.authorizationMatches, events: state.events,
-          currentCookie: document.cookie.includes('sb-current-v2-auth-token='),
-          replacement: document.cookie.includes('sb-current-v2-auth-token=new-synthetic'),
+          currentCookie: document.cookie.includes('sb-current-v3-auth-token='),
+          replacement: document.cookie.includes('sb-current-v3-auth-token=new-synthetic'),
           unrelated: document.cookie.includes('unrelated=preserve'),
-          tombstone: document.cookie.includes('tz-auth-v2-current=1'),
+          tombstone: document.cookie.includes('tz-auth-v3-current=1'),
         };
       });
       const stale = scenario === 'replaced' || scenario === 'generation-changed';
       const denied = scenario === 'mismatched-user' || scenario === 'lookup-failed';
       expect(result.cleared).toBe(!stale && !denied);
-      expect(result.scopes).toEqual(denied || scenario === 'missing-session' ? [] : stale ? ['global'] : scenario === 'local-only' ? ['local'] : ['global', 'local']);
+      expect(result.scopes).toEqual(denied || scenario === 'missing-session' ? [] : ['local']);
       expect(result.authorizationMatches).toBe(true);
       expect(result.events).toBe(stale || denied ? 0 : 1);
       expect(result.currentCookie).toBe(stale || denied);

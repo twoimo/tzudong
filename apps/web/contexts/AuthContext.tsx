@@ -10,6 +10,8 @@ import { isHomePrivacyOnboardingRequest } from "@/lib/auth/auth-redirect";
 import { DEBUG_LOG_EVENT, DEBUG_LOG_REASON_CODE, debugLog } from "@/lib/debug-log";
 import { recordPasswordRecoveryProof } from "@/lib/auth/password-recovery-proof";
 import { captureBrowserLogout } from "@/lib/auth/browser-logout";
+import { updateCurrentBrowserAuthUser } from "@/lib/auth/isolated-browser-account";
+import { requestBrowserPasswordRecovery } from "@/lib/auth/isolated-browser-pkce";
 import { AuthLogoutSupersededError } from "@/lib/auth/logout-result";
 import {
     getCurrentPrivacyEligibility,
@@ -201,7 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         dispatchHomeAuthSessionUpdated({ hasSession: false, source });
     }, []);
 
-    const clearStaleSession = useCallback(async (userId: string | undefined, revokeGlobally: boolean, generation: number) => {
+    const clearStaleSession = useCallback(async (userId: string | undefined, generation: number) => {
         const expectedGeneration = generation;
         const isCurrentGeneration = () => documentLifecycleRef.current.active && authEventGenerationRef.current === expectedGeneration;
         if (!isCurrentGeneration()) return;
@@ -230,7 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 userId: signedOutUserId ?? undefined,
                 isCurrent: isCurrentGeneration,
                 browserLogout: cookieOwner,
-                scope: revokeGlobally ? 'global' : 'local',
+                scope: 'local',
             });
             if (!cleared && !ownsRequest()) return;
         } catch {
@@ -253,7 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const authority = readBrowserDraftAuthority();
         const userId = nextSession.user?.id;
         if (!userId) {
-            await clearStaleSession(undefined, false, generation);
+            await clearStaleSession(undefined, generation);
             return;
         }
 
@@ -271,7 +273,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setIsLoading(false);
                     return;
                 }
-                await clearStaleSession(userId, true, generation);
+                await clearStaleSession(userId, generation);
                 return;
             }
 
@@ -313,7 +315,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             debugLog(DEBUG_LOG_EVENT.AUTH_USER_STATE_LOAD_FAILED, {
                 reason: DEBUG_LOG_REASON_CODE.AUTH_USER_STATE_LOAD_FAILED,
             });
-            await clearStaleSession(userId, false, generation);
+            await clearStaleSession(userId, generation);
         }
     }, [clearPrivateDrafts, clearPublishedAuthState, clearStaleSession]);
 
@@ -324,7 +326,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const state = await fetchAuthUserState(userId);
             if (!isCurrent()) return;
             if (!state.isEligible) {
-                await clearStaleSession(userId, true, generation);
+                await clearStaleSession(userId, generation);
                 return;
             }
             setIsAdmin(state.isAdmin);
@@ -335,7 +337,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             debugLog(DEBUG_LOG_EVENT.AUTH_USER_STATE_LOAD_FAILED, {
                 reason: DEBUG_LOG_REASON_CODE.AUTH_USER_STATE_LOAD_FAILED,
             });
-            await clearStaleSession(userId, false, generation);
+            await clearStaleSession(userId, generation);
         }
     }, [clearStaleSession]);
 
@@ -434,7 +436,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     supabase.auth.getSession().then(async ({ data: { session: currentSession }, error }) => {
                         if (!documentLifecycleRef.current.active || documentLifecycleRef.current.revision !== documentRevision) return;
                         if (error && isAuthSessionInvalidError(error)) {
-                            await clearStaleSession(undefined, false, generation);
+                            await clearStaleSession(undefined, generation);
                             if (authEventGenerationRef.current === generation) setIsLoading(false);
                             return;
                         }
@@ -454,7 +456,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                         reason: DEBUG_LOG_REASON_CODE.AUTH_SESSION_REFRESH_FAILED,
                                     });
                                 }
-                                await clearStaleSession(undefined, false, generation);
+                                await clearStaleSession(undefined, generation);
                                 if (authEventGenerationRef.current === generation) setIsLoading(false);
                                 return;
                             }
@@ -474,7 +476,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     }).catch(async (error) => {
                         if (!documentLifecycleRef.current.active || documentLifecycleRef.current.revision !== documentRevision) return;
                         if (isAuthSessionInvalidError(error)) {
-                            await clearStaleSession(undefined, false, generation);
+                            await clearStaleSession(undefined, generation);
                         } else {
                             debugLog(DEBUG_LOG_EVENT.AUTH_SESSION_LOAD_FAILED, {
                                 reason: DEBUG_LOG_REASON_CODE.AUTH_SESSION_LOAD_FAILED,
@@ -493,7 +495,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             if (nextSession?.user) setIsLoading(true);
                         }
                         if (isSessionExpired(nextSession)) {
-                            void clearStaleSession(nextSession?.user?.id, false, generation);
+                            void clearStaleSession(nextSession?.user?.id, generation);
                             return;
                         }
                         if (!nextSession?.user) {
@@ -597,7 +599,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         } catch {
             if (signedInUserId && signedInGeneration !== null) {
-                await clearStaleSession(signedInUserId, true, signedInGeneration);
+                await clearStaleSession(signedInUserId, signedInGeneration);
             }
             throw new Error(PASSWORD_SIGN_IN_ERROR);
         }
@@ -652,17 +654,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [clearPublishedAuthState]);
 
     const resetPassword = useCallback(async (email: string) => {
-        const redirectUrl = `${window.location.origin}/auth/reset-password`;
-        const supabase = await getSupabaseClient();
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: redirectUrl,
-        });
-        if (error) throw error;
+        await requestBrowserPasswordRecovery(email);
     }, []);
 
     const updatePassword = useCallback(async (newPassword: string) => {
-        const supabase = await getSupabaseClient();
-        const { error } = await supabase.auth.updateUser({
+        const { error } = await updateCurrentBrowserAuthUser(activeAuthUserIdRef.current ?? '', {
             password: newPassword,
         });
         if (error) throw error;
