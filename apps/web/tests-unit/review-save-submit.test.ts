@@ -1,3 +1,6 @@
+import * as draftOwnerKeys from '../lib/privacy/draft-storage-owner';
+import * as draftLifecycle from '../lib/privacy/browser-draft-lifecycle';
+import * as draftQueue from '../lib/draft-write-queue';
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -35,8 +38,11 @@ function evaluate(text: string, bindings: Record<string, unknown>) {
     const moduleFixture = { exports: {} };
     const js = ts.transpileModule(text, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
     return vm.runInNewContext(js, { module: moduleFixture, exports: moduleFixture.exports, File, crypto, Date, Promise,
-        require: (name: string) => { if (name === 'react/jsx-runtime') return jsxRuntime; throw new Error('OFFLINE_IMPORT'); },
-        console: { error() {}, warn() {} }, fetch: () => { throw new Error('OFFLINE_ONLY'); }, ...bindings });
+        require: (name: string) => { if (name === 'react/jsx-runtime') return jsxRuntime; if(name === '@/lib/privacy/browser-draft-lifecycle') return draftLifecycle; if(name === '@/lib/privacy/draft-storage-owner') return draftOwnerKeys; throw new Error('OFFLINE_IMPORT'); },
+        // Extracted handlers start after successful draft admission; the full
+        // component's failed-read/retry boundary runs in mypage-draft-browser.
+        draftLoadKey: 'loaded-handler-fixture', loadedDraftKey: 'loaded-handler-fixture', setLoadedDraftKey() {}, setDraftLoadFailed() {},
+        ...draftLifecycle, ...draftOwnerKeys, ...draftQueue, console: { error() {}, warn() {} }, fetch: () => { throw new Error('OFFLINE_ONLY'); }, ...bindings });
 }
 function fixture() {
     const counts = { uploads: 0, inserts: 0, removes: 0, reads: 0, cleared: 0, success: 0, closes: 0 };
@@ -44,6 +50,7 @@ function fixture() {
     const objects = new Set<string>();
     const metadata = new Map<string, { size: number; contentType: string }>();
     const selected: string[] = [];
+    const savedDrafts: Record<string, unknown>[] = [];
     const filters: Record<string, unknown>[] = [];
     let mode: 'normal' | 'denied' | 'lost' | 'lost-read-fails' = 'normal';
     let readFail = false;
@@ -137,7 +144,9 @@ function fixture() {
         saveOperationRef: { current: create(() => currentOwner()!, () => draftScopeRef.current.revision) },
         draftScopeRef,
         submitInFlightRef: { current: false }, closeRequestedRef: { current: false }, composerOpenRef: { current: true },
-        autoSaveInFlightRef: { current: null },
+        autoSaveInFlightRef: { current: null as Promise<void> | null },
+        currentStep: 3,
+        saveDraft: async (draft: Record<string, unknown>) => { savedDrafts.push(draft); return { ...draft, savedAt: new Date().toISOString() }; },
         verificationSelectionRef: { current: { invalidate() {} } },
         verificationInputModeRef: { current: 'manual' as 'ai' | 'manual' }, isAnalyzing: false,
         ocrRunGenerationRef: { current: 0 },
@@ -167,7 +176,7 @@ function fixture() {
     }) as () => Promise<void>;
     const submit = evaluate(`${nodeText(source, 'handleSubmit')};`, bindings) as () => Promise<void>;
     const confirm = evaluate(`${nodeText(source, 'handleConfirmSaveResult')};`, bindings) as () => Promise<void>;
-    return { counts, rows, objects, messages, recoveryStates, selected, filters, bindings, submit, confirm, close,
+    return { counts, rows, objects, messages, recoveryStates, selected, filters, savedDrafts, bindings, submit, confirm, close,
         setMode: (value: typeof mode) => { mode = value; }, failReads: (value: boolean) => { readFail = value; },
         onInsert: (callback: () => void) => { afterInsert = callback; },
         setPrepareDeletion: (callback: typeof prepareDeletion) => { prepareDeletion = callback; },
@@ -1061,6 +1070,50 @@ describe('actual ReviewModal submit and Supabase adapter', () => {
         expect(source.match(/\{saveRecoveryNotice\}/g)?.length).toBe(3);
         expect(source.match(/disabled=\{featureHeld \|\| !canSubmitReview \|\| isSubmitting \|\| saveRecovery !== null\}/g)?.length).toBe(3);
     });
+    test('close waits for pending autosave and persists the final bounded text before reset', async () => {
+        const f = fixture();
+        let release!: () => void;
+        f.bindings.autoSaveInFlightRef.current = new Promise<void>(resolve => { release = resolve; });
+        f.bindings.latestSaveInputsRef.current.content = '마지막 입력 합성 초안';
+        const closing = f.close()();
+        await Promise.resolve(); await Promise.resolve();
+        expect(f.counts.closes).toBe(0); expect(f.savedDrafts).toHaveLength(0);
+        release(); await closing;
+        expect(f.savedDrafts).toHaveLength(1);
+        expect(f.savedDrafts[0].content).toBe('마지막 입력 합성 초안');
+        expect(f.savedDrafts[0]).not.toHaveProperty('verificationPhoto');
+        expect(f.savedDrafts[0]).not.toHaveProperty('foodPhotos');
+        expect(f.counts.closes).toBe(1);
+    });
+    test('closing an unchanged composer does not overwrite another composer draft at the same key', async () => {
+        const f = fixture(); const input = f.bindings.latestSaveInputsRef.current;
+        f.bindings.draftScopeRef.current.revision = {
+            userId: 'fixture-owner', restaurantId: 'fixture-restaurant', currentStep: 3,
+            visitedDate: input.visitedDate, visitedTime: input.visitedTime,
+            categories: input.categories, content: input.content, savedAt: new Date().toISOString(),
+        };
+        await f.close()(); expect(f.savedDrafts).toHaveLength(0); expect(f.counts.closes).toBe(1);
+    });
+    test('failed final draft save keeps the composer open and allows a close retry', async () => {
+        const f = fixture(); const save = f.bindings.saveDraft;
+        f.bindings.saveDraft = async () => { throw new Error('SYNTHETIC_IDB_FAILURE'); };
+        await f.close()();
+        expect(f.counts.closes).toBe(0); expect(f.bindings.closeRequestedRef.current).toBe(false);
+        expect(f.messages.some(message => message.title === '임시 저장 실패')).toBe(true);
+        f.bindings.saveDraft = save; await f.close()(); expect(f.counts.closes).toBe(1);
+    });
+    test.each(['owner', 'restaurant', 'unmount'])('close cannot reset a new composer after a deferred save: %s', async transition => {
+        const f = fixture(); let release!: () => void;
+        let entered!: () => void; const started = new Promise<void>(resolve => { entered = resolve; });
+        const gate = new Promise<void>(resolve => { release = resolve; });
+        const save = f.bindings.saveDraft;
+        f.bindings.saveDraft = async draft => { entered(); await gate; return save(draft); };
+        const closing = f.close()(); await started;
+        if (transition === 'owner') f.bindings.saveOwnerRef.current = 'different-owner';
+        if (transition === 'restaurant') f.bindings.draftScopeRef.current = { ...f.bindings.draftScopeRef.current, restaurantId: 'different-restaurant' };
+        if (transition === 'unmount') f.bindings.composerOpenRef.current = false;
+        release(); await closing; expect(f.counts.closes).toBe(0);
+    });
     test('actual close handler retains form and blocks close for unresolved write', async () => {
         const f = fixture(); f.setMode('lost-read-fails'); await f.submit();
         const close = evaluate(`${nodeText(source, 'handleClose')};`, {
@@ -1079,7 +1132,9 @@ describe('actual ReviewModal submit and Supabase adapter', () => {
         const original = { content: 'Original fixture review content.', categories: ['한식'], foodPhotos: [existing] };
         const execute = evaluate(`${nodeText(edit, 'executeMutation')};`, {
             review: { id: 'fixture-review', ...original }, user: { id: 'fixture-owner' }, foodPhotoOwnership: ownership,
+            draftAutosave: { cancel() {}, settle: async () => true, resume() {} },
             isSubmitting: false, isDeleting: false, ownerRef: { current: 'fixture-owner' },
+            draftScope: 'fixture-scope', currentDraftScope: { current: 'fixture-scope' },
             mutationRef: { current: { pending: false, pendingKind: null, canCancelConfirmedMissingUpload: false, run: async (input: Record<string, unknown>) => {
                 calls.update++; submitted = input; return { committed: true, code: 'REVIEW_COMMITTED' };
             } } },
@@ -1111,7 +1166,7 @@ describe('actual draft handlers and IndexedDB deletion boundary', () => {
         const draftModule = readFileSync(join(import.meta.dir, '../lib/reviewDraftDB.ts'), 'utf8');
         const deleteDraft = evaluate(`${nodeText(draftModule, 'deleteDraft')}\ndeleteDraft;`, {
             isValidIdentifier: () => true, STORE_NAME: 'review-drafts',
-            initDB: async () => ({ delete: async () => { deletes++; deleteEntered.resolve(); await deleteDone.promise; exists = false; } }),
+            initDB: async () => ({ close() {}, transaction: () => ({ store: { get: async () => exists, delete: async () => { deletes++; deleteEntered.resolve(); await deleteDone.promise; exists = false; } }, done: Promise.resolve() }) }),
         }) as (owner: string, restaurant: string) => Promise<void>;
         const bindings = {
             user: { id: 'fixture-owner' }, selectedRestaurant: { id: 'fixture-restaurant' }, restaurant: null,
@@ -1141,7 +1196,9 @@ describe('actual draft handlers and IndexedDB deletion boundary', () => {
         const clearDraft = evaluate(`${nodeText(source, 'clearDraft')};`, {
             useCallback: (callback: unknown) => callback, user: { id: 'fixture-owner' },
             selectedRestaurant: { id: 'fixture-restaurant' }, restaurant: null,
-            autoSaveInFlightRef: { current: null }, setLastSavedAt() {},
+            autoSaveInFlightRef: { current: null as Promise<void> | null },
+        currentStep: 3,
+        saveDraft: async (draft: Record<string, unknown>) => { savedDrafts.push(draft); return { ...draft, savedAt: new Date().toISOString() }; }, setLastSavedAt() {},
             saveOperationRef: { current: { clearSavedDraft: async () => { throw new Error('synthetic'); } } },
         }) as () => Promise<boolean>;
         expect(await clearDraft()).toBe(false);
@@ -1170,7 +1227,7 @@ function revisionFixture() {
         }), close() {},
     };
     const draftSource = readFileSync(join(import.meta.dir, '../lib/reviewDraftDB.ts'), 'utf8');
-    const api = evaluate(draftSource.replace(/^import .* from 'idb';\n/, '') + `
+    const api = evaluate(draftSource.replace(/^import .* from 'idb';\n/m, '') + `
         initDB = async () => fixtureDB;
         sweepExpiredOrInvalidDrafts = async () => {};
         enforceUserDraftLimit = async () => {};
@@ -1287,3 +1344,34 @@ describe('composer-owned draft revisions', () => {
     });
 
 });
+
+// Deterministic transaction transport checks the actual handler's acquisition
+// boundary; native IndexedDB and cross-document scheduling are tested separately.
+for (const storeName of ['review', 'submission', 'editRequest']) {
+    for (const operation of ['saveDraft', 'deleteDraft']) {
+        test(`${storeName} ${operation} rechecks the session after transaction acquisition`, async () => {
+            const owner = `tx-${storeName}-${operation}`;
+            draftLifecycle.activateBrowserDraftOwner(owner);
+            const entered = gate(); const release = gate(); let mutations = 0;
+            const store = { get: async () => { entered.resolve(); await release.promise; return undefined; },
+                put: async () => { mutations++; }, delete: async () => { mutations++; } };
+            const draftSourceSnippet = readFileSync(join(import.meta.dir, `../lib/${storeName}DraftDB.ts`), 'utf8');
+            const handler = evaluate(`${nodeText(draftSourceSnippet, operation)}\n${operation};`, {
+                isValidIdentifier: () => true, isBoundedIdentifier: () => true,
+                STORE_NAME: 'synthetic-draft-store', createPersistedDraft: (value: unknown) => value,
+                readDraft: (value: unknown) => value, getDraftKey: (a: string, b: string) => [a,b],
+                initDB: async () => ({ transaction: () => ({store, done: Promise.resolve()}) }),
+                sweepExpiredOrInvalidDrafts: async () => {}, enforceUserDraftLimit: async () => {},
+                PrivacyUnsafeValueError: class extends Error {}, PRIVACY_UNSAFE_VALUE_REASON: 'SYNTHETIC_UNSAFE',
+            }) as (...args: unknown[]) => Promise<unknown>;
+            const pending = (operation === 'saveDraft'
+                ? handler({userId:owner,restaurantId:'synthetic-restaurant',submissionMode:'new'})
+                : handler(owner,storeName === 'submission' ? 'new' : 'synthetic-restaurant')).then(() => true, () => false);
+            await entered.promise;
+            draftLifecycle.beginBrowserDraftCleanup(owner);
+            draftLifecycle.activateBrowserDraftOwner(owner);
+            release.resolve(); await pending;
+            expect(mutations).toBe(0);
+        });
+    }
+}

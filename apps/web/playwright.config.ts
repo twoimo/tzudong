@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './tests-unit/fixtures/chrome-for-testing';
 import { defineConfig, devices, type PlaywrightTestProject } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import {
@@ -137,6 +138,7 @@ function withResponsiveOptions(name: string, use: DeviceUse): PlaywrightTestProj
         dependencies: ['admin-setup'],
         use: {
             browserName: PLAYWRIGHT_RESPONSIVE_BROWSER as 'chromium' | 'firefox' | 'webkit',
+            ...(PLAYWRIGHT_RESPONSIVE_BROWSER === 'chromium' ? { launchOptions: { executablePath: chromeForTestingExecutable() } } : {}),
             ...use,
             storageState: ADMIN_STORAGE_STATE,
             trace: 'retain-on-failure',
@@ -267,13 +269,14 @@ export default defineConfig({
             use: {
                 ...devices['iPhone SE'],
                 browserName: PLAYWRIGHT_RESPONSIVE_BROWSER as 'chromium' | 'firefox' | 'webkit',
+            ...(PLAYWRIGHT_RESPONSIVE_BROWSER === 'chromium' ? { launchOptions: { executablePath: chromeForTestingExecutable() } } : {}),
                 trace: 'retain-on-failure',
             },
         },
         {
             name: 'chromium',
             testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC, ...(runsDedicatedNaverLiveProviderSmoke ? [] : [NAVER_LIVE_PROVIDER_SPEC])],
-            use: { ...devices['Desktop Chrome'], browserName: 'chromium' },
+            use: { ...devices['Desktop Chrome'], browserName: 'chromium', launchOptions: { executablePath: chromeForTestingExecutable() } },
         },
         {
             name: 'firefox',

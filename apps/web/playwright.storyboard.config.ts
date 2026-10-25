@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './tests-unit/fixtures/chrome-for-testing';
 import { defineConfig } from '@playwright/test';
 
 // The spec owns a disposable UI harness; no app server, login or real AI calls.
@@ -8,5 +9,5 @@ export default defineConfig({
   timeout: 30_000,
   workers: 1,
   reporter: 'list',
-  use: { browserName: 'chromium', headless: true },
+  use: { browserName: 'chromium', headless: true, launchOptions: { executablePath: chromeForTestingExecutable() } },
 });

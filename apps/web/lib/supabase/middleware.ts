@@ -16,6 +16,7 @@ import {
 } from '@/lib/privacy/eligibility'
 import { classifyPublicEligibilitySessionRoute } from '@/lib/auth/public-eligibility-session'
 import { hasSupabaseAuthCookieSessionHint } from '@/lib/supabase-auth-session-hints'
+import { getAuthCookieContract, readServerAuthCookies } from '../auth/session-cookies'
 
 
 
@@ -25,6 +26,10 @@ const isSupabaseAuthCookie = (name: string) =>
 const clearSupabaseAuthCookies = (request: NextRequest, response: NextResponse) => {
     for (const cookie of request.cookies.getAll()) {
         if (!isSupabaseAuthCookie(cookie.name)) continue;
+        // A delayed rejection must not delete an upgraded browser's newer
+        // login. The response still fails closed; the browser owns its cleanup.
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+        if (url && cookie.name.startsWith(getAuthCookieContract(url).key)) continue;
 
         response.cookies.set(cookie.name, '', {
             path: '/',
@@ -198,18 +203,21 @@ export async function updateSession(
         supabaseUrl,
         supabaseAnonKey,
         {
+            cookieOptions: { name: getAuthCookieContract(supabaseUrl).key },
             cookies: {
                 getAll() {
-                    return request.cookies.getAll()
+                    return readServerAuthCookies(request.cookies.getAll(), supabaseUrl)
                 },
                 setAll(cookiesToSet) {
                     cookiesToSet.forEach(({ name, value }) =>
                         request.cookies.set(name, value)
                     )
+                    const cookieHeader = request.headers.get('cookie')
+                    if (cookieHeader) forwardedRequestHeaders.set('cookie', cookieHeader)
+                    else forwardedRequestHeaders.delete('cookie')
                     supabaseResponse = createNextResponse()
-                    cookiesToSet.forEach(({ name, value, options }) =>
-                        supabaseResponse.cookies.set(name, value, options)
-                    )
+                    // Refreshed credentials are used for this request only.
+                    // Browser SDK persistence is the sole passive cookie writer.
                 },
             },
         }

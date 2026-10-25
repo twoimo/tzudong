@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect, type Page } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 const entry = `
   import React from 'react';
@@ -55,7 +56,7 @@ const press = async (target: ReturnType<Page['locator']>) => { await target.focu
 const setFail = (page: Page, fail: string | null) => page.evaluate(value => { (globalThis as unknown as { __knowledgeFixture: Fixture }).__knowledgeFixture.fail = value; }, fail);
 
 (existsSync(chrome) ? test : test.skip)('knowledge counts distinguish visible results, totals and a pending search', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     for (const width of [1280, 390]) {
@@ -101,7 +102,7 @@ const setFail = (page: Page, fail: string | null) => page.evaluate(value => { (g
 }, 60_000);
 
 (existsSync(chrome) ? test : test.skip)('retrying a failed knowledge page reads the same page instead of returning to page one', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     for (const width of [1280, 390]) {
@@ -147,7 +148,7 @@ const setFail = (page: Page, fail: string | null) => page.evaluate(value => { (g
 }, 60_000);
 
 (existsSync(chrome) ? test : test.skip)('the next knowledge page keeps keyboard focus while that page is loading', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     for (const width of [1280, 390]) {
@@ -191,7 +192,7 @@ const setFail = (page: Page, fail: string | null) => page.evaluate(value => { (g
 }, 60_000);
 
 (existsSync(chrome) ? test : test.skip)('the next knowledge edge page keeps the visible page number until that page arrives', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     for (const width of [1280, 390]) {

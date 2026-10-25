@@ -154,6 +154,8 @@ export default function RecommendSubmissionsPage() {
     isFetchingNextPage,
     isLoading,
     isError,
+    isFetching,
+    refetch,
   } = useInfiniteQuery({
     queryKey: ["myRecommendRequests", user?.id],
     queryFn: async ({ pageParam = 0 }) => {
@@ -444,6 +446,8 @@ export default function RecommendSubmissionsPage() {
   if (isError) {
     return (
       <MyPageErrorState
+        onRetry={() => void refetch()}
+        retrying={isFetching}
         title="쯔양 맛집 제보를 불러오지 못했습니다"
         description="추천한 맛집 목록을 다시 불러오려면 잠시 후 재시도해주세요."
       />

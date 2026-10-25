@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -5,7 +6,7 @@ import { chromium, expect as playwrightExpect, type Browser } from '@playwright/
 import { RECORD_ACTION_CONFIRMATION } from '../lib/admin/record-action-contract';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 const entry = `
   import React from 'react';
@@ -92,7 +93,7 @@ async function openPage(context: Awaited<ReturnType<Browser['newContext']>>, scr
 }
 
 (existsSync(chrome) ? test : test.skip)('a record action failure shown in its dialog is not repeated as a toast', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     for (const width of [1280, 390]) {
@@ -119,7 +120,7 @@ async function openPage(context: Awaited<ReturnType<Browser['newContext']>>, scr
 }, 90_000);
 
 (existsSync(chrome) ? test : test.skip)('after a confirmed apply removes the row, keyboard focus returns to the list area', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     for (const width of [1280, 390]) {

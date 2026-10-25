@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -5,12 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { chromium, expect as browserExpect, type Browser, type Page } from '@playwright/test';
 
 const app = join(import.meta.dir, '..');
-const chromeAvailable = [
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/opt/google/chrome/chrome',
-  join(process.env.ProgramFiles ?? process.env.PROGRAMFILES ?? '', 'Google/Chrome/Application/chrome.exe'),
-  join(process.env.LOCALAPPDATA ?? '', 'Google/Chrome/Application/chrome.exe'),
-].some(existsSync);
+const chromeAvailable = existsSync(chromium.executablePath());
 const browserTest = chromeAvailable ? test : test.skip;
 const ui = browserExpect.configure({ timeout: 1500 });
 const baselineInput = process.env.NAVER_LOADER_BASELINE ?? '';
@@ -60,7 +56,7 @@ beforeAll(async () => {
     expect(bundle.success).toBe(true);
     scripts[mode] = await bundle.outputs[0].text();
   }
-  browser = await chromium.launch({ channel: 'chrome', headless: true });
+  browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
 });
 afterAll(async () => { await browser?.close(); });
 

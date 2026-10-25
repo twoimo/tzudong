@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from '../tests-unit/fixtures/chrome-for-testing.ts';
 /**
  * Loopback-only browser verification for explicit receipt OCR recovery.
  *
@@ -116,7 +117,7 @@ const browser = await chromium.launch({
   // Playwright's package points at a pruned cache entry in this workspace.
   // Launch the installed system Chrome with Playwright's isolated temporary
   // profile; the user's interactive Chrome profile/session is never opened.
-  executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  executablePath: chromeForTestingExecutable(),
 });
 const context = await browser.newContext({
   viewport: { width: 1423, height: 954 },

@@ -1,12 +1,13 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 import { bundleFixture, serveFixture } from '../performance/cluster-icon-readiness-20261024-v1/fixture.mjs';
 
-const chrome='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome=chromium.executablePath();
 const browserTest=existsSync(chrome)?test:test.skip;
 browserTest('primer uses the rendered WebP inventory once and disappears on map disposal',async()=>{
-  const browser=await chromium.launch({executablePath:chrome,headless:true});
+  const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
   try {
     const page=await browser.newPage();const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
     const network=await serveFixture(page,await bundleFixture(true),10);
@@ -26,7 +27,7 @@ browserTest('primer uses the rendered WebP inventory once and disappears on map 
 },30_000);
 
 browserTest('failed images and early unmount do not recreate primer nodes or write marker DOM',async()=>{
-  const browser=await chromium.launch({executablePath:chrome,headless:true});
+  const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
   try {
     const page=await browser.newPage();const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
     await serveFixture(page,await bundleFixture(true),80,true);
@@ -40,7 +41,7 @@ browserTest('failed images and early unmount do not recreate primer nodes or wri
 },30_000);
 
 browserTest('an unsupported picture source type selects only the PNG fallback',async()=>{
-  const browser=await chromium.launch({executablePath:chrome,headless:true});
+  const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
   try {
     const page=await browser.newPage();
     // Exercise the browser's fallback branch without changing the host codec.

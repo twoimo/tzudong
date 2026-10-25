@@ -147,12 +147,13 @@ async function fetchApprovedCanonicalRestaurantCandidates(reviewedRestaurants: R
 
     if (approvedNames.length === 0) return [];
 
-    const { data } = await supabase
+    const { data, error } = await supabase
         .from('restaurants')
         .select(USER_PROFILE_RESTAURANT_SELECT)
         .eq('status', 'approved')
         .in('approved_name', approvedNames);
 
+    if (error) throw new Error('USER_PROFILE_RESTAURANTS_UNAVAILABLE');
     return ((data ?? []) as Restaurant[]).map(withRestaurantDisplayName);
 }
 
@@ -315,7 +316,8 @@ export function useUserReviews(userId: string, viewerId?: string) {
                 .eq('is_verified', true)
                 .order('created_at', { ascending: false });
 
-            if (reviewsError || !reviews?.length) return [];
+            if (reviewsError) throw new Error('USER_PROFILE_REVIEWS_UNAVAILABLE');
+            if (!reviews?.length) return [];
             const typedReviews = reviews as UserReviewRow[];
 
             // 2. 관련 데이터 ID 추출
@@ -337,6 +339,8 @@ export function useUserReviews(userId: string, viewerId?: string) {
                     : Promise.resolve({ data: [] }),
             ]);
 
+            if (restaurantsResult.error) throw new Error('USER_PROFILE_RESTAURANTS_UNAVAILABLE');
+            if ('error' in viewerLikesResult && viewerLikesResult.error) throw new Error('USER_PROFILE_LIKES_UNAVAILABLE');
             const typedRestaurants = ((restaurantsResult.data ?? []) as UserProfileRestaurantRow[])
                 .map((restaurant) => withRestaurantDisplayName(restaurant)) as Restaurant[];
             const restaurantMap = new Map(
@@ -408,7 +412,8 @@ export function useUserLikers(userId: string) {
                 .select('id')
                 .eq('user_id', userId);
 
-            if (reviewsError || !reviews?.length) return [];
+            if (reviewsError) throw new Error('USER_PROFILE_REVIEWS_UNAVAILABLE');
+            if (!reviews?.length) return [];
 
             const reviewIds = (reviews as Array<{ id: string }>).map(r => r.id);
 
@@ -418,7 +423,8 @@ export function useUserLikers(userId: string) {
                 .select('user_id, review_id')
                 .in('review_id', reviewIds);
 
-            if (likesError || !likes?.length) return [];
+            if (likesError) throw new Error('USER_PROFILE_LIKERS_UNAVAILABLE');
+            if (!likes?.length) return [];
 
             // 사용자별 좋아요 수 집계
             const likerMap = new Map<string, number>();
@@ -475,18 +481,20 @@ export function useUserStamps(userId: string) {
                 .eq('is_verified', true)
                 .order('created_at', { ascending: false });
 
-            if (reviewsError || !reviews?.length) return [];
+            if (reviewsError) throw new Error('USER_PROFILE_REVIEWS_UNAVAILABLE');
+            if (!reviews?.length) return [];
             const typedReviews = reviews as StampReviewRow[];
 
             // 2. 맛집 ID 추출
             const restaurantIds = [...new Set(typedReviews.map(r => r.restaurant_id))];
 
             // 3. 맛집 상세 정보 조회
-            const { data: restaurants } = await supabase
+            const { data: restaurants, error: restaurantsError } = await supabase
                 .from('restaurants')
                 .select(USER_PROFILE_RESTAURANT_SELECT)
                 .in('id', restaurantIds);
 
+            if (restaurantsError) throw new Error('USER_PROFILE_RESTAURANTS_UNAVAILABLE');
             const typedRestaurants = ((restaurants ?? []) as UserProfileRestaurantRow[])
                 .map((restaurant) => withRestaurantDisplayName(restaurant)) as Restaurant[];
             const restaurantMap = new Map(
@@ -502,13 +510,14 @@ export function useUserStamps(userId: string) {
                         .filter(Boolean)
                 ),
             ];
-            const { data: approvedRestaurantRows } = reviewedRestaurantNames.length > 0
+            const { data: approvedRestaurantRows, error: approvedRestaurantsError } = reviewedRestaurantNames.length > 0
                 ? await supabase
                     .from('restaurants')
                     .select(USER_PROFILE_RESTAURANT_SELECT)
                     .eq('status', 'approved')
                     .in('approved_name', reviewedRestaurantNames)
-                : { data: [] };
+                : { data: [], error: null };
+            if (approvedRestaurantsError) throw new Error('USER_PROFILE_RESTAURANTS_UNAVAILABLE');
             const approvedRestaurants = ((approvedRestaurantRows ?? []) as Restaurant[])
                 .map(withRestaurantDisplayName);
 

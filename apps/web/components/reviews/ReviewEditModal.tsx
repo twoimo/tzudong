@@ -1,4 +1,6 @@
 "use client";
+import { DraftLoadError } from '@/components/ui/draft-load-error';
+import { captureBrowserDraftEpoch, isBrowserDraftEpochCurrent } from "@/lib/privacy/browser-draft-lifecycle";
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import useSWR from "swr";
@@ -30,6 +32,7 @@ import { ChevronDown, X as XIcon, AlertCircle, CheckCircle2, Trash2, Plus, Info 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useDraftAutosave, waitForDraftAutosave } from "@/hooks/use-draft-autosave";
 import { saveDraft as saveEditDraft, getDraft as getEditDraft, deleteDraft as deleteEditDraft } from "@/lib/reviewDraftDB";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
@@ -182,9 +185,10 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
     const [newFoodPhotos, setNewFoodPhotos] = useState<File[]>([]);
     const [existingFoodPhotos, setExistingFoodPhotos] = useState<string[]>([]);
     const [removedPhotos, setRemovedPhotos] = useState<string[]>([]);
+    const [isClosing, setIsClosing] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+    const [restoredSavedAt, setLastSavedAt] = useState<Date | null>(null);
     const [cleanupFailureMessage, setCleanupFailureMessage] = useState<string | null>(null);
     useEffect(() => {
         // The pending operation holds its original owner and operation UUID.
@@ -207,6 +211,33 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                 url: resolveReviewPhotoUrl(storedValue, foodPhotoOwnership),
             }));
     }, [existingFoodPhotos, foodPhotoOwnership, review?.foodPhotos]);
+
+    const draftScope = `${user?.id ?? ''}:edit_${review?.id ?? ''}:${isOpen}:${captureBrowserDraftEpoch(user?.id ?? '').generation}`;
+    const [draftLoadFailed, setDraftLoadFailed] = useState(false);
+    const [draftLoadRetry, setDraftLoadRetry] = useState(0);
+    const [loadedDraftScope, setLoadedDraftScope] = useState<string | null>(null);
+    const draftLoaded = loadedDraftScope === draftScope;
+    const currentDraftScope = useRef(draftScope);
+    const closingDraftScope = useRef<string | null>(null);
+    useLayoutEffect(() => {
+        currentDraftScope.current = draftScope; closingDraftScope.current = null; setIsClosing(false);
+        setLoadedDraftScope(null); setDraftLoadFailed(false);
+        return () => { currentDraftScope.current = ''; };
+    }, [draftScope]);
+    const draftValue = useMemo(() => ({
+        userId: user?.id ?? '', restaurantId: `edit_${review?.id ?? ''}`,
+        visitedDate: '', visitedTime: '', categories, content,
+        verificationPhoto: null, foodPhotos: [],
+        existingFoodPhotos: getEditableFoodPhotoValues(existingFoodPhotos, review?.foodPhotos, foodPhotoOwnership),
+        removedPhotos: getEditableFoodPhotoValues(removedPhotos, review?.foodPhotos, foodPhotoOwnership),
+    }), [user?.id, review?.id, review?.foodPhotos, categories, content, existingFoodPhotos, removedPhotos, foodPhotoOwnership]);
+    const draftAutosave = useDraftAutosave({
+        scope: draftScope, open: isOpen, value: draftValue, persist: saveEditDraft,
+        enabled: draftLoaded && Boolean(user && review) && !isSubmitting && !isDeleting && retryKind === null,
+        unpersistedChanges: newFoodPhotos.length > 0 || removedPhotos.length > 0
+            || isSubmitting || isDeleting || retryKind !== null,
+    });
+    const lastSavedAt = draftAutosave.lastSavedAt ?? restoredSavedAt;
 
     // Refs
     const foodPhotosDropRef = useRef<HTMLDivElement>(null);
@@ -253,54 +284,17 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
             setRetryKind(null);
             setCanCancelMissingUpload(false);
         }
-    }, [foodPhotoOwnership, isOpen, review]);
-
-    // Auto-save to IndexedDB
-    useEffect(() => {
-        if (!isOpen || !review || !user || isSubmitting || isDeleting || mutationRef.current?.pending) return;
-        if (content.trim().length === 0 && categories.length === 0) return;
-
-        const saveTimer = setTimeout(async () => {
-            try {
-                // Use review ID as draft key
-                const draftFoodPhotoValues = getEditableFoodPhotoValues(
-                    existingFoodPhotos,
-                    review.foodPhotos,
-                    foodPhotoOwnership,
-                );
-                const draftRemovedValues = getEditableFoodPhotoValues(
-                    removedPhotos,
-                    review.foodPhotos,
-                    foodPhotoOwnership,
-                );
-                await saveEditDraft({
-                    userId: user.id,
-                    restaurantId: `edit_${review.id}`,
-                    visitedDate: '',
-                    visitedTime: '',
-                    categories: categories,
-                    content: content,
-                    verificationPhoto: null,
-                    foodPhotos: [],
-                    existingFoodPhotos: draftFoodPhotoValues,
-                    removedPhotos: draftRemovedValues,
-                });
-                setLastSavedAt(new Date());
-            } catch (error) {
-                console.error('Edit draft 저장 실패:');
-            }
-        }, 2000); // Save after 2 seconds of inactivity
-
-        return () => clearTimeout(saveTimer);
-    }, [isOpen, review, user, content, categories, existingFoodPhotos, removedPhotos, foodPhotoOwnership, isSubmitting, isDeleting]);
+    }, [foodPhotoOwnership, isOpen, review, draftScope]);
 
     // Load draft on open
     useEffect(() => {
         let cancelled = false;
+        setDraftLoadFailed(false);
         const loadDraft = async () => {
             if (!isOpen || !review || !user || mutationRef.current?.pending) return;
 
             try {
+                await waitForDraftAutosave(draftScope);
                 const draft = await getEditDraft(user.id, `edit_${review.id}`);
                 if (cancelled || ownerRef.current !== user.id || mutationRef.current?.pending) return;
                 if (draft && draft.savedAt) {
@@ -308,10 +302,10 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                     const draftDate = new Date(draft.savedAt);
                     setLastSavedAt(draftDate);
                     // Prefer draft content if exists
-                    if (draft.content && draft.content.trim().length > 0) {
+                    if (typeof draft.content === 'string') {
                         setContent(draft.content);
                     }
-                    if (draft.categories && draft.categories.length > 0) {
+                    if (Array.isArray(draft.categories)) {
                         setCategories(draft.categories as Category[]);
                     }
                     if (Array.isArray(draft.existingFoodPhotos)) {
@@ -325,13 +319,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                         );
                     }
                 }
-            } catch (error) {
-                console.error('Edit draft 로드 실패:');
+                if (!cancelled && currentDraftScope.current === draftScope) setLoadedDraftScope(draftScope);
+            } catch {
+                if (!cancelled && currentDraftScope.current === draftScope) setDraftLoadFailed(true);
             }
         };
-        loadDraft();
+        void loadDraft();
         return () => { cancelled = true; };
-    }, [foodPhotoOwnership, isOpen, review, user]);
+    }, [foodPhotoOwnership, isOpen, review, user, draftScope, draftLoadRetry]);
 
     const appendNewFoodPhotos = useCallback((files: File[]) => {
         if (mutationRef.current?.pending) return;
@@ -405,9 +400,15 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
     const executeMutation = async (kind: 'edit' | 'delete') => {
         if (!review || !user || isSubmitting || isDeleting) return;
         const ownerId = user.id;
+        const epoch = captureBrowserDraftEpoch(ownerId);
+        const scope = draftScope;
+        const stillCurrent = () => ownerRef.current === ownerId && currentDraftScope.current === scope
+            && isBrowserDraftEpochCurrent(ownerId, epoch, true);
         if (kind === 'edit') setIsSubmitting(true);
         else setIsDeleting(true);
         try {
+            draftAutosave.cancel(); await draftAutosave.settle();
+            if (!stillCurrent()) return;
             const outcome = await mutationRef.current!.run({
                 ownerId, reviewId: review.id, kind,
                 ...(kind === 'edit' ? { edit: {
@@ -417,7 +418,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                     original: { content: review.content, categories: review.categories, foodPhotos: review.foodPhotos },
                 } } : {}),
             });
-            if (ownerRef.current !== ownerId) return;
+            if (!stillCurrent()) return;
             setRetryKind(mutationRef.current!.pendingKind);
             setCanCancelMissingUpload(mutationRef.current!.canCancelConfirmedMissingUpload);
             setCleanupFailureMessage(outcome.committed ? null : reviewMutationMessage(outcome.code));
@@ -428,11 +429,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                 ...(outcome.committed ? {} : { variant: 'destructive' as const }),
             });
             if (!outcome.committed) return;
+            draftAutosave.cancel(); await draftAutosave.settle();
+            if (!stillCurrent()) return;
             try { await deleteEditDraft(ownerId, `edit_${review.id}`); } catch { /* keep result separate from local draft cleanup */ }
-            if (ownerRef.current !== ownerId) return;
+            if (!stillCurrent()) return;
             try { onSuccess?.(); } catch { /* committed mutation must not be replayed for a UI callback */ }
             handleClose(true);
         } finally {
+            if (!mutationRef.current?.pending) draftAutosave.resume();
             setIsSubmitting(false);
             setIsDeleting(false);
         }
@@ -454,7 +458,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         }
     };
 
-    const handleClose = useCallback((force = false) => {
+    const handleClose = useCallback(async (force = false) => {
         if (!force && (isSubmitting || isDeleting || mutationRef.current?.pending)) {
             toast({
                 title: "리뷰 변경 확인 필요",
@@ -464,6 +468,17 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
             return;
         }
 
+        const scope = draftScope;
+        if (closingDraftScope.current === scope) return;
+        closingDraftScope.current = scope; setIsClosing(true);
+        if (force) { draftAutosave.cancel(); await draftAutosave.settle(); }
+        else if (!await draftAutosave.flush()) {
+            if (currentDraftScope.current !== scope) return;
+            closingDraftScope.current = null; setIsClosing(false);
+            toast({ title: "임시 저장 실패", description: "입력을 유지했습니다. 다시 닫기를 시도해주세요.", variant: "destructive" });
+            return;
+        }
+        if (currentDraftScope.current !== scope || ownerRef.current !== user?.id) return;
         setCategories([]);
         setContent("");
         setNewFoodPhotos([]);
@@ -474,7 +489,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         setRetryKind(null);
         setCanCancelMissingUpload(false);
         onClose();
-    }, [cleanupFailureMessage, isSubmitting, isDeleting, onClose]);
+    }, [cleanupFailureMessage, isSubmitting, isDeleting, onClose, draftScope, draftAutosave, user?.id]);
 
     // Form validation
     const isFormValid = useMemo(() => {
@@ -510,7 +525,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                             descriptionId="review-edit-sheet-description"
                             icon={<Info className="h-5 w-5" />}
                             action={(
-                                <Button type="button" variant="ghost" size="icon" onClick={() => handleClose()} aria-label="리뷰 수정 닫기">
+                                <Button type="button" variant="ghost" size="icon" onClick={() => handleClose()} disabled={isClosing} aria-label="리뷰 수정 닫기">
                                     <XIcon className="h-5 w-5" />
                                 </Button>
                             )}
@@ -529,6 +544,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
 
                         <div className={mobileSheetStyles.content}>
                             <div className="space-y-5">
+                                {draftLoadFailed && <DraftLoadError onRetry={() => setDraftLoadRetry(value => value + 1)} />}
                                 {/* Rejection reason display */}
                                 {isRejected && review.adminNote && (
                                     <Alert className="bg-red-50 border-red-200">
@@ -564,13 +580,13 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <AlertDescription className="text-destructive">
                                             {cleanupFailureMessage}
                                             {retryKind && (
-                                                <Button type="button" variant="outline" className="mt-2" disabled={isSubmitting || isDeleting}
+                                                <Button type="button" variant="outline" className="mt-2" disabled={!draftLoaded || isClosing || isSubmitting || isDeleting}
                                                     onClick={() => void executeMutation(retryKind)}>
                                                     같은 요청 다시 확인
                                                 </Button>
                                             )}
                                             {canCancelMissingUpload && (
-                                                <Button type="button" variant="outline" className="mt-2 ml-2" disabled={isSubmitting || isDeleting}
+                                                <Button type="button" variant="outline" className="mt-2 ml-2" disabled={!draftLoaded || isClosing || isSubmitting || isDeleting}
                                                     onClick={() => void handleCancelMissingUpload()}>
                                                     실패한 업로드 취소
                                                 </Button>
@@ -589,6 +605,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <PopoverTrigger asChild>
                                             <Button
                                                 variant="outline"
+                                                disabled={!draftLoaded || isClosing || isSubmitting || isDeleting}
                                                 className="w-full justify-between"
                                             >
                                                 <span className="truncate">
@@ -607,6 +624,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                     {CATEGORIES.map((cat) => (
                                                         <div key={cat} className="flex items-center space-x-2">
                                                             <Checkbox
+                                                                disabled={!draftLoaded || isClosing || isSubmitting || isDeleting}
                                                                 id={`edit-category-${cat}`}
                                                                 checked={categories.includes(cat)}
                                                                 onCheckedChange={(checked) => {
@@ -669,6 +687,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         </span>
                                     </Label>
                                     <Textarea
+                                        disabled={!draftLoaded || isClosing || isSubmitting || isDeleting}
                                         id="editContent"
                                         placeholder="맛, 분위기, 서비스 등 상세한 후기를 작성해주세요"
                                         value={content}
@@ -811,14 +830,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                     variant="outline"
                                     onClick={() => handleClose()}
                                     className="flex-1"
-                                    disabled={isSubmitting || isDeleting}
+                                    disabled={!draftLoaded || isClosing || isSubmitting || isDeleting}
                                 >
                                     취소
                                 </Button>
                                 <Button
                                     onClick={handleSubmit}
                                     className={`${mobileSheetStyles.primaryAction} flex-1`}
-                                    disabled={featureHeld || !isFormValid || isSubmitting || isDeleting || retryKind !== null}
+                                    disabled={featureHeld || !draftLoaded || !isFormValid || isSubmitting || isDeleting || retryKind !== null}
                                 >
                                     {isSubmitting ? (
                                         <>
@@ -870,6 +889,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
 
                         <div className="flex-1 overflow-y-auto px-6 py-4">
                             <div className="space-y-5">
+                                {draftLoadFailed && <DraftLoadError onRetry={() => setDraftLoadRetry(value => value + 1)} />}
                                 {/* Rejection reason display */}
                                 {isRejected && review.adminNote && (
                                     <Alert className="bg-red-50 border-red-200">
@@ -905,13 +925,13 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <AlertDescription className="text-destructive">
                                             {cleanupFailureMessage}
                                             {retryKind && (
-                                                <Button type="button" variant="outline" className="mt-2" disabled={isSubmitting || isDeleting}
+                                                <Button type="button" variant="outline" className="mt-2" disabled={!draftLoaded || isClosing || isSubmitting || isDeleting}
                                                     onClick={() => void executeMutation(retryKind)}>
                                                     같은 요청 다시 확인
                                                 </Button>
                                             )}
                                             {canCancelMissingUpload && (
-                                                <Button type="button" variant="outline" className="mt-2 ml-2" disabled={isSubmitting || isDeleting}
+                                                <Button type="button" variant="outline" className="mt-2 ml-2" disabled={!draftLoaded || isClosing || isSubmitting || isDeleting}
                                                     onClick={() => void handleCancelMissingUpload()}>
                                                     실패한 업로드 취소
                                                 </Button>
@@ -930,6 +950,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <PopoverTrigger asChild>
                                             <Button
                                                 variant="outline"
+                                                disabled={!draftLoaded || isClosing || isSubmitting || isDeleting}
                                                 className="w-full justify-between"
                                             >
                                                 <span className="truncate">
@@ -948,6 +969,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                     {CATEGORIES.map((cat) => (
                                                         <div key={cat} className="flex items-center space-x-2">
                                                             <Checkbox
+                                                                disabled={!draftLoaded || isClosing || isSubmitting || isDeleting}
                                                                 id={`edit-category-${cat}`}
                                                                 checked={categories.includes(cat)}
                                                                 onCheckedChange={(checked) => {
@@ -1010,6 +1032,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         </span>
                                     </Label>
                                     <Textarea
+                                        disabled={!draftLoaded || isClosing || isSubmitting || isDeleting}
                                         id="editContent"
                                         placeholder="맛, 분위기, 서비스 등 상세한 후기를 작성해주세요"
                                         value={content}
@@ -1152,14 +1175,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                     variant="outline"
                                     onClick={() => handleClose()}
                                     className="flex-1"
-                                    disabled={isSubmitting || isDeleting}
+                                    disabled={!draftLoaded || isClosing || isSubmitting || isDeleting}
                                 >
                                     취소
                                 </Button>
                                 <Button
                                     onClick={handleSubmit}
                                     className="flex-1"
-                                    disabled={featureHeld || !isFormValid || isSubmitting || isDeleting || retryKind !== null}
+                                    disabled={featureHeld || !draftLoaded || !isFormValid || isSubmitting || isDeleting || retryKind !== null}
                                 >
                                     {isSubmitting ? (
                                         <>

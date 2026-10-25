@@ -1,5 +1,5 @@
+import { chromeForTestingExecutable } from '../tests-unit/fixtures/chrome-for-testing.ts';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -49,36 +49,14 @@ function run(command, args, options = {}) {
 
 
 function resolveChromiumExecutable() {
-    const explicit = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
-    if (explicit && fs.existsSync(explicit)) {
-        return explicit;
+    const executable = chromeForTestingExecutable();
+    if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE && process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE !== executable) {
+        throw new OperationFailure('RESPONSIVE_TEST_BROWSER_PIN_MISMATCH');
     }
-
-    const cacheRoots = [
-        path.join(os.homedir(), '.cache', 'ms-playwright'),
-        process.platform === 'win32'
-            ? path.join(os.homedir(), 'AppData', 'Local', 'ms-playwright')
-            : null,
-    ].filter(Boolean);
-
-    const platformExecutable =
-        process.platform === 'win32'
-            ? ['chrome-headless-shell-win64', 'chrome-headless-shell.exe']
-            : ['chrome-headless-shell-linux64', 'chrome-headless-shell'];
-
-    const candidates = cacheRoots.flatMap((cacheRoot) => {
-        if (!fs.existsSync(cacheRoot)) {
-            return [];
-        }
-
-        return fs
-            .readdirSync(cacheRoot, { withFileTypes: true })
-            .filter((entry) => entry.isDirectory() && entry.name.startsWith('chromium_headless_shell-'))
-            .map((entry) => path.join(cacheRoot, entry.name, ...platformExecutable))
-            .filter((candidate) => fs.existsSync(candidate));
-    }).sort();
-
-    return candidates.at(-1) ?? null;
+    if (process.env.PLAYWRIGHT_RESPONSIVE_BROWSER && process.env.PLAYWRIGHT_RESPONSIVE_BROWSER !== 'chromium') {
+        throw new OperationFailure('RESPONSIVE_TEST_BROWSER_PIN_MISMATCH');
+    }
+    return executable;
 }
 
 function resolveSupplementalLibraryPaths() {

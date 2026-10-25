@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect, type Page } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 async function bundle() {
   const entry = `
@@ -63,7 +64,7 @@ async function open(page: Page, script: string, panel: 'operations' | 'sentry') 
 }
 
 (existsSync(chrome) ? test : test.skip)('admin operations and sentry details return focus without losing it to the page', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     for (const width of [1280, 800]) {

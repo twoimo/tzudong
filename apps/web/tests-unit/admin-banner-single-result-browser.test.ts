@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect, type Page } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 const entry = `
   import React from 'react';
@@ -86,7 +87,7 @@ async function openPage(context: import('@playwright/test').BrowserContext, scri
 }
 
 (existsSync(chrome) ? test : test.skip)('a banner save reports its outcome once, without a contradicting hook toast', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     const cases = [
@@ -121,7 +122,7 @@ async function openPage(context: import('@playwright/test').BrowserContext, scri
 }, 90_000);
 
 (existsSync(chrome) ? test : test.skip)('on wide screens a confirmed banner save or delete keeps keyboard focus in the editor pane', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });

@@ -1,3 +1,5 @@
+import { getAuthCookieContract } from './auth/session-cookies';
+
 const SUPABASE_AUTH_STORAGE_KEY_PATTERN = /^sb-.+-auth-token(?:\.\d+)?$/;
 
 type StorageLike = {
@@ -46,12 +48,17 @@ export function hasSupabaseAuthCookieSessionHint(cookieHeader?: string) {
   if (!resolvedCookieHeader) return false;
 
   try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+    const contract = url ? getAuthCookieContract(url) : null;
+    const migrated = contract && resolvedCookieHeader.split(';').some(part =>
+      part.trim().startsWith(`${contract.marker}=`));
     return resolvedCookieHeader.split(';').some((cookiePart) => {
       const [rawName, ...rawValueParts] = cookiePart.trim().split('=');
       const name = decodeURIComponent(rawName ?? '').trim();
       const value = rawValueParts.join('=');
 
-      return isSupabaseAuthSessionStorageKey(name) && isUsableSessionHintValue(value);
+      return isSupabaseAuthSessionStorageKey(name) && isUsableSessionHintValue(value)
+        && (!migrated || name === contract.key || name.startsWith(`${contract.key}.`));
     });
   } catch {
     return false;

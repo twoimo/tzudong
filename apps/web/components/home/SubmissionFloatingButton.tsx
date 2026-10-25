@@ -12,6 +12,7 @@ import type { HomeMapPanelSide } from "@/lib/home-map-user-preferences";
 
 interface SubmissionFloatingButtonProps {
     onClick: () => void;
+    isAuthLoading?: boolean;
     isSidebarOpen: boolean;
     className?: string;
     onDeviceLocationClick?: () => void;
@@ -30,6 +31,7 @@ const DESKTOP_MAP_SIDE_PANEL_WIDTH_CSS = "min(392px, calc(100vw - 32px))";
 // [OPTIMIZATION] React.memo로 불필요한 리렌더링 방지
 const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
     onClick,
+    isAuthLoading = false,
     isSidebarOpen,
     className,
     onDeviceLocationClick,
@@ -109,6 +111,8 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
             <Button
                 type="button"
                 onClick={onClick}
+                disabled={isAuthLoading}
+                aria-busy={isAuthLoading}
                 aria-label="맛집 제보하기"
                 className={cn(
                     // [Mobile] 돋보기 아이콘과 동일한 크기 (h-12 w-12)
@@ -126,13 +130,11 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
 
             {onDeviceLocationClick ? (
                 <div className="relative">
-                    <DeviceLocationDisclosure id="desktop-device-location-disclosure" />
+                    <DeviceLocationDisclosure id="desktop-device-location-disclosure" onConfirm={onDeviceLocationClick} skipDisclosure={Boolean(deviceLocation)}>
                     <Button
                         type="button"
-                        onClick={onDeviceLocationClick}
                         disabled={isDeviceLocationPending}
                         aria-label={deviceLocationButtonLabel}
-                        aria-describedby="desktop-device-location-disclosure"
                         aria-busy={isDeviceLocationPending}
                         className={cn(
                             isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
@@ -154,6 +156,7 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                             <LocateFixed className={isMobileOrTablet ? "h-5 w-5" : "h-6 w-6"} aria-hidden="true" />
                         )}
                     </Button>
+                    </DeviceLocationDisclosure>
                 </div>
             ) : null}
         </div>

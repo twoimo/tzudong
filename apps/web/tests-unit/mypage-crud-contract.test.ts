@@ -29,10 +29,10 @@ describe("mypage CRUD QA/QC source contracts", () => {
       );
     }
 
-    expect(profileSource).toContain("supabase.auth.signInWithPassword");
+    expect(profileSource).not.toContain("supabase.auth.signInWithPassword");
     expect(profileSource).toContain("password: currentPassword");
-    expect(profileSource).toContain("supabase.auth.updateUser");
-    expect(profileSource).toContain("password: newPassword");
+    expect(profileSource).toContain("await changeBrowserAccountPassword({");
+    expect(profileSource).toContain("userId: user.id, email: user.email, password: currentPassword, newPassword");
     expect(profileSource).toContain("newPassword !== confirmPassword");
     expect(profileSource).toContain("newPassword.length < 8");
     expect(profileSource).toContain("newPassword.length > 12");
@@ -77,12 +77,12 @@ describe("mypage CRUD QA/QC source contracts", () => {
     const submitRouteSource = source("app/api/mypage/submissions/submit/route.ts");
 
     expect(newSubmissionModalSource).toContain("fetch('/api/mypage/submissions/submit'");
-    expect(newSubmissionModalSource).toContain("postRestaurantSubmission('new', data)");
-    expect(newSubmissionModalSource).toContain("postRestaurantSubmission('request', data)");
+    expect(newSubmissionModalSource).toContain("postRestaurantSubmission('new', attempt.data)");
+    expect(newSubmissionModalSource).toContain("postRestaurantSubmission('request', attempt.data)");
     expect(newSubmissionModalSource).toContain("getRestaurantSubmissionClientKey");
-    expect(newSubmissionModalSource).toContain("requestSubmitInFlightRef");
+    expect(newSubmissionModalSource).toContain("activeSubmissionRef");
     expect(newSubmissionModalSource).toContain("admin-restaurant-requests-inline");
-    expect(newSubmissionModalSource).toContain("queryKey: ['myRecommendRequests', user?.id]");
+    expect(newSubmissionModalSource).toContain("queryKey: ['myRecommendRequests', attempt.userId]");
     expect(submitRouteSource).toContain("await supabase.auth.getUser()");
     expect(submitRouteSource).toContain('mode === "new"');
     expect(submitRouteSource).toContain("return await submitRequest(expected, user.id, clientRequestKey)");
@@ -210,7 +210,7 @@ describe("mypage CRUD QA/QC source contracts", () => {
     expect(accountDeleteRouteSource).not.toContain("auth.admin.deleteUser");
     expect(accountDeleteRouteSource).not.toContain("runAccountDeletionExternalWorker");
     expect(accountDeleteRouteSource).toContain("rpc('read_current_account_deletion_status'");
-    expect(profilePageSource).toContain("issueAccountDeletionReauthenticationProof(user.id)");
+    expect(profilePageSource).toContain("issueAccountDeletionReauthenticationProof(user.id, freshSession)");
     expect(profilePageSource).toContain("proofId: proof.proofId");
     expect(profilePageSource).toContain("Authorization: `Bearer ${freshSession.bearerToken}`");
     expect(profilePageSource).toContain("Authorization: `Bearer ${deletionSession.bearerToken}`");

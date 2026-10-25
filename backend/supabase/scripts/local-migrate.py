@@ -2562,11 +2562,45 @@ def _canonical_source_replay_bodies() -> dict[str, tuple[bytes, bytes]]:
             "transform_receipt_ocr_acl_admission_pg15_replay": ("20261019120000_receipt_ocr_credential_release_acl_admission_v2.sql",),
             "transform_receipt_ocr_indeterminate_recovery_pg15_replay": ("20261019130000_receipt_ocr_indeterminate_recovery.sql",),
             "transform_review_verification_readiness_pg15_replay": ("20261016090000_review_verification_delete_guard_readiness.sql",),
+            "transform_hosted_pending_custody_pg15_replay": ("20261025063810_hosted_pending_atomic_delivery.sql",),
         }
         for module_name, names in adapters.items():
             adapter = load(module_name)
             for name in names:
                 outputs[name] = adapter.transform((source_root() / name).read_bytes(), name)
+        custody = load("transform_hosted_pending_custody_pg15_replay")
+        # Its temporary ON COMMIT DROP clauses classify the immutable source as
+        # self_committing here. The catalog driver supplies --single-transaction;
+        # retain the same outer transaction for this exact adapted body.
+        outputs[custody.NAME] = b"BEGIN;\n" + outputs[custody.NAME] + b"\nCOMMIT;\n"
+        index_name = custody.SUPERSEDED_INDEX_NAME
+        disposition = custody.classify_superseded_index(
+            (source_root() / index_name).read_bytes(),
+            (source_root() / custody.NAME).read_bytes(),
+        )
+        # The catalog replay retains this exact source but does not install its
+        # one-video index. Verify that disposition against the local preimage;
+        # never drop an already installed index or relax the custody successor.
+        outputs[index_name] = ("""SET LOCAL search_path = '';
+DO $pending_index_source_disposition$
+BEGIN
+  IF current_user <> 'postgres' OR session_user <> 'postgres'
+    OR current_setting('is_superuser') <> 'off'
+    OR current_setting('server_version_num')::int/10000 <> 15
+    OR to_regnamespace('supabase_migrations') IS NOT NULL
+    OR to_regclass('public.idx_restaurants_active_candidate_identity') IS NOT NULL
+    OR NOT EXISTS (
+      SELECT 1 FROM pg_index
+      WHERE indexrelid=to_regclass('public.idx_restaurants_active_video_identity')
+        AND indrelid='public.restaurants'::regclass
+        AND indisunique AND indisvalid AND indisready AND indnkeyatts=2
+        AND pg_get_expr(indexprs,indrelid)=$expr$public.extract_youtube_video_id(youtube_link), public.normalize_restaurant_identity_name(public.resolve_restaurant_identity_name(approved_name, origin_name, naver_name, google_name))$expr$
+        AND pg_get_expr(indpred,indrelid)=$pred$((status <> 'deleted'::text) AND (public.extract_youtube_video_id(youtube_link) <> ''::text) AND (public.normalize_restaurant_identity_name(public.resolve_restaurant_identity_name(approved_name, origin_name, naver_name, google_name)) IS NOT NULL))$pred$
+    ) THEN
+    RAISE EXCEPTION 'PENDING_CUSTODY_SUPERSEDED_INDEX_PREIMAGE' USING ERRCODE='55000';
+  END IF;
+END $pending_index_source_disposition$;
+SELECT """ + _q(canonical_json(disposition).decode()) + "::jsonb;\n").encode()
         for name in ("20261003000812_storyboard_gemini_only.sql", "20261003182338_storyboard_service_role_bridge.sql"):
             outputs[name] = load("transform_storyboard_history_replay").transform_window((source_root() / name).read_bytes(), binding["windows"])
         for name in ("20261003113923_g014_service_invoker_contract.sql", "20261003172126_restaurant_review_manual_invoker_contract.sql", "20261003220841_admin_evaluation_page_invoker_contract.sql", "20261004050600_admin_evaluation_warning_invoker_contract.sql"):

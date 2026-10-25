@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect, type Page } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 async function bundle() {
   const entry = `
@@ -67,7 +68,7 @@ const fixture = (page: Page) => page.evaluate(() => ({ ...(globalThis as unknown
 const requestCount = async (page: Page, path: string) => (await fixture(page)).requests.filter(url => url === path).length;
 
 (existsSync(chrome) ? test : test.skip)('a failed dashboard summary read can be retried in place without refetching healthy reads', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     for (const width of [1440, 390]) {

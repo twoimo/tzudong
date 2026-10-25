@@ -220,7 +220,10 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     setHeaderlessLayoutVars,
   ]);
 
-  if (!hasMounted) {
+  // Email callbacks and recovery own one-use exchanges. Keep their parent
+  // tree stable through hydration and viewport changes instead of remounting
+  // the page after it has already removed the code from the address bar.
+  if (!hasMounted || pathname?.startsWith("/auth/") === true) {
     return (
       <div className="min-h-[var(--full-height,100vh)] min-w-0 bg-background">
         <a href="#main-content" className="skip-link">

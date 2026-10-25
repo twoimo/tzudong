@@ -25,6 +25,8 @@ export default function DesktopLeftPanelBookmarks({
     data: bookmarks = [],
     isLoading,
     isError,
+    isFetching,
+    refetch,
   } = useBookmarks({ enabled: true });
   const { toggleBookmark, isLoading: isToggling } = useToggleBookmark();
 
@@ -44,7 +46,7 @@ export default function DesktopLeftPanelBookmarks({
       <MapPanelHeader
         title="북마크"
         description="저장한 맛집을 지도와 상세로 바로 열어요"
-        count={isLoading ? undefined : bookmarks.length}
+        count={isLoading || isError ? undefined : bookmarks.length}
         onClose={onClose}
         closeLabel="북마크 패널 닫기"
       />
@@ -81,8 +83,11 @@ export default function DesktopLeftPanelBookmarks({
                 북마크를 불러오지 못했습니다
               </p>
               <p className="mt-1 text-xs leading-5">
-                잠시 후 다시 열어 주세요.
+                잠시 후 다시 시도해 주세요.
               </p>
+              <Button type="button" variant="outline" size="sm" className="mt-3" disabled={isFetching} onClick={() => void refetch()}>
+                다시 시도
+              </Button>
             </div>
           </div>
         ) : bookmarks.length === 0 ? (

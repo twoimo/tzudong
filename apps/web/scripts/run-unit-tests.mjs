@@ -22,6 +22,19 @@ const isolated = new Set([
   'storyboard-gemini-rag.test.ts',
   'admin-youtube-thumbnail-readiness-gate.test.ts',
   'auth-callback-session.test.ts',
+  // These contracts exercise the real session-aware server exports. Route
+  // mocks in the general process replace that module with createClient only.
+  'privacy-onboarding.test.ts',
+  'session-cookie-boundary.test.ts',
+  // The release verifier imports the real SSR cookie contract and exercises
+  // native child-process cleanup; shared SDK mocks must not replace its exports.
+  'auth-release-smoke-source.test.ts',
+  // These import real lazy targets, including ephemeral auth client exports.
+  // Whole-module browser client mocks in the general group omit those exports.
+  'lazy-map-boundaries.test.ts',
+  'lazy-overlay-boundaries.test.ts',
+  'notification-consent.test.ts',
+  'review-modal-map-panel-helpers.test.ts',
   'account-deletion-reauth-validation.test.ts',
   // This older contract replaces the whole Supabase SDK too. Linux ESM links
   // later StorageApiError imports against that mock unless its process ends.

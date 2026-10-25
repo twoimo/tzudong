@@ -3,6 +3,7 @@ import { ArrowLeft, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { pageHeadingTitleClass, pageHeadingDescriptionClass } from "@/components/layout/page-heading-styles";
 
 export const mapPanelIconButtonClass =
   "h-9 w-9 shrink-0 rounded-lg border border-border bg-card shadow-none hover:bg-secondary";
@@ -10,9 +11,9 @@ export const mapPanelIconButtonClass =
 export const pageHeaderIconButtonClass =
   "h-10 w-10 shrink-0 rounded-full bg-muted/45 shadow-none hover:bg-muted";
 export const pageHeaderTitleClass =
-  "flex min-w-0 items-center gap-1.5 text-[1.0625rem] font-black leading-tight tracking-tight text-foreground text-balance xs:text-xl sm:gap-2 sm:text-2xl";
+  `flex items-center gap-2 ${pageHeadingTitleClass}`;
 export const pageHeaderDescriptionClass =
-  "mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm";
+  `mt-1 text-pretty ${pageHeadingDescriptionClass}`;
 
 export function MapPanelHeader({
   title,
@@ -29,6 +30,7 @@ export function MapPanelHeader({
   variant = "panel",
   titleAddon,
   eyebrow,
+  wrapTitle = false,
   children,
 }: {
   title: string;
@@ -45,6 +47,7 @@ export function MapPanelHeader({
   variant?: "panel" | "page";
   titleAddon?: ReactNode;
   eyebrow?: string;
+  wrapTitle?: boolean;
   children?: ReactNode;
 }) {
   const isPage = variant === "page";
@@ -56,7 +59,7 @@ export function MapPanelHeader({
           <div className={cn("flex min-w-0 items-center gap-x-2", isPage ? "flex-wrap gap-y-1" : "flex-nowrap")}>
             <TitleTag id={titleId} className={isPage ? pageHeaderTitleClass : "flex min-w-0 items-center gap-2 text-sm font-semibold leading-5 text-foreground"}>
               {titleIcon ? <span className={cn("shrink-0", isPage ? "text-brand-tangerine-ink" : "text-primary", isPage ? "[&_svg]:size-5 sm:[&_svg]:size-6" : "[&_svg]:size-4")} aria-hidden="true">{titleIcon}</span> : null}
-              <span className="min-w-0 truncate" title={title}>{title}</span>
+              <span className={cn("min-w-0", wrapTitle ? "whitespace-normal break-words [overflow-wrap:anywhere]" : "truncate")} title={title}>{title}</span>
               {!isPage && typeof count === "number" ? (
                 <span className="shrink-0 rounded-full bg-brand-cream px-2 py-0.5 text-[11px] font-bold leading-4 tabular-nums text-foreground" aria-label={`${count.toLocaleString()}${countUnit}`}>
                   {count.toLocaleString()}{countUnit}
@@ -66,14 +69,14 @@ export function MapPanelHeader({
             {isPage && typeof count === "number" ? (
               <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">({count.toLocaleString()}{countUnit})</span>
             ) : null}
-            {titleAddon}
+            {isPage ? titleAddon : null}
           </div>
           {description ? (
-            <p className={isPage ? pageHeaderDescriptionClass : "mt-1 truncate text-xs leading-4 text-muted-foreground"}>{description}</p>
+            <p className={isPage ? pageHeaderDescriptionClass : "mt-1 text-pretty text-xs leading-4 text-muted-foreground"}>{description}</p>
           ) : null}
         </div>
         <div className={cn("flex shrink-0 items-center gap-1.5", isPage && "ml-auto sm:gap-2")}>
-          {actions}
+          {isPage ? actions : null}
           {onClose ? (
             <Button
               type="button"
@@ -88,6 +91,12 @@ export function MapPanelHeader({
           ) : null}
         </div>
       </div>
+      {!isPage && (titleAddon || actions) ? (
+        <div className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-2" data-map-panel-toolbar="true">
+          {titleAddon ? <div className="flex min-w-0 flex-wrap items-center gap-1">{titleAddon}</div> : null}
+          {actions ? <div className="ml-auto flex flex-wrap items-center gap-1.5">{actions}</div> : null}
+        </div>
+      ) : null}
       {children}
     </header>
   );
