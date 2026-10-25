@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { collectCandidates, descriptor, lockfileChanges } from '../scripts/collect-dependency-candidates.mjs';
+import { collectCandidates, companionPatchMirrorsOnly, descriptor, lockfileChanges } from '../scripts/collect-dependency-candidates.mjs';
 import { buildPreflightReceipt, buildRunReceipt } from '../scripts/verify-dependency-freshness.mjs';
 
 const pr = { number: 42, user: { login: 'dependabot[bot]' },
@@ -129,5 +129,103 @@ describe('real dependency candidate ingestion', () => {
       ['.github/workflows/ci.yml', '-uses: actions/checkout@old\n+uses: actions/checkout@new', '/'],
     ]) expect(descriptor(pr, [{ filename, status: 'modified', patch }]).unit).toBe(unit);
     await expect(collectCandidates(async () => ({ error: true }))).rejects.toThrow('candidate_metadata_unavailable');
+  });
+});
+
+describe('governed companion file narrow admission', () => {
+  const COMPANION = 'apps/web/tests-unit/nightly-regression-workflow.test.ts';
+  const manifest = () => ({
+    filename: 'apps/web/package.json', status: 'modified',
+    patch: '@@ -1,2 +1,2 @@\n-    "supabase": "^2.117.0",\n+    "supabase": "^2.121.0",\n-    "postcss": "^8.5.28",\n+    "postcss": "^8.5.31",',
+  });
+  const companion = (patch: string | undefined, status = 'modified') => ({
+    filename: COMPANION, status, ...(patch === undefined ? {} : { patch }),
+  });
+  const goodPatch = '@@ -1206,4 +1206,4 @@\n context\n'
+    + '-    expect(lock).toContain(\'"supabase": ["supabase@2.117.0"\');\n'
+    + '+    expect(lock).toContain(\'"supabase": ["supabase@2.121.0"\');\n';
+  const pairs = [{ name: 'supabase', fromVersion: '2.117.0', toVersion: '2.121.0' }];
+
+  test('exact manifest mirror edits in the governed file are admitted', () => {
+    const d = descriptor(pr, [manifest(), companion(goodPatch)]);
+    expect(d.metadataIncomplete).toBe(false);
+    expect(d.packages).toHaveLength(2);
+    expect(companionPatchMirrorsOnly(goodPatch, pairs)).toBe(true);
+  });
+
+  test('every adversarial non-mirror companion patch fails closed', () => {
+    const bad = [
+      // version not part of the manifest bump
+      goodPatch.replaceAll('2.121.0', '2.122.0'),
+      // semantic edit inside a changed line
+      goodPatch.replace('supabase@2.117.0', 'supabase-extra@2.117.0'),
+      // pure addition
+      goodPatch + '+    expect(true).toBe(true);\n',
+      // deletion without replacement
+      goodPatch.split('\n').filter((l: string) => !l.startsWith('-')).join('\n'),
+      // cross-package version swap (line names supabase, carries another pair)
+      goodPatch.replaceAll('2.117.0', '8.5.28').replaceAll('2.121.0', '8.5.31'),
+      // one-sided change (from-version kept on the added line)
+      goodPatch.replace('2.121.0', '2.117.0'),
+      // changed line naming no bumped package
+      goodPatch.replaceAll('supabase', 'unrelated'),
+      // reordered lines inside a block
+      '@@ -1,2 +1,2 @@\n-    a "supabase" 2.117.0\n-    b "supabase" 2.117.0\n+    b "supabase" 2.121.0\n+    a "supabase" 2.121.0\n',
+      // multiline semantic change with versions mirrored
+      '@@ -1,2 +1,2 @@\n-    expect(a).toContain("supabase 2.117.0")\n-    expect(b).toBe(true)\n+    expect(a).toContain("supabase 2.121.0")\n+    expect(b).toBe(false)\n',
+      // malformed patch grammar
+      'garbage line\n-    "supabase" 2.117.0\n+    "supabase" 2.121.0\n',
+      // no hunk header
+      '-    "supabase" 2.117.0\n+    "supabase" 2.121.0\n',
+    ];
+    for (const patch of bad) {
+      expect(companionPatchMirrorsOnly(patch, pairs)).toBe(false);
+      expect(descriptor(pr, [manifest(), companion(patch)]).metadataIncomplete).toBe(true);
+    }
+  });
+
+  test('wrong path, wrong status and empty manifest changes fail closed', () => {
+    const wrongPath = { filename: 'apps/web/tests-unit/other.test.ts', status: 'modified', patch: goodPatch };
+    expect(descriptor(pr, [manifest(), wrongPath]).metadataIncomplete).toBe(true);
+    expect(descriptor(pr, [manifest(), companion(goodPatch, 'added')]).metadataIncomplete).toBe(true);
+    expect(descriptor(pr, [companion(goodPatch)]).metadataIncomplete).toBe(true);
+    expect(companionPatchMirrorsOnly(goodPatch, [])).toBe(false);
+    expect(companionPatchMirrorsOnly(undefined as never, pairs)).toBe(false);
+  });
+
+  test('same-version pairs stay identity-bound by package name', () => {
+    const dup = [
+      { name: 'alpha', fromVersion: '1.0.0', toVersion: '2.0.0' },
+      { name: 'beta', fromVersion: '1.0.0', toVersion: '2.0.0' },
+    ];
+    expect(companionPatchMirrorsOnly(
+      '@@ -1,1 +1,1 @@\n-    "alpha": "1.0.0"\n+    "alpha": "2.0.0"\n', dup)).toBe(true);
+    // line carries the mirrored tokens but names neither package
+    expect(companionPatchMirrorsOnly(
+      '@@ -1,1 +1,1 @@\-    pin "1.0.0"\n+    pin "2.0.0"\n'.replace('\\-', '-'), dup)).toBe(false);
+  });
+
+  test('missing patch falls back to verified full contents; anything else fails closed', async () => {
+    const baseSha = 'b'.repeat(40);
+    const mergeBase = 'c'.repeat(40);
+    const text = (version: string) => `line one\nexpect(lock).toContain("supabase: ${version}")\nline three\n`;
+    const blobOf = (value: string) => {
+      const bytes = Buffer.from(value);
+      return { encoding: 'base64', content: bytes.toString('base64'), size: bytes.length,
+        sha: createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex') };
+    };
+    const collect = async (after: string, corrupt = false) => collectCandidates(async (path: string) => {
+      if (path.includes('/compare/')) return { base_commit: { sha: baseSha }, merge_base_commit: { sha: mergeBase } };
+      if (path.includes('/contents/')) {
+        if (corrupt) return { encoding: 'base64', content: 'e30=', size: 2, sha: '0'.repeat(40) };
+        return blobOf(path.endsWith(mergeBase) ? text('2.117.0') : after);
+      }
+      if (path.includes('/files')) return [manifest(), companion(undefined)];
+      return [{ ...pr, base: { ...pr.base, sha: baseSha } }];
+    }, undefined as never);
+    expect((await collect(text('2.121.0')))[0].metadataIncomplete).toBe(false);
+    expect((await collect(text('2.121.0') + 'extra\n'))[0].metadataIncomplete).toBe(true);
+    expect((await collect(text('2.121.0').replace('supabase', 'renamed')))[0].metadataIncomplete).toBe(true);
+    await expect(collect(text('2.121.0'), true)).rejects.toThrow('candidate_metadata_unavailable');
   });
 });
