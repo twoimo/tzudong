@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { collectCandidates, companionPatchMirrorsOnly, descriptor, lockfileChanges } from '../scripts/collect-dependency-candidates.mjs';
+import { collectCandidates, companionContentMirrorsOnly, descriptor, lockfileChanges } from '../scripts/collect-dependency-candidates.mjs';
 import { buildPreflightReceipt, buildRunReceipt } from '../scripts/verify-dependency-freshness.mjs';
 
 const pr = { number: 42, user: { login: 'dependabot[bot]' },
@@ -138,94 +138,115 @@ describe('governed companion file narrow admission', () => {
     filename: 'apps/web/package.json', status: 'modified',
     patch: '@@ -1,2 +1,2 @@\n-    "supabase": "^2.117.0",\n+    "supabase": "^2.121.0",\n-    "postcss": "^8.5.28",\n+    "postcss": "^8.5.31",',
   });
-  const companion = (patch: string | undefined, status = 'modified') => ({
+  const beforeText = [
+    'describe("nightly regression contracts", () => {',
+    '  it("pins supabase", () => {',
+    '    expect(lock).toContain(\'"supabase": ["supabase@2.117.0"\');',
+    '    expect(other).toBe(true);',
+    '  });',
+    '});',
+  ].join('\n');
+  const mirrorAfter = beforeText.replace('2.117.0', '2.121.0');
+  const contents = (after: string) => ({ [COMPANION]: { before: beforeText, after } });
+  const companion = (patch?: string, status = 'modified') => ({
     filename: COMPANION, status, ...(patch === undefined ? {} : { patch }),
   });
-  const goodPatch = '@@ -1206,4 +1206,4 @@\n context\n'
+  const cleanPatch = '@@ -1,4 +1,4 @@\n describe("nightly regression contracts", () => {\n'
+    + '   it("pins supabase", () => {\n'
     + '-    expect(lock).toContain(\'"supabase": ["supabase@2.117.0"\');\n'
-    + '+    expect(lock).toContain(\'"supabase": ["supabase@2.121.0"\');\n';
+    + '+    expect(lock).toContain(\'"supabase": ["supabase@2.121.0"\');\n'
+    + '     expect(other).toBe(true);\n';
   const pairs = [{ name: 'supabase', fromVersion: '2.117.0', toVersion: '2.121.0' }];
 
-  test('exact manifest mirror edits in the governed file are admitted', () => {
-    const d = descriptor(pr, [manifest(), companion(goodPatch)]);
+  test('complete content proving an exact manifest mirror is admitted', () => {
+    const d = descriptor(pr, [manifest(), companion(cleanPatch)], {}, contents(mirrorAfter));
     expect(d.metadataIncomplete).toBe(false);
     expect(d.packages).toHaveLength(2);
-    expect(companionPatchMirrorsOnly(goodPatch, pairs)).toBe(true);
+    expect(companionContentMirrorsOnly(beforeText, mirrorAfter, pairs)).toBe(true);
   });
 
-  test('every adversarial non-mirror companion patch fails closed', () => {
+  test('a patch string alone never admits; completeness comes only from verified contents', () => {
+    // Same clean patch, no verified contents supplied.
+    expect(descriptor(pr, [manifest(), companion(cleanPatch)]).metadataIncomplete).toBe(true);
+    // A clean-looking patch cannot hide a later non-mirror hunk: the verified
+    // head content carries a semantic change the patch rendering omitted.
+    const hiddenHunk = mirrorAfter.replace('toBe(true)', 'toBe(false)');
+    expect(descriptor(pr, [manifest(), companion(cleanPatch)], {}, contents(hiddenHunk))
+      .metadataIncomplete).toBe(true);
+    // Trailing truncation of the rendering is irrelevant: content compare sees it all.
+    const truncatedPatch = cleanPatch.split('\n').slice(0, 3).join('\n');
+    expect(descriptor(pr, [manifest(), companion(truncatedPatch)], {}, contents(mirrorAfter))
+      .metadataIncomplete).toBe(false);
+  });
+
+  test('every adversarial non-mirror content change fails closed', () => {
     const bad = [
-      // version not part of the manifest bump
-      goodPatch.replaceAll('2.121.0', '2.122.0'),
-      // semantic edit inside a changed line
-      goodPatch.replace('supabase@2.117.0', 'supabase-extra@2.117.0'),
-      // pure addition
-      goodPatch + '+    expect(true).toBe(true);\n',
-      // deletion without replacement
-      goodPatch.split('\n').filter((l: string) => !l.startsWith('-')).join('\n'),
-      // cross-package version swap (line names supabase, carries another pair)
-      goodPatch.replaceAll('2.117.0', '8.5.28').replaceAll('2.121.0', '8.5.31'),
-      // one-sided change (from-version kept on the added line)
-      goodPatch.replace('2.121.0', '2.117.0'),
-      // changed line naming no bumped package
-      goodPatch.replaceAll('supabase', 'unrelated'),
-      // reordered lines inside a block
-      '@@ -1,2 +1,2 @@\n-    a "supabase" 2.117.0\n-    b "supabase" 2.117.0\n+    b "supabase" 2.121.0\n+    a "supabase" 2.121.0\n',
-      // multiline semantic change with versions mirrored
-      '@@ -1,2 +1,2 @@\n-    expect(a).toContain("supabase 2.117.0")\n-    expect(b).toBe(true)\n+    expect(a).toContain("supabase 2.121.0")\n+    expect(b).toBe(false)\n',
-      // malformed patch grammar
-      'garbage line\n-    "supabase" 2.117.0\n+    "supabase" 2.121.0\n',
-      // no hunk header
-      '-    "supabase" 2.117.0\n+    "supabase" 2.121.0\n',
-    ];
-    for (const patch of bad) {
-      expect(companionPatchMirrorsOnly(patch, pairs)).toBe(false);
-      expect(descriptor(pr, [manifest(), companion(patch)]).metadataIncomplete).toBe(true);
+      mirrorAfter.replaceAll('2.121.0', '2.122.0'), // version not in the manifest bump
+      mirrorAfter.replace('supabase@2.121.0', 'supabase-extra@2.121.0'), // semantic edit on the changed line
+      mirrorAfter + '\n    expect(true).toBe(true);', // pure addition
+      mirrorAfter.replace('    expect(other).toBe(true);\n', ''), // deletion
+      mirrorAfter.replaceAll('2.121.0', '8.5.31'), // cross-package version swap
+      mirrorAfter.replace('2.121.0', '2.117.0'), // one-sided (from-version kept)
+      mirrorAfter.replaceAll('supabase', 'unrelated'), // changed line names no bumped package
+      mirrorAfter.replace('toBe(true)', 'toBe(false)'), // semantic change on another line
+      beforeText.replace('expect(other).toBe(true);', 'expect(lock).toContain(\'"supabase": ["supabase@2.121.0"\');')
+        .replace('supabase@2.117.0', 'supabase@2.121.0').replace('2.121.0\');\n  });', '2.121.0\');\n    expect(other).toBe(true);\n  });'), // reordered lines
+      beforeText.replace('2.117.0', '2.121.0').replace('2.121.0\');\n', '2.121.0\');\n'), // identical (control: not in bad list)
+    ].slice(0, 9);
+    for (const after of bad) {
+      expect(companionContentMirrorsOnly(beforeText, after, pairs)).toBe(false);
+      expect(descriptor(pr, [manifest(), companion()], {}, contents(after)).metadataIncomplete).toBe(true);
     }
   });
 
   test('wrong path, wrong status and empty manifest changes fail closed', () => {
-    const wrongPath = { filename: 'apps/web/tests-unit/other.test.ts', status: 'modified', patch: goodPatch };
-    expect(descriptor(pr, [manifest(), wrongPath]).metadataIncomplete).toBe(true);
-    expect(descriptor(pr, [manifest(), companion(goodPatch, 'added')]).metadataIncomplete).toBe(true);
-    expect(descriptor(pr, [companion(goodPatch)]).metadataIncomplete).toBe(true);
-    expect(companionPatchMirrorsOnly(goodPatch, [])).toBe(false);
-    expect(companionPatchMirrorsOnly(undefined as never, pairs)).toBe(false);
+    expect(descriptor(pr, [manifest(), { filename: 'apps/web/tests-unit/other.test.ts', status: 'modified', patch: cleanPatch }], {}, contents(mirrorAfter)).metadataIncomplete).toBe(true);
+    expect(descriptor(pr, [manifest(), companion(cleanPatch, 'added')], {}, contents(mirrorAfter)).metadataIncomplete).toBe(true);
+    expect(descriptor(pr, [companion(cleanPatch)], {}, contents(mirrorAfter)).metadataIncomplete).toBe(true);
+    expect(companionContentMirrorsOnly(beforeText, mirrorAfter, [])).toBe(false);
+    expect(companionContentMirrorsOnly(undefined as never, mirrorAfter, pairs)).toBe(false);
+    expect(companionContentMirrorsOnly(beforeText, beforeText, pairs)).toBe(false); // no change is not a mirror
   });
 
   test('same-version pairs stay identity-bound by package name', () => {
+    const before = 'pin "alpha": "1.0.0"\n';
     const dup = [
       { name: 'alpha', fromVersion: '1.0.0', toVersion: '2.0.0' },
       { name: 'beta', fromVersion: '1.0.0', toVersion: '2.0.0' },
     ];
-    expect(companionPatchMirrorsOnly(
-      '@@ -1,1 +1,1 @@\n-    "alpha": "1.0.0"\n+    "alpha": "2.0.0"\n', dup)).toBe(true);
-    // line carries the mirrored tokens but names neither package
-    expect(companionPatchMirrorsOnly(
-      '@@ -1,1 +1,1 @@\-    pin "1.0.0"\n+    pin "2.0.0"\n'.replace('\\-', '-'), dup)).toBe(false);
+    expect(companionContentMirrorsOnly(before, 'pin "alpha": "2.0.0"\n', dup)).toBe(true);
+    expect(companionContentMirrorsOnly('pin: "1.0.0"\n', 'pin: "2.0.0"\n', dup)).toBe(false);
   });
 
-  test('missing patch falls back to verified full contents; anything else fails closed', async () => {
+  test('collection always verifies companion contents, even when a patch string exists', async () => {
     const baseSha = 'b'.repeat(40);
     const mergeBase = 'c'.repeat(40);
-    const text = (version: string) => `line one\nexpect(lock).toContain("supabase: ${version}")\nline three\n`;
     const blobOf = (value: string) => {
       const bytes = Buffer.from(value);
       return { encoding: 'base64', content: bytes.toString('base64'), size: bytes.length,
         sha: createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex') };
     };
-    const collect = async (after: string, corrupt = false) => collectCandidates(async (path: string) => {
-      if (path.includes('/compare/')) return { base_commit: { sha: baseSha }, merge_base_commit: { sha: mergeBase } };
-      if (path.includes('/contents/')) {
-        if (corrupt) return { encoding: 'base64', content: 'e30=', size: 2, sha: '0'.repeat(40) };
-        return blobOf(path.endsWith(mergeBase) ? text('2.117.0') : after);
-      }
-      if (path.includes('/files')) return [manifest(), companion(undefined)];
-      return [{ ...pr, base: { ...pr.base, sha: baseSha } }];
-    }, undefined as never);
-    expect((await collect(text('2.121.0')))[0].metadataIncomplete).toBe(false);
-    expect((await collect(text('2.121.0') + 'extra\n'))[0].metadataIncomplete).toBe(true);
-    expect((await collect(text('2.121.0').replace('supabase', 'renamed')))[0].metadataIncomplete).toBe(true);
-    await expect(collect(text('2.121.0'), true)).rejects.toThrow('candidate_metadata_unavailable');
+    const collect = async (after: string, corrupt = false) => {
+      const calls: string[] = [];
+      const out = await collectCandidates(async (path: string) => {
+        calls.push(path);
+        if (path.includes('/compare/')) return { base_commit: { sha: baseSha }, merge_base_commit: { sha: mergeBase } };
+        if (path.includes('/contents/')) {
+          if (corrupt) return { encoding: 'base64', content: 'e30=', size: 2, sha: '0'.repeat(40) };
+          return blobOf(path.endsWith(mergeBase) ? beforeText : after);
+        }
+        if (path.includes('/files')) return [manifest(), companion(cleanPatch)]; // patch present
+        return [{ ...pr, base: { ...pr.base, sha: baseSha } }];
+      }, undefined as never);
+      return { candidate: out[0], calls };
+    };
+    const admitted = await collect(mirrorAfter);
+    expect(admitted.candidate.metadataIncomplete).toBe(false);
+    expect(admitted.calls.filter((path) => path.includes('/contents/'))).toEqual([
+      `/contents/${COMPANION}?ref=${mergeBase}`,
+      `/contents/${COMPANION}?ref=${pr.head.sha}`,
+    ]);
+    expect((await collect(mirrorAfter.replace('toBe(true)', 'toBe(false)'))).candidate.metadataIncomplete).toBe(true);
+    await expect(collect(mirrorAfter, true)).rejects.toThrow('candidate_metadata_unavailable');
   });
 });
