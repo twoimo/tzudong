@@ -7,11 +7,14 @@ on:
       - '.github/workflows/**'
       - '.github/scripts/*ci*.py'
       - '.github/dependabot.yml'
+      - '.github/hosted-pending-custody-install.v1.json'
       - '.kiro/specs/crawler-pipeline-*/**'
       - 'apps/web/package.json'
       - 'apps/web/package-lock.json'
       - 'apps/web/bun.lock'
       - 'apps/web/scripts/verify-pin-contract.mjs'
+      - 'apps/web/scripts/hosted-pending-custody-operation.mjs'
+      - 'apps/web/scripts/__tests__/hosted-pending-custody-operation.test.mjs'
       - 'apps/web/app/api/admin/publish-jobs/**'
       - 'apps/web/lib/admin-publish-jobs.ts'
       - 'apps/web/tests-unit/publish-jobs-request-contract.test.ts'
@@ -38,6 +41,7 @@ on:
       - 'backend/supabase/scripts/hosted_pending_*.py'
       - 'backend/supabase/scripts/test_hosted_pending_*.py'
       - 'backend/supabase/candidates/*hosted_pending*.sql'
+      - 'backend/supabase/migrations/*hosted_pending*.sql'
       - 'backend/bin/run_parallel_laaj.py'
       - 'backend/utils/**'
       - 'backend/restaurant-evaluation/scripts/**'
@@ -361,6 +365,9 @@ jobs:
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
         with:
           node-version: '24.21.0'
+
+      - name: Verify fixed pending custody SQL operation
+        run: node --test apps/web/scripts/__tests__/hosted-pending-custody-operation.test.mjs
 
       - name: Verify pipeline receipts, review completeness and resource limits
         run: |
