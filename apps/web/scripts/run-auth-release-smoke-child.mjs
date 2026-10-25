@@ -1,9 +1,10 @@
+import { getAuthCookieContract } from '../lib/auth/session-cookies.ts';
 import { chromeForTestingExecutable } from '../tests-unit/fixtures/chrome-for-testing.ts';
 import { createHash } from 'node:crypto';
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
 
-const AUTH_COOKIE = 'sb-aqlcofblfxdrjhhdmarw-auth-token';
+const { key: AUTH_COOKIE, marker: AUTH_MARKER } = getAuthCookieContract('https://aqlcofblfxdrjhhdmarw.supabase.co');
 const MAX_SESSION_SECONDS = 2 * 60 * 60;
 const MAX_STORAGE_STATE_BYTES = 128 * 1024;
 const MAX_COOKIE_VALUE_BYTES = 32 * 1024;
@@ -29,10 +30,11 @@ function decodeBase64Json(value) {
 }
 export function parseSession(origin, encoded = process.env.RELEASE_AUTH_STORAGE_STATE_B64) {
     if (!encoded) fail('INVALID_AUTH_STATE'); const state = decodeBase64Json(encoded);
-    if (!state || typeof state !== 'object' || Array.isArray(state) || Object.keys(state).sort().join(',') !== 'cookies,origins' || !Array.isArray(state.cookies) || !Array.isArray(state.origins) || state.origins.length !== 0 || state.cookies.length < 1 || state.cookies.length > 8) fail('INVALID_AUTH_STATE');
+    if (!state || typeof state !== 'object' || Array.isArray(state) || Object.keys(state).sort().join(',') !== 'cookies,origins' || !Array.isArray(state.cookies) || !Array.isArray(state.origins) || state.origins.length !== 0 || state.cookies.length < 2 || state.cookies.length > 9) fail('INVALID_AUTH_STATE');
     const now = Math.floor(Date.now() / 1000); const names = new Set();
-    for (const cookie of state.cookies) { if (!cookie || typeof cookie !== 'object' || Array.isArray(cookie) || Object.keys(cookie).sort().join(',') !== 'domain,expires,httpOnly,name,path,sameSite,secure,value' || typeof cookie.name !== 'string' || !new RegExp(`^${AUTH_COOKIE}(?:\\.\\d+)?$`).test(cookie.name) || names.has(cookie.name) || cookie.domain !== origin.hostname || cookie.path !== '/' || typeof cookie.value !== 'string' || !cookie.value || Buffer.byteLength(cookie.value, 'utf8') > MAX_COOKIE_VALUE_BYTES || !Number.isInteger(cookie.expires) || cookie.expires <= now || cookie.expires > now + MAX_SESSION_SECONDS || cookie.httpOnly !== true || cookie.secure !== true || cookie.sameSite !== 'Lax') fail('INVALID_AUTH_STATE'); names.add(cookie.name); }
-    const chunks = [...names].filter((name) => name !== AUTH_COOKIE).sort((a, b) => Number(a.slice(AUTH_COOKIE.length + 1)) - Number(b.slice(AUTH_COOKIE.length + 1)));
+    for (const cookie of state.cookies) { if (!cookie || typeof cookie !== 'object' || Array.isArray(cookie) || Object.keys(cookie).sort().join(',') !== 'domain,expires,httpOnly,name,path,sameSite,secure,value' || typeof cookie.name !== 'string' || !(cookie.name === AUTH_MARKER || new RegExp(`^${AUTH_COOKIE}(?:\\.\\d+)?$`).test(cookie.name)) || names.has(cookie.name) || cookie.domain !== origin.hostname || cookie.path !== '/' || typeof cookie.value !== 'string' || !cookie.value || Buffer.byteLength(cookie.value, 'utf8') > MAX_COOKIE_VALUE_BYTES || !Number.isInteger(cookie.expires) || cookie.expires <= now || cookie.expires > now + MAX_SESSION_SECONDS || cookie.httpOnly !== true || cookie.secure !== true || cookie.sameSite !== 'Lax') fail('INVALID_AUTH_STATE'); names.add(cookie.name); }
+    if (!state.cookies.some((cookie) => cookie.name === AUTH_MARKER && cookie.value === '1')) fail('INVALID_AUTH_STATE');
+    const chunks = [...names].filter((name) => name !== AUTH_COOKIE && name !== AUTH_MARKER).sort((a, b) => Number(a.slice(AUTH_COOKIE.length + 1)) - Number(b.slice(AUTH_COOKIE.length + 1)));
     if ((names.has(AUTH_COOKIE) && chunks.length) || (!names.has(AUTH_COOKIE) && (!chunks.length || !chunks.every((name, index) => name === `${AUTH_COOKIE}.${index}`)))) fail('INVALID_AUTH_STATE'); return state;
 }
 
@@ -84,7 +86,7 @@ export async function requestProof(context, origin, challenge) {
     }
 }
 async function assertProofDenied(context, origin, cookieValue) {
-    if (cookieValue) await context.addCookies([{ name: AUTH_COOKIE, value: cookieValue, domain: origin.hostname, path: '/', expires: Math.floor(Date.now() / 1000) + 60, httpOnly: true, secure: true, sameSite: 'Lax' }]);
+    if (cookieValue) await context.addCookies([AUTH_COOKIE, AUTH_MARKER].map(name => ({ name, value: name === AUTH_COOKIE ? cookieValue : '1', domain: origin.hostname, path: '/', expires: Math.floor(Date.now() / 1000) + 60, httpOnly: true, secure: true, sameSite: 'Lax' })));
     const proof = await requestProof(context, origin, 'A'.repeat(43));
     if (![401, 403].includes(proof.status)) fail('AUTH_PROOF_DENIED');
 }

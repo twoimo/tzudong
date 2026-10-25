@@ -22,7 +22,7 @@ const jwt = (claims: Record<string, unknown> = {}) => [
     Buffer.from(JSON.stringify({ sub: userId, session_id: sessionId, iat: now - 10, exp: now + 300, role: 'authenticated', ...claims })).toString('base64url'),
     Buffer.from('signature').toString('base64url'),
 ].join('.');
-const validState = (host = origin.hostname, value = `base64-${Buffer.from(JSON.stringify({ access_token: jwt(), refresh_token: 'refresh-1234567890123456' })).toString('base64')}`, httpOnly = true) => encode({ cookies: [{ name: 'sb-aqlcofblfxdrjhhdmarw-auth-token', value, domain: host, path: '/', expires: Math.floor(Date.now() / 1000) + 60, httpOnly, secure: true, sameSite: 'Lax' }], origins: [] });
+const validState = (host = origin.hostname, value = `base64-${Buffer.from(JSON.stringify({ access_token: jwt(), refresh_token: 'refresh-1234567890123456' })).toString('base64')}`, httpOnly = true) => encode({ cookies: ['sb-aqlcofblfxdrjhhdmarw-v3-auth-token', 'tz-auth-v3-aqlcofblfxdrjhhdmarw'].map(name => ({ name, value: name.startsWith('sb-') ? value : '1', domain: host, path: '/', expires: Math.floor(Date.now() / 1000) + 60, httpOnly, secure: true, sameSite: 'Lax' })), origins: [] });
 const jsonResponse = (body: unknown, url: string, headers: Record<string, string> = {}) => {
     const text = JSON.stringify(body);
     return { ok: true, status: 200, url, headers: new Headers({ 'content-type': 'application/json', ...headers }), text: async () => text };
@@ -77,7 +77,7 @@ const linuxPidNamespaceTest = process.platform === 'linux' && spawnSync(
 test('origin, storage, and Supabase validation fail closed', () => {
     expect(parent.exactHttpsOrigin('https://tzudong.app/').hostname).toBe('tzudong.app');
     for (const value of ['http://tzudong.app/', 'https://tzudong.app:443/', 'https://tzudong.app/a', 'https://tzudong.app/?q=1', 'https://tzudong.app/#x']) expect(() => parent.exactHttpsOrigin(value)).toThrow();
-    expect(parent.validateStorageState(validState(), origin).cookies).toHaveLength(1);
+    expect(parent.validateStorageState(validState(), origin).cookies).toHaveLength(2);
     const browserState = validState(origin.hostname, undefined, false);
     const decodedBrowserState = parent.validateStorageState(browserState, origin);
     expect(decodedBrowserState.cookies[0].httpOnly).toBe(false);
@@ -86,6 +86,36 @@ test('origin, storage, and Supabase validation fail closed', () => {
     expect(() => parent.validateSupabaseDestination('https://aqlcofblfxdrjhhdmarw.supabase.co/path')).toThrow();
     expect(child.exactOrigin('https://aqlcofblfxdrjhhdmarw.supabase.co/').hostname).toBe('aqlcofblfxdrjhhdmarw.supabase.co');
 });
+test('release proof requires the current complete cookie batch and excludes its marker from the credential', () => {
+    const state = JSON.parse(Buffer.from(validState(), 'base64').toString('utf8'));
+    const token = state.cookies[0];
+    const marker = state.cookies[1];
+    const split = Math.floor(token.value.length / 2);
+    const chunked = { cookies: [
+        { ...token, name: token.name + '.1', value: token.value.slice(split) },
+        marker,
+        { ...token, name: token.name + '.0', value: token.value.slice(0, split) },
+    ], origins: [] };
+    const accepted = parent.validateStorageState(encode(chunked), origin);
+    expect(child.parseSession(origin, encode(accepted)).cookies).toHaveLength(3);
+    expect(parent.parseBoundAccessCredential(accepted)).toBe(jwt());
+    for (const cookies of [
+        [token],
+        [token, { ...marker, value: 'pending' }],
+        [token, marker, marker],
+        [{ ...token, name: 'sb-aqlcofblfxdrjhhdmarw-auth-token' }, marker],
+        [token, marker, { ...token, name: 'sb-aqlcofblfxdrjhhdmarw-auth-token' }],
+        [{ ...token, name: token.name + '.1' }, marker],
+        [token, { ...marker, domain: 'evil.example' }],
+    ]) {
+        const encoded = encode({ cookies, origins: [] });
+        expect(() => parent.validateStorageState(encoded, origin)).toThrow();
+        expect(() => child.parseSession(origin, encoded)).toThrow();
+    }
+    const unreadableToPage = parent.encodeHttpOnlyStorageState(parent.validateStorageState(validState(origin.hostname, undefined, false), origin));
+    expect(child.parseSession(origin, unreadableToPage).cookies.every((cookie: { httpOnly: boolean }) => cookie.httpOnly)).toBe(true);
+});
+
 test('authenticated browser proof is challenge-bound, redacted, and fail-closed', async () => {
     const childSource = await readFile(resolve(root, 'scripts/run-auth-release-smoke-child.mjs'), 'utf8');
     const routeSource = await readFile(resolve(root, 'app/api/admin/release-auth-proof/route.ts'), 'utf8');
@@ -227,7 +257,7 @@ test('cell, metadata, final path, and revocation proof are strict', async () => 
         successMetadata,
         { ...revocation, bindingSha256: 'f'.repeat(64) },
     )).toThrow();
-    expect(child.parseSession(origin, validState()).cookies).toHaveLength(1);
+    expect(child.parseSession(origin, validState()).cookies).toHaveLength(2);
 });
 
 test('bounded helpers fail on spawn error, nonzero exit, output overflow, and hangs', async () => {
