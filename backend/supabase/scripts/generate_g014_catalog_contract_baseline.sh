@@ -1669,6 +1669,23 @@ for migration in "${effective_migrations[@]}"; do
     20261025063810_hosted_pending_atomic_delivery.sql)
       # Source reconstruction only. PG17 executor/ledger/membership admission is
       # proved separately by the unchanged atomic operating operation.
+      compose exec -T db psql -X -At -v ON_ERROR_STOP=1 \
+        -h 127.0.0.1 -p 5432 -U postgres -d postgres <<'SQL' |
+SELECT jsonb_agg(jsonb_build_object(
+ 'signature',p.proname||'()',
+ 'owner',pg_get_userbyid(p.proowner),
+ 'body_sha256',encode(sha256(convert_to(p.prosrc,'UTF8')),'hex'),
+ 'definer',p.prosecdef,'config',p.proconfig,'acl',p.proacl::text,
+ 'attributes',jsonb_build_array(p.prokind,p.prorettype,p.proretset,p.pronargs,
+  p.proargnames,p.proargmodes,p.proargdefaults,p.pronargdefaults,p.provariadic,
+  p.prosupport,p.procost,p.prorows,p.proisstrict,p.proleakproof,p.provolatile,p.proparallel,
+  (SELECT lanname FROM pg_language WHERE oid=p.prolang))) ORDER BY p.proname)
+FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+WHERE n.nspname='privacy_retention' AND p.proname IN (
+ 'assert_g014_workflow_owner_contract','assert_g014_public_rpc_allowlist',
+ 'assert_g014_definer_contract','assert_g014_catalog_contract');
+SQL
+        tee "$staging_dir/hosted-pending-custody-pg15-assertions.json"
       transformed_migration="$staging_dir/hosted-pending-custody-pg15-replay.sql"
       replay_receipt="$staging_dir/hosted-pending-custody-pg15-replay.json"
       python3 "$script_dir/transform_hosted_pending_custody_pg15_replay.py" \
@@ -1952,6 +1969,7 @@ jq -n --arg source_sha "$source_sha" --arg migration_chain_sha256 "$chain_hash" 
     admin-management-group-overlap-verification.sql admin-management-group-overlap-receipt.json \
     admin-user-rpc-forward-overlap-verification.sql admin-user-rpc-forward-overlap-receipt.json \
     hosted-pending-custody-pg15-replay.sql hosted-pending-custody-pg15-replay.json \
+    hosted-pending-custody-pg15-assertions.json \
     g014-owner-pg15-verification.sql g014-owner-pg15-receipt.json \
     g014-owner-final-pg15-verification.sql g014-owner-final-pg15-receipt.json \
     g016-identity-pg15-verification.sql g016-identity-pg15-receipt.json \
