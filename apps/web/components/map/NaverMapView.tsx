@@ -64,6 +64,7 @@ import {
     getSeoulDistrictClusters,
 } from "@/lib/clustering";
 import { markerPool } from "@/lib/marker-pool";
+import { primeCategoryMarkerImages } from "@/lib/category-marker-image-primer";
 import {
     createClusterMarkerHTML,
     clusterAnimationManager,
@@ -724,6 +725,7 @@ const NaverMapView = memo(({
     deviceLocation = null,
     showUserSubmittedMarkers = true,
 }: NaverMapViewProps) => {
+    useEffect(() => primeCategoryMarkerImages(document), []);
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<NaverMapLike | null>(null);
     const markerRenderSignatureRef = useRef<MarkerRenderSignature | null>(null);
