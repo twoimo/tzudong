@@ -1,4 +1,4 @@
-# 썸네일 G014 등록 후보 — 운영 미적용
+# 썸네일 G014 등록·설치와 운영 후속
 
 [등록 SQL](../../backend/supabase/candidates/20261024_thumbnail_g014_registration.sql)은 기존 썸네일 큐 후보의 신규 RPC 3개를 현재 G014 분기와 등록부에 연결하는 **companion 후보**다. applied migration·고정 실행 명세는 수정하지 않는다. 큐·bucket·ledger를 설치하는 forward 명세나 전체 G014 인증은 아직 아니다.
 
@@ -261,3 +261,14 @@ stateDiagram-v2
 이 도식은 조회 복구 명세다. `Unconfirmed`·`ReadFailed`에서 Submit으로 돌아가는 자동 경로는 없다. 진행성은 status read가 종료되고 event loop가 진행한다는 전제를 가지며, hidden 중에는 타이머를 예약하지 않는다. 명세·검사로 전역 exactly-once나 네트워크 생존성을 증명했다고 주장하지 않는다.
 
 [최종 통합 증거](../evidence/thumbnail-g014-registration-20261024/review-email-count-followup.json)는 **6파일124 pass·0 fail·897 assertions**, 변경한2파일 lint 오류·경고0와 동일한 나머지10파일 검사 재사용, 새 parity **3,427입력·진단0**이다. 이전895-assertion 증거는 원래 source hash와 함께 보존했다. 보관한 browser 증거는 이미지 hook4사례·채팅 hook5사례와 전체 편집기 통과, 복구 generation POST0이다. Auth/API는 loopback 모의값이고 가상 스케줄·실제 fetch 거부를 사용했으므로 실제20초 network timeout·hosted 업무 성공 증거와 구분한다. DB 쓰기·provider 호출은0이며 기존 budget4파일은 별도 비활성 후보로 보존했다.
+## 2026-10-24 운영 설치·배포 readback
+
+이 절은 위의 과거 미적용 기록 이후 실행한 결과다. PR #3515 → #3517 → #3518을 보호 절차 develop → data → main으로 병합했고 최종 main은 `6ccd33d5ccc09e607e8053a883087a9d0f3eab77`이다. 파일 tree는 24개 원격 source 검사가 통과한 `c0f04e56c26cb71eb017b25844b5b81527436e11`과 같다. 승격 commit의 필수 Release·Promotion Path는 별도로 확인했고 force/admin bypass·검사 취소는 사용하지 않았다.
+
+기존 native HOME에서 새로 만든 clean detached main 작업 폴더로 고정 collector를 한 번 실행했다. attempt `d3b1a8d4-130d-4766-a1db-18f843e8ba8a`가 `THUMBNAIL_COMMITTED`를 반환했고 별도 read-only reconciliation도 `committed`였다. 정확한 SQL43문장과 원장89→90·등록137→140 계약, fixed CA verify-full, 원래 custody/journal 보존을 결속했다. 이전 ACK-loss 재현의 `prior_observed`를 terminal로 해석하거나 동일 요청을 다시 전송하지 않았다.
+
+첫 main Git 배포는 이전 SHA만 허용하던 설정 때문에 CANCELED였다. 기존 production-only 승인 SHA와 GitHub 변수만 이번 main으로 갱신하고 같은 commit을 배포했다. `dpl_4ppHwfZBk4yaiVCEAoG2Y1aaZqoU`가 READY이며 www·apex aliases가 연결됐다. 실제 Chrome health의 SHA·deployment·project가 일치한다. Python urllib의 health 요청은403이었으며 보호를 약화하거나 이를 모든 client의 성공으로 바꾸지 않았다.
+
+[운영 증거](../evidence/thumbnail-g014-registration-20261024/operating-readback.json)는 실제 관리자 세션의1920×929 화면에서15개 메뉴 진입·H1/18px/650/24px 일치·가로 viewport 넘침0·사용 가능한 console buffer의 error0을 기록한다. CMS6개 목록에 데이터가 표시됐고 맛집은1,659/1,659건 로딩이 끝났다. 지식 그래프71개 노드·217개 연결, 영상 성과500개 영상과 Sentry 목록도 확인했다. 이는 현재 filter/화면의 읽기 결과이며 모든 변경·모바일·provider 실행의 완전성 검사가 아니다. 실제 생성·변경 버튼은 누르지 않았고 provider 호출은0회다.
+
+스토리보드는 실제 화면에서 DB 전환 보류를 표시한다. 썸네일은 접수 가능 화면까지 확인했으나 scoped Mac worker·기존 리딤 키 위치와 실제 생성/Storage readback은 남았다. 기존 tkt 실행 대상 프로젝트가 없어 사용자의 기존 저장 경로를 요청했고 새 key·한도·결제·모델 변경은 하지 않았다. budget90→91은 별도 caller 후보이며 아직 운영 미적용이다. 외부 Pro → Gemini → Pro 예약과 미완료 상태는 유지한다. 이 범위를 전체 목표 완료나 정량 성능·비용 개선으로 표현하지 않는다.

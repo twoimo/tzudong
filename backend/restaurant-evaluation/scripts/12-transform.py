@@ -37,6 +37,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from evaluation_results_boundary import omit_satellite_fields
+from utils.pipeline_cache_contracts import transform_groups, transform_source_hash, transform_key
 from utils.stage_cache import atomic_write, stage_lock, fingerprint, input_digest, canonical_digest
 from utils.jsonl_utils import load_last_jsonl_record
 
@@ -823,17 +824,11 @@ def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
                 raise ValueError("transform_input_changed")
             file_cache[str(path)] = {"signature": signature, "hash": value}
             return value
-        script_hash = file_hash(Path(__file__))
+        script_hash = transform_source_hash(Path(__file__).resolve().parents[2], file_hash)
         meta_dir = crawling_path / "meta"
         base = evaluation_path / "evaluation"
         def input_groups():
-            result = []
-            for path in sorted((base / "rule_results").glob("*.jsonl")):
-                laaj = base / "laaj_results" / path.name
-                result.append(("results", path.stem, [path,laaj] if laaj.is_file() else [path]))
-            for kind,directory in [("notSelection",base/"notSelection"),("map_url_crawling",crawling_path/"map_url_crawling")]:
-                result.extend((kind,path.stem,[path]) for path in sorted(directory.glob("*.jsonl")))
-            return result
+            return transform_groups(crawling_path, evaluation_path)
 
         groups = input_groups()
 
@@ -845,7 +840,7 @@ def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
 
         keys = {}
         for kind,video,inputs in groups:
-            keys[kind+":"+video] = canonical_digest([channel,kind,script_hash,file_hash(meta_dir/(video+".jsonl")),*[file_hash(path) for path in inputs]])
+            keys[kind+":"+video] = transform_key(channel, kind, script_hash, meta_dir/(video+".jsonl"), inputs, file_hash)
         verified = output.is_file() and file_hash(output) == ledger.get("outputHash")
         if verified and set(ledger["groups"]) == set(keys) and all(ledger["groups"].get(identity,{}).get("inputHash") == key for identity,key in keys.items()):
             verify_snapshot()
@@ -961,14 +956,54 @@ def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
         return stats
 
 
+def cache_current(channel, crawling, evaluation):
+    """Read-only counterpart of the producer's whole-output/group admission."""
+    observed = {}
+    def signature(path):
+        try:
+            stat = path.stat()
+            return (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
+        except FileNotFoundError:
+            return None
+    def file_hash(path):
+        observed[path] = signature(path)
+        return input_digest(path, latest=False) if observed[path] is not None else None
+    try:
+        receipt = evaluation / 'evaluation/.receipts/transform.json'
+        observed[receipt] = signature(receipt)
+        ledger = json.loads(receipt.read_bytes())
+        groups = transform_groups(crawling, evaluation)
+        source = transform_source_hash(Path(__file__).resolve().parents[2], file_hash)
+        keys = {kind + ':' + video: transform_key(channel, kind, source,
+                crawling / 'meta' / (video + '.jsonl'), inputs, file_hash)
+                for kind, video, inputs in groups}
+        output = evaluation / 'evaluation/transforms.jsonl'
+        valid = (isinstance(ledger, dict) and ledger.get('schemaVersion') == 2
+                 and isinstance(ledger.get('groups'), dict)
+                 and type(ledger.get('recordCount')) is int and ledger['recordCount'] >= 0
+                 and all(isinstance(group, dict) and isinstance(group.get('records'), list)
+                         and all(isinstance(trace, str) for trace in group['records'])
+                         for group in ledger['groups'].values())
+                 and output.is_file() and file_hash(output) == ledger.get('outputHash')
+                 and set(ledger['groups']) == set(keys)
+                 and all(ledger['groups'][identity]['inputHash'] == key for identity, key in keys.items()))
+        return (valid and groups == transform_groups(crawling, evaluation)
+                and all(signature(path) == initial for path, initial in observed.items()))
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description="평가 결과 변환")
     parser.add_argument("--channel", "-c", required=True)
     parser.add_argument("--crawling-path", required=True)
     parser.add_argument("--evaluation-path", required=True)
+    parser.add_argument("--cache-check", action="store_true")
     args = parser.parse_args()
-    return run_transform(args.channel, Path(args.crawling_path), Path(args.evaluation_path))
+    if args.cache_check:
+        return 0 if cache_current(args.channel, Path(args.crawling_path), Path(args.evaluation_path)) else 1
+    run_transform(args.channel, Path(args.crawling_path), Path(args.evaluation_path))
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

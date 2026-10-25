@@ -217,7 +217,7 @@ def validate_restaurant_data(data: Dict[str, Any]) -> bool:
 
     if len(data["restaurants"]) == 0:
         reason = data.get("no_restaurant_reason")
-        if reason:
+        if isinstance(reason, str) and reason.strip().strip('\ufeff').strip():
             print("[INFO] op=restaurant_absence_confirmed", file=sys.stderr)
             return True
         print("[ERROR] op=restaurant_list_empty", file=sys.stderr)
@@ -314,9 +314,14 @@ def save_to_jsonl(
     meta_recollect_id: Optional[int] = None,
     transcript_recollect_id: Optional[int] = None,
     channel_name: Optional[str] = None,
+    no_restaurant_reason: Optional[str] = None,
 ) -> None:
     """JSONL 형식으로 저장"""
     record = {"youtube_link": youtube_link, "restaurants": restaurants}
+    if not restaurants and no_restaurant_reason is not None:
+        if not isinstance(no_restaurant_reason, str) or not no_restaurant_reason.strip().strip('\ufeff').strip():
+            raise ValueError('restaurant_absence_unconfirmed')
+        record['no_restaurant_reason'] = no_restaurant_reason
 
     if channel_name:
         record["channel_name"] = channel_name
@@ -366,6 +371,7 @@ def parse_result(args: argparse.Namespace) -> None:
             meta_recollect_id=args.meta_id,
             transcript_recollect_id=args.trans_id,
             channel_name=args.channel,
+            no_restaurant_reason=data.get("no_restaurant_reason"),
         )
         print("[OK] op=gemini_response_saved")
     except Exception as error:

@@ -30,6 +30,19 @@ const MAX_PROCESS_RETRIES = 2;
 const UPLOAD_TIMEOUT_MS = 300000;
 const GENERATE_TIMEOUT_MS = 300000;
 
+export function uploadChunkVideo(ai, file, mimeType, displayName) {
+    // UploadFileConfig.httpOptions replaces the SDK's resumable route/headers.
+    // Retain the client's five-minute HTTP timeout and the outer deadline instead.
+    return fetchWithTimeout(abortSignal => ai.files.upload({
+        file,
+        config: {
+            mimeType,
+            displayName,
+            abortSignal,
+        },
+    }), UPLOAD_TIMEOUT_MS);
+}
+
 function buildApiKeyPool() {
     const rawPrimary = (process.env.GEMINI_API_KEY || '').trim();
     const rawFallbacks = String(process.env.GEMINI_API_FALLBACK_KEYS || '');
@@ -216,15 +229,7 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
         const mimeType = resolveMimeType(videoPath);
 
         console.log('GEMINI_FILE_UPLOAD_STARTED');
-        const uploadedFile = await fetchWithTimeout(abortSignal => ai.files.upload({
-            file: videoPath,
-            config: {
-                mimeType,
-                displayName,
-                abortSignal,
-                httpOptions: { timeout: UPLOAD_TIMEOUT_MS },
-            },
-        }), UPLOAD_TIMEOUT_MS);
+        const uploadedFile = await uploadChunkVideo(ai, videoPath, mimeType, displayName);
         uploadedName = fileNameOf(uploadedFile);
         if (!uploadedName) throw createReasonError('GEMINI_FILE_UPLOAD_NAME_MISSING');
         console.log('GEMINI_FILE_UPLOAD_COMPLETED');

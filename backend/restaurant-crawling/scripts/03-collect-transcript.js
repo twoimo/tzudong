@@ -802,7 +802,11 @@ async function getTranscript(videoId, {
     if (puppeteerResult) {
         return {
             source: 'puppeteer',
-            ...puppeteerResult
+            ...puppeteerResult,
+            // Preserve legacy aliases while exposing the collector's canonical field.
+            // An explicitly supplied invalid transcript must still fail validation.
+            transcript: Object.hasOwn(puppeteerResult, 'transcript')
+                ? puppeteerResult.transcript : puppeteerResult.segments,
         };
     }
 
@@ -989,9 +993,12 @@ async function collectChannelTranscriptsLocked(channelName, channelConfig, {
 /**
  * 메인 실행
  */
-async function main() {
-    await loadEnvironment();
-    const args = process.argv.slice(2);
+async function main(args = process.argv.slice(2), {
+    loadEnvironmentForRun = loadEnvironment,
+    loadConfig = loadChannelsConfig,
+    collect = collectChannelTranscripts,
+} = {}) {
+    await loadEnvironmentForRun();
     let channelFilter = null;
 
     for (let i = 0; i < args.length; i++) {
@@ -1004,7 +1011,7 @@ async function main() {
     log('info', '  자막 수집 (recollect_id 기반)');
     log('info', '='.repeat(60));
 
-    const config = await loadChannelsConfig();
+    const config = await loadConfig();
     const channels = config.channels;
     const channelNames = channelFilter ? [channelFilter] : Object.keys(channels);
 
@@ -1017,7 +1024,7 @@ async function main() {
             log('error', `알 수 없는 채널: ${channelName}`);
             continue;
         }
-        const result = await collectChannelTranscripts(channelName, channels[channelName]);
+        const result = await collect(channelName, channels[channelName]);
         results.push(result);
     }
 
@@ -1027,17 +1034,21 @@ async function main() {
 
     log('info', '');
     log('info', '='.repeat(60));
-    log('success', '자막 수집 완료');
+    const hasFailures = results.some(result => result.failed > 0);
+    log(hasFailures ? 'error' : 'success', hasFailures ? 'TRANSCRIPT_COLLECTION_INCOMPLETE' : '자막 수집 완료');
     for (const result of results) {
-        log('info', `  ${result.channel}: 성공 ${result.success}개, 스킵 ${result.skipped}개`);
+        log('info', `  ${result.channel}: 성공 ${result.success}개, 스킵 ${result.skipped}개, 자막 없음 ${result.noTranscript || 0}개, 실패 ${result.failed || 0}개`);
     }
     log('info', '='.repeat(60));
+    return hasFailures ? 1 : 0;
 }
 
-export { collectChannelTranscripts, fetchTranscriptYtDlp, getTranscript, isValidTranscriptRecord, updateNoTranscriptPermanent };
+export { collectChannelTranscripts, fetchTranscriptYtDlp, getTranscript, isValidTranscriptRecord, main, updateNoTranscriptPermanent };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
-    main().catch(error => {
+    main().then(exitCode => {
+        process.exitCode = exitCode;
+    }).catch(error => {
         logFailure('error', 'TRANSCRIPT_COLLECTION_FATAL', error);
         process.exit(1);
     });

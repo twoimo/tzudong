@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { collectChannelTranscripts, isValidTranscriptRecord, updateNoTranscriptPermanent } from '../03-collect-transcript.js';
+import { collectChannelTranscripts, getTranscript, isValidTranscriptRecord, updateNoTranscriptPermanent } from '../03-collect-transcript.js';
 
 const videoId = 'AbCdEf123_-';
 const url = `https://www.youtube.com/watch?v=${videoId}`;
@@ -28,6 +28,61 @@ function options(directory, getTranscriptForVideo) {
         loadSkipUrls: () => new Set(), recordNoTranscript: async () => {},
     };
 }
+
+test('Puppeteer legacy segments pass through getTranscript into a valid persisted transcript', async () => {
+    const f = fixture();
+    const segments = [{ start: 12, duration: null, text: 'fixture transcript' }];
+    let fallbackCalls = 0;
+    let response;
+    try {
+        const result = await collectChannelTranscripts('test', { name: 'test' }, options(f.directory, async (id) => {
+            response = await getTranscript(id, {
+                fetchYtDlpTranscript: async () => null,
+                getTranscriptFromPuppeteer: async (requestedId) => {
+                    assert.equal(requestedId, videoId);
+                    fallbackCalls++;
+                    return { text: '[00:12] fixture transcript', segments, language: 'ko' };
+                },
+            });
+            return response;
+        }));
+        assert.equal(fallbackCalls, 1);
+        assert.equal(result.success, 1);
+        assert.equal(result.failed, 0);
+        assert.deepEqual(response.transcript, segments);
+        assert.deepEqual(response.segments, segments);
+        const stored = JSON.parse(fs.readFileSync(f.output, 'utf8'));
+        assert.equal(isValidTranscriptRecord(stored, videoId, 'test'), true);
+        assert.deepEqual(stored.transcript, segments);
+        assert.equal(stored.collector_source, 'puppeteer');
+        assert.equal(Object.hasOwn(stored, 'text'), false);
+        assert.equal(Object.hasOwn(stored, 'segments'), false);
+    } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+});
+
+test('Puppeteer alias admission preserves validation and never hides an invalid canonical transcript', async () => {
+    for (const result of [
+        { segments: [] },
+        { segments: [{ start: -1, text: 'invalid start' }] },
+        { segments: [{ start: 0, text: ' ' }] },
+        { transcript: [], segments: provider.transcript },
+        { transcript: null, segments: provider.transcript },
+        { transcript: undefined, segments: provider.transcript },
+    ]) {
+        const f = fixture({ cached: valid, meta: { recollect_id: 2, recollect_vars: ['duration_changed'] } });
+        const before = fs.readFileSync(f.output);
+        try {
+            const stats = await collectChannelTranscripts('test', { name: 'test' }, options(f.directory, (id) => getTranscript(id, {
+                fetchYtDlpTranscript: async () => null,
+                getTranscriptFromPuppeteer: async () => ({ language: 'ko', ...result }),
+            })));
+            assert.equal(stats.failed, 1);
+            assert.equal(stats.success, 0);
+            assert.equal(stats.noTranscript, 0);
+            assert.deepEqual(fs.readFileSync(f.output), before);
+        } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+    }
+});
 
 test('legacy content is reusable only with valid identity and finite, non-empty segments', () => {
     assert.equal(isValidTranscriptRecord(valid, videoId, 'test'), true);

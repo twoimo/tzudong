@@ -1,0 +1,460 @@
+{
+  "schema": "review-activation-lock-installation-v1",
+  "status": "DRAFT_UNAPPLIED",
+  "executionEnabled": false,
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "sourceBase": "221563f6a36d8ba4e9a513e0e0fe635a15455c65",
+  "scope": "Exact configure body replacement after provider-budget ledger91; preserve source/operator/preview/limit checks and all persistent owners/privileges; no policy activation/provider call.",
+  "migration": {
+    "id": "restaurant_review_activation_lock",
+    "path": "backend/supabase/migrations/20261024160000_restaurant_review_activation_lock.sql",
+    "sha256": "16da1c813db1cda3565bfe6f2f13c7c341667774215162956645d8d340ba1703",
+    "expectedPriorState": {
+      "query": "SELECT jsonb_build_object(\n 'serverVersionNum',pg_catalog.current_setting('server_version_num')::integer,\n 'ledgerCount',(SELECT count(*) FROM supabase_migrations.schema_migrations),\n 'ledgerPrefixCount',(SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version<>'20261024160000'),\n 'ledgerPrefixLatest',(SELECT max(version COLLATE \"C\") FROM supabase_migrations.schema_migrations WHERE version<>'20261024160000'),\n 'ledgerPrefixDigest',(SELECT pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(jsonb_agg(jsonb_build_array(version,name,statements) ORDER BY version COLLATE \"C\",name COLLATE \"C\")::text,'UTF8')),'hex') FROM supabase_migrations.schema_migrations WHERE version<>'20261024160000'),\n 'ledgerTargetPresent',EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20261024160000'),\n 'functions',(SELECT jsonb_agg(jsonb_build_object('signature',signature,'owner',pg_catalog.pg_get_userbyid(p.proowner),'definer',p.prosecdef,'language',l.lanname,'returns',pg_catalog.format_type(p.prorettype,NULL),'volatility',p.provolatile,'kind',p.prokind,'parallel',p.proparallel,'strict',p.proisstrict,'leakproof',p.proleakproof,'returnsSet',p.proretset,'numArgs',p.pronargs,'argNames',p.proargnames,'argModes',p.proargmodes,'numDefaults',p.pronargdefaults,'config',p.proconfig,'acl',p.proacl::text,'bodySha256',pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc,'UTF8')),'hex')) ORDER BY signature COLLATE \"C\")\n   FROM unnest(ARRAY['public.restaurant_review_automation_configure(uuid,text,text,text,integer,integer)','pipeline_control.lock_restaurant_review_catalog_revision()','pipeline_control.bump_admin_evaluation_revision()','pipeline_control.assert_restaurant_review_operator(uuid)','public.admin_evaluation_revision()']) signature\n   JOIN pg_catalog.pg_proc p ON p.oid=pg_catalog.to_regprocedure(signature) JOIN pg_catalog.pg_language l ON l.oid=p.prolang),\n 'revisionTable',(SELECT jsonb_build_array(pg_catalog.pg_get_userbyid(c.relowner),c.relacl::text,c.relrowsecurity,c.relforcerowsecurity) FROM pg_catalog.pg_class c WHERE c.oid='pipeline_control.admin_evaluation_catalog_revision'::regclass),\n 'revisionServicePrivileges',jsonb_build_array(pg_catalog.has_table_privilege('service_role','pipeline_control.admin_evaluation_catalog_revision','SELECT'),pg_catalog.has_table_privilege('service_role','pipeline_control.admin_evaluation_catalog_revision','INSERT'),pg_catalog.has_table_privilege('service_role','pipeline_control.admin_evaluation_catalog_revision','UPDATE')),\n 'ownerMembership',(SELECT jsonb_agg(jsonb_build_array(pg_catalog.pg_get_userbyid(grantor),admin_option,inherit_option,set_option) ORDER BY grantor) FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole AND member='postgres'::regrole),\n 'ownerSet',pg_catalog.pg_has_role('postgres','privacy_workflow_owner','SET'),\n 'ownerUsage',pg_catalog.pg_has_role('postgres','privacy_workflow_owner','USAGE'),\n 'assertions',(SELECT jsonb_agg(jsonb_build_array(signature,pg_catalog.pg_get_userbyid(p.proowner),p.prosecdef,p.proconfig,p.proacl::text,pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc,'UTF8')),'hex'),pg_catalog.has_function_privilege('postgres',p.oid,'EXECUTE')) ORDER BY signature COLLATE \"C\") FROM unnest(ARRAY['privacy_retention.assert_g014_workflow_owner_contract()','privacy_retention.assert_g014_public_rpc_allowlist()','privacy_retention.assert_g014_definer_contract()','privacy_retention.assert_g014_catalog_contract()']) signature JOIN pg_catalog.pg_proc p ON p.oid=pg_catalog.to_regprocedure(signature)),\n 'rolesDigest',(SELECT pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(jsonb_agg(to_jsonb(r) ORDER BY r.oid)::text,'UTF8')),'hex') FROM pg_catalog.pg_roles r),\n 'defaultAclDigest',(SELECT pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(COALESCE(jsonb_agg(to_jsonb(d) ORDER BY d.oid),'[]'::jsonb)::text,'UTF8')),'hex') FROM pg_catalog.pg_default_acl d),\n 'temporaryObjectsAbsent',pg_catalog.to_regclass('pg_temp.review_activation_install_before') IS NULL AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc WHERE pronamespace=pg_catalog.pg_my_temp_schema() AND proname='review_activation_install_g014_check')\n);",
+      "expected": {
+        "assertions": [
+          [
+            "privacy_retention.assert_g014_catalog_contract()",
+            "privacy_workflow_owner",
+            true,
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}",
+            "5c5971a5578e09db25a41e88474f1da15acfbd658571ba28f29e8c226e4d1883",
+            false
+          ],
+          [
+            "privacy_retention.assert_g014_definer_contract()",
+            "privacy_workflow_owner",
+            true,
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}",
+            "bb8dc8d2e4020f70b2332cbdf6acf465a97cbc4d582f9f14415330247ae34131",
+            false
+          ],
+          [
+            "privacy_retention.assert_g014_public_rpc_allowlist()",
+            "privacy_workflow_owner",
+            true,
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}",
+            "f23203a0a2366eca16b30b256729e859efc556952df8cb75485924153e1188ef",
+            false
+          ],
+          [
+            "privacy_retention.assert_g014_workflow_owner_contract()",
+            "privacy_workflow_owner",
+            false,
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}",
+            "345aed9acb1da06262740ef06d81e51855a44c7470aa8b431a23e6fa629aab1d",
+            false
+          ]
+        ],
+        "defaultAclDigest": "f6ed5bc0ab6228b4b407f49ad9383895180c553f074d552b2685c0f745fb4042",
+        "functions": [
+          {
+            "acl": "{postgres=X/postgres,service_role=X/postgres}",
+            "argModes": null,
+            "argNames": [
+              "actor"
+            ],
+            "bodySha256": "f4c5f16ca924a3c071ad4d5939483152d78f7ef654e92db9fd7a92a27a1d681e",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "kind": "f",
+            "language": "plpgsql",
+            "leakproof": false,
+            "numArgs": 1,
+            "numDefaults": 0,
+            "owner": "postgres",
+            "parallel": "u",
+            "returns": "void",
+            "returnsSet": false,
+            "signature": "pipeline_control.assert_restaurant_review_operator(uuid)",
+            "strict": false,
+            "volatility": "v"
+          },
+          {
+            "acl": "{postgres=X/postgres}",
+            "argModes": null,
+            "argNames": null,
+            "bodySha256": "ed16226885c03b05cb459381cc5ef7c8352506f7ea1f88ae526a6511e4cc1b20",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "kind": "f",
+            "language": "plpgsql",
+            "leakproof": false,
+            "numArgs": 0,
+            "numDefaults": 0,
+            "owner": "postgres",
+            "parallel": "u",
+            "returns": "trigger",
+            "returnsSet": false,
+            "signature": "pipeline_control.bump_admin_evaluation_revision()",
+            "strict": false,
+            "volatility": "v"
+          },
+          {
+            "acl": "{postgres=X/postgres,service_role=X/postgres}",
+            "argModes": null,
+            "argNames": null,
+            "bodySha256": "5fe3230899d7669896f562b5a7afa5e088761b3ecc26f531c13cf0953a569413",
+            "config": [
+              "search_path=\"\"",
+              "lock_timeout=2s"
+            ],
+            "definer": true,
+            "kind": "f",
+            "language": "plpgsql",
+            "leakproof": false,
+            "numArgs": 0,
+            "numDefaults": 0,
+            "owner": "postgres",
+            "parallel": "u",
+            "returns": "void",
+            "returnsSet": false,
+            "signature": "pipeline_control.lock_restaurant_review_catalog_revision()",
+            "strict": false,
+            "volatility": "v"
+          },
+          {
+            "acl": "{postgres=X/postgres,service_role=X/postgres}",
+            "argModes": null,
+            "argNames": null,
+            "bodySha256": "634fcc52f43798089d58f11b588e11501a0518819488a7ce5cc78e318dbebc76",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": false,
+            "kind": "f",
+            "language": "sql",
+            "leakproof": false,
+            "numArgs": 0,
+            "numDefaults": 0,
+            "owner": "postgres",
+            "parallel": "u",
+            "returns": "text",
+            "returnsSet": false,
+            "signature": "public.admin_evaluation_revision()",
+            "strict": false,
+            "volatility": "s"
+          },
+          {
+            "acl": "{postgres=X/postgres,service_role=X/postgres}",
+            "argModes": null,
+            "argNames": [
+              "actor",
+              "action",
+              "expected_version",
+              "preview_hash",
+              "batch_size",
+              "daily_limit"
+            ],
+            "bodySha256": "6fe71abbb6fd73ce34758f5584b6bf5ad6d033f075c22b64161a710d69da1c57",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": false,
+            "kind": "f",
+            "language": "plpgsql",
+            "leakproof": false,
+            "numArgs": 6,
+            "numDefaults": 0,
+            "owner": "postgres",
+            "parallel": "u",
+            "returns": "jsonb",
+            "returnsSet": false,
+            "signature": "public.restaurant_review_automation_configure(uuid,text,text,text,integer,integer)",
+            "strict": false,
+            "volatility": "v"
+          }
+        ],
+        "ledgerCount": 91,
+        "ledgerPrefixCount": 91,
+        "ledgerPrefixDigest": "fa0d91d7badd9ae960938fbb49a153d1b11eed77c147a869fd752bfb411c84e0",
+        "ledgerPrefixLatest": "20261024130000",
+        "ledgerTargetPresent": false,
+        "ownerMembership": [
+          [
+            "supabase_admin",
+            true,
+            false,
+            false
+          ]
+        ],
+        "ownerSet": false,
+        "ownerUsage": false,
+        "revisionServicePrivileges": [
+          true,
+          false,
+          false
+        ],
+        "revisionTable": [
+          "postgres",
+          "{postgres=arwdDxtm/postgres,service_role=r/postgres}",
+          true,
+          false
+        ],
+        "rolesDigest": "31674c1c9bd4438057abe35412f5d66d463034721d74dd40153d8e147215a5db",
+        "serverVersionNum": 170006,
+        "temporaryObjectsAbsent": true
+      }
+    },
+    "terminalReadback": {
+      "query": "SELECT jsonb_build_object(\n 'serverVersionNum',pg_catalog.current_setting('server_version_num')::integer,\n 'ledgerCount',(SELECT count(*) FROM supabase_migrations.schema_migrations),\n 'ledgerPrefixCount',(SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version<>'20261024160000'),\n 'ledgerPrefixLatest',(SELECT max(version COLLATE \"C\") FROM supabase_migrations.schema_migrations WHERE version<>'20261024160000'),\n 'ledgerPrefixDigest',(SELECT pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(jsonb_agg(jsonb_build_array(version,name,statements) ORDER BY version COLLATE \"C\",name COLLATE \"C\")::text,'UTF8')),'hex') FROM supabase_migrations.schema_migrations WHERE version<>'20261024160000'),\n 'ledgerTargetPresent',EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20261024160000'),\n 'functions',(SELECT jsonb_agg(jsonb_build_object('signature',signature,'owner',pg_catalog.pg_get_userbyid(p.proowner),'definer',p.prosecdef,'language',l.lanname,'returns',pg_catalog.format_type(p.prorettype,NULL),'volatility',p.provolatile,'kind',p.prokind,'parallel',p.proparallel,'strict',p.proisstrict,'leakproof',p.proleakproof,'returnsSet',p.proretset,'numArgs',p.pronargs,'argNames',p.proargnames,'argModes',p.proargmodes,'numDefaults',p.pronargdefaults,'config',p.proconfig,'acl',p.proacl::text,'bodySha256',pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc,'UTF8')),'hex')) ORDER BY signature COLLATE \"C\")\n   FROM unnest(ARRAY['public.restaurant_review_automation_configure(uuid,text,text,text,integer,integer)','pipeline_control.lock_restaurant_review_catalog_revision()','pipeline_control.bump_admin_evaluation_revision()','pipeline_control.assert_restaurant_review_operator(uuid)','public.admin_evaluation_revision()']) signature\n   JOIN pg_catalog.pg_proc p ON p.oid=pg_catalog.to_regprocedure(signature) JOIN pg_catalog.pg_language l ON l.oid=p.prolang),\n 'revisionTable',(SELECT jsonb_build_array(pg_catalog.pg_get_userbyid(c.relowner),c.relacl::text,c.relrowsecurity,c.relforcerowsecurity) FROM pg_catalog.pg_class c WHERE c.oid='pipeline_control.admin_evaluation_catalog_revision'::regclass),\n 'revisionServicePrivileges',jsonb_build_array(pg_catalog.has_table_privilege('service_role','pipeline_control.admin_evaluation_catalog_revision','SELECT'),pg_catalog.has_table_privilege('service_role','pipeline_control.admin_evaluation_catalog_revision','INSERT'),pg_catalog.has_table_privilege('service_role','pipeline_control.admin_evaluation_catalog_revision','UPDATE')),\n 'ownerMembership',(SELECT jsonb_agg(jsonb_build_array(pg_catalog.pg_get_userbyid(grantor),admin_option,inherit_option,set_option) ORDER BY grantor) FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole AND member='postgres'::regrole),\n 'ownerSet',pg_catalog.pg_has_role('postgres','privacy_workflow_owner','SET'),\n 'ownerUsage',pg_catalog.pg_has_role('postgres','privacy_workflow_owner','USAGE'),\n 'assertions',(SELECT jsonb_agg(jsonb_build_array(signature,pg_catalog.pg_get_userbyid(p.proowner),p.prosecdef,p.proconfig,p.proacl::text,pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc,'UTF8')),'hex'),pg_catalog.has_function_privilege('postgres',p.oid,'EXECUTE')) ORDER BY signature COLLATE \"C\") FROM unnest(ARRAY['privacy_retention.assert_g014_workflow_owner_contract()','privacy_retention.assert_g014_public_rpc_allowlist()','privacy_retention.assert_g014_definer_contract()','privacy_retention.assert_g014_catalog_contract()']) signature JOIN pg_catalog.pg_proc p ON p.oid=pg_catalog.to_regprocedure(signature)),\n 'rolesDigest',(SELECT pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(jsonb_agg(to_jsonb(r) ORDER BY r.oid)::text,'UTF8')),'hex') FROM pg_catalog.pg_roles r),\n 'defaultAclDigest',(SELECT pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(COALESCE(jsonb_agg(to_jsonb(d) ORDER BY d.oid),'[]'::jsonb)::text,'UTF8')),'hex') FROM pg_catalog.pg_default_acl d),\n 'temporaryObjectsAbsent',pg_catalog.to_regclass('pg_temp.review_activation_install_before') IS NULL AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc WHERE pronamespace=pg_catalog.pg_my_temp_schema() AND proname='review_activation_install_g014_check')\n);",
+      "expected": {
+        "assertions": [
+          [
+            "privacy_retention.assert_g014_catalog_contract()",
+            "privacy_workflow_owner",
+            true,
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}",
+            "5c5971a5578e09db25a41e88474f1da15acfbd658571ba28f29e8c226e4d1883",
+            false
+          ],
+          [
+            "privacy_retention.assert_g014_definer_contract()",
+            "privacy_workflow_owner",
+            true,
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}",
+            "bb8dc8d2e4020f70b2332cbdf6acf465a97cbc4d582f9f14415330247ae34131",
+            false
+          ],
+          [
+            "privacy_retention.assert_g014_public_rpc_allowlist()",
+            "privacy_workflow_owner",
+            true,
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}",
+            "f23203a0a2366eca16b30b256729e859efc556952df8cb75485924153e1188ef",
+            false
+          ],
+          [
+            "privacy_retention.assert_g014_workflow_owner_contract()",
+            "privacy_workflow_owner",
+            false,
+            [
+              "search_path=\"\""
+            ],
+            "{privacy_workflow_owner=X/privacy_workflow_owner}",
+            "345aed9acb1da06262740ef06d81e51855a44c7470aa8b431a23e6fa629aab1d",
+            false
+          ]
+        ],
+        "defaultAclDigest": "f6ed5bc0ab6228b4b407f49ad9383895180c553f074d552b2685c0f745fb4042",
+        "functions": [
+          {
+            "acl": "{postgres=X/postgres,service_role=X/postgres}",
+            "argModes": null,
+            "argNames": [
+              "actor"
+            ],
+            "bodySha256": "f4c5f16ca924a3c071ad4d5939483152d78f7ef654e92db9fd7a92a27a1d681e",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "kind": "f",
+            "language": "plpgsql",
+            "leakproof": false,
+            "numArgs": 1,
+            "numDefaults": 0,
+            "owner": "postgres",
+            "parallel": "u",
+            "returns": "void",
+            "returnsSet": false,
+            "signature": "pipeline_control.assert_restaurant_review_operator(uuid)",
+            "strict": false,
+            "volatility": "v"
+          },
+          {
+            "acl": "{postgres=X/postgres}",
+            "argModes": null,
+            "argNames": null,
+            "bodySha256": "ed16226885c03b05cb459381cc5ef7c8352506f7ea1f88ae526a6511e4cc1b20",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": true,
+            "kind": "f",
+            "language": "plpgsql",
+            "leakproof": false,
+            "numArgs": 0,
+            "numDefaults": 0,
+            "owner": "postgres",
+            "parallel": "u",
+            "returns": "trigger",
+            "returnsSet": false,
+            "signature": "pipeline_control.bump_admin_evaluation_revision()",
+            "strict": false,
+            "volatility": "v"
+          },
+          {
+            "acl": "{postgres=X/postgres,service_role=X/postgres}",
+            "argModes": null,
+            "argNames": null,
+            "bodySha256": "5fe3230899d7669896f562b5a7afa5e088761b3ecc26f531c13cf0953a569413",
+            "config": [
+              "search_path=\"\"",
+              "lock_timeout=2s"
+            ],
+            "definer": true,
+            "kind": "f",
+            "language": "plpgsql",
+            "leakproof": false,
+            "numArgs": 0,
+            "numDefaults": 0,
+            "owner": "postgres",
+            "parallel": "u",
+            "returns": "void",
+            "returnsSet": false,
+            "signature": "pipeline_control.lock_restaurant_review_catalog_revision()",
+            "strict": false,
+            "volatility": "v"
+          },
+          {
+            "acl": "{postgres=X/postgres,service_role=X/postgres}",
+            "argModes": null,
+            "argNames": null,
+            "bodySha256": "634fcc52f43798089d58f11b588e11501a0518819488a7ce5cc78e318dbebc76",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": false,
+            "kind": "f",
+            "language": "sql",
+            "leakproof": false,
+            "numArgs": 0,
+            "numDefaults": 0,
+            "owner": "postgres",
+            "parallel": "u",
+            "returns": "text",
+            "returnsSet": false,
+            "signature": "public.admin_evaluation_revision()",
+            "strict": false,
+            "volatility": "s"
+          },
+          {
+            "acl": "{postgres=X/postgres,service_role=X/postgres}",
+            "argModes": null,
+            "argNames": [
+              "actor",
+              "action",
+              "expected_version",
+              "preview_hash",
+              "batch_size",
+              "daily_limit"
+            ],
+            "bodySha256": "602fffdcdc81fd7b96c70a40ff04a225c53c9a43c4320b778681cd5e7237bf5c",
+            "config": [
+              "search_path=\"\""
+            ],
+            "definer": false,
+            "kind": "f",
+            "language": "plpgsql",
+            "leakproof": false,
+            "numArgs": 6,
+            "numDefaults": 0,
+            "owner": "postgres",
+            "parallel": "u",
+            "returns": "jsonb",
+            "returnsSet": false,
+            "signature": "public.restaurant_review_automation_configure(uuid,text,text,text,integer,integer)",
+            "strict": false,
+            "volatility": "v"
+          }
+        ],
+        "ledgerCount": 92,
+        "ledgerPrefixCount": 91,
+        "ledgerPrefixDigest": "fa0d91d7badd9ae960938fbb49a153d1b11eed77c147a869fd752bfb411c84e0",
+        "ledgerPrefixLatest": "20261024130000",
+        "ledgerTargetPresent": true,
+        "ownerMembership": [
+          [
+            "supabase_admin",
+            true,
+            false,
+            false
+          ]
+        ],
+        "ownerSet": false,
+        "ownerUsage": false,
+        "revisionServicePrivileges": [
+          true,
+          false,
+          false
+        ],
+        "revisionTable": [
+          "postgres",
+          "{postgres=arwdDxtm/postgres,service_role=r/postgres}",
+          true,
+          false
+        ],
+        "rolesDigest": "31674c1c9bd4438057abe35412f5d66d463034721d74dd40153d8e147215a5db",
+        "serverVersionNum": 170006,
+        "temporaryObjectsAbsent": true
+      }
+    },
+    "candidatePath": "backend/supabase/candidates/20261024160000_restaurant_review_activation_lock.sql",
+    "bytes": 16677,
+    "statementCount": 4,
+    "originalVectorSha256": "65b506ca4d44ba47b96d5b2efa6c6b593d56bfe2db1f4226cf0069aaf3997c91"
+  },
+  "executionContract": {
+    "compiler": "apps/web/scripts/supabase-migration-transaction.mjs",
+    "compilerSha256": "c67bdff4c63b1bf1b4a157863b3eb5253b5973a8fb54b7fd49351270787bed26",
+    "serializerKey": "tzudong:review-media-sql-successor:workflow:v1",
+    "serializerSql": "SET LOCAL lock_timeout='2s'; SET LOCAL statement_timeout='120s';\nDO $provider_budget_serializer$ BEGIN\n IF NOT pg_catalog.pg_try_advisory_xact_lock(pg_catalog.hashtextextended('tzudong:review-media-sql-successor:workflow:v1',0)) THEN\n  RAISE EXCEPTION 'PROVIDER_BUDGET_SERIALIZER_BUSY' USING ERRCODE='55P03';\n END IF;\nEND $provider_budget_serializer$;\n",
+    "serializerSqlSha256": "6eda6208ce3e856a735f1ddc48ef67e1099b93a6a0581f283b9ed64cf7b21e6f",
+    "order": "one caller-owned transaction: shared serializer first, unchanged compiler ledger lock second, exact prior91, four source statements with full G014 pre/post, original vector insert, exact terminal92, commit.",
+    "caller": "Existing legacy/budget/thumbnail callers do not admit this manifest. A distinct source-bound owner execution with original durable admission/journal and read-only reconciliation is required. No override or automatic resend.",
+    "writerCustody": "Authenticated repository owner controls privileged catalog/ledger writers until original attempt reconciled; ordinary business DML may continue.",
+    "predecessor": "Budget original durable attempt independently reconciled committed; preserve both predecessor journals.",
+    "target": "aqlcofblfxdrjhhdmarw / postgres DB / postgres non-superuser / PG170006 / verify-full pinned CA",
+    "policyActivation": "separate existing guarded admin Preview -> Confirm -> Apply -> Readback; current50/50 preserved."
+  },
+  "provenance": {
+    "sqlValidationReceiptSha256": "f923e9f95304ae8616c90437a35ca6d5518c87c346f6cf97b3feffdbeff72786",
+    "cloneReadbackContractSha256": "e9e92dada4e1dfe007d6cdead6779f576121ca02aa47789585d99865450f518a",
+    "operatingCatalogReadOnlyReceiptSha256": "9dfcedc18cfbb88968dd87deca44ca22335e6794600bf26dcb4cf0f8b56fe4ed",
+    "prospectiveLedgerReadOnlyReceiptSha256": "f7ea774152c124eff25161ab886af08fe0550b51f87daa136d18db7714f570ac",
+    "operatingObservedLedgerCount": 90,
+    "prospectivePriorLedgerCount": 91,
+    "operatingVsCloneDeltaFields": [
+      "defaultAclDigest",
+      "ledgerCount",
+      "ledgerPrefixCount",
+      "ledgerPrefixDigest",
+      "ledgerPrefixLatest",
+      "rolesDigest"
+    ],
+    "rolesAndDefaults": "Pin the actual read-only operating digests; the SQL snapshots and preserves these fields in the same transaction. Never normalize or mutate operating catalog to match the clone."
+  },
+  "remainingDependencies": [
+    "protected develop -> data -> main promotion",
+    "fresh committed budget91 predecessor plus exact operating prior",
+    "separate fixed owner admission/custody execution and original-attempt reconciliation",
+    "actual guarded UI activation/readback",
+    "external Pro -> Gemini -> Pro review remains incomplete with existing reservations preserved"
+  ]
+}
