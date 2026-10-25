@@ -83,8 +83,6 @@ def classify_evaluation_row(
 ) -> str:
     hosted = set(hosted_youtube_ids)
     video_id = row_youtube_id(row)
-    if video_id and video_id in hosted:
-        return "skip_already_on_hosted"
     if not video_id:
         return "skip_no_video"
     if bool(row.get("is_missing")):
@@ -379,86 +377,5 @@ def apply_pending_candidates(
     presented_preview_sha256: str,
     fetch=None,
 ) -> dict[str, Any]:
-    """Insert preview-selected pending rows only. Never overwrite existing restaurants."""
-    assert_hosted_target(url)
-    assert_apply_authorized(
-        preview,
-        environment=environment,
-        presented_preview_sha256=presented_preview_sha256,
-    )
-    allowed = set(preview.get("applyCandidateVideoIds") or [])
-    if preview.get("applyCandidateCount") != len(allowed):
-        _deny("candidate_count_mismatch")
-    if preview.get("dockerRestaurantApply"):
-        _deny("forbidden_local_docker_apply")
-    rows_list = list(evaluation_rows)
-    hosted_for_rows = [
-        video_id
-        for row in rows_list
-        if (video_id := row_youtube_id(row)) and video_id not in allowed
-    ]
-    if apply_payload_sha256(rows_list, hosted_for_rows) != preview.get("applyPayloadSha256"):
-        _deny("apply_payload_mismatch")
-    inserted: list[str] = []
-    skipped: list[str] = []
-    unresolved: list[str] = []
-    # Per-candidate mutually-exclusive outcome by stable identity (video id).
-    # Precedence keeps a candidate in exactly one bucket when duplicate rows map
-    # to the same identity: an applied record dominates an already-present skip,
-    # which dominates an unresolved classification (R4.4).
-    _APPLIED, _PRESENT, _UNRESOLVED = 3, 2, 1
-    outcome: dict[str, int] = {}
-    requester = fetch or _json_request
-    for row in rows_list:
-        video_id = row_youtube_id(row)
-        if video_id is None or video_id not in allowed:
-            continue
-        if classify_evaluation_row(row, hosted_for_rows) not in APPLY_CANDIDATE_LABELS:
-            continue
-        payload = pending_insert_payload(row)
-        if payload["status"] != "pending":
-            _deny("approved_status_forbidden")
-        status, _body = requester(
-            f"{url.rstrip('/')}/rest/v1/restaurants?on_conflict=trace_id",
-            key=service_role_key,
-            method="POST",
-            payload=payload,
-            extra_headers={
-                "Prefer": "return=minimal,resolution=ignore-duplicates",
-            },
-        )
-        if status in {201, 200}:
-            inserted.append(video_id)
-            rank = _APPLIED
-        elif status == 409:
-            # Already present on hosted (insert-if-absent): skip, never duplicate.
-            skipped.append(video_id)
-            rank = _PRESENT
-        else:
-            # Hosted presence could not be determined for this candidate. Skip it
-            # without creating a record and classify as unresolved rather than
-            # aborting the whole run; applied records are never rolled back
-            # (R4.6, R4.7).
-            unresolved.append(video_id)
-            rank = _UNRESOLVED
-        if rank > outcome.get(video_id, 0):
-            outcome[video_id] = rank
-    # Every admitted candidate must have been processed into some bucket; the
-    # three reflection lists then partition the processed set (R4.4).
-    unexpected = sorted(allowed - set(outcome))
-    if unexpected:
-        _deny("candidate_not_applied")
-    reflection = {
-        "applied": sorted(v for v, r in outcome.items() if r == _APPLIED),
-        "skippedAlreadyPresent": sorted(
-            v for v, r in outcome.items() if r == _PRESENT
-        ),
-        "unresolved": sorted(v for v, r in outcome.items() if r == _UNRESOLVED),
-    }
-    return {
-        "insertedVideoIds": inserted,
-        "skippedExistingVideoIds": skipped,
-        "insertedCount": len(inserted),
-        "previewSha256": presented_preview_sha256,
-        "reflection": reflection,
-    }
+    """Retired legacy entry: direct POST cannot bypass shared request custody."""
+    _deny("pending_shared_custody_required")

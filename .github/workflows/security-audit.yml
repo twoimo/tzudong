@@ -31,6 +31,13 @@ on:
       - 'backend/bin/schema_mirror_report.py'
       - 'backend/bin/seed_fixture_guard.py'
       - 'backend/bin/tests/**'
+      - 'backend/bin/apply_hosted_pending_candidates.py'
+      - 'backend/bin/evaluate_new_youtube_videos.py'
+      - 'backend/bin/terminal_completion_cache.py'
+      - 'backend/supabase/scripts/hosted_data_plane.py'
+      - 'backend/supabase/scripts/hosted_pending_*.py'
+      - 'backend/supabase/scripts/test_hosted_pending_*.py'
+      - 'backend/supabase/candidates/*hosted_pending*.sql'
       - 'backend/bin/run_parallel_laaj.py'
       - 'backend/utils/**'
       - 'backend/restaurant-evaluation/scripts/**'
@@ -326,6 +333,34 @@ jobs:
 
       - name: Install focused test dependencies
         run: python -m pip install --disable-pip-version-check -r backend/test-requirements.txt
+
+      - name: Verify shared pending custody and terminal cache
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import os
+          import stat
+          from backend.supabase.scripts.hosted_pending_source import observe_source_revision
+          root = Path.cwd()
+          parents = [{"depth": i, "uid": p.lstat().st_uid,
+                      "mode": stat.S_IMODE(p.lstat().st_mode)}
+                     for i, p in enumerate((root, *root.parents))]
+          print(json.dumps({"nativeUid": os.getuid(), "sourceParents": parents}))
+          print("pendingSource=" + observe_source_revision(root))
+          PY
+          python -m unittest \
+            backend.supabase.scripts.test_hosted_pending_operation \
+            backend.supabase.scripts.test_hosted_pending_integration \
+            backend.supabase.scripts.test_hosted_pending_source \
+            backend.supabase.scripts.test_hosted_pending_resumption \
+            backend.supabase.scripts.test_hosted_pending_source_linux \
+            backend.bin.tests.test_evaluate_new_youtube_videos \
+            backend.bin.tests.test_hosted_apply_cli \
+            backend.bin.tests.test_local_pipeline_freshness \
+            backend.bin.tests.test_terminal_completion_cache \
+            backend.utils.tests.test_privacy_log
 
       - name: Set up pinned pipeline Node runtime
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6

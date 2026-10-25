@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Apply preview-selected pending restaurants to hosted Supabase.
 
-Does not flip PIPELINE_HOSTED_APPLY_ENABLED. Inserts only new youtube IDs
-classified as apply_candidate_pending_geocoded. Existing hosted rows stay
-untouched.
+Does not flip PIPELINE_HOSTED_APPLY_ENABLED. The shared RPC reconciles the
+complete current candidate set for each video and preserves existing rows.
 """
 
 from __future__ import annotations
@@ -12,20 +11,26 @@ import argparse
 import json
 import os
 import sys
+from functools import partial
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "backend" / "supabase" / "scripts"))
 
-from hosted_data_plane import (  # noqa: E402
-    APPROVAL_ENV,
-    HOSTED_URL,
+from backend.supabase.scripts.hosted_data_plane import (  # noqa: E402
+    APPROVAL_ENV, APPLY_CANDIDATE_LABELS, classify_evaluation_row, pending_insert_payload,
     HostedDataPlaneError,
-    apply_pending_candidates,
+    assert_apply_authorized,
     assert_hosted_target,
     build_apply_preview,
     fetch_hosted_restaurant_snapshot,
     load_evaluation_rows,
+)
+
+
+from backend.supabase.scripts.hosted_pending_operation import (
+    current_source_revision, rpc_transport, reconcile_request, apply_current_sets,
 )
 
 
@@ -45,12 +50,19 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--preview-out", default="")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--reconcile-request", default="")
+    parser.add_argument("--channel", default="tzuyang")
     args = parser.parse_args(argv)
 
     url = os.environ.get("SUPABASE_URL", "").strip()
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     try:
         assert_hosted_target(url)
+        transport=partial(rpc_transport,service_role_key=key)
+        if args.reconcile_request:
+            result=reconcile_request(args.reconcile_request,transport=transport)
+            print(json.dumps({'requestId':result.get('requestId'),'state':result.get('state'),'replayAllowed':False}))
+            return 0 if result.get('state')=='committed' else 2
         hosted_ids, hosted_youtube = fetch_hosted_restaurant_snapshot(
             url=url, service_role_key=key
         )
@@ -79,20 +91,18 @@ def main(argv: list[str] | None = None) -> int:
         print("apply=skipped")
         return 0
     try:
-        result = apply_pending_candidates(
-            preview=preview,
-            evaluation_rows=rows,
-            url=url,
-            service_role_key=key,
-            environment=os.environ,
-            presented_preview_sha256=preview["previewSha256"],
-        )
+        assert_apply_authorized(preview,environment=os.environ,presented_preview_sha256=preview['previewSha256'])
+        evaluation=Path(args.evaluation).resolve().parent.parent
+        crawling=REPO_ROOT/'backend/restaurant-crawling/data'/args.channel
+        revision=current_source_revision(REPO_ROOT)
+        videos=preview['applyCandidateVideoIds']
+        result=apply_current_sets(evaluation=evaluation,crawling=crawling,channel=args.channel,
+            revision=revision,environment=os.environ,videos=videos,transport=transport,
+            expected_payloads=[pending_insert_payload(r) for r in rows if classify_evaluation_row(r,[]) in APPLY_CANDIDATE_LABELS])
     except HostedDataPlaneError as exc:
         print(f"error={exc}")
         return 2
-    print(f"insertedCount={result['insertedCount']}")
-    print(f"insertedVideoIds={result['insertedVideoIds']}")
-    print(f"skippedExistingVideoIds={result['skippedExistingVideoIds']}")
+    print('requests='+json.dumps(result['requests'],sort_keys=True))
     reflection = result.get("reflection") or {
         "applied": [],
         "skippedAlreadyPresent": [],
