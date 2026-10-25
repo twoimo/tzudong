@@ -3,7 +3,6 @@ from __future__ import annotations
 import contextlib
 import io
 import json
-import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -129,29 +128,27 @@ class PrivacyLogTests(unittest.TestCase):
             self.assertNotIn("raw OCR payload", output)
             self.assertIn(REDACTED, output)
 
-    def test_subprocess_output_is_redacted_bounded_and_keeps_nonzero_status(self) -> None:
-        result = subprocess.CompletedProcess(
-            ["fake-command"],
-            9,
+    def test_subprocess_status_omits_diagnostics_and_keeps_nonzero_status(self) -> None:
+        result = nodes.CommandResult(
+            args=("fake-command",),
+            returncode=9,
             stdout="token=subprocess-secret " + ("x" * 5000),
             stderr="Authorization: Bearer subprocess-error-secret",
+            reason_code=nodes.SUBPROCESS_OK,
         )
         stdout = io.StringIO()
         stderr = io.StringIO()
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            exit_code = nodes._emit_subprocess_output(result)
+            nodes._log_subprocess_result("test", result, 1.0)
 
-        self.assertEqual(exit_code, 9)
         self.assertEqual(result.returncode, 9)
         self.assertNotIn("subprocess-secret", stdout.getvalue())
         self.assertNotIn("subprocess-error-secret", stderr.getvalue())
         self.assertLessEqual(len(stdout.getvalue()), 4096)
-        self.assertIn(REDACTED, stdout.getvalue())
-        self.assertIn(REDACTED, stderr.getvalue())
-        status_log = io.StringIO()
-        with contextlib.redirect_stdout(status_log):
-            nodes._log_subprocess_result("test", result, 1.0)
-        self.assertIn("실패", status_log.getvalue())
+        self.assertNotIn("x" * 100, stdout.getvalue())
+        self.assertEqual(stderr.getvalue(), "")
+        self.assertIn("실패", stdout.getvalue())
+        self.assertIn(nodes.SUBPROCESS_EXIT_NONZERO, stdout.getvalue())
 
 
 if __name__ == "__main__":
