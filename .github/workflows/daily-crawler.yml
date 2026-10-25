@@ -968,7 +968,23 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Preflight hosted pending apply env
         run: python3 backend/bin/check_env_contract.py --profile hosted-pending-apply
+      # Cache transports public input/receipt bytes only. A hit never bypasses
+      # the evaluator's current source, recipe and terminal-output checks.
+      - name: Restore terminal input packet
+        id: terminal_cache
+        continue-on-error: true
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0, node24
+        with:
+          path: ${{ runner.temp }}/tzudong-terminal-cache/terminal-outcomes.json.gz
+          key: hosted-terminal-v1-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: hosted-terminal-v1-${{ runner.os }}-
+      - name: Import bounded terminal input packet
+        continue-on-error: true
+        run: |
+          python3 backend/bin/terminal_completion_cache.py restore \
+            --cache-file "$RUNNER_TEMP/tzudong-terminal-cache/terminal-outcomes.json.gz"
       - name: Evaluate new videos then pending-apply
+        id: hosted_eval
         env:
           TZUDONG_PIPELINE_SOURCE: github_actions
         run: |
@@ -979,3 +995,17 @@ jobs:
             --limit 3 \
             --review-automation \
             --preview-out backend/log/cron/hosted-apply-preview.json
+      - name: Export current terminal inputs
+        id: terminal_export
+        if: ${{ always() && !cancelled() && (steps.hosted_eval.outcome == 'success' || steps.hosted_eval.outcome == 'failure') }}
+        continue-on-error: true
+        run: |
+          python3 backend/bin/terminal_completion_cache.py export \
+            --cache-file "$RUNNER_TEMP/tzudong-terminal-cache/terminal-outcomes.json.gz"
+      - name: Save terminal input packet
+        if: ${{ always() && !cancelled() && steps.terminal_export.outcome == 'success' }}
+        continue-on-error: true
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0, node24
+        with:
+          path: ${{ runner.temp }}/tzudong-terminal-cache/terminal-outcomes.json.gz
+          key: hosted-terminal-v1-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
