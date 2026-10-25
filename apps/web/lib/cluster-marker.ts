@@ -136,6 +136,11 @@ const CATEGORY_IMAGES: Record<string, CategoryMarkerImage> = {
   '제철': createCategoryMarkerImage('seasonal'),
 };
 
+// One finite inventory shared by rendered pictures and the map-owned image primer.
+// Multiple category labels can point to the same asset (일식 / 돈까스·회).
+export const getCategoryMarkerImages = (): readonly CategoryMarkerImage[] =>
+  [...new Map(Object.values(CATEGORY_IMAGES).map(image => [image.webp, image])).values()];
+
 /**
  * 카테고리 이미지 경로 가져오기
  */
