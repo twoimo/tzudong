@@ -37,6 +37,13 @@ def operation(number, vid, **changes):
             'currentSetPresent': True, 'originalRowsStillPresent': True, **changes}
 
 
+def sibling_operation(number, vid, count):
+    item = operation(number, vid)
+    rows = [{**item['currentRows'][0], 'identitySha': f'{number * 10000 + i:064x}',
+             'id': str(uuid.UUID(int=number * 10000 + i + 1))} for i in range(count)]
+    return {**item, 'currentRows': rows, 'rows': [{**row, 'action': 'inserted'} for row in rows]}
+
+
 class DiscoveryStore:
     """Model the RPC's operation-count ceiling, independently of video count."""
     def __init__(self, operations, holds=()):
@@ -209,10 +216,125 @@ class TransportTests(unittest.TestCase):
     observe = DiscoveryTests.observe
     assert_read_trace = DiscoveryTests.assert_read_trace
 
+    def observe_bodies(self, videos, store, encode=None):
+        streams = []; sizes = []
+        def open_request(request, timeout):
+            self.assertEqual(request.method, 'GET')
+            self.assertIsNone(request.data)
+            self.assertTrue(urlsplit(request.full_url).path.endswith('/hosted_pending_read'))
+            query = parse_qs(urlsplit(request.full_url).query)
+            self.assertEqual(set(query), {'video_ids'})
+            group = query['video_ids'][0][1:-1].split(',')
+            value = store('read', {'video_ids': group})
+            raw = encode(group, value) if encode else json.dumps(value).encode()
+            sizes.append(len(raw)); stream = ErrorBody(raw); streams.append(stream)
+            return stream
+        with patch.object(op, 'build_opener', return_value=Mock(open=open_request)):
+            result = self.observe(videos, self.real_transport)
+        for stream in streams:
+            self.assertEqual(stream.read_sizes, [262145])
+            self.assertTrue(stream.closed)
+        self.assert_read_trace(store.calls, videos)
+        return result, sizes
+
+    def test_large_successful_discovery_splits_without_operation_count_overflow(self):
+        videos = [video(i) for i in range(100)]
+        store = DiscoveryStore([sibling_operation(i, vid, 10) for i, vid in enumerate(videos)])
+        result, sizes = self.observe_bodies(videos, store)
+        self.assertEqual(result, {vid: {'state': 'delivered_snapshot', 'requestId': item['requestId']}
+                                  for vid, item in zip(videos, store.operations)})
+        self.assertEqual(store.counts, [100, 50, 50])
+        self.assertGreater(sizes[0], 262144)
+        self.assertTrue(all(size <= 262144 for size in sizes[1:]))
+
+    def test_body_overflow_singleton_or_malformed_child_preserves_valid_siblings(self):
+        videos = [video(i) for i in range(5)]
+        for blocked in (videos[0], videos[3]):
+            for malformed in (False, True):
+                with self.subTest(blocked=blocked, malformed=malformed):
+                    records = [sibling_operation(i, vid, 100 if vid == blocked else 1)
+                               for i, vid in enumerate(videos[:4])]
+                    records += [sibling_operation(1000 + i, blocked, 100) for i in range(9)]
+                    store = DiscoveryStore(records)
+                    def encode(group, value):
+                        if malformed and group == [blocked]:return b'{"videos":'
+                        return json.dumps(value).encode()
+                    result, sizes = self.observe_bodies(videos, store, encode)
+                    self.assertGreater(sizes[0], 262144)
+                    self.assertTrue(all(count <= 100 for count in store.counts))
+                    self.assertEqual(result[blocked], {'state': 'unconfirmed', 'requestId': None})
+                    for vid in videos:
+                        if vid != blocked:
+                            self.assertEqual(result[vid]['state'], 'legacy_unresolved' if vid == videos[4] else 'delivered_snapshot')
+                    self.assertEqual(sum(body['video_ids'] == [blocked] for _, body in store.calls), 1)
+
+    def test_oversized_malformed_bodies_terminate_at_singletons(self):
+        videos = [video(i) for i in range(5)]
+        store = DiscoveryStore([])
+        result, _ = self.observe_bodies(videos, store, lambda *_: b'x' * 262145)
+        self.assertEqual(result, {vid: {'state': 'unconfirmed', 'requestId': None} for vid in videos})
+        self.assertEqual(len(store.calls), 2 * len(videos) - 1)
+
+    def test_successful_body_boundary_and_small_malformed_body(self):
+        videos = [video(0), video(1)]
+        for size, calls in ((262144, 1), (262145, 3)):
+            with self.subTest(size=size):
+                store = DiscoveryStore([])
+                def encode(group, value):
+                    raw = json.dumps(value).encode()
+                    return raw + b' ' * (size - len(raw)) if group == videos else raw
+                result, sizes = self.observe_bodies(videos, store, encode)
+                self.assertEqual(sizes[0], size)
+                self.assertEqual({value['state'] for value in result.values()}, {'legacy_unresolved'})
+                self.assertEqual(len(store.calls), calls)
+        for raw in (b'{"videos":', b'x' * 262144):
+            store = DiscoveryStore([])
+            result, _ = self.observe_bodies(videos, store, lambda *_: raw)
+            self.assertEqual(result, {vid: {'state': 'unconfirmed', 'requestId': None} for vid in videos})
+            self.assertEqual(len(store.calls), 1)
+
+    def test_oversized_successful_writes_and_request_reads_remain_generic(self):
+        rid = str(uuid.uuid4())
+        cases = [(action, {'video_ids': [video(0)]}) for action in ('prepare', 'claim', 'apply')]
+        cases += [('read', {'request_id': rid}), ('read', {'request_id': rid, 'video_ids': [video(0)]})]
+        for action, body in cases:
+            with self.subTest(action=action, body_keys=sorted(body)):
+                stream = ErrorBody(json.dumps({'padding': RAW_SENTINEL + 'x' * 262145}).encode())
+                client = Mock(); client.open.return_value = stream
+                with patch.object(op, 'build_opener', return_value=client):
+                    with self.assertRaises(HostedDataPlaneError) as raised:
+                        self.real_transport(action, body)
+                self.assertEqual(str(raised.exception), 'pending_transport_failed')
+                self.assertNotIn(RAW_SENTINEL, ''.join(traceback.format_exception(raised.exception)))
+                client.open.assert_called_once()
+                self.assertEqual(stream.read_sizes, [262145])
+                self.assertTrue(stream.closed)
+
+    def test_oversized_write_ack_never_retries_or_advances_to_next_write(self):
+        from backend.supabase.scripts.test_hosted_pending_operation import candidate, FakeRPC
+        writes = ['prepare', 'claim', 'apply']
+        for phase in writes:
+            with self.subTest(phase=phase):
+                rpc = FakeRPC(); calls = []
+                def transport(action, body):
+                    calls.append(action)
+                    value = rpc(action, body)
+                    if action == phase:return self.real_transport(action, body)
+                    return value
+                stream = ErrorBody(json.dumps({'padding': 'x' * 262145}).encode())
+                client = Mock(); client.open.return_value = stream
+                with patch.object(op, 'build_opener', return_value=client):
+                    result = op.submit_once(candidate(), transport=transport)
+                self.assertEqual(result['state'], {'prepare': 'prepared', 'claim': 'claimed', 'apply': 'committed'}[phase])
+                self.assertEqual(calls, ['read', *writes[:writes.index(phase) + 1], 'read'])
+                self.assertFalse(result['replayAllowed'])
+                client.open.assert_called_once()
+
     def assert_transport_error(self, raw, expected, action='read', body=None):
         body = {'video_ids': [video(0), video(1)]} if body is None else body
         stream = ErrorBody(raw)
         error = HTTPError('https://offline.invalid/rpc', 500, RAW_SENTINEL, {}, stream)
+        self.addCleanup(error.close)
         client = Mock()
         client.open.side_effect = error
         output = io.StringIO()
