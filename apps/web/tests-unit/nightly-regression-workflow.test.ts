@@ -93,6 +93,41 @@ describe("nightly regression package and source contracts", () => {
     );
   });
 
+  test("preserves an explicit browser cache through nightly unit child boundaries", async () => {
+    const declarations = sourceBlock(nightlyRunnerSource, "const hostedIdentityKeys = [", "const curatedBrowserSpecs = [");
+    const picker = sourceBlock(nightlyRunnerSource, "const pickEnvironment =", "function usage()");
+    const unit = sourceBlock(nightlyRunnerSource, "async function runUnitRegression(environment)", "const localDockerBaseEnvironmentKeys =");
+    const observations: Array<{ cache: string | null; providerSecretPresent: boolean }> = [];
+    const run = new Function("process", "runCommand", `${declarations}\n${picker}\n${unit}
+      return async environment => {
+        const keys = environment.NIGHTLY_MODE === 'local' ? localRuntimeKeys : hostedRuntimeKeys;
+        await runUnitRegression(pickEnvironment(environment, [...keys]));
+      };`)(
+      { env: {} },
+      async (command: string, args: string[], options: { env: Record<string, string> }) => {
+        expect([command, ...args]).toEqual(["bun", "run", "test:unit"]);
+        const probe = spawnSync(process.execPath, ["-e", `console.log(JSON.stringify({
+          cache: process.env.PLAYWRIGHT_BROWSERS_PATH ?? null,
+          providerSecretPresent: ['OPENAI_API_KEY', 'GEMINI_API_KEY', 'DATABASE_URL'].some(k => k in process.env)
+        }))`], { env: options.env, encoding: "utf8" });
+        expect(probe.status).toBe(0);
+        observations.push(JSON.parse(probe.stdout.trim()));
+        return { code: probe.status };
+      },
+    ) as (environment: Record<string, string>) => Promise<void>;
+    const cache = join(tmpdir(), "task-owned-cft");
+    for (const mode of ["local", "hosted"]) {
+      await run({ NIGHTLY_MODE: mode, PLAYWRIGHT_BROWSERS_PATH: cache,
+        OPENAI_API_KEY: "fixture-provider-secret", GEMINI_API_KEY: "fixture-provider-secret", DATABASE_URL: "fixture-database-secret" });
+    }
+    await run({ NIGHTLY_MODE: "local" });
+    expect(observations).toEqual([
+      { cache, providerSecretPresent: false },
+      { cache, providerSecretPresent: false },
+      { cache: null, providerSecretPresent: false },
+    ]);
+  });
+
   test("passes only validated GitHub socket admission context to local stack children", () => {
     const block = sourceBlock(
       nightlyRunnerSource,
