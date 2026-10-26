@@ -13,7 +13,7 @@ import { createThumbnailPsqlRunner } from './thumbnail-production-successor.mjs'
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 export const CONTRACT_PATH = '.github/g014-guardian-auth-fk-install.v1.json';
-export const CONTRACT_SHA256 = '2bb8b76cb1ed7d7ee5cee97aec278998463135cfdd0f5deee500b364abb5448b';
+export const CONTRACT_SHA256 = '13f91cd755cf1b8c063bdd4b0fad1ce88ca7a127503aa69fa731a883e454f3d9';
 const SOURCE_PATH = 'backend/supabase/migrations/20261026140000_g014_guardian_auth_fk_lock_privilege.sql';
 const SOURCE_SHA256 = 'd95a1a30f76c0f8e3beea405549b39de1fe0bbc76833851af48640bb29d8a9cf';
 const VERSION = '20261026140000';

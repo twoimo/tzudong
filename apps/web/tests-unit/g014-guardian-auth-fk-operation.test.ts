@@ -56,14 +56,22 @@ function sequence(o:any,{lost=false,after=states(o).committed,rollback=states(o)
   };return {calls,journal,runner};
 }
 
-describe('pinned disabled authoring',()=>{
-  test('unknown97 is explicit and apply stops before transport or journal access',()=>{
-    expect(original.contract.executionEnabled).toBe(false);
-    expect(original.migration.terminalReadback.expected).toBeNull();
-    expect(pendingFields(original).length).toBeGreaterThan(0);
+describe('pinned projected expectations and owner admission',()=>{
+  test('disabled or unfinished97 still stops before transport or journal access',()=>{
     let calls=0;
-    expect(()=>executeOperation('apply',original,options(original,()=>{calls++;},null))).toThrow('EXECUTION_DISABLED_OR_UNBOUND');
-    expect(()=>runOperation('apply',{databaseUrl:'invalid'})).toThrow('EXECUTION_DISABLED_OR_UNBOUND');
+    const disabled=structuredClone(original);disabled.contract.executionEnabled=false;
+    const unknown=structuredClone(original);unknown.migration.terminalReadback.expected=null;
+    for(const o of [disabled,unknown]) {
+      expect(()=>executeOperation('apply',o,options(o,()=>{calls++;},null))).toThrow('EXECUTION_DISABLED_OR_UNBOUND');
+    }
+    expect(calls).toBe(0);
+  });
+  test('bound source cannot apply without its original journal or a valid database target',()=>{
+    expect(pendingFields(original)).toEqual([]);
+    expect(()=>assertBoundExpectations(original)).not.toThrow();
+    let calls=0;
+    expect(()=>executeOperation('apply',original,options(original,()=>{calls++;},null))).toThrow('ORIGINAL_JOURNAL_REQUIRED');
+    expect(()=>runOperation('apply',{databaseUrl:'invalid'})).toThrow('SUCCESSOR_DATABASE_TARGET_INVALID');
     expect(calls).toBe(0);
   });
   test('changed source and contract bytes are rejected',()=>{
@@ -80,7 +88,8 @@ describe('pinned disabled authoring',()=>{
     expect(createHash('sha256').update(JSON.stringify(original.plan.originalVector)).digest('hex')).toBe(original.contract.statementVectorSha256);
   });
   test('unknown observe reports unbound without claiming completion',()=>{
-    const v=executeOperation('observe',original,options(original,()=>emit({state:'predecessor_not_ready'}),null));
+    const unknown=structuredClone(original);unknown.migration.terminalReadback.expected=null;
+    const v=executeOperation('observe',unknown,options(unknown,()=>emit({state:'predecessor_not_ready'}),null));
     expect(v.state).toBe('unbound');expect(v.pendingFields.length).toBeGreaterThan(0);
   });
   test('reader branches absent predecessor before planning nonexistent96 relations',()=>{
