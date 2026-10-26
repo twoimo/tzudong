@@ -6,8 +6,8 @@ const owner='11111111-1111-4111-8111-111111111111';
 const other='22222222-2222-4222-8222-222222222222';
 const kinds=['review','submission','edit'];
 
-async function duplicateRecoveryRows(page: Page, kind: string, seed = false) {
- return page.evaluate(async ({kind, owner, seed}) => {
+async function duplicateRecoveryRows(page: Page, kind: string, seed = false, endpoint = false) {
+ return page.evaluate(async ({kind, owner, seed, endpoint}) => {
   const dbName = kind === 'review' ? 'tzudong-review-drafts' : 'tzudong-edit-request-drafts';
   const storeName = kind === 'review' ? 'review-drafts' : 'edit-request-drafts';
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -24,14 +24,20 @@ async function duplicateRecoveryRows(page: Page, kind: string, seed = false) {
     request.onsuccess = () => {
      const template = request.result;
      store.delete(['v3-' + owner, template.restaurantId]);
-     for (const prefix of ['v3-', 'v2-', '']) {
-      for (let i = 0; i < (prefix === '' ? 15 : 10); i++) {
+     for (const prefix of endpoint ? ['v3-', 'v2-'] : ['v3-', 'v2-', '']) {
+      for (let i = 0; i < (endpoint ? 19 : prefix === '' ? 15 : 10); i++) {
        store.put({...template, userId: prefix + owner, restaurantId: 'r-' + String(i).padStart(3, '0')});
       }
      }
+     if (endpoint) {
+      store.put({...template, userId: 'v2-' + owner, restaurantId: '\uffff'});
+      store.put({...template, userId: owner, restaurantId: 'r-new'});
+      // Keep the endpoint outside bounded maintenance sweeps during this case.
+      for (let i = 0; i < 300; i++) store.put({...template, userId: 'a-padding-' + i, restaurantId: 'r-padding'});
+     }
     };
    } else {
-    const request = store.getAll(); // This fixture contains exactly 35 synthetic rows.
+    const request = store.getAll(); // Only bounded synthetic fixture rows.
     request.onsuccess = () => { rows = request.result; };
    }
    await new Promise<void>((resolve, reject) => {
@@ -40,7 +46,38 @@ async function duplicateRecoveryRows(page: Page, kind: string, seed = false) {
    });
    return rows;
   } finally { db.close(); }
- }, {kind, owner, seed});
+ }, {kind, owner, seed, endpoint});
+}
+
+for (const kind of ['review', 'edit']) {
+ test(`${kind} native upper endpoint advances to the next legacy namespace`, async () => {
+  const f = await setup();
+  try {
+   const current = await f.page(false);
+   await current.evaluate(() => (globalThis as unknown as TabFixture).__tab.activate());
+   await save(current, kind, '보존할 합성 원문');
+   await duplicateRecoveryRows(current, kind, true, true);
+   expect(await current.evaluate(owner => {
+    try { IDBKeyRange.bound(['v2-' + owner, '\uffff'], ['v2-' + owner, '\uffff'], true); return null; }
+    catch (error) { return (error as DOMException).name; }
+   }, owner)).toBe('DataError');
+   const before = await duplicateRecoveryRows(current, kind);
+   expect(await current.evaluate(kind => (globalThis as unknown as TabFixture).__tab.recover(kind), kind)).toBe(0);
+   expect(await duplicateRecoveryRows(current, kind)).toEqual(before);
+   expect(await current.evaluate(kind => (globalThis as unknown as TabFixture).__tab.recover(kind), kind)).toBe(1);
+   const after = await duplicateRecoveryRows(current, kind);
+   expect(after.filter(row => row.userId === 'v3-' + owner)).toHaveLength(20);
+   expect(after.find(row => row.userId === 'v2-' + owner && row.restaurantId === '\uffff'))
+    .toEqual(before.find(row => row.userId === 'v2-' + owner && row.restaurantId === '\uffff'));
+   expect(after.some(row => row.userId === 'v3-' + owner && row.restaurantId === '\uffff')).toBe(false);
+   expect(after.some(row => row.userId === owner && row.restaurantId === 'r-new')).toBe(false);
+   for (const row of before.filter(row => row.userId === 'v3-' + owner)) {
+    expect(after.find(item => item.userId === row.userId && item.restaurantId === row.restaurantId)).toEqual(row);
+   }
+   expect(await current.evaluate(kind => (globalThis as unknown as TabFixture).__tab.recover(kind), kind)).toBe(0);
+   expect(await duplicateRecoveryRows(current, kind)).toEqual(after);
+  } finally { await f.browser.close(); }
+ }, 20000);
 }
 
 for (const kind of ['review', 'edit']) for (const fail of [false, true]) {

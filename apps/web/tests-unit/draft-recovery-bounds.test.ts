@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 if (process.env.TZUDONG_DRAFT_RECOVERY_BOUNDS_WORKER === '1') {
     await import('./fixtures/draft-recovery-bounds-cases');
 } else {
-    test('draft recovery and submit bounds pass their twelve isolated store cases', () => {
+    test('draft recovery and submit bounds pass their isolated store cases', () => {
         const result = spawnSync(process.execPath, ['test', import.meta.path], {
             env: { ...process.env, TZUDONG_DRAFT_RECOVERY_BOUNDS_WORKER: '1' },
             encoding: 'utf8', timeout: 30_000,

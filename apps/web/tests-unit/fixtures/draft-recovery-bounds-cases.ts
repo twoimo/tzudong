@@ -4,7 +4,7 @@ import { expect, mock, test } from 'bun:test';
 // by legacy-draft-recovery-browser.test.ts; this file launches no browser.
 type Row = Record<string, unknown>;
 type Key = [string, string];
-type Range = { lower?: Key; upper?: Key | number; lowerOpen?: boolean };
+type Range = { lower?: Key; upper?: Key | number; lowerOpen?: boolean; upperOpen?: boolean };
 const databases = new Map<string, Map<string, Row>>();
 let failPut = 0;
 let onPut: (() => void) | undefined;
@@ -16,7 +16,7 @@ function compare(left: Key, right: Key) {
 }
 function matches(key: Key, range?: Range) {
     return !range || ((!range.lower || compare(key, range.lower) >= (range.lowerOpen ? 1 : 0))
-        && (!range.upper || compare(key, range.upper as Key) <= 0));
+        && (!range.upper || compare(key, range.upper as Key) <= (range.upperOpen ? -1 : 0)));
 }
 function store(records: Map<string, Row>) {
     function cursor(rows: Row[], position = 0, track = false): object | null {
@@ -77,7 +77,11 @@ mock.module('idb', () => ({ openDB: async (name: string, _version: number, optio
 Object.defineProperty(globalThis, 'IDBKeyRange', { configurable: true, value: {
     upperBound: (upper: number): Range => ({ upper }),
     lowerBound: (lower: Key, lowerOpen = false): Range => ({ lower, lowerOpen }),
-    bound: (lower: Key, upper: Key, lowerOpen = false): Range => ({ lower, upper, lowerOpen }),
+    bound: (lower: Key, upper: Key, lowerOpen = false, upperOpen = false): Range => {
+        const order = compare(lower, upper);
+        if (order > 0 || (order === 0 && (lowerOpen || upperOpen))) throw new DOMException('Invalid key range', 'DataError');
+        return { lower, upper, lowerOpen, upperOpen };
+    },
 } });
 const review = await import('../../lib/reviewDraftDB');
 const edit = await import('../../lib/editRequestDraftDB');
@@ -104,7 +108,49 @@ function seed(kind: typeof kinds[number], owner: string, count = 10, extra = 5) 
 const recover = (kind: typeof kinds[number], owner: string) => (kind === 'review' ? review : edit).recoverLegacyDrafts(owner);
 const currentRows = (rows: Map<string, Row>, owner: string) => [...rows.values()].filter(row => row.userId === 'v3-' + owner);
 
+test('IDBKeyRange model rejects reversed and equal-open bounds', () => {
+    const key = ['legacy-owner', '\uffff'];
+    const errorName = (lower: string[], upper: string[], lowerOpen = false, upperOpen = false) => {
+        try { IDBKeyRange.bound(lower, upper, lowerOpen, upperOpen); return null; }
+        catch (error) { return (error as DOMException).name; }
+    };
+    expect(errorName(key, key)).toBeNull();
+    expect(errorName(key, key, true)).toBe('DataError');
+    expect(errorName(key, key, false, true)).toBe('DataError');
+    expect(errorName(['owner', 'z'], ['owner', 'a'])).toBe('DataError');
+});
+
 for (const kind of kinds) {
+    test(`${kind}: upper endpoint advances to the next legacy namespace`, async () => {
+        const owner = kind + '-endpoint'; const rows = seed(kind, owner, 19, 0);
+        const template = rows.get(encoded([owner, 'r-000']))!;
+        for (const [key, row] of rows) if (row.userId === owner) rows.delete(key);
+        const pending = { ...template, restaurantId: 'r-new' };
+        rows.set(encoded(keyOf(pending)), pending);
+        const endpoint = { ...template, userId: 'v2-' + owner, restaurantId: '\uffff' };
+        rows.set(encoded(keyOf(endpoint)), endpoint);
+        // Keep the malformed endpoint beyond the existing bounded maintenance
+        // sweep. Recovery must handle it without depending on a prior deletion.
+        for (let i = 0; i < 300; i++) {
+            const padding = { ...template, userId: 'a-padding-' + i, restaurantId: 'r-padding' };
+            rows.set(encoded(keyOf(padding)), padding);
+        }
+        const before = structuredClone(rows);
+        expect(await recover(kind, owner)).toBe(0);
+        expect(scans).toHaveLength(20);
+        expect(rows).toEqual(before);
+        scans = [];
+        expect(await recover(kind, owner)).toBe(1);
+        expect(scans).toHaveLength(1);
+        expect(currentRows(rows, owner)).toHaveLength(20);
+        expect(rows.get(encoded(keyOf(endpoint)))).toEqual(endpoint);
+        expect(rows.has(encoded(['v3-' + owner, '\uffff']))).toBe(false);
+        expect(rows.get(encoded(['v3-' + owner, 'r-new']))).toEqual({ ...pending, userId: 'v3-' + owner });
+        expect(rows.has(encoded(keyOf(pending)))).toBe(false);
+        const completed = structuredClone(rows);
+        scans = []; expect(await recover(kind, owner)).toBe(0); expect(scans).toHaveLength(0);
+        expect(rows).toEqual(completed);
+    });
     test(`${kind}: retry advances beyond ten duplicates in both legacy namespaces`, async () => {
         const owner = kind + '-duplicates'; const rows = seed(kind, owner);
         const before = structuredClone(rows);

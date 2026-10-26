@@ -639,6 +639,8 @@ export async function recoverLegacyDrafts(userId: string): Promise<number> {
         let after = progress?.after;
         for (; namespace < legacyOwners.length && scanned < MAX_DRAFTS_PER_USER && count < MAX_DRAFTS_PER_USER; namespace++) {
             const legacyOwner = legacyOwners[namespace];
+            // A closed upper endpoint cannot become an exclusive lower bound.
+            if (after && after[1] >= '\uffff') { after = undefined; continue; }
             let cursor = await transaction.store.openCursor(IDBKeyRange.bound(
                 after ?? [legacyOwner, ''], [legacyOwner, '\uffff'], after !== undefined,
             ));
