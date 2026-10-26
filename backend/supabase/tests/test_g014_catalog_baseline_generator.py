@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import subprocess
+import tempfile
 import unittest
 
 
@@ -71,6 +72,64 @@ available_amd64_image fixture-image && printf 'admitted\n' || printf 'denied\n'
         self.assertIn('docker_local run --rm --platform linux/amd64 --network none', self.source)
         self.assertIn('Postgres resolved RepoDigest does not match pinned index or amd64 manifest evidence', self.source)
         self.assertNotIn('docker_local image inspect --platform linux/amd64', self.source)
+
+    def _run_migration_case(self, name, *, psql_exit=0):
+        """Exercise the real dispatch with a recording psql boundary, not a DB."""
+        case = self.source.split('  case "${migration##*/}" in\n', 1)[1].split(
+            '  esac\n  previous_effective_filename=', 1
+        )[0]
+        source_name = name if name in (
+            "20261026120000_atomic_edit_submission_request.sql",
+            "20261026130000_atomic_edit_public_business_phone.sql",
+        ) else "20261026120000_atomic_edit_submission_request.sql"
+        original = ROOT / "backend/supabase/migrations" / source_name
+        with tempfile.TemporaryDirectory(prefix="g014-atomic-edit-dispatch-") as work:
+            directory = Path(work)
+            migration = directory / name
+            migration.write_bytes(original.read_bytes())
+            argv = directory / "argv"
+            sql = directory / "stdin.sql"
+            stub = r'''
+set -euo pipefail
+compose() {
+  printf '%s\0' "$@" > "$TEST_ARGV"
+  cat > "$TEST_SQL"
+  return "$TEST_PSQL_EXIT"
+}
+'''
+            run = subprocess.run(
+                ["bash", "-c", stub + 'case "${migration##*/}" in\n' + case + "esac\n"],
+                env={**os.environ, "migration": str(migration), "TEST_ARGV": str(argv),
+                     "TEST_SQL": str(sql), "TEST_PSQL_EXIT": str(psql_exit)},
+                capture_output=True, timeout=5,
+            )
+            args = argv.read_bytes().decode().rstrip("\0").split("\0")
+            self.assertEqual(sql.read_bytes(), original.read_bytes())
+            self.assertEqual(run.stdout, b"")
+            self.assertEqual(run.stderr, b"")
+            self.assertEqual(args[:5], ["exec", "-T", "db", "psql", "-X"])
+            self.assertIn("ON_ERROR_STOP=1", args)
+            return run.returncode, args
+
+    def test_atomic_edit_source_is_replayed_in_one_transaction_without_rewriting_sql(self):
+        for name in ("20261026120000_atomic_edit_submission_request.sql", "20261026130000_atomic_edit_public_business_phone.sql"):
+            with self.subTest(name=name):
+                status, args = self._run_migration_case(name)
+                self.assertEqual(status, 0)
+                self.assertEqual(args.count("--single-transaction"), 1)
+                self.assertEqual(args.count("--file=-"), 1)
+
+    def test_atomic_edit_transaction_dispatch_is_exact_and_preserves_psql_failure(self):
+        name = "20261026120000_atomic_edit_submission_request.sql"
+        status, args = self._run_migration_case(name, psql_exit=3)
+        self.assertEqual(status, 3)
+        self.assertIn("--single-transaction", args)
+        for other in ("20990101000000_fixture.sql", name + ".unrecognized"):
+            with self.subTest(name=other):
+                status, args = self._run_migration_case(other)
+                self.assertEqual(status, 0)
+                self.assertNotIn("--single-transaction", args)
+                self.assertNotIn("--file=-", args)
 
 
 if __name__ == "__main__":

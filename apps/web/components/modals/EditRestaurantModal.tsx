@@ -18,8 +18,8 @@ import { Card } from "@/components/ui/card";
 import { Restaurant, RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDraftAutosave, waitForDraftAutosave } from "@/hooks/use-draft-autosave";
-import { supabase } from "@/integrations/supabase/client";
 import { readCurrentBrowserAuthUser } from "@/lib/auth/isolated-browser-account";
+import { canonicalizeRestaurantEditPayload, isRestaurantEditSubmitBody, isSavedRestaurantEdit, restaurantEditPayloadFingerprint } from '@/lib/restaurant-edit-submit-contract';
 import { toast } from "@/lib/no-toast";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/editRequestDraftDB";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -30,7 +30,6 @@ import {
     EDIT_RESTAURANT_REQUEST_KIND_OPTIONS,
     EDIT_RESTAURANT_REQUEST_CLOSURE_HELPER_TEXT,
     EDIT_RESTAURANT_REQUEST_EDIT_HELPER_TEXT,
-    getEditRestaurantRequestAdminNote,
     validateEditRestaurantRequest,
     validateEditRestaurantRequestStep,
     type EditRestaurantRequestFormData,
@@ -97,6 +96,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
     const [validationMessage, setValidationMessage] = useState<string | null>(null);
     const [desktopEditPanelPosition, setDesktopEditPanelPosition] = useState<DesktopEditPanelPosition>(DEFAULT_DESKTOP_EDIT_PANEL_POSITION);
     const activeSubmissionRef = useRef<EditSubmissionAttempt | null>(null);
+    const submissionClientKeyRef = useRef<{ fingerprint: string; key: string } | null>(null);
     const cleanupSubmissionRef = useRef<EditSubmissionAttempt | null>(null);
     const [completedSubmission, setCompletedSubmission] = useState<EditSubmissionAttempt | null>(null);
     const mobileFormRef = useRef<HTMLFormElement>(null);
@@ -134,6 +134,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         catch { return; }
         if (!ownsSubmissionAttempt(attempt)) return;
         cleanupSubmissionRef.current = null; activeSubmissionRef.current = null;
+        submissionClientKeyRef.current = null;
         setCompletedSubmission(null); setIsSubmitting(false);
         toast.success('맛집 수정 요청이 성공적으로 제출되었습니다!');
         onClose();
@@ -149,11 +150,13 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         const ownsAttempt = () => ownsSubmissionAttempt(attempt);
         activeSubmissionRef.current = attempt;
         setIsSubmitting(true);
+        let failureMessage = '제출 결과를 확인하지 못했습니다. 입력을 유지했으니 다시 시도해주세요.';
 
         try {
             const { data: { user: authenticatedUser } } = await readCurrentBrowserAuthUser();
             if (!ownsAttempt()) return;
             if (!authenticatedUser || authenticatedUser.id !== attempt.userId) {
+                failureMessage = '로그인이 필요합니다.';
                 throw new Error('로그인이 필요합니다.');
             }
 
@@ -164,57 +167,37 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
             const validationError = validateEditRestaurantRequest(editFormData);
             if (validationError) {
                 setValidationMessage(validationError);
+                failureMessage = validationError;
                 throw new Error(validationError);
             }
 
-            // 1. restaurant_submissions 테이블에 INSERT (target_restaurant_id는 items 레벨에서 관리)
-            const { data: submission, error: submissionError } = await supabase
-                .from('restaurant_submissions')
-                .insert({
-                    user_id: attempt.userId,
-                    submission_type: 'edit',
-                    status: 'pending',
-                    restaurant_name: editFormData.name.trim(),
-                    restaurant_address: editFormData.address.trim() || null,
-                    restaurant_phone: editFormData.phone.trim() || null,
-                    restaurant_categories: editFormData.category,
-                    admin_notes: getEditRestaurantRequestAdminNote(editFormData),
-                    // target_restaurant_id는 submission 레벨이 아닌 items 레벨에서 저장
-                } as never)
-                .select('id')
-                .single();
-
-            if (submissionError) throw submissionError;
-            if (!ownsAttempt()) return;
-
-            const submissionId = (submission as { id: string }).id;
-
-            // 2. restaurant_submission_items 테이블에 각 영상별 INSERT (각 아이템에 해당 레코드의 target_restaurant_id 저장)
-            const itemsToInsert = editFormData.youtube_reviews.map(review => ({
-                submission_id: submissionId,
-                youtube_link: review.youtube_link.trim(),
-                tzuyang_review: review.tzuyang_review?.trim() || null,
-                target_restaurant_id: review.restaurant_id, // 각 아이템별로 해당 레코드의 restaurants.id 저장
-            }));
-
-            const { error: itemsError } = await supabase
-                .from('restaurant_submission_items')
-                .insert(itemsToInsert as never);
-
-            if (!ownsAttempt()) return;
-            if (itemsError) {
-                // 롤백: submission 삭제 (CASCADE로 items도 삭제됨)
-                await supabase.from('restaurant_submissions').delete().eq('id', submissionId);
-                throw itemsError;
+            const payload = canonicalizeRestaurantEditPayload(editFormData);
+            const fingerprint = `${attempt.userId}:${restaurantEditPayloadFingerprint(attempt.restaurantId, payload)}`;
+            if (submissionClientKeyRef.current?.fingerprint !== fingerprint) {
+                submissionClientKeyRef.current = { fingerprint, key: `edit-${crypto.randomUUID()}` };
+            }
+            const body = { clientRequestKey: submissionClientKeyRef.current.key, restaurantId: attempt.restaurantId, payload };
+            if (!isRestaurantEditSubmitBody(body)) {
+                failureMessage = '제출 정보를 확인해주세요. 식당 연락처와 유튜브 링크 형식도 확인해주세요.';
+                throw new Error('EDIT_SUBMISSION_INVALID');
+            }
+            // The server owns the complete parent/items transaction once this request begins.
+            // UI ownership only controls the subsequent local draft cleanup.
+            const response = await fetch('/api/mypage/submissions/edit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Tzudong-Actor-Id': attempt.userId },
+                body: JSON.stringify(body),
+            });
+            const result: unknown = await response.json().catch(() => null);
+            if (!response.ok || !isSavedRestaurantEdit(result, payload.youtube_reviews.length)) {
+                throw new Error('EDIT_SUBMISSION_NOT_CONFIRMED');
             }
 
             // Preserve the committed result while retrying only local cleanup.
             await finishSubmittedDraft(attempt);
-        } catch (error: unknown) {
+        } catch {
             if (!ownsAttempt()) return;
-            console.error('제출 실패:');
-            const message = error instanceof Error ? error.message : '제출에 실패했습니다. 다시 시도해주세요.';
-            toast.error(message);
+            toast.error(failureMessage);
         } finally {
             if (activeSubmissionRef.current === attempt && cleanupSubmissionRef.current !== attempt) {
                 activeSubmissionRef.current = null;
@@ -841,11 +824,11 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                         </Button>
                     )}
                     {currentStep < 3 ? (
-                        <Button type="button" onClick={handleNextStep} className={`${mobileSheetStyles.primaryAction} flex-1`}>
+                        <Button key="next-step" type="button" onClick={handleNextStep} className={`${mobileSheetStyles.primaryAction} flex-1`}>
                             다음
                         </Button>
                     ) : (
-                        <Button type="submit" className={`${mobileSheetStyles.primaryAction} flex-1`} disabled={isSubmitting}>
+                        <Button key="submit-request" type="submit" className={`${mobileSheetStyles.primaryAction} flex-1`} disabled={isSubmitting}>
                             <Send className="mr-2 h-4 w-4" />
                             {completedSubmission ? '제출 완료' : isSubmitting ? '제출 중...' : '수정 요청 제출'}
                         </Button>

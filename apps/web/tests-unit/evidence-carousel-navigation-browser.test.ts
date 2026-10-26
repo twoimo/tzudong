@@ -100,10 +100,12 @@ for (const width of [1440, 390, 820]) {
       async function swipe(selector: string) {
         const box = await page.locator(selector).boundingBox();
         if (!box) throw new Error('SWIPE_TARGET_MISSING');
-        const x = box.x + Math.min(box.width - 20, 300), y = box.y + Math.min(box.height / 2, 80);
+        // Cross the snap midpoint even when a busy runner slows touch delivery.
+        const x = box.x + box.width * 0.85, y = box.y + Math.min(box.height / 2, 80);
+        const distance = box.width * 0.65;
         await session.send('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{x,y,id:1}]});
         for (let step = 1; step <= 8; step++) {
-          await session.send('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{x:x-step*25,y,id:1}]});
+          await session.send('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{x:x-distance*step/8,y,id:1}]});
           await page.waitForTimeout(20);
         }
         await session.send('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});

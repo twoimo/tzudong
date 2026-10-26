@@ -360,11 +360,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (isCancelled || !documentLifecycleRef.current.active || !hasBootstrapped || document.visibilityState === 'hidden') return;
             if (resumeInFlight) { resumeAgain = true; return; }
             resumeInFlight = true;
-            const generation = ++authEventGenerationRef.current;
+            let generation = authEventGenerationRef.current;
             const documentRevision = documentLifecycleRef.current.revision;
             void getSupabaseClient().then(async (supabase) => {
                 const { data: { session: currentSession }, error } = await supabase.auth.getSession();
                 if (isCancelled || !documentLifecycleRef.current.active || documentLifecycleRef.current.revision !== documentRevision || authEventGenerationRef.current !== generation) return;
+                // Reading the same session on focus is not a replacement login.
+                // Keep an explicit logout's ownership while still revalidating eligibility.
+                if ((currentSession?.user?.id ?? null) !== activeAuthUserIdRef.current
+                    || (currentSession?.access_token ?? null) !== publishedAccessTokenRef.current) {
+                    generation = ++authEventGenerationRef.current;
+                }
                 const previousOwner = activeAuthUserIdRef.current ?? pendingAuthUserIdRef.current;
                 if (previousOwner && previousOwner !== currentSession?.user?.id) {
                     void clearPrivateDrafts(previousOwner);

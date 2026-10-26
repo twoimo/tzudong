@@ -2890,6 +2890,9 @@ isOneToOne: false
 "submit_privacy_consent":
 { Args: { "p_channel": string,"p_correlation_id": string,"p_decision": string,"p_guardian_verification_id": string,"p_idempotency_key": string,"p_notice_sha256": string,"p_policy_version_id": string,"p_purpose": string,"p_source": string }; Returns: Json
                            },
+"submit_restaurant_edit_request":
+{ Args: { "p_client_request_key": string,"p_payload": Json,"p_target_restaurant_id": string,"p_user_id": string }; Returns: Json
+                           },
 "submit_restaurant_submission":
 { Args: { "p_client_submission_key": string,"p_restaurant_address": string,"p_restaurant_categories"?: (string)[],"p_restaurant_name": string,"p_restaurant_phone"?: string,"p_submission_type": string,"p_tzuyang_review"?: string,"p_user_id": string,"p_youtube_link"?: string }; Returns: {
               "client_submission_key": string,"item_id": string,"restaurant_address": string,"restaurant_categories": (string)[],"restaurant_name": string,"restaurant_phone": string,"status": string,"submission_id": string,"submission_type": string,"tzuyang_review": string,"user_id": string,"youtube_link": string
