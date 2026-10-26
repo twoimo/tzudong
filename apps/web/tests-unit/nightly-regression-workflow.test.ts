@@ -904,7 +904,7 @@ describe("nightly regression package and source contracts", () => {
       "UNIT_OUTCOME: ${{ steps.nightly-unit.outcome }}",
       "E2E_OUTCOME: ${{ steps.nightly-e2e.outcome }}",
       "--mode local",
-      "actions/upload-artifact@v4",
+      "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4.6.0",
       "publication-boundary.txt",
       "failure-diagnostics/local-stack-failure-diagnostics.json",
       "steps.prepare-lifecycle-diagnostic.outputs.path",
