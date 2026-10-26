@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { Restaurant, Region } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
 import type { HomeMapThemeFilterId } from '@/lib/home-map-theme-filters';
+import { buildEditRestaurantInitialFormData } from '@/lib/edit-restaurant-request-form';
 
 
 interface UseHomeHandlersProps {
@@ -80,38 +81,7 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
 
     const handleRequestEditRestaurant = useCallback((restaurant: Restaurant) => {
         setRestaurantToEdit(restaurant);
-
-        const youtubeReviews: { youtube_link: string; tzuyang_review: string; restaurant_id: string }[] = [];
-
-        if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
-            restaurant.mergedRestaurants.forEach(record => {
-                if (record.youtube_link && record.tzuyang_review) {
-                    youtubeReviews.push({
-                        youtube_link: record.youtube_link,
-                        tzuyang_review: record.tzuyang_review,
-                        restaurant_id: record.id // 각 레코드의 restaurants.id 저장
-                    });
-                }
-            });
-        } else {
-            if (restaurant.youtube_link && restaurant.tzuyang_review) {
-                youtubeReviews.push({
-                    youtube_link: restaurant.youtube_link,
-                    tzuyang_review: restaurant.tzuyang_review,
-                    restaurant_id: restaurant.id // 해당 레코드의 restaurants.id 저장
-                });
-            }
-        }
-
-        setEditFormData({
-            name: restaurant.name,
-            address: restaurant.road_address || restaurant.jibun_address || '',
-            phone: restaurant.phone || '',
-            category: Array.isArray(restaurant.categories)
-                ? restaurant.categories
-                : (restaurant.categories ? [restaurant.categories] : []),
-            youtube_reviews: youtubeReviews
-        });
+        setEditFormData(buildEditRestaurantInitialFormData(restaurant));
         setIsEditModalOpen(true);
     }, [setRestaurantToEdit, setEditFormData, setIsEditModalOpen]);
 

@@ -236,10 +236,12 @@ def _cache_probe_many(command: list[str], videos: list[str], env: dict[str, str]
         return set()
 
 
-def _cache_snapshot(crawling: Path, evaluation: Path, videos, env: dict[str, str] | None = None) -> dict:
+def _cache_snapshot(crawling: Path, evaluation: Path, videos, env: dict[str, str] | None = None,
+                    *, candidate_scope: bool = False) -> dict:
     from backend.utils.pipeline_cache_contracts import stage_inputs, transform_groups
     paths = set()
-    for video in ([videos] if isinstance(videos, str) else videos):
+    requested = {videos} if isinstance(videos, str) else set(videos)
+    for video in sorted(requested):
         for stage in ('crawl', 'selection', 'rule', 'laaj'):
             # 08 captures CONFIG_NAME from its inherited environment before
             # loading .env; watch that same file across all stage probes.
@@ -252,9 +254,12 @@ def _cache_snapshot(crawling: Path, evaluation: Path, videos, env: dict[str, str
             paths.add(evaluation / 'evaluation' / directory / '.receipts' / (video + '.json'))
         paths.add(crawling / 'crawling' / (video + '.jsonl'))
         paths.add(crawling / 'crawling/.receipts' / (video + '.json'))
-    paths.update((evaluation / 'evaluation/transforms.jsonl',
-                  evaluation / 'evaluation/.receipts/transform.json'))
+    if not candidate_scope:
+        paths.update((evaluation / 'evaluation/transforms.jsonl',
+                      evaluation / 'evaluation/.receipts/transform.json'))
     for _, item, inputs in transform_groups(crawling, evaluation):
+        if candidate_scope and item not in requested:
+            continue
         paths.update(inputs)
         paths.add(crawling / 'meta' / (item + '.jsonl'))
     paths.update((REPO_ROOT / 'backend/.env', REPO_ROOT / '.env', REPO_ROOT.parent / '.env',
