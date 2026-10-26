@@ -1,3 +1,4 @@
+import { getAuthCookieContract } from '../lib/auth/session-cookies';
 import { expect, test } from 'bun:test';
 import { resolve, join } from 'node:path';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -6,23 +7,25 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createConnection, createServer } from 'node:net';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 const root = resolve(import.meta.dir, '..');
 const parent = await import(resolve(root, 'scripts/run-auth-release-smoke.mjs'));
 const child = await import(resolve(root, 'scripts/run-auth-release-smoke-child.mjs'));
 const origin = new URL('https://tzudong.app/');
+const cookieContract = getAuthCookieContract('https://aqlcofblfxdrjhhdmarw.supabase.co');
 const fixtureNodeExecutable = process.execPath;
 const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64');
 const userId = '11111111-1111-4111-8111-111111111111';
 const sessionId = '22222222-2222-4222-8222-222222222222';
 const now = Math.floor(Date.now() / 1000);
+const syntheticRefreshToken = `synthetic-refresh-${randomUUID()}`;
 const jwt = (claims: Record<string, unknown> = {}) => [
     Buffer.from(JSON.stringify({ alg: 'ES256', typ: 'JWT' })).toString('base64url'),
     Buffer.from(JSON.stringify({ sub: userId, session_id: sessionId, iat: now - 10, exp: now + 300, role: 'authenticated', ...claims })).toString('base64url'),
     Buffer.from('signature').toString('base64url'),
 ].join('.');
-const validState = (host = origin.hostname, value = `base64-${Buffer.from(JSON.stringify({ access_token: jwt(), refresh_token: 'refresh-1234567890123456' })).toString('base64')}`, httpOnly = true) => encode({ cookies: [{ name: 'sb-aqlcofblfxdrjhhdmarw-auth-token', value, domain: host, path: '/', expires: Math.floor(Date.now() / 1000) + 60, httpOnly, secure: true, sameSite: 'Lax' }], origins: [] });
+const validState = (host = origin.hostname, value = `base64-${Buffer.from(JSON.stringify({ access_token: jwt(), refresh_token: syntheticRefreshToken })).toString('base64')}`, httpOnly = true) => encode({ cookies: [cookieContract.key, cookieContract.marker].map(name => ({ name, value: name.startsWith('sb-') ? value : '1', domain: host, path: '/', expires: Math.floor(Date.now() / 1000) + 60, httpOnly, secure: true, sameSite: 'Lax' })), origins: [] });
 const jsonResponse = (body: unknown, url: string, headers: Record<string, string> = {}) => {
     const text = JSON.stringify(body);
     return { ok: true, status: 200, url, headers: new Headers({ 'content-type': 'application/json', ...headers }), text: async () => text };
@@ -77,15 +80,45 @@ const linuxPidNamespaceTest = process.platform === 'linux' && spawnSync(
 test('origin, storage, and Supabase validation fail closed', () => {
     expect(parent.exactHttpsOrigin('https://tzudong.app/').hostname).toBe('tzudong.app');
     for (const value of ['http://tzudong.app/', 'https://tzudong.app:443/', 'https://tzudong.app/a', 'https://tzudong.app/?q=1', 'https://tzudong.app/#x']) expect(() => parent.exactHttpsOrigin(value)).toThrow();
-    expect(parent.validateStorageState(validState(), origin).cookies).toHaveLength(1);
+    expect(parent.validateStorageState(validState(), origin).cookies).toHaveLength(2);
     const browserState = validState(origin.hostname, undefined, false);
     const decodedBrowserState = parent.validateStorageState(browserState, origin);
     expect(decodedBrowserState.cookies[0].httpOnly).toBe(false);
     expect(JSON.parse(Buffer.from(parent.encodeHttpOnlyStorageState(decodedBrowserState), 'base64').toString('utf8')).cookies[0].httpOnly).toBe(true);
     expect(() => parent.validateStorageState(validState('evil.example'), origin)).toThrow();
     expect(() => parent.validateSupabaseDestination('https://aqlcofblfxdrjhhdmarw.supabase.co/path')).toThrow();
-    expect(child.exactOrigin('https://aqlcofblfxdrjhhdmarw.supabase.co/').hostname).toBe('aqlcofblfxdrjhhdmarw.supabase.co');
+    expect(child.exactOrigin('https://auth-smoke.example.test/').hostname).toBe('auth-smoke.example.test');
 });
+test('release proof requires the current complete cookie batch and excludes its marker from the credential', () => {
+    const state = JSON.parse(Buffer.from(validState(), 'base64').toString('utf8'));
+    const token = state.cookies[0];
+    const marker = state.cookies[1];
+    const split = Math.floor(token.value.length / 2);
+    const chunked = { cookies: [
+        { ...token, name: token.name + '.1', value: token.value.slice(split) },
+        marker,
+        { ...token, name: token.name + '.0', value: token.value.slice(0, split) },
+    ], origins: [] };
+    const accepted = parent.validateStorageState(encode(chunked), origin);
+    expect(child.parseSession(origin, encode(accepted)).cookies).toHaveLength(3);
+    expect(parent.parseBoundAccessCredential(accepted)).toBe(jwt());
+    for (const cookies of [
+        [token],
+        [token, { ...marker, value: 'pending' }],
+        [token, marker, marker],
+        [{ ...token, name: cookieContract.legacyKey }, marker],
+        [token, marker, { ...token, name: cookieContract.legacyKey }],
+        [{ ...token, name: token.name + '.1' }, marker],
+        [token, { ...marker, domain: 'evil.example' }],
+    ]) {
+        const encoded = encode({ cookies, origins: [] });
+        expect(() => parent.validateStorageState(encoded, origin)).toThrow();
+        expect(() => child.parseSession(origin, encoded)).toThrow();
+    }
+    const unreadableToPage = parent.encodeHttpOnlyStorageState(parent.validateStorageState(validState(origin.hostname, undefined, false), origin));
+    expect(child.parseSession(origin, unreadableToPage).cookies.every((cookie: { httpOnly: boolean }) => cookie.httpOnly)).toBe(true);
+});
+
 test('authenticated browser proof is challenge-bound, redacted, and fail-closed', async () => {
     const childSource = await readFile(resolve(root, 'scripts/run-auth-release-smoke-child.mjs'), 'utf8');
     const routeSource = await readFile(resolve(root, 'app/api/admin/release-auth-proof/route.ts'), 'utf8');
@@ -227,7 +260,7 @@ test('cell, metadata, final path, and revocation proof are strict', async () => 
         successMetadata,
         { ...revocation, bindingSha256: 'f'.repeat(64) },
     )).toThrow();
-    expect(child.parseSession(origin, validState()).cookies).toHaveLength(1);
+    expect(child.parseSession(origin, validState()).cookies).toHaveLength(2);
 });
 
 test('bounded helpers fail on spawn error, nonzero exit, output overflow, and hangs', async () => {
@@ -480,7 +513,7 @@ linuxPidNamespaceTest('production controller tears down a real resistant descend
 }, 30_000);
 
 function stateWithAccessToken(accessToken: string) {
-    const cookieValue = `base64-${Buffer.from(JSON.stringify({ access_token: accessToken, refresh_token: 'refresh-1234567890123456' })).toString('base64')}`;
+    const cookieValue = `base64-${Buffer.from(JSON.stringify({ access_token: accessToken, refresh_token: syntheticRefreshToken })).toString('base64')}`;
     return parent.validateStorageState(validState(origin.hostname, cookieValue), origin);
 }
 
@@ -501,8 +534,8 @@ test('bound session identity requires canonical duplicate-free JWT claims and a 
         issuedAt: now - 10,
         expiresAt: now + 300,
     });
-    expect(JSON.stringify(identity)).not.toContain('refresh-1234567890123456');
-    expect(identity.refreshSha256).toBe(createHash('sha256').update('tzudong:release-auth-refresh-binding:v1\nrefresh-1234567890123456').digest('hex'));
+    expect(JSON.stringify(identity)).not.toContain(syntheticRefreshToken);
+    expect(identity.refreshSha256).toBe(createHash('sha256').update('tzudong:release-auth-refresh-binding:v1\n' + syntheticRefreshToken).digest('hex'));
 
     const refreshState = (refreshToken: unknown) => parent.validateStorageState(validState(origin.hostname, `base64-${Buffer.from(JSON.stringify({ access_token: jwt(), refresh_token: refreshToken })).toString('base64')}`), origin);
     for (const refreshToken of [undefined, '', 'short', 'has/a-slash', 'x'.repeat(4097)]) {
@@ -560,7 +593,7 @@ test('authoritative identity and preflight RPCs bind the dedicated user, refresh
     expect(userHeaders.apikey).toBe('anon-key');
     expect(userHeaders.authorization).toBe(`Bearer ${identity.accessToken}`);
     expect(calls[1].options.body).toBe(parent.canonicalJson({ p_expires_at: expiresAt, p_operation_id: operationId, p_refresh_sha256: identity.refreshSha256, p_session_id: sessionId, p_user_id: userId }));
-    expect(JSON.stringify(calls[1].options.body)).not.toContain('refresh-1234567890123456');
+    expect(JSON.stringify(calls[1].options.body)).not.toContain(syntheticRefreshToken);
     await expect(parent.preflightReleaseSessionFamily(identity, operationId, now + 901, 'service-key', fetcher)).rejects.toMatchObject({ code: 'SESSION_REVOCATION_FAILED' });
     await expect(parent.validateReleaseSessionIdentity(identity, 'anon-key', '33333333-3333-4333-8333-333333333333', fetcher)).rejects.toMatchObject({ code: 'SESSION_REVOCATION_FAILED' });
     const userUrl = 'https://aqlcofblfxdrjhhdmarw.supabase.co/auth/v1/user';
@@ -617,7 +650,7 @@ test('authoritative revocation retries idempotently and requires exact readback'
         expect(headers.authorization).toBe('Bearer service-key');
     }
     expect(JSON.stringify(calls)).not.toContain(identity.accessToken);
-    expect(JSON.stringify(calls)).not.toContain('refresh-1234567890123456');
+    expect(JSON.stringify(calls)).not.toContain(syntheticRefreshToken);
 
     let malformedCalls = 0;
     await expect(parent.revokeReleaseSessionFamily(

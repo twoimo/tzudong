@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -5,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, expect as browserExpect, type Browser, type Page } from "@playwright/test";
 
-const chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const chrome = chromium.executablePath();
 const browserTest = existsSync(chrome) ? test : test.skip;
 const root = join(import.meta.dir, "..");
 const A = "11111111-1111-4111-8111-111111111111";
@@ -77,7 +78,7 @@ createRoot(document.getElementById('root')).render(<LocalStoryboardWorkspace/>);
   execFileSync(process.execPath, [join(root, "node_modules/@tailwindcss/cli/dist/index.mjs"),
     "-i", join(root, "tests/fixtures/local-storyboard-ui/input.css"), "-o", cssPath], { cwd: root, stdio: "pipe" });
   css = `${readFileSync(cssPath, "utf8")}\n${readFileSync(join(root, "styles/admin-ui.css"), "utf8")}`;
-  browser = await chromium.launch({ executablePath: chrome, headless: true });
+  browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
 }, 30_000);
 afterAll(async () => {
   await browser?.close();

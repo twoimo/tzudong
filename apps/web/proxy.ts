@@ -261,6 +261,13 @@ function buildContentSecurityPolicy(nonce: string) {
             : ''
     const sentryOrigin = sentryIngestionOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN)
     const sentryConnectSource = sentryOrigin ? ` ${sentryOrigin}` : ''
+    const supabaseOrigin = resolveConfiguredSupabaseOrigin()
+    // The same validation used for public storage accepts loopback only when
+    // local runtime is explicit. Keep local production builds usable without
+    // granting arbitrary HTTP origins or changing the browser's permissions.
+    const supabaseConnectSources = supabaseOrigin
+        ? ` ${supabaseOrigin} ${supabaseOrigin.replace(/^http/, 'ws')}`
+        : ''
     const directives = [
         "default-src 'self'",
         `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${developmentScriptSource} https://maps.googleapis.com https://oapi.map.naver.com`,
@@ -268,7 +275,7 @@ function buildContentSecurityPolicy(nonce: string) {
         "style-src 'self' 'unsafe-inline'",
         `img-src ${buildImageSources()}`,
         "font-src 'self' data: https://assets.tzudong.app",
-        `connect-src 'self'${developmentConnectSources} ${OVERSEAS_MAP_RESOURCE_ORIGIN} https://api.openai.com https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.naver.com https://*.naver.net https://*.pstatic.net${sentryConnectSource}`,
+        `connect-src 'self'${developmentConnectSources}${supabaseConnectSources} ${OVERSEAS_MAP_RESOURCE_ORIGIN} https://api.openai.com https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.naver.com https://*.naver.net https://*.pstatic.net${sentryConnectSource}`,
         "media-src 'self' blob: https://*.supabase.co",
         "worker-src 'self' blob:",
         `frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com${loopbackGrafanaFrameSrc}`,

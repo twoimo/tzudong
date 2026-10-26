@@ -1,14 +1,11 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-const signInWithPassword = mock();
+const reauthenticateBrowserAccount = mock();
 const rpc = mock();
 
-mock.module('@/integrations/supabase/client', () => ({
-  supabase: {
-    auth: { signInWithPassword },
-    rpc,
-  },
-}));
+mock.module('@/lib/auth/isolated-browser-account', () => ({ reauthenticateBrowserAccount }));
+const freshSession = { bearerToken: 'fresh-token', client: { rpc }, isCurrent: () => true,
+  dispose: async () => {}, clearBrowserSession: async () => true } as unknown as import('../lib/privacy/account-deletion-reauth').AccountDeletionReauthenticationSession;
 
 const loadModule = () => import('@/lib/privacy/account-deletion-reauth');
 
@@ -21,7 +18,7 @@ const validBinding = { userId, proofId, requestId, idempotencyKey };
 
 describe('account deletion reauthentication validation', () => {
   beforeEach(() => {
-    signInWithPassword.mockReset();
+    reauthenticateBrowserAccount.mockReset();
     rpc.mockReset();
   });
 
@@ -99,35 +96,15 @@ describe('account deletion reauthentication validation', () => {
     expect(asSingleRow(null)).toBeNull();
   });
 
-  test('creates a fresh session only for the same signed-in user', async () => {
+  test('returns the isolated session and maps rejected reauthentication to no proof', async () => {
     const { createAccountDeletionReauthenticationSession } = await loadModule();
-    const input = { userId, email: 'twoimo@dgu.ac.kr', password: 'secret-password' };
-
-    signInWithPassword.mockResolvedValueOnce({
-      data: { session: { access_token: 'fresh-token' }, user: { id: userId } },
-      error: null,
-    });
-    expect(await createAccountDeletionReauthenticationSession(input)).toEqual({ bearerToken: 'fresh-token' });
-
-    signInWithPassword.mockResolvedValueOnce({
-      data: { session: { access_token: 'fresh-token' }, user: { id: 'other-user' } },
-      error: null,
-    });
+    const input = { userId, email: 'fixture@example.invalid', password: 'fixture-only-password' };
+    reauthenticateBrowserAccount.mockResolvedValueOnce(freshSession);
+    expect(await createAccountDeletionReauthenticationSession(input)).toBe(freshSession);
+    expect(reauthenticateBrowserAccount).toHaveBeenCalledWith(input);
+    reauthenticateBrowserAccount.mockRejectedValueOnce(new Error('AUTH_ACCOUNT_SUPERSEDED'));
     expect(await createAccountDeletionReauthenticationSession(input)).toBeNull();
-
-    signInWithPassword.mockResolvedValueOnce({
-      data: { session: null, user: null },
-      error: { message: 'invalid credentials' },
-    });
-    expect(await createAccountDeletionReauthenticationSession(input)).toBeNull();
-
-    signInWithPassword.mockResolvedValueOnce({
-      data: { session: { access_token: '' }, user: { id: userId } },
-      error: null,
-    });
-    expect(await createAccountDeletionReauthenticationSession(input)).toBeNull();
-
-    expect(signInWithPassword).toHaveBeenCalledTimes(4);
+    expect(reauthenticateBrowserAccount).toHaveBeenCalledTimes(2);
   });
 
   test('issues a proof only from a well shaped single-row rpc result', async () => {
@@ -137,7 +114,7 @@ describe('account deletion reauthentication validation', () => {
       data: [{ proof_id: proofId, expires_at: '2026-09-21T12:00:00.000Z' }],
       error: null,
     });
-    expect(await issueAccountDeletionReauthenticationProof(userId)).toEqual({
+    expect(await issueAccountDeletionReauthenticationProof(userId, freshSession)).toEqual({
       proofId,
       expiresAt: '2026-09-21T12:00:00.000Z',
     });
@@ -146,7 +123,7 @@ describe('account deletion reauthentication validation', () => {
     });
 
     rpc.mockResolvedValueOnce({ data: null, error: { message: 'denied' } });
-    expect(await issueAccountDeletionReauthenticationProof(userId)).toBeNull();
+    expect(await issueAccountDeletionReauthenticationProof(userId, freshSession)).toBeNull();
 
     rpc.mockResolvedValueOnce({
       data: [
@@ -155,12 +132,18 @@ describe('account deletion reauthentication validation', () => {
       ],
       error: null,
     });
-    expect(await issueAccountDeletionReauthenticationProof(userId)).toBeNull();
+    expect(await issueAccountDeletionReauthenticationProof(userId, freshSession)).toBeNull();
 
     rpc.mockResolvedValueOnce({
       data: [{ proof_id: proofId, expires_at: 'tomorrow' }],
       error: null,
     });
-    expect(await issueAccountDeletionReauthenticationProof(userId)).toBeNull();
+    expect(await issueAccountDeletionReauthenticationProof(userId, freshSession)).toBeNull();
+  });
+
+  test('a superseded isolated session cannot issue an account deletion proof', async () => {
+    const { issueAccountDeletionReauthenticationProof } = await loadModule();
+    expect(await issueAccountDeletionReauthenticationProof(userId, { ...freshSession, isCurrent: () => false })).toBeNull();
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

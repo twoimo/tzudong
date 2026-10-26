@@ -1,9 +1,10 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect, type Browser } from '@playwright/test';
 
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 const localTest = existsSync(chrome) ? test : test.skip;
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -60,7 +61,7 @@ createRoot(document.getElementById('root')).render(<LocalStoryboardWorkspace />)
   });
   expect(bundle.success).toBe(true);
   script = await bundle.outputs[0].text();
-  browser = await chromium.launch({ executablePath: chrome, headless: true });
+  browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
 });
 afterAll(async () => { await browser?.close(); });
 

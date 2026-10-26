@@ -4,6 +4,9 @@ import { clearNaverDeviceLocationMarker, createNaverCancellableCallback, createN
 
 import { Suspense, lazy, useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
 import type { CSSProperties } from "react";
+import { useAuth } from "@/contexts/AuthContextBase";
+import { useQueryClient } from "@tanstack/react-query";
+import { readHomeRouteMemory, writeHomeRouteMemory } from "@/hooks/use-home-route-memory";
 import { usePathname } from "next/navigation";
 
 import { buildHomeMapActivationPlan, isEmbeddedHomeRuntimeWindow } from "@/app/home-map-runtime-activation";
@@ -64,13 +67,14 @@ import {
     getSeoulDistrictClusters,
 } from "@/lib/clustering";
 import { markerPool } from "@/lib/marker-pool";
+import { primeCategoryMarkerImages } from "@/lib/category-marker-image-primer";
 import {
     createClusterMarkerHTML,
     clusterAnimationManager,
     injectClusterCSS,
     removeClusterCSS
 } from "@/lib/cluster-marker";
-import { syncPopularityMarkerInteraction } from "@/lib/evidence-engineering/popularity-marker";
+import { syncPopularityMarkerInteraction, syncPopularityMarkerZoom } from "@/lib/evidence-engineering/popularity-marker";
 import { getNaverIndividualMarkerVisual } from "@/lib/naver-map-marker-visuals";
 import { projectPublishedPopularityTier } from "@/lib/evidence-engineering/published-popularity";
 import { deferMarkerRenders } from "@/lib/deferred-marker-renders";
@@ -724,6 +728,10 @@ const NaverMapView = memo(({
     deviceLocation = null,
     showUserSubmittedMarkers = true,
 }: NaverMapViewProps) => {
+    useEffect(() => primeCategoryMarkerImages(document), []);
+    const { user: mapViewer, isLoading: isMapViewerLoading } = useAuth();
+    const routeQueryClient = useQueryClient();
+    const mapReturnOwner = mapViewer?.id ?? "anonymous";
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<NaverMapLike | null>(null);
     const markerRenderSignatureRef = useRef<MarkerRenderSignature | null>(null);
@@ -3319,9 +3327,27 @@ const NaverMapView = memo(({
 
 
 
+    // Save only in the existing in-memory cache; no URL/storage coordinate writes.
+    useEffect(() => {
+        const map = mapInstanceRef.current;
+        if (!isMapInitialized || !map || isMapViewerLoading) return;
+        let active = true;
+        const capture = () => {
+            if (!active) return;
+            try {
+                const center = map.getCenter();
+                const lat = center.lat(), lng = center.lng(), zoom = map.getZoom();
+                if (![lat, lng, zoom].every(Number.isFinite) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || zoom < 6 || zoom > 18) return;
+                writeHomeRouteMemory(routeQueryClient, mapReturnOwner, "domestic-camera", {lat, lng, zoom});
+            } catch { /* A failing provider must not abort route teardown. */ }
+        };
+        const listener = window.naver.maps.Event.addListener(map, "idle", capture);
+        return () => { capture(); active = false; removeNaverMapListener(window.naver?.maps.Event, listener); };
+    }, [isMapInitialized, isMapViewerLoading, mapReturnOwner, routeQueryClient]);
+
     // 지도 초기화
     useEffect(() => {
-        if (!isLoaded || !mapRef.current) return;
+        if (!isLoaded || !mapRef.current || isMapViewerLoading) return;
 
         // 기존 인스턴스가 유효하면 재초기화 불필요
         if (isNaverMapInstanceReusable({
@@ -3351,11 +3377,12 @@ const NaverMapView = memo(({
                 selectedRegion,
             });
 
+            const camera = hasValidUrlState ? undefined : readHomeRouteMemory<{lat: number; lng: number; zoom: number}>(routeQueryClient, mapReturnOwner, "domestic-camera");
             const map = new naver.maps.Map(mapRef.current, buildNaverMapOptions({
-                center: new naver.maps.LatLng(initialCenter[0], initialCenter[1]),
+                center: new naver.maps.LatLng(camera?.lat ?? initialCenter[0], camera?.lng ?? initialCenter[1]),
                 positionTopLeft: naver.maps.Position.TOP_LEFT,
                 positionTopRight: naver.maps.Position.TOP_RIGHT,
-                zoom: initialZoom,
+                zoom: camera?.zoom ?? initialZoom,
             }));
 
             try {
@@ -3366,6 +3393,7 @@ const NaverMapView = memo(({
 
             mapInstanceRef.current = map;
             prevSelectedRestaurantIdRef.current = null;
+            if (camera) hasUserMovedMapRef.current = true;
             setIsMapInitialized(true);
             const postInitPlan = resolveNaverPostInitPlan({
                 hasValidUrlState,
@@ -3376,7 +3404,7 @@ const NaverMapView = memo(({
             }
 
             // [Fix] URL 파라미터로 초기화된 경우 플래그 설정 (centering effect에서 줌 오버라이드 방지)
-            if (postInitPlan.shouldMarkInitialLoadFromUrl) {
+            if (postInitPlan.shouldMarkInitialLoadFromUrl || camera) {
                 isInitialLoadFromUrlRef.current = true;
             }
 
@@ -3402,7 +3430,7 @@ const NaverMapView = memo(({
             setMapInitError(error instanceof Error ? error.message : "네이버 지도를 초기화하지 못했습니다.");
             showMapToast("지도를 초기화하는 중 오류가 발생했습니다.", 'error');
         }
-    }, [isLoaded, getDeviceAdjustedZoom, selectedRegion, showMapToast]);
+    }, [isLoaded, isMapViewerLoading, mapReturnOwner, routeQueryClient, getDeviceAdjustedZoom, selectedRegion, showMapToast]);
 
     // [New] 커스텀 스크롤 휠 핸들러 (마우스 호버 위치 기준 줌 고정)
     useEffect(() => {
@@ -3596,8 +3624,16 @@ const NaverMapView = memo(({
 
         // passive: false여야 preventDefault()가 동작함
         mapElement.addEventListener('wheel', handleWheel, { passive: false });
-        const interacting = createNaverCancellableCallback(() => syncPopularityMarkerInteraction(mapElement, true));
-        const settled = createNaverCancellableCallback(() => syncPopularityMarkerInteraction(mapElement, false));
+        const updatePopularityZoom = () => syncPopularityMarkerZoom(mapElement, map.getZoom());
+        updatePopularityZoom();
+        const interacting = createNaverCancellableCallback(() => {
+            syncPopularityMarkerInteraction(mapElement, true);
+            updatePopularityZoom();
+        });
+        const settled = createNaverCancellableCallback(() => {
+            syncPopularityMarkerInteraction(mapElement, false);
+            updatePopularityZoom();
+        });
         const interactionListeners = window.naver?.maps?.Event
             ? [
                 window.naver.maps.Event.addListener(map, "dragstart", interacting.handle),
@@ -3626,6 +3662,7 @@ const NaverMapView = memo(({
                 }
             }
             syncPopularityMarkerInteraction(mapElement, false);
+            mapElement.removeAttribute("data-popularity-details");
         };
     }, [activateNoncriticalMapEffects, isMapInitialized]);
 

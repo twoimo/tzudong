@@ -44,7 +44,8 @@ export function classifyPublicEligibilitySessionRoute({
   if (
     (pathname === '/api/privacy/onboarding' && (method === 'GET' || method === 'POST'))
     || (pathname === '/api/auth/logout' && method === 'POST')
-    || (pathname === '/auth/callback' && method === 'GET')
+    || (pathname === '/auth/callback' && (method === 'GET' || method === 'POST'))
+    || (pathname === '/auth/complete' && isGetOrHead(method))
     || (pathname === '/privacy/onboarding' && isGetOrHead(method))
     || (pathname === '/auth/reset-password' && isGetOrHead(method))
     || (pathname === '/auth/required' && isGetOrHead(method))

@@ -185,7 +185,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('className="w-full space-y-2 md:hidden"');
     expect(profileSource).not.toContain("user.user_metadata?.full_name");
     expect(profileSource).toContain(
-      'className="overflow-hidden rounded-2xl border-0 bg-muted/35 shadow-none md:order-1 lg:col-start-1 lg:row-start-1 lg:h-full lg:min-h-0"',
+      'className="overflow-hidden rounded-2xl border border-border bg-card shadow-none md:order-1 lg:col-start-1"',
     );
     expect(profileSource).toContain('data-mypage-profile-main-column="true"');
     expect(profileSource).toContain(
@@ -203,12 +203,11 @@ describe("mypage mobile cleanup source contracts", () => {
     );
     expect(profileSource).not.toContain("lg:text-xs");
     expect(profileSource).not.toContain("lg:text-base");
-    expect(profileSource).toContain('data-mypage-profile-density="dashboard-matrix"');
+    expect(profileSource).toContain('data-mypage-profile-density="content-first"');
     expect(profileSource).toContain('data-mypage-profile-viewport-fit="content"');
     expect(profileSource).toContain('data-mypage-profile-matrix="content-2x2"');
     expect(profileSource).toContain('data-mypage-profile-matrix-size="content-track"');
-    expect(profileSource).toContain("lg:min-h-0");
-    expect(profileSource).toContain("lg:content-stretch lg:items-stretch");
+    expect(profileSource).toContain("lg:items-start");
     expect(profileSource).not.toContain(
       'data-mypage-profile-account-column="true"',
     );
@@ -231,20 +230,20 @@ describe("mypage mobile cleanup source contracts", () => {
       'data-mypage-sidebar-session-action="logout"',
     );
     expect(sidebarSource).toContain(
-      "hidden h-full w-64 shrink-0 flex-col border-r border-border bg-card md:flex",
+      "hidden h-full min-h-0 w-64 shrink-0 flex-col overflow-y-auto border-r border-border bg-card md:flex",
     );
     expect(sidebarSource.match(/border-r border-border/g)?.length ?? 0).toBe(1);
     expect(sidebarSource).not.toContain("border-b border-border");
-    expect(sidebarSource).not.toContain("border-t border-border");
+    expect(sidebarSource.match(/border-t border-border/g)?.length ?? 0).toBe(1);
     expect(sidebarSource).toContain(
       'variant="ghost"\n          className="h-9 w-full rounded-xl text-xs"',
     );
-    expect(profileSource).toContain("lg:h-full");
+    expect(profilePageSurfaceClass(profileSource)).not.toContain("h-full");
     // The page surface must stay content-sized: pinning two viewport rows
     // clipped the password form inside its card. The matrix breakpoint is lg
     // because md leaves ~431px, where two tracks squeezed the tier headline.
     expect(profilePageSurfaceClass(profileSource)).toContain(
-      "rounded-xl border border-border",
+      "grid min-w-0 gap-5 lg:grid-cols-2 lg:items-start",
     );
     expect(profilePageSurfaceClass(profileSource)).not.toContain(
       "md:grid-rows-2",
@@ -252,9 +251,9 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profilePageSurfaceClass(profileSource)).not.toContain("md:h-full");
     expect(profileSource).not.toContain("lg:max-h-[calc(100dvh-6.25rem)]");
     expect(profileSource).toContain("lg:grid-cols-2");
-    expect(profileSource).toContain("2xl:grid-cols-3");
+    expect(profileSource).not.toContain("2xl:grid-cols-3");
     expect(profileSource).not.toContain("md:grid-cols-2");
-    expect(profilePageSurfaceClass(profileSource)).toContain("gap-3");
+    expect(profilePageSurfaceClass(profileSource)).toContain("gap-5");
     expect(profileSource).toContain("md:order-1");
     expect(profileSource).toContain("md:order-2");
     expect(profileSource).toContain('data-mypage-quick-actions="combined"');
@@ -297,10 +296,10 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain("완전 삭제는 복구할 수 없습니다.");
     expect(profileSource).not.toContain("진행 전 확인");
     expect(profileSource).toContain(
-      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:flex md:flex-col lg:col-start-2 lg:row-start-1 lg:h-full lg:min-h-0 lg:overflow-hidden"',
+      'className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-3"',
     );
     expect(profileSource).toContain(
-      'className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:flex md:flex-col lg:col-start-1 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"',
+      'className="hidden min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-2 md:flex md:flex-col lg:col-start-2"',
     );
     expect(profileSource).toContain('data-mypage-desktop-recent-activity-row="true"');
     expect(profileSource).toContain("최근 활동");
@@ -308,7 +307,7 @@ describe("mypage mobile cleanup source contracts", () => {
       "flex min-h-0 min-w-0 items-center gap-3 py-2.5",
     );
     expect(profileSource).toContain(
-      'className="hidden h-full min-h-0 overflow-y-auto overscroll-contain p-4 md:flex md:flex-col md:gap-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"',
+      'className="hidden space-y-5 p-5 md:block"',
     );
     expect(profileSource).toContain(
       'data-mypage-desktop-tier-action-guide="true"',
@@ -393,11 +392,11 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).not.toContain("const joinedDateLabel");
   });
 
-  test("profile dashboard keeps exactly one border around the whole surface", () => {
+  test("profile dashboard keeps content-sized cards without duplicate page framing", () => {
     const profileSource = source("app/mypage/profile/page.tsx");
 
     expect(profileSource).toContain(
-      'className="grid min-w-0 gap-3 rounded-xl border border-border bg-card p-3 sm:p-4 lg:grid-cols-2 lg:auto-rows-auto lg:content-stretch lg:items-stretch 2xl:grid-cols-3"',
+      'className="grid min-w-0 gap-5 lg:grid-cols-2 lg:items-start"',
     );
     expect(profileSource).toContain('data-mypage-profile-page="true"');
 
@@ -407,8 +406,8 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).not.toContain("md:border md:border-border/70");
     expect(profileSource).not.toContain('className="min-w-0 border-border/70');
 
-    // The five inner sections are toned panels; the mobile hero stays flat.
-    expect(profileSource.match(/rounded-2xl border-0/g)?.length ?? 0).toBe(5);
+    // Each of the five content cards owns one frame; the mobile hero stays flat.
+    expect(profileSource.match(/rounded-2xl border border-border bg-card/g)?.length ?? 0).toBe(5);
     expect(profileSource.match(/shadow-none/g)?.length ?? 0).toBe(6);
 
     // The duplicate card title repeated the two consent group headings.
@@ -571,7 +570,7 @@ describe("mypage mobile cleanup source contracts", () => {
       'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(profileSource).toContain(
-      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:flex md:flex-col lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"',
+      'className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-6 lg:col-span-2"',
     );
     expect(profileSource).not.toContain("계정 위험 작업");
     expect(profileSource).not.toContain(
@@ -586,7 +585,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).not.toContain(
       'className="group rounded-2xl border border-border/70 bg-background p-3 md:flex md:flex-1 md:flex-col lg:p-2.5"',
     );
-    expect(profileSource).toContain("<details\n              open");
+    expect(profileSource).not.toContain("<details\n              open");
     expect(profileSource).toContain("계정 삭제 옵션 보기");
     expect(profileSource).toContain('className="mt-3 grid gap-2 md:flex-1"');
     expect(profileSource).not.toContain(
@@ -686,19 +685,18 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(reviewsSource).toContain('<div className="flex shrink-0 gap-1">');
   });
 
-  test("mypage desktop cards fill stretched rows and keep touch targets", () => {
+  test("mypage desktop cards keep content height and touch targets", () => {
     const sectionFrameSource = source("components/mypage/MyPageSectionFrame.tsx");
     const sidebarSource = source("components/mypage/MyPageSidebar.tsx");
     const profileSource = source("app/mypage/profile/page.tsx");
 
-    // The lg matrix stretches the tier card to the password card's height
-    // (306px) while its own content is ~180px, which left ~139px of empty
-    // panel below the metrics. The progress block grows into that space.
+    // The tier dashboard follows its content height while the shared actions
+    // retain their measured touch-target floor.
     expect(profileSource).toContain(
-      'className="space-y-2 lg:flex lg:flex-1 lg:flex-col lg:justify-center"',
+      'className="space-y-2"',
     );
     expect(profileSource).toContain(
-      'className="hidden h-full min-h-0 overflow-y-auto overscroll-contain p-4 md:flex md:flex-col md:gap-3',
+      'className="hidden space-y-5 p-5 md:block',
     );
 
     // Inline video links measured 68x20, under the 24px target floor. The

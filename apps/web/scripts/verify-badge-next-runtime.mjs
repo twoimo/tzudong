@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from '../tests-unit/fixtures/chrome-for-testing.ts';
 // Real production Next App Router server; no bundler alias or component mock.
 import { chromium, expect } from '@playwright/test';
 import { mkdtemp, mkdir, readFile, writeFile, cp, symlink, rm } from 'node:fs/promises';
@@ -64,7 +65,7 @@ try {
     await writeFile(join(out, `ssr-${mode}.html`), html);
     if (response.status !== 200 || !html.includes('Badge server boundary') || !html.includes('data-hydrated="false"') || !html.includes('badge_popular_fire_40.webp') || html.includes('<canvas')) throw Error('SSR_BRANCH_FAILED:' + mode);
   }
-  browser = await chromium.launch({ executablePath: process.env.TZUDONG_TEST_CHROMIUM || undefined,
+  browser = await chromium.launch({ executablePath: chromeForTestingExecutable(),
     args: ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   result.browser = browser.version();
   const viewerRequest = url => chunks.some(path => new URL(url).pathname === '/_next/' + path);

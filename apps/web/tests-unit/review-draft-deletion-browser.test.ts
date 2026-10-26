@@ -1,8 +1,9 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 // Real IndexedDB in a fresh browser, using only synthetic text and local bundle
 // interception. No app server, configured client, user profile or network API.
@@ -85,7 +86,7 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
     });
     expect(build.success).toBe(true);
     const script = await build.outputs[0].text();
-    const browser = await chromium.launch({ executablePath: chrome, headless: true });
+    const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
     try {
         const page = await browser.newPage();
         let externalRequests = 0;

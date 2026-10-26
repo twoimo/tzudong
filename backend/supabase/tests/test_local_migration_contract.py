@@ -12,6 +12,8 @@ import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
 
+from backend.supabase.scripts import transform_hosted_pending_custody_pg15_replay as custody_replay
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "backend/supabase/scripts/local-migrate.py"
@@ -214,6 +216,50 @@ class LocalMigrationContractTests(unittest.TestCase):
         with patch.object(local_migrate, "_verified_migration_bytes", return_value=b"changed source"):
             with self.assertRaisesRegex(local_migrate.LocalMigrationError, "migration_source_mismatch"):
                 local_migrate._execution_body(item)
+
+    def test_custody_execution_reuses_reversible_exact_catalog_pg15_adapter(self) -> None:
+        path = "backend/supabase/migrations/" + custody_replay.NAME
+        item = next(row for row in local_migrate.build_manifest()["source"]["files"]
+                    if row["path"] == path)
+        original = (ROOT / path).read_bytes()
+        emitted = local_migrate._execution_body(item)
+        adapted = custody_replay.transform(original)
+        expected = b"BEGIN;\n" + adapted + b"\nCOMMIT;\n"
+        self.assertEqual(hashlib.sha256(emitted).hexdigest(), hashlib.sha256(expected).hexdigest())
+        self.assertEqual(custody_replay.restore(emitted[len(b"BEGIN;\n"):-len(b"\nCOMMIT;\n")]), original)
+        self.assertEqual(item["sha256"], custody_replay.SHA256)
+        _, executed = local_migrate._source_execution_parts(item, item["ordinal"] - 1)
+        self.assertEqual(executed, expected)
+
+    def test_superseded_candidate_index_retains_both_sources_and_checks_preimage(self) -> None:
+        items = {row["path"]: row for row in local_migrate.build_manifest()["source"]["files"]}
+        path = "backend/supabase/migrations/" + custody_replay.SUPERSEDED_INDEX_NAME
+        successor = "backend/supabase/migrations/" + custody_replay.NAME
+        body = local_migrate._execution_body(items[path])
+        match = re.search(rb"SELECT '([^']+)'::jsonb;", body)
+        self.assertIsNotNone(match)
+        self.assertEqual(json.loads(match[1]), custody_replay.classify_superseded_index(
+            (ROOT / path).read_bytes(), (ROOT / successor).read_bytes()))
+        self.assertEqual(items[path]["sha256"], custody_replay.SUPERSEDED_INDEX_SHA256)
+        self.assertEqual(items[successor]["sha256"], custody_replay.SHA256)
+        self.assertIn(b"PENDING_CUSTODY_SUPERSEDED_INDEX_PREIMAGE", body)
+        self.assertNotIn(b"CREATE UNIQUE INDEX", body.upper())
+        self.assertNotIn(b"DROP INDEX", body.upper())
+
+    def test_custody_registry_rejects_drift_in_either_immutable_source(self) -> None:
+        read_bytes = Path.read_bytes
+        try:
+            for name in (custody_replay.NAME, custody_replay.SUPERSEDED_INDEX_NAME):
+                target = ROOT / "backend/supabase/migrations" / name
+                def changed(path):
+                    data = read_bytes(path)
+                    return data + b"\n" if path == target else data
+                local_migrate._canonical_source_replay_bodies.cache_clear()
+                with self.subTest(source=name), patch.object(Path, "read_bytes", changed):
+                    with self.assertRaisesRegex(local_migrate.LocalMigrationError, "source_replay_invalid"):
+                        local_migrate._canonical_source_replay_bodies()
+        finally:
+            local_migrate._canonical_source_replay_bodies.cache_clear()
 
     def test_ddl_prerequisite_is_ddl_only_and_localizes_extensions(self) -> None:
         sql = b"CREATE EXTENSION IF NOT EXISTS vector;\nCREATE TABLE sample(id integer);\n"

@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 async function bundle() {
   const entry = `
@@ -50,7 +51,7 @@ async function bundle() {
 declare global { interface Window { __sentryRead: { hold: boolean; release: () => void } } }
 
 (existsSync(chrome) ? test : test.skip)('a failed sentry list keeps keyboard focus on retry', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     for (const width of [1280, 390]) {
@@ -95,7 +96,7 @@ declare global { interface Window { __sentryRead: { hold: boolean; release: () =
 }, 60_000);
 
 (existsSync(chrome) ? test : test.skip)('the next sentry page keeps keyboard focus while that page is loading', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle().then(source => source.replace('pages: false', 'pages: true'));
     for (const width of [1280, 390]) {

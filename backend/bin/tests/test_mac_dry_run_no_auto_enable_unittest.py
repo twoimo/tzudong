@@ -11,7 +11,7 @@ Requirement 3.5 (dry-run preview precedes any live write):
     (``apply_exit = _run(apply_cmd)``).
   * The apply script ``apply_hosted_pending_candidates.py`` always builds the
     apply preview (``build_apply_preview``) before it can call the live
-    ``apply_pending_candidates``, and gates the live apply behind a
+    ``apply_current_sets``, and gates the live apply behind a
     dry-run / zero-candidate short-circuit that returns first.
 
 Requirement 3.6 (no auto-enable during unattended runs):
@@ -290,9 +290,9 @@ class ApplyScriptPreviewGatesLiveApplyTest(unittest.TestCase):
             self.main, msg=f"main() not found in {APPLY_SCRIPT}"
         )
 
-    def test_build_preview_precedes_apply_pending_candidates(self) -> None:
+    def test_build_preview_precedes_apply_current_sets(self) -> None:
         preview_calls = _calls_to(self.main, "build_apply_preview")
-        apply_calls = _calls_to(self.main, "apply_pending_candidates")
+        apply_calls = _calls_to(self.main, "apply_current_sets")
         self.assertEqual(
             len(preview_calls),
             1,
@@ -301,19 +301,19 @@ class ApplyScriptPreviewGatesLiveApplyTest(unittest.TestCase):
         self.assertEqual(
             len(apply_calls),
             1,
-            msg="apply script must call apply_pending_candidates exactly once",
+            msg="apply script must call apply_current_sets exactly once",
         )
         self.assertLess(
             preview_calls[0].lineno,
             apply_calls[0].lineno,
             msg=(
-                "build_apply_preview must precede apply_pending_candidates so a "
+                "build_apply_preview must precede apply_current_sets so a "
                 "dry-run preview is always computed before any live write (R3.5)"
             ),
         )
 
     def test_live_apply_is_gated_behind_dry_run_short_circuit(self) -> None:
-        apply_calls = _calls_to(self.main, "apply_pending_candidates")
+        apply_calls = _calls_to(self.main, "apply_current_sets")
         self.assertEqual(len(apply_calls), 1)
         apply_lineno = apply_calls[0].lineno
 

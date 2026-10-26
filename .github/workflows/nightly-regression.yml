@@ -110,6 +110,10 @@ jobs:
           bun-version: '1.4.0'
       - name: Install web dependencies
         run: bun install --frozen-lockfile
+      - name: Install pinned Chrome for Testing for unit collection
+        run: bunx playwright install --with-deps chromium
+      - name: Verify unit browser identity
+        run: bun -e 'import { chromeForTestingExecutable } from "./tests-unit/fixtures/chrome-for-testing.ts"; chromeForTestingExecutable();'
       - name: Run hosted nightly unit regressions
         run: |
           set -o pipefail

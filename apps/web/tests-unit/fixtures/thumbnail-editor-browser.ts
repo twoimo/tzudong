@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './chrome-for-testing';
 /** Real React editor + project CSS + isolated Chrome. Auth/API/data are synthetic;
  * this is browser behavior evidence, never hosted or provider execution proof. */
 import assert from 'node:assert/strict';
@@ -145,7 +146,7 @@ function chatSucceed() {
       bytes: bytes.length, mimeType: 'application/json' }, provenance: { providerId: 'gemini-api', model: 'gemini-3.8-flash', responseModel: 'gemini-3.8-flash',
       responseId: 'synthetic-chat-editor', verification: 'official-api', modelEvidence: 'response', generatedAt: now, attemptId, inputSha256: chatJob.inputSha256 } } });
 }
-const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
 const origin = `http://127.0.0.1:${server.port}`;
 const errors: string[] = [], geometry: unknown[] = []; let externalRequests = 0;
 const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, reducedMotion: 'reduce' });
@@ -167,9 +168,10 @@ try {
   assert.equal(await page.evaluate(() => (globalThis as unknown as { __THUMBNAIL_FIXTURE_OWNER__: string }).__THUMBNAIL_FIXTURE_OWNER__), owner);
   await expect(page.locator('[data-thumbnail-chat-status-badge]')).toHaveText('접수 가능');
   if (process.env.THUMBNAIL_RUN_TASTE_INSPECTOR === '1') {
+    const executable = chromeForTestingExecutable();
     const inspection = Bun.spawn(['/opt/homebrew/Cellar/node@24/24.22.0/bin/node',
       '/Users/twoimo/.codex/skills/taste-skill/scripts/inspect.mjs', `${origin}/admin`, '--out', join(out, 'taste'),
-      '--widths', '1440,768,390', '--json'], { cwd: app, stdout: Bun.file(join(out, 'taste.stdout')), stderr: Bun.file(join(out, 'taste.stderr')) });
+      '--widths', '1440,768,390', '--json'], { cwd: app, env: { ...process.env, CHROME_PATH: executable, PUPPETEER_EXECUTABLE_PATH: executable }, stdout: Bun.file(join(out, 'taste.stdout')), stderr: Bun.file(join(out, 'taste.stderr')) });
     const exitCode = await inspection.exited;
     writeFileSync(join(out, 'taste-exit.json'), JSON.stringify({ exitCode, dashboardConventionExceptionsRequireReview: true }));
   }

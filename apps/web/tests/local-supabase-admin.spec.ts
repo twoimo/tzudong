@@ -1,3 +1,4 @@
+import { getAuthCookieContract } from '../lib/auth/session-cookies';
 import { expect, test } from './nightly/nightly-test';
 import {
   ADMIN_MAP_OVERLAY_CONFIRMATION_TEXT,
@@ -696,7 +697,7 @@ test.describe('real local Supabase and admin lifecycle', () => {
     });
     expect(unauthenticatedStatus).toBe(401);
 
-    const login = await page.evaluate(async ({ email, password, supabaseUrl, anonKey }) => {
+    const login = await page.evaluate(async ({ email, password, supabaseUrl, anonKey, cookieContract }) => {
       const response = await fetch(
         `${supabaseUrl}/auth/v1/token?grant_type=password`,
         {
@@ -727,8 +728,11 @@ test.describe('real local Supabase and admin lifecycle', () => {
         });
         const binary = Array.from(new TextEncoder().encode(raw), (byte) => String.fromCharCode(byte)).join('');
         const cookieValue = `base64-${btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')}`;
-        const supabaseHost = new URL(supabaseUrl).hostname.split('.')[0];
-        document.cookie = `sb-${supabaseHost}-auth-token=${cookieValue}; Path=/; SameSite=Lax`;
+        // Seed only this disposable test page from its fresh issuer response.
+        const scope = `Path=/; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`;
+        document.cookie = `${cookieContract.marker}=pending; ${scope}`;
+        document.cookie = `${cookieContract.key}=${cookieValue}; ${scope}`;
+        document.cookie = `${cookieContract.marker}=1; ${scope}`;
       }
       return { status: response.status, hasAccessToken, hasRefreshToken, userIdIsUuid };
     }, {
@@ -736,6 +740,7 @@ test.describe('real local Supabase and admin lifecycle', () => {
       password,
       supabaseUrl: localSupabaseUrl,
       anonKey: localSupabaseAnonKey,
+      cookieContract: getAuthCookieContract(localSupabaseUrl),
     });
     expect(login.status).toBe(200);
     expect(login.hasAccessToken).toBe(true);

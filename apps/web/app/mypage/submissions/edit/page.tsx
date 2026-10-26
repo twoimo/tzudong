@@ -223,6 +223,8 @@ export default function EditSubmissionsPage() {
     isFetchingNextPage,
     isLoading,
     isError,
+    isFetching,
+    refetch,
   } = useInfiniteQuery({
     queryKey: ["myEditSubmissions", user?.id],
     queryFn: async ({ pageParam = 0 }) => {
@@ -678,6 +680,8 @@ export default function EditSubmissionsPage() {
   if (isError) {
     return (
       <MyPageErrorState
+        onRetry={() => void refetch()}
+        retrying={isFetching}
         title="맛집 수정 요청을 불러오지 못했습니다"
         description="수정 요청 목록을 다시 불러오려면 잠시 후 재시도해주세요."
       />

@@ -4,7 +4,7 @@
 
 import type { ClusterFeature } from 'supercluster';
 import type { ClusterProperties } from './clustering';
-import { popularityFlameMarkup, publicPopularityTier } from './evidence-engineering/popularity-marker';
+import { publicPopularityTier } from './evidence-engineering/popularity-marker';
 import { escapeHtmlAttribute } from './html-escape';
 
 /**
@@ -136,6 +136,11 @@ const CATEGORY_IMAGES: Record<string, CategoryMarkerImage> = {
   '제철': createCategoryMarkerImage('seasonal'),
 };
 
+// One finite inventory shared by rendered pictures and the map-owned image primer.
+// Multiple category labels can point to the same asset (일식 / 돈까스·회).
+export const getCategoryMarkerImages = (): readonly CategoryMarkerImage[] =>
+  [...new Map(Object.values(CATEGORY_IMAGES).map(image => [image.webp, image])).values()];
+
 /**
  * 카테고리 이미지 경로 가져오기
  */
@@ -180,7 +185,6 @@ export const createClusterMarkerHTML = (
 ): string => {
   const count = cluster.properties.point_count || 0;
   const safeTier = publicPopularityTier(popularityTier);
-  const flame = popularityFlameMarkup(safeTier);
   const displayCategory = categories[currentIndex % categories.length] || '기타';
   const image = getCategoryImage(displayCategory);
 
@@ -224,7 +228,6 @@ export const createClusterMarkerHTML = (
         z-index: ${zIndex};
       "
     >
-      ${flame}
       <!-- 카테고리 이미지 (애니메이션) -->
       <div
         class="cluster-icon"

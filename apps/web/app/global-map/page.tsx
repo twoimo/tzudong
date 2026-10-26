@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { readCurrentBrowserAuthUser } from "@/lib/auth/isolated-browser-account";
 
 import { toast } from "@/lib/no-toast";
 import { Group, Panel, Separator } from "react-resizable-panels";
@@ -471,7 +472,7 @@ export default function GlobalMapPage() {
         if (!restaurantToEdit) return;
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await readCurrentBrowserAuthUser();
             if (!user) {
                 toast.error("로그인이 필요합니다.");
                 return;

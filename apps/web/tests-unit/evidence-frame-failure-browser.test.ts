@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { chromium, expect as ui } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromeForTestingExecutable();
 const reviewed = JSON.parse(readFileSync(resolve(appRoot, '../../docs/evidence/marker-evidence-live-20261021-v1/reviewed-frames.json'), 'utf8'));
 const frame = reviewed.frames[0].frame;
 
@@ -43,7 +44,10 @@ async function bundle() {
           return route.abort();
         });
         await page.goto('https://frame-failure.test/'); await page.addScriptTag({ content: script });
-        await ui(page.getByRole('heading', { name: '영상에서 확인한 방문·현장 장면 📸' })).toBeVisible();
+        await ui(page.locator('summary')).toHaveText('영상 속 장면1장');
+        await ui(page.locator('section img')).not.toBeVisible();
+        await page.locator('summary').press('Enter');
+        await ui(page.locator('section')).toContainText('현장 장면은 영상의 맥락');
         await ui(page.locator('section img')).toBeVisible();
         await ui.poll(() => page.locator('section img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(640);
         await page.getByRole('button', { name: '실패 재현' }).click();

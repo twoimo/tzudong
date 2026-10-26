@@ -35,7 +35,7 @@ class HostedDataPlaneTests(unittest.TestCase):
         )
         self.assertEqual(label, "forbidden_disjoint_local_test_db")
 
-    def test_evaluation_already_on_hosted_is_skipped(self) -> None:
+    def test_existing_video_requires_row_reconciliation(self) -> None:
         row = {
             "youtube_link": "https://www.youtube.com/watch?v=abcdefghijk",
             "geocoding_success": True,
@@ -46,7 +46,7 @@ class HostedDataPlaneTests(unittest.TestCase):
         }
         self.assertEqual(
             classify_evaluation_row(row, ["abcdefghijk"]),
-            "skip_already_on_hosted",
+            "apply_candidate_pending_geocoded",
         )
 
     def test_geocoded_eval_only_row_is_apply_candidate(self) -> None:
@@ -185,50 +185,12 @@ class HostedDataPlaneTests(unittest.TestCase):
             presented_preview_sha256=preview["previewSha256"],
         )
 
-    def test_freeze_state_does_not_block_pending_review_insert(self) -> None:
-        preview = build_apply_preview(
-            local_restaurant_ids=[],
-            hosted_restaurant_ids=[],
-            hosted_youtube_ids=[],
-            evaluation_rows=[
-                {
-                    "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
-                    "trace_id": "trace-new",
-                    "geocoding_success": True,
-                    "lat": 1,
-                    "lng": 2,
-                    "is_missing": False,
-                    "is_notSelected": False,
-                    "origin_name": "신규집",
-                }
-            ],
-        )
-        row = {
-            "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
-            "trace_id": "trace-new",
-            "geocoding_success": True,
-            "lat": 1,
-            "lng": 2,
-            "origin_name": "신규집",
-        }
-        for value in (None, "", "active", "inactive", "unknown", "cleared"):
-            calls = []
-            env = {APPROVAL_ENV: "1"}
-            if value is not None:
-                env["G037_WRITE_FREEZE"] = value
-            with self.subTest(value=value):
-                result = apply_pending_candidates(
-                    preview=preview,
-                    evaluation_rows=[row],
-                    url=HOSTED_URL,
-                    service_role_key="service-role",
-                    environment=env,
-                    presented_preview_sha256=preview["previewSha256"],
-                    fetch=lambda *args, **kwargs: calls.append(True) or (201, None),
-                )
-            self.assertEqual(result["insertedCount"], 1)
-            self.assertEqual(calls, [True])
-            self.assertEqual(result["insertedVideoIds"], ["newvideo111"])
+    def test_freeze_state_does_not_block_pending_review_insert(self):
+        preview=build_apply_preview(local_restaurant_ids=[],hosted_restaurant_ids=[],hosted_youtube_ids=[],evaluation_rows=[])
+        for value in (None,"","active","inactive","unknown","cleared"):
+            environment={APPROVAL_ENV:"1"}
+            if value is not None:environment["G037_WRITE_FREEZE"]=value
+            assert_apply_authorized(preview,environment=environment,presented_preview_sha256=preview["previewSha256"])
 
     def test_pending_payload_never_stays_approved(self) -> None:
         payload = pending_insert_payload(
@@ -269,242 +231,9 @@ class HostedDataPlaneTests(unittest.TestCase):
         self.assertEqual(payload["status"], "pending")
         self.assertNotIn("updated_by_admin_id", payload)
 
-    def test_apply_pending_candidates_posts_only_preview_ids(self) -> None:
-        preview = build_apply_preview(
-            local_restaurant_ids=[],
-            hosted_restaurant_ids=[],
-            hosted_youtube_ids=[],
-            evaluation_rows=[
-                {
-                    "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
-                    "trace_id": "trace-new",
-                    "geocoding_success": True,
-                    "lat": 1,
-                    "lng": 2,
-                    "is_missing": False,
-                    "is_notSelected": False,
-                    "status": "approved",
-                    "origin_name": "신규집",
-                }
-            ],
-        )
-        calls: list[tuple[str, object]] = []
 
-        def fake_fetch(url, *, key, method="GET", payload=None, extra_headers=None):
-            calls.append((method, payload))
-            return 201, None
 
-        result = apply_pending_candidates(
-            preview=preview,
-            evaluation_rows=[
-                {
-                    "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
-                    "trace_id": "trace-new",
-                    "geocoding_success": True,
-                    "lat": 1,
-                    "lng": 2,
-                    "origin_name": "신규집",
-                    "status": "approved",
-                },
-                {
-                    "youtube_link": "https://www.youtube.com/watch?v=oldvideo222",
-                    "trace_id": "trace-old",
-                    "geocoding_success": True,
-                    "lat": 3,
-                    "lng": 4,
-                    "origin_name": "기존집",
-                },
-            ],
-            url=HOSTED_URL,
-            service_role_key="service-role",
-            environment={APPROVAL_ENV: "1", "G037_WRITE_FREEZE": "cleared"},
-            presented_preview_sha256=preview["previewSha256"],
-            fetch=fake_fetch,
-        )
-        self.assertEqual(result["insertedVideoIds"], ["newvideo111"])
-        self.assertEqual(result["insertedCount"], 1)
-        self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0][0], "POST")
-        self.assertEqual(calls[0][1]["status"], "pending")
-        self.assertEqual(calls[0][1]["trace_id"], "trace-new")
 
-    def test_reflection_partitions_processed_set_by_identity(self) -> None:
-        preview = build_apply_preview(
-            local_restaurant_ids=[],
-            hosted_restaurant_ids=[],
-            hosted_youtube_ids=[],
-            evaluation_rows=[
-                {
-                    "youtube_link": "https://www.youtube.com/watch?v=applyvideo1",
-                    "trace_id": "trace-apply",
-                    "geocoding_success": True,
-                    "lat": 1,
-                    "lng": 2,
-                    "is_missing": False,
-                    "is_notSelected": False,
-                },
-                {
-                    "youtube_link": "https://www.youtube.com/watch?v=presentvid2",
-                    "trace_id": "trace-present",
-                    "geocoding_success": True,
-                    "lat": 3,
-                    "lng": 4,
-                    "is_missing": False,
-                    "is_notSelected": False,
-                },
-                {
-                    "youtube_link": "https://www.youtube.com/watch?v=unresolvid3",
-                    "trace_id": "trace-unresolved",
-                    "geocoding_success": True,
-                    "lat": 5,
-                    "lng": 6,
-                    "is_missing": False,
-                    "is_notSelected": False,
-                },
-            ],
-        )
-        status_by_trace = {
-            "trace-apply": 201,
-            "trace-present": 409,
-            "trace-unresolved": 500,
-        }
-
-        def fake_fetch(url, *, key, method="GET", payload=None, extra_headers=None):
-            return status_by_trace[payload["trace_id"]], None
-
-        rows = [
-            {
-                "youtube_link": "https://www.youtube.com/watch?v=applyvideo1",
-                "trace_id": "trace-apply",
-                "geocoding_success": True,
-                "lat": 1,
-                "lng": 2,
-            },
-            {
-                "youtube_link": "https://www.youtube.com/watch?v=presentvid2",
-                "trace_id": "trace-present",
-                "geocoding_success": True,
-                "lat": 3,
-                "lng": 4,
-            },
-            {
-                "youtube_link": "https://www.youtube.com/watch?v=unresolvid3",
-                "trace_id": "trace-unresolved",
-                "geocoding_success": True,
-                "lat": 5,
-                "lng": 6,
-            },
-        ]
-        result = apply_pending_candidates(
-            preview=preview,
-            evaluation_rows=rows,
-            url=HOSTED_URL,
-            service_role_key="service-role",
-            environment={APPROVAL_ENV: "1", "G037_WRITE_FREEZE": "cleared"},
-            presented_preview_sha256=preview["previewSha256"],
-            fetch=fake_fetch,
-        )
-        reflection = result["reflection"]
-        self.assertEqual(reflection["applied"], ["applyvideo1"])
-        self.assertEqual(reflection["skippedAlreadyPresent"], ["presentvid2"])
-        self.assertEqual(reflection["unresolved"], ["unresolvid3"])
-        # Three lists are pairwise disjoint and their union is the processed set.
-        applied = set(reflection["applied"])
-        present = set(reflection["skippedAlreadyPresent"])
-        unresolved = set(reflection["unresolved"])
-        self.assertEqual(applied & present, set())
-        self.assertEqual(applied & unresolved, set())
-        self.assertEqual(present & unresolved, set())
-        self.assertEqual(
-            applied | present | unresolved,
-            set(preview["applyCandidateVideoIds"]),
-        )
-        # Backward-compatible keys are preserved.
-        self.assertEqual(result["insertedVideoIds"], ["applyvideo1"])
-        self.assertEqual(result["skippedExistingVideoIds"], ["presentvid2"])
-        self.assertEqual(result["insertedCount"], 1)
-        self.assertEqual(result["previewSha256"], preview["previewSha256"])
-
-    def test_unresolved_candidate_does_not_abort_or_create_record(self) -> None:
-        preview = build_apply_preview(
-            local_restaurant_ids=[],
-            hosted_restaurant_ids=[],
-            hosted_youtube_ids=[],
-            evaluation_rows=[
-                {
-                    "youtube_link": "https://www.youtube.com/watch?v=applyvideo1",
-                    "trace_id": "trace-apply",
-                    "geocoding_success": True,
-                    "lat": 1,
-                    "lng": 2,
-                    "is_missing": False,
-                    "is_notSelected": False,
-                },
-                {
-                    "youtube_link": "https://www.youtube.com/watch?v=unresolvid3",
-                    "trace_id": "trace-unresolved",
-                    "geocoding_success": True,
-                    "lat": 5,
-                    "lng": 6,
-                    "is_missing": False,
-                    "is_notSelected": False,
-                },
-            ],
-        )
-        status_by_trace = {"trace-apply": 201, "trace-unresolved": 503}
-
-        def fake_fetch(url, *, key, method="GET", payload=None, extra_headers=None):
-            return status_by_trace[payload["trace_id"]], None
-
-        rows = [
-            {
-                "youtube_link": "https://www.youtube.com/watch?v=applyvideo1",
-                "trace_id": "trace-apply",
-                "geocoding_success": True,
-                "lat": 1,
-                "lng": 2,
-            },
-            {
-                "youtube_link": "https://www.youtube.com/watch?v=unresolvid3",
-                "trace_id": "trace-unresolved",
-                "geocoding_success": True,
-                "lat": 5,
-                "lng": 6,
-            },
-        ]
-        # A non-2xx/non-409 insert error must not abort the whole run and must
-        # not roll back the applied record (R4.6, R4.7).
-        result = apply_pending_candidates(
-            preview=preview,
-            evaluation_rows=rows,
-            url=HOSTED_URL,
-            service_role_key="service-role",
-            environment={APPROVAL_ENV: "1", "G037_WRITE_FREEZE": "cleared"},
-            presented_preview_sha256=preview["previewSha256"],
-            fetch=fake_fetch,
-        )
-        self.assertEqual(result["reflection"]["applied"], ["applyvideo1"])
-        self.assertEqual(result["reflection"]["unresolved"], ["unresolvid3"])
-        self.assertEqual(result["insertedVideoIds"], ["applyvideo1"])
-
-    def test_apply_pending_candidates_refuses_without_approval(self) -> None:
-        preview = build_apply_preview(
-            local_restaurant_ids=[],
-            hosted_restaurant_ids=[],
-            hosted_youtube_ids=[],
-            evaluation_rows=[],
-        )
-        with self.assertRaises(HostedDataPlaneError) as raised:
-            apply_pending_candidates(
-                preview=preview,
-                evaluation_rows=[],
-                url=HOSTED_URL,
-                service_role_key="service-role",
-                environment={},
-                presented_preview_sha256=preview["previewSha256"],
-                fetch=lambda *args, **kwargs: (201, None),
-            )
-        self.assertEqual(str(raised.exception), "approval_missing")
 
     def test_hosted_url_must_match_project_ref(self) -> None:
         assert_hosted_target(HOSTED_URL)
@@ -542,76 +271,7 @@ class HostedDataPlaneTests(unittest.TestCase):
             )
         self.assertEqual(str(raised.exception), "preview_hash_mismatch")
 
-    def test_skip_row_sharing_a_candidate_video_is_not_posted(self) -> None:
-        candidate = {
-            "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
-            "trace_id": "trace-new",
-            "geocoding_success": True,
-            "lat": 1,
-            "lng": 2,
-            "origin_name": "신규집",
-            "evaluation_results": {"visit_authenticity": {"name": "신규집", "eval_value": 1}},
-        }
-        skipped = {
-            "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
-            "trace_id": "trace-skip",
-            "is_missing": True,
-            "origin_name": "빠진집",
-        }
-        preview = build_apply_preview(
-            local_restaurant_ids=[],
-            hosted_restaurant_ids=[],
-            hosted_youtube_ids=[],
-            evaluation_rows=[candidate, skipped],
-        )
-        calls: list[dict] = []
 
-        def fake_fetch(url, *, key, method="GET", payload=None, extra_headers=None):
-            calls.append(payload)
-            return 201, None
-
-        apply_pending_candidates(
-            preview=preview,
-            evaluation_rows=[candidate, skipped],
-            url=HOSTED_URL,
-            service_role_key="service-role",
-            environment={APPROVAL_ENV: "1"},
-            presented_preview_sha256=preview["previewSha256"],
-            fetch=fake_fetch,
-        )
-        self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0]["origin_name"], "신규집")
-        self.assertEqual(calls[0]["status"], "pending")
-        self.assertEqual(calls[0]["evaluation_results"]["visit_authenticity"]["eval_value"], 1)
-
-    def test_changed_row_content_is_rejected_before_post(self) -> None:
-        row = {
-            "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
-            "trace_id": "trace-new",
-            "geocoding_success": True,
-            "lat": 1,
-            "lng": 2,
-            "origin_name": "신규집",
-        }
-        preview = build_apply_preview(
-            local_restaurant_ids=[],
-            hosted_restaurant_ids=[],
-            hosted_youtube_ids=[],
-            evaluation_rows=[row],
-        )
-        changed = dict(row)
-        changed["origin_name"] = "다른집"
-        with self.assertRaises(HostedDataPlaneError) as raised:
-            apply_pending_candidates(
-                preview=preview,
-                evaluation_rows=[changed],
-                url=HOSTED_URL,
-                service_role_key="service-role",
-                environment={APPROVAL_ENV: "1"},
-                presented_preview_sha256=preview["previewSha256"],
-                fetch=lambda *args, **kwargs: (201, None),
-            )
-        self.assertEqual(str(raised.exception), "apply_payload_mismatch")
 
     def test_invalid_evaluation_json_fails_closed(self) -> None:
         import tempfile

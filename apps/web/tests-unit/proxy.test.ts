@@ -108,6 +108,43 @@ test('production CSP admits the overseas tile service without widening script or
     }
 })
 
+test('production CSP binds local Auth connections to the explicitly enabled validated origin', async () => {
+    const oldUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const oldRuntime = process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME
+    resetAdminBypassEnv()
+    process.env.NODE_ENV = 'production'
+    try {
+        const { proxy } = await loadProxyModule()
+        for (const [runtime, url, allowed] of [
+            ['1', 'http://127.0.0.1:28000', true],
+            ['0', 'http://127.0.0.1:28000', false],
+            ['1', 'http://192.168.1.5:28000', false],
+            ['1', 'http://127.0.0.1:80', false],
+            ['1', 'http://127.0.0.1:28000/path', false],
+            ['1', 'http://127.0.0.1:28000/?allow=other', false],
+        ] as const) {
+            process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME = runtime
+            process.env.NEXT_PUBLIC_SUPABASE_URL = url
+            const response = await proxy(new NextRequest('http://127.0.0.1:18080/'))
+            const policy = response.headers.get('content-security-policy') ?? ''
+            const connects = policy.split(';').find(part => part.trim().startsWith('connect-src '))!.trim().split(/\s+/)
+            expect(connects.includes('http://127.0.0.1:28000')).toBe(allowed)
+            expect(connects.includes('ws://127.0.0.1:28000')).toBe(allowed)
+            expect(connects).not.toContain('http:')
+            expect(connects).not.toContain('ws:')
+            expect(connects).not.toContain('http://192.168.1.5:28000')
+            expect(policy).toContain("'strict-dynamic'")
+            expect(policy).not.toContain("'unsafe-eval'")
+        }
+    } finally {
+        if (oldUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL
+        else process.env.NEXT_PUBLIC_SUPABASE_URL = oldUrl
+        if (oldRuntime === undefined) delete process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME
+        else process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME = oldRuntime
+        resetAdminBypassEnv()
+    }
+})
+
 test('field POST omits Auth work only when credentialless and keeps mutation checks', async () => {
     resetAdminBypassEnv()
     let updateSessionCalls = 0

@@ -1,9 +1,12 @@
 "use client";
 
+import { isSupersededLogout } from "@/lib/auth/logout-result";
+
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHydration } from "@/hooks/useHydration";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import {
   Bookmark,
   Edit3,
@@ -17,6 +20,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
+import { useMyPageScrollRestoration } from "@/hooks/use-mypage-scroll-restoration";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { pageHeaderTitleClass, pageHeaderDescriptionClass } from "@/components/home/map-panel-chrome";
 import { Button } from "@/components/ui/button";
@@ -174,6 +178,7 @@ export function MyPageLayoutContent({
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recordScroll = useMyPageScrollRestoration(scrollRef, pathname, !userLoading && Boolean(user));
   const [shouldRenderSidebar, setShouldRenderSidebar] = useState(false);
   const myPageBottomNavAutoHide = useMobileBottomNavAutoHide({
     scrollRef,
@@ -205,6 +210,7 @@ export function MyPageLayoutContent({
       toast.success("로그아웃되었습니다");
       router.push("/");
     } catch (error) {
+      if (isSupersededLogout(error)) return;
       console.error("로그아웃 실패:");
       toast.error("로그아웃에 실패했습니다");
     }
@@ -235,7 +241,10 @@ export function MyPageLayoutContent({
           className="flex-1 h-full min-h-0 overflow-y-auto min-w-0 overscroll-contain"
           data-layout-primitives="scroll-body-shell"
           data-scroll-owner="mypage-content"
-          onScroll={myPageBottomNavAutoHide.onScroll}
+          onScroll={(event) => {
+            recordScroll(event.currentTarget);
+            myPageBottomNavAutoHide.onScroll();
+          }}
           onTouchStart={myPageBottomNavAutoHide.onTouchStart}
           onTouchMove={myPageBottomNavAutoHide.onTouchMove}
         >
@@ -272,6 +281,9 @@ export function MyPageLayoutContent({
                 </Button>
               )}
             </div>
+            <Button asChild variant="outline" className="mt-3 min-h-11 w-full rounded-xl">
+              <Link href="/">지도로 돌아가기</Link>
+            </Button>
           </div>
           <div
             className="flex min-h-full w-full flex-col px-3 py-4 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+1rem)] sm:px-4 md:h-full md:min-h-0 md:px-4 md:py-3 md:pb-3 lg:px-5 lg:py-3"

@@ -245,6 +245,8 @@ export default function FeedContent({
     // 리뷰 피드 데이터 조회 (무한 스크롤)
     const {
         data: feedPages,
+        refetch,
+        isFetching,
         fetchNextPage,
         hasNextPage,
         isError,
@@ -289,6 +291,8 @@ export default function FeedContent({
                     : Promise.resolve({ data: [] }),
             ]);
 
+            if (restaurantsResult.error) throw new Error('FEED_RESTAURANTS_UNAVAILABLE');
+            if ('error' in userLikesResult && userLikesResult.error) throw new Error('FEED_LIKES_UNAVAILABLE');
             const restaurantsData = (restaurantsResult.data ?? []) as FeedRestaurantRecord[];
             const restaurantsMap = new Map<string, FeedRestaurantRecord>((restaurantsData || []).map((restaurantRow) => {
                 return [restaurantRow.id, normalizeFeedRestaurantRecord(restaurantRow)];
@@ -307,13 +311,14 @@ export default function FeedContent({
                     ),
                 ]
                 : [];
-            const { data: approvedRestaurantRowsRaw } = reviewedRestaurantNames.length > 0
+            const { data: approvedRestaurantRowsRaw, error: approvedRestaurantsError } = reviewedRestaurantNames.length > 0
                 ? await supabase
                     .from('restaurants')
                     .select(FEED_RESTAURANT_SELECT)
                     .eq('status', 'approved')
                     .in('approved_name', reviewedRestaurantNames)
-                : { data: [] };
+                : { data: [], error: null };
+            if (approvedRestaurantsError) throw new Error('FEED_RESTAURANTS_UNAVAILABLE');
             const approvedRestaurants = ((approvedRestaurantRowsRaw ?? []) as FeedRestaurantRecord[])
                 .map(normalizeFeedRestaurantRecord);
 
@@ -592,7 +597,7 @@ export default function FeedContent({
                             variant={isOverlay ? "panel" : "page"}
                             titleIcon={!isOverlay ? <MessageSquareText /> : undefined}
                             count={isLoading ? undefined : allReviews.length}
-                            description={!isOverlay ? (isLoggedIn ? '맛집 방문 후기를 공유해보세요!' : '로그인하여 리뷰를 작성해보세요!') : undefined}
+                            description={!isOverlay ? (isLoggedIn ? '맛집 방문 후기를 공유해보세요!' : '로그인하여 리뷰를 작성해보세요!') : '맛집을 다녀온 이야기를 나눠요'}
                             onClose={isOverlay ? onClose : undefined}
                             closeLabel="리뷰 패널 닫기"
                             actions={(
@@ -673,6 +678,9 @@ export default function FeedContent({
                         <div className="flex h-64 flex-col items-center justify-center text-muted-foreground" role="alert">
                             <p>리뷰 데이터를 불러오지 못했습니다.</p>
                             <p className="mt-1 text-sm">잠시 후 다시 시도해 주세요.</p>
+                            <Button type="button" variant="outline" size="sm" className="mt-3" disabled={isFetching} onClick={() => void refetch()}>
+                                다시 시도
+                            </Button>
                         </div>
                     ) : allReviews.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">

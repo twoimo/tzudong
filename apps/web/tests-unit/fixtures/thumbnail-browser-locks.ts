@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './chrome-for-testing';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -30,7 +31,7 @@ const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) 
     cancelRequested: false, result: null, createdAt: now, updatedAt: now });
   return Response.json({ job });
 } });
-const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
 try {
   const context = await browser.newContext(); const origin = `http://127.0.0.1:${server.port}`;
   await context.route('**/*', (route) => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());

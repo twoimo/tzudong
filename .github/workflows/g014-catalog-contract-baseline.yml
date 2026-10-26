@@ -11,6 +11,8 @@ on:
       - 'backend/supabase/scripts/transform_registration_replay.py'
       - 'backend/supabase/tests/test_registration_replay.py'
       - 'backend/supabase/tests/test_g014_catalog_baseline_generator.py'
+      - 'backend/supabase/scripts/compare_g024_clean_replays.py'
+      - 'backend/supabase/tests/test_compare_g024_clean_replays.py'
       - 'backend/supabase/scripts/g014_catalog_diagnostic.py'
       - 'backend/supabase/tests/test_g014_diagnostic_admission.py'
       - 'backend/supabase/tests/test_restaurant_refresh_apply_boundary.py'
@@ -21,12 +23,14 @@ on:
       - 'backend/supabase/scripts/transform_receipt_ocr_acl_admission_pg15_replay.py'
       - 'backend/supabase/scripts/transform_receipt_ocr_indeterminate_recovery_pg15_replay.py'
       - 'backend/supabase/scripts/transform_review_verification_readiness_pg15_replay.py'
+      - 'backend/supabase/scripts/transform_hosted_pending_custody_pg15_replay.py'
       - 'backend/supabase/tests/test_storyboard_owner_replay.py'
       - 'backend/supabase/tests/test_review_storage_pg15_replay.py'
       - 'backend/supabase/tests/test_receipt_ocr_credential_release_pg15_replay.py'
       - 'backend/supabase/tests/test_receipt_ocr_acl_admission_pg15_replay.py'
       - 'backend/supabase/tests/test_receipt_ocr_indeterminate_recovery_pg15_replay.py'
       - 'backend/supabase/tests/test_review_verification_readiness_pg15_replay.py'
+      - 'backend/supabase/tests/test_hosted_pending_custody_pg15_replay.py'
       - 'backend/supabase/tests/test_g014_guardian_replay.py'
       - 'backend/supabase/scripts/recover_advisor_replay_prerequisites.py'
       - 'backend/supabase/tests/test_advisor_replay_prerequisites.py'
@@ -121,6 +125,7 @@ jobs:
           backend.supabase.tests.test_storyboard_owner_replay
           backend.supabase.tests.test_review_storage_pg15_replay
           backend.supabase.tests.test_review_verification_readiness_pg15_replay
+          backend.supabase.tests.test_hosted_pending_custody_pg15_replay
           backend.supabase.tests.test_feature_rpc_catalog_pg15_replay
           backend.supabase.tests.test_receipt_ocr_credential_release_pg15_replay
           backend.supabase.tests.test_receipt_ocr_acl_admission_pg15_replay

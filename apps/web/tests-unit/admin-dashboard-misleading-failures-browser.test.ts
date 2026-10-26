@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect, type Browser, type Page } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 const shared = `
   const json = value => new Response(JSON.stringify(value), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -148,7 +149,7 @@ async function withPage(browser: Browser, width: number, script: string, run: (p
 const browserTest = existsSync(chrome) ? test : test.skip;
 
 browserTest('failed dashboard metric and collection-log reads are not shown as zeros, empty data or missing permission', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle(overviewEntry);
     for (const width of [1440, 390]) {
@@ -225,7 +226,7 @@ browserTest('failed dashboard metric and collection-log reads are not shown as z
 }, 90_000);
 
 browserTest('a failed route candidate read shows no invented readback or export and can be retried in place', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle(routeEntry);
     for (const width of [1280, 390]) {
@@ -267,7 +268,7 @@ browserTest('a failed route candidate read shows no invented readback or export 
 }, 90_000);
 
 browserTest('a failed map overlay read stays failed when the overlay layer is opened again', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle(routeEntry);
     for (const width of [1280, 390]) {
