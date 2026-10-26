@@ -1070,7 +1070,7 @@ describe("nightly regression package and source contracts", () => {
       "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
       "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
       "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08",
-      "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+      "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
     ]) {
       expect(localWorkflowSource).toContain(action);
     }
@@ -1082,7 +1082,7 @@ describe("nightly regression package and source contracts", () => {
     expect(localWorkflowSource).toContain("needs: local");
     expect(localWorkflowSource).toContain("if: ${{ needs.local.result == 'success' && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || inputs.suite == 'all') }}");
     expect(localWorkflowSource).toContain('test "${GITHUB_SHA}" = "$main_sha"');
-    expect(localWorkflowSource).toContain("actions/download-artifact@v4");
+    expect(localWorkflowSource).toContain("actions/download-artifact@v8.0.2");
     expect(localWorkflowSource).not.toContain("nightly-artifacts/nightly-run.log");
     expect(localWorkflowSource).not.toContain("nightly-artifacts/nightly-web.log");
     expect(localWorkflowSource).not.toContain("(Path('apps/web/nightly-run.log')");
