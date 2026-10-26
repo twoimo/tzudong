@@ -145,8 +145,11 @@ export class ReviewMediaMutation {
     private active: Promise<ReviewMutationResult> | null = null;
     private activeInput: ReviewMutationInput | null = null;
     constructor(private readonly deps: ReviewMediaDependencies) {}
+    get running(): boolean { return this.active !== null; }
     get pending(): boolean { return this.operation !== null; }
     get pendingKind(): ReviewMutationInput['kind'] | null { return this.operation?.input.kind ?? null; }
+    get pendingOwnerId(): string | null { return this.operation?.input.ownerId ?? null; }
+    get pendingReviewId(): string | null { return this.operation?.input.reviewId ?? null; }
     get canCancelConfirmedMissingUpload(): boolean {
         return Boolean(this.operation && !this.operation.sent && this.operation.confirmedMissingUpload && !this.active);
     }

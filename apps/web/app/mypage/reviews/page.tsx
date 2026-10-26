@@ -50,6 +50,8 @@ import { resolveReviewPhotoUrl } from "@/lib/review-photo-url";
 import { createCanonicalVisitedLookup } from "@/lib/restaurant-visit-matching";
 import type { Restaurant } from "@/types/restaurant";
 
+import { isMyPageReviewStatus, type MyPageReviewStatus } from "@/lib/mypage-route-state";
+
 const REVIEW_DELETE_CONFIRMATION = "리뷰삭제";
 
 // 리뷰 데이터 타입 정의
@@ -172,7 +174,8 @@ export default function ReviewsPage() {
     return cleanupRunner.current.request(cancelInterrupted);
   }, []);
   const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const initialStatus = searchParams.get("status");
+  const [filterStatus, setFilterStatus] = useState<MyPageReviewStatus>(isMyPageReviewStatus(initialStatus) ? initialStatus : "all");
   const [editingReview, setEditingReview] = useState<MyReview | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [highlightedReviewId, setHighlightedReviewId] = useState<string | null>(
@@ -182,6 +185,10 @@ export default function ReviewsPage() {
     null,
   );
   const [deleteReviewConfirmation, setDeleteReviewConfirmation] = useState("");
+  useLayoutEffect(() => {
+    setIsEditModalOpen(false);
+    setEditingReview(null);
+  }, [user?.id]);
 
   useEffect(() => {
     deleteMutation.current = new ReviewMediaMutation(createReviewMediaDependencies(supabase, () => ownerRef.current));
@@ -368,9 +375,7 @@ export default function ReviewsPage() {
     const status = searchParams.get("status");
     const reviewId = searchParams.get("reviewId");
 
-    if (status && ["all", "approved", "pending", "rejected"].includes(status)) {
-      setFilterStatus(status);
-    }
+    setFilterStatus(isMyPageReviewStatus(status) ? status : "all");
 
     if (reviewId) {
       setHighlightedReviewId(reviewId);
@@ -459,7 +464,14 @@ export default function ReviewsPage() {
       description="작성한 리뷰와 검수 상태를 차분한 카드 흐름으로 확인합니다."
       countLabel={`총 ${filteredReviews.length}개`}
       action={
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select value={filterStatus} onValueChange={(value) => {
+          if (!isMyPageReviewStatus(value)) return;
+          setFilterStatus(value);
+          const url = new URL(window.location.href);
+          if (value === "all") url.searchParams.delete("status");
+          else url.searchParams.set("status", value);
+          window.history.replaceState(window.history.state, "", url.pathname + url.search);
+        }}>
           <SelectTrigger
             className="h-9 w-[104px] rounded-full border-0 bg-transparent px-2 text-xs shadow-none md:h-10 md:w-[140px] md:border md:bg-background md:px-3 md:text-sm"
             aria-label="리뷰 상태 필터"

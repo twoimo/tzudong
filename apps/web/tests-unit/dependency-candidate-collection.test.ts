@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { collectCandidates, descriptor, lockfileChanges } from '../scripts/collect-dependency-candidates.mjs';
+import { collectCandidates, companionContentMirrorsOnly, descriptor, lockfileChanges } from '../scripts/collect-dependency-candidates.mjs';
 import { buildPreflightReceipt, buildRunReceipt } from '../scripts/verify-dependency-freshness.mjs';
 
 const pr = { number: 42, user: { login: 'dependabot[bot]' },
@@ -129,5 +129,212 @@ describe('real dependency candidate ingestion', () => {
       ['.github/workflows/ci.yml', '-uses: actions/checkout@old\n+uses: actions/checkout@new', '/'],
     ]) expect(descriptor(pr, [{ filename, status: 'modified', patch }]).unit).toBe(unit);
     await expect(collectCandidates(async () => ({ error: true }))).rejects.toThrow('candidate_metadata_unavailable');
+  });
+});
+
+describe('governed companion file narrow admission', () => {
+  const COMPANION = 'apps/web/tests-unit/nightly-regression-workflow.test.ts';
+  const manifest = () => ({
+    filename: 'apps/web/package.json', status: 'modified',
+    patch: '@@ -1,2 +1,2 @@\n-    "supabase": "^2.117.0",\n+    "supabase": "^2.121.0",\n-    "postcss": "^8.5.28",\n+    "postcss": "^8.5.31",',
+  });
+  const beforeText = [
+    'describe("nightly regression contracts", () => {',
+    '  it("pins supabase", () => {',
+    '    expect(lock).toContain(\'"supabase": ["supabase@2.117.0"\');',
+    '    expect(other).toBe(true);',
+    '  });',
+    '});',
+  ].join('\n');
+  const mirrorAfter = beforeText.replace('2.117.0', '2.121.0');
+  const contents = (after: string) => ({ [COMPANION]: { before: beforeText, after } });
+  const companion = (patch?: string, status = 'modified') => ({
+    filename: COMPANION, status, ...(patch === undefined ? {} : { patch }),
+  });
+  const cleanPatch = '@@ -1,4 +1,4 @@\n describe("nightly regression contracts", () => {\n'
+    + '   it("pins supabase", () => {\n'
+    + '-    expect(lock).toContain(\'"supabase": ["supabase@2.117.0"\');\n'
+    + '+    expect(lock).toContain(\'"supabase": ["supabase@2.121.0"\');\n'
+    + '     expect(other).toBe(true);\n';
+  const pairs = [{ name: 'supabase', fromVersion: '2.117.0', toVersion: '2.121.0' }];
+
+  test('complete content proving an exact manifest mirror is admitted', () => {
+    const d = descriptor(pr, [manifest(), companion(cleanPatch)], {}, contents(mirrorAfter));
+    expect(d.metadataIncomplete).toBe(false);
+    expect(d.packages).toHaveLength(2);
+    expect(companionContentMirrorsOnly(beforeText, mirrorAfter, pairs)).toBe(true);
+  });
+
+  test('a patch string alone never admits; completeness comes only from verified contents', () => {
+    // Same clean patch, no verified contents supplied.
+    expect(descriptor(pr, [manifest(), companion(cleanPatch)]).metadataIncomplete).toBe(true);
+    // A clean-looking patch cannot hide a later non-mirror hunk: the verified
+    // head content carries a semantic change the patch rendering omitted.
+    const hiddenHunk = mirrorAfter.replace('toBe(true)', 'toBe(false)');
+    expect(descriptor(pr, [manifest(), companion(cleanPatch)], {}, contents(hiddenHunk))
+      .metadataIncomplete).toBe(true);
+    // Trailing truncation of the rendering is irrelevant: content compare sees it all.
+    const truncatedPatch = cleanPatch.split('\n').slice(0, 3).join('\n');
+    expect(descriptor(pr, [manifest(), companion(truncatedPatch)], {}, contents(mirrorAfter))
+      .metadataIncomplete).toBe(false);
+  });
+
+  test('every adversarial non-mirror content change fails closed', () => {
+    const bad = [
+      mirrorAfter.replaceAll('2.121.0', '2.122.0'), // version not in the manifest bump
+      mirrorAfter.replace('supabase@2.121.0', 'supabase-extra@2.121.0'), // semantic edit on the changed line
+      mirrorAfter + '\n    expect(true).toBe(true);', // pure addition
+      mirrorAfter.replace('    expect(other).toBe(true);\n', ''), // deletion
+      mirrorAfter.replaceAll('2.121.0', '8.5.31'), // cross-package version swap
+      mirrorAfter.replace('2.121.0', '2.117.0'), // one-sided (from-version kept)
+      mirrorAfter.replaceAll('supabase', 'unrelated'), // changed line names no bumped package
+      mirrorAfter.replace('toBe(true)', 'toBe(false)'), // semantic change on another line
+      beforeText.replace('expect(other).toBe(true);', 'expect(lock).toContain(\'"supabase": ["supabase@2.121.0"\');')
+        .replace('supabase@2.117.0', 'supabase@2.121.0').replace('2.121.0\');\n  });', '2.121.0\');\n    expect(other).toBe(true);\n  });'), // reordered lines
+    ];
+    for (const after of bad) {
+      expect(companionContentMirrorsOnly(beforeText, after, pairs)).toBe(false);
+      expect(descriptor(pr, [manifest(), companion()], {}, contents(after)).metadataIncomplete).toBe(true);
+    }
+  });
+
+  test('wrong path, wrong status and empty manifest changes fail closed', () => {
+    expect(descriptor(pr, [manifest(), { filename: 'apps/web/tests-unit/other.test.ts', status: 'modified', patch: cleanPatch }], {}, contents(mirrorAfter)).metadataIncomplete).toBe(true);
+    expect(descriptor(pr, [manifest(), companion(cleanPatch, 'added')], {}, contents(mirrorAfter)).metadataIncomplete).toBe(true);
+    expect(descriptor(pr, [companion(cleanPatch)], {}, contents(mirrorAfter)).metadataIncomplete).toBe(true);
+    expect(companionContentMirrorsOnly(beforeText, mirrorAfter, [])).toBe(false);
+    expect(companionContentMirrorsOnly(undefined as never, mirrorAfter, pairs)).toBe(false);
+    expect(companionContentMirrorsOnly(beforeText, beforeText, pairs)).toBe(false); // no change is not a mirror
+  });
+
+  test('same-version pairs stay identity-bound by package name', () => {
+    const before = 'pin "alpha": "1.0.0"\n';
+    const dup = [
+      { name: 'alpha', fromVersion: '1.0.0', toVersion: '2.0.0' },
+      { name: 'beta', fromVersion: '1.0.0', toVersion: '2.0.0' },
+    ];
+    expect(companionContentMirrorsOnly(before, 'pin "alpha": "2.0.0"\n', dup)).toBe(true);
+    expect(companionContentMirrorsOnly('pin: "1.0.0"\n', 'pin: "2.0.0"\n', dup)).toBe(false);
+  });
+
+  test('shared from-version pairs stay bound to their own to-version', () => {
+    const dup = [
+      { name: 'alpha', fromVersion: '1.0.0', toVersion: '2.0.0' },
+      { name: 'beta', fromVersion: '1.0.0', toVersion: '3.0.0' },
+    ];
+    // Each package's own pair is admitted regardless of pair order.
+    expect(companionContentMirrorsOnly('pin "alpha": "1.0.0"\n', 'pin "alpha": "2.0.0"\n', dup)).toBe(true);
+    expect(companionContentMirrorsOnly('pin "beta": "1.0.0"\n', 'pin "beta": "3.0.0"\n', dup)).toBe(true);
+    expect(companionContentMirrorsOnly('pin "alpha": "1.0.0"\n', 'pin "alpha": "2.0.0"\n', [...dup].reverse())).toBe(true);
+    // Cross-pair swaps are rejected even though every token is a real manifest version.
+    expect(companionContentMirrorsOnly('pin "alpha": "1.0.0"\n', 'pin "alpha": "3.0.0"\n', dup)).toBe(false);
+    expect(companionContentMirrorsOnly('pin "beta": "1.0.0"\n', 'pin "beta": "2.0.0"\n', dup)).toBe(false);
+  });
+
+  test('collection always verifies companion contents, even when a patch string exists', async () => {
+    const baseSha = 'b'.repeat(40);
+    const mergeBase = 'c'.repeat(40);
+    const blobOf = (value: string) => {
+      const bytes = Buffer.from(value);
+      return { encoding: 'base64', content: bytes.toString('base64'), size: bytes.length,
+        sha: createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex') };
+    };
+    const collect = async (after: string, corrupt = false) => {
+      const calls: string[] = [];
+      const out = await collectCandidates(async (path: string) => {
+        calls.push(path);
+        if (path.includes('/compare/')) return { base_commit: { sha: baseSha }, merge_base_commit: { sha: mergeBase } };
+        if (path.includes('/contents/')) {
+          if (corrupt) return { encoding: 'base64', content: 'e30=', size: 2, sha: '0'.repeat(40) };
+          return blobOf(path.endsWith(mergeBase) ? beforeText : after);
+        }
+        if (path.includes('/files')) return [manifest(), companion(cleanPatch)]; // patch present
+        return [{ ...pr, base: { ...pr.base, sha: baseSha } }];
+      }, undefined as never);
+      return { candidate: out[0], calls };
+    };
+    const admitted = await collect(mirrorAfter);
+    expect(admitted.candidate.metadataIncomplete).toBe(false);
+    expect(admitted.calls.filter((path) => path.includes('/contents/'))).toEqual([
+      `/contents/${COMPANION}?ref=${mergeBase}`,
+      `/contents/${COMPANION}?ref=${pr.head.sha}`,
+    ]);
+    expect((await collect(mirrorAfter.replace('toBe(true)', 'toBe(false)'))).candidate.metadataIncomplete).toBe(true);
+    await expect(collect(mirrorAfter, true)).rejects.toThrow('candidate_metadata_unavailable');
+  });
+});
+
+describe('governed companion exact action SHA pin mirror', () => {
+  const OLD = 'd3f86a106a0bac45b974a628896c90dbdf5c8093';
+  const NEW = '9000827ccba6bdab643e8b6fd33ac0654aef8333';
+  const OTHER = 'cf430e030ddbb5b0abf93d22962f4752f3646cd9';
+  const pairs = [{ name: 'actions/download-artifact', fromVersion: OLD, toVersion: NEW }];
+  const line = (sha: string, tail = '') => `      "actions/download-artifact@${sha}",${tail}`;
+  const doc = (l: string) => ['expect(a).toBe(1);', l, 'expect(b).toBe(2);'].join('\n');
+
+  test('exact from->to SHA on a line naming the bumped action is admitted', () => {
+    expect(companionContentMirrorsOnly(doc(line(OLD)), doc(line(NEW)), pairs)).toBe(true);
+  });
+
+  test('every SHA deviation fails closed', () => {
+    const before = doc(line(OLD));
+    const bad = [
+      doc(line(OTHER)), // to-ref is not this package's bumped ref
+      doc(line(OLD)), // unchanged: no change at all
+      doc(line(NEW, ' // extra')), // extra edit on the changed line
+      doc(line(NEW).replace('download-artifact', 'upload-artifact')), // different action name
+      doc(line(NEW).replace(NEW.slice(0, 39), NEW.slice(0, 38) + '0')), // truncated or altered ref
+      doc(line(NEW)).replace('toBe(2)', 'toBe(3)'), // second, non-mirror line change
+      doc(line(NEW)) + '\n' + line(NEW), // added line
+    ];
+    for (const after of bad) expect(companionContentMirrorsOnly(before, after, pairs)).toBe(false);
+    // Swapped direction is not the manifest pair.
+    expect(companionContentMirrorsOnly(doc(line(NEW)), doc(line(OLD)), pairs)).toBe(false);
+    // A line that does not name the bumped action is never admitted, even with the right refs.
+    expect(companionContentMirrorsOnly(doc(`  "x@${OLD}",`), doc(`  "x@${NEW}",`), pairs)).toBe(false);
+    // Short or non-hex refs are not treated as SHA pins.
+    const short = [{ name: 'actions/download-artifact', fromVersion: 'v4', toVersion: 'v8' }];
+    expect(companionContentMirrorsOnly(doc(line('v4')), doc(line('v8')), short)).toBe(false);
+  });
+
+  test('a second action sharing the line cannot ride along unless it is also a bumped pair', () => {
+    const before = doc(`  "actions/download-artifact@${OLD}", "actions/upload-artifact@${OLD}",`);
+    const after = doc(`  "actions/download-artifact@${NEW}", "actions/upload-artifact@${NEW}",`);
+    expect(companionContentMirrorsOnly(before, after, pairs)).toBe(false);
+  });
+});
+
+describe('governed companion pin record binds SHA and version comment to the same action', () => {
+  const OLD = 'd3f86a106a0bac45b974a628896c90dbdf5c8093';
+  const NEW = '9000827ccba6bdab643e8b6fd33ac0654aef8333';
+  const pairs = [{ name: 'actions/download-artifact', fromVersion: OLD, toVersion: NEW, fromTag: 'v4.3.0', toTag: 'v8.0.2' }];
+  const pin = (sha: string, tag: string, action = 'actions/download-artifact') =>
+    `const PIN = "actions/download-artifact@${sha} # ${action}@${tag}";`;
+  const flow = {
+    number: 9, head: { sha: 'h' }, base: { ref: 'develop' },
+  };
+  const wf = (comment: string) => ({
+    filename: '.github/workflows/nightly-local-regression.yml', status: 'modified',
+    patch: `@@ -1,1 +1,1 @@\n-        uses: actions/download-artifact@${OLD} # actions/download-artifact@v4.3.0\n+        uses: actions/download-artifact@${NEW}${comment}`,
+  });
+  const COMPANION = 'apps/web/tests-unit/nightly-regression-workflow.test.ts';
+  const verdict = (after: string, comment = ' # actions/download-artifact@v8.0.2') =>
+    descriptor(flow, [wf(comment), { filename: COMPANION, status: 'modified' }], {},
+      { [COMPANION]: { before: pin(OLD, 'v4.3.0'), after } }).metadataIncomplete;
+
+  test('exact SHA plus exact version comment of the same action is admitted', () => {
+    expect(verdict(pin(NEW, 'v8.0.2'))).toBe(false);
+    expect(companionContentMirrorsOnly(pin(OLD, 'v4.3.0'), pin(NEW, 'v8.0.2'), pairs)).toBe(true);
+  });
+
+  test('stale, wrong, other-action or missing version evidence fails closed', () => {
+    expect(verdict(pin(NEW, 'v4.3.0'))).toBe(true); // stale comment kept
+    expect(verdict(pin(NEW, 'v8.0.3'))).toBe(true); // version not in the bot diff
+    expect(verdict(pin(NEW, 'v8.0.2', 'actions/upload-artifact'))).toBe(true); // comment names another action
+    expect(verdict(pin(NEW, 'v8.0.2'), '')).toBe(true); // bot diff carries no version comment: tag not bound
+    expect(verdict(pin(NEW, 'v8.0.2'), ' # actions/upload-artifact@v8.0.2')).toBe(true); // bot comment names another action
+    expect(companionContentMirrorsOnly(pin(OLD, 'v4.3.0'), pin(OLD, 'v8.0.2'), pairs)).toBe(false); // tag moved, SHA kept
+    expect(companionContentMirrorsOnly(pin(OLD, 'v4.3.0'), pin(NEW, 'v4.3.0'), pairs)).toBe(false); // SHA moved, tag stale
+    expect(companionContentMirrorsOnly(pin(NEW, 'v8.0.2'), pin(OLD, 'v4.3.0'), pairs)).toBe(false); // reversed pair
   });
 });

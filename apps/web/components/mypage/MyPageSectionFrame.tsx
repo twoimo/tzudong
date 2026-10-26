@@ -1,9 +1,11 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { pageHeadingTitleClass } from "@/components/layout/page-heading-styles";
 
 export const myPageListCardClass =
   "overflow-hidden border-border bg-card transition-colors hover:border-input";
@@ -74,7 +76,7 @@ export function MyPageSectionFrame({
               <p className="text-xs font-medium text-muted-foreground">
                 {eyebrow}
               </p>
-              <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
+              <h1 className={cn("mt-1", pageHeadingTitleClass)}>
                 {title}
               </h1>
               <p className="mt-1 hidden max-w-2xl text-sm leading-6 text-muted-foreground sm:block">
@@ -155,17 +157,22 @@ export function MyPageEmptyState({
 interface MyPageErrorStateProps {
   title?: string;
   description?: string;
+  onRetry?: () => void;
+  retrying?: boolean;
 }
 
 export function MyPageErrorState({
   title = "내용을 불러오지 못했습니다",
-  description = "잠시 후 다시 시도해주세요. 문제가 계속되면 홈으로 돌아가 다시 열어주세요.",
+  description = "잠시 후 다시 시도해주세요.",
+  onRetry,
+  retrying = false,
 }: MyPageErrorStateProps) {
   return (
     <Card className="border-destructive/25 bg-destructive/5">
-      <CardContent className="px-5 py-8 text-sm text-destructive">
+      <CardContent className="px-5 py-8 text-sm text-destructive" role="alert">
         <p className="font-semibold">{title}</p>
         <p className="mt-1 leading-6 text-destructive/80">{description}</p>
+        {onRetry && <Button type="button" variant="outline" className="mt-4" disabled={retrying} onClick={onRetry}>다시 시도</Button>}
       </CardContent>
     </Card>
   );

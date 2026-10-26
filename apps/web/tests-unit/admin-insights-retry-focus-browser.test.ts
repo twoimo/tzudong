@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect, type Page } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 const entry = `
   import React from 'react';
@@ -62,7 +63,7 @@ const requestCount = async (page: Page, period: string) =>
   (await page.evaluate(() => (globalThis as unknown as { __fixture: Fixture }).__fixture.requests)).filter(value => value === period).length;
 
 (existsSync(chrome) ? test : test.skip)('an insights period read failure keeps keyboard focus through the error, retry and recovery', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     for (const width of [1280, 390]) {
@@ -115,7 +116,7 @@ const requestCount = async (page: Page, period: string) =>
 }, 90_000);
 
 (existsSync(chrome) ? test : test.skip)('a failed first insights read stays failed while retrying', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     for (const width of [1280, 390]) {

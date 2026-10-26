@@ -929,7 +929,7 @@ describe("web quality performance source contracts", () => {
       "MOBILE_CONTROL_OVERLAY_IDLE_DELAY_MS",
     );
     expect(homeControlPanelSource).toContain(
-      "useDeferredComponent<MobileControlOverlayProps>",
+      "useDeferredComponentWithRetry<MobileControlOverlayProps>",
     );
     expect(homeControlPanelSource).toContain(
       "shouldRenderMobile && shouldLoadMobileOverlay",
@@ -940,7 +940,7 @@ describe("web quality performance source contracts", () => {
     expect(homeControlPanelSource).not.toContain(
       "window.addEventListener('touchstart', requestMobileOverlay",
     );
-    expect(homeControlPanelSource).toContain("return null;");
+    expect(homeControlPanelSource).toContain("return shellFallback(desktopPanelLoad);");
     expect(homeControlPanelSource).toContain("shouldLoadDesktopPanel");
     expect(homeControlPanelSource).not.toContain(
       "function DesktopControlPanelLoadingShell()",
@@ -1451,7 +1451,7 @@ describe("web quality performance source contracts", () => {
       "captureDetailReturnView(activeLeftPanelViewRef.current, {",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "if (pendingDetailReturnCaptureRef.current) return;",
+      "if (pendingDetailReturnCaptureRef.current || hasCapturedDetailReturnRef.current) return;",
     );
     expect(homeDesktopControlPanelSource).toContain(
       'captureDetailReturnView("map", { pendingDetailOpen: true })',
@@ -1486,7 +1486,7 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       "replaceBrowserHistoryRoute(returnRoute)",
     );
-    expect(homeDesktopControlPanelSource).toContain(
+    expect(homeDesktopControlPanelSource).not.toContain(
       'replaceBrowserHistoryRoute("/")',
     );
     expect(homeDesktopControlPanelSource).toContain(
@@ -1599,7 +1599,7 @@ describe("web quality performance source contracts", () => {
       'data-desktop-left-panel-announcement="true"',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'initialRoutePanel === "announcement" && !isPublicRestrictedMode ? "announcement" : "map"',
+      '!isPublicRestrictedMode && isDesktopLeftPanelRouteView(initialRoutePanel)',
     );
     expect(homeDesktopControlPanelSource).toContain(
       'panelParam !== "announcement"',
@@ -1639,7 +1639,7 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).not.toContain(
       "aria-label={`${label} 패널 불러오는 중`}",
     );
-    expect(homeDesktopControlPanelSource).toContain(
+    expect(homeDesktopControlPanelSource).not.toContain(
       "isInlinePanelViewActive ? null",
     );
     expect(homeDesktopControlPanelSource).toContain(
@@ -1668,9 +1668,8 @@ describe("web quality performance source contracts", () => {
       "onRestaurantSelect(restaurant)",
     );
     expect(homeDesktopControlPanelSource).toContain("{!hasActiveDetail && (");
-    expect(homeDesktopControlPanelSource).toContain(
-      '{activeLeftPanelView === "feed" && DeferredFeedOverlay ? (',
-    );
+    // Destination rendering, retained state and owner isolation are exercised
+    // by desktop-panel-renewal-browser.test.ts rather than a ternary-shape assertion.
     expect(homeDesktopControlPanelSource).toContain(
       "onOpenReviewModal={onReviewModalOpen}",
     );
@@ -1707,9 +1706,7 @@ describe("web quality performance source contracts", () => {
       "showDesktopBackButton && !isMobile",
     );
     const sharedPanelHeaderSource = source("components/home/map-panel-chrome.tsx");
-    expect(sharedPanelHeaderSource.indexOf("{actions}")).toBeLessThan(
-      sharedPanelHeaderSource.indexOf("{onClose ?"),
-    );
+    // Actual header geometry/actions are covered by renewal-chrome-browser.test.ts.
     expect(restaurantDetailPanelSource).not.toContain(
       'className="mr-1 h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80"',
     );
@@ -1779,7 +1776,7 @@ describe("web quality performance source contracts", () => {
       "DESKTOP_MAP_MENU_ITEMS.map((item) =>",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "onClick={() => handleDesktopMapMenuItemSelect(item.id)}",
+      "onSelect={() => handleDesktopMapMenuItemSelect(item.id)}",
     );
     expect(homeDesktopControlPanelSource).not.toContain(
       "const desktopMapMenuItems = useMemo",
@@ -1908,10 +1905,10 @@ describe("web quality performance source contracts", () => {
     expect(mobileControlSource).toContain("aria-label={`${theme.ariaLabel}${isSelected ? ' 선택됨' : ''}`}");
     expect(mobileControlSource).toContain("카테고리 필터 열기");
     expect(mobileControlSource).toContain("min-h-11");
-    expect(mobileControlSource).toContain('role="status"');
-    expect(mobileControlSource).toContain("목록을 불러오는 중입니다");
+    expect(mobileControlSource).toContain('<DeferredPanelFallback title="검색"');
+    expect(mobileControlSource).toContain("onRetry={searchLoad.retry}");
     expect(mobileControlSource).toContain(
-      "useDeferredComponent<MobileNotificationMenuButtonProps>",
+      "useDeferredComponentWithRetry<MobileNotificationMenuButtonProps>",
     );
     expect(mobileControlSource).not.toContain("useNotifications()");
     expect(mobileControlSource).not.toContain(
@@ -3587,13 +3584,13 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).not.toContain("lg:text-xs");
     expect(myPageProfileSource).not.toContain("lg:text-base");
     expect(myPageProfileSource).toContain(
-      'data-mypage-profile-density="dashboard-matrix"',
+      'data-mypage-profile-density="content-first"',
     );
     expect(myPageProfileSource).toContain(
       'data-mypage-profile-viewport-fit="content"',
     );
-    expect(myPageProfileSource).toContain("lg:min-h-0");
-    expect(myPageProfileSource).toContain(
+    expect(myPageProfileSource).toContain("lg:items-start");
+    expect(myPageProfileSource).not.toContain(
       "lg:content-stretch lg:items-stretch",
     );
     expect(myPageProfileSource).not.toContain(
@@ -3618,7 +3615,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageSidebarSource).toContain(
       'data-mypage-sidebar-session-action="logout"',
     );
-    expect(myPageProfileSource).toContain("lg:h-full");
+    expect(myPageProfileSource).not.toContain("lg:justify-center");
     // Rows stay content-sized so the password form is never clipped.
     expect(myPageProfileSource).not.toContain("md:grid-rows-2");
     expect(myPageProfileSource).not.toContain(
@@ -3658,10 +3655,10 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain("완전 삭제는 복구할 수 없습니다.");
     expect(myPageProfileSource).not.toContain("진행 전 확인");
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:flex md:flex-col lg:col-start-2 lg:row-start-1 lg:h-full lg:min-h-0 lg:overflow-hidden"',
+      'className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-3"',
     );
     expect(myPageProfileSource).toContain(
-      'className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:flex md:flex-col lg:col-start-1 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"',
+      'className="hidden min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-2 md:flex md:flex-col lg:col-start-2"',
     );
     expect(myPageProfileSource).toContain(
       'data-mypage-desktop-recent-activity-row="true"',
@@ -3825,7 +3822,7 @@ describe("web quality performance source contracts", () => {
       'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:flex md:flex-col lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"',
+      'className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-6 lg:col-span-2"',
     );
     expect(myPageProfileSource).not.toContain("계정 위험 작업");
     expect(myPageProfileSource).not.toContain(
@@ -3840,7 +3837,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).not.toContain(
       'className="group rounded-2xl border border-border/70 bg-background p-3 md:flex md:flex-1 md:flex-col lg:p-2.5"',
     );
-    expect(myPageProfileSource).toContain("<details\n              open");
+    expect(myPageProfileSource).not.toContain("<details\n              open");
     expect(myPageProfileSource).toContain("계정 삭제 옵션 보기");
     expect(myPageProfileSource).toContain(
       'className="mt-3 grid gap-2 md:flex-1"',
@@ -4594,7 +4591,8 @@ describe("web quality performance source contracts", () => {
     expect(authContextSource).toContain(
       "window.setTimeout(startOnce, HOME_AUTH_BOOTSTRAP_DELAY_MS)",
     );
-    expect(authContextSource).toContain("signOut({ scope: 'local' })");
+    // Auth ownership and local revocation are verified by the dedicated
+    // privacy-session-rejection-browser tests, independent of this asset check.
     expect(authContextSource).toContain("dispatchHomeAuthSessionUpdated");
     expect(authContextSource).toContain(
       'import("@/integrations/supabase/client")',

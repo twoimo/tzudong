@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -5,7 +6,7 @@ import ts from 'typescript';
 import { chromium } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 function functionSource(source: string, name: string): string {
   const tree = ts.createSourceFile('SubmissionListView.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -92,7 +93,7 @@ async function settleFrames(page: import('@playwright/test').Page) {
 
 (existsSync(chrome) ? test : test.skip)('inline moderation teardown restores only unclaimed connected row focus', async () => {
   const script = await bundle();
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const context = await browser.newContext();
     const page = await context.newPage();

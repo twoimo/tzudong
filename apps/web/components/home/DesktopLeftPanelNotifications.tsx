@@ -30,6 +30,7 @@ export default function DesktopLeftPanelNotifications({
     unreadCount,
     isLoading,
     isError,
+    retryNotifications,
     markAsRead,
     markAllAsRead,
     removeNotification,
@@ -125,8 +126,13 @@ export default function DesktopLeftPanelNotifications({
                 알림을 불러오지 못했습니다
               </p>
               <p className="mt-1 text-xs leading-5">
-                잠시 후 다시 열어 주세요.
+                잠시 후 다시 시도해 주세요.
               </p>
+              {retryNotifications && (
+                <Button className="mt-3" variant="outline" onClick={() => void retryNotifications()}>
+                  다시 시도
+                </Button>
+              )}
             </div>
           </div>
         ) : notifications.length === 0 ? (

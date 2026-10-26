@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const appRoot = join(repoRoot, 'apps', 'web');
@@ -71,10 +71,27 @@ describe('repo design contract source', () => {
   });
 
   test('public surface inventory contract exists as the slice-1 page matrix owner', () => {
-    expect(appSource('tests-unit/public-surface-design-contract.test.ts')).toContain(
-      'page and share transport inventory preserves all 27 surfaces',
+    const publicContract = appSource('tests-unit/public-surface-design-contract.test.ts');
+    const inventory = JSON.parse(appSource('performance/cms-followthrough-20261009/route-inventory.json'));
+    const pageSources = readdirSync(join(appRoot, 'app'), { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name === 'page.tsx')
+      .map((entry) => relative(appRoot, join(entry.parentPath, entry.name)).replaceAll('\\', '/'));
+
+    expect(publicContract).toContain(
+      'page and share transport inventory preserves all 28 surfaces',
     );
-    expect(appSource('tests-unit/public-surface-design-contract.test.ts')).toContain(
+    expect(pageSources).toHaveLength(27);
+    expect(pageSources).toContain('app/auth/complete/page.tsx');
+    expect(inventory.inventory_scope).toMatchObject({
+      logical_surfaces: 28,
+      physical_page_sources: 27,
+      public_or_account_page_sources: 22,
+      public_share_handlers: 1,
+      admin_page_sources: 5,
+    });
+    expect(inventory.public_or_account_pages).toHaveLength(23);
+    expect(inventory.admin_legacy_or_canonical_pages).toHaveLength(5);
+    expect(publicContract).toContain(
       'pins all five CSS owner-to-importer mappings',
     );
   });

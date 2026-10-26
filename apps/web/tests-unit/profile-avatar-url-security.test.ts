@@ -66,8 +66,8 @@ describe("profile avatar URL trust boundary", () => {
     }
   });
 
-  test("resolves an internal marker against exact loopback only in explicit local runtime", () => {
-    const localOrigin = "http://127.0.0.1:54321";
+  for (const protocol of ["http", "https"]) test(`resolves an internal marker against exact ${protocol} loopback only in explicit local runtime`, () => {
+    const localOrigin = `${protocol}://127.0.0.1:54321`;
     const localAvatarUrl = `${localOrigin}/storage/v1/object/public/profile-avatars/${VERSIONED_AVATAR_KEY}`;
 
     try {
@@ -100,6 +100,13 @@ describe("profile avatar URL trust boundary", () => {
         "http://127.0.0.1:54321/path",
         "http://127.0.0.1:54321?query=1",
         "http://user:password@127.0.0.1:54321",
+        "https://localhost:9443",
+        "https://0.0.0.0:9443",
+        "https://127.0.0.1:443",
+        "https://127.0.0.1:9443/path",
+        "https://127.0.0.1:9443?query=1",
+        "https://127.0.0.1:9443#fragment",
+        "https://user:password@127.0.0.1:9443",
       ]) {
         process.env.NEXT_PUBLIC_SUPABASE_URL = configuredUrl;
         expect(

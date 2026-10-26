@@ -184,9 +184,9 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
         isFetching: profileFetching,
         refetch: refetchProfile,
     } = useUserProfile(userId);
-    const { data: stamps = [], isLoading: stampsLoading } = useUserStamps(userId);
-    const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews(userId, user?.id);
-    const { data: likers = [], isLoading: likersLoading } = useUserLikers(userId);
+    const { data: stamps = [], isLoading: stampsLoading, isError: stampsError, isFetching: stampsFetching, refetch: refetchStamps } = useUserStamps(userId);
+    const { data: reviews = [], isLoading: reviewsLoading, isError: reviewsError, isFetching: reviewsFetching, refetch: refetchReviews } = useUserReviews(userId, user?.id);
+    const { data: likers = [], isLoading: likersLoading, isError: likersError, isFetching: likersFetching, refetch: refetchLikers } = useUserLikers(userId);
     const { data: leaderboard = [] } = useLeaderboard();
     const profileAvatarUrl = useMemo(
         () => resolveProfileAvatarUrl(profile?.avatarUrl, profile?.userId),
@@ -356,6 +356,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     const profilePanelHeader = (
         <MapPanelHeader
             title="프로필"
+            description="방문 도장과 리뷰 활동을 확인해요"
             titleAs="h1"
             onClose={showBackButton && onClose ? handleBack : undefined}
             closeLabel="프로필 패널 닫기"
@@ -536,6 +537,11 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         <div ref={stampTabRef} className="h-full overflow-y-auto">
                         {stampsLoading ? (
                             <UserProfileTabSkeleton label="도장 목록 로딩 중" />
+                        ) : stampsError ? (
+                            <div role="alert" className="flex min-h-52 flex-col items-center justify-center gap-3 p-4 text-center text-sm text-muted-foreground">
+                                <p>도장 목록을 불러오지 못했습니다</p>
+                                <Button type="button" variant="outline" size="sm" disabled={stampsFetching} onClick={() => void refetchStamps()}>다시 시도</Button>
+                            </div>
                         ) : stamps.length === 0 ? (
                             <EmptyState
                                 icon={<Stamp className="h-8 w-8 mb-2 opacity-50" />}
@@ -581,6 +587,11 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         <div ref={reviewTabRef} className="h-full overflow-y-auto">
                         {reviewsLoading ? (
                             <UserProfileTabSkeleton label="리뷰 목록 로딩 중" />
+                        ) : reviewsError ? (
+                            <div role="alert" className="flex min-h-52 flex-col items-center justify-center gap-3 p-4 text-center text-sm text-muted-foreground">
+                                <p>리뷰 목록을 불러오지 못했습니다</p>
+                                <Button type="button" variant="outline" size="sm" disabled={reviewsFetching} onClick={() => void refetchReviews()}>다시 시도</Button>
+                            </div>
                         ) : reviews.length === 0 ? (
                             <EmptyState
                                 icon={<MessageSquare className="h-8 w-8 mb-2 opacity-50" />}
@@ -644,6 +655,11 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         <div ref={likerTabRef} className="h-full overflow-y-auto">
                         {likersLoading ? (
                             <UserProfileTabSkeleton label="좋아요 목록 로딩 중" />
+                        ) : likersError ? (
+                            <div role="alert" className="flex min-h-52 flex-col items-center justify-center gap-3 p-4 text-center text-sm text-muted-foreground">
+                                <p>좋아요 목록을 불러오지 못했습니다</p>
+                                <Button type="button" variant="outline" size="sm" disabled={likersFetching} onClick={() => void refetchLikers()}>다시 시도</Button>
+                            </div>
                         ) : likers.length === 0 ? (
                             <EmptyState
                                 icon={<Heart className="h-8 w-8 mb-2 opacity-50" />}

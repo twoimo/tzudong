@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect, type Browser, type Page } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 const entry = `
   import React from 'react';
@@ -95,7 +96,7 @@ async function withPage(browser: Browser, width: number, script: string, setup: 
 const browserTest = existsSync(chrome) ? test : test.skip;
 
 browserTest('a failed audit refresh keeps the last table and keyboard focus, and recovers in place', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     for (const width of [1280, 390]) {
@@ -134,7 +135,7 @@ browserTest('a failed audit refresh keeps the last table and keyboard focus, and
 }, 90_000);
 
 browserTest('a failed first audit read offers an inline retry that keeps focus', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle();
     await withPage(browser, 1280, script, { fail: true }, async page => {

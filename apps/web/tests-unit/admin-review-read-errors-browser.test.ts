@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 const reviewEntry = `
     import React, { useState } from 'react';
@@ -94,7 +95,7 @@ async function bundle(entry: string) {
 }
 
 (existsSync(chrome) ? test : test.skip)('real moderation component distinguishes retry states and restores focus only from removed review content', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle(reviewEntry);
     for (const width of [1280, 1021, 390]) {
@@ -155,7 +156,7 @@ async function bundle(entry: string) {
 }, 30_000);
 
 (existsSync(chrome) ? test : test.skip)('failed submission source shows a retryable error on its own tabs and keeps the healthy tab readable', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle(submissionEntry);
     for (const width of [1280, 1021, 390]) {

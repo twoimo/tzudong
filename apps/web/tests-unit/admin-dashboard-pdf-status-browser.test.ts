@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, expect as playwrightExpect } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 
 const overviewEntry = `
   import React from 'react';
@@ -59,7 +60,7 @@ async function bundle(entry: string) {
 
 
 (existsSync(chrome) ? test : test.skip)('a PDF report export reports its result while the card-order editor stays closed', async () => {
-  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
     const script = await bundle(overviewEntry);
     for (const [width, opened] of [[1280, false], [390, true]] as const) {

@@ -97,6 +97,38 @@ function fixture() {
     return { f, deps };
 }
 describe('review commit and media failure boundaries', () => {
+    for (const phase of ['ready', 'read', 'capability'] as const) test(`keeps the runner active before an operation exists during ${phase}`, async () => {
+        const { f, deps } = fixture();
+        let release!: () => void;
+        let entered!: () => void;
+        const held = new Promise<void>(resolve => { release = resolve; });
+        const started = new Promise<void>(resolve => { entered = resolve; });
+        const hold = async () => { entered(); await held; };
+        if (phase === 'ready') deps.ready = async () => { await hold(); return true; };
+        else if (phase === 'read') {
+            const read = deps.read;
+            deps.read = async (...args) => { await hold(); return read(...args); };
+        } else {
+            const rpc = deps.rpc;
+            let first = true;
+            deps.rpc = async (...args) => {
+                if (args[0] === 'read_review_media_commit' && first) { first = false; await hold(); }
+                return rpc(...args);
+            };
+        }
+        f.mode = 'throw-after'; f.confirmation = false;
+        const mutation = new ReviewMediaMutation(deps);
+        const input: ReviewMutationInput = { ownerId: owner, reviewId: review, kind: 'delete' };
+        const request = mutation.run(input);
+        await started;
+        expect(mutation.running).toBe(true); expect(mutation.pending).toBe(false);
+        release();
+        expect(await request).toEqual({ committed: false, code: 'REVIEW_NOT_CONFIRMED' });
+        expect(mutation.running).toBe(false); expect(mutation.pending).toBe(true);
+        f.confirmation = true;
+        expect(await mutation.run(input)).toEqual({ committed: true, code: 'REVIEW_COMMITTED' });
+        expect(f.mutations).toBe(1);
+    });
     test('DB rejection before commit preserves old media and retires only unused uploads', async () => {
         const { f, deps } = fixture(); f.mode = 'reject';
         expect(await new ReviewMediaMutation(deps).run(edit())).toEqual({ committed: false, code: 'REVIEW_CONFLICT' });

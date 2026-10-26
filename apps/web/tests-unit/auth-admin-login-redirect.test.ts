@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { NextRequest } from 'next/server';
+import * as realSSR from '../node_modules/@supabase/ssr/dist/module/index.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -26,6 +27,7 @@ import {
 
 type SupabaseMockState = {
   userId: string | null;
+  refreshCookies?: { name: string; value: string }[];
   authError?: unknown;
   role?: { role: string } | null;
   roleError?: unknown;
@@ -62,16 +64,19 @@ afterAll(() => {
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
 mock.module('@supabase/ssr', () => ({
-  createServerClient: () => ({
+  ...realSSR,
+  createServerClient: (_url: string, _key: string, options: { cookies: { setAll(cookies: { name: string; value: string }[]): void } }) => ({
     auth: {
-      getUser: async () => ({
+      getUser: async () => {
+        if (supabaseMockState.refreshCookies) options.cookies.setAll(supabaseMockState.refreshCookies);
+        return {
         data: {
           user: supabaseMockState.userId
             ? { id: supabaseMockState.userId }
             : null,
         },
         error: supabaseMockState.authError ?? null,
-      }),
+      }; },
       signOut: async () => ({ error: null }),
     },
     rpc: (functionName: string) => {
@@ -221,7 +226,7 @@ describe('public eligibility proxy', () => {
       hasSessionHint: false,
     })).toBe(true);
 
-    for (const pathname of ['/api/privacy/onboarding', '/auth/callback', '/privacy/onboarding', '/auth/reset-password', '/auth/required']) {
+    for (const pathname of ['/api/privacy/onboarding', '/auth/callback', '/auth/complete', '/privacy/onboarding', '/auth/reset-password', '/auth/required']) {
       expect(shouldSkipPublicEligibilitySession({
         pathname,
         method: 'GET',
@@ -239,7 +244,8 @@ describe('public eligibility proxy', () => {
     for (const { pathname, method } of [
       { pathname: '/privacy', method: 'POST' },
       { pathname: '/data-deletion', method: 'POST' },
-      { pathname: '/auth/callback', method: 'POST' },
+      { pathname: '/auth/callback', method: 'PUT' },
+      { pathname: '/auth/complete', method: 'POST' },
       { pathname: '/auth//callback', method: 'GET' },
       { pathname: '/privacy/', method: 'GET' },
       { pathname: '/%70rivacy', method: 'GET' },
@@ -653,3 +659,22 @@ describe('admin middleware login redirect', () => {
     expect(eligibility).toContain("rpc('get_current_privacy_eligibility')");
     expect(eligibility).not.toContain('submit_privacy_consent');
   });
+
+
+test('middleware forwards rotated request cookies through the nonce header clone without browser writes', async () => {
+  supabaseMockState = { userId: '11111111-1111-4111-8111-111111111111', refreshCookies: [{ name: 'sb-127-v3-auth-token', value: 'synthetic-rotated' }] };
+  const request = new NextRequest('https://app.fixture.invalid/mypage/profile', { headers: { cookie: 'sb-127-v3-auth-token=synthetic-old; unrelated=kept' } });
+  const forwarded = new Headers(request.headers);
+  forwarded.set('x-nonce', 'synthetic-nonce');
+  forwarded.set('content-security-policy', "script-src 'nonce-synthetic-nonce'");
+  try {
+    const { updateSession } = await loadMiddleware();
+    const response = await updateSession(request, forwarded);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('x-middleware-request-cookie')).toContain('sb-127-v3-auth-token=synthetic-rotated');
+    expect(response.headers.get('x-middleware-request-cookie')).toContain('unrelated=kept');
+    expect(response.headers.get('x-middleware-request-x-nonce')).toBe('synthetic-nonce');
+    expect(response.headers.get('x-middleware-request-content-security-policy')).toContain('nonce-synthetic-nonce');
+    expect(response.headers.get('set-cookie')).toBeNull();
+  } finally { supabaseMockState = { userId: null }; }
+});

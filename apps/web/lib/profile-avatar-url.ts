@@ -27,7 +27,9 @@ export function resolveConfiguredSupabaseOrigin(
     const localPort = Number(url.port);
     const isExplicitUnprivilegedLocalOrigin =
       process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === "1"
-      && url.protocol === "http:"
+      // The declared local runtime may terminate TLS for production-mode auth
+      // verification. Host, port and canonical-origin restrictions stay exact.
+      && (url.protocol === "http:" || url.protocol === "https:")
       && url.hostname === "127.0.0.1"
       && url.port.length > 0
       && Number.isSafeInteger(localPort)

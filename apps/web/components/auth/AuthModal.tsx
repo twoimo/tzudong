@@ -1,3 +1,7 @@
+import { captureBrowserLogout } from "@/lib/auth/browser-logout";
+import { beginBrowserAuthIntent, publishBrowserSignupPkce } from "@/lib/auth/browser-oauth-commit";
+import { requestBrowserPasswordRecovery, startBrowserGoogleOAuth } from "@/lib/auth/isolated-browser-pkce";
+import { beginBrowserDraftCleanup } from "@/lib/privacy/browser-draft-lifecycle";
 import { useState, useEffect, useCallback, memo, type CSSProperties } from "react";
 import Image from "next/image";
 import {
@@ -368,11 +372,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         callbackUrl.searchParams.set("next", requestedRedirect);
       }
 
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: callbackUrl.toString() },
-      });
-      if (error) throw new Error("oauth_start_failed");
+      await startBrowserGoogleOAuth(callbackUrl.toString());
     } catch {
       toast.error("Google 로그인에 실패했습니다");
       setIsGoogleLoading(false);
@@ -393,11 +393,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         callbackUrl.searchParams.set("next", requestedRedirect);
       }
 
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: callbackUrl.toString() },
-      });
-      if (error) throw new Error("oauth_start_failed");
+      await startBrowserGoogleOAuth(callbackUrl.toString());
     } catch {
       toast.error("Google 가입을 시작할 수 없습니다");
       setIsGoogleLoading(false);
@@ -416,11 +412,13 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     }
     onClose();
   }, [onAuthSuccess, onClose]);
-  const rejectPrivacyIneligibleSession = useCallback(async (userId: string) => {
-    await signOutRejectedPrivacySession(supabase);
+  const rejectPrivacyIneligibleSession = useCallback(async (userId: string, owner: ReturnType<typeof captureBrowserLogout>) => {
+    if (!owner.isCurrent()) return;
+    const epoch = beginBrowserDraftCleanup(userId);
+    if (!await signOutRejectedPrivacySession(supabase, { userId, isCurrent: owner.isCurrent, browserLogout: owner })) return;
     try {
       const { clearBrowserDraftsForUser } = await import("@/lib/privacy/browser-draft-cleanup");
-      await clearBrowserDraftsForUser(userId);
+      await clearBrowserDraftsForUser(userId, epoch);
     } catch {
       // Rejecting an ineligible session must not retain published auth state.
     }
@@ -437,8 +435,9 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       const signedInUserId = data.session?.user?.id;
+      const privacySessionOwner = captureBrowserLogout();
       if (error || !signedInUserId) {
-        if (signedInUserId) await rejectPrivacyIneligibleSession(signedInUserId);
+        if (signedInUserId) await rejectPrivacyIneligibleSession(signedInUserId, privacySessionOwner);
         throw new Error("password_login_failed");
       }
 
@@ -504,8 +503,9 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       if (isExistingAccountRecovery) recoveryToken = beginExistingAccountPrivacyRecovery(email);
       const { data: existingSession, error: existingSessionError } = await supabase.auth.signInWithPassword({ email, password });
       const existingUserId = existingSession.session?.user?.id;
+      const existingPrivacySessionOwner = captureBrowserLogout();
       if (isExistingAccountRecovery && (existingSessionError || !existingUserId)) {
-        if (existingUserId) await rejectPrivacyIneligibleSession(existingUserId);
+        if (existingUserId) await rejectPrivacyIneligibleSession(existingUserId, existingPrivacySessionOwner);
         toast.error("기존 계정 확인에 실패했습니다. 이메일과 비밀번호를 다시 확인해주세요.");
         return;
       }
@@ -518,14 +518,14 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         });
         const eligibility = response.ok ? await getCurrentPrivacyEligibility(supabase) : null;
         if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
-          await rejectPrivacyIneligibleSession(existingUserId);
+          await rejectPrivacyIneligibleSession(existingUserId, existingPrivacySessionOwner);
           toast.error("개인정보 처리 확인을 완료할 수 없습니다. 다시 시도해주세요.");
           return;
         }
 
         const { data: refreshedSession, error: refreshError } = await supabase.auth.refreshSession();
         if (refreshError || refreshedSession.session?.user?.id !== existingUserId) {
-          await rejectPrivacyIneligibleSession(existingUserId);
+          await rejectPrivacyIneligibleSession(existingUserId, existingPrivacySessionOwner);
           toast.error("개인정보 처리 확인을 완료하지 못했습니다. 다시 시도해주세요.");
           return;
         }
@@ -540,6 +540,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         return;
       }
 
+      const signupIntent = await beginBrowserAuthIntent();
       const response = await fetch("/api/privacy/onboarding", {
         method: "POST",
         credentials: "same-origin",
@@ -558,8 +559,10 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       }
       const onboardingResult = await response.json().catch(() => null) as {
         emailConfirmationRequired?: unknown;
+        pkceCookies?: unknown;
       } | null;
       if (onboardingResult?.emailConfirmationRequired === true) {
+        await publishBrowserSignupPkce(signupIntent, onboardingResult.pkceCookies);
         toast.success("회원가입이 완료되었습니다. 이메일의 확인 링크를 열어주세요.");
         resetForm();
         closeAfterAuthSuccess();
@@ -568,15 +571,16 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       const signedInUserId = data.session?.user?.id;
+      const privacySessionOwner = captureBrowserLogout();
       if (error || !signedInUserId) {
-        if (signedInUserId) await rejectPrivacyIneligibleSession(signedInUserId);
+        if (signedInUserId) await rejectPrivacyIneligibleSession(signedInUserId, privacySessionOwner);
         toast.error("가입은 완료되었지만 로그인에 실패했습니다. 로그인 탭에서 다시 시도해주세요.");
         return;
       }
 
       const eligibility = await getCurrentPrivacyEligibility(supabase);
       if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
-        await rejectPrivacyIneligibleSession(signedInUserId);
+        await rejectPrivacyIneligibleSession(signedInUserId, privacySessionOwner);
         toast.error(privacyEligibilityGuidance(eligibility.reasonCode));
         return;
       }
@@ -605,10 +609,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     }
     setIsSendingReset(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      });
-      if (error) throw new Error("password_reset_failed");
+      await requestBrowserPasswordRecovery(forgotPasswordEmail);
       toast.success("비밀번호 재설정 링크를 이메일로 발송했습니다");
       setShowForgotPassword(false);
       setForgotPasswordEmail("");

@@ -102,9 +102,12 @@ class LocalFreshnessTests(unittest.TestCase):
             self.transform.run_transform('tzuyang', self.crawl, self.eval)
 
     def run_main(self, *, dry=True, urls=None):
+        from backend.supabase.scripts import hosted_pending_operation as custody
         output = io.StringIO()
         urls = urls or [f'https://www.youtube.com/watch?v={VIDEO}']
         with patch.dict(os.environ, self.env, clear=True), \
+             patch.object(custody, 'current_source_revision', return_value='03246a7c3351fd71eff4ff33d1579fb4dc4e36b8'), \
+             patch.object(custody, 'observe_deliveries', side_effect=lambda videos,**kwargs:{v:{'state':'legacy_unresolved','requestId':None} for v in videos}), \
              patch.object(self.module, 'assert_hosted_target'), \
              patch.object(self.module, 'fetch_hosted_restaurant_snapshot', return_value=([], [])), \
              patch.object(self.module, '_load_urls', return_value=urls), \

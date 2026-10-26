@@ -29,7 +29,7 @@ const approvedSources = new Set([
   'lib/privacy/onboarding.ts', 'lib/privacy/eligibility.ts', 'lib/privacy/policy.ts',
   'lib/privacy/processing-inventory.ts', 'lib/security/bounded-json-request.ts',
   'lib/security/same-origin-mutation.ts', 'lib/auth/auth-redirect.ts', 'lib/auth/callback-origin.ts',
-  'lib/auth/callback-session.ts', 'lib/profile-mutation.ts',
+  'lib/auth/callback-session.ts', 'lib/auth/session-cookies.ts', 'lib/auth/signup-pkce-handoff.ts', 'lib/profile-mutation.ts',
   'app/api/privacy/onboarding/route.ts', 'app/auth/callback/route.ts',
 ]);
 
@@ -57,7 +57,7 @@ function fixture(settings: {
     policyId: crypto.randomUUID(), userId: crypto.randomUUID(), auditId: crypto.randomUUID(),
     events: [], challenges: new Map(), confirmed: false, active: true,
     signupCalls: 0, simulatedIdentityMutations: 0, blockedExternalCalls: 0,
-    confirmCalls: 0, confirmAccepted: 0, digestMatched: false, nonceMatched: false,
+    confirmCalls: 0, confirmAccepted: 0, digestMatched: false, nonceMatched: false, capturedSessionReadbacks: 0,
     argumentBindingsValid: true, signupEmailRedirectTo: null as string | null,
     signupUsesSsrClient: false,
   };
@@ -128,8 +128,15 @@ function fixture(settings: {
     throw new Error('UNDECLARED_RPC');
   }
   const client = { rpc: async (...args) => intoRealm(JSON.stringify(await rpc(...args))), auth: {
-    exchangeCodeForSession: async () => { state.events.push('exchange'); return { error: null }; },
-    getUser: async () => { state.events.push('getUser'); return { error: null, data: { user: state.active ? { id: state.userId } : null } }; },
+    exchangeCodeForSession: async () => { state.events.push('exchange'); return { error: null, data: { session: { access_token: 'synthetic-captured-token', refresh_token: 'synthetic-refresh-token', user: { id: state.userId } } } }; },
+    getUser: async (token) => {
+      if (token !== undefined) {
+        if (token !== 'synthetic-captured-token') throw new Error('FIXTURE_UNCAPTURED_SESSION');
+        state.capturedSessionReadbacks++;
+      }
+      state.events.push('getUser'); return { error: null, data: { user: state.active ? { id: state.userId } : null } };
+    },
+    getSession: async () => ({ error: null, data: { session: state.active ? { access_token: 'synthetic-captured-token', refresh_token: 'synthetic-refresh-token', user: { id: state.userId } } : null } }),
     signUp: async (credentials) => {
       state.events.push('simulated-signup'); state.signupCalls++;
       state.signupEmailRedirectTo = credentials?.options?.emailRedirectTo ?? null;
@@ -137,6 +144,10 @@ function fixture(settings: {
     },
     signOut: async ({ scope }) => { state.events.push(`signOut-${scope}`); state.active = false; return { error: null }; },
     admin: {
+      signOut: async (token, scope) => {
+        if (token !== 'synthetic-captured-token') throw new Error('FIXTURE_UNCAPTURED_SESSION');
+        state.events.push(`signOut-${scope}`); state.active = false; return { error: null };
+      },
       updateUserById: async () => { state.simulatedIdentityMutations++; return { error: null }; },
       deleteUser: async () => { state.simulatedIdentityMutations++; return { error: null }; },
       getUserById: async () => ({ data: { user: null }, error: null }),
@@ -147,15 +158,17 @@ function fixture(settings: {
     '@supabase/supabase-js': {},
     '@supabase/ssr': {},
     '@/lib/supabase/server': {
+      getConsumedPkceCookieNames: () => ['sb-fixture-v3-auth-token-code-verifier'],
       createClient: async () => client,
-      createClientForCookieStore: (cookieStore) => {
+      createClientForCookieStore: (cookieStore, _env, options) => {
+        if (options?.allowPkceCookieWrites !== true || cookieStore.getAll().length !== 0) throw new Error('FIXTURE_SIGNUP_COOKIE_WRITES_REQUIRED');
         state.signupUsesSsrClient = true;
         return {
           ...client,
           auth: {
             ...client.auth,
             signUp: async (credentials) => {
-              cookieStore.set('sb-fixture-auth-token-code-verifier', 'fixture-pkce-verifier', {
+              cookieStore.set('sb-fixture-v3-auth-token-code-verifier', 'fixture-pkce-verifier', {
                 path: '/', sameSite: 'lax', secure: true,
               });
               return client.auth.signUp(credentials);
@@ -165,6 +178,8 @@ function fixture(settings: {
       },
     },
     '@/lib/supabase/service-role': { createSupabaseServiceRoleClient: () => client },
+    '@/lib/auth/browser-logout': { captureBrowserLogout: deny },
+    '@/lib/home-auth-events': { dispatchHomeAuthSessionUpdated: deny },
     // Unexercised profile avatar/read helpers are denied, never substituted as successes.
     '@/lib/profile-avatar-url': { classifyProfileAvatarUrl: deny, getProfileAvatarVersionedReference: deny, getProfileAvatarVersionedStorageKey: deny },
     '@/lib/public-profile-read': { readPublicProfileSummaries: deny },
@@ -199,8 +214,16 @@ function fixture(settings: {
     const response = await route.POST(post({ policyVersion: state.policyId, ageBand: 'age_14_plus', intent, policyAcknowledged: true }));
     return { response, cookie: response.cookies.get(lib.ONBOARDING_CHALLENGE_COOKIE) };
   };
+  const completeCallback = (navigationRequest: Request) => {
+    const target = new URL(navigationRequest.url);
+    return callback.POST(new Request(`${target.origin}/auth/callback`, {
+      method: 'POST', headers: { origin: target.origin, 'content-type': 'application/json',
+        cookie: navigationRequest.headers.get('cookie') ?? '' },
+      body: JSON.stringify({ code: target.searchParams.get('code'), next: target.searchParams.get('next') ?? '/' }),
+    }));
+  };
   const signup = (next = '/') => ({ action: 'password_signup', email: 'fixture@example.invalid', password: crypto.randomBytes(8).toString('hex'), nickname: 'fixture', next });
-  return { state, lib, route, callback, policy, env, origin: runtimeOrigin, post, start, signup };
+  return { state, lib, route, callback, completeCallback, policy, env, origin: runtimeOrigin, post, start, signup };
 }
 
 describe('privacy onboarding full route runtime contracts', () => {
@@ -216,11 +239,12 @@ describe('privacy onboarding full route runtime contracts', () => {
     const body = f.signup();
     const response = await f.route.POST(f.post(body, [cookie]));
     const created = await response.json();
-    assert('exact creation result', response.status === 201 && created.status === 'created' && created.emailConfirmationRequired === emailConfirmation && Object.keys(created).length === 2);
+    assert('exact creation result', response.status === 201 && created.status === 'created' && created.emailConfirmationRequired === emailConfirmation && Object.keys(created).length === (emailConfirmation ? 3 : 2));
     assert('single creation and confirmed digest', f.state.signupCalls === 1 && f.state.confirmCalls === 1 && f.state.confirmAccepted === 1 && f.state.digestMatched && f.state.nonceMatched && f.state.argumentBindingsValid);
     assert('signup uses the SSR PKCE client', f.state.signupUsesSsrClient === true);
     assert('server binds confirmation to its same-origin callback', f.state.signupEmailRedirectTo === `${origin}/auth/callback`);
-    assert('PKCE verifier is emitted only for email confirmation', Boolean(response.cookies.get('sb-fixture-auth-token-code-verifier')) === emailConfirmation);
+    assert('PKCE handoff is returned only for email confirmation', Boolean(created.pkceCookies?.length) === emailConfirmation);
+    assert('HTTP response never publishes a PKCE or session cookie', !response.cookies.getAll().some(cookie => cookie.name.startsWith('sb-')));
     assert('ordered source profile/confirmation/eligibility validators', traceContainsInOrder(f.state.events, ['simulated-signup', 'read_signup_profile_state', 'confirm_privacy_onboarding', 'get_privacy_eligibility_for_user']));
     assert('no compensation on success', f.state.simulatedIdentityMutations === 0 && !f.state.events.some(x => x.startsWith('signOut')));
     assert('challenge consumed and response not cacheable', cookieCleared(response, f.lib.ONBOARDING_CHALLENGE_COOKIE) && response.headers.get('cache-control') === 'no-store');
@@ -250,13 +274,13 @@ describe('privacy onboarding full route runtime contracts', () => {
       && confirmationCallback.pathname === '/auth/callback'
       && confirmationCallback.searchParams.get('next') === next);
     confirmationCallback.searchParams.set('code', 'fixture');
-    const verifierCookie = response.cookies.get('sb-fixture-auth-token-code-verifier');
+    const verifierCookie = created.pkceCookies?.find(cookie => cookie.name === 'sb-fixture-v3-auth-token-code-verifier');
     assert('server returned the SDK PKCE verifier', Boolean(verifierCookie?.value));
-    const callbackResponse = await f.callback.GET(new Request(confirmationCallback, {
+    const callbackResponse = await f.completeCallback(new Request(confirmationCallback, {
       headers: { cookie: `${verifierCookie.name}=${verifierCookie.value}` },
     }));
-    const destination = new URL(callbackResponse.headers.get('location'));
-    assert('confirmed session resumes the exact destination', callbackResponse.status === 307
+    const destination = new URL((await callbackResponse.json()).next, origin);
+    assert('confirmed session resumes the exact destination', callbackResponse.status === 200
       && `${destination.pathname}${destination.search}` === next);
     assert('callback validates the live privacy receipt without a second challenge', traceContainsInOrder(f.state.events, [
       'confirm_privacy_onboarding', 'exchange', 'getUser', 'get_current_privacy_eligibility',
@@ -308,21 +332,21 @@ describe('privacy onboarding full route runtime contracts', () => {
     const { response: issued, cookie } = await f.start('oauth');
     assert('challenge issued', issued.status === 201 && Boolean(cookie));
     if (rejection === 'nonce') [...f.state.challenges.values()][0].p_oauth_nonce_hash = 'a'.repeat(64);
-    const response = await f.callback.GET(new Request(`${origin}/auth/callback?code=fixture&next=%2Fmypage%2Freviews`, {
+    const response = await f.completeCallback(new Request(`${origin}/auth/callback?code=fixture&next=%2Fmypage%2Freviews`, {
       headers: { cookie: `${cookie.name}=${cookie.value}` },
     }));
-    const location = new URL(response.headers.get('location'));
+    const location = new URL((await response.clone().json()).next ?? '/', f.origin);
     assert('route actually reaches session/user/confirmation', traceContainsInOrder(f.state.events, ['exchange', 'getUser', 'confirm_privacy_onboarding']));
     assert('independent SQL digest comparison', f.state.digestMatched && f.state.argumentBindingsValid);
     assert('nonce result', f.state.nonceMatched === (rejection !== 'nonce'));
     assert('cookies cleared and response not cacheable', cookieCleared(response, f.lib.ONBOARDING_CHALLENGE_COOKIE) && response.headers.get('cache-control') === 'no-store');
     if (rejection === 'none') {
-      assert('exact requested destination', response.status === 307 && location.origin === origin && location.pathname === '/mypage/reviews' && location.search === '');
+      assert('exact requested destination', response.status === 200 && location.origin === origin && location.pathname === '/mypage/reviews' && location.search === '');
       assert('confirmation precedes live eligibility', f.state.confirmAccepted === 1 && traceContainsInOrder(f.state.events, ['confirm_privacy_onboarding', 'get_current_privacy_eligibility']));
       assert('success does not revoke', !f.state.events.some(x => x.startsWith('signOut')));
     } else {
-      assert('rejected destination', response.status === 307 && location.origin === origin && location.pathname === '/' && location.search === '');
-      assert('route itself invokes both revocations', traceContainsInOrder(f.state.events, ['confirm_privacy_onboarding', 'signOut-global', 'signOut-local']));
+      assert('rejected destination', response.status === 400 && location.origin === origin && location.pathname === '/' && location.search === '');
+      assert('route revokes only its captured callback session', traceContainsInOrder(f.state.events, ['confirm_privacy_onboarding', 'signOut-local']) && !f.state.events.includes('signOut-global'));
       assert('no eligibility before confirmation', f.state.events.includes('get_current_privacy_eligibility') === (rejection === 'eligibility'));
     }
     assert('OAuth does not mutate identities', f.state.signupCalls === 0 && f.state.simulatedIdentityMutations === 0);
@@ -332,18 +356,18 @@ describe('privacy onboarding full route runtime contracts', () => {
   test('stale no-challenge OAuth recovery keeps only a validated user continuation', async () => {
     const f = fixture();
     const next = '/mypage/reviews';
-    const response = await f.callback.GET(new Request(`${origin}/auth/callback?code=fixture&next=${encodeURIComponent(next)}`));
-    const location = new URL(response.headers.get('location'));
+    const response = await f.completeCallback(new Request(`${origin}/auth/callback?code=fixture&next=${encodeURIComponent(next)}`));
+    const location = new URL((await response.clone().json()).next ?? '/', f.origin);
 
-    assert('privacy recovery route retained', response.status === 307
+    assert('privacy recovery route retained', response.status === 200
       && location.pathname === '/'
       && location.searchParams.get('auth') === 'login'
       && location.searchParams.get('reason') === 'privacy_onboarding'
       && location.searchParams.get('next') === next);
     assert('stale recovery keeps the session for challenge completion', !f.state.events.some(x => x.startsWith('signOut')));
 
-    const unsafe = await f.callback.GET(new Request(`${origin}/auth/callback?code=fixture&next=${encodeURIComponent('https://attacker.example')}`));
-    const unsafeLocation = new URL(unsafe.headers.get('location'));
+    const unsafe = await f.completeCallback(new Request(`${origin}/auth/callback?code=fixture&next=${encodeURIComponent('https://attacker.example')}`));
+    const unsafeLocation = new URL((await unsafe.json()).next, f.origin);
     assert('external destination omitted', unsafeLocation.origin === origin
       && unsafeLocation.pathname === '/'
       && unsafeLocation.searchParams.get('reason') === 'privacy_onboarding'
@@ -359,14 +383,14 @@ describe('privacy onboarding full route runtime contracts', () => {
     });
     const { response: issued, cookie } = await f.start('oauth');
     assert('branch-origin challenge issued', issued.status === 201 && Boolean(cookie));
-    const response = await f.callback.GET(new Request(
+    const response = await f.completeCallback(new Request(
       `${f.origin}/auth/callback?code=fixture&next=%2Fmypage%2Freviews`,
       { headers: { cookie: `${cookie.name}=${cookie.value}` } },
     ));
-    const location = new URL(response.headers.get('location'));
+    const location = new URL((await response.clone().json()).next ?? '/', f.origin);
     assert(
       'branch callback keeps session host',
-      response.status === 307
+      response.status === 200
         && location.origin === f.origin
         && location.pathname === '/mypage/reviews'
         && traceContainsInOrder(f.state.events, ['exchange', 'getUser', 'confirm_privacy_onboarding']),
@@ -384,14 +408,14 @@ describe('privacy onboarding full route runtime contracts', () => {
       const created = await f.route.POST(f.post(f.signup(destination), [cookie]));
       assert('single email-confirmed signup', created.status === 201 && f.state.signupCalls === 1);
       const callbackUrl = new URL(f.state.signupEmailRedirectTo);
-      const verifier = created.cookies.get('sb-fixture-auth-token-code-verifier');
+      const verifier = (await created.json()).pkceCookies?.find(cookie => cookie.name === 'sb-fixture-v3-auth-token-code-verifier');
       assert('host-only PKCE cookie and confirmation link share origin', callbackUrl.origin === f.origin
         && callbackUrl.pathname === '/auth/callback' && callbackUrl.searchParams.get('next') === destination
-        && Boolean(verifier?.value) && verifier.domain === undefined);
+        && Boolean(verifier?.value) && !created.cookies.getAll().some(cookie => cookie.name.startsWith('sb-')));
       callbackUrl.searchParams.set('code', 'fixture');
-      const completed = await f.callback.GET(new Request(callbackUrl, { headers: { cookie: `${verifier.name}=${verifier.value}` } }));
-      const location = new URL(completed.headers.get('location'));
-      assert('confirmed preview session resumes its destination', completed.status === 307
+      const completed = await f.completeCallback(new Request(callbackUrl, { headers: { cookie: `${verifier.name}=${verifier.value}` } }));
+      const location = new URL((await completed.json()).next, f.origin);
+      assert('confirmed preview session resumes its destination', completed.status === 200
         && location.origin === f.origin && location.pathname === destination);
       assert('no external account or email request', f.state.blockedExternalCalls === 0);
     });
@@ -423,10 +447,10 @@ describe('privacy onboarding full route runtime contracts', () => {
       value = `${payload}.${crypto.createHmac('sha256', f.env.PRIVACY_ONBOARDING_COOKIE_SECRET).update(`tzudong:onboarding-challenge:v1:${payload}`).digest('base64url')}`;
     }
     if (control === 'secret') f.env.PRIVACY_ONBOARDING_COOKIE_SECRET = crypto.randomBytes(48).toString('hex');
-    const response = await f.callback.GET(new Request(`${origin}/auth/callback?code=fixture&next=%2Fmypage%2Freviews`, {
+    const response = await f.completeCallback(new Request(`${origin}/auth/callback?code=fixture&next=%2Fmypage%2Freviews`, {
       headers: { cookie: `${cookie.name}=${value}` },
     }));
-    assert('rejected to home', response.status === 307 && new URL(response.headers.get('location')).pathname === '/');
+    assert('fixed callback failure', response.status === 400 && (await response.json()).error === 'AUTH_CALLBACK_FAILED');
     assert('no exchange or confirmation', !f.state.events.includes('exchange') && f.state.confirmCalls === 0);
     assert('rejected challenge cleared', cookieCleared(response, f.lib.ONBOARDING_CHALLENGE_COOKIE));
     assert('no identity or network activity', f.state.signupCalls === 0 && f.state.simulatedIdentityMutations === 0 && f.state.blockedExternalCalls === 0);
@@ -461,7 +485,9 @@ describe('privacy onboarding full route runtime contracts', () => {
       : response.status === 403 && body.code === 'ONBOARDING_FINALIZATION_FAILED');
     assert('correct failure phase reached', f.state.signupCalls === 1 && f.state.confirmCalls === 1 && f.state.confirmAccepted === (rejection === 'eligibility' ? 1 : 0));
     assert('live eligibility only after accepted confirm', f.state.events.includes('get_privacy_eligibility_for_user') === (rejection === 'eligibility'));
-    assert('actual route revokes simulated session', traceContainsInOrder(f.state.events, ['confirm_privacy_onboarding', 'signOut-global', 'signOut-local']));
+    assert('actual route revokes only the captured session', traceContainsInOrder(f.state.events, ['confirm_privacy_onboarding', 'signOut-local']));
+    assert('one local revocation without account-wide logout', f.state.events.filter(event => event === 'signOut-local').length === 1 && !f.state.events.includes('signOut-global'));
+    assert('issuer readback retains the captured credential', f.state.capturedSessionReadbacks === 1);
     assert('compensation only in memory and no success recovery', f.state.simulatedIdentityMutations === 2 && !response.cookies.get(f.lib.ONBOARDING_PASSWORD_RECOVERY_COOKIE)?.value);
     assert('no external calls', f.state.blockedExternalCalls === 0);
   });

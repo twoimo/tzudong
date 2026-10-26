@@ -1,7 +1,10 @@
 'use client';
+import { DraftCleanupRetry } from '@/components/ui/draft-cleanup-retry';
+import { DraftLoadError } from '@/components/ui/draft-load-error';
+import { captureBrowserDraftEpoch, isBrowserDraftEpochCurrent, type BrowserDraftEpoch } from "@/lib/privacy/browser-draft-lifecycle";
 
 import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
-import { memo, useState, useEffect, useCallback, useRef, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { memo, useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -13,7 +16,10 @@ import { Check, ChevronsUpDown, X, CheckCircle2, Send, ChevronLeft } from "lucid
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Restaurant, RESTAURANT_CATEGORIES } from "@/types/restaurant";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDraftAutosave, waitForDraftAutosave } from "@/hooks/use-draft-autosave";
+import { readCurrentBrowserAuthUser } from "@/lib/auth/isolated-browser-account";
+import { canonicalizeRestaurantEditPayload, isRestaurantEditSubmitBody, isSavedRestaurantEdit, restaurantEditPayloadFingerprint } from '@/lib/restaurant-edit-submit-contract';
 import { toast } from "@/lib/no-toast";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/editRequestDraftDB";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -24,7 +30,6 @@ import {
     EDIT_RESTAURANT_REQUEST_KIND_OPTIONS,
     EDIT_RESTAURANT_REQUEST_CLOSURE_HELPER_TEXT,
     EDIT_RESTAURANT_REQUEST_EDIT_HELPER_TEXT,
-    getEditRestaurantRequestAdminNote,
     validateEditRestaurantRequest,
     validateEditRestaurantRequestStep,
     type EditRestaurantRequestFormData,
@@ -40,6 +45,8 @@ interface EditRestaurantModalProps {
     };
     presentation?: 'auto' | 'map-panel';
 }
+
+type EditSubmissionAttempt = { userId: string; restaurantId: string; scope: string; epoch: BrowserDraftEpoch };
 
 type DesktopEditPanelPosition = {
     x: number;
@@ -76,17 +83,22 @@ const getDesktopEditPanelFocusableElements = (container: HTMLElement | null) =>
 
 export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, onClose, restaurant, initialFormData, presentation = 'auto' }: EditRestaurantModalProps) {
     const isMobileOrTablet = useImmediateMobileOrTablet();
+    const { user } = useAuth();
     const [editFormData, setEditFormData] = useState<EditRestaurantRequestFormData>({
         ...initialFormData,
         requestKind: initialFormData.requestKind ?? 'edit',
     });
     const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+    const [restoredSavedAt, setLastSavedAt] = useState<Date | null>(null);
     const [currentStep, setCurrentStep] = useState<EditRestaurantRequestStep>(1);
     const [validationMessage, setValidationMessage] = useState<string | null>(null);
     const [desktopEditPanelPosition, setDesktopEditPanelPosition] = useState<DesktopEditPanelPosition>(DEFAULT_DESKTOP_EDIT_PANEL_POSITION);
+    const activeSubmissionRef = useRef<EditSubmissionAttempt | null>(null);
+    const submissionClientKeyRef = useRef<{ fingerprint: string; key: string } | null>(null);
+    const cleanupSubmissionRef = useRef<EditSubmissionAttempt | null>(null);
+    const [completedSubmission, setCompletedSubmission] = useState<EditSubmissionAttempt | null>(null);
     const mobileFormRef = useRef<HTMLFormElement>(null);
     const desktopEditPanelRef = useRef<HTMLElement>(null);
     const desktopEditPanelDragRef = useRef<DesktopEditPanelDragState | null>(null);
@@ -110,13 +122,41 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         }));
     };
 
+    const ownsSubmissionAttempt = (attempt: EditSubmissionAttempt) => activeSubmissionRef.current === attempt
+        && currentDraftScope.current === attempt.scope
+        && isBrowserDraftEpochCurrent(attempt.userId, attempt.epoch, true);
+    const finishSubmittedDraft = async (attempt: EditSubmissionAttempt) => {
+        if (!ownsSubmissionAttempt(attempt)) return;
+        cleanupSubmissionRef.current = attempt; setCompletedSubmission(attempt);
+        draftAutosave.cancel(); await draftAutosave.settle();
+        if (!ownsSubmissionAttempt(attempt)) return;
+        try { await deleteDraft(attempt.userId, attempt.restaurantId); }
+        catch { return; }
+        if (!ownsSubmissionAttempt(attempt)) return;
+        cleanupSubmissionRef.current = null; activeSubmissionRef.current = null;
+        submissionClientKeyRef.current = null;
+        setCompletedSubmission(null); setIsSubmitting(false);
+        toast.success('맛집 수정 요청이 성공적으로 제출되었습니다!');
+        onClose();
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (loadedDraftScope !== draftScope || activeSubmissionRef.current || !user?.id || !restaurant?.id) return;
+        const attempt: EditSubmissionAttempt = {
+            userId: user.id, restaurantId: restaurant.id, scope: currentDraftScope.current,
+            epoch: captureBrowserDraftEpoch(user.id),
+        };
+        const ownsAttempt = () => ownsSubmissionAttempt(attempt);
+        activeSubmissionRef.current = attempt;
         setIsSubmitting(true);
+        let failureMessage = '제출 결과를 확인하지 못했습니다. 입력을 유지했으니 다시 시도해주세요.';
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
+            const { data: { user: authenticatedUser } } = await readCurrentBrowserAuthUser();
+            if (!ownsAttempt()) return;
+            if (!authenticatedUser || authenticatedUser.id !== attempt.userId) {
+                failureMessage = '로그인이 필요합니다.';
                 throw new Error('로그인이 필요합니다.');
             }
 
@@ -127,150 +167,100 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
             const validationError = validateEditRestaurantRequest(editFormData);
             if (validationError) {
                 setValidationMessage(validationError);
+                failureMessage = validationError;
                 throw new Error(validationError);
             }
 
-            // 1. restaurant_submissions 테이블에 INSERT (target_restaurant_id는 items 레벨에서 관리)
-            const { data: submission, error: submissionError } = await supabase
-                .from('restaurant_submissions')
-                .insert({
-                    user_id: user.id,
-                    submission_type: 'edit',
-                    status: 'pending',
-                    restaurant_name: editFormData.name.trim(),
-                    restaurant_address: editFormData.address.trim() || null,
-                    restaurant_phone: editFormData.phone.trim() || null,
-                    restaurant_categories: editFormData.category,
-                    admin_notes: getEditRestaurantRequestAdminNote(editFormData),
-                    // target_restaurant_id는 submission 레벨이 아닌 items 레벨에서 저장
-                } as never)
-                .select('id')
-                .single();
-
-            if (submissionError) throw submissionError;
-
-            const submissionId = (submission as { id: string }).id;
-
-            // 2. restaurant_submission_items 테이블에 각 영상별 INSERT (각 아이템에 해당 레코드의 target_restaurant_id 저장)
-            const itemsToInsert = editFormData.youtube_reviews.map(review => ({
-                submission_id: submissionId,
-                youtube_link: review.youtube_link.trim(),
-                tzuyang_review: review.tzuyang_review?.trim() || null,
-                target_restaurant_id: review.restaurant_id, // 각 아이템별로 해당 레코드의 restaurants.id 저장
-            }));
-
-            const { error: itemsError } = await supabase
-                .from('restaurant_submission_items')
-                .insert(itemsToInsert as never);
-
-            if (itemsError) {
-                // 롤백: submission 삭제 (CASCADE로 items도 삭제됨)
-                await supabase.from('restaurant_submissions').delete().eq('id', submissionId);
-                throw itemsError;
+            const payload = canonicalizeRestaurantEditPayload(editFormData);
+            const fingerprint = `${attempt.userId}:${restaurantEditPayloadFingerprint(attempt.restaurantId, payload)}`;
+            if (submissionClientKeyRef.current?.fingerprint !== fingerprint) {
+                submissionClientKeyRef.current = { fingerprint, key: `edit-${crypto.randomUUID()}` };
+            }
+            const body = { clientRequestKey: submissionClientKeyRef.current.key, restaurantId: attempt.restaurantId, payload };
+            if (!isRestaurantEditSubmitBody(body)) {
+                failureMessage = '제출 정보를 확인해주세요. 식당 연락처와 유튜브 링크 형식도 확인해주세요.';
+                throw new Error('EDIT_SUBMISSION_INVALID');
+            }
+            // The server owns the complete parent/items transaction once this request begins.
+            // UI ownership only controls the subsequent local draft cleanup.
+            const response = await fetch('/api/mypage/submissions/edit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Tzudong-Actor-Id': attempt.userId },
+                body: JSON.stringify(body),
+            });
+            const result: unknown = await response.json().catch(() => null);
+            if (!response.ok || !isSavedRestaurantEdit(result, payload.youtube_reviews.length)) {
+                throw new Error('EDIT_SUBMISSION_NOT_CONFIRMED');
             }
 
-            await clearDraft();
-            toast.success('맛집 수정 요청이 성공적으로 제출되었습니다!');
-            onClose();
-        } catch (error: unknown) {
-            console.error('제출 실패:');
-            const message = error instanceof Error ? error.message : '제출에 실패했습니다. 다시 시도해주세요.';
-            toast.error(message);
+            // Preserve the committed result while retrying only local cleanup.
+            await finishSubmittedDraft(attempt);
+        } catch {
+            if (!ownsAttempt()) return;
+            toast.error(failureMessage);
         } finally {
-            setIsSubmitting(false);
+            if (activeSubmissionRef.current === attempt && cleanupSubmissionRef.current !== attempt) {
+                activeSubmissionRef.current = null;
+                if (currentDraftScope.current === attempt.scope) setIsSubmitting(false);
+            }
         }
     };
 
     // 임시 저장된 데이터 불러오기
+    const draftScope = `${user?.id ?? ''}:${restaurant?.id ?? ''}:${isOpen}:${captureBrowserDraftEpoch(user?.id ?? '').generation}`;
+    const currentDraftScope = useRef('');
+    const closingDraftScope = useRef<string | null>(null);
+    const [draftLoadFailed, setDraftLoadFailed] = useState(false);
+    const [loadedDraftScope, setLoadedDraftScope] = useState<string | null>(null);
+    useLayoutEffect(() => {
+        if (currentDraftScope.current !== draftScope) {
+            setEditFormData({ ...initialFormData, requestKind: initialFormData.requestKind ?? 'edit' });
+            setCurrentStep(1); setLastSavedAt(null); setValidationMessage(null); setLoadedDraftScope(null);
+            closingDraftScope.current = null; setIsClosing(false);
+            activeSubmissionRef.current = null; cleanupSubmissionRef.current = null; setCompletedSubmission(null);
+            setIsSubmitting(false); setDraftLoadFailed(false);
+        }
+        currentDraftScope.current = draftScope;
+    }, [draftScope, initialFormData]);
+    useLayoutEffect(() => () => { currentDraftScope.current = ''; }, [draftScope]);
+    const draftValue = useMemo(() => ({ userId: user?.id ?? '', restaurantId: restaurant?.id ?? '', ...editFormData, currentStep }), [user?.id, restaurant?.id, editFormData, currentStep]);
+    const draftAutosave = useDraftAutosave({ scope: draftScope, open: isOpen, value: draftValue, persist: saveDraft,
+        unpersistedChanges: completedSubmission !== null,
+        enabled: loadedDraftScope === draftScope && Boolean(user?.id && restaurant?.id) && !isSubmitting });
+    const isSaving = draftAutosave.isSaving;
+    const lastSavedAt = draftAutosave.lastSavedAt ?? restoredSavedAt;
     const loadDraft = useCallback(async () => {
-        const { data: { user } } = await supabase.auth.getUser();
+        const scope = draftScope;
+        setDraftLoadFailed(false);
         if (!user?.id || !restaurant?.id) return;
-
         try {
+            await waitForDraftAutosave(scope);
             const draft = await getDraft(user.id, restaurant.id);
+            if (currentDraftScope.current !== scope) return;
             if (draft) {
-                setEditFormData({
-                    name: draft.name,
-                    address: draft.address,
-                    phone: draft.phone,
-                    category: draft.category,
-                    youtube_reviews: draft.youtube_reviews,
-                    requestKind: draft.requestKind ?? 'edit',
-                });
-                if (draft.currentStep && EDIT_RESTAURANT_REQUEST_STEPS.some((step) => step.id === draft.currentStep)) {
-                    setCurrentStep(draft.currentStep);
-                }
+                setEditFormData({ name: draft.name, address: draft.address, phone: draft.phone, category: draft.category,
+                    youtube_reviews: draft.youtube_reviews, requestKind: draft.requestKind ?? 'edit' });
+                if (draft.currentStep) setCurrentStep(draft.currentStep);
                 setLastSavedAt(new Date(draft.savedAt));
-
-                toast.success("임시 저장된 내용을 불러왔습니다", {
-                    description: `저장 시간: ${new Date(draft.savedAt).toLocaleString('ko-KR')}`,
-                });
             }
-        } catch (error) {
-            console.error('임시 저장 데이터 로드 실패:');
+            setLoadedDraftScope(scope);
+        } catch {
+            if (currentDraftScope.current === scope) setDraftLoadFailed(true);
         }
-    }, [restaurant?.id]);
-
-    // 자동 저장
-    const autoSave = useCallback(async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user?.id || !restaurant?.id) return;
-
-        // 내용이 하나라도 있을 때만 저장
-        if (!editFormData.name && !editFormData.address && !editFormData.phone && editFormData.category.length === 0 && editFormData.youtube_reviews.length === 0) {
-            return;
-        }
-
-        try {
-            setIsSaving(true);
-            await saveDraft({
-                userId: user.id,
-                restaurantId: restaurant.id,
-                name: editFormData.name,
-                address: editFormData.address,
-                phone: editFormData.phone,
-                category: editFormData.category,
-                youtube_reviews: editFormData.youtube_reviews,
-                requestKind: editFormData.requestKind,
-                currentStep,
-            });
-            setLastSavedAt(new Date());
-        } catch (error) {
-            console.error('자동 저장 실패:');
-        } finally {
-            setIsSaving(false);
-        }
-    }, [restaurant?.id, editFormData, currentStep]);
-
-    // 임시 저장 데이터 삭제
-    const clearDraft = useCallback(async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user?.id || !restaurant?.id) return;
-
-        try {
-            await deleteDraft(user.id, restaurant.id);
-            setLastSavedAt(null);
-        } catch (error) {
-            console.error('임시 저장 데이터 삭제 실패:');
-        }
-    }, [restaurant?.id]);
-
-    // 디바운스된 자동 저장 (500ms)
-    useEffect(() => {
-        if (!isOpen) return;
-
-        const timer = setTimeout(() => {
-            autoSave();
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }, [isOpen, editFormData, currentStep, autoSave]);
+    }, [user?.id, restaurant?.id, draftScope]);
+    const handleClose = useCallback(async () => {
+        if (isSubmitting || closingDraftScope.current === draftScope) return;
+        const scope = draftScope; closingDraftScope.current = scope; setIsClosing(true);
+        const saved = await draftAutosave.flush();
+        if (currentDraftScope.current !== scope) return;
+        if (!saved) { closingDraftScope.current = null; setIsClosing(false); toast.error('임시 저장하지 못했습니다. 입력을 유지했으니 다시 닫기를 시도해주세요.'); return; }
+        onClose();
+    }, [isSubmitting, draftScope, draftAutosave, onClose]);
 
     // 모달이 열릴 때 임시 저장된 데이터 확인
     useEffect(() => {
         if (isOpen && restaurant?.id) {
             loadDraft();
-            setCurrentStep(1);
             setValidationMessage(null);
         }
     }, [isOpen, restaurant?.id, loadDraft]);
@@ -390,7 +380,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
     const handleDesktopEditDialogKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
         if (event.key === 'Escape') {
             event.preventDefault();
-            onClose();
+            void handleClose();
             return;
         }
 
@@ -414,7 +404,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
             event.preventDefault();
             firstElement.focus({ preventScroll: true });
         }
-    }, [onClose]);
+    }, [handleClose]);
 
     useEffect(() => {
         if (!shouldRenderMapPanel || !isOpen) return;
@@ -771,6 +761,9 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
             onSubmit={handleSubmit}
             className={mobileSheetStyles.frame}
         >
+{draftLoadFailed && <DraftLoadError onRetry={() => void loadDraft()} />}
+{completedSubmission && <DraftCleanupRetry onRetry={() => void finishSubmittedDraft(completedSubmission)} />}
+<fieldset disabled={loadedDraftScope !== draftScope || isSubmitting} className="min-w-0">
             <div
                 className={`${mobileSheetStyles.header}${shouldRenderMapPanel ? ' cursor-move select-none touch-none' : ''}`}
                 data-desktop-map-edit-drag-handle={shouldRenderMapPanel ? "true" : undefined}
@@ -793,7 +786,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                             맛집 수정 요청
                         </h2>
                     </div>
-                    <Button type="button" variant="ghost" size="icon" aria-label="맛집 수정 요청 닫기" onClick={onClose}>
+                    <Button type="button" variant="ghost" size="icon" aria-label="맛집 수정 요청 닫기" onClick={() => void handleClose()} disabled={isClosing}>
                         <X className="h-5 w-5" />
                     </Button>
                 </div>
@@ -826,30 +819,30 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                             이전
                         </Button>
                     ) : (
-                        <Button type="button" variant="outline" onClick={onClose} className="min-w-24" disabled={isSubmitting}>
+                        <Button type="button" variant="outline" onClick={() => void handleClose()} className="min-w-24" disabled={isClosing || isSubmitting}>
                             취소
                         </Button>
                     )}
                     {currentStep < 3 ? (
-                        <Button type="button" onClick={handleNextStep} className={`${mobileSheetStyles.primaryAction} flex-1`}>
+                        <Button key="next-step" type="button" onClick={handleNextStep} className={`${mobileSheetStyles.primaryAction} flex-1`}>
                             다음
                         </Button>
                     ) : (
-                        <Button type="submit" className={`${mobileSheetStyles.primaryAction} flex-1`} disabled={isSubmitting}>
+                        <Button key="submit-request" type="submit" className={`${mobileSheetStyles.primaryAction} flex-1`} disabled={isSubmitting}>
                             <Send className="mr-2 h-4 w-4" />
-                            {isSubmitting ? '제출 중...' : '수정 요청 제출'}
+                            {completedSubmission ? '제출 완료' : isSubmitting ? '제출 중...' : '수정 요청 제출'}
                         </Button>
                     )}
                 </div>
             </div>
-        </form>
+        </fieldset></form>
     ) : null;
 
     if (isMobileOrTablet) {
         return (
             <BottomSheet
                 isOpen={isOpen}
-                onClose={onClose}
+                onClose={() => void handleClose()}
                 {...MOBILE_FULL_FORM_SHEET}
                 layoutSource="edit-restaurant-modal"
                 className="z-[110]"
@@ -885,7 +878,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
 
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <Dialog open={isOpen} onOpenChange={(open) => { if (!open) void handleClose(); }}>
             {isOpen && (
                 <DialogContent
                     className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]"
@@ -938,6 +931,9 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
 
                     {restaurant && (
                         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+{draftLoadFailed && <DraftLoadError onRetry={() => void loadDraft()} />}
+{completedSubmission && <DraftCleanupRetry onRetry={() => void finishSubmittedDraft(completedSubmission)} />}
+<fieldset disabled={loadedDraftScope !== draftScope || isSubmitting} className="min-w-0">
                             {/* 공통 정보 입력 */}
                             <div className="space-y-4 p-4 bg-muted rounded-lg">
                                 <h3 className="font-semibold text-lg">공통 정보</h3>
@@ -1111,14 +1107,14 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                             </div>
 
                             <div className="flex gap-2 pt-4">
-                                <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={isSubmitting}>
+                                <Button type="button" variant="outline" onClick={() => void handleClose()} className="flex-1" disabled={isClosing || isSubmitting}>
                                     취소
                                 </Button>
                                 <Button type="submit" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitting}>
-                                    {isSubmitting ? '제출 중...' : '수정 요청 제출'}
+                                    {completedSubmission ? '제출 완료' : isSubmitting ? '제출 중...' : '수정 요청 제출'}
                                 </Button>
                             </div>
-                        </form>
+                        </fieldset></form>
                     )}
                 </DialogContent>
             )}

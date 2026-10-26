@@ -19,7 +19,7 @@ class MacHostedPipelineInstallerTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix='mac-hosted-install-test-')
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
+        self.root = Path(self.temporary.name).resolve()
         self.repo = self.root / 'repo & source'
         self.home = self.root / 'home & owner'
         self.support = self.home / 'Library/Application Support/tzudong'
@@ -33,6 +33,18 @@ class MacHostedPipelineInstallerTests(unittest.TestCase):
         self.script = self.repo / 'backend/bin' / INSTALLER.name
         self.script.parent.mkdir(parents=True)
         shutil.copyfile(INSTALLER, self.script)
+        shutil.copyfile(INSTALLER.with_name('chrome_for_testing.py'), self.script.with_name('chrome_for_testing.py'))
+        (self.repo / '.github').mkdir()
+        shutil.copyfile(INSTALLER.parents[2] / '.github/chrome-for-testing.v1.json', self.repo / '.github/chrome-for-testing.v1.json')
+        self.chrome = self.root / 'Google Chrome for Testing.app/Contents/MacOS/chrome'
+        self.chrome.parent.mkdir(parents=True)
+        self.chrome.write_text('#!/bin/sh\nprintf "Google Chrome for Testing 156.0.8078.4\\n"\n')
+        self.chrome.chmod(0o755)
+        self.chrome_info = self.chrome.parent.parent / 'Info.plist'
+        self.chrome_info.write_bytes(plistlib.dumps({
+            'CFBundleIdentifier': 'com.google.chrome.for.testing',
+            'CFBundleShortVersionString': '156.0.8078.4', 'CFBundleExecutable': self.chrome.name,
+        }))
         self.commands = self.root / 'launchctl.jsonl'
         self.observation = self.root / 'writer.json'
         self.bin = self.root / 'fake-bin'
@@ -43,7 +55,7 @@ args = sys.argv[1:]
 if args and args[0].endswith('/run_hosted_new_video_pipeline.py'):
     keys = ['TZUDONG_LAAJ_PROVIDER', 'TZUDONG_HOSTED_DATA_PLANE_APPROVED',
             'G037_WRITE_FREEZE', 'TZUDONG_PIPELINE_SOURCE', 'TZUDONG_REPO_ROOT',
-            'ALLOW_CUSTOM_FFMPEG', 'FFMPEG_PATH', 'FFMPEG_TRUSTED_ROOT']
+            'ALLOW_CUSTOM_FFMPEG', 'FFMPEG_PATH', 'FFMPEG_TRUSTED_ROOT', 'PUPPETEER_EXECUTABLE_PATH']
     pathlib.Path(os.environ['FAKE_WRITER_OBSERVATION']).write_text(json.dumps(
         {'argv': args, 'env': {key: os.environ.get(key) for key in keys}}))
     raise SystemExit(int(os.environ.get('FAKE_WRITER_EXIT', '0')))
@@ -89,6 +101,7 @@ raise SystemExit(75)
         self.env = {
             'HOME': str(self.home), 'PATH': f'{self.bin}:/usr/bin:/bin',
             'PYTHON_CMD': str(self.runtime), 'TMPDIR': str(self.root), 'LANG': 'C',
+            'CHROME_FOR_TESTING_EXECUTABLE': str(self.chrome),
             'FAKE_LAUNCHCTL_LOG': str(self.commands),
             'FAKE_WRITER_OBSERVATION': str(self.observation),
         }
@@ -133,9 +146,52 @@ raise SystemExit(75)
             'G037_WRITE_FREEZE': 'active', 'TZUDONG_PIPELINE_SOURCE': 'mac',
             'TZUDONG_REPO_ROOT': str(self.repo), 'ALLOW_CUSTOM_FFMPEG': '1',
             'FFMPEG_PATH': str(self.ffmpeg), 'FFMPEG_TRUSTED_ROOT': str(self.ffmpeg_root),
+            'PUPPETEER_EXECUTABLE_PATH': str(self.chrome),
         })
         self.assertIn('end exit=7', execution.stdout)
         self.assertIn('limit=3', result.stdout)
+
+    def test_missing_or_symlink_browser_never_replaces_owned_files(self):
+        self.seed_previous()
+        link = self.root / 'linked-browser'
+        link.symlink_to(self.chrome)
+        for executable in ['', str(self.root / 'missing-browser'), str(link)]:
+            with self.subTest(executable=executable):
+                result = self.install(CHROME_FOR_TESTING_EXECUTABLE=executable)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('chrome_for_testing_unverified', result.stderr)
+                self.assert_previous_preserved()
+
+    def test_wrong_browser_product_or_build_never_replaces_owned_files(self):
+        self.seed_previous()
+        for product, version, bundle in [
+            ('Google Chrome', '156.0.8078.4', 'com.google.Chrome'),
+            ('Google Chrome for Testing', '153.0.8010.12', 'com.google.chrome.for.testing'),
+        ]:
+            with self.subTest(product=product, version=version):
+                self.chrome.write_text(f'#!/bin/sh\nprintf "{product} {version}\\n"\n')
+                self.chrome_info.write_bytes(plistlib.dumps({
+                    'CFBundleIdentifier': bundle, 'CFBundleShortVersionString': version,
+                    'CFBundleExecutable': self.chrome.name,
+                }))
+                result = self.install()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('chrome_for_testing_unverified', result.stderr)
+                self.assert_previous_preserved()
+
+    def test_changed_browser_after_install_does_not_start_writer(self):
+        result = self.install()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.chrome_info.write_bytes(plistlib.dumps({
+            'CFBundleIdentifier': 'com.google.Chrome',
+            'CFBundleShortVersionString': '156.0.8078.4', 'CFBundleExecutable': self.chrome.name,
+        }))
+        self.chrome.write_text('#!/bin/sh\nprintf "Google Chrome 156.0.8078.4\\n"\n')
+        execution = subprocess.run(['/bin/bash', str(self.wrapper)], env=self.env,
+                                   capture_output=True, text=True, timeout=15)
+        self.assertNotEqual(execution.returncode, 0)
+        self.assertFalse(self.observation.exists())
+        self.assertNotIn('start source=mac', execution.stdout)
 
     def test_explicit_cleared_freeze_is_preserved(self):
         result = self.install(G037_WRITE_FREEZE='cleared')

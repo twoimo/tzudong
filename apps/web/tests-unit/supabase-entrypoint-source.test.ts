@@ -52,9 +52,18 @@ const PREEXISTING_ADDITIONAL_CLIENT_SITES = [
   'scripts/restaurant-refresh-cron.mjs', // restaurant refresh cron CLI (server-side tooling)
 ] as const;
 
+// Auth maintenance must not use the application's shared persistence or SDK
+// cleanup. These two reviewed, ephemeral auth clients use the same public
+// endpoint/key; actual SDK and native browser tests cover their isolation.
+const ISOLATED_BROWSER_AUTH_CLIENT_SITES = [
+  'lib/auth/isolated-browser-account.ts',
+  'lib/auth/isolated-browser-pkce.ts',
+] as const;
+
 const ALLOWED_CONSTRUCTION_SITES = [
   ...Object.values(CANONICAL_ENTRYPOINTS).map((entry) => entry.path),
   ...PREEXISTING_ADDITIONAL_CLIENT_SITES,
+  ...ISOLATED_BROWSER_AUTH_CLIENT_SITES,
 ].sort();
 
 // First-party shipped source roots. Excludes build output (.next*), node_modules,
@@ -177,6 +186,17 @@ describe('Supabase Local_Database access entrypoint source contract (Requirement
       expect(source).toContain(`from '${entry.package}'`);
       // The primitive is actually invoked (not merely imported), typed to Database.
       expect(source).toContain(`${entry.constructor}<Database>(`);
+    }
+  });
+
+  test('isolated browser auth clients cannot become privileged or general data entrypoints', () => {
+    for (const file of ISOLATED_BROWSER_AUTH_CLIENT_SITES) {
+      const source = readSource(file);
+      expect(source).toContain('NEXT_PUBLIC_SUPABASE_URL');
+      expect(source).toContain('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+      expect(source).not.toContain('SERVICE_ROLE_KEY');
+      expect(source).not.toMatch(/\.(?:from|channel)\s*\(/);
+      expect(source).not.toMatch(/\.storage\b/);
     }
   });
 

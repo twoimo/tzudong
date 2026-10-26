@@ -103,6 +103,19 @@ class LocalComposeInputContractTests(unittest.TestCase):
             self.assertIn(f'"{binding}"', self.mail_source)
         self.assertNotIn("0.0.0.0:", self.overlay_source + self.mail_source)
 
+    def test_verification_links_use_the_api_origin_and_redirects_use_the_app_origin(self) -> None:
+        values = {"API_EXTERNAL_URL": "http://127.0.0.1:28000", "SITE_URL": "http://127.0.0.1:8080"}
+        services = {"auth": {"environment": {
+            "API_EXTERNAL_URL": values["API_EXTERNAL_URL"], "GOTRUE_SITE_URL": values["SITE_URL"],
+        }}}
+        local_stack._validate_auth_public_urls(services, values)
+        services["auth"]["environment"]["API_EXTERNAL_URL"] = values["SITE_URL"]
+        with self.assertRaises(local_stack.LocalStackError):
+            local_stack._validate_auth_public_urls(services, values)
+        services["auth"]["environment"]["API_EXTERNAL_URL"] = "https://external.example.invalid"
+        with self.assertRaises(local_stack.LocalStackError):
+            local_stack._validate_auth_public_urls(services, values)
+
     def test_storage_uses_a_distinct_owner_role_key_without_restoring_service_acl(self) -> None:
         storage_block = _service_block(self.overlay_source, "storage")
         self.assertIn("SERVICE_KEY: ${STORAGE_SERVICE_KEY}", storage_block)

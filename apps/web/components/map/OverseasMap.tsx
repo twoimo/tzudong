@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import * as maplibregl from 'maplibre-gl';
 import '@/styles/maplibre-gl.css';
 import type { Restaurant } from '@/types/restaurant';
-import { syncPopularityMarkerInteraction } from '@/lib/evidence-engineering/popularity-marker';
+import { syncPopularityMarkerInteraction, syncPopularityMarkerZoom } from '@/lib/evidence-engineering/popularity-marker';
 import type { FilterState } from '@/components/filters/filter-state';
 import { useRestaurants } from '@/hooks/use-restaurants';
 import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
@@ -229,6 +229,11 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                 setIsMapLoaded(true);
             });
             const interactionElement = mapContainer.current;
+            const updatePopularityZoom = () => {
+                if (interactionElement && mapInstance) syncPopularityMarkerZoom(interactionElement, mapInstance.getZoom());
+            };
+            updatePopularityZoom();
+            mapInstance.on('zoom', updatePopularityZoom);
             mapInstance.on('movestart', () => {
                 if (interactionElement) syncPopularityMarkerInteraction(interactionElement, true);
             });

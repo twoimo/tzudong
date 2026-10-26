@@ -23,12 +23,9 @@ import {
     Check,
     ChevronUp,
     ChevronRight,
-    Play,
     ChevronLeft
 } from "lucide-react";
 import { OperationalCautionNotice, cautionForDetailPanel } from "@/components/restaurant/OperationalCautionNotice";
-import { RestaurantEvidenceCarousel } from "@/components/restaurant/RestaurantEvidenceCarousel";
-import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -54,7 +51,7 @@ import {
     buildCanonicalYouTubeWatchUrl,
     extractCanonicalYouTubeVideoId,
 } from "@/lib/youtube-url";
-import { YoutubeThumbnail } from "@/components/ui/youtube-thumbnail";
+import { RestaurantVideoCarousel } from "@/components/restaurant/RestaurantVideoCarousel";
 import { buildRestaurantMapDestinationUrls } from "@/lib/restaurant-outbound-url";
 import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from "@/lib/public-profile-read";
 
@@ -241,7 +238,6 @@ export function RestaurantDetailPanel({
     const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
     const [copiedAddress, setCopiedAddress] = useState<RestaurantAddressEntryType | null>(null);
-    const [isYoutubeExpanded, setIsYoutubeExpanded] = useState(false);
     const [isReviewExpanded, setIsReviewExpanded] = useState(false);
     const [isDirectionSheetOpen, setIsDirectionSheetOpen] = useState(false);
     const [isShareCopied, setIsShareCopied] = useState(false);
@@ -275,16 +271,16 @@ export function RestaurantDetailPanel({
     const mergedMedia = useMemo(() => collectRestaurantMergedMedia(restaurant), [restaurant]);
     const youtubeLinks = mergedMedia.youtubeLinks;
     const youtubeVideos = useMemo(
-        () => youtubeLinks.flatMap((youtubeLink) => {
-            const videoId = extractCanonicalYouTubeVideoId(youtubeLink);
-            const watchUrl = buildCanonicalYouTubeWatchUrl(videoId);
-            if (!videoId || !watchUrl) return [];
-
-            return [{
-                videoId,
-                watchUrl,
-            }];
-        }),
+        () => {
+            const seen = new Set<string>();
+            return youtubeLinks.flatMap((youtubeLink) => {
+                const videoId = extractCanonicalYouTubeVideoId(youtubeLink);
+                const watchUrl = buildCanonicalYouTubeWatchUrl(videoId);
+                if (!videoId || !watchUrl || seen.has(videoId)) return [];
+                seen.add(videoId);
+                return [{ videoId, watchUrl }];
+            });
+        },
         [youtubeLinks],
     );
     const collectedTzuyangReviews = mergedMedia.tzuyangReviews;
@@ -378,10 +374,6 @@ export function RestaurantDetailPanel({
         });
         return Array.from(new Set(labels));
     }, [youtubeMetas]);
-    const youtubeCopy = useMemo(
-        () => buildRestaurantDetailMediaCopy('youtube', youtubeVideos.length, isYoutubeExpanded),
-        [isYoutubeExpanded, youtubeVideos.length],
-    );
     const reviewCopy = useMemo(
         () => buildRestaurantDetailMediaCopy('review', tzuyangReviewEntries.length, isReviewExpanded),
         [isReviewExpanded, tzuyangReviewEntries.length],
@@ -1061,6 +1053,7 @@ export function RestaurantDetailPanel({
 
                 <MapPanelHeader
                     title={restaurant.name}
+                    wrapTitle
                     titleAs="h2"
                     count={viewMode === 'reviews' ? totalReviewCount : undefined}
                     description={viewMode === 'reviews' ? '전체 리뷰' : undefined}
@@ -1070,7 +1063,7 @@ export function RestaurantDetailPanel({
                         </span>
                     ) : undefined}
                     titleAddon={viewMode === 'detail' && categories.length > 0 ? (
-                        <span className="flex shrink-0 items-center gap-1" data-restaurant-detail-categories="true">
+                        <span className="flex min-w-0 flex-wrap items-center gap-1" data-restaurant-detail-categories="true">
                             {categories.map((cat, index) => (
                                 <Badge
                                     key={`${cat}-${index}`}
@@ -1131,9 +1124,6 @@ export function RestaurantDetailPanel({
                                         <OperationalCautionNotice
                                             caution={cautionForDetailPanel(restaurant)}
                                             shopName={restaurant.name}
-                                        />
-                                        <RestaurantEvidenceCarousel
-                                            frames={[mergedMedia.evidenceFrames ?? []]}
                                         />
                                         {advertisementLabels.length > 0 && (
                                             <ScrollableTagContainer className="mb-1" maxWidth="100%">
@@ -1196,106 +1186,16 @@ export function RestaurantDetailPanel({
                                 </div>
 
                                 {/* 유튜브 링크 */}
-                                {youtubeVideos.length > 0 ? (
+                                {(youtubeVideos.length > 0 || (mergedMedia.evidenceFrames?.length ?? 0) > 0) && (
                                     <>
-                                    <Separator />
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <h3 className="min-w-0 flex-1 font-semibold text-sm flex flex-wrap items-center gap-2">
-                                                <YouTubeIcon className="h-4 w-4 text-red-500" />
-                                                {youtubeCopy.title}
-                                                {youtubeVideos.length > 1 && (
-                                                    <Badge variant="outline" className="ml-1 text-xs">
-                                                        {youtubeCopy.countLabel}
-                                                    </Badge>
-                                                )}
-                                            </h3>
-                                            {youtubeVideos.length > 1 && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setIsYoutubeExpanded(!isYoutubeExpanded)}
-                                                    aria-expanded={isYoutubeExpanded}
-                                                    aria-label={youtubeCopy.toggleAriaLabel}
-                                                    className="h-7 shrink-0 px-2 text-xs text-muted-foreground hover:text-foreground"
-                                                >
-                                                    {isYoutubeExpanded ? (
-                                                        <>
-                                                            {youtubeCopy.expandedToggleLabel} <ChevronUp className="ml-1 h-3.5 w-3.5" />
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            {youtubeCopy.collapsedToggleLabel} <ChevronDown className="ml-1 h-3.5 w-3.5" />
-                                                        </>
-                                                    )}
-                                                </Button>
-                                            )}
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <button
-                                                type="button"
-                                                className="relative w-full cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                                onClick={() => openExternalUrl(youtubeVideos[0].watchUrl)}
-                                                aria-label={youtubeCopy.openAriaLabel(1)}
-                                            >
-                                                <YoutubeThumbnail
-                                                    videoId={youtubeVideos[0].videoId}
-                                                    alt=""
-                                                    className="object-cover"
-                                                    sizes="(max-width: 400px) 100vw, 400px"
-                                                    priority
-                                                />
-                                                {youtubeVideos.length > 1 && (
-                                                    <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
-                                                        {youtubeCopy.itemBadge(1)}
-                                                    </span>
-                                                )}
-                                                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-sm ring-1 ring-white/40 group-hover:bg-red-600">
-                                                        <Play className="h-5 w-5 translate-x-[1px] fill-current" aria-hidden="true" />
-                                                    </span>
-                                                </div>
-                                            </button>
-
-                                            {youtubeVideos.length > 1 && !isYoutubeExpanded && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    {youtubeCopy.collapsedHint}
-                                                </p>
-                                            )}
-
-                                            {youtubeVideos.length > 1 && isYoutubeExpanded && (
-                                                <div className="space-y-2">
-                                                    {youtubeVideos.slice(1).map((video, index) => (
-                                                        <button
-                                                            type="button"
-                                                            key={video.watchUrl}
-                                                            className="relative w-full cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                                            onClick={() => openExternalUrl(video.watchUrl)}
-                                                            aria-label={youtubeCopy.openAriaLabel(index + 2)}
-                                                        >
-                                                            <YoutubeThumbnail
-                                                                videoId={video.videoId}
-                                                                alt=""
-                                                                className="object-cover"
-                                                                sizes="(max-width: 400px) 100vw, 400px"
-                                                            />
-                                                            <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
-                                                                {youtubeCopy.itemBadge(index + 2)}
-                                                            </span>
-                                                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-sm ring-1 ring-white/40 group-hover:bg-red-600">
-                                                                    <Play className="h-5 w-5 translate-x-[1px] fill-current" aria-hidden="true" />
-                                                                </span>
-                                                            </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                        <Separator />
+                                        <RestaurantVideoCarousel
+                                            key={`${restaurant.id}:${youtubeVideos.map((video) => video.videoId).join(',')}`}
+                                            videos={youtubeVideos}
+                                            frames={[mergedMedia.evidenceFrames ?? []]}
+                                        />
                                     </>
-                                ) : null}
+                                )}
 
                                 {/* 쯔양 리뷰 섹션 */}
                                 {tzuyangReviewEntries.length > 0 ? (

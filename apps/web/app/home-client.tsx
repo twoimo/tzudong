@@ -200,7 +200,7 @@ type HomeDetailOpenOptions = {
 };
 
 export default function HomeClient() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, isLoading: isAuthLoading } = useAuth();
   const { isSidebarOpen } = useLayout();
   const viewportMode = useHomeViewportMode();
   const isViewportResolved = viewportMode !== "pending";
@@ -772,7 +772,7 @@ export default function HomeClient() {
 
   // [OPTIMIZATION] useCallback으로 메모이제이션
   const handleSubmissionButtonClick = useCallback(() => {
-    if (isPublicRestrictedMode) return;
+    if (isPublicRestrictedMode || isAuthLoading) return;
     if (!user) {
       toast.info("로그인하면 맛집 제보를 바로 이어서 할 수 있어요");
       requestAuthUi({
@@ -784,7 +784,7 @@ export default function HomeClient() {
       return;
     }
     setIsSubmissionModalOpen(true);
-  }, [user]);
+  }, [user, isAuthLoading]);
 
   const handleUserSubmittedMarkerToggle = useCallback(() => {
     const next = !showUserSubmittedMarkers;
@@ -1345,6 +1345,7 @@ export default function HomeClient() {
             setMapMode(mode);
           }}
           user={isPublicRestrictedMode ? null : user}
+          isAuthLoading={isPublicRestrictedMode ? false : isAuthLoading}
           onSubmissionClick={isPublicRestrictedMode ? undefined : handleSubmissionButtonClick}
           onTopShellUserIconClick={isPublicRestrictedMode ? undefined : handleTopShellUserIconClick}
           onDeviceLocationClick={isPublicRestrictedMode ? undefined : handleDeviceLocationClick}
@@ -1371,6 +1372,7 @@ export default function HomeClient() {
           />
           <SubmissionFloatingButton
             onClick={handleSubmissionButtonClick}
+            isAuthLoading={isAuthLoading}
             isSidebarOpen={isSidebarOpen}
             onDeviceLocationClick={handleDeviceLocationClick}
             deviceLocation={deviceLocation}

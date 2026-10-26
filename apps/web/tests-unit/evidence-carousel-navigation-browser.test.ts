@@ -1,11 +1,14 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import ts from '@typescript/old';
+import postcss from 'postcss';
+import tailwind from '@tailwindcss/postcss';
 import { chromium, expect as ui } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 const localTest = existsSync(chrome) ? test : test.skip;
 const rows = JSON.parse(readFileSync(resolve(appRoot, '../../docs/evidence/marker-evidence-live-20261021-v1/reviewed-frames.json'), 'utf8'));
 const frames = rows.frames.slice(0, 3).map((row: { frame: unknown }) => row.frame);
@@ -30,7 +33,7 @@ function actualPanelSwipeDeclarations(): string {
 
 async function bundle() {
   const entry = `import React, { useCallback, useRef } from 'react'; import { createRoot } from 'react-dom/client';
-    import { RestaurantEvidenceCarousel } from './components/restaurant/RestaurantEvidenceCarousel';
+    import { RestaurantVideoCarousel } from './components/restaurant/RestaurantVideoCarousel';
     import { handleDesktopArrowNavigationEvent } from './lib/home-map-keyboard-navigation';
     let navigations = 0, panelStarts = 0;
     window.sceneFixture = { reset: () => { navigations = 0; panelStarts = 0; }, count: () => navigations, starts: () => panelStarts };
@@ -40,10 +43,10 @@ async function bundle() {
     function App() {
       const onSwipeLeft = () => { navigations++; }, onSwipeRight = onSwipeLeft, hideSwipeHint = () => { panelStarts++; };
       ${actualPanelSwipeDeclarations()}
-      return <div onTouchStart={handleContentSwipeStart} onTouchMove={handleContentSwipeMove}
+      return <div style={{width:'min(100%,420px)'}} onTouchStart={handleContentSwipeStart} onTouchMove={handleContentSwipeMove}
         onTouchEnd={handleContentSwipeEnd} onTouchCancel={handleContentSwipeCancel}>
         <div id='outside' tabIndex={0} style={{height:100}}>Restaurant navigation area</div>
-        <RestaurantEvidenceCarousel frames={[${JSON.stringify(frames)}]} />
+        <RestaurantVideoCarousel videos={[]} frames={[${JSON.stringify(frames)}]} />
       </div>;
     }
     createRoot(document.getElementById('root')).render(<App />);`;
@@ -59,7 +62,7 @@ async function bundle() {
 
 for (const width of [1440, 390, 820]) {
   localTest(`scene navigation keeps the restaurant selected at ${width}px`, async () => {
-    const browser = await chromium.launch({ executablePath: chrome, headless: true });
+    const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
     try {
       const context = await browser.newContext({ viewport: { width, height: 1000 }, hasTouch: true });
       const page = await context.newPage();
@@ -69,44 +72,48 @@ for (const width of [1440, 390, 820]) {
         const url = new URL(route.request().url());
         if (url.origin !== 'https://scene-navigation.test') { external.push(url.origin); return route.abort(); }
         if (url.pathname.startsWith('/evidence-frames/')) return route.fulfill({contentType:'image/webp', body:readFileSync(join(appRoot,'public',url.pathname))});
-        return route.fulfill({contentType:'text/html; charset=utf-8',body:`<div id="root"></div><style>
-          [aria-label="영상 장면 가로 스크롤"] { display:flex; width:min(100%,420px); overflow-x:auto; gap:12px; }
-          [aria-label="영상 장면 가로 스크롤"] a { display:block; flex:0 0 280px; }
-          img { width:280px; height:158px; } </style>`});
+        return route.fulfill({contentType:'text/html; charset=utf-8',body:'<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><body><div id="root"></div><script>globalThis.process={env:{NODE_ENV:"test"}};</script></body></html>'});
       });
-      await page.goto('https://scene-navigation.test/'); await page.addScriptTag({ content: await bundle() });
-      const scroller = page.getByLabel('영상 장면 가로 스크롤', {exact:true});
-      await ui(scroller.locator('img')).toHaveCount(3);
-      const metrics = await scroller.evaluate(element => ({width:element.clientWidth, contentWidth:element.scrollWidth, overflow:getComputedStyle(element).overflowX}));
-      expect(metrics.overflow).toBe('auto');
-      expect(metrics.contentWidth).toBeGreaterThan(metrics.width);
+      const css = await postcss([tailwind()]).process('@import "./app/globals.css";\n@import "./app/home-detail-globals.css";', {from:join(appRoot,'scene-navigation-fixture.css')});
+      await page.goto('https://scene-navigation.test/');
+      await page.addStyleTag({content:css.css});
+      await page.addScriptTag({ content: await bundle() });
+      const carousel = page.getByRole('region', {name:'쯔양 영상과 장면 넘기기',exact:true});
+      const choices = page.getByRole('group', {name:'영상과 장면 바로 선택'}).getByRole('button');
+      await ui(choices).toHaveCount(3);
+      await ui(choices.nth(0)).toHaveAttribute('aria-pressed','true');
+      await ui(page.getByRole('button',{name:'다음 영상 또는 장면',exact:true})).toBeEnabled();
       const count = () => page.evaluate(() => (window as unknown as {sceneFixture:{count():number}}).sceneFixture.count());
       const starts = () => page.evaluate(() => (window as unknown as {sceneFixture:{starts():number}}).sceneFixture.starts());
       const reset = () => page.evaluate(() => (window as unknown as {sceneFixture:{reset():void}}).sceneFixture.reset());
       if (width === 1440) {
-        await scroller.focus(); await page.keyboard.press('ArrowRight');
+        await carousel.focus(); await page.keyboard.press('ArrowRight');
         expect(await count()).toBe(0);
-        await ui.poll(() => scroller.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+        await ui(choices.nth(1)).toHaveAttribute('aria-pressed','true');
         await page.locator('#outside').focus(); await page.keyboard.press('ArrowRight');
         expect(await count()).toBe(1);
         await reset();
+        await choices.nth(0).click();
+        await ui(choices.nth(0)).toHaveAttribute('aria-pressed','true');
       }
       const session = await context.newCDPSession(page);
       async function swipe(selector: string) {
         const box = await page.locator(selector).boundingBox();
         if (!box) throw new Error('SWIPE_TARGET_MISSING');
-        const x = box.x + Math.min(box.width - 20, 300), y = box.y + Math.min(box.height / 2, 80);
+        // Cross the snap midpoint even when a busy runner slows touch delivery.
+        const x = box.x + box.width * 0.85, y = box.y + Math.min(box.height / 2, 80);
+        const distance = box.width * 0.65;
         await session.send('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{x,y,id:1}]});
         for (let step = 1; step <= 8; step++) {
-          await session.send('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{x:x-step*25,y,id:1}]});
+          await session.send('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{x:x-distance*step/8,y,id:1}]});
           await page.waitForTimeout(20);
         }
         await session.send('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
       }
-      await swipe('[aria-label="영상 장면 가로 스크롤"]');
+      await swipe('[aria-label="쯔양 영상과 장면 넘기기"]');
       expect(await starts()).toBe(0);
       expect(await count()).toBe(0);
-      await ui.poll(() => scroller.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+      await ui(choices.nth(1)).toHaveAttribute('aria-pressed','true');
       await swipe('#outside');
       expect(await starts()).toBe(1);
       expect(await count()).toBe(1);

@@ -430,6 +430,18 @@ describe('submission and admin-user request security', () => {
     }
   });
 
+  test('rejects incomplete draft phones for new and recommendation submission before persistence', async () => {
+    const { POST, persistence } = await loadSubmissionSubmitRoute();
+    for (const mode of ['new', 'request']) for (const phone of ['0', '02-', '02-1234-', '+', '+82 ', '(', '-', '.']) {
+      const body = { ...validSubmissionBody, mode, payload: { ...validSubmissionBody.payload, phone,
+        description: '여기는 꼭 추천하고 싶은 합성 맛집입니다.' } };
+      const response = await POST(submitRouteRequest(JSON.stringify(body)));
+      expect(response.status).toBe(400);
+      expect(response.headers.get('Cache-Control')).toBe('no-store');
+      expect(persistence).toEqual({ insertCalls: 0, rpcCalls: 0, serviceRoleCalls: 0 });
+    }
+  });
+
   test('accepts new and recommendation request controls only after exact validation', async () => {
     const { POST, persistence } = await loadSubmissionSubmitRoute();
 

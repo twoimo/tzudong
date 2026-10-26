@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -5,7 +6,7 @@ import ts from 'typescript';
 import { chromium } from '@playwright/test';
 
 const appRoot = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromeForTestingExecutable();
 
 async function bundle(sourceRoot: string) {
     const source = readFileSync(join(sourceRoot, 'components/reviews/ReviewModal.tsx'), 'utf8');
@@ -29,6 +30,8 @@ async function bundle(sourceRoot: string) {
         import { createRoot } from 'react-dom/client';
         import { flushSync } from 'react-dom';
         import * as db from '@revision/db';
+        import {enqueueDraftWrite,waitForDraftAutosave} from './lib/draft-write-queue';
+        import {captureBrowserDraftEpoch,assertBrowserDraftWrite} from './lib/privacy/browser-draft-lifecycle';
         import { REVIEW_FOOD_PHOTO_MAX_COUNT, ReviewSaveOperation } from '@revision/operation';
         import { buildReviewPhotoObjectPath, normalizeReviewPhotoFilename, cleanupCanonicalReviewPhotoObjects } from './lib/review-photo-url';
         import { FEATURE_DATABASE_HELD, FEATURE_DATABASE_HELD_MESSAGE, FEATURE_DATABASE_READY } from './lib/runtime-feature-readiness-contract';
@@ -83,6 +86,8 @@ async function bundle(sourceRoot: string) {
             const ocrRunGenerationRef = useRef(0), saveInputRevisionRef = useRef(0), verificationInputModeRef = useRef(verificationInputMode), ocrRecoveryContextRef = useRef(null);
             const verificationSelectionRef = useRef({ invalidate() {} }), receiptOcrPreparationRef = useRef({ invalidate() {} });
             const draftScopeRef = useRef({ ownerId: user.id, restaurantId: restaurant.id, revision: null });
+            const draftLoadKey = 'handler-fixture-loaded'; const loadedDraftKey = draftLoadKey;
+            const setLoadedDraftKey = () => {}, setDraftLoadFailed = () => {};
             const latestSaveInputsRef = useRef({ revision: 0, ownerId: user.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: restaurant.id, restaurantName: restaurant.name, verificationInputMode, isAnalyzing, ocrRunGeneration: ocrRunGenerationRef.current, ocrResultRef, ocrResultRevision });
             const reviseLatestSaveInputs = useCallback(patch => {
                 const revision = saveInputRevisionRef.current + 1;
@@ -191,7 +196,7 @@ async function bundle(sourceRoot: string) {
             const restaurant = id();
             const committed = await db.saveDraft({ userId: owner, restaurantId: restaurant, currentStep: 3, visitedDate: '2026-10-04', visitedTime: '12:00', categories: ['한식'], content: 'Synthetic privacy row', verificationPhoto: new File(['synthetic'], 'receipt.jpg'), foodPhotos: ['blob:excluded'] });
             const database = await new Promise((resolve, reject) => { const request = indexedDB.open('tzudong-review-drafts', 3); request.onsuccess = () => resolve(request.result); request.onerror = reject; });
-            const persisted = await new Promise(resolve => { const request = database.transaction('review-drafts').objectStore('review-drafts').get([owner, restaurant]); request.onsuccess = () => resolve(request.result); });
+            const persisted = await new Promise(resolve => { const request = database.transaction('review-drafts').objectStore('review-drafts').get(['v3-'+owner, restaurant]); request.onsuccess = () => resolve(request.result); });
             result.committedBoundedTextOnly = !!committed && Object.keys(committed).sort().join(',') === 'categories,content,currentStep,restaurantId,savedAt,userId,visitedDate,visitedTime'
                 && JSON.stringify(committed) === JSON.stringify(await db.getDraft(owner, restaurant));
             result.persistedV3Unchanged = database.version === 3 && Object.keys(persisted).sort().join(',') === 'categories,content,currentStep,expiresAt,restaurantId,savedAt,userId,visitedDate,visitedTime'

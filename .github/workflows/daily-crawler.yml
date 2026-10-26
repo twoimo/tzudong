@@ -800,7 +800,7 @@ jobs:
           git merge-base --is-ancestor "$TRIGGER_SHA" "origin/$DEFAULT_BRANCH"
 
       - name: Download data-only publication artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # actions/download-artifact@v8.0.2
         with:
           name: daily-data-publication-${{ github.run_id }}
           path: ${{ runner.temp }}/daily-data-publication
@@ -937,7 +937,6 @@ jobs:
       ALLOW_CUSTOM_FFMPEG: "1"
       FFMPEG_PATH: /usr/bin/ffmpeg
       FFMPEG_TRUSTED_ROOT: /usr/bin
-      PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
       TZUDONG_LAAJ_PROVIDER: gemini
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -961,11 +960,23 @@ jobs:
           sudo env DEBIAN_FRONTEND=noninteractive apt-get update -qq
           sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends ffmpeg jq
           test -x /usr/bin/ffmpeg
-          test -x /usr/bin/google-chrome
           /usr/bin/ffmpeg -hide_banner -version >/dev/null
       - name: Install locked Node dependencies for evaluate
         working-directory: backend
         run: npm ci --ignore-scripts
+      - name: Install and verify pinned Chrome for Testing for evaluate
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open(".github/chrome-for-testing.v1.json"))["version"])')"
+          browser_cache="$RUNNER_TEMP/tzudong-cft"
+          (
+            cd backend
+            npx --no-install @puppeteer/browsers install "chrome@$version" --path "$browser_cache"
+            node --input-type=module -e 'import {Browser,computeExecutablePath} from "@puppeteer/browsers"; console.log(computeExecutablePath({browser:Browser.CHROME,buildId:process.argv[1],cacheDir:process.argv[2]}))' "$version" "$browser_cache" > "$RUNNER_TEMP/tzudong-cft-path"
+          )
+          executable="$(cat "$RUNNER_TEMP/tzudong-cft-path")"
+          python3 backend/bin/chrome_for_testing.py --executable "$executable" >/dev/null
+          printf 'PUPPETEER_EXECUTABLE_PATH=%s\n' "$executable" >> "$GITHUB_ENV"
       - name: Preflight hosted pending apply env
         run: python3 backend/bin/check_env_contract.py --profile hosted-pending-apply
       # Cache transports public input/receipt bytes only. A hit never bypasses

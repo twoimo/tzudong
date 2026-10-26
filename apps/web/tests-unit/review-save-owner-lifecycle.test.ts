@@ -1,10 +1,11 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
 import { chromium } from '@playwright/test';
 
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 // Local isolated browser only; no application server, configured clients, auth
 // profiles, remote requests or retained user data. No browser is downloaded.
 (existsSync(chrome) ? test : test.skip)('real React owner-key remount clears A inputs, unblocks B, and protects unknown A photos', async () => {
@@ -21,7 +22,9 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
         ts.forEachChild(node, visit);
     }
     visit(tree);
-    expect(wrapper).toContain('key={user?.id'); expect(lifecycle.length).toBe(2);
+    expect(wrapper).toContain("${user?.id ?? 'signed-out'}");
+    expect(wrapper).toContain('captureBrowserDraftEpoch');
+    expect(lifecycle.length).toBe(2);
     expect(reviseInputs).toContain('saveInputRevisionRef');
     const script = `
         import React, { useState, useRef, useLayoutEffect, useCallback } from 'react';
@@ -29,6 +32,7 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
         import { flushSync } from 'react-dom';
         import { ReviewSaveOperation } from './lib/reviews/review-save-operation';
         import { createLatestSelection } from './lib/ocr/latest-selection';
+        import { captureBrowserDraftEpoch } from './lib/privacy/browser-draft-lifecycle';
         import { FEATURE_DATABASE_HELD, FEATURE_DATABASE_READY } from '@/lib/runtime-feature-readiness-contract';
         let owner = 'owner-a', nextInstance = 0, nextId = 0;
         let featureReadiness = FEATURE_DATABASE_READY;
@@ -125,7 +129,7 @@ const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
         } }],
     });
     expect(bundle.success).toBe(true);
-    const browser = await chromium.launch({ executablePath: chrome, headless: true });
+    const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
     try {
         const page = await browser.newPage();
         page.setDefaultTimeout(5_000);
