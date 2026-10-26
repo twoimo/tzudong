@@ -178,6 +178,8 @@ const browserEnvironmentKeys = [
   'NIGHTLY_ENV_PROVENANCE_SHA256',
   'NIGHTLY_ENV_FILE',
   'NIGHTLY_BROWSER_RUNTIME',
+  // Preserve an explicitly selected task-owned Chrome for Testing cache.
+  'PLAYWRIGHT_BROWSERS_PATH',
   'NIGHTLY_ADMIN_EMAIL',
   'NIGHTLY_ADMIN_PASSWORD',
   'NEXT_PUBLIC_SUPABASE_URL',
