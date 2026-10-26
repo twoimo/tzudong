@@ -6,6 +6,84 @@ const owner='11111111-1111-4111-8111-111111111111';
 const other='22222222-2222-4222-8222-222222222222';
 const kinds=['review','submission','edit'];
 
+async function duplicateRecoveryRows(page: Page, kind: string, seed = false) {
+ return page.evaluate(async ({kind, owner, seed}) => {
+  const dbName = kind === 'review' ? 'tzudong-review-drafts' : 'tzudong-edit-request-drafts';
+  const storeName = kind === 'review' ? 'review-drafts' : 'edit-request-drafts';
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+   const request = indexedDB.open(dbName);
+   request.onsuccess = () => resolve(request.result);
+   request.onerror = () => reject(new Error('FIXTURE_OPEN_FAILED'));
+  });
+  try {
+   const tx = db.transaction(storeName, seed ? 'readwrite' : 'readonly');
+   const store = tx.objectStore(storeName);
+   let rows: Record<string, unknown>[] = [];
+   if (seed) {
+    const request = store.get(['v3-' + owner, '33333333-3333-4333-8333-333333333333']);
+    request.onsuccess = () => {
+     const template = request.result;
+     store.delete(['v3-' + owner, template.restaurantId]);
+     for (const prefix of ['v3-', 'v2-', '']) {
+      for (let i = 0; i < (prefix === '' ? 15 : 10); i++) {
+       store.put({...template, userId: prefix + owner, restaurantId: 'r-' + String(i).padStart(3, '0')});
+      }
+     }
+    };
+   } else {
+    const request = store.getAll(); // This fixture contains exactly 35 synthetic rows.
+    request.onsuccess = () => { rows = request.result; };
+   }
+   await new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onabort = tx.onerror = () => reject(new Error('FIXTURE_TRANSACTION_FAILED'));
+   });
+   return rows;
+  } finally { db.close(); }
+ }, {kind, owner, seed});
+}
+
+for (const kind of ['review', 'edit']) for (const fail of [false, true]) {
+ test(`${kind} native duplicate recovery advances across both namespaces${fail ? ' after an aborted copy' : ''}`, async () => {
+  const f = await setup();
+  try {
+   const current = await f.page(false);
+   await current.evaluate(() => (globalThis as unknown as TabFixture).__tab.activate());
+   await save(current, kind, '보존할 합성 원문');
+   await duplicateRecoveryRows(current, kind, true);
+   const before = await duplicateRecoveryRows(current, kind);
+   expect(await current.evaluate(kind => (globalThis as unknown as TabFixture).__tab.recover(kind), kind)).toBe(0);
+   expect(await duplicateRecoveryRows(current, kind)).toEqual(before);
+   if (fail) {
+    await current.evaluate(kind => {
+     const original = IDBObjectStore.prototype.put;
+     const store = kind === 'review' ? 'review-drafts' : 'edit-request-drafts';
+     let remaining = 2;
+     IDBObjectStore.prototype.put = function(value, key) {
+      if (this.name === store && String(value.userId).startsWith('v3-') && --remaining === 0) {
+       IDBObjectStore.prototype.put = original;
+       throw new DOMException('synthetic', 'QuotaExceededError');
+      }
+      return original.call(this, value, key);
+     };
+    }, kind);
+    await expect(current.evaluate(kind => (globalThis as unknown as TabFixture).__tab.recover(kind), kind))
+     .rejects.toThrow('DRAFT_RECOVERY_FAILED');
+    expect(await duplicateRecoveryRows(current, kind)).toEqual(before);
+   }
+   expect(await current.evaluate(kind => (globalThis as unknown as TabFixture).__tab.recover(kind), kind)).toBe(5);
+   const after = await duplicateRecoveryRows(current, kind);
+   expect(after.filter(row => row.userId === 'v3-' + owner)).toHaveLength(15);
+   expect(after.filter(row => row.userId !== 'v3-' + owner)).toHaveLength(20);
+   for (const row of before.filter(row => row.userId === 'v3-' + owner)) {
+    expect(after.find(item => item.userId === row.userId && item.restaurantId === row.restaurantId)).toEqual(row);
+   }
+   expect(await current.evaluate(kind => (globalThis as unknown as TabFixture).__tab.recover(kind), kind)).toBe(0);
+   expect(await duplicateRecoveryRows(current, kind)).toEqual(after);
+  } finally { await f.browser.close(); }
+ }, 20000);
+}
+
 test('review completion cleans its captured legacy revision even after the current revision was replaced', async () => {
  const f=await setup();try{
   const current=await f.page(false);
