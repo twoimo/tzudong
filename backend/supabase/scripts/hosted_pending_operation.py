@@ -47,15 +47,17 @@ def rpc_transport(action, body, *, service_role_key):
     req=Request(url,data=data,method='GET' if action=='read' else 'POST',headers={
         'Authorization':'Bearer '+service_role_key,'apikey':service_role_key,
         'Content-Type':'application/json','Accept':'application/json'})
+    discovery_read=(action=='read' and bool(body.get('video_ids')) and body.get('request_id') is None)
     try:
         with build_opener(NoRedirect()).open(req,timeout=15) as response:
             raw=response.read(262145)
-            if len(raw)>262144:deny('pending_transport_failed')
+            if len(raw)>262144:
+                deny('pending_discovery_unbounded' if discovery_read else 'pending_transport_failed')
             return json.loads(raw)
     except HTTPError as error:
         # Only this fixed discovery error permits smaller read-only requests.
         # Keep arbitrary transport failures and all writes on the no-retry path.
-        if action=='read' and body.get('video_ids') and body.get('request_id') is None:
+        if discovery_read:
             try:
                 with error:
                     raw=error.read(4097)
