@@ -44,22 +44,43 @@ export function createBrowserRefreshGuard(url: string) {
     // Never evict an uncommitted guard: a suspended renderer may still resume
     // with that response. Exhaustion is retryable after reloading the document.
     if (pending.size >= 32) throw new Error('AUTH_REFRESH_GUARD_CAPACITY');
-    let inherited: ReturnType<typeof pending.get>;
-    try {
-      const body = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
-      if (body && typeof body.refresh_token === 'string') inherited = pending.get(body.refresh_token);
-    } catch { /* Request parsing remains the SDK/provider's responsibility. */ }
+    let refreshToken: string | undefined;
+    if (tokenRequest && requestUrl.searchParams.get('grant_type') === 'refresh_token') {
+      // The pinned SDK supplies JSON in init.body. Request-owned streams and
+      // other body types are unsupported: never send an unvalidated credential.
+      try {
+        const body: unknown = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
+        if (!body || typeof body !== 'object' || Array.isArray(body) || !('refresh_token' in body)
+          || typeof body.refresh_token !== 'string' || !body.refresh_token.trim()) throw new Error();
+        refreshToken = body.refresh_token;
+      } catch { throw new Error('AUTH_REFRESH_REQUEST_INVALID'); }
+    }
     const captured = await withBrowserAuthCookieLock(url, () => {
       migrateBrowserAuthCookies(url);
       if (requestUrl.searchParams.get('grant_type') === 'password') advanceBrowserAuthRevision(contract);
       const tokens = currentTokens();
+      const state = fingerprint();
+      const inherited = refreshToken === undefined ? undefined : pending.get(refreshToken);
+      if (refreshToken !== undefined) {
+        // An SDK read may precede another tab's login/logout. Do not adopt that
+        // later snapshot for the old token. Explicit callback/rotation handoffs
+        // may use a different token, but must still own their original snapshot.
+        if (inherited) {
+          let owns = false;
+          try { owns = inherited.ownsRequest(); } catch { /* Lost callback intent. */ }
+          if (!owns || inherited.ambiguous || inherited.expected !== state) throw new Error('AUTH_REFRESH_SUPERSEDED');
+        } else if (tokens?.refresh_token !== refreshToken) {
+          throw new Error('AUTH_REFRESH_SUPERSEDED');
+        }
+      }
       const headers = new Headers(input instanceof Request ? input.headers : undefined);
       new Headers(init?.headers).forEach((value, name) => headers.set(name, value));
       const currentUserRequest = userRequest && tokens?.access_token
         && headers.get('Authorization') === `Bearer ${tokens.access_token}`;
       if (userRequest && method.toUpperCase() === 'PUT' && !currentUserRequest) throw new Error('AUTH_REFRESH_SUPERSEDED');
-      return { state: fingerprint(), token: currentUserRequest ? tokens.refresh_token as string : null };
+      return { state, inherited, token: currentUserRequest ? tokens.refresh_token as string : null };
     });
+    const { inherited } = captured;
     const expected = inherited?.expected ?? captured.state;
     const response = await globalThis.fetch(input, init);
     if (response.ok) {
