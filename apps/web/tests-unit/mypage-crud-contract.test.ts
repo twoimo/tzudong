@@ -63,7 +63,7 @@ describe("mypage CRUD QA/QC source contracts", () => {
     expect(reviewsSource).toContain('aria-label="리뷰 삭제 확인"');
   });
 
-  test("submission create flows insert parent and child rows with rollback on child insert failure", () => {
+  test("submission create flows use authenticated server writes for complete submissions", () => {
     const newSubmissionModalSource = source(
       "components/modals/RestaurantSubmissionModal.tsx",
     );
@@ -100,14 +100,13 @@ describe("mypage CRUD QA/QC source contracts", () => {
     expect(requestIdempotencyMigrationSource).toContain("restaurant_requests_user_client_request_key_idx");
     expect(requestIdempotencyMigrationSource).toContain("where client_request_key is not null");
 
-    expect(editSubmissionModalSource).toContain(".from('restaurant_submissions')");
-    expect(editSubmissionModalSource).toContain("submission_type: 'edit'");
-    expect(editSubmissionModalSource).toContain(
-      ".from('restaurant_submission_items')",
-    );
-    expect(editSubmissionModalSource).toContain(
-      "await supabase.from('restaurant_submissions').delete().eq('id', submissionId)",
-    );
+    const editRouteSource = source('app/api/mypage/submissions/edit/route.ts');
+    expect(editSubmissionModalSource).toContain("fetch('/api/mypage/submissions/edit'");
+    expect(editSubmissionModalSource).not.toContain(".from('restaurant_submissions')");
+    expect(editSubmissionModalSource).not.toContain(".from('restaurant_submission_items')");
+    expect(editRouteSource).toContain("service.rpc('submit_restaurant_edit_request'");
+    expect(editRouteSource).toContain('p_user_id: user.id');
+    expect(editRouteSource).toContain('isSavedRestaurantEdit(outcome, payload.youtube_reviews.length)');
   });
 
   test("submission history deletion goes through an authenticated owner-checking API route", () => {

@@ -91,8 +91,14 @@ def admit_current_candidate_set(*,evaluation,crawling,channel,videos,revision,en
         deny('pending_video_set_invalid')
     evaluation,crawling=Path(evaluation),Path(crawling)
     root=Path(evaluator.REPO_ROOT)
-    def snapshot():
-        watched=evaluator._cache_snapshot(crawling,evaluation,videos,environment)
+    def snapshot(*,candidate_scope=False):
+        if candidate_scope:
+            try:
+                watched=evaluator._cache_snapshot(crawling,evaluation,videos,environment,candidate_scope=True)
+            except TypeError:
+                deny('pending_freshness_contract_unavailable')
+        else:
+            watched=evaluator._cache_snapshot(crawling,evaluation,videos,environment)
         from backend.supabase.scripts import hosted_data_plane
         for path in (Path(evaluator.__file__),Path(__file__),Path(hosted_data_plane.__file__)):
             st=path.stat()
@@ -101,6 +107,9 @@ def admit_current_candidate_set(*,evaluation,crawling,channel,videos,revision,en
     def observe():
         if current_source_revision(root)!=revision:deny('pending_source_input_changed')
         before=snapshot()
+        scoped=snapshot(candidate_scope=True)
+        if any(path not in before or before[path]!=signature for path,signature in scoped.items()):
+            deny('pending_source_input_changed')
         fresh=evaluator._fresh_locally_evaluated_ids(evaluation,crawling,channel,environment)
         if not set(videos)<=fresh:deny('pending_local_input_stale')
         all_rows=load_evaluation_rows(str(evaluation/'evaluation/transforms.jsonl'))
@@ -108,7 +117,11 @@ def admit_current_candidate_set(*,evaluation,crawling,channel,videos,revision,en
               and classify_evaluation_row(r,[]) in APPLY_CANDIDATE_LABELS]
         if not rows or len(rows)>200:deny('pending_candidate_set_invalid')
         inputs=[];sources=[]
-        for path in sorted(before,key=str):
+        # Keep the whole-output cache check and broad before/after race guard.
+        # Its global transform output/receipt and unrelated groups are not
+        # persistent inputs of this video's custody: rows below bind every
+        # admitted sibling while scoped paths bind its own inputs/receipts.
+        for path in sorted(scoped,key=str):
             path=Path(path)
             # Never copy/hash secret values into a receipt. Producer probes bind
             # their resolved public settings; stat changes still invalidate here.

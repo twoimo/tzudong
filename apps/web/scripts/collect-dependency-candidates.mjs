@@ -42,13 +42,12 @@ export const GOVERNED_COMPANION_PATHS = new Set([
   'apps/web/tests-unit/nightly-regression-workflow.test.ts',
 ]);
 
+// "[name@]vX.Y.Z" version comment written by Dependabot next to a pinned action.
+const ACTION_COMMENT_TAG = /^(?:([\w./-]+)@)?(v\d+\.\d+\.\d+(?:[-+][\w.-]+)?)$/;
 const COMPANION_VERSION_TOKEN = /\d+\.\d+\.\d+(?:[-+][\w.-]+)?/g;
 const stripRange = (value) => String(value).replace(/^[~^<>=v ]+/, '');
 
 function companionLineMirrorsOnly(before, after, pairSet, fromSet, toSet, byName) {
-  const removed = before.match(COMPANION_VERSION_TOKEN) ?? [];
-  const added = after.match(COMPANION_VERSION_TOKEN) ?? [];
-  if (removed.length !== added.length) return false;
   // Every admitted change must be anchored to at least one bumped package
   // named on the line, and must mirror that package's own pair.
   const named = byName.filter((pkg) => before.includes(pkg.name) || after.includes(pkg.name));
@@ -58,9 +57,24 @@ function companionLineMirrorsOnly(before, after, pairSet, fromSet, toSet, byName
       return false;
     }
   }
-  // Non-version text must be identical once mirrored tokens are masked.
-  const maskedBefore = before.replace(COMPANION_VERSION_TOKEN, (tok) => (fromSet.has(tok) ? ' \0 ' : tok));
-  const maskedAfter = after.replace(COMPANION_VERSION_TOKEN, (tok) => (toSet.has(tok) ? ' \0 ' : tok));
+  // Exact refs that are not semver (full-length commit SHAs used by pinned
+  // GitHub Actions) are masked only as the complete string "<named package>@<ref>",
+  // and the version comment only as "# <same package>@<tag>" with the exact
+  // from/to tag of that same package. Nothing else on the line may differ.
+  const maskExact = (text, refKey, tagKey) => named.reduce((acc, pkg) => {
+    const ref = stripRange(pkg[refKey]);
+    let out = /^[0-9a-f]{40}$/.test(ref)
+      ? acc.split(`${pkg.name}@${ref}`).join(`${pkg.name}@ \0 `) : acc;
+    if (pkg[tagKey] !== undefined) out = out.split(`# ${pkg.name}@${pkg[tagKey]}`).join(`# ${pkg.name}@ \u0001 `);
+    return out;
+  }, text);
+  const exactBefore = maskExact(before, 'fromVersion', 'fromTag');
+  const exactAfter = maskExact(after, 'toVersion', 'toTag');
+  const removed = exactBefore.match(COMPANION_VERSION_TOKEN) ?? [];
+  const added = exactAfter.match(COMPANION_VERSION_TOKEN) ?? [];
+  if (removed.length !== added.length) return false;
+  const maskedBefore = exactBefore.replace(COMPANION_VERSION_TOKEN, (tok) => (fromSet.has(tok) ? ' \0 ' : tok));
+  const maskedAfter = exactAfter.replace(COMPANION_VERSION_TOKEN, (tok) => (toSet.has(tok) ? ' \0 ' : tok));
   if (maskedBefore !== maskedAfter) return false;
   // Every changed token must be one package's exact from->to pair. Pairs stay
   // identity-bound: two packages can share a from-version with different
@@ -130,20 +144,34 @@ export function descriptor(pr, files, lockfiles = {}, companionContents = {}) {
     }
     units.add(unit.directory);
     const before = new Map(); const after = new Map();
+    const beforeTag = new Map(); const afterTag = new Map();
     for (const line of file.patch.split('\n')) {
       if (!/^[+-](?![+-])/.test(line)) continue;
       const raw = line.slice(1).trim(); let match;
       if (unit.ecosystem === 'npm') match = raw.match(/^"([@\w./-]+)"\s*:\s*"([^"]+)"[,]?$/);
       else if (unit.ecosystem === 'pip') match = raw.match(/^([\w.-]+)(?:\[[\w,.-]+\])?==([^ #;]+)(?:\s*[#;].*)?$/);
       else if (unit.ecosystem === 'cargo') match = raw.match(/^([\w-]+)\s*=\s*(?:\{\s*version\s*=\s*)?"([^"]+)"/);
-      else match = raw.match(/^(?:-\s*)?uses:\s*([\w./-]+)@([\w.-]+)(?:\s+#.*)?$/);
+      else match = raw.match(/^(?:-\s*)?uses:\s*([\w./-]+)@([\w.-]+)(?:\s+#\s*(.*))?$/);
       if (!match || (unit.ecosystem !== 'github-actions' && !VERSION.test(match[2]))) continue;
       (line[0] === '-' ? before : after).set(match[1], match[2]);
+      // Version comment of a pinned action: bound to this action only. A
+      // comment that names another action or is not a plain tag is ignored.
+      if (unit.ecosystem === 'github-actions') {
+        const tag = (match[3] ?? '').trim().match(ACTION_COMMENT_TAG);
+        if (tag && (tag[1] === undefined || tag[1] === match[1])) {
+          (line[0] === '-' ? beforeTag : afterTag).set(match[1], tag[2]);
+        }
+      }
     }
     for (const [name, toVersion] of after) {
       const fromVersion = before.get(name);
       if (!fromVersion) { incomplete = true; continue; }
-      if (fromVersion !== toVersion) packages.push({ name, fromVersion, toVersion });
+      if (fromVersion !== toVersion) {
+        const pkg = { name, fromVersion, toVersion };
+        const fromTag = beforeTag.get(name); const toTag = afterTag.get(name);
+        if (fromTag && toTag && fromTag !== toTag) Object.assign(pkg, { fromTag, toTag });
+        packages.push(pkg);
+      }
     }
     if (after.size === 0 || [...before.keys()].some((name) => !after.has(name))) incomplete = true;
   }
