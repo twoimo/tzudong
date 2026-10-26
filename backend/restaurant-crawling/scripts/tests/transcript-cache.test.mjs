@@ -3,7 +3,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { collectChannelTranscripts, getTranscript, isValidTranscriptRecord, updateNoTranscriptPermanent } from '../03-collect-transcript.js';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { collectChannelTranscripts, getTranscript, isValidTranscriptRecord, main, updateNoTranscriptPermanent } from '../03-collect-transcript.js';
 
 const videoId = 'AbCdEf123_-';
 const url = `https://www.youtube.com/watch?v=${videoId}`;
@@ -210,4 +212,224 @@ test('a damaged failure ledger is not overwritten and its writer can be acquired
         await updateNoTranscriptPermanent(url, ledger);
         assert.equal(JSON.parse(fs.readFileSync(ledger, 'utf8'))[0].retry_num, 1);
     } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
+
+
+const scopeArgs = ['--channel', 'test', '--video-id', videoId];
+const scopedMeta = { youtube_link: url, recollect_id: 1 };
+function runScoped(directory, opts = {}) {
+    return main(scopeArgs, {
+        loadEnvironmentForRun: async () => {},
+        loadConfig: async () => ({ channels: { test: { name: 'test' } } }),
+        collect: (name, config, scope) => collectChannelTranscripts(name, config, {
+            ...options(directory, async () => provider), ...opts, ...scope,
+        }),
+    });
+}
+
+test('scoped CLI rejects duplicate, URL, whitespace and malformed IDs before environment or collector', async (t) => {
+    t.mock.method(console, 'log', () => {});
+    const badArgs = [
+        ['--channel', 'test', '--video-id'],
+        ['--channel', 'test', '--video-id', ''],
+        ['--channel', 'test', '--video-id', url],
+        ['--channel', 'test', '--video-id', ` ${videoId}`],
+        ['--channel', 'test', '--video-id', `${videoId} `],
+        ['--channel', 'test', '--video-id', `${videoId}\n`],
+        ['--channel', 'test', '--video-id', `${videoId}\r\n`],
+        ['--channel', 'test', '--video-id', 'bad'],
+        ['--channel', 'test', '--video-id', 'AbCdEf123_;'],
+        [...scopeArgs, '--video-id', videoId],
+        [...scopeArgs, '--channel', 'test'],
+        [...scopeArgs, '-c', 'test'],
+        [...scopeArgs, '--force'],
+        ['--channel', 'test', `--video-id=${videoId}`],
+        ['--channel', 'test', '--video-id ', videoId],
+    ];
+    for (const args of badArgs) {
+        let environment = 0, config = 0, collector = 0;
+        const exit = await main(args, {
+            loadEnvironmentForRun: async () => { environment++; },
+            loadConfig: async () => { config++; return { channels: { test: {} } }; },
+            collect: async () => { collector++; return { success: 1, skipped: 0 }; },
+        });
+        assert.equal(exit, 2, JSON.stringify(args));
+        assert.deepEqual([environment, config, collector], [0, 0, 0]);
+    }
+});
+
+test('scoped CLI requires an explicit valid registered channel', async (t) => {
+    t.mock.method(console, 'log', () => {});
+    for (const args of [
+        ['--video-id', videoId],
+        ['--channel', ' test', '--video-id', videoId],
+        ['--channel', 'test\n', '--video-id', videoId],
+        ['--channel', '../test', '--video-id', videoId],
+        ['--channel', 'unknown', '--video-id', videoId],
+        ['--channel', 'toString', '--video-id', videoId],
+    ]) {
+        let calls = 0;
+        assert.equal(await main(args, {
+            loadEnvironmentForRun: async () => {},
+            loadConfig: async () => ({ channels: { test: { name: 'test' } } }),
+            collect: async () => { calls++; return { success: 1, skipped: 0 }; },
+        }), 2);
+        assert.equal(calls, 0);
+    }
+});
+
+test('scoped main collects only its singleton and preserves sibling shorts and canonical input bytes', async () => {
+    const f = fixture({ meta: scopedMeta });
+    const others = ['ZyXwVu987_-', 'QrStUv456_-', 'ShOrTs123_-'];
+    const urls = `${url}\n${others.map(id => `https://www.youtube.com/watch?v=${id}`).join('\n')}\n${url}\n`;
+    fs.writeFileSync(path.join(f.directory, 'urls.txt'), urls);
+    for (const id of others) fs.writeFileSync(path.join(f.directory, 'meta', `${id}.jsonl`), JSON.stringify({ youtube_link: `https://www.youtube.com/watch?v=${id}`, recollect_id: 1, duration: 30 }) + '\n');
+    const calls = [];
+    try {
+        assert.equal(await runScoped(f.directory, { getTranscriptForVideo: async id => { calls.push(id); return provider; } }), 0);
+        assert.deepEqual(calls, [videoId]);
+        assert.equal(fs.readFileSync(path.join(f.directory, 'urls.txt'), 'utf8'), urls);
+        assert.deepEqual(fs.readdirSync(path.join(f.directory, 'transcript')), [`${videoId}.jsonl`]);
+        assert.equal(isValidTranscriptRecord(JSON.parse(fs.readFileSync(f.output, 'utf8')), videoId, 'test'), true);
+    } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+});
+
+test('scoped admission rejects absent deleted skipped missing and mismatched metadata under the writer', async () => {
+    for (const mode of ['absent', 'deleted', 'permanent', 'missing-meta', 'wrong-meta', 'malformed-meta', 'invalid-sequence']) {
+        const f = fixture({ meta: scopedMeta });
+        let calls = 0;
+        try {
+            if (mode === 'absent') fs.writeFileSync(path.join(f.directory, 'urls.txt'), 'https://www.youtube.com/watch?v=ZyXwVu987_-\n');
+            if (mode === 'deleted') fs.writeFileSync(path.join(f.directory, 'deleted_urls.txt'), `${url}\t2026-01-01\n`);
+            if (mode === 'missing-meta') fs.unlinkSync(path.join(f.directory, 'meta', `${videoId}.jsonl`));
+            if (mode === 'wrong-meta') fs.writeFileSync(path.join(f.directory, 'meta', `${videoId}.jsonl`), JSON.stringify({ ...scopedMeta, youtube_link: 'https://www.youtube.com/watch?v=ZyXwVu987_-' }));
+            if (mode === 'malformed-meta') fs.writeFileSync(path.join(f.directory, 'meta', `${videoId}.jsonl`), '{"recollect_id":');
+            if (mode === 'invalid-sequence') fs.writeFileSync(path.join(f.directory, 'meta', `${videoId}.jsonl`), JSON.stringify({ ...scopedMeta, recollect_id: -1 }));
+            const before = fs.readFileSync(path.join(f.directory, 'urls.txt'));
+            assert.equal(await runScoped(f.directory, {
+                getTranscriptForVideo: async () => { calls++; return provider; },
+                loadSkipUrls: () => new Set(mode === 'permanent' ? [url] : []),
+            }), 2, mode);
+            assert.equal(calls, 0, mode);
+            assert.equal(fs.existsSync(f.output), false, mode);
+            assert.deepEqual(fs.readFileSync(path.join(f.directory, 'urls.txt')), before);
+        } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+    }
+});
+
+test('scoped valid cached transcript is reused across repeated and concurrent runs without provider calls', async () => {
+    const f = fixture({ meta: { ...scopedMeta, recollect_id: 2, recollect_vars: ['title_changed'] }, cached: valid });
+    const before = fs.readFileSync(f.output);
+    let calls = 0;
+    const opts = { getTranscriptForVideo: async () => { calls++; return provider; } };
+    try {
+        assert.equal(await runScoped(f.directory, opts), 0);
+        assert.deepEqual(await Promise.all([runScoped(f.directory, opts), runScoped(f.directory, opts)]), [0, 0]);
+        assert.equal(calls, 0);
+        assert.deepEqual(fs.readFileSync(f.output), before);
+    } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+});
+
+test('scoped invalid provider and no-transcript results remain nonzero without replacing history', async () => {
+    for (const response of [null, {}, { ...provider, transcript: [] }, { ...provider, transcript: [{ start: 0, text: ' ' }] }]) {
+        const f = fixture({ meta: { ...scopedMeta, recollect_id: 2, recollect_vars: ['duration_changed'] }, cached: valid });
+        const before = fs.readFileSync(f.output);
+        let calls = 0;
+        try {
+            assert.equal(await runScoped(f.directory, { getTranscriptForVideo: async () => { calls++; return response; } }), 1);
+            assert.equal(calls, 1);
+            assert.deepEqual(fs.readFileSync(f.output), before);
+        } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+    }
+});
+
+test('scoped partial append is unconfirmed and preserves the original damaged tail', async (t) => {
+    const f = fixture({ meta: scopedMeta, cached: '{"old":' });
+    const append = fs.appendFileSync;
+    t.mock.method(fs, 'appendFileSync', (file, ...args) => file === f.output
+        ? append(file, '{"partial":', 'utf8') : append(file, ...args));
+    try {
+        assert.equal(await runScoped(f.directory), 1);
+        assert.equal(fs.readFileSync(f.output, 'utf8'), '{"old":{"partial":');
+    } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+});
+
+test('scoped append cannot report success by reading an unchanged old valid row', async (t) => {
+    const f = fixture({ meta: { ...scopedMeta, recollect_id: 2, recollect_vars: ['duration_changed'] }, cached: valid });
+    const before = fs.readFileSync(f.output);
+    const append = fs.appendFileSync;
+    t.mock.method(fs, 'appendFileSync', (file, ...args) => file === f.output ? undefined : append(file, ...args));
+    try {
+        assert.equal(await runScoped(f.directory), 1);
+        assert.deepEqual(fs.readFileSync(f.output), before);
+    } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+});
+
+test('scoped cleanup failure stops without fallback or completed output', async () => {
+    const f = fixture({ meta: scopedMeta });
+    let calls = 0, fallback = 0;
+    try {
+        const exit = await runScoped(f.directory, { getTranscriptForVideo: id => getTranscript(id, {
+            fetchYtDlpTranscript: async () => { calls++; throw Object.assign(new Error('fixed'), { code: 'TRANSCRIPT_YTDLP_TREE_CLEANUP_FAILED' }); },
+            getTranscriptFromPuppeteer: async () => { fallback++; return provider; },
+        }) });
+        assert.equal(exit, 1);
+        assert.equal(calls, 1);
+        assert.equal(fallback, 0);
+        assert.equal(fs.existsSync(f.output), false);
+    } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+});
+
+test('scoped permanent-skip ledger parse failure is fail-closed before provider', async (t) => {
+    const f = fixture({ meta: scopedMeta });
+    const ledger = fileURLToPath(new URL('../../../data/no_transcript_link/no_transcript_permanent.json', import.meta.url));
+    const exists = fs.existsSync, read = fs.readFileSync;
+    t.mock.method(fs, 'existsSync', file => String(file) === ledger || exists(file));
+    t.mock.method(fs, 'readFileSync', (file, ...args) => String(file) === ledger ? '{"broken":' : read(file, ...args));
+    let calls = 0;
+    try {
+        assert.equal(await runScoped(f.directory, { loadSkipUrls: undefined, getTranscriptForVideo: async () => { calls++; return provider; } }), 2);
+        assert.equal(calls, 0);
+    } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+});
+
+test('actual scoped CLI rejects a URL ID with fixed exit2 before environment or provider work', () => {
+    const source = fileURLToPath(new URL('../03-collect-transcript.js', import.meta.url));
+    const run = spawnSync(process.execPath, [source, '--channel', 'test', '--video-id', url], { env: {}, encoding: 'utf8', timeout: 5000 });
+    assert.equal(run.status, 2);
+    assert.match(run.stdout, /TRANSCRIPT_VIDEO_SCOPE_INVALID/);
+    assert.equal(run.stdout.includes(url), false);
+    assert.equal(run.stderr, '');
+});
+
+test('default main still visits all configured channels with no singleton option', async () => {
+    const seen = [];
+    assert.equal(await main([], {
+        loadEnvironmentForRun: async () => {},
+        loadConfig: async () => ({ channels: { first: {}, second: {} } }),
+        collect: async (name, _config, scope) => { seen.push([name, scope]); return { channel: name, success: 0, skipped: 0 }; },
+    }), 0);
+    assert.deepEqual(seen.map(row => row[0]), ['first', 'second']);
+    assert.equal(seen.every(row => row[1] === undefined), true);
+});
+
+
+test('scoped admission rechecks canonical membership after waiting for the existing stage writer', async () => {
+    const f = fixture({ meta: scopedMeta });
+    let enter;
+    const entered = new Promise(resolve => { enter = resolve; });
+    let release;
+    const held = new Promise(resolve => { release = resolve; });
+    let calls = 0;
+    try {
+        const first = runScoped(f.directory, { getTranscriptForVideo: async () => {
+            calls++; enter(); await held; return provider;
+        } });
+        await entered;
+        const second = runScoped(f.directory, { getTranscriptForVideo: async () => { calls++; return provider; } });
+        fs.writeFileSync(path.join(f.directory, 'urls.txt'), 'https://www.youtube.com/watch?v=ZyXwVu987_-\n');
+        release();
+        assert.deepEqual(await Promise.all([first, second]), [0, 2]);
+        assert.equal(calls, 1);
+    } finally { release?.(); fs.rmSync(f.directory, { recursive: true, force: true }); }
 });
