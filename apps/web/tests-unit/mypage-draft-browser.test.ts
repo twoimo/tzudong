@@ -35,7 +35,7 @@ import { chromium, expect as browserExpect } from '@playwright/test';
 interface DraftFormGlobals {
  __setDraftOwner(id:string):void;__renewDraftOwner():Promise<void>;__readOwnerSubmission(owner:string,mode?:'new'|'request'):Promise<{restaurant_name:string}|null>; __seedReview(owner?:string,contentOnly?:boolean):Promise<unknown>; __readReview():Promise<{content:string}|null>; __seedReviewEdit():Promise<unknown>; __readReviewEdit(owner?:string):Promise<{content:string}|null>; __draftAuthIO?:{hold:boolean;started:number;lastResolvedOwner?:string;release():void}; __seedEdit(owner:string,name:string):Promise<unknown>; __readOwnerEdit(owner:string):Promise<{name:string}|null>;
  __draftUI:{target():void;leave():void};
- __reviewRecovery?:{mode:'commit'|'missing';calls:number;created:number;cancelled:number;commit:boolean};
+ __reviewRecovery?:{mode:'commit'|'missing';calls:number;created:number;cancelled:number;commit:boolean;holdPreflight?:boolean;preflightEntered?:boolean;releasePreflight?():void};
 }
 const root = join(import.meta.dir, '..');
 const chrome = chromeForTestingExecutable();
@@ -69,10 +69,10 @@ async function bundle(presentation: 'auto' | 'map-panel' = 'map-panel', recovery
   if (recovery) {
     inert['@/lib/runtime-feature-readiness-contract'] = `export const FEATURE_DATABASE_HELD_MESSAGE='합성 기능 대기';export const fetchFeatureDatabaseReadiness=async()=>({status:'ready'});`;
     inert['@/lib/reviews/review-media-mutation'] = `export const createReviewMediaDependencies=(_client,owner)=>({owner});export const reviewMutationMessage=()=> '합성 요청 결과 확인 필요';export class ReviewMediaMutation {
-      constructor(deps){this.deps=deps;this.operation=null;}
+      constructor(deps){this.deps=deps;this.operation=null;this.active=false;}get running(){return this.active;}
       get pending(){return this.operation!==null;}get pendingKind(){return this.operation?.kind??null;}get pendingOwnerId(){return this.operation?.ownerId??null;}get pendingReviewId(){return this.operation?.reviewId??null;}
       get canCancelConfirmedMissingUpload(){return this.pending&&globalThis.__reviewRecovery.mode==='missing';}
-      async run(input){const io=globalThis.__reviewRecovery;if(!this.operation){io.created++;this.operation={ownerId:input.ownerId,reviewId:input.reviewId,kind:input.kind};}if(this.deps.owner()!==this.operation.ownerId)throw new Error('SYNTHETIC_RECOVERY_OWNER_MISMATCH');io.calls++;if(io.commit){this.operation=null;return {committed:true,code:'REVIEW_COMMITTED'};}return {committed:false,code:io.mode==='missing'?'REVIEW_UPLOAD_FAILED':'REVIEW_NOT_CONFIRMED'};}
+      async run(input){const io=globalThis.__reviewRecovery;this.active=true;try{if(!this.operation&&io.holdPreflight){io.holdPreflight=false;io.preflightEntered=true;await new Promise(resolve=>{io.releasePreflight=resolve;});}if(!this.operation){io.created++;this.operation={ownerId:input.ownerId,reviewId:input.reviewId,kind:input.kind};}if(this.deps.owner()!==this.operation.ownerId)throw new Error('SYNTHETIC_RECOVERY_OWNER_MISMATCH');io.calls++;if(io.commit){this.operation=null;return {committed:true,code:'REVIEW_COMMITTED'};}return {committed:false,code:io.mode==='missing'?'REVIEW_UPLOAD_FAILED':'REVIEW_NOT_CONFIRMED'};}finally{this.active=false;}}
       async cancelConfirmedMissingUpload(){const io=globalThis.__reviewRecovery;if(!this.pending||this.deps.owner()!==this.operation.ownerId)return false;io.cancelled++;this.operation=null;return true;}
     }`;
   }
@@ -669,6 +669,38 @@ for (const width of [1440,390]) for (const mode of ['commit','missing'] as const
   expect(io?.created).toBe(1);expect(io?.calls).toBe(mode==='commit'?2:1);expect(io?.cancelled).toBe(mode==='missing'?1:0);
  } finally {await browser.close();}
 },30000);
+
+for (const width of [1440, 390]) for (const transition of ['epoch', 'review'] as const) test(`in-flight review preflight at ${width}px keeps recovery through ${transition} changes`, async () => {
+ const browser = await chromium.launch({ executablePath: chrome, headless: true });
+ try {
+  const page = await browser.newPage({ viewport: { width, height: 900 } });
+  await prepare(page, 'map-panel', 'commit');
+  await page.getByRole('button', { name: '리뷰 수정 열기', exact: true }).click();
+  await browserExpect(page.locator('textarea:visible')).toBeEditable();
+  await page.evaluate(() => { (globalThis as unknown as DraftFormGlobals).__reviewRecovery!.holdPreflight = true; });
+  await page.getByTitle('리뷰 삭제', { exact: true }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: '삭제', exact: true }).click();
+  await page.waitForFunction(() => (globalThis as unknown as DraftFormGlobals).__reviewRecovery?.preflightEntered);
+  expect((await page.evaluate(() => (globalThis as unknown as DraftFormGlobals).__reviewRecovery))?.created).toBe(0);
+  await page.evaluate(async transition => {
+   const g = globalThis as unknown as DraftFormGlobals;
+   if (transition === 'epoch') await g.__renewDraftOwner();
+   else g.__draftUI.target();
+  }, transition);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.evaluate(() => (globalThis as unknown as DraftFormGlobals).__reviewRecovery!.releasePreflight!());
+  const recover = page.getByRole('button', { name: '같은 요청 다시 확인', exact: true });
+  if (transition === 'review') {
+   await browserExpect(recover).toBeDisabled();
+   await page.evaluate(() => (globalThis as unknown as DraftFormGlobals).__draftUI.target());
+  }
+  await browserExpect(recover).toBeEnabled();
+  await page.evaluate(() => { (globalThis as unknown as DraftFormGlobals).__reviewRecovery!.commit = true; });
+  await recover.click();
+  await browserExpect(page.locator('textarea:visible')).toHaveCount(0);
+  expect(await page.evaluate(() => (globalThis as unknown as DraftFormGlobals).__reviewRecovery)).toMatchObject({ created: 1, calls: 2 });
+ } finally { await browser.close(); }
+}, 30_000);
 
 test('pending review confirmation stays reachable after the same owner signs in again', async()=>{
  const browser=await chromium.launch({executablePath:chrome,headless:true});

@@ -227,7 +227,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
     }, []);
     useLayoutEffect(() => {
         // Retain the original operation while hiding the previous session's form.
-        if (mutationRef.current?.pending) {
+        if (mutationRef.current?.pending || mutationRef.current?.running) {
             syncPendingRecovery();
             setContent(''); setCategories([]); setExistingFoodPhotos([]);
             setNewFoodPhotos([]); setRemovedPhotos([]); setLastSavedAt(null);
@@ -275,7 +275,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
 
     // Load review data when opened
     useEffect(() => {
-        if (isOpen && review && !mutationRef.current?.pending) {
+        if (isOpen && review && !mutationRef.current?.pending && !mutationRef.current?.running) {
             setContent(review.content);
 
             // [DEBUG & SAFETY] 카테고리 데이터 안전하게 로드
@@ -307,12 +307,12 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         let cancelled = false;
         setDraftLoadFailed(false);
         const loadDraft = async () => {
-            if (!isOpen || !review || !user || mutationRef.current?.pending) return;
+            if (!isOpen || !review || !user || mutationRef.current?.pending || mutationRef.current?.running) return;
 
             try {
                 await waitForDraftAutosave(draftScope);
                 const draft = await getEditDraft(user.id, `edit_${review.id}`);
-                if (cancelled || ownerRef.current !== user.id || mutationRef.current?.pending) return;
+                if (cancelled || ownerRef.current !== user.id || mutationRef.current?.pending || mutationRef.current?.running) return;
                 if (draft && draft.savedAt) {
                     // Only load draft if it's newer than review data
                     const draftDate = new Date(draft.savedAt);
