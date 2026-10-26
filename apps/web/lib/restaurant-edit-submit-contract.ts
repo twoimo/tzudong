@@ -29,11 +29,14 @@ function text(value: unknown, maximum: number): value is string {
 function businessPhone(value: unknown): value is string {
   if (!text(value, 40)) return false;
   if (!value.trim()) return true;
-  return /^[\d().\s-]+$/.test(value)
-    && /^(?:02\d{7,8}|0[3-6]\d{7,8}|1[5-8]\d{6,7})$/.test(normalizeRestaurantSubmissionPhone(value));
+  if (!/^\+?[\d(). \t\r\n\f\v-]+$/.test(value.trim())) return false;
+  const normalized = normalizeRestaurantSubmissionPhone(value);
+  if (/^(?:02\d{7,8}|0[3-6]\d{7,8}|1[5-8]\d{6,7})$/.test(normalized)) return true;
+  if (!/^\+[1-9]\d{6,14}$/.test(normalized)) return false;
+  return !normalized.startsWith('+82') || /^\+82(?:2\d{7,8}|[3-6]\d{7,8})$/.test(normalized);
 }
 
-/** The business-phone field follows the existing submission boundary. All other fields remain subject to privacy sanitization. */
+/** International candidates additionally require the RPC's matching public business-contact check. Other fields remain subject to privacy sanitization. */
 export function isRestaurantEditSubmitBody(value: unknown): value is RestaurantEditSubmitBody {
   if (!record(value) || !exactKeys(value, ['clientRequestKey', 'restaurantId', 'payload'])
     || !isValidClientRequestKey(value.clientRequestKey) || value.clientRequestKey !== value.clientRequestKey.trim()

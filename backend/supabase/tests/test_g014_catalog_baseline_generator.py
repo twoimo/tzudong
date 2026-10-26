@@ -78,7 +78,11 @@ available_amd64_image fixture-image && printf 'admitted\n' || printf 'denied\n'
         case = self.source.split('  case "${migration##*/}" in\n', 1)[1].split(
             '  esac\n  previous_effective_filename=', 1
         )[0]
-        original = ROOT / "backend/supabase/migrations/20261026120000_atomic_edit_submission_request.sql"
+        source_name = name if name in (
+            "20261026120000_atomic_edit_submission_request.sql",
+            "20261026130000_atomic_edit_public_business_phone.sql",
+        ) else "20261026120000_atomic_edit_submission_request.sql"
+        original = ROOT / "backend/supabase/migrations" / source_name
         with tempfile.TemporaryDirectory(prefix="g014-atomic-edit-dispatch-") as work:
             directory = Path(work)
             migration = directory / name
@@ -108,10 +112,12 @@ compose() {
             return run.returncode, args
 
     def test_atomic_edit_source_is_replayed_in_one_transaction_without_rewriting_sql(self):
-        status, args = self._run_migration_case("20261026120000_atomic_edit_submission_request.sql")
-        self.assertEqual(status, 0)
-        self.assertEqual(args.count("--single-transaction"), 1)
-        self.assertEqual(args.count("--file=-"), 1)
+        for name in ("20261026120000_atomic_edit_submission_request.sql", "20261026130000_atomic_edit_public_business_phone.sql"):
+            with self.subTest(name=name):
+                status, args = self._run_migration_case(name)
+                self.assertEqual(status, 0)
+                self.assertEqual(args.count("--single-transaction"), 1)
+                self.assertEqual(args.count("--file=-"), 1)
 
     def test_atomic_edit_transaction_dispatch_is_exact_and_preserves_psql_failure(self):
         name = "20261026120000_atomic_edit_submission_request.sql"
