@@ -444,6 +444,9 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                 if (!hasPending) setDraftLoadRetry(value => value + 1);
                 return;
             }
+            if (!hasPending && !outcome.committed && !draftLoaded) {
+                setDraftLoadRetry(value => value + 1);
+            }
             setCleanupFailureMessage(outcome.committed ? null : reviewMutationMessage(outcome.code));
             toast({
                 title: outcome.committed ? (kind === 'edit' ? '리뷰 수정 완료' : '리뷰 삭제 완료') : '리뷰 변경 확인 필요',

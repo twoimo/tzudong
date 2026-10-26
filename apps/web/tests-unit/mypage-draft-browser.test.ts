@@ -35,7 +35,7 @@ import { chromium, expect as browserExpect } from '@playwright/test';
 interface DraftFormGlobals {
  __setDraftOwner(id:string):void;__renewDraftOwner():Promise<void>;__readOwnerSubmission(owner:string,mode?:'new'|'request'):Promise<{restaurant_name:string}|null>; __seedReview(owner?:string,contentOnly?:boolean):Promise<unknown>; __readReview():Promise<{content:string}|null>; __seedReviewEdit():Promise<unknown>; __readReviewEdit(owner?:string):Promise<{content:string}|null>; __draftAuthIO?:{hold:boolean;started:number;lastResolvedOwner?:string;release():void}; __seedEdit(owner:string,name:string):Promise<unknown>; __readOwnerEdit(owner:string):Promise<{name:string}|null>;
  __draftUI:{target():void;leave():void};
- __reviewRecovery?:{mode:'commit'|'missing';calls:number;created:number;cancelled:number;commit:boolean;holdPreflight?:boolean;preflightEntered?:boolean;releasePreflight?():void};
+ __reviewRecovery?:{mode:'commit'|'missing';calls:number;created:number;cancelled:number;commit:boolean;reject?:boolean;holdPreflight?:boolean;preflightEntered?:boolean;releasePreflight?():void};
 }
 const root = join(import.meta.dir, '..');
 const chrome = chromeForTestingExecutable();
@@ -72,7 +72,7 @@ async function bundle(presentation: 'auto' | 'map-panel' = 'map-panel', recovery
       constructor(deps){this.deps=deps;this.operation=null;this.active=false;}get running(){return this.active;}
       get pending(){return this.operation!==null;}get pendingKind(){return this.operation?.kind??null;}get pendingOwnerId(){return this.operation?.ownerId??null;}get pendingReviewId(){return this.operation?.reviewId??null;}
       get canCancelConfirmedMissingUpload(){return this.pending&&globalThis.__reviewRecovery.mode==='missing';}
-      async run(input){const io=globalThis.__reviewRecovery;this.active=true;try{if(!this.operation&&io.holdPreflight){io.holdPreflight=false;io.preflightEntered=true;await new Promise(resolve=>{io.releasePreflight=resolve;});}if(!this.operation){io.created++;this.operation={ownerId:input.ownerId,reviewId:input.reviewId,kind:input.kind};}if(this.deps.owner()!==this.operation.ownerId)throw new Error('SYNTHETIC_RECOVERY_OWNER_MISMATCH');io.calls++;if(io.commit){this.operation=null;return {committed:true,code:'REVIEW_COMMITTED'};}return {committed:false,code:io.mode==='missing'?'REVIEW_UPLOAD_FAILED':'REVIEW_NOT_CONFIRMED'};}finally{this.active=false;}}
+      async run(input){const io=globalThis.__reviewRecovery;this.active=true;try{if(!this.operation&&io.holdPreflight){io.holdPreflight=false;io.preflightEntered=true;await new Promise(resolve=>{io.releasePreflight=resolve;});}if(!this.operation){io.created++;this.operation={ownerId:input.ownerId,reviewId:input.reviewId,kind:input.kind};}if(this.deps.owner()!==this.operation.ownerId)throw new Error('SYNTHETIC_RECOVERY_OWNER_MISMATCH');io.calls++;if(io.reject){this.operation=null;return {committed:false,code:'REVIEW_CONFLICT'};}if(io.commit){this.operation=null;return {committed:true,code:'REVIEW_COMMITTED'};}return {committed:false,code:io.mode==='missing'?'REVIEW_UPLOAD_FAILED':'REVIEW_NOT_CONFIRMED'};}finally{this.active=false;}}
       async cancelConfirmedMissingUpload(){const io=globalThis.__reviewRecovery;if(!this.pending||this.deps.owner()!==this.operation.ownerId)return false;io.cancelled++;this.operation=null;return true;}
     }`;
   }
@@ -698,6 +698,34 @@ for (const width of [1440, 390]) for (const transition of ['epoch', 'review'] as
   await page.evaluate(() => { (globalThis as unknown as DraftFormGlobals).__reviewRecovery!.commit = true; });
   await recover.click();
   await browserExpect(page.locator('textarea:visible')).toHaveCount(0);
+  expect(await page.evaluate(() => (globalThis as unknown as DraftFormGlobals).__reviewRecovery)).toMatchObject({ created: 1, calls: 2 });
+ } finally { await browser.close(); }
+}, 30_000);
+
+for (const width of [1440, 390]) test(`definitively rejected review recovery at ${width}px reloads the current draft`, async () => {
+ const browser = await chromium.launch({ executablePath: chrome, headless: true });
+ try {
+  const page = await browser.newPage({ viewport: { width, height: 900 } });
+  await prepare(page, 'map-panel', 'commit');
+  await page.getByRole('button', { name: '리뷰 수정 열기', exact: true }).click();
+  const field = page.locator('textarea:visible');
+  await browserExpect(field).toBeEditable();
+  await page.getByTitle('리뷰 삭제', { exact: true }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: '삭제', exact: true }).click();
+  const recover = page.getByRole('button', { name: '같은 요청 다시 확인', exact: true });
+  await browserExpect(recover).toBeEnabled();
+  await page.evaluate(async () => {
+   const g = globalThis as unknown as DraftFormGlobals;
+   await g.__renewDraftOwner(); await g.__seedReviewEdit();
+   g.__reviewRecovery!.reject = true;
+  });
+  await browserExpect(field).toBeDisabled();
+  await browserExpect(recover).toBeEnabled();
+  await recover.click();
+  await browserExpect(recover).toHaveCount(0);
+  await browserExpect(field).toBeEditable();
+  await browserExpect(field).toHaveValue('보존할 합성 리뷰 수정 초안');
+  expect((await page.evaluate(() => (globalThis as unknown as DraftFormGlobals).__readReviewEdit()))?.content).toBe('보존할 합성 리뷰 수정 초안');
   expect(await page.evaluate(() => (globalThis as unknown as DraftFormGlobals).__reviewRecovery)).toMatchObject({ created: 1, calls: 2 });
  } finally { await browser.close(); }
 }, 30_000);
