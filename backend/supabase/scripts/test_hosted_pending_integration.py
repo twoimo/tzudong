@@ -40,7 +40,7 @@ class IntegrationTests(unittest.TestCase):
   self.assertEqual(url.path,'/rest/v1/rpc/hosted_pending_read');self.assertEqual(req.method,'GET');self.assertIsNone(req.data);self.assertEqual(timeout,15)
   self.assertEqual(parse_qs(url.query),{'video_ids':['{'+VIDEO+'}']})
   req,_=client.calls[1];self.assertEqual(req.method,'POST');self.assertEqual(json.loads(req.data)['rows'],[])
- def test_transport_redirect_and_oversize_response_are_fixed_failure(self):
+ def test_transport_redirect_and_oversize_discovery_are_distinct_fixed_failures(self):
   with self.assertRaisesRegex(plane.HostedDataPlaneError,'pending_transport_failed'):
    op.NoRedirect().redirect_request(None,None,None,None,None,None)
   class Response:
@@ -49,7 +49,7 @@ class IntegrationTests(unittest.TestCase):
    def read(self,n):return b'x'*n
   class Opener:
    def open(self,*args,**kwargs):return Response()
-  with patch.object(op,'build_opener',return_value=Opener()),self.assertRaisesRegex(plane.HostedDataPlaneError,'pending_transport_failed'):
+  with patch.object(op,'build_opener',return_value=Opener()),self.assertRaisesRegex(plane.HostedDataPlaneError,'pending_discovery_unbounded'):
    op.rpc_transport('read',{'video_ids':[VIDEO]},service_role_key='synthetic')
  def test_existing_video_cannot_filter_missing_sibling_from_preview(self):
   p=plane.build_apply_preview(local_restaurant_ids=[],hosted_restaurant_ids=['A'],hosted_youtube_ids=[VIDEO],evaluation_rows=[row('A'),row('B')])
