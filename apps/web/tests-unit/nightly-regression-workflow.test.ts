@@ -10,7 +10,7 @@ const read = (relativePath: string) => readFileSync(resolve(appRoot, relativePat
 
 // One governed pin record: the exact action SHA and the exact version comment the
 // workflow must carry together. A moved SHA or a stale version comment fails.
-const DOWNLOAD_ARTIFACT_PIN = "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # actions/download-artifact@v4.3.0";
+const DOWNLOAD_ARTIFACT_PIN = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # actions/download-artifact@v8.0.2";
 
 const packageSource = read("package.json");
 const packageJson = JSON.parse(packageSource) as {
