@@ -24,6 +24,14 @@ const validBody = () => ({ clientRequestKey: 'edit-fixture-request', restaurantI
   requestKind: 'edit', name: '합성 식당', address: '합성 영업장 주소', phone: '02-123-4567', category: ['분식'],
   youtube_reviews: [{ youtube_link: 'https://youtu.be/AbCdEfGhI12', tzuyang_review: '합성 영상 설명', restaurant_id: restaurant }],
 } });
+const bodyWithItems = (count: number) => {
+  const body = validBody();
+  body.payload.category = Array.from({ length: 10 }, (_, index) => `분류 ${index}`);
+  body.payload.youtube_reviews = Array.from({ length: count }, (_, index) => ({
+    ...body.payload.youtube_reviews[0], tzuyang_review: `합성 영상 설명 ${index}`,
+  }));
+  return body;
+};
 
 // Each case owns an isolated VM. Only Auth/database I/O are doubled; request,
 // privacy, origin, bounded JSON, eligibility and payload validators run as source.
@@ -80,10 +88,12 @@ function fixture(settings: { guest?: boolean; denyEligibility?: boolean; staleEl
     return loadedModule.exports;
   }
   const post = load('app/api/mypage/submissions/edit/route.ts').POST as (request: Request) => Promise<Response>;
-  const request = (body: unknown = validBody(), headers: Record<string, string> = {}) => new Request(`${origin}/api/mypage/submissions/edit`, {
-    method: 'POST', headers: { origin, 'content-type': 'application/json', 'x-tzudong-actor-id': actor, ...headers }, body: JSON.stringify(body),
+  const rawRequest = (body: string, headers: Record<string, string> = {}) => new Request(`${origin}/api/mypage/submissions/edit`, {
+    method: 'POST', headers: { origin, 'content-type': 'application/json', 'x-tzudong-actor-id': actor, ...headers }, body,
   });
-  return { state, post, request };
+  const request = (body: unknown = validBody(), headers: Record<string, string> = {}) => rawRequest(JSON.stringify(body), headers);
+  const validates = (body: unknown) => (load('lib/restaurant-edit-submit-contract.ts').isRestaurantEditSubmitBody as (value: unknown) => boolean)(intoRealm(JSON.stringify(body)));
+  return { state, post, request, rawRequest, validates };
 }
 
 test('edit request binds the authenticated actor and complete canonical payload to one RPC', async () => {
@@ -94,6 +104,65 @@ test('edit request binds the authenticated actor and complete canonical payload 
   expect(f.state.params?.p_user_id).toBe(actor);
   expect(f.state.params?.p_target_restaurant_id).toBe(restaurant);
   expect((f.state.params?.p_payload as ReturnType<typeof validBody>['payload']).youtube_reviews[0].youtube_link).toBe('https://www.youtube.com/watch?v=AbCdEfGhI12');
+});
+
+for (const count of [24, 100]) test(`edit accepts ${count} items and ten categories without truncating the payload`, async () => {
+  const f = fixture({ rpcData: { ok: true, code: 'EDIT_SUBMISSION_SAVED', id: submission, status: 'pending', itemCount: count } });
+  const body = bodyWithItems(count);
+  const response = await f.post(f.request(body));
+  expect(response.status).toBe(200);
+  expect((await response.json()).itemCount).toBe(count);
+  expect([f.state.serviceCalls, f.state.rpcCalls, f.state.eligibilityCalls]).toEqual([1, 1, 1]);
+  expect(f.state.params?.p_user_id).toBe(actor);
+  const payload = f.state.params?.p_payload as ReturnType<typeof validBody>['payload'];
+  expect(payload.category).toHaveLength(10);
+  expect(payload.youtube_reviews).toHaveLength(count);
+  expect(payload.youtube_reviews.map(item => item.tzuyang_review).sort()).toEqual(body.payload.youtube_reviews.map(item => item.tzuyang_review).sort());
+  expect(payload.youtube_reviews.every(item => item.youtube_link === 'https://www.youtube.com/watch?v=AbCdEfGhI12' && item.restaurant_id === restaurant)).toBe(true);
+});
+
+for (const [label, mutate] of [
+  ['101 items', body => { body.payload.youtube_reviews.push({ ...body.payload.youtube_reviews[0] }); }],
+  ['eleven categories', body => { body.payload.category.push('초과 분류'); }],
+  ['PII in the last review', body => { body.payload.youtube_reviews[99].tzuyang_review = 'fixture@example.invalid'; }],
+  // Canonicalization removes this query; the raw-payload assertion must still inspect it.
+  ['PII in the last raw URL', body => { body.payload.youtube_reviews[99].youtube_link += '?si=010-1234-5678'; }],
+] as Array<[string, (body: ReturnType<typeof validBody>) => void]>) test(`edit rejects ${label} at maximum traversal without privileged work`, async () => {
+  const f = fixture(); const body = bodyWithItems(100); mutate(body);
+  expect(f.validates(body)).toBe(label.startsWith('PII'));
+  const response = await f.post(f.request(body));
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({ ok: false, code: 'EDIT_SUBMISSION_INVALID' });
+  expect([f.state.serviceCalls, f.state.rpcCalls, f.state.eligibilityCalls]).toEqual([0, 0, 0]);
+});
+
+for (const reviewLength of [4_000, 4_001]) test(`edit preserves the ${reviewLength}-character review boundary with 100 items`, async () => {
+  const f = fixture({ rpcData: { ok: true, code: 'EDIT_SUBMISSION_SAVED', id: submission, status: 'pending', itemCount: 100 } });
+  const body = bodyWithItems(100);
+  body.payload.name = '가'.repeat(160);
+  body.payload.address = '나'.repeat(500);
+  body.payload.category = Array.from({ length: 10 }, (_, index) => `${index}${'다'.repeat(49)}`);
+  body.payload.youtube_reviews[99].tzuyang_review = '라'.repeat(reviewLength);
+  const accepted = reviewLength === 4_000;
+  expect(f.validates(body)).toBe(accepted);
+  const response = await f.post(f.request(body));
+  expect(response.status).toBe(accepted ? 200 : 400);
+  expect([f.state.serviceCalls, f.state.rpcCalls, f.state.eligibilityCalls]).toEqual(accepted ? [1, 1, 1] : [0, 0, 0]);
+  if (accepted) {
+    const payload = f.state.params?.p_payload as ReturnType<typeof validBody>['payload'];
+    expect(payload.youtube_reviews.some(item => item.tzuyang_review.length === 4_000)).toBe(true);
+  }
+});
+
+for (const extraByte of [0, 1]) test(`edit preserves the 64 KiB transport boundary plus ${extraByte} byte`, async () => {
+  const f = fixture({ rpcData: { ok: true, code: 'EDIT_SUBMISSION_SAVED', id: submission, status: 'pending', itemCount: 100 } });
+  const json = JSON.stringify(bodyWithItems(100));
+  // JSON whitespace changes transport size without exceeding any field limit.
+  const raw = json + ' '.repeat(64 * 1024 - Buffer.byteLength(json) + extraByte);
+  expect(Buffer.byteLength(raw)).toBe(64 * 1024 + extraByte);
+  const response = await f.post(f.rawRequest(raw));
+  expect(response.status).toBe(extraByte ? 400 : 200);
+  expect([f.state.serviceCalls, f.state.rpcCalls, f.state.eligibilityCalls]).toEqual(extraByte ? [0, 0, 0] : [1, 1, 1]);
 });
 
 for (const [label, settings, headers, status] of [

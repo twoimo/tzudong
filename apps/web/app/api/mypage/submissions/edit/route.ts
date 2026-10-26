@@ -12,6 +12,10 @@ import {
 } from '@/lib/restaurant-edit-submit-contract';
 
 export const runtime = 'nodejs';
+// The validated public shape has 5 + 10 + 100 * (1 + 3) = 415 entries.
+// Inspect metadata and each video separately to retain the sanitizer's hard
+// output/work bounds: metadata has 4 + 10 entries, each video has only 3.
+const EDIT_PRIVACY_GROUP_MAX_ENTRIES = 4 + 10;
 type EditRpc = GeneratedDatabase['public']['Functions']['submit_restaurant_edit_request'];
 type EditRpcClient = {
   rpc(name: 'submit_restaurant_edit_request', args: EditRpc['Args']): Promise<{ data: EditRpc['Returns'] | null; error: unknown }>;
@@ -32,11 +36,15 @@ export async function POST(request: NextRequest) {
     const { clientRequestKey, restaurantId } = body.value;
     const payload = canonicalizeRestaurantEditPayload(body.value.payload);
     // Only the validated business-contact field is handled separately, as in the existing submission route.
-    const { phone: _rawPhone, ...rawPublicFields } = body.value.payload;
-    const { phone: _phone, ...publicFields } = payload;
+    const { phone: _rawPhone, youtube_reviews: rawReviews, ...rawPublicFields } = body.value.payload;
+    const { phone: _phone, youtube_reviews: reviews, ...publicFields } = payload;
+    const rawGroups = [rawPublicFields, ...rawReviews];
+    const publicGroups = [publicFields, ...reviews];
     try {
-      assertPrivacySafe(rawPublicFields);
-      assertPrivacySafe(publicFields, { locationClass: 'business' });
+      for (let index = 0; index < rawGroups.length; index++) {
+        assertPrivacySafe(rawGroups[index], { maxEntries: EDIT_PRIVACY_GROUP_MAX_ENTRIES });
+        assertPrivacySafe(publicGroups[index], { locationClass: 'business', maxEntries: EDIT_PRIVACY_GROUP_MAX_ENTRIES });
+      }
     } catch {
       return failure('EDIT_SUBMISSION_INVALID', 400);
     }
