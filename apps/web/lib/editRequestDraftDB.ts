@@ -198,16 +198,17 @@ function normalizeStringArray(value: unknown, maxItems: number, maxItemLength: n
     return normalized;
 }
 
-function normalizeBusinessPhone(value: unknown): string | null {
+function normalizeDraftPhone(value: unknown): string | null {
     const phone = normalizeText(value, MAX_PHONE_LENGTH);
     if (phone === null) return null;
     if (!phone) return '';
-    if (!/^\+?[\d\s().-]+$/.test(phone)) return null;
+    if (!/^\+?[\d\s().-]*$/.test(phone)) return null;
 
     const canonical = phone.replace(/[^\d+]/g, '');
     const digits = canonical.replace(/\+/g, '');
-    if (!/^\+?\d+$/.test(canonical) || digits.length < 7 || digits.length > 20) return null;
-    return canonical;
+    if (digits.length > 20) return null;
+    // A draft may contain a prefix; final submission validates business numbers.
+    return digits.length < 7 ? phone : canonical;
 }
 
 function normalizeYoutubeReviews(value: unknown): EditRequestDraft['youtube_reviews'] | null {
@@ -284,7 +285,7 @@ function readDraft(value: unknown, allowStoredFields: boolean, now = Date.now())
         : null;
     const name = normalizeText(record.name, MAX_NAME_LENGTH);
     const address = normalizeText(record.address, MAX_ADDRESS_LENGTH);
-    const phone = normalizeBusinessPhone(record.phone);
+    const phone = normalizeDraftPhone(record.phone);
     const category = normalizeStringArray(record.category, MAX_CATEGORY_COUNT, MAX_CATEGORY_LENGTH);
     const youtubeReviews = normalizeYoutubeReviews(record.youtube_reviews);
 
