@@ -45,7 +45,7 @@ async function fixture(replacement = newOwner, chunked = false, malformed: 'json
         globalThis.probe={events,read:()=>supabase.auth.getSession(),refresh:()=>supabase.auth.refreshSession(),
           login:()=>supabase.auth.signInWithPassword({email:'synthetic@example.invalid',password:'synthetic-only'}),
           logout:()=>captureBrowserLogout().clearIfCurrent(()=>true),
-          forwardResponse:async()=>{const r=await createBrowserRefreshGuard('${url}').fetch('${url}/auth/v1/token?grant_type=refresh_token',{method:'POST'});return {status:r.status,body:await r.text()}}};
+          forwardResponse:async()=>{const {data:{session}}=await supabase.auth.getSession();const r=await createBrowserRefreshGuard('${url}').fetch('${url}/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:session.refresh_token})});return {status:r.status,body:await r.text()}}};
       ` }));
     } }] });
   if (!built.success) { await server.stop(true); throw new Error('REFRESH_GUARD_FIXTURE_BUILD_FAILED'); }
