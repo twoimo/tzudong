@@ -147,6 +147,8 @@ export class ReviewMediaMutation {
     constructor(private readonly deps: ReviewMediaDependencies) {}
     get pending(): boolean { return this.operation !== null; }
     get pendingKind(): ReviewMutationInput['kind'] | null { return this.operation?.input.kind ?? null; }
+    get pendingOwnerId(): string | null { return this.operation?.input.ownerId ?? null; }
+    get pendingReviewId(): string | null { return this.operation?.input.reviewId ?? null; }
     get canCancelConfirmedMissingUpload(): boolean {
         return Boolean(this.operation && !this.operation.sent && this.operation.confirmedMissingUpload && !this.active);
     }
