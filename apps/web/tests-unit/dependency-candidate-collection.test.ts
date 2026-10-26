@@ -263,3 +263,78 @@ describe('governed companion file narrow admission', () => {
     await expect(collect(mirrorAfter, true)).rejects.toThrow('candidate_metadata_unavailable');
   });
 });
+
+describe('governed companion exact action SHA pin mirror', () => {
+  const OLD = 'd3f86a106a0bac45b974a628896c90dbdf5c8093';
+  const NEW = '9000827ccba6bdab643e8b6fd33ac0654aef8333';
+  const OTHER = 'cf430e030ddbb5b0abf93d22962f4752f3646cd9';
+  const pairs = [{ name: 'actions/download-artifact', fromVersion: OLD, toVersion: NEW }];
+  const line = (sha: string, tail = '') => `      "actions/download-artifact@${sha}",${tail}`;
+  const doc = (l: string) => ['expect(a).toBe(1);', l, 'expect(b).toBe(2);'].join('\n');
+
+  test('exact from->to SHA on a line naming the bumped action is admitted', () => {
+    expect(companionContentMirrorsOnly(doc(line(OLD)), doc(line(NEW)), pairs)).toBe(true);
+  });
+
+  test('every SHA deviation fails closed', () => {
+    const before = doc(line(OLD));
+    const bad = [
+      doc(line(OTHER)), // to-ref is not this package's bumped ref
+      doc(line(OLD)), // unchanged: no change at all
+      doc(line(NEW, ' // extra')), // extra edit on the changed line
+      doc(line(NEW).replace('download-artifact', 'upload-artifact')), // different action name
+      doc(line(NEW).replace(NEW.slice(0, 39), NEW.slice(0, 38) + '0')), // truncated or altered ref
+      doc(line(NEW)).replace('toBe(2)', 'toBe(3)'), // second, non-mirror line change
+      doc(line(NEW)) + '\n' + line(NEW), // added line
+    ];
+    for (const after of bad) expect(companionContentMirrorsOnly(before, after, pairs)).toBe(false);
+    // Swapped direction is not the manifest pair.
+    expect(companionContentMirrorsOnly(doc(line(NEW)), doc(line(OLD)), pairs)).toBe(false);
+    // A line that does not name the bumped action is never admitted, even with the right refs.
+    expect(companionContentMirrorsOnly(doc(`  "x@${OLD}",`), doc(`  "x@${NEW}",`), pairs)).toBe(false);
+    // Short or non-hex refs are not treated as SHA pins.
+    const short = [{ name: 'actions/download-artifact', fromVersion: 'v4', toVersion: 'v8' }];
+    expect(companionContentMirrorsOnly(doc(line('v4')), doc(line('v8')), short)).toBe(false);
+  });
+
+  test('a second action sharing the line cannot ride along unless it is also a bumped pair', () => {
+    const before = doc(`  "actions/download-artifact@${OLD}", "actions/upload-artifact@${OLD}",`);
+    const after = doc(`  "actions/download-artifact@${NEW}", "actions/upload-artifact@${NEW}",`);
+    expect(companionContentMirrorsOnly(before, after, pairs)).toBe(false);
+  });
+});
+
+describe('governed companion pin record binds SHA and version comment to the same action', () => {
+  const OLD = 'd3f86a106a0bac45b974a628896c90dbdf5c8093';
+  const NEW = '9000827ccba6bdab643e8b6fd33ac0654aef8333';
+  const pairs = [{ name: 'actions/download-artifact', fromVersion: OLD, toVersion: NEW, fromTag: 'v4.3.0', toTag: 'v8.0.2' }];
+  const pin = (sha: string, tag: string, action = 'actions/download-artifact') =>
+    `const PIN = "actions/download-artifact@${sha} # ${action}@${tag}";`;
+  const flow = {
+    number: 9, head: { sha: 'h' }, base: { ref: 'develop' },
+  };
+  const wf = (comment: string) => ({
+    filename: '.github/workflows/nightly-local-regression.yml', status: 'modified',
+    patch: `@@ -1,1 +1,1 @@\n-        uses: actions/download-artifact@${OLD} # actions/download-artifact@v4.3.0\n+        uses: actions/download-artifact@${NEW}${comment}`,
+  });
+  const COMPANION = 'apps/web/tests-unit/nightly-regression-workflow.test.ts';
+  const verdict = (after: string, comment = ' # actions/download-artifact@v8.0.2') =>
+    descriptor(flow, [wf(comment), { filename: COMPANION, status: 'modified' }], {},
+      { [COMPANION]: { before: pin(OLD, 'v4.3.0'), after } }).metadataIncomplete;
+
+  test('exact SHA plus exact version comment of the same action is admitted', () => {
+    expect(verdict(pin(NEW, 'v8.0.2'))).toBe(false);
+    expect(companionContentMirrorsOnly(pin(OLD, 'v4.3.0'), pin(NEW, 'v8.0.2'), pairs)).toBe(true);
+  });
+
+  test('stale, wrong, other-action or missing version evidence fails closed', () => {
+    expect(verdict(pin(NEW, 'v4.3.0'))).toBe(true); // stale comment kept
+    expect(verdict(pin(NEW, 'v8.0.3'))).toBe(true); // version not in the bot diff
+    expect(verdict(pin(NEW, 'v8.0.2', 'actions/upload-artifact'))).toBe(true); // comment names another action
+    expect(verdict(pin(NEW, 'v8.0.2'), '')).toBe(true); // bot diff carries no version comment: tag not bound
+    expect(verdict(pin(NEW, 'v8.0.2'), ' # actions/upload-artifact@v8.0.2')).toBe(true); // bot comment names another action
+    expect(companionContentMirrorsOnly(pin(OLD, 'v4.3.0'), pin(OLD, 'v8.0.2'), pairs)).toBe(false); // tag moved, SHA kept
+    expect(companionContentMirrorsOnly(pin(OLD, 'v4.3.0'), pin(NEW, 'v4.3.0'), pairs)).toBe(false); // SHA moved, tag stale
+    expect(companionContentMirrorsOnly(pin(NEW, 'v8.0.2'), pin(OLD, 'v4.3.0'), pairs)).toBe(false); // reversed pair
+  });
+});
