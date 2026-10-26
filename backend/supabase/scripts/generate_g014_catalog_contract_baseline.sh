@@ -1725,6 +1725,13 @@ SQL
       compose exec -T db psql -X --single-transaction --file=- -v ON_ERROR_STOP=1 \
         -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
+    20261026120000_atomic_edit_submission_request.sql)
+      # The immutable source has no BEGIN/COMMIT: its transaction-local guard
+      # and ON COMMIT DROP witnesses require the caller's one outer transaction.
+      # Replay the original bytes, preserving every executor/G014 assertion.
+      compose exec -T db psql -X --single-transaction --file=- -v ON_ERROR_STOP=1 \
+        -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$migration"
+      ;;
     *)
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$migration"
       ;;
