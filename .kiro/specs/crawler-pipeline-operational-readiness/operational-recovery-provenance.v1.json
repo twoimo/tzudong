@@ -662,15 +662,15 @@
     },
     {
       "path": "apps/web/scripts/collect-dependency-candidates.mjs",
-      "gitBlobSha1": "bba1fce1d98ffe0a02034112906d7a01c32a0833",
-      "sha256": "740117bc8c26c5480ad76bde4099433fc0033d3e6d3829a4171952700bd4a19b",
-      "bytes": 13358
+      "gitBlobSha1": "5c25701f3eec31625f9edc1e8348294534a76c5d",
+      "sha256": "e7470bbf00d59cd2ca95d5657b64008c26fa8fb43de1c9c23e1a7bfc339ffb15",
+      "bytes": 26693
     },
     {
       "path": "apps/web/tests-unit/dependency-candidate-collection.test.ts",
-      "gitBlobSha1": "eff49351e0a45799c97b2e49ec119694b5edece8",
-      "sha256": "9b1af2934fa698b5b7714bad4ba809d3e5a2a2376d49d138f9546f4f1a4247c8",
-      "bytes": 16446
+      "gitBlobSha1": "cb24df4c62f040c08a3a2b6a5c0c95dc7c163fd0",
+      "sha256": "976b27b3483d79cf1694e8bbc55f547df776096a56e4ca1aeb879e6d145202ea",
+      "bytes": 37565
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_runtime_bindings.py",

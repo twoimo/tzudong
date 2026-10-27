@@ -183,16 +183,17 @@ function normalizeStringArray(value: unknown, maxItems: number, maxItemLength: n
     return normalized;
 }
 
-function normalizeBusinessPhone(value: unknown): string | null {
+function normalizeDraftPhone(value: unknown): string | null {
     const phone = normalizeText(value, MAX_PHONE_LENGTH);
     if (phone === null) return null;
     if (!phone) return '';
-    if (!/^\+?[\d\s().-]+$/.test(phone)) return null;
+    if (!/^\+?[\d\s().-]*$/.test(phone)) return null;
 
     const canonical = phone.replace(/[^\d+]/g, '');
     const digits = canonical.replace(/\+/g, '');
-    if (!/^\+?\d+$/.test(canonical) || digits.length < 7 || digits.length > 20) return null;
-    return canonical;
+    if (digits.length > 20) return null;
+    // A draft may contain a prefix; final submission validates business numbers.
+    return digits.length < 7 ? phone : canonical;
 }
 
 function isInputCurrentStep(value: unknown): value is 1 | 2 | 3 | undefined {
@@ -230,7 +231,7 @@ function readDraft(value: unknown, allowStoredFields: boolean, now = Date.now())
     const currentStep = record.currentStep;
     const restaurantName = normalizeText(record.restaurant_name, MAX_NAME_LENGTH);
     const address = normalizeText(record.address, MAX_ADDRESS_LENGTH);
-    const phone = normalizeBusinessPhone(record.phone);
+    const phone = normalizeDraftPhone(record.phone);
     const categories = normalizeStringArray(record.categories, MAX_CATEGORY_COUNT, MAX_CATEGORY_LENGTH);
     const youtubeLink = normalizeText(record.youtube_link, MAX_LINK_LENGTH);
     const description = normalizeText(record.description, MAX_DESCRIPTION_LENGTH);

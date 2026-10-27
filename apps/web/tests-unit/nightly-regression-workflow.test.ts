@@ -8,6 +8,10 @@ import { join, resolve } from "node:path";
 const appRoot = resolve(import.meta.dir, "..");
 const read = (relativePath: string) => readFileSync(resolve(appRoot, relativePath), "utf8");
 
+// One governed pin record: the exact action SHA and the exact version comment the
+// workflow must carry together. A moved SHA or a stale version comment fails.
+const DOWNLOAD_ARTIFACT_PIN = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # actions/download-artifact@v8.0.2";
+
 const packageSource = read("package.json");
 const packageJson = JSON.parse(packageSource) as {
   scripts?: Record<string, unknown>;
@@ -87,6 +91,41 @@ describe("nightly regression package and source contracts", () => {
     expect(nightlyRunnerSource).toContain(
       "TZUDONG_NODE24_EXECUTABLE: supervisorExecutable",
     );
+  });
+
+  test("preserves an explicit browser cache through nightly unit child boundaries", async () => {
+    const declarations = sourceBlock(nightlyRunnerSource, "const hostedIdentityKeys = [", "const curatedBrowserSpecs = [");
+    const picker = sourceBlock(nightlyRunnerSource, "const pickEnvironment =", "function usage()");
+    const unit = sourceBlock(nightlyRunnerSource, "async function runUnitRegression(environment)", "const localDockerBaseEnvironmentKeys =");
+    const observations: Array<{ cache: string | null; providerSecretPresent: boolean }> = [];
+    const run = new Function("process", "runCommand", `${declarations}\n${picker}\n${unit}
+      return async environment => {
+        const keys = environment.NIGHTLY_MODE === 'local' ? localRuntimeKeys : hostedRuntimeKeys;
+        await runUnitRegression(pickEnvironment(environment, [...keys]));
+      };`)(
+      { env: {} },
+      async (command: string, args: string[], options: { env: Record<string, string> }) => {
+        expect([command, ...args]).toEqual(["bun", "run", "test:unit"]);
+        const probe = spawnSync(process.execPath, ["-e", `console.log(JSON.stringify({
+          cache: process.env.PLAYWRIGHT_BROWSERS_PATH ?? null,
+          providerSecretPresent: ['OPENAI_API_KEY', 'GEMINI_API_KEY', 'DATABASE_URL'].some(k => k in process.env)
+        }))`], { env: options.env, encoding: "utf8" });
+        expect(probe.status).toBe(0);
+        observations.push(JSON.parse(probe.stdout.trim()));
+        return { code: probe.status };
+      },
+    ) as (environment: Record<string, string>) => Promise<void>;
+    const cache = join(tmpdir(), "task-owned-cft");
+    for (const mode of ["local", "hosted"]) {
+      await run({ NIGHTLY_MODE: mode, PLAYWRIGHT_BROWSERS_PATH: cache,
+        OPENAI_API_KEY: "fixture-provider-secret", GEMINI_API_KEY: "fixture-provider-secret", DATABASE_URL: "fixture-database-secret" });
+    }
+    await run({ NIGHTLY_MODE: "local" });
+    expect(observations).toEqual([
+      { cache, providerSecretPresent: false },
+      { cache, providerSecretPresent: false },
+      { cache: null, providerSecretPresent: false },
+    ]);
   });
 
   test("passes only validated GitHub socket admission context to local stack children", () => {
@@ -900,7 +939,7 @@ describe("nightly regression package and source contracts", () => {
       "UNIT_OUTCOME: ${{ steps.nightly-unit.outcome }}",
       "E2E_OUTCOME: ${{ steps.nightly-e2e.outcome }}",
       "--mode local",
-      "actions/upload-artifact@v4",
+      "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4.6.0",
       "publication-boundary.txt",
       "failure-diagnostics/local-stack-failure-diagnostics.json",
       "steps.prepare-lifecycle-diagnostic.outputs.path",
@@ -1070,7 +1109,7 @@ describe("nightly regression package and source contracts", () => {
       "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
       "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
       "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08",
-      "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+      DOWNLOAD_ARTIFACT_PIN,
     ]) {
       expect(localWorkflowSource).toContain(action);
     }
@@ -1082,7 +1121,6 @@ describe("nightly regression package and source contracts", () => {
     expect(localWorkflowSource).toContain("needs: local");
     expect(localWorkflowSource).toContain("if: ${{ needs.local.result == 'success' && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || inputs.suite == 'all') }}");
     expect(localWorkflowSource).toContain('test "${GITHUB_SHA}" = "$main_sha"');
-    expect(localWorkflowSource).toContain("actions/download-artifact@v4");
     expect(localWorkflowSource).not.toContain("nightly-artifacts/nightly-run.log");
     expect(localWorkflowSource).not.toContain("nightly-artifacts/nightly-web.log");
     expect(localWorkflowSource).not.toContain("(Path('apps/web/nightly-run.log')");

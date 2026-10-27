@@ -48,8 +48,8 @@ function run(command, args, options = {}) {
 }
 
 
-function resolveChromiumExecutable() {
-    const executable = chromeForTestingExecutable();
+function resolveChromiumExecutable(runtimeEnv) {
+    const executable = chromeForTestingExecutable(runtimeEnv);
     if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE && process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE !== executable) {
         throw new OperationFailure('RESPONSIVE_TEST_BROWSER_PIN_MISMATCH');
     }
@@ -246,8 +246,8 @@ function maybeBuildForProduction(env) {
 
 function main() {
     try {
-        const executable = resolveChromiumExecutable();
         const runtimeEnv = ensureServerConfig(withSupplementalLibraryEnv());
+        const executable = resolveChromiumExecutable(runtimeEnv);
 
         if (!executable) {
             if (strictMode) {

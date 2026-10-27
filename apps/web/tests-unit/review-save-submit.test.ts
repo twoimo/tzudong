@@ -1133,7 +1133,7 @@ describe('actual ReviewModal submit and Supabase adapter', () => {
         const execute = evaluate(`${nodeText(edit, 'executeMutation')};`, {
             review: { id: 'fixture-review', ...original }, user: { id: 'fixture-owner' }, foodPhotoOwnership: ownership,
             draftAutosave: { cancel() {}, settle: async () => true, resume() {} },
-            isSubmitting: false, isDeleting: false, ownerRef: { current: 'fixture-owner' },
+            isSubmitting: false, isDeleting: false, draftLoaded: true, ownerRef: { current: 'fixture-owner' },
             draftScope: 'fixture-scope', currentDraftScope: { current: 'fixture-scope' },
             mutationRef: { current: { pending: false, pendingKind: null, canCancelConfirmedMissingUpload: false, run: async (input: Record<string, unknown>) => {
                 calls.update++; submitted = input; return { committed: true, code: 'REVIEW_COMMITTED' };
@@ -1141,6 +1141,7 @@ describe('actual ReviewModal submit and Supabase adapter', () => {
             content: 'Synthetic existing review content for edit regression.', categories: ['한식'],
             existingFoodPhotos: [existing], removedPhotos: [], newFoodPhotos: [],
             getEditableFoodPhotoValues,
+            syncPendingRecovery: () => false,
             setIsSubmitting() {}, setIsDeleting() {}, setCleanupFailureMessage() {}, setRetryKind() {}, setCanCancelMissingUpload() {}, reviewMutationMessage: () => 'COMMITTED',
             toast() {}, deleteEditDraft: async () => { calls.draft++; }, onSuccess: () => { calls.success++; },
             handleClose: () => { calls.close++; },

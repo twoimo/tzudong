@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 interface DraftAuthGlobals {
  __authDraft:{owner:string;other:string;publicRead():Promise<unknown>;clear():Promise<unknown>;signOut():Promise<void>;refresh():void;save(id:string,text:string):Promise<unknown>;read(id:string):Promise<{content:string}|null>};
- __authEvents:{failCleanup:boolean;holdCleanup:boolean;cleanupEntered:boolean;releaseCleanup():void;holdEligibility:boolean;rejectEligibility:boolean;eligibilityEntered:boolean;releaseEligibility():void;holdLogout:boolean;logoutEntered:boolean;release():void;storeOnly(id:string|null):void;emit(id:string|null):void};
+ __authEvents:{sessionReads?:number;failCleanup:boolean;holdCleanup:boolean;cleanupEntered:boolean;releaseCleanup():void;holdEligibility:boolean;rejectEligibility:boolean;eligibilityEntered:boolean;releaseEligibility():void;holdLogout:boolean;logoutEntered:boolean;release():void;storeOnly(id:string|null):void;emit(id:string|null):void};
  __pendingLogout:Promise<void>;__authRoot:{unmount():void};
 }
 const root=join(import.meta.dir,'..');
@@ -41,7 +41,7 @@ async function bundle(composer: 'submission' | 'edit' | 'review' | 'new-review' 
   'next/navigation':`export const useRouter=()=>({push(){},replace(){},refresh(){}});`,
   '@/lib/no-toast':`export const toast={success(){},error(){},warning(){},info(){}};`,
   '@/hooks/use-toast':`export const toast=()=>{};export const useToast=()=>({toast});`,
-  '@/integrations/supabase/client':`const s=uid=>({access_token:'synthetic-'+uid+'-'+(localStorage.getItem('synthetic-auth-family')??'0'),user:{id:uid},expires_at:Math.floor(Date.now()/1000)+3600});let session=s('11111111-1111-4111-8111-111111111111'),callback;const key='synthetic-auth-owner';const stored=()=>{const uid=localStorage.getItem(key);return uid===null?session:uid?s(uid):null};globalThis.__authEvents={storeOnly(uid){localStorage.setItem(key,uid??'')},emit(uid){session=uid?s(uid):null;this.storeOnly(uid);callback?.(uid?'SIGNED_IN':'SIGNED_OUT',session)},holdLogout:false,logoutEntered:false,release:()=>{}};const chain={select(){return this},eq(){return this},async maybeSingle(){return {data:null,error:null}}};export const supabase={from(){return chain},rpc(){throw new Error('SYNTHETIC_RPC_NOT_ALLOWED')},storage:{from(){return {upload(){throw new Error('SYNTHETIC_MEDIA_NOT_ALLOWED')},list(){throw new Error('SYNTHETIC_MEDIA_NOT_ALLOWED')},remove(){throw new Error('SYNTHETIC_MEDIA_NOT_ALLOWED')}}}},auth:{getUser:async()=>({data:{user:stored()?.user??null},error:null}),getSession:async()=>({data:{session:stored()}}),onAuthStateChange(cb){callback=cb;return {data:{subscription:{unsubscribe(){callback=null}}}}},async signOut(){globalThis.__authEvents.emit(null);if(globalThis.__authEvents.holdLogout){globalThis.__authEvents.logoutEntered=true;await new Promise(resolve=>globalThis.__authEvents.release=resolve)}return {error:null}}}};export const getSupabaseBrowserClient=()=>supabase;export const commitSupabaseBrowserSession=async()=>{throw new Error('SYNTHETIC_AUTH_PUBLICATION_NOT_ALLOWED')};`,
+  '@/integrations/supabase/client':`const s=uid=>({access_token:'synthetic-'+uid+'-'+(localStorage.getItem('synthetic-auth-family')??'0'),user:{id:uid},expires_at:Math.floor(Date.now()/1000)+3600});let session=s('11111111-1111-4111-8111-111111111111'),callback;const key='synthetic-auth-owner';const stored=()=>{const uid=localStorage.getItem(key);return uid===null?session:uid?s(uid):null};globalThis.__authEvents={storeOnly(uid){localStorage.setItem(key,uid??'')},emit(uid){session=uid?s(uid):null;this.storeOnly(uid);callback?.(uid?'SIGNED_IN':'SIGNED_OUT',session)},holdLogout:false,logoutEntered:false,release:()=>{}};const chain={select(){return this},eq(){return this},async maybeSingle(){return {data:null,error:null}}};export const supabase={from(){return chain},rpc(){throw new Error('SYNTHETIC_RPC_NOT_ALLOWED')},storage:{from(){return {upload(){throw new Error('SYNTHETIC_MEDIA_NOT_ALLOWED')},list(){throw new Error('SYNTHETIC_MEDIA_NOT_ALLOWED')},remove(){throw new Error('SYNTHETIC_MEDIA_NOT_ALLOWED')}}}},auth:{getUser:async()=>({data:{user:stored()?.user??null},error:null}),getSession:async()=>{globalThis.__authEvents.sessionReads=(globalThis.__authEvents.sessionReads??0)+1;return {data:{session:stored()}};},onAuthStateChange(cb){callback=cb;return {data:{subscription:{unsubscribe(){callback=null}}}}},async signOut(){globalThis.__authEvents.emit(null);if(globalThis.__authEvents.holdLogout){globalThis.__authEvents.logoutEntered=true;await new Promise(resolve=>globalThis.__authEvents.release=resolve)}return {error:null}}}};export const getSupabaseBrowserClient=()=>supabase;export const commitSupabaseBrowserSession=async()=>{throw new Error('SYNTHETIC_AUTH_PUBLICATION_NOT_ALLOWED')};`,
   '@/lib/auth/browser-logout':`export const captureBrowserLogout=()=>({isCurrent:()=>true,isCleared:()=>true,async clearIfCurrent(owns){if(!owns())return false;globalThis.__authEvents.storeOnly(null);return true}});`,
   '@/lib/privacy/eligibility':`export const getCurrentPrivacyEligibility=async()=>{const io=globalThis.__authEvents;const ready=!io.rejectEligibility;io.rejectEligibility=false;if(io.holdEligibility){io.holdEligibility=false;io.eligibilityEntered=true;await new Promise(resolve=>io.releaseEligibility=resolve)}return {ready}};export const hasLivePrivacyEligibilityReceipt=value=>value?.ready===true;export const signOutRejectedPrivacySession=async()=>{};`,
   '@/lib/public-profile-read':`export const isPublicProfileInvalidSessionError=()=>false;export const readPublicProfileSummaries=async()=>[{nickname:'합성 계정'}];`,
@@ -166,6 +166,29 @@ for (const nextOwner of ['other-owner', 'same-owner-renewal'] as const) test(`la
  } finally { await browser.close(); }
 },20000);
 
+
+for (const resumeEvent of ['focus', 'visibilitychange'] as const) test(`same-session ${resumeEvent} preserves a pending HTTP logout`, async()=>{
+ const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});
+ try {
+  const page=await browser.newPage();let releaseHttp:(()=>Promise<void>)|undefined;
+  await page.route('**/*',route=>{
+   if(route.request().resourceType()==='document')return route.fulfill({contentType:'text/html',body:'<!doctype html><div id="root"></div>'});
+   if(route.request().url().endsWith('/api/auth/logout')){releaseHttp=()=>route.fulfill({status:200,body:'{}'});return;}
+   return route.abort();
+  });
+  await page.goto('https://draft-auth.test/mypage/profile');await page.addScriptTag({content:await bundle()});
+  await browserExpect(page.locator('output')).toHaveText('11111111-1111-4111-8111-111111111111');
+  await page.evaluate(async()=>{const w=globalThis as unknown as DraftAuthGlobals;await w.__authDraft.save(w.__authDraft.owner,'포커스 복귀 후 로그아웃으로 삭제할 합성 초안');w.__pendingLogout=w.__authDraft.signOut();});
+  await browserExpect.poll(()=>Boolean(releaseHttp)).toBe(true);
+  const reads=await page.evaluate(()=>(globalThis as unknown as DraftAuthGlobals).__authEvents.sessionReads??0);
+  await page.evaluate(event=>{if(event==='focus')window.dispatchEvent(new Event(event));else document.dispatchEvent(new Event(event));},resumeEvent);
+  // A resume checks the SDK, then eligibility publication checks it once more.
+  await browserExpect.poll(()=>page.evaluate(()=>(globalThis as unknown as DraftAuthGlobals).__authEvents.sessionReads??0)).toBeGreaterThan(reads+1);
+  await releaseHttp!();await page.evaluate(()=>(globalThis as unknown as DraftAuthGlobals).__pendingLogout);
+  await browserExpect(page.locator('output')).toHaveText('signed-out');
+  expect(await page.evaluate(async()=>{const w=globalThis as unknown as DraftAuthGlobals;return w.__authDraft.read(w.__authDraft.owner);})).toBeNull();
+ } finally {await browser.close();}
+},20000);
 
 test('old same-account eligibility rejection cannot acquire the renewed session draft epoch', async () => {
  const browser=await chromium.launch({executablePath:chromeForTestingExecutable(),headless:true});

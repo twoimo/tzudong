@@ -87,7 +87,7 @@ test('origin, storage, and Supabase validation fail closed', () => {
     expect(JSON.parse(Buffer.from(parent.encodeHttpOnlyStorageState(decodedBrowserState), 'base64').toString('utf8')).cookies[0].httpOnly).toBe(true);
     expect(() => parent.validateStorageState(validState('evil.example'), origin)).toThrow();
     expect(() => parent.validateSupabaseDestination('https://aqlcofblfxdrjhhdmarw.supabase.co/path')).toThrow();
-    expect(child.exactOrigin('https://aqlcofblfxdrjhhdmarw.supabase.co/').hostname).toBe('aqlcofblfxdrjhhdmarw.supabase.co');
+    expect(child.exactOrigin('https://auth-smoke.example.test/').hostname).toBe('auth-smoke.example.test');
 });
 test('release proof requires the current complete cookie batch and excludes its marker from the credential', () => {
     const state = JSON.parse(Buffer.from(validState(), 'base64').toString('utf8'));

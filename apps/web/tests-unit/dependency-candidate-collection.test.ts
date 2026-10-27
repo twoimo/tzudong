@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { collectCandidates, companionContentMirrorsOnly, descriptor, lockfileChanges } from '../scripts/collect-dependency-candidates.mjs';
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import {
+  GOVERNED_COMPANION_PATHS, RECONCILIATION_MANIFEST_PATH, collectCandidates, companionContentMirrorsOnly, descriptor,
+  lockfileChanges, manifestTrackedPaths, manifestEntriesDigest, pythonCanonicalJson, reconciliationManifestMirrorsOnly,
+} from '../scripts/collect-dependency-candidates.mjs';
 import { buildPreflightReceipt, buildRunReceipt } from '../scripts/verify-dependency-freshness.mjs';
 
 const pr = { number: 42, user: { login: 'dependabot[bot]' },
@@ -261,5 +267,302 @@ describe('governed companion file narrow admission', () => {
     ]);
     expect((await collect(mirrorAfter.replace('toBe(true)', 'toBe(false)'))).candidate.metadataIncomplete).toBe(true);
     await expect(collect(mirrorAfter, true)).rejects.toThrow('candidate_metadata_unavailable');
+  });
+});
+
+describe('governed companion exact action SHA pin mirror', () => {
+  const OLD = 'd3f86a106a0bac45b974a628896c90dbdf5c8093';
+  const NEW = '9000827ccba6bdab643e8b6fd33ac0654aef8333';
+  const OTHER = 'cf430e030ddbb5b0abf93d22962f4752f3646cd9';
+  const pairs = [{ name: 'actions/download-artifact', fromVersion: OLD, toVersion: NEW }];
+  const line = (sha: string, tail = '') => `      "actions/download-artifact@${sha}",${tail}`;
+  const doc = (l: string) => ['expect(a).toBe(1);', l, 'expect(b).toBe(2);'].join('\n');
+
+  test('exact from->to SHA on a line naming the bumped action is admitted', () => {
+    expect(companionContentMirrorsOnly(doc(line(OLD)), doc(line(NEW)), pairs)).toBe(true);
+  });
+
+  test('every SHA deviation fails closed', () => {
+    const before = doc(line(OLD));
+    const bad = [
+      doc(line(OTHER)), // to-ref is not this package's bumped ref
+      doc(line(OLD)), // unchanged: no change at all
+      doc(line(NEW, ' // extra')), // extra edit on the changed line
+      doc(line(NEW).replace('download-artifact', 'upload-artifact')), // different action name
+      doc(line(NEW).replace(NEW.slice(0, 39), NEW.slice(0, 38) + '0')), // truncated or altered ref
+      doc(line(NEW)).replace('toBe(2)', 'toBe(3)'), // second, non-mirror line change
+      doc(line(NEW)) + '\n' + line(NEW), // added line
+    ];
+    for (const after of bad) expect(companionContentMirrorsOnly(before, after, pairs)).toBe(false);
+    // Swapped direction is not the manifest pair.
+    expect(companionContentMirrorsOnly(doc(line(NEW)), doc(line(OLD)), pairs)).toBe(false);
+    // A line that does not name the bumped action is never admitted, even with the right refs.
+    expect(companionContentMirrorsOnly(doc(`  "x@${OLD}",`), doc(`  "x@${NEW}",`), pairs)).toBe(false);
+    // Short or non-hex refs are not treated as SHA pins.
+    const short = [{ name: 'actions/download-artifact', fromVersion: 'v4', toVersion: 'v8' }];
+    expect(companionContentMirrorsOnly(doc(line('v4')), doc(line('v8')), short)).toBe(false);
+  });
+
+  test('a second action sharing the line cannot ride along unless it is also a bumped pair', () => {
+    const before = doc(`  "actions/download-artifact@${OLD}", "actions/upload-artifact@${OLD}",`);
+    const after = doc(`  "actions/download-artifact@${NEW}", "actions/upload-artifact@${NEW}",`);
+    expect(companionContentMirrorsOnly(before, after, pairs)).toBe(false);
+  });
+});
+
+describe('governed companion pin record binds SHA and version comment to the same action', () => {
+  const OLD = 'd3f86a106a0bac45b974a628896c90dbdf5c8093';
+  const NEW = '9000827ccba6bdab643e8b6fd33ac0654aef8333';
+  const pairs = [{ name: 'actions/download-artifact', fromVersion: OLD, toVersion: NEW, fromTag: 'v4.3.0', toTag: 'v8.0.2' }];
+  const pin = (sha: string, tag: string, action = 'actions/download-artifact') =>
+    `const PIN = "actions/download-artifact@${sha} # ${action}@${tag}";`;
+  const flow = {
+    number: 9, head: { sha: 'h' }, base: { ref: 'develop' },
+  };
+  const wf = (comment: string) => ({
+    filename: '.github/workflows/nightly-local-regression.yml', status: 'modified',
+    patch: `@@ -1,1 +1,1 @@\n-        uses: actions/download-artifact@${OLD} # actions/download-artifact@v4.3.0\n+        uses: actions/download-artifact@${NEW}${comment}`,
+  });
+  const COMPANION = 'apps/web/tests-unit/nightly-regression-workflow.test.ts';
+  const verdict = (after: string, comment = ' # actions/download-artifact@v8.0.2') =>
+    descriptor(flow, [wf(comment), { filename: COMPANION, status: 'modified' }], {},
+      { [COMPANION]: { before: pin(OLD, 'v4.3.0'), after } }).metadataIncomplete;
+
+  test('exact SHA plus exact version comment of the same action is admitted', () => {
+    expect(verdict(pin(NEW, 'v8.0.2'))).toBe(false);
+    expect(companionContentMirrorsOnly(pin(OLD, 'v4.3.0'), pin(NEW, 'v8.0.2'), pairs)).toBe(true);
+  });
+
+  test('stale, wrong, other-action or missing version evidence fails closed', () => {
+    expect(verdict(pin(NEW, 'v4.3.0'))).toBe(true); // stale comment kept
+    expect(verdict(pin(NEW, 'v8.0.3'))).toBe(true); // version not in the bot diff
+    expect(verdict(pin(NEW, 'v8.0.2', 'actions/upload-artifact'))).toBe(true); // comment names another action
+    expect(verdict(pin(NEW, 'v8.0.2'), '')).toBe(true); // bot diff carries no version comment: tag not bound
+    expect(verdict(pin(NEW, 'v8.0.2'), ' # actions/upload-artifact@v8.0.2')).toBe(true); // bot comment names another action
+    expect(companionContentMirrorsOnly(pin(OLD, 'v4.3.0'), pin(OLD, 'v8.0.2'), pairs)).toBe(false); // tag moved, SHA kept
+    expect(companionContentMirrorsOnly(pin(OLD, 'v4.3.0'), pin(NEW, 'v4.3.0'), pairs)).toBe(false); // SHA moved, tag stale
+    expect(companionContentMirrorsOnly(pin(NEW, 'v8.0.2'), pin(OLD, 'v4.3.0'), pairs)).toBe(false); // reversed pair
+  });
+});
+
+describe('governed companion bare SHA on a named line stays rejected', () => {
+  const F = '043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
+  const T = 'cf430e030ddbb5b0abf93d22962f4752f3646cd9';
+  const X = '65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08';
+  const E = 'ea165f8d65b6e75b540449e92b4886f43607fa02';
+  const pairs = [{ name: 'actions/upload-artifact', fromVersion: F, toVersion: T }];
+  const doc = (l: string) => ['const a = 1;', l, 'const b = 2;'].join('\n');
+  const tuple = (sha: string, name = 'actions/upload-artifact') => `  ["${name}", "${sha}"],`;
+  const pin = (sha: string, name = 'actions/upload-artifact') => `  "${name}@${sha}",`;
+  const check = (before: string, after: string, p = pairs) => companionContentMirrorsOnly(doc(before), doc(after), p);
+
+  test('only the exact name@sha string shape is admitted, TS and Python', () => {
+    expect(check(pin(F), pin(T))).toBe(true);
+    expect(check(`UPLOAD = "actions/upload-artifact@${F}"`, `UPLOAD = "actions/upload-artifact@${T}"`)).toBe(true);
+    expect(check(`    self.assertEqual(pins, ["actions/upload-artifact@${F}"])`,
+      `    self.assertEqual(pins, ["actions/upload-artifact@${T}"])`)).toBe(true);
+    // Pin plus its own version comment inside one Python assertIn string.
+    const tagged71 = [{ name: 'actions/upload-artifact', fromVersion: F, toVersion: T, fromTag: 'v7.0.1', toTag: 'v7.0.2' }];
+    const cmt = (sha: string, tag: string) =>
+      `        self.assertIn("actions/upload-artifact@${sha} # actions/upload-artifact@${tag}", workflow)`;
+    expect(check(cmt(F, 'v7.0.1'), cmt(T, 'v7.0.2'), tagged71)).toBe(true);
+    expect(check(cmt(F, 'v7.0.1'), cmt(T, 'v7.0.1'), tagged71)).toBe(false);
+    expect(check(cmt(F, 'v7.0.1'), cmt(T, 'v7.0.3'), tagged71)).toBe(false);
+    expect(check(`        self.assertIn("actions/upload-artifact@v7.0.1", workflow)`,
+      `        self.assertIn("actions/upload-artifact@v7.0.2", workflow)`, tagged71)).toBe(false);
+  });
+
+  test('tuple, bare SHA, name-in-comment and loose major shapes are not admitted', () => {
+    expect(check(tuple(F), tuple(T))).toBe(false);
+    expect(check(`  ['actions/upload-artifact', '${F}'],`, `  ['actions/upload-artifact', '${T}'],`)).toBe(false);
+    expect(check(`${tuple(F, 'actions/other')} // actions/upload-artifact`, `${tuple(T, 'actions/other')} // actions/upload-artifact`)).toBe(false);
+    expect(check(`  // actions/upload-artifact\n  const sha = "${F}";`, `  // actions/upload-artifact\n  const sha = "${T}";`)).toBe(false);
+    expect(check(`  "actions/upload-artifact" + "${F}"`, `  "actions/upload-artifact" + "${T}"`)).toBe(false);
+    expect(check('  "actions/upload-artifact@v4",', '  "actions/upload-artifact@v7.0.2",')).toBe(false);
+    const tagged = [{ name: 'actions/upload-artifact', fromVersion: X, toVersion: T, fromTag: 'v4.6.0', toTag: 'v7.0.2' }];
+    expect(check('  "actions/upload-artifact@v4.6.0",', '  "actions/upload-artifact@v7.0.2",', tagged)).toBe(false);
+  });
+
+  test('name boundaries, ambiguity, counts and shared SHAs fail closed', () => {
+    expect(check(pin(F, 'evil/actions/upload-artifact'), pin(T, 'evil/actions/upload-artifact'))).toBe(false);
+    expect(check(pin(F, 'actions/upload-artifact-x'), pin(T, 'actions/upload-artifact-x'))).toBe(false);
+    expect(check(`  "x@actions/upload-artifact@${F}"`, `  "x@actions/upload-artifact@${T}"`)).toBe(false);
+    const two = (a: string, b: string) => `  "actions/upload-artifact@${a}", "actions/upload-artifact@${b}",`;
+    expect(check(two(F, F), two(T, T))).toBe(true);
+    expect(check(two(F, F), two(T, F))).toBe(false);
+    expect(check(two(F, F), two(T, X))).toBe(false);
+    expect(check(pin(F), two(T, T))).toBe(false);
+    expect(check(two(F, F), pin(T))).toBe(false);
+    const shared = [
+      { name: 'actions/a', fromVersion: F, toVersion: T },
+      { name: 'actions/b', fromVersion: F, toVersion: X },
+    ];
+    expect(check(pin(F, 'actions/a'), pin(T, 'actions/a'), shared)).toBe(true);
+    expect(check(pin(F, 'actions/a'), pin(X, 'actions/a'), shared)).toBe(false);
+    expect(check(pin(F, 'actions/b'), pin(T, 'actions/b'), shared)).toBe(false);
+    expect(check(`${pin(F, 'actions/a')} ${pin(F, 'actions/b')}`, `${pin(T, 'actions/a')} ${pin(X, 'actions/b')}`, shared)).toBe(true);
+    expect(check(`${pin(F, 'actions/a')} ${pin(F, 'actions/b')}`, `${pin(X, 'actions/a')} ${pin(T, 'actions/b')}`, shared)).toBe(false);
+  });
+
+  test('three historical from-pins map only to their own pair; cross-pair swaps are rejected', () => {
+    const upload = [
+      { name: 'actions/upload-artifact', fromVersion: X, toVersion: T },
+      { name: 'actions/upload-artifact', fromVersion: F, toVersion: T },
+      { name: 'actions/upload-artifact', fromVersion: E, toVersion: T },
+    ];
+    for (const from of [X, F, E]) expect(check(pin(from), pin(T), upload)).toBe(true);
+    // A from-pin moving to another historical from-pin, or to a SHA that is nobody's target.
+    expect(check(pin(X), pin(F), upload)).toBe(false);
+    expect(check(pin(E), pin(X), upload)).toBe(false);
+    expect(check(pin(F), pin(E), upload)).toBe(false);
+    expect(check(pin(X), pin('1'.repeat(40)), upload)).toBe(false);
+    // A SHA that is the target on one side may not appear as the from-side change.
+    expect(check(pin(T), pin(F), upload)).toBe(false);
+  });
+
+  test('assertion operator and whitespace edits fail closed', () => {
+    expect(check(`  expect(w).toContain("actions/upload-artifact@${F}");`, `  expect(w).toContain("actions/upload-artifact@${T}");`)).toBe(true);
+    expect(check(`  expect(w).toContain("actions/upload-artifact@${F}");`, `  expect(w).not.toContain("actions/upload-artifact@${T}");`)).toBe(false);
+    expect(check(pin(F), pin(T).replace('",', '", '))).toBe(false);
+    // Corrupt only the first quote, then every quote; both must be rejected.
+    const quotedPin = pin(T);
+    const firstQuote = quotedPin.indexOf('"');
+    expect(firstQuote).toBeGreaterThanOrEqual(0);
+    expect(check(pin(F), `${quotedPin.slice(0, firstQuote)}'${quotedPin.slice(firstQuote + 1)}`)).toBe(false);
+    expect(check(pin(F), quotedPin.replaceAll('"', "'"))).toBe(false);
+    expect(check(pin(F), pin(T.toUpperCase()))).toBe(false);
+  });
+
+  test('allowlist is explicit paths with a named verifier, nothing else', () => {
+    expect([...GOVERNED_COMPANION_PATHS.keys()].sort()).toEqual([
+      '.kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json',
+      'apps/web/tests-unit/account-deletion-contract.test.ts',
+      'apps/web/tests-unit/nightly-regression-workflow.test.ts',
+      'apps/web/tests-unit/release-workflow-governance-source.test.ts',
+      'apps/web/tests-unit/review-media-sql-successor-workflow-contract.test.ts',
+      'apps/web/tests-unit/youtube-kpi-snapshot-contract.test.ts',
+      'backend/supabase/tests/test_g037_hosted_closure_workflow.py',
+      'backend/supabase/tests/test_g038_workflow.py',
+      'backend/supabase/tests/test_g040_prefix_recovery_workflow.py',
+      'backend/utils/tests/test_gdrive_frame_inventory.py',
+      'backend/utils/tests/test_run_daily_regression.py',
+    ]);
+    for (const path of GOVERNED_COMPANION_PATHS.keys()) expect(path.includes('*')).toBe(false);
+  });
+});
+
+describe('governed reconciliation manifest verifier', () => {
+  const repoRoot = resolve(import.meta.dir, '../../..');
+  const manifestText = readFileSync(resolve(repoRoot, RECONCILIATION_MANIFEST_PATH), 'utf8');
+  const base = JSON.parse(manifestText);
+  const sha1 = (seed: string) => createHash('sha1').update(seed).digest('hex');
+  const wf = base.entries.filter((e: { candidateInspectionPath: string; candidateGitBlobSha1: string | null }) =>
+    e.candidateInspectionPath.startsWith('.github/workflows/') && e.candidateGitBlobSha1).slice(0, 2);
+  const paths = wf.map((e: { candidateInspectionPath: string }) => e.candidateInspectionPath);
+  const render = (doc: unknown) => `${JSON.stringify(doc, null, 2)}\n`;
+  const rehash = (doc: any) => ({ ...doc, candidateContentSha256: manifestEntriesDigest(doc.entries) });
+  const clone = () => JSON.parse(manifestText);
+  const newBlobs = new Map<string, string>(paths.map((p: string, i: number) => [p, sha1(`new${i}`)]));
+  const oldBlobs = new Map<string, string>(wf.map((e: any) => [e.candidateInspectionPath, e.candidateGitBlobSha1]));
+  const goodAfter = () => {
+    const doc = clone();
+    for (const e of doc.entries) if (newBlobs.has(e.candidateInspectionPath)) e.candidateGitBlobSha1 = newBlobs.get(e.candidateInspectionPath);
+    return rehash(doc);
+  };
+  const ctx = (over: Record<string, unknown> = {}) => ({
+    modifiedFiles: new Set(paths), otherFiles: new Set<string>(), beforeBlobs: oldBlobs, afterBlobs: newBlobs, ...over,
+  });
+  const verify = (after: unknown, c = ctx()) => reconciliationManifestMirrorsOnly(manifestText, render(after), c);
+
+  test('checked-in derived hash is reproduced from the Python builder bytes', () => {
+    expect(manifestEntriesDigest(base.entries)).toBe(base.candidateContentSha256);
+    const py = execFileSync('python3', ['-c',
+      'import hashlib,json,sys;d=json.load(open(sys.argv[1]));'
+      + 'print(hashlib.sha256(json.dumps(d["entries"],sort_keys=True,separators=(",",":")).encode()).hexdigest())',
+      resolve(repoRoot, RECONCILIATION_MANIFEST_PATH)], { encoding: 'utf8' }).trim();
+    expect(py).toBe(manifestEntriesDigest(base.entries));
+  });
+
+  test('canonical JSON matches Python for escapes, unicode and key order', () => {
+    const sample = [{ z: 'a"b\\c\n\t\u0001\u007f', 'é': '한글 😀', a: [null, true, false, 0, -7, 12], b: {}, c: [] }];
+    const py = execFileSync('python3', ['-c',
+      'import json,sys;print(json.dumps(json.loads(sys.stdin.read()),sort_keys=True,separators=(",",":")),end="")'],
+    { input: JSON.stringify(sample), encoding: 'utf8' });
+    expect(pythonCanonicalJson(sample)).toBe(py);
+  });
+
+  test('exact blob-hash mirror with recomputed derived hash is admitted', () => {
+    expect(verify(goodAfter())).toBe(true);
+    expect(manifestTrackedPaths(manifestText, render(goodAfter()), new Set(paths))?.sort()).toEqual([...paths].sort());
+  });
+
+  test('every deviation fails closed', () => {
+    const mutate = (fn: (d: any) => void, rehashIt = true) => { const d = goodAfter(); fn(d); return rehashIt ? rehash(d) : d; };
+    const idx = (d: any) => d.entries.findIndex((e: any) => e.candidateInspectionPath === paths[0]);
+    const cases: Array<[string, unknown]> = [
+      ['stale derived hash', mutate(() => {}, false) && { ...goodAfter(), candidateContentSha256: base.candidateContentSha256 }],
+      ['non-hash field changed', mutate((d) => { d.entries[idx(d)].disposition = 'source_exact_present'; })],
+      ['contentState changed', mutate((d) => { d.entries[idx(d)].contentState = 'source_exact'; })],
+      ['rationale changed', mutate((d) => { d.entries[idx(d)].rationale = 'x'; })],
+      ['top-level count changed', mutate((d) => { d.sourceDeltaEntryCount += 1; })],
+      ['baseCommit changed', mutate((d) => { d.baseCommit = 'f'.repeat(40); })],
+      ['entry removed', mutate((d) => { d.entries.pop(); })],
+      ['entry added', mutate((d) => { d.entries.push({ ...d.entries[0] }); })],
+      ['entries reordered', mutate((d) => { [d.entries[0], d.entries[1]] = [d.entries[1], d.entries[0]]; })],
+      ['duplicate entry identity', mutate((d) => { d.entries[2] = { ...d.entries[1] }; })],
+      ['extra key on entry', mutate((d) => { d.entries[idx(d)].extra = 1; })],
+      ['blob set to null', mutate((d) => { d.entries[idx(d)].candidateGitBlobSha1 = null; })],
+      ['blob is not a sha1', mutate((d) => { d.entries[idx(d)].candidateGitBlobSha1 = 'abc'; })],
+      ['wrong blob (not the verified head blob)', mutate((d) => { d.entries[idx(d)].candidateGitBlobSha1 = sha1('wrong'); })],
+      ['inspection path non canonical', mutate((d) => { d.entries[idx(d)].candidateInspectionPath = `./${paths[0]}`; })],
+      ['schema changed', mutate((d) => { d.schemaVersion = 4; })],
+    ];
+    for (const [name, doc] of cases) expect([name, verify(doc)]).toEqual([name, false]);
+    // Context: file not modified by this PR, missing or wrong verified blobs.
+    expect(verify(goodAfter(), ctx({ modifiedFiles: new Set([paths[0]]) }))).toBe(false);
+    expect(verify(goodAfter(), ctx({ afterBlobs: new Map([[paths[0], newBlobs.get(paths[0])!]]) }))).toBe(false);
+    expect(verify(goodAfter(), ctx({ beforeBlobs: new Map(oldBlobs).set(paths[0], sha1('other')) }))).toBe(false);
+    expect(verify(goodAfter(), { modifiedFiles: new Set(paths) } as any)).toBe(false);
+    // Tracked path removed/renamed by the PR; tracked modified path whose blobs are not both verified.
+    expect(verify(goodAfter(), ctx({ otherFiles: new Set([paths[0]]) }))).toBe(false);
+    const extra = base.entries.find((e: any) => !paths.includes(e.candidateInspectionPath) && e.candidateGitBlobSha1);
+    expect(verify(goodAfter(), ctx({ modifiedFiles: new Set([...paths, extra.candidateInspectionPath]) }))).toBe(false);
+    expect(verify(goodAfter(), ctx({ modifiedFiles: new Set([...paths, extra.candidateInspectionPath]),
+      beforeBlobs: new Map(oldBlobs).set(extra.candidateInspectionPath, extra.candidateGitBlobSha1),
+      afterBlobs: new Map(newBlobs).set(extra.candidateInspectionPath, extra.candidateGitBlobSha1) }))).toBe(true);
+    // Formatting-only churn is not the builder rendering.
+    expect(reconciliationManifestMirrorsOnly(manifestText, JSON.stringify(goodAfter()), ctx())).toBe(false);
+    expect(reconciliationManifestMirrorsOnly(manifestText, JSON.stringify(goodAfter(), null, 4) + '\n', ctx())).toBe(false);
+    // Convert only the first line break, then all of them; both must be rejected.
+    const firstBreak = manifestText.indexOf('\n');
+    expect(firstBreak).toBeGreaterThanOrEqual(0);
+    expect(reconciliationManifestMirrorsOnly(`${manifestText.slice(0, firstBreak)}\r\n${manifestText.slice(firstBreak + 1)}`, render(goodAfter()), ctx())).toBe(false);
+    expect(reconciliationManifestMirrorsOnly(manifestText.replaceAll('\n', '\r\n'), render(goodAfter()), ctx())).toBe(false);
+    // No change at all, invalid JSON, wrong kind.
+    expect(verify(base)).toBe(false);
+    expect(reconciliationManifestMirrorsOnly(manifestText, '{', ctx())).toBe(false);
+    expect(reconciliationManifestMirrorsOnly(manifestText, render({ ...goodAfter(), kind: 'x' }), ctx())).toBe(false);
+  });
+
+  test('descriptor admits the manifest only inside a bumped Actions candidate with verified blob evidence', () => {
+    const F = '043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
+    const T = 'cf430e030ddbb5b0abf93d22962f4752f3646cd9';
+    const wfFiles = paths.map((p: string) => ({ filename: p, status: 'modified',
+      patch: `-      - uses: actions/upload-artifact@${F} # actions/upload-artifact@v4.3.3\n+      - uses: actions/upload-artifact@${T} # actions/upload-artifact@v7.0.2` }));
+    const files = [...wfFiles, { filename: RECONCILIATION_MANIFEST_PATH, status: 'modified' }];
+    const content = { before: manifestText, after: render(goodAfter()), beforeBlobs: oldBlobs, afterBlobs: newBlobs };
+    const ok = descriptor(pr, files, {}, { [RECONCILIATION_MANIFEST_PATH]: content });
+    expect(ok.metadataIncomplete).toBe(false);
+    expect(ok.packages.length).toBe(paths.length);
+    const bad = descriptor(pr, files, {}, { [RECONCILIATION_MANIFEST_PATH]: { ...content, afterBlobs: new Map() } });
+    expect(bad.metadataIncomplete).toBe(true);
+    const missing = descriptor(pr, files, {}, {});
+    expect(missing.metadataIncomplete).toBe(true);
+    const added = descriptor(pr, files.map((f) => f.filename === RECONCILIATION_MANIFEST_PATH ? { ...f, status: 'added' } : f), {},
+      { [RECONCILIATION_MANIFEST_PATH]: content });
+    expect(added.metadataIncomplete).toBe(true);
+    const alone = descriptor(pr, [{ filename: RECONCILIATION_MANIFEST_PATH, status: 'modified' }], {},
+      { [RECONCILIATION_MANIFEST_PATH]: content });
+    expect(alone.metadataIncomplete).toBe(true);
   });
 });

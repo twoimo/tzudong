@@ -33,20 +33,25 @@ import { chromium, expect as browserExpect } from '@playwright/test';
 }, 30_000);
 
 interface DraftFormGlobals {
- __setDraftOwner(id:string):void;__renewDraftOwner():Promise<void>;__readOwnerSubmission(owner:string,mode?:'new'|'request'):Promise<{restaurant_name:string}|null>; __seedReview(owner?:string,contentOnly?:boolean):Promise<unknown>; __readReview():Promise<{content:string}|null>; __seedReviewEdit():Promise<unknown>; __readReviewEdit():Promise<{content:string}|null>; __seedEdit(owner:string,name:string):Promise<unknown>; __readOwnerEdit(owner:string):Promise<{name:string}|null>;
+ __setDraftOwner(id:string):void;__renewDraftOwner():Promise<void>;__readOwnerSubmission(owner:string,mode?:'new'|'request'):Promise<{restaurant_name:string}|null>; __seedReview(owner?:string,contentOnly?:boolean):Promise<unknown>; __readReview():Promise<{content:string}|null>; __seedReviewEdit():Promise<unknown>; __readReviewEdit(owner?:string):Promise<{content:string}|null>; __draftAuthIO?:{hold:boolean;started:number;lastResolvedOwner?:string;release():void}; __seedEdit(owner:string,name:string):Promise<unknown>; __readOwnerEdit(owner:string):Promise<{name:string}|null>;
  __draftUI:{target():void;leave():void};
+ __reviewRecovery?:{mode:'commit'|'missing';calls:number;created:number;cancelled:number;commit:boolean;reject?:boolean;holdPreflight?:boolean;preflightEntered?:boolean;releasePreflight?():void};
 }
 const root = join(import.meta.dir, '..');
 const chrome = chromeForTestingExecutable();
-async function bundle(presentation: 'auto' | 'map-panel' = 'map-panel') {
-  const entry = `import React,{useState,useMemo} from 'react';import {createRoot} from 'react-dom/client';import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
+async function bundle(presentation: 'auto' | 'map-panel' = 'map-panel', recovery: 'commit' | 'missing' | null = null) {
+  const entry = `globalThis.__reviewRecovery=${recovery ? JSON.stringify({mode:recovery,calls:0,created:0,cancelled:0,commit:false}) : 'undefined'};import React,{useState,useMemo} from 'react';import {createRoot} from 'react-dom/client';import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
   import {ReviewModal} from './components/reviews/ReviewModal';import {saveDraft as seedReview,getDraft as readReview} from './lib/reviewDraftDB';globalThis.__readReview=()=>readReview('fixture-owner','11111111-1111-4111-8111-111111111111');globalThis.__seedReview=(owner='fixture-owner',contentOnly=false)=>seedReview({userId:owner,restaurantId:'11111111-1111-4111-8111-111111111111',currentStep:3,visitedDate:contentOnly?'':'2026-10-20',visitedTime:contentOnly?'':'12:00',categories:contentOnly?[]:['분식'],content:'첫 식당 합성 초안 원문'});import RestaurantSubmissionModal from './components/modals/RestaurantSubmissionModal';import {EditRestaurantModal} from './components/modals/EditRestaurantModal';import {ReviewEditModal} from './components/reviews/ReviewEditModal';import {getDraft as readSubmission} from './lib/submissionDraftDB';globalThis.__readSubmission=()=>readSubmission('fixture-owner','new');globalThis.__readOwnerSubmission=(owner,mode='new')=>readSubmission(owner,mode);
   const restaurant={id:'11111111-1111-4111-8111-111111111111',name:'합성 식당'};
   import {saveDraft as seedEdit,getDraft as readEdit} from './lib/editRequestDraftDB';globalThis.__seedEdit=(owner,name)=>seedEdit({userId:owner,restaurantId:restaurant.id,name,address:'합성 주소',phone:'',category:['분식'],youtube_reviews:[{youtube_link:'https://youtu.be/AbCdEfGhI12',tzuyang_review:'합성 자료',restaurant_id:restaurant.id}],requestKind:'edit',currentStep:1});globalThis.__readOwnerEdit=owner=>readEdit(owner,restaurant.id);
   const initial={name:'합성 식당',address:'합성 주소',phone:'',category:['분식'],youtube_reviews:[],requestKind:'edit'};
-  globalThis.__seedReviewEdit=()=>seedReview({userId:'fixture-owner',restaurantId:'edit_22222222-2222-4222-8222-222222222222',visitedDate:'',visitedTime:'',categories:['분식'],content:'보존할 합성 리뷰 수정 초안'});globalThis.__readReviewEdit=()=>readReview('fixture-owner','edit_22222222-2222-4222-8222-222222222222');
+  globalThis.__seedReviewEdit=()=>seedReview({userId:'fixture-owner',restaurantId:'edit_22222222-2222-4222-8222-222222222222',visitedDate:'',visitedTime:'',categories:['분식'],content:'보존할 합성 리뷰 수정 초안'});globalThis.__readReviewEdit=(owner='fixture-owner')=>readReview(owner,'edit_22222222-2222-4222-8222-222222222222');
   const review={id:'22222222-2222-4222-8222-222222222222',restaurantId:restaurant.id,restaurantName:restaurant.name,content:'합성 기존 리뷰 본문입니다. 실제 방문 기록이 아닙니다.',categories:['분식'],foodPhotos:[]};
-  globalThis.__draftIO={hold:false,started:0,release:()=>{}};globalThis.fetch=async()=>new Response('',{status:503});
+  globalThis.__draftIO={hold:false,started:0,release:()=>{}};globalThis.fetch=async(input,init)=>{
+    const io=globalThis.__editSubmitIO;if(String(input)!=='/api/mypage/submissions/edit'||!io)return new Response('',{status:503});
+    const body=JSON.parse(init.body);io.requests=(io.requests||0)+1;io.bodies??=[];io.bodies.push(body);io.actors??=[];io.actors.push(init.headers['X-Tzudong-Actor-Id']);io.entered=true;
+    return new Promise((resolve,reject)=>{io.release=()=>{io.commits=(io.commits||0)+1;if(io.failFirst&&io.requests===1)return reject(new Error('SYNTHETIC_RESPONSE_LOST'));resolve(new Response(JSON.stringify({ok:true,code:'EDIT_SUBMISSION_SAVED',id:'55555555-5555-4555-8555-555555555555',status:'pending',itemCount:body.payload.youtube_reviews.length}),{status:200}));};});
+  };
   function Fixture(){const [kind,setKind]=useState(null);const [target,setTarget]=useState(0);const targetRestaurant=useMemo(()=>target?{...restaurant,id:'33333333-3333-4333-8333-333333333333'}:restaurant,[target]);const targetReview=useMemo(()=>target?{...review,id:'44444444-4444-4444-8444-444444444444',restaurantId:targetRestaurant.id}:review,[target,targetRestaurant]);globalThis.__draftUI={leave:()=>setKind(null),target:()=>setTarget(value=>value?0:1)};return <><button onClick={()=>setKind('submission')}>제보 열기</button><button onClick={()=>setKind('edit')}>수정 요청 열기</button><button onClick={()=>setKind('review')}>리뷰 수정 열기</button><button onClick={()=>setKind('new-review')}>새 리뷰 열기</button>{kind==='submission'&&<RestaurantSubmissionModal isOpen onClose={()=>setKind(null)} presentation="${presentation}"/>}{kind==='edit'&&<EditRestaurantModal isOpen onClose={()=>setKind(null)} restaurant={targetRestaurant} initialFormData={initial} presentation="map-panel"/>}{kind==='new-review'&&<ReviewModal isOpen onClose={()=>setKind(null)} restaurant={targetRestaurant} presentation="map-panel"/>}{kind==='review'&&<ReviewEditModal isOpen onClose={()=>setKind(null)} review={targetReview}/>}</>}
   createRoot(document.getElementById('root')).render(<QueryClientProvider client={new QueryClient()}><Fixture/></QueryClientProvider>);`;
   const inert: Record<string, string> = {
@@ -54,13 +59,23 @@ async function bundle(presentation: 'auto' | 'map-panel' = 'map-panel') {
     'next/link': `import React from 'react';export default function Link(props){return <a {...props}/>}`,
     'next/navigation': 'export const useRouter=()=>({push(){},replace(){},refresh(){}});',
     '@/contexts/AuthContext': `import {useSyncExternalStore} from 'react';import {activateBrowserDraftOwner} from '@/lib/privacy/browser-draft-lifecycle';import {clearBrowserDraftsForUser} from '@/lib/privacy/browser-draft-cleanup';let user={id:'fixture-owner'};const listeners=new Set();globalThis.__setDraftOwner=id=>{globalThis.__sessionOwner=id;user={id};listeners.forEach(fn=>fn());};globalThis.__renewDraftOwner=async()=>{const id=user.id;await clearBrowserDraftsForUser(id);activateBrowserDraftOwner(id);user={id};listeners.forEach(fn=>fn());};const subscribe=fn=>{listeners.add(fn);return()=>listeners.delete(fn)};export const useAuth=()=>({user:useSyncExternalStore(subscribe,()=>user)});`,
-    '@/integrations/supabase/client': `export const getSupabaseBrowserClient=()=>supabase;export const commitSupabaseBrowserSession=async()=>{throw new Error('SYNTHETIC_AUTH_PUBLICATION_NOT_ALLOWED')};export const supabase={auth:{getUser:async()=>({data:{user:{id:globalThis.__sessionOwner||'fixture-owner'}}}),getSession:async()=>({data:{session:{user:{id:globalThis.__sessionOwner||'fixture-owner'}}}})},rpc(){throw new Error('REMOTE_RPC_FORBIDDEN')},from(table){const io=globalThis.__editSubmitIO;if(!io||!['restaurant_submissions','restaurant_submission_items'].includes(table))throw new Error('REMOTE_WRITE_FORBIDDEN');return {insert(){io.inserts=(io.inserts||0)+1;if(table==='restaurant_submissions')return {select(){return {single:async()=>({data:{id:'synthetic-submission'},error:null})}}};io.entered=true;return new Promise(resolve=>{io.release=()=>resolve({error:null})})}}},storage:{from(){return {upload(){throw new Error('REMOTE_MEDIA_FORBIDDEN')},list(){throw new Error('REMOTE_MEDIA_FORBIDDEN')},remove(){throw new Error('REMOTE_MEDIA_FORBIDDEN')}}}}};`,
+    '@/integrations/supabase/client': `export const getSupabaseBrowserClient=()=>supabase;export const commitSupabaseBrowserSession=async()=>{throw new Error('SYNTHETIC_AUTH_PUBLICATION_NOT_ALLOWED')};export const supabase={auth:{getUser:async()=>({data:{user:{id:globalThis.__sessionOwner||'fixture-owner'}}}),getSession:async()=>{const io=globalThis.__draftAuthIO;if(io?.hold){io.hold=false;io.started++;await new Promise(resolve=>{io.release=resolve;});}const id=globalThis.__sessionOwner||'fixture-owner';if(io)io.lastResolvedOwner=id;return {data:{session:{user:{id}}}};}},rpc(){throw new Error('REMOTE_RPC_FORBIDDEN')},from(){throw new Error('REMOTE_WRITE_FORBIDDEN')},storage:{from(){return {upload(){throw new Error('REMOTE_MEDIA_FORBIDDEN')},list(){throw new Error('REMOTE_MEDIA_FORBIDDEN')},remove(){throw new Error('REMOTE_MEDIA_FORBIDDEN')}}}}};`,
     // This UI fixture owns account identity and draft scheduling only. Actual
     // isolated issuer/session behavior has its own native auth boundary suite.
     '@/lib/auth/isolated-browser-account': `import {supabase} from '@/integrations/supabase/client';export const readCurrentBrowserAuthUser=()=>supabase.auth.getUser();const reject=async()=>{throw new Error('SYNTHETIC_ACCOUNT_WRITE_NOT_ALLOWED')};export const createMemoryAuthClient=reject;export const updateCurrentBrowserAuthUser=reject;export const reauthenticateBrowserAccount=reject;export const changeBrowserAccountPassword=reject;`,
     '@/lib/no-toast': `export const toast={success(){},error(){},warning(){},info(){}};`,
     '@/hooks/use-toast': `export const toast=()=>{};export const useToast=()=>({toast});`,
   };
+  if (recovery) {
+    inert['@/lib/runtime-feature-readiness-contract'] = `export const FEATURE_DATABASE_HELD_MESSAGE='합성 기능 대기';export const fetchFeatureDatabaseReadiness=async()=>({status:'ready'});`;
+    inert['@/lib/reviews/review-media-mutation'] = `export const createReviewMediaDependencies=(_client,owner)=>({owner});export const reviewMutationMessage=()=> '합성 요청 결과 확인 필요';export class ReviewMediaMutation {
+      constructor(deps){this.deps=deps;this.operation=null;this.active=false;}get running(){return this.active;}
+      get pending(){return this.operation!==null;}get pendingKind(){return this.operation?.kind??null;}get pendingOwnerId(){return this.operation?.ownerId??null;}get pendingReviewId(){return this.operation?.reviewId??null;}
+      get canCancelConfirmedMissingUpload(){return this.pending&&globalThis.__reviewRecovery.mode==='missing';}
+      async run(input){const io=globalThis.__reviewRecovery;this.active=true;try{if(!this.operation&&io.holdPreflight){io.holdPreflight=false;io.preflightEntered=true;await new Promise(resolve=>{io.releasePreflight=resolve;});}if(!this.operation){io.created++;this.operation={ownerId:input.ownerId,reviewId:input.reviewId,kind:input.kind};}if(this.deps.owner()!==this.operation.ownerId)throw new Error('SYNTHETIC_RECOVERY_OWNER_MISMATCH');io.calls++;if(io.reject){this.operation=null;return {committed:false,code:'REVIEW_CONFLICT'};}if(io.commit){this.operation=null;return {committed:true,code:'REVIEW_COMMITTED'};}return {committed:false,code:io.mode==='missing'?'REVIEW_UPLOAD_FAILED':'REVIEW_NOT_CONFIRMED'};}finally{this.active=false;}}
+      async cancelConfirmedMissingUpload(){const io=globalThis.__reviewRecovery;if(!this.pending||this.deps.owner()!==this.operation.ownerId)return false;io.cancelled++;this.operation=null;return true;}
+    }`;
+  }
   const built = await Bun.build({ entrypoints: ['mypage-draft-fixture'], target: 'browser', format: 'iife', write: false, define: { 'process.env.NODE_ENV': '"test"' }, plugins: [{ name: 'mypage-draft-fixture', setup(builder) {
     if (process.env.TZUDONG_SUBMISSION_DISCARD_BASELINE) builder.onLoad({filter:/RestaurantSubmissionModal\.tsx$/},()=>({contents:readFileSync(process.env.TZUDONG_SUBMISSION_DISCARD_BASELINE!,'utf8'),loader:'tsx',resolveDir:join(root,'components/modals')}));
     if (process.env.TZUDONG_EDIT_SUBMIT_BASELINE) builder.onLoad({filter:/EditRestaurantModal\.tsx$/},()=>({contents:readFileSync(process.env.TZUDONG_EDIT_SUBMIT_BASELINE!,'utf8'),loader:'tsx',resolveDir:join(root,'components/modals')}));
@@ -114,11 +129,36 @@ for (const kind of ['submission', 'edit', 'review'] as const) {
  }
 
 }
-async function prepare(page: import('@playwright/test').Page, presentation: 'auto' | 'map-panel' = 'map-panel') {
+async function prepare(page: import('@playwright/test').Page, presentation: 'auto' | 'map-panel' = 'map-panel', recovery: 'commit' | 'missing' | null = null) {
   await page.route('**/*', route => route.request().resourceType() === 'document'
     ? route.fulfill({contentType:'text/html',body:'<!doctype html><html><body><div id="root"></div></body></html>'}) : route.abort());
-  await page.goto('https://mypage-drafts.test/'); await page.addScriptTag({content:await bundle(presentation)});
+  await page.goto('https://mypage-drafts.test/'); await page.addScriptTag({content:await bundle(presentation,recovery)});
 }
+for (const width of [390, 820]) (existsSync(chrome) ? test : test.skip)(`edit request at ${width}px waits for final confirmation before submitting`, async () => {
+  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width, height: 900 } });
+    await prepare(page, 'auto');
+    await page.evaluate(async () => {
+      await (globalThis as unknown as DraftFormGlobals).__seedEdit('fixture-owner', '최종 확인할 합성 수정 요청');
+      (globalThis as unknown as { __editSubmitIO: unknown }).__editSubmitIO = { requests: 0, entered: false, release: () => {} };
+    });
+    await page.getByRole('button', { name: '수정 요청 열기', exact: true }).click();
+    await browserExpect(page.getByPlaceholder('맛집 이름을 입력해주세요')).toHaveValue('최종 확인할 합성 수정 요청');
+    await page.getByRole('button', { name: '다음', exact: true }).click();
+    await page.getByRole('button', { name: '다음', exact: true }).click();
+    const submit = page.getByRole('button', { name: '수정 요청 제출', exact: true });
+    await browserExpect(submit).toBeEnabled();
+    expect(await page.evaluate(() => (globalThis as unknown as { __editSubmitIO: { requests: number } }).__editSubmitIO.requests)).toBe(0);
+    await submit.click();
+    await page.waitForFunction(() => (globalThis as unknown as { __editSubmitIO: { entered: boolean } }).__editSubmitIO.entered);
+    expect(await page.evaluate(() => (globalThis as unknown as { __editSubmitIO: { requests: number } }).__editSubmitIO.requests)).toBe(1);
+    await page.evaluate(() => (globalThis as unknown as { __editSubmitIO: { release(): void } }).__editSubmitIO.release());
+    await browserExpect(submit).toHaveCount(0);
+  } finally {
+    await browser.close();
+  }
+}, 30_000);
 for (const mode of ['new', 'request'] as const) (existsSync(chrome) ? test : test.skip)(`late successful ${mode} submission cannot delete or close the next account draft`, async () => {
   const browser = await chromium.launch({ executablePath: chrome, headless: true });
   try {
@@ -247,15 +287,51 @@ for (const kind of ['submission','edit','review'] as const) {
  } finally {await browser.close();}
 },30_000);
 
+async function persistedOwnerDraftText(page: import('@playwright/test').Page, kind: 'submission' | 'edit' | 'review', owner: string) {
+  return page.evaluate(async ({ kind, owner }) => {
+    const globals = globalThis as unknown as DraftFormGlobals;
+    if (kind === 'submission') return (await globals.__readOwnerSubmission(owner))?.restaurant_name ?? null;
+    if (kind === 'edit') return (await globals.__readOwnerEdit(owner))?.name ?? null;
+    return (await globals.__readReviewEdit(owner))?.content ?? null;
+  }, { kind, owner });
+}
+
 for(const kind of ['submission','edit','review'] as const)(existsSync(chrome)?test:test.skip)(`actual ${kind} form isolates text when the account changes without remount`,async()=>{
  const browser=await chromium.launch({executablePath:chrome,headless:true});
  try{
   const page=await browser.newPage();await prepare(page);await page.getByRole('button',{name:{submission:'제보 열기',edit:'수정 요청 열기',review:'리뷰 수정 열기'}[kind],exact:true}).click();
   const field=kind==='submission'?page.getByPlaceholder('예: 명동 짜장면'):kind==='edit'?page.getByPlaceholder('맛집 이름을 입력해주세요'):page.locator('textarea:visible');await browserExpect(field).toBeEnabled();await field.fill('첫 계정의 합성 초안');
+  // Restoration requires a committed draft; a session change may reject a pending save.
+  await browserExpect.poll(()=>persistedOwnerDraftText(page,kind,'fixture-owner')).toBe('첫 계정의 합성 초안');
   await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__setDraftOwner('fixture-other-owner'));await browserExpect(field).toBeEnabled();await browserExpect(field).not.toHaveValue('첫 계정의 합성 초안');await field.fill('둘째 계정의 합성 초안');
+  await browserExpect.poll(()=>persistedOwnerDraftText(page,kind,'fixture-other-owner')).toBe('둘째 계정의 합성 초안');
   await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__setDraftOwner('fixture-owner'));if(kind==='submission')await page.getByRole('button',{name:'복원하기',exact:true}).click();await browserExpect(field).toHaveValue('첫 계정의 합성 초안');
  }finally{await browser.close();}
 },30000);
+(existsSync(chrome)?test:test.skip)('a pending review draft save rejected by the next account preserves the committed draft', async()=>{
+  const browser=await chromium.launch({executablePath:chrome,headless:true});
+  try {
+    const page=await browser.newPage();await prepare(page);
+    await page.getByRole('button',{name:'리뷰 수정 열기',exact:true}).click();
+    const field=page.locator('textarea:visible');await browserExpect(field).toBeEnabled();
+    await field.fill('보존할 첫 계정의 저장된 합성 초안');
+    await browserExpect.poll(()=>persistedOwnerDraftText(page,'review','fixture-owner')).toBe('보존할 첫 계정의 저장된 합성 초안');
+    await page.evaluate(()=>{(globalThis as unknown as DraftFormGlobals).__draftAuthIO={hold:true,started:0,release(){}};});
+    await field.fill('계정 전환 중 저장을 거부할 합성 입력');
+    await browserExpect.poll(()=>page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__draftAuthIO?.started)).toBe(1);
+    await page.evaluate(()=>{const globals=globalThis as unknown as DraftFormGlobals;globals.__setDraftOwner('fixture-other-owner');globals.__draftAuthIO?.release();});
+    await browserExpect.poll(()=>page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__draftAuthIO?.lastResolvedOwner)).toBe('fixture-other-owner');
+    await browserExpect(field).toBeEnabled();
+    await browserExpect(field).not.toHaveValue('계정 전환 중 저장을 거부할 합성 입력');
+    expect(await persistedOwnerDraftText(page,'review','fixture-owner')).toBe('보존할 첫 계정의 저장된 합성 초안');
+    await field.fill('둘째 계정의 분리된 합성 초안');
+    await browserExpect.poll(()=>persistedOwnerDraftText(page,'review','fixture-other-owner')).toBe('둘째 계정의 분리된 합성 초안');
+    await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__setDraftOwner('fixture-owner'));
+    await browserExpect(field).toBeEnabled();
+    await browserExpect(field).toHaveValue('보존할 첫 계정의 저장된 합성 초안');
+  } finally {await browser.close();}
+},30000);
+
 for(const kind of ['edit','review'] as const)(existsSync(chrome)?test:test.skip)(`actual ${kind} form isolates immediate edits between two restaurant targets`,async()=>{
  const browser=await chromium.launch({executablePath:chrome,headless:true});
  try{
@@ -407,9 +483,51 @@ for (const discard of [false,true]) {
   await browserExpect(name).toHaveValue('다음 계정 보존할 합성 수정 초안');
   await page.evaluate(() => (globalThis as unknown as {__editSubmitIO:{release():void}}).__editSubmitIO.release());
   await browserExpect(page.getByRole('button',{name:'제출 중...',exact:true})).toHaveCount(0);
+  expect(await page.evaluate(() => (globalThis as unknown as {__editSubmitIO:{requests:number;commits:number;actors:string[]}}).__editSubmitIO)).toMatchObject({requests:1,commits:1,actors:['fixture-owner']});
   await browserExpect.poll(() => page.evaluate(async () => (await (globalThis as unknown as DraftFormGlobals).__readOwnerEdit('fixture-other-owner'))?.name)).toBe('다음 계정 보존할 합성 수정 초안');
   await browserExpect(name).toHaveValue('다음 계정 보존할 합성 수정 초안');
  } finally { await browser.close(); }
+},30000);
+
+(existsSync(chrome) ? test : test.skip)('edit request continues its server transaction after composer unmount', async () => {
+ const browser=await chromium.launch({executablePath:chrome,headless:true});
+ try {
+  const page=await browser.newPage({viewport:{width:1440,height:900}});await prepare(page);
+  await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__seedEdit('fixture-owner','이동 중 보존할 합성 수정 요청'));
+  await page.getByRole('button',{name:'수정 요청 열기',exact:true}).click();
+  await browserExpect(page.getByPlaceholder('맛집 이름을 입력해주세요')).toHaveValue('이동 중 보존할 합성 수정 요청');
+  await page.getByRole('button',{name:'다음',exact:true}).click();await page.getByRole('button',{name:'다음',exact:true}).click();
+  await page.evaluate(()=>{(globalThis as unknown as {__editSubmitIO:unknown}).__editSubmitIO={entered:false,release:()=>{}};});
+  await page.getByRole('button',{name:'수정 요청 제출',exact:true}).click();
+  await page.waitForFunction(()=>(globalThis as unknown as {__editSubmitIO:{entered:boolean}}).__editSubmitIO.entered);
+  await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__draftUI.leave());
+  await page.evaluate(()=>(globalThis as unknown as {__editSubmitIO:{release():void}}).__editSubmitIO.release());
+  await browserExpect.poll(()=>page.evaluate(()=>(globalThis as unknown as {__editSubmitIO:{commits:number}}).__editSubmitIO.commits)).toBe(1);
+  expect(await page.evaluate(()=>(globalThis as unknown as {__editSubmitIO:{requests:number}}).__editSubmitIO.requests)).toBe(1);
+  expect((await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__readOwnerEdit('fixture-owner')))?.name).toBe('이동 중 보존할 합성 수정 요청');
+ } finally {await browser.close();}
+},30000);
+
+(existsSync(chrome) ? test : test.skip)('edit response loss retains the draft and reuses its original request key', async () => {
+ const browser=await chromium.launch({executablePath:chrome,headless:true});
+ try {
+  const page=await browser.newPage({viewport:{width:1440,height:900}});await prepare(page);
+  await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__seedEdit('fixture-owner','결과 확인할 합성 수정 요청'));
+  await page.getByRole('button',{name:'수정 요청 열기',exact:true}).click();
+  await browserExpect(page.getByPlaceholder('맛집 이름을 입력해주세요')).toHaveValue('결과 확인할 합성 수정 요청');
+  await page.getByRole('button',{name:'다음',exact:true}).click();await page.getByRole('button',{name:'다음',exact:true}).click();
+  await page.evaluate(()=>{(globalThis as unknown as {__editSubmitIO:unknown}).__editSubmitIO={entered:false,release:()=>{},failFirst:true};});
+  const submit=page.getByRole('button',{name:'수정 요청 제출',exact:true});await submit.click();
+  await page.waitForFunction(()=>(globalThis as unknown as {__editSubmitIO:{entered:boolean}}).__editSubmitIO.entered);
+  await page.evaluate(()=>(globalThis as unknown as {__editSubmitIO:{release():void}}).__editSubmitIO.release());
+  await browserExpect(submit).toBeEnabled();
+  expect((await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__readOwnerEdit('fixture-owner')))?.name).toBe('결과 확인할 합성 수정 요청');
+  await submit.click();await page.waitForFunction(()=>(globalThis as unknown as {__editSubmitIO:{requests:number}}).__editSubmitIO.requests===2);
+  const keys=await page.evaluate(()=>(globalThis as unknown as {__editSubmitIO:{bodies:Array<{clientRequestKey:string}>}}).__editSubmitIO.bodies.map(body=>body.clientRequestKey));
+  expect(keys[0]).toBe(keys[1]);
+  await page.evaluate(()=>(globalThis as unknown as {__editSubmitIO:{release():void}}).__editSubmitIO.release());
+  await browserExpect(submit).toHaveCount(0);
+ } finally {await browser.close();}
 },30000);
 
 (existsSync(chrome) ? test : test.skip)('clearing a content-only review persists the empty revision through route return', async () => {
@@ -481,14 +599,14 @@ for(const mode of ['new','request'] as const) (existsSync(chrome)?test:test.skip
  }finally{await browser.close();}
 },30000);
 
-(existsSync(chrome)?test:test.skip)('committed edit request retries draft cleanup without another insert',async()=>{
+(existsSync(chrome)?test:test.skip)('committed edit request retries draft cleanup without another request',async()=>{
  const browser=await chromium.launch({executablePath:chrome,headless:true});try{
   const page=await browser.newPage({viewport:{width:1440,height:900}});await prepare(page);await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__seedEdit('fixture-owner','정리 재시도 합성 수정 요청'));
   await page.getByRole('button',{name:'수정 요청 열기',exact:true}).click();const field=page.getByPlaceholder('맛집 이름을 입력해주세요');await browserExpect(field).toHaveValue('정리 재시도 합성 수정 요청');await page.getByRole('button',{name:'다음',exact:true}).click();await page.getByRole('button',{name:'다음',exact:true}).click();
-  await page.evaluate(()=>{(globalThis as unknown as {__editSubmitIO:unknown}).__editSubmitIO={entered:false,release:()=>{},inserts:0};(globalThis as unknown as {__draftIO:{failDelete:boolean}}).__draftIO.failDelete=true;});
+  await page.evaluate(()=>{(globalThis as unknown as {__editSubmitIO:unknown}).__editSubmitIO={entered:false,release:()=>{},requests:0};(globalThis as unknown as {__draftIO:{failDelete:boolean}}).__draftIO.failDelete=true;});
   await page.getByRole('button',{name:'수정 요청 제출',exact:true}).click();await page.waitForFunction(()=>(globalThis as unknown as {__editSubmitIO:{entered:boolean}}).__editSubmitIO.entered);await page.evaluate(()=>(globalThis as unknown as {__editSubmitIO:{release():void}}).__editSubmitIO.release());
   await browserExpect(page.getByRole('button',{name:'제출한 초안 정리 다시 시도',exact:true})).toBeVisible();await page.getByRole('button',{name:'제출한 초안 정리 다시 시도',exact:true}).click();
-  await browserExpect(field).toHaveCount(0);expect(await page.evaluate(()=>(globalThis as unknown as {__editSubmitIO:{inserts:number}}).__editSubmitIO.inserts)).toBe(2);expect(await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__readOwnerEdit('fixture-owner'))).toBeNull();
+  await browserExpect(field).toHaveCount(0);expect(await page.evaluate(()=>(globalThis as unknown as {__editSubmitIO:{requests:number}}).__editSubmitIO.requests)).toBe(1);expect(await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__readOwnerEdit('fixture-owner'))).toBeNull();
  }finally{await browser.close();}
 },30000);
 
@@ -525,3 +643,106 @@ for (const presentation of ['auto', 'map-panel'] as const) test(`pending submitt
     await browserExpect(page.getByRole('button', { name: '제출 중...', exact: true })).toHaveCount(0);
   } finally { await browser.close(); }
 }, 20000);
+
+
+for (const width of [1440,390]) for (const mode of ['commit','missing'] as const) test(`pending review ${mode} recovery at ${width}px survives a renewed draft epoch without changing the original operation`, async()=>{
+ const browser=await chromium.launch({executablePath:chrome,headless:true});
+ try {
+  const page=await browser.newPage({viewport:{width,height:900}});await prepare(page,'map-panel',mode);
+  await page.getByRole('button',{name:'리뷰 수정 열기',exact:true}).click();
+  const field=page.locator('textarea:visible');await browserExpect(field).toBeEditable();
+  await field.fill('첫 계정에서 전송할 합성 리뷰 변경 내용입니다.');
+  await page.locator('input[type="file"]').setInputFiles({name:'synthetic-food.png',mimeType:'image/png',buffer:Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 4, 0, 0, 0, 181, 28, 12, 2, 0, 0, 0, 11, 73, 68, 65, 84, 120, 218, 99, 252, 255, 31, 0, 3, 3, 2, 0, 239, 154, 209, 223, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130])});
+  await page.getByRole('button',{name:'수정 완료',exact:true}).click();
+  const recover=page.getByRole('button',{name:mode==='commit'?'같은 요청 다시 확인':'실패한 업로드 취소',exact:true});
+  await browserExpect(recover).toBeEnabled();await browserExpect(field).toBeDisabled();
+  await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__setDraftOwner('fixture-other-owner'));
+  const nextFrameValue=await page.evaluate(()=>new Promise<string>(resolve=>requestAnimationFrame(()=>resolve(document.querySelector('textarea')?.value??''))));
+  expect(nextFrameValue).toBe('');await browserExpect(recover).toBeDisabled();
+  await page.evaluate(async()=>{const g=globalThis as unknown as DraftFormGlobals;g.__setDraftOwner('fixture-owner');await g.__renewDraftOwner();await g.__seedReviewEdit();if(g.__reviewRecovery)g.__reviewRecovery.commit=true;});
+  await browserExpect(field).toBeDisabled();await browserExpect(recover).toBeEnabled();
+  await recover.click();
+  if(mode==='commit')await browserExpect(field).toHaveCount(0);
+  else {await browserExpect(field).toBeEditable();await browserExpect(field).toHaveValue('보존할 합성 리뷰 수정 초안');}
+  expect((await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__readReviewEdit()))?.content).toBe('보존할 합성 리뷰 수정 초안');
+  const io=await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__reviewRecovery);
+  expect(io?.created).toBe(1);expect(io?.calls).toBe(mode==='commit'?2:1);expect(io?.cancelled).toBe(mode==='missing'?1:0);
+ } finally {await browser.close();}
+},30000);
+
+for (const width of [1440, 390]) for (const transition of ['epoch', 'review'] as const) test(`in-flight review preflight at ${width}px keeps recovery through ${transition} changes`, async () => {
+ const browser = await chromium.launch({ executablePath: chrome, headless: true });
+ try {
+  const page = await browser.newPage({ viewport: { width, height: 900 } });
+  await prepare(page, 'map-panel', 'commit');
+  await page.getByRole('button', { name: '리뷰 수정 열기', exact: true }).click();
+  await browserExpect(page.locator('textarea:visible')).toBeEditable();
+  await page.evaluate(() => { (globalThis as unknown as DraftFormGlobals).__reviewRecovery!.holdPreflight = true; });
+  await page.getByTitle('리뷰 삭제', { exact: true }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: '삭제', exact: true }).click();
+  await page.waitForFunction(() => (globalThis as unknown as DraftFormGlobals).__reviewRecovery?.preflightEntered);
+  expect((await page.evaluate(() => (globalThis as unknown as DraftFormGlobals).__reviewRecovery))?.created).toBe(0);
+  await page.evaluate(async transition => {
+   const g = globalThis as unknown as DraftFormGlobals;
+   if (transition === 'epoch') await g.__renewDraftOwner();
+   else g.__draftUI.target();
+  }, transition);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.evaluate(() => (globalThis as unknown as DraftFormGlobals).__reviewRecovery!.releasePreflight!());
+  const recover = page.getByRole('button', { name: '같은 요청 다시 확인', exact: true });
+  if (transition === 'review') {
+   await browserExpect(recover).toBeDisabled();
+   await page.evaluate(() => (globalThis as unknown as DraftFormGlobals).__draftUI.target());
+  }
+  await browserExpect(recover).toBeEnabled();
+  await page.evaluate(() => { (globalThis as unknown as DraftFormGlobals).__reviewRecovery!.commit = true; });
+  await recover.click();
+  await browserExpect(page.locator('textarea:visible')).toHaveCount(0);
+  expect(await page.evaluate(() => (globalThis as unknown as DraftFormGlobals).__reviewRecovery)).toMatchObject({ created: 1, calls: 2 });
+ } finally { await browser.close(); }
+}, 30_000);
+
+for (const width of [1440, 390]) test(`definitively rejected review recovery at ${width}px reloads the current draft`, async () => {
+ const browser = await chromium.launch({ executablePath: chrome, headless: true });
+ try {
+  const page = await browser.newPage({ viewport: { width, height: 900 } });
+  await prepare(page, 'map-panel', 'commit');
+  await page.getByRole('button', { name: '리뷰 수정 열기', exact: true }).click();
+  const field = page.locator('textarea:visible');
+  await browserExpect(field).toBeEditable();
+  await page.getByTitle('리뷰 삭제', { exact: true }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: '삭제', exact: true }).click();
+  const recover = page.getByRole('button', { name: '같은 요청 다시 확인', exact: true });
+  await browserExpect(recover).toBeEnabled();
+  await page.evaluate(async () => {
+   const g = globalThis as unknown as DraftFormGlobals;
+   await g.__renewDraftOwner(); await g.__seedReviewEdit();
+   g.__reviewRecovery!.reject = true;
+  });
+  await browserExpect(field).toBeDisabled();
+  await browserExpect(recover).toBeEnabled();
+  await recover.click();
+  await browserExpect(recover).toHaveCount(0);
+  await browserExpect(field).toBeEditable();
+  await browserExpect(field).toHaveValue('보존할 합성 리뷰 수정 초안');
+  expect((await page.evaluate(() => (globalThis as unknown as DraftFormGlobals).__readReviewEdit()))?.content).toBe('보존할 합성 리뷰 수정 초안');
+  expect(await page.evaluate(() => (globalThis as unknown as DraftFormGlobals).__reviewRecovery)).toMatchObject({ created: 1, calls: 2 });
+ } finally { await browser.close(); }
+}, 30_000);
+
+test('pending review confirmation stays reachable after the same owner signs in again', async()=>{
+ const browser=await chromium.launch({executablePath:chrome,headless:true});
+ try {
+  const page=await browser.newPage({viewport:{width:1440,height:900}});await prepare(page,'map-panel','commit');
+  await page.getByRole('button',{name:'리뷰 수정 열기',exact:true}).click();
+  const field=page.locator('textarea:visible');await browserExpect(field).toBeEditable();
+  await field.fill('재로그인 전 결과가 불확실한 합성 리뷰 수정입니다.');
+  await page.locator('input[type="file"]').setInputFiles({name:'synthetic-food.png',mimeType:'image/png',buffer:Buffer.from([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,1,0,0,0,1,8,4,0,0,0,181,28,12,2,0,0,0,11,73,68,65,84,120,218,99,252,255,31,0,3,3,2,0,239,154,209,223,0,0,0,0,73,69,78,68,174,66,96,130])});
+  await page.getByRole('button',{name:'수정 완료',exact:true}).click();
+  const recover=page.getByRole('button',{name:'같은 요청 다시 확인',exact:true});await browserExpect(recover).toBeEnabled();
+  await page.evaluate(async()=>{const g=globalThis as unknown as DraftFormGlobals;await g.__renewDraftOwner();await g.__seedReviewEdit();if(g.__reviewRecovery)g.__reviewRecovery.commit=true;});
+  await browserExpect(recover).toBeEnabled();await recover.click();await browserExpect(field).toHaveCount(0);
+  expect((await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__readReviewEdit()))?.content).toBe('보존할 합성 리뷰 수정 초안');
+  expect(await page.evaluate(()=>(globalThis as unknown as DraftFormGlobals).__reviewRecovery)).toMatchObject({created:1,calls:2});
+ } finally {await browser.close();}
+},30000);

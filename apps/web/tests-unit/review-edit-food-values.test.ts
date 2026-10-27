@@ -157,12 +157,13 @@ describe('authoritative food values in review editing', () => {
             user: { id: ownership.ownerId }, foodPhotoOwnership: ownership, ownerRef: { current: ownership.ownerId },
             captureBrowserDraftEpoch, isBrowserDraftEpochCurrent, draftScope: 'scope', currentDraftScope: { current: 'scope' },
             content: 'Edited synthetic content', categories: ['한식'], existingFoodPhotos: [...remaining, 'injected value'], newFoodPhotos: [],
-            isSubmitting: false, isDeleting: false,
+            isSubmitting: false, isDeleting: false, draftLoaded: true,
             draftAutosave: { cancel() {}, settle: async () => true, resume() {} },
             mutationRef: { current: { pendingKind: 'edit', canCancelConfirmedMissingUpload: false, run: async (input: typeof submitted) => {
                 submitted = input; return { committed: false, code: 'REVIEW_NOT_CONFIRMED' };
             } } },
             setIsSubmitting() {}, setIsDeleting() {}, setRetryKind() {}, setCanCancelMissingUpload() {}, setCleanupFailureMessage() {},
+            syncPendingRecovery: () => false,
             reviewMutationMessage: () => 'UNCONFIRMED', toast() {},
         });
         await submit('edit');

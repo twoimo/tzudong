@@ -13,6 +13,7 @@ const MAX_CONTENT_LENGTH = 4_000;
 const MAX_CATEGORY_LENGTH = 16;
 const MAX_CATEGORIES = 15;
 const MAX_RECORD_BYTES = 16 * 1024;
+const legacyRecoveryPositions = new WeakMap<BrowserDraftEpoch, { namespace: number; after?: [string, string] }>();
 const DRAFT_CATEGORIES = new Set([
     '치킨',
     '중식',
@@ -632,8 +633,18 @@ export async function recoverLegacyDrafts(userId: string): Promise<number> {
         let count = existingCount;
         let imported = 0;
         let scanned = 0;
-        for (const legacyOwner of legacyDraftStorageOwnerKeys(userId)) {
-            let cursor = await index.openCursor(legacyOwner);
+        const legacyOwners = legacyDraftStorageOwnerKeys(userId);
+        const progress = legacyRecoveryPositions.get(epoch);
+        let namespace = progress?.namespace ?? 0;
+        let after = progress?.after;
+        for (; namespace < legacyOwners.length && scanned < MAX_DRAFTS_PER_USER && count < MAX_DRAFTS_PER_USER; namespace++) {
+            const legacyOwner = legacyOwners[namespace];
+            // A closed upper endpoint cannot become an exclusive lower bound.
+            if (after && after[1] >= '\uffff') { after = undefined; continue; }
+            let cursor = await transaction.store.openCursor(IDBKeyRange.bound(
+                after ?? [legacyOwner, ''], [legacyOwner, '\uffff'], after !== undefined,
+            ));
+            after = undefined;
             while (cursor && scanned < MAX_DRAFTS_PER_USER && count < MAX_DRAFTS_PER_USER) {
                 const row = readPersistedReviewDraft(cursor.value);
                 const candidate = row && readPersistedReviewDraft({ ...row, userId: draftStorageOwnerKey(userId) });
@@ -652,11 +663,18 @@ export async function recoverLegacyDrafts(userId: string): Promise<number> {
                     }
                 }
                 scanned++;
+                after = cursor.primaryKey;
+                if (scanned >= MAX_DRAFTS_PER_USER || count >= MAX_DRAFTS_PER_USER) break;
                 cursor = await cursor.continue();
             }
+            if (cursor) break;
+            after = undefined;
         }
         await transaction.done;
         assertBrowserDraftWrite(userId, epoch);
+        // Commit progress with the copy, never with an aborted or stale session.
+        if (namespace < legacyOwners.length) legacyRecoveryPositions.set(epoch, { namespace, after });
+        else legacyRecoveryPositions.delete(epoch);
         return imported;
     } catch {
         try { transaction.abort(); } catch { /* It may already have completed. */ }
