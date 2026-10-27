@@ -131,4 +131,43 @@ describe('bounded nightly unit failure source coordinates', () => {
       unlinkSync(log); rmdirSync(dir);
     }
   });
+
+  test('passes one bounded gap record through on rejection without retaining content', () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'nightly-unit-gap-'));
+    const log = path.join(dir, 'unit.log');
+    try {
+      const gap = JSON.stringify({ schema: 'nightly-unit-diagnostic-gap-v1', stage: 'derive', xml_bytes: 0, exit_code: -9, signal: 9 });
+      writeFileSync(log, `discarded-private-log-${canary}\nNIGHTLY_UNIT_DIAGNOSTIC_GAP=${gap}\n`, { mode: 0o600 });
+      const r = spawnSync('python3', [script, '--log', log, '--exit-code', '1'], { encoding: 'utf8' });
+      if (process.platform === 'win32') { expect(r.status).toBe(1); return; }
+      expect(r.status).toBe(1);
+      expect(r.stdout).toBe(`NIGHTLY_UNIT_DIAGNOSTIC_GAP=${gap}\n`);
+      expect(r.stdout + r.stderr).not.toContain(canary);
+      expect(r.stderr.trim()).toBe('unit_diagnostic_unavailable');
+      const three = [1, 2, 3].map(() => `NIGHTLY_UNIT_DIAGNOSTIC_GAP=${gap}`).join('\n');
+      writeFileSync(log, `${three}\n`, { mode: 0o600 });
+      const over = spawnSync('python3', [script, '--log', log], { encoding: 'utf8' });
+      expect(over.status).toBe(1);
+      expect(over.stdout.split('\n').filter((line) => line.startsWith('NIGHTLY_UNIT_DIAGNOSTIC_GAP='))).toHaveLength(2);
+      expect(over.stdout + over.stderr).not.toContain(canary);
+      const bad = JSON.stringify({ schema: 'nightly-unit-diagnostic-gap-v1', stage: 'derive', xml_bytes: 0, exit_code: -9, signal: 9, raw: canary });
+      writeFileSync(log, `NIGHTLY_UNIT_DIAGNOSTIC_GAP=${bad}\n`, { mode: 0o600 });
+      const rejected = spawnSync('python3', [script, '--log', log], { encoding: 'utf8' });
+      expect(rejected.status).toBe(1);
+      expect(rejected.stdout).toBe('');
+      expect(rejected.stdout + rejected.stderr).not.toContain(canary);
+    } finally {
+      unlinkSync(log); rmdirSync(dir);
+    }
+  });
+
+  test('run-linux emits a bounded gap record instead of a silent rejection', () => {
+    if (process.platform !== 'linux') return;
+    const r = spawnSync('python3', [script, '--run-linux'], { input: 'not-json', encoding: 'utf8' });
+    expect(r.status).toBe(1);
+    const line = r.stdout.trim();
+    expect(line.startsWith('NIGHTLY_UNIT_DIAGNOSTIC_GAP=')).toBe(true);
+    const gap = JSON.parse(line.slice('NIGHTLY_UNIT_DIAGNOSTIC_GAP='.length));
+    expect(gap).toEqual({ schema: 'nightly-unit-diagnostic-gap-v1', stage: 'input', xml_bytes: 0, exit_code: null, signal: null });
+  });
 });
