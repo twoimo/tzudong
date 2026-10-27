@@ -55,6 +55,62 @@ const fixture = (page: Page) => page.evaluate(() => (globalThis as unknown as { 
 const press = async (target: ReturnType<Page['locator']>) => { await target.focus(); await target.press('Enter'); };
 const setFail = (page: Page, fail: string | null) => page.evaluate(value => { (globalThis as unknown as { __knowledgeFixture: Fixture }).__knowledgeFixture.fail = value; }, fail);
 
+(existsSync(chrome) ? test : test.skip)('the initial search debounce does not reset a page reached before its deadline', async () => {
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
+  try {
+    const script = await bundle();
+    for (const width of [1280, 390]) {
+      const context = await browser.newContext({ viewport: { width, height: 900 } });
+      try {
+        const page = await context.newPage();
+        page.setDefaultTimeout(5_000);
+        let externalRequests = 0;
+        await page.route('**/*', route => {
+          if (route.request().url() === 'https://knowledge.test/admin') return route.fulfill({ contentType: 'text/html', body: '<!doctype html><body></body>' });
+          externalRequests++;
+          return route.abort();
+        });
+        await page.clock.install({ time: new Date('2026-10-27T00:00:00Z') });
+        await page.addInitScript(() => { (globalThis as unknown as { process: unknown }).process = { env: { NODE_ENV: 'test' } }; });
+        await page.goto('https://knowledge.test/admin');
+        await page.clock.pauseAt(new Date('2026-10-27T00:01:00Z'));
+        await page.addScriptTag({ content: script });
+        const advanceUntilVisible = async (target: ReturnType<Page['locator']>, budget: number) => {
+          let advanced = 0;
+          while (!await target.isVisible() && advanced < budget) {
+            await page.clock.runFor(1);
+            advanced++;
+          }
+          await playwrightExpect(target).toBeVisible();
+          return advanced;
+        };
+        const node = (n: number) => page.locator(`[data-knowledge-node="node-${n}"]`);
+        const initialTicks = await advanceUntilVisible(node(1), 100);
+        await press(page.getByRole('button', { name: '다음 지식 페이지' }));
+        const nextTicks = await advanceUntilVisible(node(2), 100);
+        expect(initialTicks + nextTicks).toBeLessThan(200);
+
+        await page.clock.runFor(300);
+        await page.clock.runFor(1);
+        expect((await fixture(page)).cursors).toEqual([null, 'cursor-2']);
+        await playwrightExpect(node(2)).toBeVisible();
+
+        await page.getByRole('textbox', { name: '지식 검색' }).fill('no-match');
+        await page.clock.runFor(1);
+        await page.clock.runFor(200);
+        await playwrightExpect(node(2)).toBeVisible();
+        await page.clock.runFor(100);
+        await advanceUntilVisible(page.getByText('일치하는 지식이 없습니다.', { exact: true }), 100);
+        expect(externalRequests).toBe(0);
+      } finally {
+        await context.close();
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+}, 60_000);
+
 (existsSync(chrome) ? test : test.skip)('knowledge counts distinguish visible results, totals and a pending search', async () => {
   const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   try {
