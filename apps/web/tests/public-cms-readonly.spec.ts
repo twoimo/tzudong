@@ -55,14 +55,21 @@ test('public legal documents scroll and retain their read-only navigation', asyn
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/privacy');
   await expect(page.getByRole('heading', { name: '개인정보 처리방침', exact: true })).toBeVisible();
-  const initial = await page.locator('main').evaluate(element => ({ height: element.scrollHeight, viewport: innerHeight }));
+  const initial = await page.locator('[data-legal-page="true"]').evaluate(element => ({ height: element.scrollHeight, viewport: innerHeight }));
   expect(initial.height).toBeGreaterThan(initial.viewport);
+  await page.mouse.wheel(0, 500);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.getByRole('link', { name: '데이터 삭제 요청 안내', exact: true }).click();
   await expect(page).toHaveURL(/\/data-deletion$/);
   await expect(page.getByRole('heading', { name: '데이터 삭제 요청 안내', exact: true })).toBeVisible();
+  await page.mouse.wheel(0, 500);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await page.goto('/');
+  await expect(page.locator('[data-legal-page="true"]')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(1);
 });
 
 for (const size of sizes.slice(0, 3)) {
