@@ -742,10 +742,49 @@ def save_thumbnail_file(
                 pass
 
 
-def collect_channel_meta(channel_name: str, youtube, openai_client: Optional[OpenAI], logger: PipelineLogger) -> Dict[str, Any]:
+class ScopedMetadataError(RuntimeError):
+    """Only fixed codes cross the scoped CLI boundary."""
+
+    def __init__(self, code: str, exit_code: int = 1):
+        super().__init__(code)
+        self.exit_code = exit_code
+
+
+def _validate_metadata_scope(channel_name: str, video_id: str) -> None:
+    if not isinstance(video_id, str) or not VIDEO_ID_PATTERN.fullmatch(video_id):
+        raise ScopedMetadataError("metadata_video_id_invalid", 2)
+    if not isinstance(channel_name, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", channel_name):
+        raise ScopedMetadataError("metadata_channel_invalid", 2)
+    try:
+        info = get_channel_info(channel_name)
+    except Exception:
+        raise ScopedMetadataError("metadata_channel_unregistered", 2) from None
+    if not isinstance(info, dict) or info.get("data_path") != f"restaurant-crawling/data/{channel_name}":
+        raise ScopedMetadataError("metadata_channel_path_invalid", 2)
+
+
+def _scoped_checked_cache(channel_path: Path) -> Dict[str, Any]:
+    path = channel_path / "checked_cache.json"
+    if not path.exists():
+        return {}
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            raise ValueError
+        canonical_digest(value)
+        return value
+    except Exception:
+        # Never replace an unreadable cache with an empty dictionary.
+        raise ScopedMetadataError("metadata_checkpoint_invalid") from None
+
+
+def collect_channel_meta(channel_name: str, youtube, openai_client: Optional[OpenAI], logger: PipelineLogger,
+                         *, video_id: Optional[str] = None) -> Dict[str, Any]:
+    if video_id is not None:
+        _validate_metadata_scope(channel_name, video_id)
     channel_path = Path(__file__).parent.parent / "data" / channel_name
     with stage_lock(channel_path / '.receipts' / 'metadata-collection'):
-        return _collect_channel_meta(channel_name, youtube, openai_client, logger)
+        return _collect_channel_meta(channel_name, youtube, openai_client, logger, video_id=video_id)
 
 
 def _collect_channel_meta(
@@ -753,6 +792,7 @@ def _collect_channel_meta(
     youtube,
     openai_client: Optional[OpenAI],
     logger: PipelineLogger,
+    *, video_id: Optional[str] = None,
 ) -> Dict[str, Any]:
 
     channel_path = Path(__file__).parent.parent / "data" / channel_name
@@ -760,15 +800,20 @@ def _collect_channel_meta(
     deleted_path = channel_path / "deleted_urls.txt"
 
     if not urls_path.exists():
+        if video_id is not None:
+            raise ScopedMetadataError("metadata_url_input_missing", 2)
         logger.warning("op=video_url_list_missing")
         return {}
 
     # 1. 수집 대상 비디오 ID 로드
     video_ids = []
+    canonical_member = False
     with open(urls_path, "r", encoding="utf-8") as f:
         for line in f:
             url = line.strip()
             if url:
+                if video_id is not None and url == f"https://www.youtube.com/watch?v={video_id}":
+                    canonical_member = True
                 vid = extract_video_id(url)
                 if vid:
                     video_ids.append(vid)
@@ -784,6 +829,14 @@ def _collect_channel_meta(
                     vid = extract_video_id(parts[0])
                     if vid:
                         deleted_ids.add(vid)
+
+    if video_id is not None:
+        if not canonical_member:
+            raise ScopedMetadataError("metadata_video_not_in_urls", 2)
+        if video_id in deleted_ids:
+            raise ScopedMetadataError("metadata_video_deleted", 2)
+        # This is the entire provider scope, regardless of the other URL/cache rows.
+        video_ids = [video_id]
 
     # urls.txt에는 없지만 혹시 남아있을 수 있는 것들 필터링
     original_count = len(video_ids)
@@ -813,10 +866,11 @@ def _collect_channel_meta(
     today_str = datetime.now(KST).date().isoformat()
 
     # 캐시 로드
-    checked_cache = load_checked_cache(channel_path)
+    checked_cache = (_scoped_checked_cache(channel_path) if video_id is not None
+                     else load_checked_cache(channel_path))
     recipe = canonical_digest({'code': METADATA_RECIPE_HASH,
         'adModel': get_api_config().get('openai', {}).get('model', 'gpt-4o-mini'),
-        'adsAnalysisEnabled': openai_client is not None})
+        'adsAnalysisEnabled': video_id is not None or openai_client is not None})
 
     skipped_today_count = 0
 
@@ -830,7 +884,8 @@ def _collect_channel_meta(
 
     # 초기 캐시 저장 (메타데이터로 업데이트된 내용 반영)
     if skipped_today_count > 0:
-        save_checked_cache(channel_path, checked_cache)
+        if video_id is None:
+            save_checked_cache(channel_path, checked_cache)
         logger.info(f"op=video_metadata_skip_collected_today count={skipped_today_count}")
 
     video_ids = pending_ids
@@ -838,6 +893,15 @@ def _collect_channel_meta(
     if not video_ids:
         logger.info("op=video_metadata_collection_empty")
         return {"processed": 0, "success": success_count}
+
+    if video_id is not None:
+        # Resolve the unchanged provider route only after locked input/cache checks.
+        youtube_api_key = get_api_key("youtube")
+        openai_api_key = (get_api_key("openai") or os.environ.get("OPENAI_API_KEY") or "").strip()
+        if not youtube_api_key or not openai_api_key:
+            raise ScopedMetadataError("metadata_provider_not_configured")
+        youtube = build("youtube", "v3", developerKey=youtube_api_key)
+        openai_client = OpenAI(api_key=openai_api_key)
 
     # 배치 처리
 
@@ -849,12 +913,29 @@ def _collect_channel_meta(
         # 1. 배치의 현재 메타데이터 가져오기
         current_metas = get_video_meta_batch(youtube, batch_ids, channel_name)
         recipe_completed = set()
+        expected_output_hash = None
 
         for vid in batch_ids:
             if vid not in current_metas:
+                if video_id is not None:
+                    raise ScopedMetadataError("metadata_provider_incomplete")
                 continue
 
             current_meta = current_metas[vid]
+            if video_id is not None:
+                try:
+                    canonical_digest(current_meta)
+                    valid = (current_meta.get("youtube_link") == f"https://www.youtube.com/watch?v={vid}"
+                             and isinstance(current_meta.get("title"), str) and bool(current_meta["title"].strip())
+                             and isinstance(current_meta.get("description", ""), str)
+                             and isinstance(current_meta.get("stats"), dict)
+                             and type(current_meta.get("duration")) in (int, float) and current_meta["duration"] >= 0)
+                except (ValueError, TypeError, AttributeError):
+                    valid = False
+                if not valid:
+                    raise ScopedMetadataError("metadata_provider_output_invalid")
+                if not isinstance(current_meta.get("thumbnail_hash"), str) or not re.fullmatch(r"[0-9a-f]{32}", current_meta["thumbnail_hash"]):
+                    raise ScopedMetadataError("metadata_thumbnail_incomplete")
             previous_meta = get_latest_meta(channel_path, vid)
             prior_checkpoint = checked_cache.get(vid)
             recipe_changed = not isinstance(prior_checkpoint,dict) or prior_checkpoint.get('recipe') != recipe
@@ -920,6 +1001,8 @@ def _collect_channel_meta(
                         channel_path, vid, prev_id, current_meta.get("thumbnail_url")
                     ):
                         # A failed backfill is still pending on this day's restart.
+                        if video_id is not None:
+                            raise ScopedMetadataError("metadata_thumbnail_incomplete")
                         continue
                 recipe_completed.add(vid)
                 continue
@@ -927,6 +1010,11 @@ def _collect_channel_meta(
             # [수정] 변경사항 없이 스케줄링에 의한 수집인 경우, 하루 1회만 허용
             if not is_changed and is_scheduled and already_collected_today and not recipe_changed:
                 logger.debug("op=video_skip_collected_today")
+                if video_id is not None:
+                    prev_id = previous_meta.get("recollect_id", 0)
+                    if not check_thumbnail_exists(channel_path, vid, prev_id) and not save_thumbnail_file(
+                            channel_path, vid, prev_id, current_meta.get("thumbnail_url")):
+                        raise ScopedMetadataError("metadata_thumbnail_incomplete")
                 recipe_completed.add(vid)
                 continue
 
@@ -940,10 +1028,12 @@ def _collect_channel_meta(
                     recollect_vars.append(schedule_reason)
 
             # 6. 필요시 썸네일 저장
-            if "new_video" in recollect_vars or "thumbnail_changed" in recollect_vars:
+            if video_id is not None or "new_video" in recollect_vars or "thumbnail_changed" in recollect_vars:
                 if not check_thumbnail_exists(channel_path, vid, new_id) and not save_thumbnail_file(
                     channel_path, vid, new_id, current_meta.get("thumbnail_url")
                 ):
+                    if video_id is not None:
+                        raise ScopedMetadataError("metadata_thumbnail_incomplete")
                     continue
 
             # OpenAI 분석 (옵션)
@@ -968,6 +1058,8 @@ def _collect_channel_meta(
                     what_ads = analyze_ad_content(openai_client, description, logger)
                     if OPENAI_AD_ANALYSIS_FAILURE_COUNT != failures_before:
                         # Provider failures are not completed recipe execution.
+                        if video_id is not None:
+                            raise ScopedMetadataError("metadata_ads_incomplete")
                         continue
 
             current_meta["ads_info"] = {"is_ads": is_ads, "what_ads": what_ads}
@@ -979,6 +1071,8 @@ def _collect_channel_meta(
 
             output_file = meta_dir / f"{vid}.jsonl"
             append_metadata(output_file, current_meta)
+            if video_id is not None:
+                expected_output_hash = canonical_digest(current_meta)
             recipe_completed.add(vid)
             logger.info("op=metadata_updated")
             success_count += 1
@@ -989,20 +1083,56 @@ def _collect_channel_meta(
             if vid not in current_metas or vid not in recipe_completed:
                 continue
             saved = get_latest_meta(channel_path, vid)
+            if video_id is not None and (saved is None or (expected_output_hash is not None
+                    and canonical_digest(saved) != expected_output_hash)):
+                raise ScopedMetadataError("metadata_output_incomplete")
             if saved is not None:
                 checked_cache[vid] = checkpoint(today_str, recipe, saved)
         save_checked_cache(channel_path, checked_cache)
+        if video_id is not None and not verified_today(
+                _scoped_checked_cache(channel_path).get(video_id),
+                datetime.now(KST).date().isoformat(), recipe, get_latest_meta(channel_path, video_id)):
+            raise ScopedMetadataError("metadata_checkpoint_incomplete")
 
     logger.progress_done()
     logger.info(f"op=video_metadata_collection_complete updated={success_count}")
     return {"success": success_count}
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--channel", "-c", type=str)
     parser.add_argument("--skip-ads", action="store_true", help="광고 분석 스킵")
-    args = parser.parse_args()
+    parser.add_argument("--video-id", action="append", help="등록 채널의 canonical URL에 있는 영상 1개만 처리")
+    args = parser.parse_args(argv)
+
+    if args.video_id is not None:
+        if len(args.video_id) != 1 or not args.channel or args.skip_ads:
+            print("op=metadata_scoped_failed code=metadata_scope_invalid")
+            return 2
+        logger = None
+        status = 0
+        try:
+            _validate_metadata_scope(args.channel, args.video_id[0])
+            logger = PipelineLogger(phase="collect-meta", log_dir=LOG_DIR)
+            logger.start_stage()
+            collect_channel_meta(args.channel, None, None, logger, video_id=args.video_id[0])
+        except ScopedMetadataError as error:
+            print(f"op=metadata_scoped_failed code={error}")
+            status = error.exit_code
+        except Exception:
+            print("op=metadata_scoped_failed code=metadata_scoped_incomplete")
+            status = 1
+        finally:
+            if logger is not None:
+                try:
+                    logger.end_stage()
+                except Exception:
+                    print("op=metadata_scoped_failed code=metadata_log_incomplete")
+                    status = 1
+        if status == 0:
+            print("op=metadata_scoped_complete")
+        return status
 
     youtube_api_key = get_api_key("youtube")
     openai_api_key = (get_api_key("openai") or os.environ.get("OPENAI_API_KEY") or "").strip()
@@ -1033,4 +1163,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
