@@ -65,10 +65,29 @@ test('public legal documents scroll and retain their read-only navigation', asyn
   await page.getByRole('link', { name: '데이터 삭제 요청 안내', exact: true }).click();
   await expect(page).toHaveURL(/\/data-deletion$/);
   await expect(page.getByRole('heading', { name: '데이터 삭제 요청 안내', exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   await page.mouse.wheel(0, 500);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-  await page.goto('/');
+
+  // This existing Link leaves the legal layout without reloading the document.
+  await page.getByRole('link', { name: '마이페이지 프로필/계정 관리', exact: true }).click();
+  await expect(page).toHaveURL(/\/mypage\/profile$/);
   await expect(page.locator('[data-legal-page="true"]')).toHaveCount(0);
+  if (await page.locator('html').getAttribute('data-local-workspace') === 'true') {
+    const app = page.locator('[data-local-workspace-app="true"]');
+    await expect(app).toHaveCSS('overflow-y', 'hidden');
+    await expect.poll(() => app.evaluate(element => Math.abs(element.clientHeight - innerHeight))).toBeLessThanOrEqual(1);
+    await page.mouse.wheel(0, 500);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  }
+
+  // A fresh home load must reach the real map component, not only its skeleton.
+  await page.goto('/');
+  await expect(page.getByRole('region', { name: '쯔동여지도 홈 지도 화면', exact: true })).toBeVisible();
+  await expect(page.getByTestId('map-container')).toBeVisible();
+  await expect(page.locator('[data-legal-page="true"]')).toHaveCount(0);
+  await page.mouse.wheel(0, 500);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(1);
 });
 
