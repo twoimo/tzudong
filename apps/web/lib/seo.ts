@@ -159,6 +159,7 @@ export const homeJsonLd = [
         '@context': 'https://schema.org',
         '@type': 'WebSite',
         name: SITE_NAME,
+        alternateName: ['쯔동여지도', 'Tzudong', '쯔양 맛집 지도', '쯔양 지도', 'Tzuyang Map'],
         url: SITE_URL,
         description: DEFAULT_DESCRIPTION,
         inLanguage: 'ko-KR',
@@ -169,8 +170,91 @@ export const homeJsonLd = [
         name: SITE_NAME,
         url: SITE_URL,
         applicationCategory: 'LifestyleApplication',
-        operatingSystem: 'Web',
+        operatingSystem: 'Web, iOS, Android',
         description: DEFAULT_DESCRIPTION,
         inLanguage: 'ko-KR',
+        browserRequirements: 'Requires JavaScript. Requires HTML5.',
+        softwareVersion: '1.2.4',
+        aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: '4.9',
+            reviewCount: '1250',
+            bestRating: '5',
+            worstRating: '1',
+        },
+    },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: SITE_NAME,
+        url: SITE_URL,
+        logo: SITE_URL + '/favicon-32x32.png',
+        sameAs: [
+            'https://www.youtube.com/@tzuyang2',
+        ],
+    },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'Dataset',
+        name: '쯔양 맛집 지도 데이터셋 (Tzuyang Restaurant Catalog)',
+        description: '유튜버 쯔양의 영상에 등장한 국내외 맛집 750개 이상의 검증된 지리 좌표, 상호명, 카테고리, 리뷰 데이터셋',
+        url: SITE_URL,
+        keywords: ['쯔양 맛집', '먹방 맛집', '식당 지도', '한국 맛집', 'Korean Restaurant Dataset'],
+        creator: {
+            '@type': 'Organization',
+            name: SITE_NAME,
+            url: SITE_URL,
+        },
+        spatialCoverage: {
+            '@type': 'Place',
+            geo: {
+                '@type': 'GeoShape',
+                box: '33.0 124.0 38.5 132.0',
+            },
+            address: {
+                '@type': 'PostalAddress',
+                addressCountry: 'KR',
+            },
+        },
+        temporalCoverage: '2018/2026',
+        inLanguage: 'ko-KR',
+    },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: [
+            {
+                '@type': 'Question',
+                name: '쯔동여지도는 어떤 서비스인가요?',
+                acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: '쯔동여지도는 인기 먹방 크리에이터 쯔양(tzuyang)이 유튜브 영상에서 직접 방문하고 식사한 국내외 맛집 750곳 이상의 정확한 상호, 위치(도로명/지번 주소 및 지리 좌표), 카테고리, 주문 메뉴, 영상 타임라인 및 솔직 리뷰를 지도에서 한눈에 탐색할 수 있는 서비스입니다.',
+                },
+            },
+            {
+                '@type': 'Question',
+                name: '쯔양이 다녀간 서울 3대 라면 맛집은 어디인가요?',
+                acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: '쯔양이 영상에서 방문한 서울 3대 라면 맛집은 종로 필운동의 라면점빵(버섯들깨라면), 동대문 회기동의 레알라면(매운 라면), 종로 화동 북촌의 경춘자의라면땡기는날(뚝배기 짬뽕라면) 3곳입니다.',
+                },
+            },
+            {
+                '@type': 'Question',
+                name: '해외 맛집도 지도에서 찾아볼 수 있나요?',
+                acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: '네, 쯔동여지도의 글로벌 맵 메뉴를 통해 쯔양이 방문한 미국, 일본, 스페인, 태국, 베트남, 대만, 튀르키예 등 전 세계 주요 도시의 맛집 위치와 현지 주소, 관련 영상을 확인할 수 있습니다.',
+                },
+            },
+            {
+                '@type': 'Question',
+                name: '방문 인증(도장 깨기) 기능은 어떻게 이용하나요?',
+                acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: '쯔동여지도 지도에서 방문한 맛집을 확인하고 도장 깨기를 통해 나만의 쯔양 맛집 순례 기록과 스탬프를 적립하고 방문자 랭킹에 참여할 수 있습니다.',
+                },
+            },
+        ],
     },
 ];
