@@ -86,11 +86,26 @@ VALUES (
 );
 INSERT INTO public.user_roles (user_id, role)
 VALUES ('00000000-0000-4000-8000-000000000499'::uuid, 'admin');
-INSERT INTO public.user_account_status (user_id, account_status, disabled_at)
-VALUES (
-  '00000000-0000-4000-8000-000000000499'::uuid,
-  'active', '2026-01-01T00:00:00Z'::timestamptz
-);
+-- The on_auth_user_created trigger (handle_new_user, migration
+-- 20260813085342) auto-creates this user's status row as ('active', NULL) on
+-- the auth.users insert above, so an INSERT here would duplicate the primary
+-- key. Flip the trigger-created row to the cross-path state instead, with a
+-- fail-closed row-count guard.
+DO $$
+DECLARE
+  updated_rows integer;
+BEGIN
+  UPDATE public.user_account_status
+  SET disabled_at = '2026-01-01T00:00:00Z'::timestamptz
+  WHERE user_id = '00000000-0000-4000-8000-000000000499'::uuid
+    AND account_status = 'active'
+    AND disabled_at IS NULL;
+  GET DIAGNOSTICS updated_rows = ROW_COUNT;
+  IF updated_rows <> 1 THEN
+    RAISE EXCEPTION 'local_runtime_disabled_admin_fixture_rowcount';
+  END IF;
+END
+$$;
 
 SET LOCAL ROLE anon;
 DO $$
