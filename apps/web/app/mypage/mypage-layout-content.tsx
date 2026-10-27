@@ -236,9 +236,10 @@ export function MyPageLayoutContent({
           ))}
 
         {/* 콘텐츠 영역만 스크롤 가능하도록 설정 */}
+        {/* This owner restores saved offsets; native anchoring must not replace them. */}
         <div
           ref={scrollRef}
-          className="flex-1 h-full min-h-0 overflow-y-auto min-w-0 overscroll-contain"
+          className="flex-1 h-full min-h-0 overflow-y-auto min-w-0 overscroll-contain [overflow-anchor:none]"
           data-layout-primitives="scroll-body-shell"
           data-scroll-owner="mypage-content"
           onScroll={(event) => {

@@ -215,10 +215,7 @@ export function getRestaurantRegionAddressKeywords(
 
   const overseasRegion = OVERSEAS_REGIONS[normalizedRegion];
   if (overseasRegion) {
-    return uniqueAddressKeywords([
-      overseasRegion.country,
-      ...overseasRegion.keywords,
-    ]);
+    return uniqueAddressKeywords(overseasRegion.keywords);
   }
 
   const overseasCountryKeywords = Object.values(OVERSEAS_REGIONS)
@@ -249,13 +246,14 @@ export const matchesRestaurantAddressContext = (
     restaurant.english_address,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(' ')
+    .toLowerCase();
 
   const selectedRegionKeywords =
     getRestaurantRegionAddressKeywords(selectedRegion);
   if (
     selectedRegionKeywords.length > 0 &&
-    !selectedRegionKeywords.some((keyword) => address.includes(keyword))
+    !selectedRegionKeywords.some((keyword) => address.includes(keyword.toLowerCase()))
   ) {
     return false;
   }

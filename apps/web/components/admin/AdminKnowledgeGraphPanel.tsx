@@ -31,9 +31,10 @@ export function AdminKnowledgeGraphPanel() {
   }, []);
   const [q, setQ] = useState('');
   useEffect(() => {
+    if (search === q) return;
     const timer = window.setTimeout(() => { setQ(search); setCursors([null]); setEdgeCursors([null]); }, 250);
     return () => window.clearTimeout(timer);
-  }, [search]);
+  }, [search, q]);
   const searchPending = search !== q;
   const cursor = cursors.at(-1) ?? null, edgeCursor = edgeCursors.at(-1) ?? null;
   const query = useQuery<KnowledgeGraphPage>({ queryKey: ['admin-knowledge-graph', q, kind, cursor, edgeCursor], staleTime: 0, retry: false, refetchOnWindowFocus: false, placeholderData: previous => previous,
