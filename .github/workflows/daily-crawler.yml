@@ -667,7 +667,7 @@ jobs:
 
       - name: Upload GDrive Status Artifacts
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact@v7.0.2
         with:
           name: gdrive-upload-status-${{ github.run_id }}
           if-no-files-found: ignore
@@ -731,7 +731,7 @@ jobs:
         id: upload-publication
         # Data artifacts follow the same explicit public-publication opt-in.
         if: ${{ steps.publication.outputs.ready == 'true' && vars.TZUDONG_DATA_BRANCH_PUBLISH == '1' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact@v7.0.2
         with:
           name: daily-data-publication-${{ github.run_id }}
           if-no-files-found: error
