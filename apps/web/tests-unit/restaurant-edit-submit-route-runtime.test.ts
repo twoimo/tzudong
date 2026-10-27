@@ -33,6 +33,16 @@ const bodyWithItems = (count: number) => {
   return body;
 };
 
+test('edit rejects incomplete draft phone prefixes before privileged work', async () => {
+  for (const phone of ['0', '02-', '02-1234-', '+', '+82 ', '(', '-', '.']) {
+    const f = fixture(); const body = validBody(); body.payload.phone = phone;
+    const response = await f.post(f.request(body));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ ok: false, code: 'EDIT_SUBMISSION_INVALID' });
+    expect([f.state.serviceCalls, f.state.rpcCalls, f.state.eligibilityCalls]).toEqual([0, 0, 0]);
+  }
+});
+
 // Each case owns an isolated VM. Only Auth/database I/O are doubled; request,
 // privacy, origin, bounded JSON, eligibility and payload validators run as source.
 function fixture(settings: { guest?: boolean; denyEligibility?: boolean; staleEligibility?: boolean; rpcData?: unknown; rpcError?: boolean; throwRpc?: boolean } = {}) {
