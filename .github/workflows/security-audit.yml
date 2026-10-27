@@ -241,7 +241,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node@v6
         with:
           node-version: '24'
           cache: 'npm'
@@ -365,7 +365,7 @@ jobs:
             backend.utils.tests.test_privacy_log
 
       - name: Set up pinned pipeline Node runtime
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node@v6
         with:
           node-version: '24.21.0'
 
@@ -589,7 +589,7 @@ jobs:
           rustup run 1.97.0 cargo --version
 
       - name: Set up canonical performance verifier runtime
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node@v6
         with:
           node-version: '24.x'
 
@@ -643,7 +643,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node@v6
         with:
           node-version: '24'
 
