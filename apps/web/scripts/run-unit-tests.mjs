@@ -87,7 +87,11 @@ function run(filesToRun) {
       env: process.env, stdio: ['pipe', 'pipe', 'ignore'],
       maxBuffer: 64 * 1024, shell: false,
     });
-    if (result.stdout?.trim()) console.log(`NIGHTLY_UNIT_DIAGNOSTIC=${result.stdout.trim()}`);
+    if (result.stdout?.trim()) {
+      const line = result.stdout.trim();
+      // A bounded gap record is already prefixed; wrap only full payloads.
+      console.log(line.startsWith('NIGHTLY_UNIT_DIAGNOSTIC_GAP=') ? line : `NIGHTLY_UNIT_DIAGNOSTIC=${line}`);
+    }
     return typeof result.status === 'number' ? result.status : 1;
   }
   const reportArgs = localDiagnostic ? ['--reporter', 'junit', '--reporter-outfile', '/dev/fd/3'] : [];
