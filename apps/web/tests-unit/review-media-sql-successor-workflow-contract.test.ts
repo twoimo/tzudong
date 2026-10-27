@@ -552,7 +552,7 @@ esac
   test('uses pinned Node 24 and bounded PostgreSQL-backed operating paths', () => {
     expect(workflow).toContain('FORCE_JAVASCRIPT_ACTIONS_TO_NODE24');
     expect(workflow).toContain('actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd');
-    expect(workflow).toContain('actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e');
+    expect(workflow).toContain('actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1');
     expect(workflow).toContain("node-version: '24.21.0'");
     expect(workflow).toContain("manifest.engines?.node !== '24.x'");
     expect(workflow).toContain("manifest.packageManager !== 'npm@11.6.2'");

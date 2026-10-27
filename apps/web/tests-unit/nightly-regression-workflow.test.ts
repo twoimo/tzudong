@@ -231,7 +231,7 @@ describe("nightly regression package and source contracts", () => {
     expect(hostedWorkflowSource).not.toMatch(/^\s{4}environment:/m);
     for (const action of [
       "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
-      "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+      "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1",
       "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
       "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08",
     ]) {
@@ -1106,7 +1106,7 @@ describe("nightly regression package and source contracts", () => {
     expect(publicationAllowlistSource).not.toContain("local-lifecycle-stage");
     for (const action of [
       "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
-      "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+      "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1",
       "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
       "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08",
       DOWNLOAD_ARTIFACT_PIN,

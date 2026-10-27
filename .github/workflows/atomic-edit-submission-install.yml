@@ -63,7 +63,7 @@ jobs:
             count="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/daily-crawler.yml/runs?status=$status&per_page=1" --jq .total_count)"
             test "$count" = 0
           done
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '24.22.0'
       - name: Install PostgreSQL client

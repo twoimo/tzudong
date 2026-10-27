@@ -31,7 +31,7 @@ describe("YouTube KPI snapshot collector contract", () => {
       "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
     );
     expect(workflow).toContain(
-      "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+      "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1",
     );
 
     const collector = readRepoFile("scripts/capture-youtube-kpi-snapshot.mjs");

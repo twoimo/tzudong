@@ -38,7 +38,7 @@ function job(source: string, name: string) {
 }
 const GOVERNANCE_ACTION_PINS = [
   "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
-  "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+  "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1",
   "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
   "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
 ];

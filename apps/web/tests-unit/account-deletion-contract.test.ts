@@ -807,7 +807,7 @@ describe('G014 durable account deletion contract', () => {
     expect(workflow).not.toContain('environment:');
     expect(workflow).not.toContain('production-account-deletion-worker');
     expect(workflow).toContain('uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd');
-    expect(workflow).toContain('uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e');
+    expect(workflow).toContain('uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1');
     expect(workflow).toContain('ref: ${{ github.sha }}');
     expect(workflow).toContain('persist-credentials: false');
     expect(workflow).toContain('node scripts/run-account-deletion-worker.mjs --limit 10 --deadline-ms 10000');
