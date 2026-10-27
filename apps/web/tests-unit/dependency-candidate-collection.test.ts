@@ -415,8 +415,12 @@ describe('governed companion bare SHA on a named line stays rejected', () => {
     expect(check(`  expect(w).toContain("actions/upload-artifact@${F}");`, `  expect(w).toContain("actions/upload-artifact@${T}");`)).toBe(true);
     expect(check(`  expect(w).toContain("actions/upload-artifact@${F}");`, `  expect(w).not.toContain("actions/upload-artifact@${T}");`)).toBe(false);
     expect(check(pin(F), pin(T).replace('",', '", '))).toBe(false);
-    expect(check(pin(F), pin(T).replace(/"/, "'"))).toBe(false);
-    expect(check(pin(F), pin(T).replace(/"/g, "'"))).toBe(false);
+    // Corrupt only the first quote, then every quote; both must be rejected.
+    const quotedPin = pin(T);
+    const firstQuote = quotedPin.indexOf('"');
+    expect(firstQuote).toBeGreaterThanOrEqual(0);
+    expect(check(pin(F), `${quotedPin.slice(0, firstQuote)}'${quotedPin.slice(firstQuote + 1)}`)).toBe(false);
+    expect(check(pin(F), quotedPin.replaceAll('"', "'"))).toBe(false);
     expect(check(pin(F), pin(T.toUpperCase()))).toBe(false);
   });
 
@@ -519,8 +523,11 @@ describe('governed reconciliation manifest verifier', () => {
     // Formatting-only churn is not the builder rendering.
     expect(reconciliationManifestMirrorsOnly(manifestText, JSON.stringify(goodAfter()), ctx())).toBe(false);
     expect(reconciliationManifestMirrorsOnly(manifestText, JSON.stringify(goodAfter(), null, 4) + '\n', ctx())).toBe(false);
-    expect(reconciliationManifestMirrorsOnly(manifestText.replace(/\n/, '\r\n'), render(goodAfter()), ctx())).toBe(false);
-    expect(reconciliationManifestMirrorsOnly(manifestText.replace(/\n/g, '\r\n'), render(goodAfter()), ctx())).toBe(false);
+    // Convert only the first line break, then all of them; both must be rejected.
+    const firstBreak = manifestText.indexOf('\n');
+    expect(firstBreak).toBeGreaterThanOrEqual(0);
+    expect(reconciliationManifestMirrorsOnly(`${manifestText.slice(0, firstBreak)}\r\n${manifestText.slice(firstBreak + 1)}`, render(goodAfter()), ctx())).toBe(false);
+    expect(reconciliationManifestMirrorsOnly(manifestText.replaceAll('\n', '\r\n'), render(goodAfter()), ctx())).toBe(false);
     // No change at all, invalid JSON, wrong kind.
     expect(verify(base)).toBe(false);
     expect(reconciliationManifestMirrorsOnly(manifestText, '{', ctx())).toBe(false);
