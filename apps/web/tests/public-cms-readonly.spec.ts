@@ -55,14 +55,47 @@ test('public legal documents scroll and retain their read-only navigation', asyn
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/privacy');
   await expect(page.getByRole('heading', { name: '개인정보 처리방침', exact: true })).toBeVisible();
-  const initial = await page.locator('main').evaluate(element => ({ height: element.scrollHeight, viewport: innerHeight }));
+  const documentTimeOrigin = await page.evaluate(() => performance.timeOrigin);
+  const initial = await page.locator('[data-legal-page="true"]').evaluate(element => ({ height: element.scrollHeight, viewport: innerHeight }));
   expect(initial.height).toBeGreaterThan(initial.viewport);
+  await page.mouse.wheel(0, 500);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.getByRole('link', { name: '데이터 삭제 요청 안내', exact: true }).click();
   await expect(page).toHaveURL(/\/data-deletion$/);
   await expect(page.getByRole('heading', { name: '데이터 삭제 요청 안내', exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await page.mouse.wheel(0, 500);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+  // This existing Link leaves the legal layout without reloading the document.
+  await page.getByRole('link', { name: '마이페이지 프로필/계정 관리', exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === '/auth/required'
+    && url.searchParams.get('reason') === 'mypage'
+    && url.searchParams.get('next') === '/mypage/profile');
+  await expect(page.getByRole('heading', { name: '로그인이 필요합니다', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => performance.timeOrigin)).toBe(documentTimeOrigin);
+  await expect(page.locator('[data-legal-page="true"]')).toHaveCount(0);
+  if (await page.locator('html').getAttribute('data-local-workspace') === 'true') {
+    const app = page.locator('[data-local-workspace-app="true"]');
+    await expect(app).toHaveCSS('overflow-y', 'hidden');
+    await expect.poll(() => app.evaluate(element => Math.abs(element.clientHeight - innerHeight))).toBeLessThanOrEqual(1);
+    await page.mouse.wheel(0, 500);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  }
+
+  // The existing auth boundary links back without replacing the root document.
+  await page.getByRole('link', { name: '홈으로 돌아가기', exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === '/');
+  await expect(page.getByRole('region', { name: '쯔동여지도 홈 지도 화면', exact: true })).toBeVisible();
+  await expect(page.getByTestId('map-container')).toBeVisible();
+  expect(await page.evaluate(() => performance.timeOrigin)).toBe(documentTimeOrigin);
+  await expect(page.locator('[data-legal-page="true"]')).toHaveCount(0);
+  await page.mouse.wheel(0, 500);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(1);
 });
 
 for (const size of sizes.slice(0, 3)) {

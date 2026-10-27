@@ -101,6 +101,19 @@ html[data-local-workspace="true"] [data-local-workspace-app="true"] {
   transform: translateZ(0);
 }
 
+/* Legal documents use the document scroll, including inside the local shell. */
+html[data-local-workspace="true"]:has([data-legal-page="true"]) body {
+  height: auto;
+  overflow-y: auto;
+}
+
+html[data-local-workspace="true"] [data-local-workspace-app="true"]:has([data-legal-page="true"]) {
+  flex: 0 0 auto;
+  min-height: var(--full-height, 100vh);
+  height: auto;
+  overflow: visible;
+}
+
 @layer base {
   /* `border` sets width only. Without this, the preflight shorthand paints every
      unspecified edge with currentColor, so chips and toasts look black. */
