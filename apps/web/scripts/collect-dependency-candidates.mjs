@@ -38,13 +38,29 @@ export function lockfileChanges(before, after) {
 // it is never trusted as evidence of the whole change. Fail-closed: anything
 // outside the allowlist, any non-mirror change, any missing evidence keeps
 // metadataIncomplete = true.
-export const GOVERNED_COMPANION_PATHS = new Set([
-  'apps/web/tests-unit/nightly-regression-workflow.test.ts',
+export const ACTION_PIN_MIRROR = 'action-pin-mirror';
+export const RECONCILIATION_MANIFEST = 'reconciliation-manifest';
+export const RECONCILIATION_MANIFEST_PATH =
+  '.kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json';
+// Explicit paths only, no globs. Every entry names the one verifier that may
+// admit it; a path that is absent here is never admitted.
+export const GOVERNED_COMPANION_PATHS = new Map([
+  ['apps/web/tests-unit/nightly-regression-workflow.test.ts', ACTION_PIN_MIRROR],
+  ['apps/web/tests-unit/release-workflow-governance-source.test.ts', ACTION_PIN_MIRROR],
+  ['apps/web/tests-unit/account-deletion-contract.test.ts', ACTION_PIN_MIRROR],
+  ['apps/web/tests-unit/review-media-sql-successor-workflow-contract.test.ts', ACTION_PIN_MIRROR],
+  ['apps/web/tests-unit/youtube-kpi-snapshot-contract.test.ts', ACTION_PIN_MIRROR],
+  ['backend/supabase/tests/test_g037_hosted_closure_workflow.py', ACTION_PIN_MIRROR],
+  ['backend/supabase/tests/test_g038_workflow.py', ACTION_PIN_MIRROR],
+  ['backend/supabase/tests/test_g040_prefix_recovery_workflow.py', ACTION_PIN_MIRROR],
+  ['backend/utils/tests/test_gdrive_frame_inventory.py', ACTION_PIN_MIRROR],
+  [RECONCILIATION_MANIFEST_PATH, RECONCILIATION_MANIFEST],
 ]);
 
 // "[name@]vX.Y.Z" version comment written by Dependabot next to a pinned action.
 const ACTION_COMMENT_TAG = /^(?:([\w./-]+)@)?(v\d+\.\d+\.\d+(?:[-+][\w.-]+)?)$/;
 const COMPANION_VERSION_TOKEN = /\d+\.\d+\.\d+(?:[-+][\w.-]+)?/g;
+const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const stripRange = (value) => String(value).replace(/^[~^<>=v ]+/, '');
 
 function companionLineMirrorsOnly(before, after, pairSet, fromSet, toSet, byName) {
@@ -52,24 +68,55 @@ function companionLineMirrorsOnly(before, after, pairSet, fromSet, toSet, byName
   // named on the line, and must mirror that package's own pair.
   const named = byName.filter((pkg) => before.includes(pkg.name) || after.includes(pkg.name));
   if (named.length === 0) return false;
-  for (const pkg of named) {
-    if (!before.includes(stripRange(pkg.fromVersion)) || !after.includes(stripRange(pkg.toVersion))) {
-      return false;
-    }
+  const names = [...new Set(named.map((pkg) => pkg.name))];
+  // Each named action must have one of its own exact pairs present on this line
+  // (from on the before side, to on the after side).
+  for (const name of names) {
+    if (!byName.some((pkg) => pkg.name === name
+      && before.includes(stripRange(pkg.fromVersion)) && after.includes(stripRange(pkg.toVersion)))) return false;
   }
   // Exact refs that are not semver (full-length commit SHAs used by pinned
-  // GitHub Actions) are masked only as the complete string "<named package>@<ref>",
-  // and the version comment only as "# <same package>@<tag>" with the exact
-  // from/to tag of that same package. Nothing else on the line may differ.
-  const maskExact = (text, refKey, tagKey) => named.reduce((acc, pkg) => {
-    const ref = stripRange(pkg[refKey]);
-    let out = /^[0-9a-f]{40}$/.test(ref)
-      ? acc.split(`${pkg.name}@${ref}`).join(`${pkg.name}@ \0 `) : acc;
-    if (pkg[tagKey] !== undefined) out = out.split(`# ${pkg.name}@${pkg[tagKey]}`).join(`# ${pkg.name}@ \u0001 `);
-    return out;
-  }, text);
-  const exactBefore = maskExact(before, 'fromVersion', 'fromTag');
-  const exactAfter = maskExact(after, 'toVersion', 'toTag');
+  // GitHub Actions) are masked only as the complete string "<name>@<ref>", and
+  // the version comment only as "# <same name>@<tag>". The name must start at a
+  // token boundary (so "evil/actions/x" never matches "actions/x") and the ref
+  // must end at one. A bare SHA, a tuple or a loose major tag is never admitted
+  // by name presence alone; those shapes are refactored to exact pin records
+  // before a bot bump instead. One action can carry several historical pins
+  // (several from-refs), so every masked occurrence is recorded in order and
+  // must be one exact (from, to) pair of that same action. The k-th masked
+  // occurrence before must pair with the k-th after; counts must match.
+  const pairKeys = new Set();
+  const tagPairKeys = new Set();
+  for (const pkg of byName) {
+    pairKeys.add([pkg.name, stripRange(pkg.fromVersion), stripRange(pkg.toVersion)].join('\0'));
+    if (pkg.fromTag !== undefined && pkg.toTag !== undefined) tagPairKeys.add([pkg.name, pkg.fromTag, pkg.toTag].join('\0'));
+  }
+  const mask = (text, side) => {
+    const refKey = side === 'before' ? 'fromVersion' : 'toVersion';
+    const tagKey = side === 'before' ? 'fromTag' : 'toTag';
+    const refSeq = []; const tagSeq = []; let out = text;
+    for (const name of names) {
+      const refs = [...new Set(byName.filter((pkg) => pkg.name === name)
+        .map((pkg) => stripRange(pkg[refKey])).filter((ref) => /^[0-9a-f]{40}$/.test(ref)))];
+      if (refs.length > 0) {
+        out = out.replace(new RegExp(`(?<![\\w./@-])${escapeRegExp(name)}@(${refs.join('|')})(?![\\w])`, 'g'),
+          (m, ref) => { refSeq.push([name, ref]); return `${name}@ \0 `; });
+      }
+      const tags = [...new Set(byName.filter((pkg) => pkg.name === name && pkg[tagKey] !== undefined)
+        .map((pkg) => pkg[tagKey]))];
+      if (tags.length > 0) {
+        out = out.replace(new RegExp(`# ${escapeRegExp(name)}@(${tags.map(escapeRegExp).join('|')})(?![\\w.-])`, 'g'),
+          (m, tag) => { tagSeq.push([name, tag]); return `# ${name}@ \u0001 `; });
+      }
+    }
+    return { out, refSeq, tagSeq };
+  };
+  const b = mask(before, 'before'); const a = mask(after, 'after');
+  const sameSeq = (x, y, keys) => x.length === y.length
+    && x.every(([name, ref], i) => y[i][0] === name && keys.has([name, ref, y[i][1]].join('\0')));
+  if (!sameSeq(b.refSeq, a.refSeq, pairKeys) || !sameSeq(b.tagSeq, a.tagSeq, tagPairKeys)) return false;
+  const exactBefore = b.out;
+  const exactAfter = a.out;
   const removed = exactBefore.match(COMPANION_VERSION_TOKEN) ?? [];
   const added = exactAfter.match(COMPANION_VERSION_TOKEN) ?? [];
   if (removed.length !== added.length) return false;
@@ -107,6 +154,131 @@ export function companionContentMirrorsOnly(before, after, packages) {
     if (!companionLineMirrorsOnly(beforeLines[i], afterLines[i], pairSet, fromSet, toSet, byName)) return false;
   }
   return changes > 0;
+}
+
+
+// ---- Reconciliation manifest: exact derived-artifact verifier ----------------
+// The manifest is produced by backend/bin/build_platform_modernization_
+// reconciliation.py. Its only legitimate candidate-side change is the git blob
+// SHA1 of a workflow file the same PR modified, plus the derived
+// candidateContentSha256 over the entries. The hash below must reproduce the
+// Python builder bytes exactly:
+//   hashlib.sha256(json.dumps(entries, sort_keys=True, separators=(",", ":"))).
+const codePointCompare = (l, r) => {
+  const a = Array.from(l); const b = Array.from(r);
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    const d = a[i].codePointAt(0) - b[i].codePointAt(0);
+    if (d !== 0) return d;
+  }
+  return a.length - b.length;
+};
+const pythonJsonString = (value) => JSON.stringify(value)
+  .replace(/[^\x20-\x7e]/g, (ch) => `\\u${ch.charCodeAt(0).toString(16).padStart(4, '0')}`);
+export function pythonCanonicalJson(value) {
+  if (value === null) return 'null';
+  if (value === true) return 'true';
+  if (value === false) return 'false';
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value)) throw new Error('manifest_number_unsupported');
+    return String(value);
+  }
+  if (typeof value === 'string') return pythonJsonString(value);
+  if (Array.isArray(value)) return `[${value.map(pythonCanonicalJson).join(',')}]`;
+  if (typeof value === 'object') {
+    return `{${Object.keys(value).sort(codePointCompare)
+      .map((key) => `${pythonJsonString(key)}:${pythonCanonicalJson(value[key])}`).join(',')}}`;
+  }
+  throw new Error('manifest_value_unsupported');
+}
+export const manifestEntriesDigest = (entries) =>
+  createHash('sha256').update(pythonCanonicalJson(entries)).digest('hex');
+
+const GIT_BLOB_SHA1 = /^[0-9a-f]{40}$/;
+const canonicalRepoPath = (value) => typeof value === 'string' && value.length > 0
+  && !value.startsWith('/') && !value.includes('\\') && !value.includes('//')
+  && value.split('/').every((part) => part !== '' && part !== '.' && part !== '..');
+const parseManifest = (text) => {
+  let doc;
+  try { doc = JSON.parse(text); } catch { return null; }
+  if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) return null;
+  if (doc.schemaVersion !== 3 || doc.kind !== 'platform_modernization_reconciliation'
+    || !Array.isArray(doc.entries) || !/^[0-9a-f]{64}$/.test(doc.candidateContentSha256 ?? '')) return null;
+  if (doc.entries.some((entry) => entry === null || typeof entry !== 'object' || Array.isArray(entry))) return null;
+  return doc;
+};
+const entryIdentity = (entry) => pythonCanonicalJson([entry.sourceStatus, entry.basePath, entry.sourcePath]);
+
+// Tracked paths (head manifest) that this PR touches in any way; used to
+// prefetch verified blob bytes. Null when the pair is not a comparable manifest.
+export function manifestTrackedPaths(before, after, touchedFiles) {
+  const b = parseManifest(before); const a = parseManifest(after);
+  if (!b || !a || !(touchedFiles instanceof Set)) return null;
+  const paths = new Set();
+  for (const entry of [...b.entries, ...a.entries]) {
+    if (typeof entry.candidateInspectionPath !== 'string') continue;
+    if (touchedFiles.has(entry.candidateInspectionPath)) paths.add(entry.candidateInspectionPath);
+  }
+  return [...paths];
+}
+
+// context: { modifiedFiles: Set<path modified by this PR>,
+//            otherFiles: Set<path added/removed/renamed/copied by this PR>,
+//            beforeBlobs / afterBlobs: Map<path, git blob sha1 computed from the
+//            verified merge-base / head bytes> }
+// Rendering must be the builder's own (json.dumps indent=2, trailing newline),
+// so formatting-only churn is never admitted.
+const renderedLikeBuilder = (text, doc) => text === `${JSON.stringify(doc, null, 2)}\n`;
+export function reconciliationManifestMirrorsOnly(before, after, context) {
+  const { modifiedFiles, otherFiles, beforeBlobs, afterBlobs } = context ?? {};
+  if (!(modifiedFiles instanceof Set) || !(otherFiles instanceof Set)
+    || !(beforeBlobs instanceof Map) || !(afterBlobs instanceof Map)) return false;
+  const b = parseManifest(before); const a = parseManifest(after);
+  if (!b || !a) return false;
+  try {
+    if (!renderedLikeBuilder(before, b) || !renderedLikeBuilder(after, a)) return false;
+    // Both sides must be self-consistent with the builder's derived hash.
+    if (manifestEntriesDigest(b.entries) !== b.candidateContentSha256
+      || manifestEntriesDigest(a.entries) !== a.candidateContentSha256) return false;
+    const topKeys = Object.keys(a).sort(codePointCompare);
+    if (pythonCanonicalJson(topKeys) !== pythonCanonicalJson(Object.keys(b).sort(codePointCompare))) return false;
+    for (const key of topKeys) {
+      if (key === 'entries' || key === 'candidateContentSha256') continue;
+      if (pythonCanonicalJson(a[key]) !== pythonCanonicalJson(b[key])) return false;
+    }
+    if (a.entries.length !== b.entries.length) return false;
+    const seen = new Set();
+    let changes = 0;
+    for (let i = 0; i < a.entries.length; i++) {
+      const old = b.entries[i]; const current = a.entries[i];
+      const identity = entryIdentity(current);
+      if (identity !== entryIdentity(old) || seen.has(identity)) return false;
+      seen.add(identity);
+      const keys = Object.keys(current).sort(codePointCompare);
+      if (pythonCanonicalJson(keys) !== pythonCanonicalJson(Object.keys(old).sort(codePointCompare))) return false;
+      for (const key of keys) {
+        if (key === 'candidateGitBlobSha1') continue;
+        if (pythonCanonicalJson(current[key]) !== pythonCanonicalJson(old[key])) return false;
+      }
+      const tracked = current.candidateInspectionPath;
+      // A tracked path this PR deletes, renames or re-adds cannot be mirrored.
+      if (otherFiles.has(tracked)) return false;
+      // Every tracked path this PR modifies must carry the exact verified blobs
+      // on both sides, whether or not the manifest changed it.
+      if (modifiedFiles.has(tracked)
+        && (old.candidateGitBlobSha1 !== beforeBlobs.get(tracked)
+          || current.candidateGitBlobSha1 !== afterBlobs.get(tracked))) return false;
+      if (old.candidateGitBlobSha1 === current.candidateGitBlobSha1) continue;
+      changes += 1;
+      const path = current.candidateInspectionPath;
+      if (!canonicalRepoPath(path) || !modifiedFiles.has(path)
+        || current.candidatePresentAtInspectionPath !== true
+        || !GIT_BLOB_SHA1.test(old.candidateGitBlobSha1 ?? '')
+        || !GIT_BLOB_SHA1.test(current.candidateGitBlobSha1 ?? '')
+        || old.candidateGitBlobSha1 !== beforeBlobs.get(path)
+        || current.candidateGitBlobSha1 !== afterBlobs.get(path)) return false;
+    }
+    return changes > 0;
+  } catch { return false; }
 }
 
 export function descriptor(pr, files, lockfiles = {}, companionContents = {}) {
@@ -178,10 +350,19 @@ export function descriptor(pr, files, lockfiles = {}, companionContents = {}) {
   // Companion pass: an allowlisted file is admitted only when its complete
   // verified base/head contents mirror manifest from/to pairs exactly.
   // Anything else fails closed.
+  const modifiedFiles = new Set(files.filter((f) => f.status === 'modified').map((f) => f.filename));
+  const otherFiles = new Set(files.filter((f) => f.status !== 'modified').map((f) => f.filename));
   for (const file of companionFiles) {
     if (file.status !== 'modified' || packages.length === 0) { incomplete = true; continue; }
-    if (!companionContentMirrorsOnly(companionContents[file.filename]?.before,
-      companionContents[file.filename]?.after, packages)) incomplete = true;
+    const content = companionContents[file.filename];
+    const kind = GOVERNED_COMPANION_PATHS.get(file.filename);
+    const admitted = kind === ACTION_PIN_MIRROR
+      ? companionContentMirrorsOnly(content?.before, content?.after, packages)
+      : kind === RECONCILIATION_MANIFEST
+        ? reconciliationManifestMirrorsOnly(content?.before, content?.after,
+          { modifiedFiles, otherFiles, beforeBlobs: content?.beforeBlobs, afterBlobs: content?.afterBlobs })
+        : false;
+    if (!admitted) incomplete = true;
   }
   return { number: pr.number, headSha: pr.head.sha, targetBranch: pr.base.ref,
     unit: units.size === 1 ? [...units][0] : 'unknown', packages,
@@ -247,13 +428,30 @@ export async function collectCandidates(request, checkedCommit = null) {
       // /head contents, whether or not the API supplied a patch string;
       // unavailable evidence fails closed inside the descriptor.
       const companionContents = {};
+      const gitBlobSha1 = (bytes) => createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
       for (const file of files) {
         if (!GOVERNED_COMPANION_PATHS.has(file.filename) || file.status !== 'modified') continue;
         const base = await ensureMergeBase();
-        companionContents[file.filename] = {
+        const content = {
           before: (await fetchVerifiedBytes(file.filename, base)).toString('utf8'),
           after: (await fetchVerifiedBytes(file.filename, pr.head?.sha)).toString('utf8'),
         };
+        if (GOVERNED_COMPANION_PATHS.get(file.filename) === RECONCILIATION_MANIFEST) {
+          // Blob SHA1s are recomputed from verified bytes of the tracked files
+          // this PR modifies (never trusted from the manifest or API patch).
+          const touched = new Set(files.map((f) => f.filename));
+          const tracked = manifestTrackedPaths(content.before, content.after, touched) ?? [];
+          const modified = new Set(files.filter((f) => f.status === 'modified').map((f) => f.filename));
+          content.beforeBlobs = new Map(); content.afterBlobs = new Map();
+          if (tracked.length <= 100) {
+            for (const path of tracked) {
+              if (!modified.has(path)) continue;
+              content.beforeBlobs.set(path, gitBlobSha1(await fetchVerifiedBytes(path, base)));
+              content.afterBlobs.set(path, gitBlobSha1(await fetchVerifiedBytes(path, pr.head?.sha)));
+            }
+          }
+        }
+        companionContents[file.filename] = content;
       }
       candidates.push(descriptor(pr, files, lockfiles, companionContents));
     }
