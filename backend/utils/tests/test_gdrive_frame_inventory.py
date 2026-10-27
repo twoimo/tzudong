@@ -378,7 +378,7 @@ class WorkflowGuardTest(unittest.TestCase):
                           "rclone copy", "rclone sync", "rclone delete", "rclone.conf", "base64 -d", "status_scope:", "include-hidden-files: true"]:
             self.assertNotIn(forbidden, text)
         pins = [line.split("uses: ")[1].split(" #")[0] for line in text.splitlines() if "uses: " in line]
-        self.assertEqual(pins, ["actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd", "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405", "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"])
+        self.assertEqual(pins, ["actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd", "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405", "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"])
         backfill = (ROOT / ".github/workflows/gdrive-frame-backfill.yml").read_text()
         self.assertIn("vars.G037_WRITE_FREEZE == 'cleared'", backfill)
         self.assertIn("github.ref_protected", backfill)
