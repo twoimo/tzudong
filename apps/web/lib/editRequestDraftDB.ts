@@ -1,6 +1,7 @@
 import { draftStorageOwnerKey, draftPublicOwnerId, legacyDraftStorageOwnerKeys } from '@/lib/privacy/draft-storage-owner';
 import { assertBrowserDraftWrite, beginBrowserDraftCleanup, captureBrowserDraftEpoch, isBrowserDraftEpochCurrent, type BrowserDraftEpoch } from '@/lib/privacy/browser-draft-lifecycle';
 import { openDB, DBSchema, IDBPDatabase, IDBPObjectStore } from 'idb';
+import { MAX_EDIT_SUBMISSION_BYTES } from '@/lib/restaurant-edit-submit-contract';
 import {
     PRIVACY_UNSAFE_VALUE_REASON,
     PrivacyUnsafeValueError,
@@ -48,16 +49,18 @@ const STORE_NAME = 'edit-request-drafts';
 const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_DRAFTS_PER_USER = 20;
 const MAX_SWEEP_RECORDS = 50;
-const MAX_RECORD_BYTES = 12 * 1024;
+// Valid submit payloads also need room for owner, step and expiry metadata.
+const MAX_RECORD_BYTES = MAX_EDIT_SUBMISSION_BYTES + 1024;
 const MAX_IDENTIFIER_LENGTH = 128;
 const MAX_NAME_LENGTH = 200;
 const MAX_ADDRESS_LENGTH = 500;
-const MAX_PHONE_LENGTH = 32;
-const MAX_CATEGORY_COUNT = 8;
+const MAX_PHONE_LENGTH = 40;
+const MAX_CATEGORY_COUNT = 10;
 const MAX_CATEGORY_LENGTH = 64;
-const MAX_REVIEW_COUNT = 12;
+const MAX_REVIEW_COUNT = 100;
 const MAX_LINK_LENGTH = 2_048;
-const MAX_REVIEW_TEXT_LENGTH = 1_000;
+const MAX_REVIEW_TEXT_LENGTH = 4_000;
+const legacyRecoveryPositions = new WeakMap<BrowserDraftEpoch, { namespace: number; after?: [string, string] }>();
 
 const DRAFT_FIELDS = new Set([
     'userId',
@@ -195,16 +198,17 @@ function normalizeStringArray(value: unknown, maxItems: number, maxItemLength: n
     return normalized;
 }
 
-function normalizeBusinessPhone(value: unknown): string | null {
+function normalizeDraftPhone(value: unknown): string | null {
     const phone = normalizeText(value, MAX_PHONE_LENGTH);
     if (phone === null) return null;
     if (!phone) return '';
-    if (!/^\+?[\d\s().-]+$/.test(phone)) return null;
+    if (!/^\+?[\d\s().-]*$/.test(phone)) return null;
 
     const canonical = phone.replace(/[^\d+]/g, '');
     const digits = canonical.replace(/\+/g, '');
-    if (!/^\+?\d+$/.test(canonical) || digits.length < 7 || digits.length > 20) return null;
-    return canonical;
+    if (digits.length > 20) return null;
+    // A draft may contain a prefix; final submission validates business numbers.
+    return digits.length < 7 ? phone : canonical;
 }
 
 function normalizeYoutubeReviews(value: unknown): EditRequestDraft['youtube_reviews'] | null {
@@ -258,7 +262,10 @@ function isWithinRecordByteLimit(value: PersistedEditRequestDraft): boolean {
 function hasOnlyPrivacySafeText(draft: Omit<PersistedEditRequestDraft, 'phone'>): boolean {
     try {
         // Phone is validated separately as an explicit restaurant business-contact field.
-        assertPrivacySafe(draft);
+        // Match submit's bounded groups without relaxing the sanitizer's limits.
+        const { youtube_reviews: reviews, ...metadata } = draft;
+        assertPrivacySafe(metadata);
+        for (const review of reviews) assertPrivacySafe(review);
         return true;
     } catch {
         return false;
@@ -278,7 +285,7 @@ function readDraft(value: unknown, allowStoredFields: boolean, now = Date.now())
         : null;
     const name = normalizeText(record.name, MAX_NAME_LENGTH);
     const address = normalizeText(record.address, MAX_ADDRESS_LENGTH);
-    const phone = normalizeBusinessPhone(record.phone);
+    const phone = normalizeDraftPhone(record.phone);
     const category = normalizeStringArray(record.category, MAX_CATEGORY_COUNT, MAX_CATEGORY_LENGTH);
     const youtubeReviews = normalizeYoutubeReviews(record.youtube_reviews);
 
@@ -331,7 +338,7 @@ function readDraft(value: unknown, allowStoredFields: boolean, now = Date.now())
     };
 
     const { phone: _phone, ...privacySafeFields } = draft;
-    return hasOnlyPrivacySafeText(privacySafeFields) && isWithinRecordByteLimit(draft) ? draft : null;
+    return isWithinRecordByteLimit(draft) && hasOnlyPrivacySafeText(privacySafeFields) ? draft : null;
 }
 
 function getDraftKey(userId: string, restaurantId: string): [string, string] {
@@ -606,8 +613,18 @@ export async function recoverLegacyDrafts(userId: string): Promise<number> {
         let count = existingCount;
         let imported = 0;
         let scanned = 0;
-        for (const legacyOwner of legacyDraftStorageOwnerKeys(userId)) {
-            let cursor = await index.openCursor(legacyOwner);
+        const legacyOwners = legacyDraftStorageOwnerKeys(userId);
+        const progress = legacyRecoveryPositions.get(epoch);
+        let namespace = progress?.namespace ?? 0;
+        let after = progress?.after;
+        for (; namespace < legacyOwners.length && scanned < MAX_DRAFTS_PER_USER && count < MAX_DRAFTS_PER_USER; namespace++) {
+            const legacyOwner = legacyOwners[namespace];
+            // A closed upper endpoint cannot become an exclusive lower bound.
+            if (after && after[1] >= '\uffff') { after = undefined; continue; }
+            let cursor = await transaction.store.openCursor(IDBKeyRange.bound(
+                after ?? [legacyOwner, ''], [legacyOwner, '\uffff'], after !== undefined,
+            ));
+            after = undefined;
             while (cursor && scanned < MAX_DRAFTS_PER_USER && count < MAX_DRAFTS_PER_USER) {
                 const row = readDraft(cursor.value, true);
                 const candidate = row && readDraft({ ...row, userId: draftStorageOwnerKey(userId) }, true);
@@ -626,11 +643,18 @@ export async function recoverLegacyDrafts(userId: string): Promise<number> {
                     }
                 }
                 scanned++;
+                after = cursor.primaryKey;
+                if (scanned >= MAX_DRAFTS_PER_USER || count >= MAX_DRAFTS_PER_USER) break;
                 cursor = await cursor.continue();
             }
+            if (cursor) break;
+            after = undefined;
         }
         await transaction.done;
         assertBrowserDraftWrite(userId, epoch);
+        // Commit progress with the copy, never with an aborted or stale session.
+        if (namespace < legacyOwners.length) legacyRecoveryPositions.set(epoch, { namespace, after });
+        else legacyRecoveryPositions.delete(epoch);
         return imported;
     } catch {
         try { transaction.abort(); } catch { /* It may already have completed. */ }

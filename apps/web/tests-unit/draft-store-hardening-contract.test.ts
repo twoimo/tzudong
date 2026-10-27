@@ -215,6 +215,32 @@ async function rejectionMessage(operation: () => Promise<unknown>): Promise<stri
 }
 
 describe("submission and edit-request draft stores", () => {
+  test("round-trips incomplete phone prefixes for new, recommendation and edit drafts", async () => {
+    for (const phone of ["0", "02-", "02-1234-", "+", "+82 ", "(", "-", "."]) {
+      for (const submissionMode of ["new", "request"] as const) {
+        await submissionDraftStore.saveDraft(submissionDraft({ phone, submissionMode }) as never);
+        expect((await submissionDraftStore.getDraft("draft-user", submissionMode))?.phone).toBe(phone.trim());
+      }
+      await editRequestDraftStore.saveDraft(editRequestDraft({ phone }) as never);
+      expect((await editRequestDraftStore.getDraft("edit-user", "restaurant-1"))?.phone).toBe(phone.trim());
+    }
+  });
+
+  test("unsafe or oversized draft phone values cannot replace a kept partial prefix", async () => {
+    await submissionDraftStore.saveDraft(submissionDraft({ phone: "02-" }) as never);
+    await editRequestDraftStore.saveDraft(editRequestDraft({ phone: "02-" }) as never);
+    const invalid = ["person@example.invalid", "password=synthetic", "data:text/plain,0", "blob:synthetic",
+      "++82", "02/1234", "02;1234", "０２-", "1".repeat(21)];
+    for (const phone of invalid) {
+      expect(await rejectionMessage(() => submissionDraftStore.saveDraft(submissionDraft({ phone }) as never))).toBe("PRIVACY_UNSAFE_VALUE");
+      expect(await rejectionMessage(() => editRequestDraftStore.saveDraft(editRequestDraft({ phone }) as never))).toBe("PRIVACY_UNSAFE_VALUE");
+    }
+    expect(await rejectionMessage(() => submissionDraftStore.saveDraft(submissionDraft({ phone: "-".repeat(33) }) as never))).toBe("PRIVACY_UNSAFE_VALUE");
+    expect(await rejectionMessage(() => editRequestDraftStore.saveDraft(editRequestDraft({ phone: "-".repeat(41) }) as never))).toBe("PRIVACY_UNSAFE_VALUE");
+    expect((await submissionDraftStore.getDraft("draft-user", "new"))?.phone).toBe("02-");
+    expect((await editRequestDraftStore.getDraft("edit-user", "restaurant-1"))?.phone).toBe("02-");
+  });
+
   test("round-trips normal drafts while preserving omitted optional fields", async () => {
     resetDatabase(SUBMISSION_DB);
     resetDatabase(EDIT_REQUEST_DB);

@@ -9,6 +9,7 @@
  * 
  * 사용법:
  *   node 03-collect-transcript.js --channel tzuyang
+ *   node 03-collect-transcript.js --channel tzuyang --video-id <11-character-ID>
  *   node 03-collect-transcript.js --channel meatcreator
  *   node 03-collect-transcript.js  # 모든 채널
  */
@@ -366,13 +367,17 @@ const NO_TRANSCRIPT_DIR = path.resolve(__dirname, '../../data/no_transcript_link
 const NO_TRANSCRIPT_PERMANENT = path.join(NO_TRANSCRIPT_DIR, 'no_transcript_permanent.json');
 
 // 영구 스킵 URL 로드 (retry_num >= 3)
-function loadPermanentSkipUrls() {
+function loadPermanentSkipUrls({ strict = false } = {}) {
     const skipUrls = new Set();
 
     if (fs.existsSync(NO_TRANSCRIPT_PERMANENT)) {
         try {
             const content = fs.readFileSync(NO_TRANSCRIPT_PERMANENT, 'utf-8');
             const entries = JSON.parse(content);
+            if (strict && (!Array.isArray(entries) || entries.some(entry => !entry
+                || !extractVideoId(entry.youtube_link) || !Number.isSafeInteger(entry.retry_num) || entry.retry_num < 0))) {
+                throw new Error('TRANSCRIPT_PERMANENT_SKIP_INVALID');
+            }
 
             for (const entry of entries) {
                 if (entry.retry_num >= 3) {
@@ -385,6 +390,7 @@ function loadPermanentSkipUrls() {
             }
         } catch (error) {
             logFailure('warning', 'TRANSCRIPT_PERMANENT_SKIP_LOAD_FAILED', error);
+            if (strict) throw Object.assign(new Error('TRANSCRIPT_VIDEO_NOT_AVAILABLE'), { code: 'TRANSCRIPT_VIDEO_NOT_AVAILABLE' });
         }
     }
 
@@ -817,6 +823,9 @@ async function getTranscript(videoId, {
  * 채널 자막 수집 (recollect_id 기반)
  */
 async function collectChannelTranscripts(channelName, channelConfig, options = {}) {
+    if (options.videoId !== undefined && (!isTrustedYoutubeVideoId(options.videoId) || options.videoId.length !== 11)) {
+        throw Object.assign(new Error('TRANSCRIPT_VIDEO_SCOPE_INVALID'), { code: 'TRANSCRIPT_VIDEO_SCOPE_INVALID' });
+    }
     const dataPath = options.dataPath || path.resolve(__dirname, '../../', channelConfig.data_path);
     return withStageWriter(path.join(dataPath, '.stage-locks', 'transcript'), assertWriterAvailable =>
         collectChannelTranscriptsLocked(channelName, channelConfig, { ...options, dataPath, assertWriterAvailable }));
@@ -831,7 +840,9 @@ async function collectChannelTranscriptsLocked(channelName, channelConfig, {
     loadSkipUrls = loadPermanentSkipUrls,
     recordNoTranscript = updateNoTranscriptPermanent,
     assertWriterAvailable,
+    videoId: requestedVideoId,
 } = {}) {
+    const scoped = requestedVideoId !== undefined;
     const transcriptDir = path.join(dataPath, 'transcript');
 
     // const channelDataPath = path.join(DATA_DIR, channelName); // ERROR
@@ -846,18 +857,35 @@ async function collectChannelTranscriptsLocked(channelName, channelConfig, {
             if (parts[0]) {
                 const vid = extractVideoId(parts[0]);
                 if (vid) deletedIds.add(vid);
+                else if (scoped && parts[0].trim()) {
+                    throw Object.assign(new Error('TRANSCRIPT_VIDEO_NOT_AVAILABLE'), { code: 'TRANSCRIPT_VIDEO_NOT_AVAILABLE' });
+                }
             }
         }
     }
 
     // 2. 모든 video ID 로드
-    const allVideoIds = [...new Set(loadVideoIdsFromTxt(dataPath))].filter(vid => !deletedIds.has(vid));
+    const registeredIds = [...new Set(loadVideoIdsFromTxt(dataPath))];
+    const permanentSkipUrls = scoped ? loadSkipUrls({ strict: true }) : loadSkipUrls();
+    let scopedMeta;
+    if (scoped) {
+        // Recheck canonical admission under the same stage writer as the append.
+        scopedMeta = getLatestMeta(dataPath, requestedVideoId);
+        if (!registeredIds.includes(requestedVideoId) || deletedIds.has(requestedVideoId)
+            || [...permanentSkipUrls].some(url => extractVideoId(url) === requestedVideoId)
+            || !scopedMeta || typeof scopedMeta !== 'object' || Array.isArray(scopedMeta)
+            || extractVideoId(scopedMeta.youtube_link) !== requestedVideoId
+            || !Number.isSafeInteger(scopedMeta.recollect_id) || scopedMeta.recollect_id < 0
+            || (scopedMeta.channel_name !== undefined && scopedMeta.channel_name !== channelName)) {
+            throw Object.assign(new Error('TRANSCRIPT_VIDEO_NOT_AVAILABLE'), { code: 'TRANSCRIPT_VIDEO_NOT_AVAILABLE' });
+        }
+    }
+    const allVideoIds = scoped ? [requestedVideoId] : registeredIds.filter(vid => !deletedIds.has(vid));
 
     if (!fs.existsSync(transcriptDir)) {
         fs.mkdirSync(transcriptDir, { recursive: true });
     }
 
-    const permanentSkipUrls = loadSkipUrls();  // 블랙리스트 로드
     log('info', `채널: ${channelConfig.name}`);
     log('info', `전체 URL: ${allVideoIds.length}개`);
 
@@ -869,7 +897,7 @@ async function collectChannelTranscriptsLocked(channelName, channelConfig, {
     const toCollect = [];
 
     for (const videoId of allVideoIds) {
-        const latestMeta = getLatestMeta(dataPath, videoId);
+        const latestMeta = scoped ? scopedMeta : getLatestMeta(dataPath, videoId);
         const latestTranscript = getLatestTranscript(dataPath, videoId);
 
         if (!latestMeta) {
@@ -943,6 +971,13 @@ async function collectChannelTranscriptsLocked(channelName, channelConfig, {
                 }
                 assertWriterAvailable();
                 appendTranscriptRecord(outputFile, outputData);
+                if (scoped) {
+                    const persisted = getLatestTranscript(dataPath, videoId);
+                    if (!isValidTranscriptRecord(persisted, videoId, channelName)
+                        || JSON.stringify(persisted) !== JSON.stringify(outputData)) {
+                        throw Object.assign(new Error('TRANSCRIPT_OUTPUT_UNCONFIRMED'), { code: 'TRANSCRIPT_OUTPUT_UNCONFIRMED' });
+                    }
+                }
 
                 stats.success++;
                 log('success', `[Success] ${videoId} (${result.transcript.length} lines) via ${result.source}`);
@@ -990,6 +1025,24 @@ async function collectChannelTranscriptsLocked(channelName, channelConfig, {
     };
 }
 
+// Strict parsing applies only to the opt-in singleton mode; legacy channel mode stays unchanged.
+function parseVideoScope(args) {
+    if (!args.some(arg => arg.startsWith('--video-id'))) return null;
+    const values = new Map();
+    for (let i = 0; i < args.length; i += 2) {
+        const option = args[i] === '-c' ? '--channel' : args[i];
+        if (!['--channel', '--video-id'].includes(option) || values.has(option)
+            || typeof args[i + 1] !== 'string') return { invalid: true };
+        values.set(option, args[i + 1]);
+    }
+    const channel = values.get('--channel');
+    const videoId = values.get('--video-id');
+    if (typeof channel !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(channel)
+        || !isTrustedYoutubeVideoId(videoId) || videoId.length !== 11
+        || /\s/.test(channel)) return { invalid: true };
+    return { channel, videoId };
+}
+
 /**
  * 메인 실행
  */
@@ -998,12 +1051,19 @@ async function main(args = process.argv.slice(2), {
     loadConfig = loadChannelsConfig,
     collect = collectChannelTranscripts,
 } = {}) {
+    const videoScope = parseVideoScope(args);
+    if (videoScope?.invalid) {
+        log('error', 'TRANSCRIPT_VIDEO_SCOPE_INVALID');
+        return 2;
+    }
     await loadEnvironmentForRun();
-    let channelFilter = null;
+    let channelFilter = videoScope?.channel || null;
 
-    for (let i = 0; i < args.length; i++) {
-        if (args[i] === '--channel' || args[i] === '-c') {
-            channelFilter = args[i + 1];
+    if (!videoScope) {
+        for (let i = 0; i < args.length; i++) {
+            if (args[i] === '--channel' || args[i] === '-c') {
+                channelFilter = args[i + 1];
+            }
         }
     }
 
@@ -1013,6 +1073,12 @@ async function main(args = process.argv.slice(2), {
 
     const config = await loadConfig();
     const channels = config.channels;
+    if (videoScope && (!channels || !Object.hasOwn(channels, videoScope.channel)
+        || !channels[videoScope.channel] || typeof channels[videoScope.channel] !== 'object'
+        || Array.isArray(channels[videoScope.channel]))) {
+        log('error', 'TRANSCRIPT_VIDEO_SCOPE_INVALID');
+        return 2;
+    }
     const channelNames = channelFilter ? [channelFilter] : Object.keys(channels);
 
     log('info', `대상 채널: ${channelNames.join(', ')}`);
@@ -1024,8 +1090,18 @@ async function main(args = process.argv.slice(2), {
             log('error', `알 수 없는 채널: ${channelName}`);
             continue;
         }
-        const result = await collect(channelName, channels[channelName]);
-        results.push(result);
+        try {
+            const result = videoScope
+                ? await collect(channelName, channels[channelName], { videoId: videoScope.videoId })
+                : await collect(channelName, channels[channelName]);
+            results.push(result);
+        } catch (error) {
+            if (!videoScope) throw error;
+            if (puppeteerBrowser) await puppeteerBrowser.close();
+            const invalid = ['TRANSCRIPT_VIDEO_SCOPE_INVALID', 'TRANSCRIPT_VIDEO_NOT_AVAILABLE'].includes(error?.code);
+            log('error', invalid ? error.code : 'TRANSCRIPT_COLLECTION_INCOMPLETE');
+            return invalid ? 2 : 1;
+        }
     }
 
     if (puppeteerBrowser) {
@@ -1034,7 +1110,9 @@ async function main(args = process.argv.slice(2), {
 
     log('info', '');
     log('info', '='.repeat(60));
-    const hasFailures = results.some(result => result.failed > 0);
+    const hasFailures = results.some(result => result.failed > 0
+        || (videoScope && (result.noTranscript > 0
+            || (result.success !== 1 && !(result.processed === 0 && result.skipped === 1)))));
     log(hasFailures ? 'error' : 'success', hasFailures ? 'TRANSCRIPT_COLLECTION_INCOMPLETE' : '자막 수집 완료');
     for (const result of results) {
         log('info', `  ${result.channel}: 성공 ${result.success}개, 스킵 ${result.skipped}개, 자막 없음 ${result.noTranscript || 0}개, 실패 ${result.failed || 0}개`);
