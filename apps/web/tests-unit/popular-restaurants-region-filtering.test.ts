@@ -109,6 +109,25 @@ describe('popular restaurant region filtering', () => {
     }
   });
 
+  test.each(['osaka', 'OSAKA', 'oSaKa'])('matches %s address casing like the server city filter', (city) => {
+    for (const field of ['road_address', 'jibun_address', 'english_address'] as const) {
+      expect(
+        matchesRestaurantAddressContext(
+          restaurantWithAddress({ [field]: '일본 ' + city + ', Chuo Ward' }),
+          '일본(오사카)',
+          false,
+        ),
+      ).toBe(true);
+      expect(
+        matchesRestaurantAddressContext(
+          restaurantWithAddress({ [field]: '일본 sApPoRo, Hokkaido' }),
+          '일본(오사카)',
+          false,
+        ),
+      ).toBe(false);
+    }
+  });
+
   test('normalizes an exact overseas city without adding the generic country', () => {
     expect(getRestaurantRegionAddressKeywords(' 일본(오사카) ')).toEqual([
       'Osaka',
