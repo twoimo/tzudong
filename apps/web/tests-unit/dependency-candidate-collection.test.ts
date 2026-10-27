@@ -361,6 +361,15 @@ describe('governed companion bare SHA on a named line stays rejected', () => {
     expect(check(`UPLOAD = "actions/upload-artifact@${F}"`, `UPLOAD = "actions/upload-artifact@${T}"`)).toBe(true);
     expect(check(`    self.assertEqual(pins, ["actions/upload-artifact@${F}"])`,
       `    self.assertEqual(pins, ["actions/upload-artifact@${T}"])`)).toBe(true);
+    // Pin plus its own version comment inside one Python assertIn string.
+    const tagged71 = [{ name: 'actions/upload-artifact', fromVersion: F, toVersion: T, fromTag: 'v7.0.1', toTag: 'v7.0.2' }];
+    const cmt = (sha: string, tag: string) =>
+      `        self.assertIn("actions/upload-artifact@${sha} # actions/upload-artifact@${tag}", workflow)`;
+    expect(check(cmt(F, 'v7.0.1'), cmt(T, 'v7.0.2'), tagged71)).toBe(true);
+    expect(check(cmt(F, 'v7.0.1'), cmt(T, 'v7.0.1'), tagged71)).toBe(false);
+    expect(check(cmt(F, 'v7.0.1'), cmt(T, 'v7.0.3'), tagged71)).toBe(false);
+    expect(check(`        self.assertIn("actions/upload-artifact@v7.0.1", workflow)`,
+      `        self.assertIn("actions/upload-artifact@v7.0.2", workflow)`, tagged71)).toBe(false);
   });
 
   test('tuple, bare SHA, name-in-comment and loose major shapes are not admitted', () => {
@@ -436,6 +445,7 @@ describe('governed companion bare SHA on a named line stays rejected', () => {
       'backend/supabase/tests/test_g038_workflow.py',
       'backend/supabase/tests/test_g040_prefix_recovery_workflow.py',
       'backend/utils/tests/test_gdrive_frame_inventory.py',
+      'backend/utils/tests/test_run_daily_regression.py',
     ]);
     for (const path of GOVERNED_COMPANION_PATHS.keys()) expect(path.includes('*')).toBe(false);
   });

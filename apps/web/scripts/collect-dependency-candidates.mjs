@@ -54,6 +54,7 @@ export const GOVERNED_COMPANION_PATHS = new Map([
   ['backend/supabase/tests/test_g038_workflow.py', ACTION_PIN_MIRROR],
   ['backend/supabase/tests/test_g040_prefix_recovery_workflow.py', ACTION_PIN_MIRROR],
   ['backend/utils/tests/test_gdrive_frame_inventory.py', ACTION_PIN_MIRROR],
+  ['backend/utils/tests/test_run_daily_regression.py', ACTION_PIN_MIRROR],
   [RECONCILIATION_MANIFEST_PATH, RECONCILIATION_MANIFEST],
 ]);
 
