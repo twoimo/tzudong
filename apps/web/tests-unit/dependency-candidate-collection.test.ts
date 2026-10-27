@@ -415,7 +415,8 @@ describe('governed companion bare SHA on a named line stays rejected', () => {
     expect(check(`  expect(w).toContain("actions/upload-artifact@${F}");`, `  expect(w).toContain("actions/upload-artifact@${T}");`)).toBe(true);
     expect(check(`  expect(w).toContain("actions/upload-artifact@${F}");`, `  expect(w).not.toContain("actions/upload-artifact@${T}");`)).toBe(false);
     expect(check(pin(F), pin(T).replace('",', '", '))).toBe(false);
-    expect(check(pin(F), pin(T).replace('"', "'"))).toBe(false);
+    expect(check(pin(F), pin(T).replace(/"/, "'"))).toBe(false);
+    expect(check(pin(F), pin(T).replace(/"/g, "'"))).toBe(false);
     expect(check(pin(F), pin(T.toUpperCase()))).toBe(false);
   });
 
@@ -518,7 +519,8 @@ describe('governed reconciliation manifest verifier', () => {
     // Formatting-only churn is not the builder rendering.
     expect(reconciliationManifestMirrorsOnly(manifestText, JSON.stringify(goodAfter()), ctx())).toBe(false);
     expect(reconciliationManifestMirrorsOnly(manifestText, JSON.stringify(goodAfter(), null, 4) + '\n', ctx())).toBe(false);
-    expect(reconciliationManifestMirrorsOnly(manifestText.replace('\n', '\r\n'), render(goodAfter()), ctx())).toBe(false);
+    expect(reconciliationManifestMirrorsOnly(manifestText.replace(/\n/, '\r\n'), render(goodAfter()), ctx())).toBe(false);
+    expect(reconciliationManifestMirrorsOnly(manifestText.replace(/\n/g, '\r\n'), render(goodAfter()), ctx())).toBe(false);
     // No change at all, invalid JSON, wrong kind.
     expect(verify(base)).toBe(false);
     expect(reconciliationManifestMirrorsOnly(manifestText, '{', ctx())).toBe(false);
