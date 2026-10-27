@@ -72,6 +72,26 @@ VALUES
     '2026-01-01T00:00:00Z'::timestamptz
   );
 
+-- Disabled administrator fixture: the account row keeps account_status
+-- 'active' but carries a non-null disabled_at, the cross-path state named by
+-- #3366 verification criteria. The authenticated probe below must deny it,
+-- matching the fail-closed disabled_at check in
+-- apps/web/lib/auth/require-admin.ts (require-admin-fail-closed.test.ts).
+INSERT INTO auth.users (id, aud, role, email, encrypted_password, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+VALUES (
+  '00000000-0000-4000-8000-000000000499'::uuid,
+  'authenticated', 'authenticated', 'disabled-admin@local.invalid', 'disabled',
+  '{}'::jsonb, '{}'::jsonb,
+  pg_catalog.clock_timestamp(), pg_catalog.clock_timestamp()
+);
+INSERT INTO public.user_roles (user_id, role)
+VALUES ('00000000-0000-4000-8000-000000000499'::uuid, 'admin');
+INSERT INTO public.user_account_status (user_id, account_status, disabled_at)
+VALUES (
+  '00000000-0000-4000-8000-000000000499'::uuid,
+  'active', '2026-01-01T00:00:00Z'::timestamptz
+);
+
 SET LOCAL ROLE anon;
 DO $$
 DECLARE
@@ -250,6 +270,25 @@ BEGIN
      ) <> 2 THEN
     RAISE EXCEPTION 'local_runtime_authenticated_admin_read_failed';
   END IF;
+
+  -- #3366: an administrator whose status row stays 'active' but has a non-null
+  -- disabled_at must be denied by the caller-bound predicate, the same answer
+  -- requireAdmin() gives for that row (require-admin-fail-closed.test.ts).
+  PERFORM pg_catalog.set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-4000-8000-000000000499',
+    true
+  );
+
+  IF public.is_current_user_active_admin() IS NOT FALSE THEN
+    RAISE EXCEPTION 'local_runtime_disabled_admin_was_admitted';
+  END IF;
+
+  PERFORM pg_catalog.set_config(
+    'request.jwt.claim.sub',
+    pg_catalog.current_setting('tzudong.test_user_id'),
+    true
+  );
 
   -- Every legacy RLS caller now uses the same caller-bound predicate. Merely
   -- reading all affected relations catches a revoked-helper regression before
