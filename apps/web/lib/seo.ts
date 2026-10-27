@@ -175,13 +175,6 @@ export const homeJsonLd = [
         inLanguage: 'ko-KR',
         browserRequirements: 'Requires JavaScript. Requires HTML5.',
         softwareVersion: '1.2.4',
-        aggregateRating: {
-            '@type': 'AggregateRating',
-            ratingValue: '4.9',
-            reviewCount: '1250',
-            bestRating: '5',
-            worstRating: '1',
-        },
     },
     {
         '@context': 'https://schema.org',
