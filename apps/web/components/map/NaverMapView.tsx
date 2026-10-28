@@ -734,6 +734,7 @@ const NaverMapView = memo(({
     const mapReturnOwner = mapViewer?.id ?? "anonymous";
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<NaverMapLike | null>(null);
+    const initialIdleWorkRef = useRef<{ map: NaverMapLike; cancel: () => void } | null>(null);
     const markerRenderSignatureRef = useRef<MarkerRenderSignature | null>(null);
     const pendingOffscreenMarkerRendersRef = useRef<(() => void) | null>(null);
     const extendedBoundsRef = useRef({ south: 0, west: 0, north: 0, east: 0 });
@@ -3327,6 +3328,11 @@ const NaverMapView = memo(({
 
 
 
+    useEffect(() => () => {
+        initialIdleWorkRef.current?.cancel();
+        initialIdleWorkRef.current = null;
+    }, []);
+
     // Save only in the existing in-memory cache; no URL/storage coordinate writes.
     useEffect(() => {
         const map = mapInstanceRef.current;
@@ -3341,19 +3347,64 @@ const NaverMapView = memo(({
                 writeHomeRouteMemory(routeQueryClient, mapReturnOwner, "domestic-camera", {lat, lng, zoom});
             } catch { /* A failing provider must not abort route teardown. */ }
         };
-        const listener = window.naver.maps.Event.addListener(map, "idle", capture);
-        return () => { capture(); active = false; removeNaverMapListener(window.naver?.maps.Event, listener); };
+        const events = window.naver?.maps?.Event;
+        if (typeof events?.addListener !== 'function') return;
+        try {
+            const listener = events.addListener(map, "idle", capture);
+            return () => { capture(); active = false; removeNaverMapListener(events, listener); };
+        } catch {
+            // A provider can retain the callback before registration throws.
+            active = false;
+        }
     }, [isMapInitialized, isMapViewerLoading, mapReturnOwner, routeQueryClient]);
 
     // 지도 초기화
     useEffect(() => {
         if (!isLoaded || !mapRef.current || isMapViewerLoading) return;
 
+        const scheduleInitialIdle = (map: NaverMapLike, maps: typeof window.naver.maps | undefined) => {
+            initialIdleWorkRef.current?.cancel();
+            const events = maps?.Event;
+            let active = true;
+            const fail = () => {
+                if (mapInstanceRef.current !== map) return;
+                mapInstanceRef.current = null;
+                setIsMapInitialized(false);
+                setMapInitError("네이버 지도를 초기화하지 못했습니다.");
+                // A failed provider must not interrupt the local failure state.
+                try { markerPool.clear(); } catch { /* Best-effort provider teardown. */ }
+                try { clusterAnimationManager.clear(); } catch { /* Best-effort animation teardown. */ }
+            };
+            const timer = scheduleNaverInitialIdleTrigger({
+                map,
+                triggerIdle: (targetMap) => {
+                    if (!active || mapInstanceRef.current !== targetMap) return;
+                    active = false;
+                    if (window.naver?.maps !== maps || maps?.Event !== events || typeof events?.trigger !== 'function') {
+                        fail();
+                        return;
+                    }
+                    try { events.trigger(targetMap, 'idle'); } catch { fail(); }
+                },
+            });
+            initialIdleWorkRef.current = {
+                map,
+                cancel: () => { active = false; clearTimeout(timer); },
+            };
+        };
+
         // 기존 인스턴스가 유효하면 재초기화 불필요
         if (isNaverMapInstanceReusable({
             mapElement: mapRef.current,
             mapInstance: mapInstanceRef.current,
-        })) return;
+        })) {
+            const map = mapInstanceRef.current;
+            if (map && initialIdleWorkRef.current?.map !== map) scheduleInitialIdle(map, window.naver?.maps);
+            return;
+        }
+
+        initialIdleWorkRef.current?.cancel();
+        initialIdleWorkRef.current = null;
 
         // 유효하지 않은 기존 인스턴스 정리
         const staleMapCleanupPlan = resolveNaverStaleMapCleanupPlan({
@@ -3369,7 +3420,8 @@ const NaverMapView = memo(({
 
         try {
             setMapInitError(null);
-            const { naver } = window;
+            const maps = window.naver?.maps;
+            if (!maps) throw new Error("네이버 지도를 초기화하지 못했습니다.");
 
             const { hasValidUrlState, initialCenter, initialZoom } = resolveNaverInitialMapView({
                 getDeviceAdjustedZoom,
@@ -3378,10 +3430,10 @@ const NaverMapView = memo(({
             });
 
             const camera = hasValidUrlState ? undefined : readHomeRouteMemory<{lat: number; lng: number; zoom: number}>(routeQueryClient, mapReturnOwner, "domestic-camera");
-            const map = new naver.maps.Map(mapRef.current, buildNaverMapOptions({
-                center: new naver.maps.LatLng(camera?.lat ?? initialCenter[0], camera?.lng ?? initialCenter[1]),
-                positionTopLeft: naver.maps.Position.TOP_LEFT,
-                positionTopRight: naver.maps.Position.TOP_RIGHT,
+            const map = new maps.Map(mapRef.current, buildNaverMapOptions({
+                center: new maps.LatLng(camera?.lat ?? initialCenter[0], camera?.lng ?? initialCenter[1]),
+                positionTopLeft: maps.Position.TOP_LEFT,
+                positionTopRight: maps.Position.TOP_RIGHT,
                 zoom: camera?.zoom ?? initialZoom,
             }));
 
@@ -3409,25 +3461,20 @@ const NaverMapView = memo(({
             }
 
             // [Fix] 지도 초기화 후 idle 이벤트 강제 트리거 - 클러스터 초기화 보장
-            scheduleNaverInitialIdleTrigger({
-                map,
-                triggerIdle: (targetMap) => {
-                    naver.maps.Event.trigger(targetMap, 'idle');
-                },
-            });
+            scheduleInitialIdle(map, maps);
 
             // [URL 라우팅] 지도 이동 시 URL 동기화 비활성화
             // 사용자가 직접 공유 버튼을 클릭할 때만 URL이 생성되도록 변경
             // idle 이벤트에서 URL 동기화하면 공유 URL 접속 시 원치 않는 URL 변경이 발생함
             // naver.maps.Event.addListener(map, 'idle', () => { ... });
 
-        } catch (error) {
+        } catch {
             console.error("네이버 지도 초기화 오류:");
             markerPool.clear();
             clusterAnimationManager.clear();
             mapInstanceRef.current = null;
             setIsMapInitialized(false);
-            setMapInitError(error instanceof Error ? error.message : "네이버 지도를 초기화하지 못했습니다.");
+            setMapInitError("네이버 지도를 초기화하지 못했습니다.");
             showMapToast("지도를 초기화하는 중 오류가 발생했습니다.", 'error');
         }
     }, [isLoaded, isMapViewerLoading, mapReturnOwner, routeQueryClient, getDeviceAdjustedZoom, selectedRegion, showMapToast]);
