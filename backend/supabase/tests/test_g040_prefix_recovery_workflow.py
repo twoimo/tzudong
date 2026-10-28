@@ -17,7 +17,7 @@ CONTROLLER_PATH = ROOT / "backend" / "supabase" / "scripts" / "g040_production_c
 G035_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "g035-hosted-recovery.yml"
 G035_RUNBOOK_PATH = ROOT / "backend" / "supabase" / "docs" / "g035-hosted-recovery-runbook.md"
 CHECKOUT = "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
-UPLOAD = "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08"
+UPLOAD = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"
 FORBIDDEN_TEXT = re.compile(
     r"(?:secrets\.|vars\.|private[_ -]?key|BEGIN [A-Z ]*PRIVATE KEY|\bdsn\b|database_url|"
     r"service[_ -]?file|authorization|signature|diagnose|readback|prepare|execute|\bmode\b)",

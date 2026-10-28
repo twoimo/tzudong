@@ -14,7 +14,7 @@ WORKFLOW_PATH = ROOT / ".github" / "workflows" / "g038-account-deletion-successo
 CHECKOUT = "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
 SETUP_PYTHON = "actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38"
 ATTEST = "actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be"
-UPLOAD = "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08"
+UPLOAD = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"
 JOB_IF = (
     "github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' "
     "&& github.sha == inputs.commit_sha"

@@ -714,7 +714,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertNotIn("--completion-proof remote_manifest_check", workflow)
         self.assertIn("remote_manifest_check", workflow)
         self.assertIn(
-            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1",
+            "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact@v7.0.2",
             workflow,
         )
         self.assertIn("STATUS_SCOPE_SAFE", workflow)

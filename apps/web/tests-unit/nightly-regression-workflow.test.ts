@@ -233,7 +233,7 @@ describe("nightly regression package and source contracts", () => {
       "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
       "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
       "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
-      "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08",
+      "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
     ]) {
       expect(hostedWorkflowSource).toContain(action);
     }
@@ -939,7 +939,7 @@ describe("nightly regression package and source contracts", () => {
       "UNIT_OUTCOME: ${{ steps.nightly-unit.outcome }}",
       "E2E_OUTCOME: ${{ steps.nightly-e2e.outcome }}",
       "--mode local",
-      "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4.6.0",
+      "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact@v7.0.2",
       "publication-boundary.txt",
       "failure-diagnostics/local-stack-failure-diagnostics.json",
       "steps.prepare-lifecycle-diagnostic.outputs.path",
@@ -1108,7 +1108,7 @@ describe("nightly regression package and source contracts", () => {
       "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
       "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
       "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
-      "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08",
+      "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
       DOWNLOAD_ARTIFACT_PIN,
     ]) {
       expect(localWorkflowSource).toContain(action);
