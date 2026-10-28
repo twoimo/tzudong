@@ -21,6 +21,29 @@ GAP_PREFIX = "NIGHTLY_UNIT_DIAGNOSTIC_GAP="
 GAP_SCHEMA = "nightly-unit-diagnostic-gap-v1"
 GAP_STAGES = {"memfd", "input", "input_size", "files", "spawn", "junit_size", "junit_read", "derive"}
 GAP_FIELDS = {"schema", "stage", "xml_bytes", "exit_code", "signal"}
+GAP_V2_SCHEMA = "nightly-unit-diagnostic-gap-v2"
+GAP_V2_FIELDS = {"schema", "stage", "reason", "xml_bytes", "exit_code", "signal"}
+DERIVE_REASONS = frozenset({
+    "bad_input_shape", "bad_file_entry", "unknown_file", "duplicate_file",
+    "empty_admitted", "doctype_or_entity", "xml_parse", "root_tag",
+    "unadmitted_case_file", "max_tests", "multi_outcome", "bad_line",
+    "line_range", "no_tests", "tests_mismatch", "failures_mismatch",
+    "skipped_mismatch", "exit_code_type", "exit_failure_mismatch",
+})
+
+
+class DeriveRejected(ValueError):
+    """Typed derive-stage rejection; subclasses ValueError so existing catch sites are unchanged."""
+
+    def __init__(self, reason: str) -> None:
+        if reason not in DERIVE_REASONS:
+            raise ValueError("unknown derive reason")
+        super().__init__(reason)
+        self.reason = reason
+
+
+def reject(reason: str) -> None:
+    raise DeriveRejected(reason)
 
 
 def fail() -> None:
@@ -32,10 +55,22 @@ def gap_record(stage: str, xml_bytes: int, exit_code: int | None, signal: int | 
                        "exit_code": exit_code, "signal": signal}, separators=(",", ":"))
 
 
+def gap_record_v2(reason: str, xml_bytes: int, exit_code: int | None, signal: int | None) -> str:
+    return json.dumps({"schema": GAP_V2_SCHEMA, "stage": "derive", "reason": reason,
+                       "xml_bytes": xml_bytes, "exit_code": exit_code, "signal": signal},
+                      separators=(",", ":"))
+
+
 def validate_gap(payload: object) -> dict:
-    if not isinstance(payload, dict) or set(payload) != GAP_FIELDS or payload["schema"] != GAP_SCHEMA:
+    if not isinstance(payload, dict):
         fail()
-    if payload["stage"] not in GAP_STAGES:
+    if set(payload) == GAP_FIELDS and payload["schema"] == GAP_SCHEMA:
+        if payload["stage"] not in GAP_STAGES:
+            fail()
+    elif set(payload) == GAP_V2_FIELDS and payload["schema"] == GAP_V2_SCHEMA:
+        if payload["stage"] != "derive" or payload["reason"] not in DERIVE_REASONS:
+            fail()
+    else:
         fail()
     if not count(payload["xml_bytes"], MAX_INPUT):
         fail()
@@ -108,18 +143,27 @@ def validate(payload: object, files: dict[str, int]) -> dict:
 
 def derive(data: dict, root: Path) -> dict:
     if set(data) not in ({"xml", "files"}, {"xml", "files", "exit_code"}) or not isinstance(data["xml"], str) or not isinstance(data["files"], list):
-        fail()
+        reject("bad_input_shape")
     available = inventory(root)
     admitted = {}
     for file in data["files"]:
-        if not isinstance(file, str) or file not in available or file in admitted:
-            fail()
+        if not isinstance(file, str):
+            reject("bad_file_entry")
+        if file not in available:
+            reject("unknown_file")
+        if file in admitted:
+            reject("duplicate_file")
         admitted[file] = available[file]
-    if not admitted or "<!DOCTYPE" in data["xml"] or "<!ENTITY" in data["xml"]:
-        fail()
-    report = ET.fromstring(data["xml"])
+    if not admitted:
+        reject("empty_admitted")
+    if "<!DOCTYPE" in data["xml"] or "<!ENTITY" in data["xml"]:
+        reject("doctype_or_entity")
+    try:
+        report = ET.fromstring(data["xml"])
+    except ET.ParseError:
+        reject("xml_parse")
     if report.tag != "testsuites":
-        fail()
+        reject("root_tag")
     sites, next_index = [], {}
     total = skipped = failed = 0
     for case in report.iter("testcase"):
@@ -128,36 +172,42 @@ def derive(data: dict, root: Path) -> dict:
         if raw_file.startswith(str(root) + "/"):
             file = raw_file[len(str(root)) + 1:]
         if file not in admitted:
-            fail()
+            reject("unadmitted_case_file")
         index = next_index.get(file, 0)
         next_index[file] = index + 1
         total += 1
         if total > MAX_TESTS:
-            fail()
+            reject("max_tests")
         outcomes = [child.tag for child in case if child.tag in {"failure", "error", "skipped"}]
         if len(outcomes) > 1:
-            fail()
+            reject("multi_outcome")
         if outcomes == ["skipped"]:
             skipped += 1
         elif outcomes:
             failed += 1
             line = case.get("line", "")
             if not line.isascii() or not line.isdigit():
-                fail()
+                reject("bad_line")
             if not 1 <= int(line) <= admitted[file]:
-                fail()
+                reject("line_range")
             sites.append({"file": file, "test_index": index, "line": int(line), "kind": outcomes[0]})
-    if not total or int(report.get("tests", "-1")) != total or int(report.get("failures", "-1")) != failed:
-        fail()
+    if not total:
+        reject("no_tests")
+    if int(report.get("tests", "-1")) != total:
+        reject("tests_mismatch")
+    if int(report.get("failures", "-1")) != failed:
+        reject("failures_mismatch")
     if int(report.get("skipped", "-1")) != skipped:
-        fail()
+        reject("skipped_mismatch")
     payload = validate({"schema": "nightly-unit-failure-sites-v2", "test_count": total,
                      "failure_count": failed, "skip_count": skipped, "sites": sites[:MAX_SITES],
                      "omitted_site_count": max(0, failed - MAX_SITES)}, admitted)
     if "exit_code" in data:
         code = data["exit_code"]
-        if type(code) is not int or not -127 <= code <= 255 or (code == 0) != (failed == 0):
-            fail()
+        if type(code) is not int or not -127 <= code <= 255:
+            reject("exit_code_type")
+        if (code == 0) != (failed == 0):
+            reject("exit_failure_mismatch")
     return payload
 
 
@@ -272,6 +322,10 @@ def main() -> int:
                     return code if code >= 0 else 1
                 finally:
                     os.close(fd)
+            except DeriveRejected as rejected:
+                print(GAP_PREFIX + gap_record_v2(rejected.reason, xml_bytes, code,
+                                                 -code if type(code) is int and code < 0 else None))
+                return 1
             except (ValueError, TypeError, KeyError, OSError, ET.ParseError):
                 print(GAP_PREFIX + gap_record(stage, xml_bytes, code,
                                               -code if type(code) is int and code < 0 else None))
@@ -280,7 +334,18 @@ def main() -> int:
             raw = sys.stdin.buffer.read(MAX_INPUT + 1)
             if len(raw) > MAX_INPUT:
                 fail()
-            print(json.dumps(derive(json.loads(raw), root), separators=(",", ":")))
+            data = json.loads(raw)
+            try:
+                print(json.dumps(derive(data, root), separators=(",", ":")))
+            except DeriveRejected as rejected:
+                xml = data.get("xml") if isinstance(data, dict) else None
+                code = data.get("exit_code") if isinstance(data, dict) else None
+                print(GAP_PREFIX + gap_record_v2(
+                    rejected.reason,
+                    len(xml.encode("utf-8")) if isinstance(xml, str) else 0,
+                    code if type(code) is int and -127 <= code <= 255 else None,
+                    -code if type(code) is int and -127 <= code < 0 else None))
+                return 1
         else:
             fail()
     except (ValueError, TypeError, KeyError, OSError, ET.ParseError):
