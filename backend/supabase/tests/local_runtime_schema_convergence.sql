@@ -2,6 +2,8 @@
 BEGIN;
 
 DO $$
+DECLARE
+  expected_profile_updated_at timestamptz;
 BEGIN
   -- The harness prepares private fixtures; each behavior probe below switches
   -- to anon, authenticated or service_role before asserting its boundary.
@@ -20,6 +22,23 @@ BEGIN
   IF pg_catalog.current_setting('tzudong.test_user_id', true) IS NULL THEN
     RAISE EXCEPTION 'local_runtime_test_identity_missing';
   END IF;
+
+  -- Other local journeys can legitimately update the seeded profile. Keep
+  -- the service RPC comparison exact without assuming its seed timestamp.
+  SELECT profile_row.updated_at
+    INTO STRICT expected_profile_updated_at
+    FROM public.profiles AS profile_row
+   WHERE profile_row.user_id =
+     pg_catalog.current_setting('tzudong.test_user_id')::uuid
+     FOR SHARE;
+  IF expected_profile_updated_at IS NULL THEN
+    RAISE EXCEPTION 'local_runtime_test_profile_timestamp_missing';
+  END IF;
+  PERFORM pg_catalog.set_config(
+    'tzudong.test_profile_updated_at',
+    expected_profile_updated_at::text,
+    true
+  );
 END
 $$;
 
@@ -556,7 +575,7 @@ BEGIN
      OR metadata_row.profile_created_at IS DISTINCT FROM
        '2026-01-01T00:00:00Z'::timestamptz
      OR metadata_row.profile_updated_at IS DISTINCT FROM
-       '2026-01-01T00:00:00Z'::timestamptz
+       pg_catalog.current_setting('tzudong.test_profile_updated_at')::timestamptz
      OR metadata_row.is_admin IS DISTINCT FROM true
      OR metadata_row.account_status IS DISTINCT FROM 'active' THEN
     RAISE EXCEPTION 'local_runtime_admin_metadata_rpc_failed';
