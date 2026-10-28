@@ -23,10 +23,9 @@ databaseTarget.username = 'postgres';
 databaseTarget.password = 'synthetic-fixture';
 const databaseUrl = databaseTarget.toString();
 function admission() {
-  return { kind: 'sponsorship_scoped_admission_v1', authority: 'authenticated-repository-owner-local-cli',
+  return { kind: 'sponsorship_scoped_admission_v2', authority: 'authenticated-repository-owner-local-cli',
     operationId: '12345678-1234-4234-8234-123456789abc', projectRef: record.manifest.projectRef,
-    databaseName: 'postgres', manifestSha256: MANIFEST_SHA256, migrationSha256: record.manifest.migration.sha256,
-    vectorSha256: record.manifest.statementVectorSha256, scopeSha256: hash(JSON.stringify(record.manifest.scope)),
+    databaseName: 'postgres', manifestSha256: MANIFEST_SHA256, bundleSha256: record.manifest.bundleSha256, scopeSha256: hash(JSON.stringify(record.manifest.scope)),
     sourceRevision: source.revision, sourceTree: source.tree, sourceFilesSha256: source.filesSha256,
     issuedAt: instant.toISOString(), expiresAt: new Date(instant.getTime() + 300000).toISOString(),
     fences: structuredClone(record.manifest.fences),
@@ -35,11 +34,13 @@ function admission() {
 }
 function prior() {
   return { identity: true, catalog: true,
-    ledger: { count: 97, priorHash: record.manifest.priorLedger.sha256, targetPresent: false, targetEqual: false },
+    ledger: { count: 97, priorHash: record.manifest.priorLedger.sha256, targets: record.plans.map((p: any) => ({ version: p.version, present: false, equal: false })) },
+    revision: { count: 1, singletonCount: 1, value: '9007199254740993' },
     data: { businessCount: 3, businessHash: hash('three synthetic business rows'),
       cohortCount: 2, cohortHash: hash('two selected synthetic keys'), indexCount: 3,
       indexHash: hash('old derived values'), untouchedCount: 1, untouchedHash: hash('outside cohort') } };
 }
+const bundleReply = () => [1, 2].map(stage => JSON.stringify(expectedTerminal(record, prior(), stage))).join('\n') + '\n';
 const ro = (state: unknown) => JSON.stringify({ readOnly: 'on', state });
 class MemoryJournal {
   first: any = null;
@@ -71,17 +72,26 @@ function fixture() {
   return { a, journal, calls, clock, replies, options, prepare };
 }
 
-describe('immutable single migration and actual maintained interfaces', () => {
-  it('pins five original statements and retains the exact migration bytes', () => {
-    assert.equal(record.plan.originalVector.length, 5);
-    assert.equal(hash(record.bytes), 'd0a91f3c1729b05b0aee508058973aecaa13f187f3f7e89ea9b2f71e415d82b9');
-    assert.equal(record.plan.vectorSha256, 'ba2154c3f8aadc1d203d49376bf3eacb30e686032bd7a75450d6cbc87f79ac48');
-    assert.ok(applySql(record, admission(), prior()).includes(record.bytes.toString('utf8')));
+describe('immutable two migration bundle and actual maintained interfaces', () => {
+  it('pins five plus one original statements and retains both exact migration byte sequences', () => {
+    const hashes = ['d0a91f3c1729b05b0aee508058973aecaa13f187f3f7e89ea9b2f71e415d82b9',
+      '551c52c0f46f3283b9b6a12239bf3ba91eda784a8570950e18dddade2c642d4f'];
+    const vectors = ['ba2154c3f8aadc1d203d49376bf3eacb30e686032bd7a75450d6cbc87f79ac48',
+      '9b72d4faa1a0beb0a5194c3c339aaf3e165029f9a058983353a5a3f47c8162cb'];
+    const sql = applySql(record, admission(), prior());
+    for (const i of [0, 1]) {
+      assert.equal(record.plans[i].originalVector.length, [5, 1][i]);
+      assert.equal(hash(record.bytes[i]), hashes[i]);
+      assert.equal(record.plans[i].vectorSha256, vectors[i]);
+      assert.ok(sql.includes(record.bytes[i].toString('utf8')));
+    }
   });
   it('rejects changed bytes, changed vector and mutated manifest before transport', () => {
-    assert.throws(() => loadRecord({ read: (path: string) => path === record.manifest.migration.path
-      ? Buffer.concat([record.bytes, Buffer.from('\n')]) : readFileSync(resolve(ROOT, path)) }), /MIGRATION_FILE_DIGEST_MISMATCH/);
-    const vector = { ...record, plan: { ...record.plan, originalVector: ['SELECT 1'] } };
+    for (const i of [0, 1]) {
+      assert.throws(() => loadRecord({ read: (path: string) => path === record.manifest.migrations[i].path
+        ? Buffer.concat([record.bytes[i], Buffer.from('\n')]) : readFileSync(resolve(ROOT, path)) }), /MIGRATION_FILE_DIGEST_MISMATCH/);
+    }
+    const vector = { ...record, plans: [{ ...record.plans[0], originalVector: ['SELECT 1'] }, record.plans[1]] };
     assert.throws(() => applySql(vector, admission(), prior()), /SPONSORSHIP_VECTOR_DRIFT/);
     const changed = structuredClone(record.manifest); changed.projectRef = 'wrong-project';
     assert.throws(() => applySql({ ...record, manifest: changed }, admission(), prior()), /SPONSORSHIP_MANIFEST_DRIFT/);
@@ -119,7 +129,7 @@ describe('immutable single migration and actual maintained interfaces', () => {
     assert.equal(writes, 1);
     f.options.transport = (_url: string, sql: string, single: boolean) => {
       assert.equal(single, true); assert.ok(sql.includes('READ ONLY'));
-      return ro({ prior: prior(), terminal: expectedTerminal(record) });
+      return ro({ prior: prior(), terminal: expectedTerminal(record, prior()) });
     };
     assert.equal(executeSponsorship('reconcile', f.options).disposition, 'committed');
     assert.equal(writes, 1);
@@ -139,7 +149,10 @@ describe('actual offline CLI packaging and completion contract', () => {
     assert.equal(p.status, 0); assert.equal(p.stderr, '');
     const result = JSON.parse(p.stdout);
     assert.equal(result.status, 'source_prepared_not_admitted'); assert.equal(result.executionReady, false);
-    assert.equal(result.manifestSha256, MANIFEST_SHA256); assert.equal(result.statementCount, 5);
+    assert.equal(result.manifestSha256, MANIFEST_SHA256); assert.equal(result.statementCount, 6);
+    assert.deepEqual(result.migrations.map((m: any) => m.statementCount), [5, 1]);
+    assert.equal(result.bundleSha256, record.manifest.bundleSha256);
+    assert.equal(result.admissionKind, 'sponsorship_scoped_admission_v2');
     const git = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8', timeout: 15000 });
     assert.equal(git.status, 0); assert.equal(result.source.revision, git.stdout.trim());
     assert.match(result.source.filesSha256, /^[a-f0-9]{64}$/);
@@ -177,7 +190,7 @@ describe('source, role, ledger, security and fresh scope admission', () => {
     assert.equal(record.manifest.scope.macRestaurantDml, 'allowed_subject_to_bounded_share_lock');
     validateAdmission(record, admission(), source, instant);
   });
-  for (const key of ['projectRef', 'migrationSha256', 'vectorSha256', 'sourceRevision', 'sourceTree', 'sourceFilesSha256', 'scopeSha256']) {
+  for (const key of ['projectRef', 'bundleSha256', 'sourceRevision', 'sourceTree', 'sourceFilesSha256', 'scopeSha256']) {
     it(`rejects ${key} drift`, () => {
       const a: any = admission(); a[key] = 'wrong';
       assert.throws(() => validateAdmission(record, a, source, instant), /BINDING_INVALID/);
@@ -203,7 +216,7 @@ describe('source, role, ledger, security and fresh scope admission', () => {
     for (const mutate of [
       (p: any) => { p.identity = false; }, (p: any) => { p.catalog = false; },
       (p: any) => { p.ledger.count = 96; }, (p: any) => { p.ledger.priorHash = '0'.repeat(64); },
-      (p: any) => { p.ledger.targetPresent = true; }, (p: any) => { p.data.businessHash = 'untrusted'; },
+      (p: any) => { p.ledger.targets[0].present = true; }, (p: any) => { p.data.businessHash = 'untrusted'; },
     ]) {
       const p = prior(); mutate(p); const f = fixture(); f.replies.push(ro(p));
       assert.throws(() => executeSponsorship('preflight', f.options), /PRIOR_DRIFT/);
@@ -293,6 +306,7 @@ describe('SQL ordering and scope preservation', () => {
     const statements = statementSpans(sql).map((s: any) => head(s.token));
     const positions = ["pg_advisory_xact_lock", 'LOCK TABLE supabase_migrations.schema_migrations IN EXCLUSIVE MODE',
       'LOCK TABLE public.restaurants IN SHARE MODE', 'LOCK TABLE pipeline_control.admin_evaluation_read_index IN SHARE ROW EXCLUSIVE MODE',
+      'FOR UPDATE NOWAIT',
       'MIGRATION_PRIOR_STATE_MISMATCH', 'CREATE OR REPLACE FUNCTION pipeline_control.admin_eval_valid_meta',
       'INSERT INTO supabase_migrations.schema_migrations', 'MIGRATION_TERMINAL_READBACK_FAILED'].map(x =>
         statements.findIndex((s: string) => /^(CREATE|INSERT|LOCK)/.test(x) ? s.startsWith(x) : s.includes(x)));
@@ -306,6 +320,9 @@ describe('SQL ordering and scope preservation', () => {
     assert.ok(sql.includes("SET LOCAL lock_timeout='2s'"));
     assert.ok(sql.indexOf("SET LOCAL transaction_timeout='15s'") < sql.indexOf('pg_advisory_xact_lock'));
     assert.ok(!/CREATE\s+TEMP|\bsetval\s*\(|\bnextval\s*\(|DISABLE\s+TRIGGER/i.test(sql));
+    const rowLock = statementSpans(sql).map((s: any) => head(s.token)).filter((s: string) => s.includes('FOR UPDATE NOWAIT'));
+    assert.equal(rowLock.length, 1);
+    assert.match(rowLock[0], /^DO .*PERFORM 1 FROM pipeline_control\.admin_evaluation_catalog_revision WHERE singleton FOR UPDATE NOWAIT/s);
     // Negative control: moving the first SHARE lock after DDL must be detected.
     const unsafe = sql.replace('LOCK TABLE public.restaurants IN SHARE MODE;', '') + '\nLOCK TABLE public.restaurants IN SHARE MODE;';
     assert.throws(() => checkOrder(unsafe));
@@ -322,7 +339,7 @@ describe('SQL ordering and scope preservation', () => {
     assert.ok(t.indexOf('CASE WHEN') < t.indexOf('pipeline_control.admin_eval_descriptor('));
     for (const field of ['businessUnchanged', 'cohortUnchanged', 'untouchedUnchanged', 'cohortCorrect', 'indexCountCorrect']) assert.ok(t.includes(field));
   });
-  it('terminal requires exact98 entry, old ledger retention and only two changed function bodies', () => {
+  it('terminal requires exact99 entries, old ledger retention and only two changed function bodies', () => {
     const before = record.manifest.catalogBefore, after = record.manifest.catalogAfter;
     const names = before.functions.filter((f: any, i: number) => f.prosrc_md5 !== after.functions[i].prosrc_md5).map((f: any) => f.name);
     assert.deepEqual(names, ['admin_eval_valid_meta', 'admin_record_compose']);
@@ -330,8 +347,8 @@ describe('SQL ordering and scope preservation', () => {
       const strip = (f: any) => { const { prosrc_md5, prosrc_trimmed_md5, ...security } = f; void prosrc_md5; void prosrc_trimmed_md5; return security; };
       assert.deepEqual(strip(before.functions[i]), strip(after.functions[i]));
     }
-    for (const key of ['tables', 'indexes', 'policies', 'triggers', 'schemas', 'column_acls']) assert.deepEqual(before[key], after[key]);
-    assert.deepEqual(expectedTerminal(record).ledger, { count: 98, priorHash: record.manifest.priorLedger.sha256, targetPresent: true, targetEqual: true });
+    for (const key of ['tables', 'indexes', 'policies', 'triggers', 'schemas', 'column_acls', 'revision_relation']) assert.deepEqual(before[key], after[key]);
+    assert.deepEqual(expectedTerminal(record, prior()).ledger, { count: 99, priorHash: record.manifest.priorLedger.sha256, targets: record.plans.map((p: any) => ({ version: p.version, present: true, equal: true })) });
   });
 });
 
@@ -341,7 +358,7 @@ describe('one original operation, uncertain send and reconciliation', () => {
     assert.throws(() => executeSponsorship('apply', f.options), /ORIGINAL_REQUIRED/);
     f.prepare(); assert.equal(f.calls.length, 1); assert.equal(f.calls[0].single, true);
     assert.deepEqual(f.journal.first.before, prior());
-    f.replies.push(JSON.stringify(expectedTerminal(record)));
+    f.replies.push(bundleReply());
     assert.equal(executeSponsorship('apply', f.options).status, 'committed');
     assert.equal(f.journal.spent, true); assert.equal(f.calls.length, 2);
     assert.equal(f.journal.events[1].event, 'commit_acknowledged');
@@ -353,9 +370,9 @@ describe('one original operation, uncertain send and reconciliation', () => {
     f.replies.push(new Error('MIGRATION_PRIOR_STATE_MISMATCH'));
     assert.equal(executeSponsorship('apply', f.options).status, 'unconfirmed');
     const moved = prior(); moved.data.businessHash = hash('producer committed between calls');
-    f.replies.push(ro({ prior: moved, terminal: { ...expectedTerminal(record), catalog: false, ledger: moved.ledger } }));
+    f.replies.push(ro({ prior: moved, terminal: { ...expectedTerminal(record, prior()), catalog: false, ledger: moved.ledger } }));
     const result = executeSponsorship('reconcile', f.options);
-    assert.equal(result.disposition, 'not_applied_no_retry'); assert.equal(result.replayAllowed, false);
+    assert.equal(result.disposition, 'conflict_or_unconfirmed'); assert.equal(result.replayAllowed, false);
   });
   it('lost COMMIT acknowledgement uses the original identity, even after receipt expiry, with no second write', () => {
     const f = fixture(); f.prepare();
@@ -365,16 +382,16 @@ describe('one original operation, uncertain send and reconciliation', () => {
     assert.equal(unknown.cacheSequenceRollbackClaimed, false);
     f.clock.value = new Date(instant.getTime() + 3600000);
     f.options.readProtectedMain = () => { throw new Error('current main has advanced; must not rebind the original'); };
-    f.replies.push(ro({ prior: { ...prior(), catalog: false }, terminal: expectedTerminal(record) }));
+    f.replies.push(ro({ prior: { ...prior(), catalog: false }, terminal: expectedTerminal(record, prior()) }));
     const observed = executeSponsorship('reconcile', f.options);
     assert.equal(observed.disposition, 'committed');
     assert.deepEqual(observed.identity, f.journal.first.identity); assert.equal(observed.replayAllowed, false);
     assert.ok(f.calls[2].sql.includes('READ ONLY')); assert.equal(f.calls.length, 3);
   });
   it('distinguishes post-commit business movement from atomic schema/ledger commitment', () => {
-    const t = { ...expectedTerminal(record), businessUnchanged: false, untouchedUnchanged: false };
-    assert.equal(disposition(record, { prior: prior(), terminal: t }), 'committed_schema_ledger_postcommit_data_unverified');
-    assert.equal(disposition(record, { prior: { ...prior(), catalog: false }, terminal: { ...t, ledger: prior().ledger } }), 'conflict_or_unconfirmed');
+    const t = { ...expectedTerminal(record, prior()), businessUnchanged: false, untouchedUnchanged: false };
+    assert.equal(disposition(record, { prior: prior(), terminal: t }, prior()), 'committed_schema_ledger_postcommit_data_unverified');
+    assert.equal(disposition(record, { prior: { ...prior(), catalog: false }, terminal: { ...t, ledger: prior().ledger } }, prior()), 'conflict_or_unconfirmed');
   });
   it('never retries after partial/incorrect terminal, timeout, or failed terminal audit', () => {
     for (const response of [JSON.stringify({ identity: true }), '{partial', new Error('timeout'), new Error('MIGRATION_TERMINAL_READBACK_FAILED')]) {
@@ -386,7 +403,7 @@ describe('one original operation, uncertain send and reconciliation', () => {
   });
   it('reconciles a partial journal tail but rejects relabeling the original operation', () => {
     const f = fixture(); f.prepare(); f.journal.spent = true; f.journal.partialTail = true;
-    f.replies.push(ro({ prior: prior(), terminal: { ...expectedTerminal(record), ledger: prior().ledger, catalog: false } }));
+    f.replies.push(ro({ prior: prior(), terminal: { ...expectedTerminal(record, prior()), ledger: prior().ledger, catalog: false } }));
     assert.equal(executeSponsorship('reconcile', f.options).disposition, 'not_applied_no_retry');
     f.a.operationId = '22345678-1234-4234-8234-123456789abc';
     assert.throws(() => executeSponsorship('reconcile', f.options), /JOURNAL_BINDING_INVALID/);
@@ -411,5 +428,129 @@ describe('one original operation, uncertain send and reconciliation', () => {
     f.journal.first.before.data.businessHash = hash('changed private receipt');
     assert.throws(() => executeSponsorship('apply', f.options), /SQL_BINDING_INVALID/);
     assert.equal(f.calls.length, 1);
+  });
+});
+
+describe('atomic bundle revision and two-output regressions', () => {
+  it('checks both server terminal states and the second preimage before the one outer commit', () => {
+    const sql = applySql(record, admission(), prior());
+    const statements = statementSpans(sql).map((s: any) => s.token.trim());
+    const terminalSelects = statements.filter((s: string) => s.startsWith('SELECT'));
+    assert.equal(terminalSelects.length, 2);
+    assert.deepEqual(terminalSelects, [terminalQuery(record, prior()), terminalQuery(record, prior())]);
+    const guards = statements.filter((s: string) => s.includes("RAISE EXCEPTION 'MIGRATION_TERMINAL_READBACK_FAILED'"));
+    assert.equal(guards.length, 2);
+    for (const [i, guard] of guards.entries()) assert.ok(guard.includes(JSON.stringify(expectedTerminal(record, prior(), i + 1))));
+    const secondPrior = statements.filter((s: string) => s.includes("RAISE EXCEPTION 'MIGRATION_PRIOR_STATE_MISMATCH'"))[1];
+    assert.ok(secondPrior.includes(JSON.stringify(expectedTerminal(record, prior(), 1))));
+    assert.ok(sql.indexOf(guards[0]) < sql.indexOf(record.bytes[1].toString('utf8')));
+    assert.ok(sql.indexOf(guards[1]) > sql.indexOf(record.bytes[1].toString('utf8')));
+    assert.ok(statements.every((s: string) => !/^(BEGIN|COMMIT|ROLLBACK)\b/i.test(s)));
+    const q = priorQuery(record);
+    assert.ok(q.includes("WHERE version NOT IN ('20261028195647','20261028225926')"));
+    for (const p of record.plans) assert.ok(q.includes(JSON.stringify(p.originalVector).replaceAll("'", "''")));
+  });
+  it('closes transitive source and certificate dependencies before admission', () => {
+    for (const path of Object.keys(record.manifest.dependencies)) {
+      assert.throws(() => loadRecord({ read: (p: string) => p === path
+        ? Buffer.from('changed dependency') : readFileSync(resolve(ROOT, p)) }), /DEPENDENCY_DRIFT/);
+    }
+    assert.ok(record.manifest.dependencies['backend/supabase/certificates/prod-ca-2021.crt']);
+    assert.ok(record.manifest.dependencies['apps/web/scripts/privacy-safe-cli-log.mjs']);
+    assert.ok(record.manifest.dependencies['apps/web/scripts/thumbnail-local-owner.mjs']);
+  });
+  it('binds revision metadata and explicit singleton write scope without fixing its dynamic value', () => {
+    const meta = record.manifest.catalogBefore.revision_relation;
+    assert.equal(meta.table.name, 'admin_evaluation_catalog_revision');
+    assert.equal(meta.table.rls, true);
+    assert.ok(meta.table.acl);
+    assert.deepEqual(meta.columns.map((c: any) => [c.name, c.type]), [['singleton', 'boolean'], ['revision', 'bigint']]);
+    assert.equal(meta.triggers, null);
+    assert.ok(record.manifest.scope.catalogRevision.write.includes('exact_singleton_increment_once'));
+    assert.equal('value' in meta, false);
+    assert.ok(priorQuery(record).includes('min(revision)::text'));
+  });
+  it('uses exact bigint arithmetic beyond safe float precision and rejects unavailable/invalid revisions', () => {
+    assert.equal(expectedTerminal(record, prior(), 1).revision.value, '9007199254740993');
+    assert.equal(expectedTerminal(record, prior(), 2).revision.value, '9007199254740994');
+    const edge = prior(); edge.revision.value = '9223372036854775806';
+    assert.equal(expectedTerminal(record, edge).revision.value, '9223372036854775807');
+    for (const revision of [null, { count: 0, singletonCount: 0, value: null },
+      { count: 2, singletonCount: 1, value: '2' }, { count: 1, singletonCount: 0, value: '2' },
+      ...[9007199254740992, '01', '-1', '1.0', '1e3', '9223372036854775807', '9223372036854775808']
+        .map(value => ({ count: 1, singletonCount: 1, value }))]) {
+      const f = fixture(); f.replies.push(ro({ ...prior(), revision }));
+      assert.throws(() => executeSponsorship('preflight', f.options), /PRIOR_DRIFT/);
+      assert.equal(f.journal.first, null);
+    }
+  });
+  it('requires both ordered bounded JSON lines and never treats a missing160 reply as success', () => {
+    const first = JSON.stringify(expectedTerminal(record, prior(), 1));
+    const last = JSON.stringify(expectedTerminal(record, prior()));
+    for (const output of [first, last, last + '\n' + first, first + '\n' + first,
+      first + '\n\n' + last, first + '\n' + last + '\n{}', '[{} , {}]',
+      first + '\n' + last + 'x', ' '.repeat(256 * 1024) + first + '\n' + last]) {
+      const f = fixture(); f.prepare(); f.replies.push(output);
+      assert.equal(executeSponsorship('apply', f.options).status, 'unconfirmed');
+      assert.equal(f.journal.spent, true);
+      assert.throws(() => executeSponsorship('apply', f.options), /RECONCILE_REQUIRED/);
+      assert.equal(f.calls.length, 2);
+    }
+  });
+  it('rejects first or final revision/ledger mismatches even with two valid JSON lines', () => {
+    for (const stage of [0, 1]) {
+      for (const mutate of [
+        (t: any) => { t.revision.value = (BigInt(t.revision.value) + 1n).toString(); },
+        (t: any) => { t.revision.count = 0; },
+        (t: any) => { t.revision.count = 2; },
+        (t: any) => { t.ledger.priorHash = '0'.repeat(64); },
+        (t: any) => { t.ledger.targets[stage].equal = false; },
+        (t: any) => { t.ledger.count--; },
+      ]) {
+        const f = fixture(); f.prepare();
+        const states = [expectedTerminal(record, prior(), 1), expectedTerminal(record, prior())];
+        mutate(states[stage]);
+        f.replies.push(states.map(t => JSON.stringify(t)).join('\n'));
+        assert.equal(executeSponsorship('apply', f.options).status, 'unconfirmed');
+        assert.throws(() => executeSponsorship('apply', f.options), /RECONCILE_REQUIRED/);
+        assert.equal(f.calls.length, 2);
+      }
+    }
+  });
+  it('keeps locks and either migration failure spent, even if the first terminal was printed', () => {
+    for (const detail of ['revision lock conflict', '159 terminal failure', '160 DO failure', '160 terminal failure', 'commit connection lost']) {
+      const f = fixture(); f.prepare();
+      f.options.transport = createSponsorshipPsqlRunner(databaseUrl, { environment: {}, spawnImpl: () => ({
+        status: 1, stdout: JSON.stringify(expectedTerminal(record, prior(), 1)), stderr: detail,
+      }) });
+      const result = executeSponsorship('apply', f.options);
+      assert.equal(result.status, 'unconfirmed');
+      assert.ok(!JSON.stringify(result).includes(detail));
+      assert.throws(() => executeSponsorship('apply', f.options), /RECONCILE_REQUIRED/);
+    }
+  });
+  it('reconciles partial bundle or revision mismatch as conflict with no replay', () => {
+    for (const mutate of [
+      (t: any) => { t.ledger = expectedTerminal(record, prior(), 1).ledger; },
+      (t: any) => { t.ledger.targets[0].equal = false; },
+      (t: any) => { t.ledger.targets[1].equal = false; },
+      (t: any) => { t.revision.value = prior().revision.value; },
+      (t: any) => { t.revision.value = '9007199254740995'; },
+      (t: any) => { t.revision.count = 2; },
+    ]) {
+      const t = expectedTerminal(record, prior()); mutate(t);
+      assert.equal(disposition(record, { prior: { ...prior(), catalog: false }, terminal: t }, prior()), 'conflict_or_unconfirmed');
+    }
+    const moved = prior(); moved.revision.value = '9007199254740995';
+    assert.equal(disposition(record, { prior: moved, terminal: { catalog: false } }, prior()), 'conflict_or_unconfirmed');
+  });
+  it('rejects changed or dirty original source even on an expired receipt reconciliation', () => {
+    for (const patch of [{ clean: false }, { revision: 'd'.repeat(40) }, { filesSha256: 'e'.repeat(64) }]) {
+      const f = fixture(); f.prepare(); f.journal.spent = true;
+      f.clock.value = new Date(instant.getTime() + 3600000);
+      f.options.readSource = () => ({ ...source, ...patch });
+      assert.throws(() => executeSponsorship('reconcile', f.options), /ADMISSION_BINDING_INVALID/);
+      assert.equal(f.calls.length, 1);
+    }
   });
 });

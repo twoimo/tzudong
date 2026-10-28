@@ -195,10 +195,9 @@ function integrationFixture(directory: string) {
   const source = { revision: 'a'.repeat(40), tree: 'b'.repeat(40), clean: true,
     repositoryMatched: true, filesSha256: 'c'.repeat(64) };
   const admission = {
-    kind: 'sponsorship_scoped_admission_v1', authority: 'authenticated-repository-owner-local-cli',
+    kind: 'sponsorship_scoped_admission_v2', authority: 'authenticated-repository-owner-local-cli',
     operationId, projectRef: record.manifest.projectRef, databaseName: 'postgres',
-    manifestSha256: MANIFEST_SHA256, migrationSha256: record.manifest.migration.sha256,
-    vectorSha256: record.manifest.statementVectorSha256, scopeSha256: hash(JSON.stringify(record.manifest.scope)),
+    manifestSha256: MANIFEST_SHA256, bundleSha256: record.manifest.bundleSha256, scopeSha256: hash(JSON.stringify(record.manifest.scope)),
     sourceRevision: source.revision, sourceTree: source.tree, sourceFilesSha256: source.filesSha256,
     issuedAt: instant.toISOString(), expiresAt: new Date(instant.getTime() + 300000).toISOString(),
     fences: structuredClone(record.manifest.fences), protectedMain: {
@@ -207,7 +206,8 @@ function integrationFixture(directory: string) {
     },
   };
   const prior = { identity: true, catalog: true,
-    ledger: { count: 97, priorHash: record.manifest.priorLedger.sha256, targetPresent: false, targetEqual: false },
+    ledger: { count: 97, priorHash: record.manifest.priorLedger.sha256, targets: record.plans.map((p: any) => ({ version: p.version, present: false, equal: false })) },
+    revision: { count: 1, singletonCount: 1, value: '9007199254740993' },
     data: { businessCount: 3, businessHash: hash('synthetic business rows'),
       cohortCount: 2, cohortHash: hash('synthetic selected keys'), indexCount: 3,
       indexHash: hash('synthetic derived values'), untouchedCount: 1, untouchedHash: hash('synthetic outside cohort') } };
@@ -235,6 +235,44 @@ function integrationFixture(directory: string) {
 }
 
 describe('sponsorship execution with a real private original journal', posixCustodySuite, () => {
+  it('persists both validated terminal acknowledgements under the original bundle identity', () => {
+    withPrivateDirectory(directory => {
+      const f = integrationFixture(directory);
+      executeSponsorship('preflight', f.options);
+      const terminals = [1, 2].map(stage => expectedTerminal(f.record, f.prior, stage));
+      f.replies.push(terminals.map(value => JSON.stringify(value)).join('\n') + '\n');
+      const result = executeSponsorship('apply', f.options);
+      assert.equal(result.status, 'committed');
+      assert.deepEqual(result.terminals, terminals);
+      f.options.journal = new OriginalJournal({ directory });
+      const events = readFileSync(f.options.journal.path, 'utf8').trimEnd().split('\n').map(value => JSON.parse(value));
+      assert.deepEqual(events.at(-1), { event: 'commit_acknowledged', identity: identityFor(f.record, f.admission), terminals });
+      assert.equal(f.options.journal.read()?.spent, true);
+      assert.throws(() => executeSponsorship('apply', f.options), /SPONSORSHIP_RECONCILE_REQUIRED/);
+      assert.equal(f.calls.length, 2);
+    });
+  });
+
+  it('retains a missing160 acknowledgement as spent after reopening and detects partial bundle on reconcile', () => {
+    withPrivateDirectory(directory => {
+      const f = integrationFixture(directory);
+      executeSponsorship('preflight', f.options);
+      const intermediate = expectedTerminal(f.record, f.prior, 1);
+      f.replies.push(JSON.stringify(intermediate));
+      assert.equal(executeSponsorship('apply', f.options).status, 'unconfirmed');
+      f.options.journal = new OriginalJournal({ directory });
+      assert.equal(f.options.journal.read()?.spent, true);
+      assert.throws(() => executeSponsorship('apply', f.options), /SPONSORSHIP_RECONCILE_REQUIRED/);
+      f.replies.push(JSON.stringify({ readOnly: 'on', state: {
+        prior: { ...f.prior, catalog: false }, terminal: intermediate,
+      } }));
+      const result = executeSponsorship('reconcile', f.options);
+      assert.equal(result.disposition, 'conflict_or_unconfirmed');
+      assert.equal(result.replayAllowed, false);
+      assert.deepEqual(f.calls.map(call => call.readOnly), [true, false, true]);
+    });
+  });
+
   it('reconciles an uncertain send read-only after reopening and denies every second apply', () => {
     withPrivateDirectory(directory => {
       const f = integrationFixture(directory);
@@ -254,7 +292,7 @@ describe('sponsorship execution with a real private original journal', posixCust
       assert.throws(() => executeSponsorship('apply', f.options), /SPONSORSHIP_RECONCILE_REQUIRED/);
       assert.equal(f.calls.length, 2);
       f.replies.push(JSON.stringify({ readOnly: 'on', state: {
-        prior: { ...f.prior, catalog: false }, terminal: expectedTerminal(f.record),
+        prior: { ...f.prior, catalog: false }, terminal: expectedTerminal(f.record, f.prior),
       } }));
       const reconciled = executeSponsorship('reconcile', f.options);
       assert.equal(reconciled.status, 'reconciled');
@@ -283,7 +321,7 @@ describe('sponsorship execution with a real private original journal', posixCust
         }
       }
       f.options.journal = new FailAfterIntentJournal({ directory });
-      f.replies.push(JSON.stringify(expectedTerminal(f.record)));
+      f.replies.push([1, 2].map(stage => JSON.stringify(expectedTerminal(f.record, f.prior, stage))).join('\n'));
       assert.equal(executeSponsorship('apply', f.options).status, 'unconfirmed');
       f.options.journal = new OriginalJournal({ directory });
       assert.equal(f.options.journal.read()?.spent, true);
