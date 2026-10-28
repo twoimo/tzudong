@@ -67,7 +67,7 @@ const tailwindEntries = {
     exclusions: ['not "../**/*.test.*"', 'not "../tests-unit"'],
   },
   "app/home-detail-globals.css": {
-    sources: ['"../components/restaurant"', '"../components/reviews"', '"../components/auth"', '"../components/ui"'],
+    sources: ['"../components/restaurant"', '"../components/reviews"', '"../components/auth"', '"../components/ui"', '"../components/home/map-panel-chrome.tsx"'],
     exclusions: ['not "../**/*.test.*"', 'not "../tests-unit"'],
   },
 } as const;
