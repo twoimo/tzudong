@@ -17,10 +17,39 @@ MAX_SITES = 64
 PREFIX = "NIGHTLY_UNIT_DIAGNOSTIC="
 FIELDS = {"schema", "test_count", "failure_count", "skip_count", "sites"}
 SITE_FIELDS = {"file", "test_index", "line", "kind"}
+GAP_PREFIX = "NIGHTLY_UNIT_DIAGNOSTIC_GAP="
+GAP_SCHEMA = "nightly-unit-diagnostic-gap-v1"
+GAP_STAGES = {"memfd", "input", "input_size", "files", "spawn", "junit_size", "junit_read", "derive"}
+GAP_FIELDS = {"schema", "stage", "xml_bytes", "exit_code", "signal"}
 
 
 def fail() -> None:
     raise ValueError("unit_diagnostic_rejected")
+
+
+def gap_record(stage: str, xml_bytes: int, exit_code: int | None, signal: int | None) -> str:
+    return json.dumps({"schema": GAP_SCHEMA, "stage": stage, "xml_bytes": xml_bytes,
+                       "exit_code": exit_code, "signal": signal}, separators=(",", ":"))
+
+
+def validate_gap(payload: object) -> dict:
+    if not isinstance(payload, dict) or set(payload) != GAP_FIELDS or payload["schema"] != GAP_SCHEMA:
+        fail()
+    if payload["stage"] not in GAP_STAGES:
+        fail()
+    if not count(payload["xml_bytes"], MAX_INPUT):
+        fail()
+    code = payload["exit_code"]
+    sig = payload["signal"]
+    if not (code is None or (type(code) is int and -127 <= code <= 255)):
+        fail()
+    if not (sig is None or (type(sig) is int and 1 <= sig <= 64)):
+        fail()
+    if (type(code) is int and code < 0) != (type(sig) is int):
+        fail()
+    if type(sig) is int and sig != -code:
+        fail()
+    return payload
 
 
 def inventory(root: Path) -> dict[str, int]:
@@ -135,6 +164,7 @@ def derive(data: dict, root: Path) -> dict:
 def main() -> int:
     root = Path(__file__).resolve().parents[2] / "apps/web"
     try:
+        gaps: list = []
         if len(sys.argv) in {3, 5} and sys.argv[1] == "--log":
             # Canonical local Nightly requires POSIX custody. Never substitute
             # a following open or pretend that Windows mode bits prove ACLs.
@@ -150,52 +180,102 @@ def main() -> int:
                 if len(body) > MAX_INPUT:
                     fail()
             records = [line[len(PREFIX):] for line in body.decode("utf-8").splitlines() if line.startswith(PREFIX)]
-            if not 1 <= len(records) <= 2:
+            gaps = [validate_gap(json.loads(line[len(GAP_PREFIX):]))
+                    for line in body.decode("utf-8").splitlines() if line.startswith(GAP_PREFIX)]
+            if len(gaps) > 2:
                 fail()
             files = inventory(root)
+            # The runner emits one record for the general batch, then one record
+            # per isolated file, stopping at the first failing isolated file.
+            # Admit that real stream: at most one general record plus one record
+            # per inventoried test file. The 32MiB body cap bounds every line.
+            if not 1 <= len(records) <= 1 + len(files):
+                fail()
             payloads = [validate(json.loads(record), files) for record in records]
-            # General failure stops the runner; isolated tests run only after
-            # general success. A partial success cannot describe a full run.
-            if (len(payloads) == 1 and payloads[0]["failure_count"] == 0) or (len(payloads) == 2 and payloads[0]["failure_count"] != 0):
+            # Legacy single records pass through; mixed legacy streams cannot be
+            # aggregated safely.
+            if any(payload["schema"] == "nightly-unit-failure-sites-v1" for payload in payloads) and len(payloads) != 1:
+                fail()
+            # General failure stops the runner; isolated files run only after
+            # general success, and the runner exits at the first failing
+            # isolated file, so a failing record can only be the last one.
+            # A partial success cannot describe a full run.
+            if len(payloads) == 1 and payloads[0]["failure_count"] == 0:
+                fail()
+            if payloads[0]["failure_count"] != 0 and len(payloads) != 1:
+                fail()
+            if any(payload["failure_count"] != 0 for payload in payloads[1:-1]):
                 fail()
             if len(sys.argv) == 5:
                 code = sys.argv[4]
                 if sys.argv[3] != "--exit-code" or not code.isascii() or not code.isdigit() or not 0 <= int(code) <= 255:
                     fail()
-                complete_success = len(payloads) == 2 and all(p["failure_count"] == 0 for p in payloads)
+                complete_success = all(p["failure_count"] == 0 for p in payloads)
                 if (int(code) == 0) != complete_success:
                     fail()
-            for payload in payloads:
-                print(PREFIX + json.dumps(payload, separators=(",", ":")))
+            if len(payloads) == 1:
+                aggregate = payloads[0]
+            else:
+                failures = sum(p["failure_count"] for p in payloads)
+                # Keep the public single-line shape: one aggregate v2 record.
+                aggregate = validate({
+                    "schema": "nightly-unit-failure-sites-v2",
+                    "test_count": sum(p["test_count"] for p in payloads),
+                    "failure_count": failures,
+                    "skip_count": sum(p["skip_count"] for p in payloads),
+                    "sites": [site for p in payloads for site in p["sites"]][:MAX_SITES],
+                    "omitted_site_count": failures - min(failures, MAX_SITES),
+                }, files)
+            print(PREFIX + json.dumps(aggregate, separators=(",", ":")))
         elif len(sys.argv) == 2 and sys.argv[1] == "--run-linux":
             if not hasattr(os, "memfd_create"):
                 fail()
-            raw = sys.stdin.buffer.read(MAX_INPUT + 1)
-            if len(raw) > MAX_INPUT:
-                fail()
-            data = json.loads(raw)
-            if not isinstance(data, dict) or set(data) != {"files"} or not isinstance(data["files"], list):
-                fail()
-            files = inventory(root)
-            if not data["files"] or any(not isinstance(p, str) or p not in files for p in data["files"]):
-                fail()
-            fd = os.memfd_create("nightly-unit-report", os.MFD_CLOEXEC)
+            # On rejection, emit one bounded gap record (stage and counters
+            # only - never log content) so a killed or non-emitting runner no
+            # longer collapses into an unexplained unavailable diagnostic.
+            stage = "input"
+            xml_bytes = 0
+            code: int | None = None
             try:
-                result = subprocess.run(
-                    ["bun", "test", *data["files"], "--timeout", "30000", "--reporter", "junit",
-                     "--reporter-outfile", f"/proc/self/fd/{fd}"],
-                    cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                    pass_fds=(fd,), check=False,
-                )
-                if os.fstat(fd).st_size > MAX_INPUT:
+                raw = sys.stdin.buffer.read(MAX_INPUT + 1)
+                if len(raw) > MAX_INPUT:
+                    stage = "input_size"
                     fail()
-                os.lseek(fd, 0, os.SEEK_SET)
-                report = os.read(fd, MAX_INPUT + 1).decode("utf-8")
-                payload = derive({"xml": report, "files": data["files"], "exit_code": result.returncode}, root)
-                print(json.dumps(payload, separators=(",", ":")))
-                return result.returncode if result.returncode >= 0 else 1
-            finally:
-                os.close(fd)
+                data = json.loads(raw)
+                if not isinstance(data, dict) or set(data) != {"files"} or not isinstance(data["files"], list):
+                    fail()
+                stage = "files"
+                files = inventory(root)
+                if not data["files"] or any(not isinstance(p, str) or p not in files for p in data["files"]):
+                    fail()
+                stage = "memfd"
+                fd = os.memfd_create("nightly-unit-report", os.MFD_CLOEXEC)
+                try:
+                    stage = "spawn"
+                    result = subprocess.run(
+                        ["bun", "test", *data["files"], "--timeout", "30000", "--reporter", "junit",
+                         "--reporter-outfile", f"/proc/self/fd/{fd}"],
+                        cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                        pass_fds=(fd,), check=False,
+                    )
+                    code = result.returncode
+                    stage = "junit_size"
+                    if os.fstat(fd).st_size > MAX_INPUT:
+                        fail()
+                    os.lseek(fd, 0, os.SEEK_SET)
+                    stage = "junit_read"
+                    report = os.read(fd, MAX_INPUT + 1).decode("utf-8")
+                    xml_bytes = len(report.encode("utf-8"))
+                    stage = "derive"
+                    payload = derive({"xml": report, "files": data["files"], "exit_code": code}, root)
+                    print(json.dumps(payload, separators=(",", ":")))
+                    return code if code >= 0 else 1
+                finally:
+                    os.close(fd)
+            except (ValueError, TypeError, KeyError, OSError, ET.ParseError):
+                print(GAP_PREFIX + gap_record(stage, xml_bytes, code,
+                                              -code if type(code) is int and code < 0 else None))
+                return 1
         elif len(sys.argv) == 1:
             raw = sys.stdin.buffer.read(MAX_INPUT + 1)
             if len(raw) > MAX_INPUT:
@@ -204,6 +284,10 @@ def main() -> int:
         else:
             fail()
     except (ValueError, TypeError, KeyError, OSError, ET.ParseError):
+        # The validation bound above also bounds emission: never re-emit
+        # more records than a well-formed runner log may carry.
+        for gap in gaps[:2]:
+            print(GAP_PREFIX + json.dumps(gap, separators=(",", ":")))
         print("unit_diagnostic_unavailable", file=sys.stderr)
         return 1
     return 0

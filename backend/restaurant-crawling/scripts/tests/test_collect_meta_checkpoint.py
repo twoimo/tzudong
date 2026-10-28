@@ -5,6 +5,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 import unittest
+import httpx
+from openai import APIStatusError, AuthenticationError, RateLimitError
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 from contextlib import redirect_stdout
@@ -17,6 +19,114 @@ ROW = {'youtube_link': f'https://www.youtube.com/watch?v={VID}', 'title': 'fixtu
 class Logger:
     def __getattr__(self, name):
         return lambda *args, **kwargs: None
+
+
+class AdAnalysisQuotaTests(unittest.TestCase):
+    def setUp(self):
+        self.client = Mock()
+        self.client.chat.completions.create.return_value.choices = [
+            Mock(message=Mock(content='["fixture sponsor"]'))]
+        self.log = Mock()
+        for patcher in (
+            patch.object(collect_meta, 'OPENAI_AD_ANALYSIS_DISABLED_REASON', None),
+            patch.object(collect_meta, 'OPENAI_AD_ANALYSIS_FAILURE_COUNT', 0),
+            patch.object(collect_meta, 'get_api_config', return_value={
+                'openai': {'model': 'gpt-4o-mini'}}),
+        ):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    @staticmethod
+    def provider_error(body, status=429):
+        response = httpx.Response(status, request=httpx.Request('POST', 'https://fixture.invalid'))
+        cls = AuthenticationError if status == 401 else RateLimitError if status == 429 else APIStatusError
+        return cls('private provider message: credit_balance_exhausted', response=response, body=body)
+
+    def analyze(self):
+        return collect_meta.analyze_ad_content(self.client, '광고 fixture', self.log)
+
+    def test_fatal_codes_stop_later_sdk_calls_but_count_every_incomplete_attempt(self):
+        for code in ('credit_balance_exhausted', 'organization_spend_limit_exceeded',
+                     'project_spend_limit_exceeded', 'organization_usage_limit_exceeded',
+                     'insufficient_quota'):
+            for shape in ('top', 'nested', 'attributes'):
+                with self.subTest(code=code, shape=shape):
+                    collect_meta.OPENAI_AD_ANALYSIS_DISABLED_REASON = None
+                    collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT = 0
+                    fields = {'code': code, 'type': 'insufficient_quota', 'message': 'private body'}
+                    error = self.provider_error({'error': fields} if shape == 'nested' else fields)
+                    if shape == 'attributes':
+                        error.body = None
+                    self.client.reset_mock()
+                    self.log.reset_mock()
+                    self.client.chat.completions.create.side_effect = error
+                    self.assertIsNone(self.analyze())
+                    self.assertIsNone(self.analyze())
+                    self.assertIsNone(self.analyze())
+                    self.client.chat.completions.create.assert_called_once()
+                    self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT, 3)
+                    self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_DISABLED_REASON, code)
+                    logged = str(self.log.mock_calls)
+                    self.assertIn('code='+code, logged)
+                    self.assertNotIn('private', logged)
+
+    def test_transient_unknown_and_malformed_429_allow_next_video_to_succeed(self):
+        for body in (
+            {'code': 'rate_limit_exceeded', 'type': 'tokens'},
+            {'code': 'private\ncredit_balance_exhausted', 'type': 'private type'},
+            {'error': {'code': 'private code', 'message': 'insufficient_quota'}},
+            {'code': ['insufficient_quota'], 'type': {'code': 'credit_balance_exhausted'}},
+            {'error': 'insufficient_quota'}, ['credit_balance_exhausted'], None,
+        ):
+            with self.subTest(body=body):
+                self.client.reset_mock()
+                self.log.reset_mock()
+                before = collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT
+                response = Mock(choices=[Mock(message=Mock(content='["fixture sponsor"]'))])
+                self.client.chat.completions.create.side_effect = [self.provider_error(body), response]
+                self.assertIsNone(self.analyze())
+                self.assertIsNone(collect_meta.OPENAI_AD_ANALYSIS_DISABLED_REASON)
+                self.assertEqual(self.analyze(), ['fixture sponsor'])
+                self.assertEqual(self.client.chat.completions.create.call_count, 2)
+                self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT, before+1)
+                self.assertNotIn('private', str(self.log.mock_calls))
+                self.assertNotIn('credit_balance_exhausted', str(self.log.mock_calls))
+                self.assertNotIn('insufficient_quota', str(self.log.mock_calls))
+
+    def test_insufficient_quota_type_and_non_429_boundary(self):
+        for body in ({'type': 'insufficient_quota'}, {'error': {'type': 'insufficient_quota'}}):
+            with self.subTest(body=body):
+                self.assertEqual(collect_meta.fatal_ad_quota_code(self.provider_error(body)),
+                                 'insufficient_quota')
+        self.client.chat.completions.create.side_effect = [
+            self.provider_error({'code': 'credit_balance_exhausted'}, status=503),
+            Mock(choices=[Mock(message=Mock(content='["fixture sponsor"]'))]),
+        ]
+        self.assertIsNone(self.analyze())
+        self.assertIsNone(collect_meta.OPENAI_AD_ANALYSIS_DISABLED_REASON)
+        self.assertEqual(self.analyze(), ['fixture sponsor'])
+
+    def test_existing_authentication_disablement_is_preserved(self):
+        self.client.chat.completions.create.side_effect = self.provider_error(
+            {'code': 'private auth code'}, status=401)
+        self.assertIsNone(self.analyze())
+        self.assertIsNone(self.analyze())
+        self.client.chat.completions.create.assert_called_once()
+        self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_DISABLED_REASON, 'invalid_api_key')
+        self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT, 2)
+        self.assertNotIn('private', str(self.log.mock_calls))
+
+    def test_success_and_legitimate_no_attribution_keep_provider_configuration(self):
+        for content, expected in (('["fixture sponsor"]', ['fixture sponsor']), ('None', None)):
+            with self.subTest(content=content):
+                self.client.chat.completions.create.return_value.choices[0].message.content = content
+                self.assertEqual(self.analyze(), expected)
+        self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT, 0)
+        self.assertIsNone(collect_meta.OPENAI_AD_ANALYSIS_DISABLED_REASON)
+        for call in self.client.chat.completions.create.call_args_list:
+            self.assertEqual(call.kwargs['model'], 'gpt-4o-mini')
+            self.assertEqual(call.kwargs['temperature'], 0.3)
+
 
 class MetadataCheckpointTests(unittest.TestCase):
     def test_changed_ad_recipe_runs_before_certifying_an_unchanged_unscheduled_video(self):
@@ -383,6 +493,51 @@ class ScopedMetadataTests(unittest.TestCase):
         self.assertNotIn('private', output)
         self.assertFalse(self.file.exists())
         self.assertEqual(self.cache.read_bytes(), before)
+
+    def test_fatal_quota_preserves_partial_metadata_and_checkpoints_and_scoped_nonzero(self):
+        complete_vid, missing_vid = 'otherID_003', 'otherID_004'
+        rows = {
+            complete_vid: {**self.row, 'youtube_link': f'https://www.youtube.com/watch?v={complete_vid}',
+                           'description': 'ordinary fixture'},
+            VID: dict(self.row),
+            missing_vid: {**self.row, 'youtube_link': f'https://www.youtube.com/watch?v={missing_vid}'},
+        }
+        self.urls.write_text(''.join(row['youtube_link']+'\n' for row in rows.values()))
+        prior = {**self.row, 'description': '광고 prior',
+                 'ads_info': {'is_ads': True, 'what_ads': ['prior sponsor']}}
+        self.file.write_text(json.dumps(prior)+'\n')
+        cache = json.loads(self.cache.read_text())
+        cache[VID] = collect_meta.checkpoint('2000-01-01', 'prior-recipe', prior)
+        self.cache.write_text(json.dumps(cache))
+        before = self.snapshot()
+        prior_bytes = self.file.read_bytes()
+        self.client.chat.completions.create.side_effect = AdAnalysisQuotaTests.provider_error({
+            'code': 'credit_balance_exhausted', 'type': 'insufficient_quota', 'message': 'private body'})
+        with patch.object(collect_meta, 'get_video_meta_batch', return_value=rows):
+            result = collect_meta.collect_channel_meta('fixture', object(), self.client, self.log)
+        self.assertEqual(result, {'success': 1})
+        self.client.chat.completions.create.assert_called_once()
+        self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT, 2)
+        self.assertEqual(self.file.read_bytes(), prior_bytes)
+        self.assertFalse((self.channel / 'meta' / f'{missing_vid}.jsonl').exists())
+        after = json.loads(self.cache.read_text())
+        for vid, entry in before['cache'].items():
+            self.assertEqual(after[vid], entry)
+        self.assertNotIn(missing_vid, after)
+        saved = collect_meta.get_latest_meta(self.channel, complete_vid)
+        today = collect_meta.datetime.now(collect_meta.KST).date().isoformat()
+        self.assertTrue(collect_meta.verified_today(after[complete_vid], today, self.recipe(), saved))
+        self.assertFalse(collect_meta.verified_today(after[VID], today, self.recipe(), prior))
+        self.assert_unselected_unchanged(before)
+        # A required scoped retry must still fail closed even though the SDK is disabled.
+        cache_bytes = self.cache.read_bytes()
+        status, output = self.run_cli()
+        self.assertEqual(status, 1)
+        self.assertIn('code=metadata_ads_incomplete', output)
+        self.assertEqual(self.file.read_bytes(), prior_bytes)
+        self.assertEqual(self.cache.read_bytes(), cache_bytes)
+        self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT, 3)
+        self.client.chat.completions.create.assert_called_once()
 
     def test_thumbnail_failure_never_appends_or_certifies(self):
         before = self.cache.read_bytes()
