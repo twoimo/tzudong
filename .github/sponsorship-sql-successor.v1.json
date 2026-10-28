@@ -1,0 +1,2128 @@
+{
+  "schemaVersion": 2,
+  "kind": "sponsorship_atomic_migration_bundle_successor",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "serverVersionNum": 170006,
+  "priorLedger": {
+    "count": 97,
+    "sha256": "f44a125b806370b982f9f894383cb5dc62245ebc53edf7c62b86372351cbbbbe"
+  },
+  "terminalLedgerCount": 99,
+  "serializer": "tzudong:review-media-sql-successor:workflow:v1",
+  "catalogExpression": "jsonb_build_object('functions',(SELECT jsonb_agg(jsonb_build_object('schema',n.nspname,'name',p.proname,'signature',pg_get_function_identity_arguments(p.oid),'returns',pg_get_function_result(p.oid),'oid',p.oid,'owner',CASE WHEN r.rolname IN ('postgres','supabase_admin','service_role') THEN r.rolname ELSE 'other:'||md5(r.rolname) END,'security_definer',p.prosecdef,'volatility',p.provolatile,'config',p.proconfig,'prosrc_md5',md5(p.prosrc),'prosrc_trimmed_md5',md5(btrim(p.prosrc)),'language',l.lanname,'acl',p.proacl::text) ORDER BY n.nspname,p.proname,p.oid)\n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace JOIN pg_roles r ON r.oid=p.proowner JOIN pg_language l ON l.oid=p.prolang\n WHERE (n.nspname='pipeline_control' AND (p.proname LIKE 'admin_eval_%' OR p.proname IN ('admin_record_compose','admin_record_assert_operator','admin_record_hash','admin_record_patch','admin_record_write','update_admin_eval_read_index','clear_admin_eval_read_index'))) OR (n.nspname='public' AND p.proname='admin_record_action')),'tables',(SELECT jsonb_agg(jsonb_build_object('schema',n.nspname,'table',c.relname,'owner',r.rolname,'rls',c.relrowsecurity,'force_rls',c.relforcerowsecurity,'acl',c.relacl::text,'columns',(SELECT jsonb_agg(jsonb_build_object('name',a.attname,'type',format_type(a.atttypid,a.atttypmod),'not_null',a.attnotnull) ORDER BY a.attnum) FROM pg_attribute a WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped)) ORDER BY n.nspname,c.relname)\nFROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_roles r ON r.oid=c.relowner WHERE c.oid IN ('public.restaurants'::regclass,'pipeline_control.admin_evaluation_read_index'::regclass)),'indexes',(SELECT jsonb_agg(jsonb_build_object('table',indrelid::regclass::text,'name',indexrelid::regclass::text,'valid',indisvalid,'ready',indisready,'unique',indisunique,'primary',indisprimary,'definition',pg_get_indexdef(indexrelid)) ORDER BY indexrelid::regclass::text) FROM pg_index WHERE indrelid IN ('public.restaurants'::regclass,'pipeline_control.admin_evaluation_read_index'::regclass)),'policies',(SELECT jsonb_agg(jsonb_build_object('table',polrelid::regclass::text,'name',polname,'command',polcmd,'permissive',polpermissive,'roles',polroles,'qual_md5',md5(pg_get_expr(polqual,polrelid)),'check_md5',md5(pg_get_expr(polwithcheck,polrelid))) ORDER BY polname) FROM pg_policy WHERE polrelid IN ('public.restaurants'::regclass,'pipeline_control.admin_evaluation_read_index'::regclass)),'triggers',(SELECT jsonb_agg(jsonb_build_object('table',tgrelid::regclass::text,'name',tgname,'enabled',tgenabled,'function',tgfoid::regprocedure::text,'definition_md5',md5(pg_get_triggerdef(oid))) ORDER BY tgname) FROM pg_trigger WHERE NOT tgisinternal AND tgrelid IN ('public.restaurants'::regclass,'pipeline_control.admin_evaluation_read_index'::regclass)),'schemas',(SELECT jsonb_agg(jsonb_build_object('schema',nspname,'acl',nspacl::text) ORDER BY nspname) FROM pg_namespace WHERE nspname IN ('public','pipeline_control')),'column_acls',(SELECT jsonb_agg(jsonb_build_object('column',a.attname,'acl',a.attacl::text) ORDER BY a.attnum) FROM pg_attribute a WHERE a.attrelid='public.restaurants'::regclass AND a.attnum>0 AND NOT a.attisdropped AND a.attacl IS NOT NULL),'target_sha256',(SELECT jsonb_object_agg(p.proname,encode(sha256(convert_to(p.prosrc,'UTF8')),'hex')) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='pipeline_control' AND p.proname IN ('admin_eval_valid_meta','admin_record_compose')),'index_column_acl_count',(SELECT count(*) FROM pg_attribute WHERE attrelid='pipeline_control.admin_evaluation_read_index'::regclass AND attnum>0 AND NOT attisdropped AND attacl IS NOT NULL),'target_properties',(SELECT jsonb_agg(jsonb_build_object('name',p.proname,'strict',p.proisstrict,'leakproof',p.proleakproof,'parallel',p.proparallel,'kind',p.prokind,'cost',p.procost,'rows',p.prorows,'returnsSet',p.proretset,'argumentDefaults',p.pronargdefaults,'noSupport',p.prosupport=0,'noSqlBody',p.prosqlbody IS NULL,'argumentNames',p.proargnames) ORDER BY p.proname) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='pipeline_control' AND p.proname IN ('admin_eval_valid_meta','admin_record_compose')),'revision_relation',jsonb_build_object('table',(SELECT jsonb_build_object('schema',n.nspname,'name',c.relname,'kind',c.relkind,'persistence',c.relpersistence,'owner',r.rolname,'acl',c.relacl::text,'rls',c.relrowsecurity,'force_rls',c.relforcerowsecurity) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_roles r ON r.oid=c.relowner WHERE c.oid='pipeline_control.admin_evaluation_catalog_revision'::regclass),'columns',(SELECT jsonb_agg(jsonb_build_object('name',a.attname,'type',format_type(a.atttypid,a.atttypmod),'not_null',a.attnotnull,'acl',a.attacl::text,'default',pg_get_expr(d.adbin,d.adrelid),'identity',a.attidentity,'generated',a.attgenerated) ORDER BY a.attnum) FROM pg_attribute a LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE a.attrelid='pipeline_control.admin_evaluation_catalog_revision'::regclass AND a.attnum>0 AND NOT a.attisdropped),'constraints',(SELECT jsonb_agg(jsonb_build_object('name',conname,'type',contype,'validated',convalidated,'definition',pg_get_constraintdef(oid)) ORDER BY conname) FROM pg_constraint WHERE conrelid='pipeline_control.admin_evaluation_catalog_revision'::regclass),'indexes',(SELECT jsonb_agg(jsonb_build_object('name',indexrelid::regclass::text,'valid',indisvalid,'ready',indisready,'unique',indisunique,'primary',indisprimary,'definition',pg_get_indexdef(indexrelid)) ORDER BY indexrelid::regclass::text) FROM pg_index WHERE indrelid='pipeline_control.admin_evaluation_catalog_revision'::regclass),'policies',(SELECT jsonb_agg(jsonb_build_object('name',polname,'command',polcmd,'permissive',polpermissive,'roles',polroles,'qual_md5',md5(pg_get_expr(polqual,polrelid)),'check_md5',md5(pg_get_expr(polwithcheck,polrelid))) ORDER BY polname) FROM pg_policy WHERE polrelid='pipeline_control.admin_evaluation_catalog_revision'::regclass),'triggers',(SELECT jsonb_agg(jsonb_build_object('name',tgname,'internal',tgisinternal,'enabled',tgenabled,'function',tgfoid::regprocedure::text,'definition_md5',md5(pg_get_triggerdef(oid))) ORDER BY tgname) FROM pg_trigger WHERE tgrelid='pipeline_control.admin_evaluation_catalog_revision'::regclass)))",
+  "catalogBefore": {
+    "functions": [
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804753",
+        "name": "admin_eval_address_status",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text",
+        "language": "plpgsql",
+        "signature": "value jsonb",
+        "prosrc_md5": "df80d23d6c7bfd130582c66ad992a0d6",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "df80d23d6c7bfd130582c66ad992a0d6"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804755",
+        "name": "admin_eval_descriptor",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "jsonb",
+        "language": "plpgsql",
+        "signature": "value jsonb",
+        "prosrc_md5": "52f6982cf1369999bd204cae4c3a2c24",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "52f6982cf1369999bd204cae4c3a2c24"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804746",
+        "name": "admin_eval_display_name",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text",
+        "language": "plpgsql",
+        "signature": "value jsonb",
+        "prosrc_md5": "1b979d28e5fb5775b3ba28c311170fc7",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "1b979d28e5fb5775b3ba28c311170fc7"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804751",
+        "name": "admin_eval_epoch",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\"",
+          "TimeZone=UTC",
+          "DateStyle=ISO, MDY"
+        ],
+        "schema": "pipeline_control",
+        "returns": "numeric",
+        "language": "plpgsql",
+        "signature": "value text",
+        "prosrc_md5": "652ca0089389ef1ae78d27a6be2579b6",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "652ca0089389ef1ae78d27a6be2579b6"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804749",
+        "name": "admin_eval_filter_number",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "double precision",
+        "language": "plpgsql",
+        "signature": "value text, allow_fraction boolean",
+        "prosrc_md5": "768c25dfd02180122c547679930a5713",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "768c25dfd02180122c547679930a5713"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804742",
+        "name": "admin_eval_flags",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "jsonb",
+        "language": "plpgsql",
+        "signature": "value jsonb",
+        "prosrc_md5": "bbe5e06a8c57f71a444a9caebcf67c0b",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "bbe5e06a8c57f71a444a9caebcf67c0b"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804748",
+        "name": "admin_eval_js_trim",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text",
+        "language": "sql",
+        "signature": "value text",
+        "prosrc_md5": "09850b8241ea710b40451c464138015d",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "09850b8241ea710b40451c464138015d"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804769",
+        "name": "admin_eval_matches",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "boolean",
+        "language": "plpgsql",
+        "signature": "d jsonb, q jsonb",
+        "prosrc_md5": "915f97eb5752842676d5064f310e29b2",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "915f97eb5752842676d5064f310e29b2"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804741",
+        "name": "admin_eval_metrics",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "jsonb",
+        "language": "plpgsql",
+        "signature": "value jsonb",
+        "prosrc_md5": "a42a78fd3e17ee2947823d845650a1ef",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "a42a78fd3e17ee2947823d845650a1ef"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804743",
+        "name": "admin_eval_name_key",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text",
+        "language": "sql",
+        "signature": "value text",
+        "prosrc_md5": "ac8a25f004e5095d688449dd4ef079fb",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "ac8a25f004e5095d688449dd4ef079fb"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804744",
+        "name": "admin_eval_name_tokens",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text[]",
+        "language": "sql",
+        "signature": "value text",
+        "prosrc_md5": "43d1e939aee842cc8b3d12452ba596d1",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "43d1e939aee842cc8b3d12452ba596d1"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804745",
+        "name": "admin_eval_names_compatible",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "boolean",
+        "language": "plpgsql",
+        "signature": "origin text, candidate text",
+        "prosrc_md5": "e4d796436827963a2ddb5d86920b793f",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "e4d796436827963a2ddb5d86920b793f"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804770",
+        "name": "admin_eval_row",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "jsonb",
+        "language": "sql",
+        "signature": "r public.restaurants",
+        "prosrc_md5": "e7274ebdc1fd6204a7484cb7d4b13184",
+        "volatility": "s",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "e7274ebdc1fd6204a7484cb7d4b13184"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804750",
+        "name": "admin_eval_valid_meta",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "boolean",
+        "language": "sql",
+        "signature": "value jsonb",
+        "prosrc_md5": "ca7ae9a849ff65a3178020ce3ceef63f",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "ca7ae9a849ff65a3178020ce3ceef63f"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804752",
+        "name": "admin_eval_video_id",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text",
+        "language": "sql",
+        "signature": "value text",
+        "prosrc_md5": "6c83a8c5a6e5d9b9827b78cdb1d8b70a",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "6c83a8c5a6e5d9b9827b78cdb1d8b70a"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1805064",
+        "name": "admin_record_assert_operator",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "void",
+        "language": "plpgsql",
+        "signature": "actor uuid",
+        "prosrc_md5": "66c81cdf010c25e47401ca3c548d6412",
+        "volatility": "v",
+        "security_definer": true,
+        "prosrc_trimmed_md5": "85ad779f4cfb26978f95c83dd2151ea0"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1805058",
+        "name": "admin_record_compose",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "jsonb",
+        "language": "plpgsql",
+        "signature": "row_value jsonb, changes jsonb",
+        "prosrc_md5": "224b972003d11846a0db564ade2ca5d8",
+        "volatility": "v",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "d492c39d17cd986b4729ae2372822459"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1805046",
+        "name": "admin_record_hash",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text",
+        "language": "sql",
+        "signature": "value jsonb",
+        "prosrc_md5": "d3ed0df2873e01677ce0fb83562eb4f1",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "b9570c6303c32c173d22ce833ce30558"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1805062",
+        "name": "admin_record_patch",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "void",
+        "language": "plpgsql",
+        "signature": "id_value uuid, changes jsonb, actor uuid, approve boolean",
+        "prosrc_md5": "657ea5ddc589f03bb0d92bf137c5040a",
+        "volatility": "v",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "bc2102432906c2f64174b94d6e0bbbc2"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1805061",
+        "name": "admin_record_write",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "void",
+        "language": "plpgsql",
+        "signature": "id_value uuid, row_value jsonb, actor uuid, approve boolean",
+        "prosrc_md5": "6115ad201646155827d2be6c45527a34",
+        "volatility": "v",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "4dddbf4cca821f231519f56d4b2b2f89"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "oid": "1804767",
+        "name": "clear_admin_eval_read_index",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "trigger",
+        "language": "plpgsql",
+        "signature": "",
+        "prosrc_md5": "b1c86134d121a29cbc4bbb69549dd581",
+        "volatility": "v",
+        "security_definer": true,
+        "prosrc_trimmed_md5": "b1c86134d121a29cbc4bbb69549dd581"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "oid": "1804765",
+        "name": "update_admin_eval_read_index",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "trigger",
+        "language": "plpgsql",
+        "signature": "",
+        "prosrc_md5": "1d84c30af7f1c0afac1cb6328ba7c5f6",
+        "volatility": "v",
+        "security_definer": true,
+        "prosrc_trimmed_md5": "1d84c30af7f1c0afac1cb6328ba7c5f6"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1805065",
+        "name": "admin_record_action",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "returns": "jsonb",
+        "language": "plpgsql",
+        "signature": "p_actor uuid, p_phase text, p_operation_id uuid, p_action text, p_target_ids uuid[], p_payload jsonb, p_preview_hash text",
+        "prosrc_md5": "973d91c5cbd852c7566faea39bc2c0f5",
+        "volatility": "v",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "e74bf1740a974c9ae73646c018e4dd36"
+      }
+    ],
+    "tables": [
+      {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=r/postgres}",
+        "rls": true,
+        "owner": "postgres",
+        "table": "admin_evaluation_read_index",
+        "schema": "pipeline_control",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "not_null": true
+          },
+          {
+            "name": "descriptor",
+            "type": "jsonb",
+            "not_null": true
+          },
+          {
+            "name": "latest",
+            "type": "numeric",
+            "not_null": true
+          },
+          {
+            "name": "created",
+            "type": "numeric",
+            "not_null": true
+          },
+          {
+            "name": "video",
+            "type": "text",
+            "not_null": false
+          }
+        ],
+        "force_rls": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=rwdDxtm/postgres,anon=r/postgres,authenticated=rw/postgres,privacy_workflow_owner=r/postgres}",
+        "rls": true,
+        "owner": "postgres",
+        "table": "restaurants",
+        "schema": "public",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "not_null": true
+          },
+          {
+            "name": "approved_name",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "phone",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "categories",
+            "type": "text[]",
+            "not_null": false
+          },
+          {
+            "name": "lat",
+            "type": "numeric",
+            "not_null": false
+          },
+          {
+            "name": "lng",
+            "type": "numeric",
+            "not_null": false
+          },
+          {
+            "name": "road_address",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "jibun_address",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "english_address",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "address_elements",
+            "type": "jsonb",
+            "not_null": false
+          },
+          {
+            "name": "origin_address",
+            "type": "jsonb",
+            "not_null": false
+          },
+          {
+            "name": "youtube_meta",
+            "type": "jsonb",
+            "not_null": false
+          },
+          {
+            "name": "trace_id",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "reasoning_basis",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "evaluation_results",
+            "type": "jsonb",
+            "not_null": false
+          },
+          {
+            "name": "source_type",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "geocoding_success",
+            "type": "boolean",
+            "not_null": false
+          },
+          {
+            "name": "geocoding_false_stage",
+            "type": "integer",
+            "not_null": false
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "is_missing",
+            "type": "boolean",
+            "not_null": false
+          },
+          {
+            "name": "is_not_selected",
+            "type": "boolean",
+            "not_null": false
+          },
+          {
+            "name": "review_count",
+            "type": "integer",
+            "not_null": false
+          },
+          {
+            "name": "created_by",
+            "type": "uuid",
+            "not_null": false
+          },
+          {
+            "name": "updated_by_admin_id",
+            "type": "uuid",
+            "not_null": false
+          },
+          {
+            "name": "created_at",
+            "type": "timestamp with time zone",
+            "not_null": false
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamp with time zone",
+            "not_null": false
+          },
+          {
+            "name": "db_error_message",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "db_error_details",
+            "type": "jsonb",
+            "not_null": false
+          },
+          {
+            "name": "tzuyang_review",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "youtube_link",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "search_count",
+            "type": "integer",
+            "not_null": false
+          },
+          {
+            "name": "weekly_search_count",
+            "type": "integer",
+            "not_null": false
+          },
+          {
+            "name": "origin_name",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "naver_name",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "trace_id_name_source",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "channel_name",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "description_map_url",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "recollect_version",
+            "type": "jsonb",
+            "not_null": false
+          },
+          {
+            "name": "google_name",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "category",
+            "type": "text",
+            "not_null": false
+          }
+        ],
+        "force_rls": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "pipeline_control.admin_evaluation_read_index_pkey",
+        "ready": true,
+        "table": "pipeline_control.admin_evaluation_read_index",
+        "valid": true,
+        "unique": true,
+        "primary": true,
+        "definition": "CREATE UNIQUE INDEX admin_evaluation_read_index_pkey ON pipeline_control.admin_evaluation_read_index USING btree (id)"
+      },
+      {
+        "name": "pipeline_control.admin_evaluation_read_keyset",
+        "ready": true,
+        "table": "pipeline_control.admin_evaluation_read_index",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX admin_evaluation_read_keyset ON pipeline_control.admin_evaluation_read_index USING btree (latest DESC, created DESC, id DESC)"
+      },
+      {
+        "name": "pipeline_control.admin_evaluation_read_video",
+        "ready": true,
+        "table": "pipeline_control.admin_evaluation_read_index",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX admin_evaluation_read_video ON pipeline_control.admin_evaluation_read_index USING btree (video, created DESC, id)"
+      },
+      {
+        "name": "public.admin_evaluation_warning_source_order",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX admin_evaluation_warning_source_order ON public.restaurants USING btree (created_at DESC, id)"
+      },
+      {
+        "name": "public.idx_restaurants_active_video_identity",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": true,
+        "primary": false,
+        "definition": "CREATE UNIQUE INDEX idx_restaurants_active_video_identity ON public.restaurants USING btree (public.extract_youtube_video_id(youtube_link), public.normalize_restaurant_identity_name(public.resolve_restaurant_identity_name(approved_name, origin_name, naver_name, google_name))) WHERE ((status <> 'deleted'::text) AND (public.extract_youtube_video_id(youtube_link) <> ''::text) AND (public.normalize_restaurant_identity_name(public.resolve_restaurant_identity_name(approved_name, origin_name, naver_name, google_name)) IS NOT NULL))"
+      },
+      {
+        "name": "public.idx_restaurants_categories_gin",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX idx_restaurants_categories_gin ON public.restaurants USING gin (categories) WHERE (status = 'approved'::text)"
+      },
+      {
+        "name": "public.restaurant_review_active_address",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurant_review_active_address ON public.restaurants USING btree (btrim(jibun_address)) WHERE (status <> 'deleted'::text)"
+      },
+      {
+        "name": "public.restaurant_review_active_phone",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurant_review_active_phone ON public.restaurants USING btree (NULLIF(regexp_replace(phone, '[^0-9]'::text, ''::text, 'g'::text), ''::text)) WHERE (status <> 'deleted'::text)"
+      },
+      {
+        "name": "public.restaurant_review_video_identity",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurant_review_video_identity ON public.restaurants USING btree (public.extract_youtube_video_id(youtube_link), public.normalize_restaurant_identity_name(COALESCE(origin_name, approved_name, naver_name, ''::text)))"
+      },
+      {
+        "name": "public.restaurants_approved_name_trgm_idx",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurants_approved_name_trgm_idx ON public.restaurants USING gin (approved_name extensions.gin_trgm_ops)"
+      },
+      {
+        "name": "public.restaurants_categories_gin_idx",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurants_categories_gin_idx ON public.restaurants USING gin (categories)"
+      },
+      {
+        "name": "public.restaurants_duplicate_duplicate_pkey",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": true,
+        "primary": true,
+        "definition": "CREATE UNIQUE INDEX restaurants_duplicate_duplicate_pkey ON public.restaurants USING btree (id)"
+      },
+      {
+        "name": "public.restaurants_duplicate_duplicate_trace_id_key",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": true,
+        "primary": false,
+        "definition": "CREATE UNIQUE INDEX restaurants_duplicate_duplicate_trace_id_key ON public.restaurants USING btree (trace_id)"
+      },
+      {
+        "name": "public.restaurants_status_approved_name_idx",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurants_status_approved_name_idx ON public.restaurants USING btree (status, approved_name)"
+      },
+      {
+        "name": "public.restaurants_status_lat_lng_idx",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurants_status_lat_lng_idx ON public.restaurants USING btree (status, lat, lng)"
+      },
+      {
+        "name": "public.restaurants_status_review_count_idx",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurants_status_review_count_idx ON public.restaurants USING btree (status, review_count DESC)"
+      },
+      {
+        "name": "public.restaurants_status_weekly_search_count_idx",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurants_status_weekly_search_count_idx ON public.restaurants USING btree (status, weekly_search_count DESC) WHERE (weekly_search_count > 0)"
+      }
+    ],
+    "policies": [
+      {
+        "name": "g014_privacy_workflow_owner_restaurants_source",
+        "roles": [
+          "1788689"
+        ],
+        "table": "public.restaurants",
+        "command": "r",
+        "qual_md5": "b326b5062b2f0e69046810717534cb09",
+        "check_md5": null,
+        "permissive": true
+      },
+      {
+        "name": "restaurants_authenticated_admin_update",
+        "roles": [
+          "16481"
+        ],
+        "table": "public.restaurants",
+        "command": "w",
+        "qual_md5": "f2ddbda9dd15ef1ade0efab8ce3704e3",
+        "check_md5": "f2ddbda9dd15ef1ade0efab8ce3704e3",
+        "permissive": true
+      },
+      {
+        "name": "restaurants_public_approved_select",
+        "roles": [
+          "16480",
+          "16481"
+        ],
+        "table": "public.restaurants",
+        "command": "r",
+        "qual_md5": "da73743c71ce2dedcca80eb02b23f7b6",
+        "check_md5": null,
+        "permissive": true
+      }
+    ],
+    "triggers": [
+      {
+        "name": "admin_eval_read_index_row",
+        "table": "public.restaurants",
+        "enabled": "O",
+        "function": "pipeline_control.update_admin_eval_read_index()",
+        "definition_md5": "264dabb5435ce9539765596b9b4d2b56"
+      },
+      {
+        "name": "admin_eval_read_index_truncate",
+        "table": "public.restaurants",
+        "enabled": "O",
+        "function": "pipeline_control.clear_admin_eval_read_index()",
+        "definition_md5": "9aa3abe9d9cd9d03d1a345703d3da158"
+      },
+      {
+        "name": "admin_evaluation_display_revision_after_write",
+        "table": "public.restaurants",
+        "enabled": "O",
+        "function": "pipeline_control.bump_admin_evaluation_revision()",
+        "definition_md5": "559db16e33d17fc4c046d5bfc675b93d"
+      },
+      {
+        "name": "admin_evaluation_revision_after_write",
+        "table": "public.restaurants",
+        "enabled": "O",
+        "function": "pipeline_control.bump_admin_evaluation_revision()",
+        "definition_md5": "45778c3e7f6fe6a22e8a648c7ceebf96"
+      }
+    ],
+    "schemas": [
+      {
+        "acl": "{postgres=UC/postgres,service_role=U/postgres,privacy_workflow_owner=U/postgres}",
+        "schema": "pipeline_control"
+      },
+      {
+        "acl": "{pg_database_owner=UC/pg_database_owner,=U/pg_database_owner,postgres=U/pg_database_owner,anon=U/pg_database_owner,authenticated=U/pg_database_owner,service_role=U/pg_database_owner,privacy_workflow_owner=UC/pg_database_owner}",
+        "schema": "public"
+      }
+    ],
+    "column_acls": [
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "id"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "approved_name"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "categories"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "lat"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "lng"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "jibun_address"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "trace_id"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "source_type"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "geocoding_success"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "status"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "updated_by_admin_id"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "youtube_link"
+      }
+    ],
+    "target_sha256": {
+      "admin_eval_valid_meta": "22c337cb584b98b4afa194e023bba389d49017ec1422bac743937b190ebdcb24",
+      "admin_record_compose": "3613ff0688b0ae8892d1c539e74805ac2ac34d21bf1da993ea0d2f7eaa29b12b"
+    },
+    "index_column_acl_count": 0,
+    "target_properties": [
+      {
+        "name": "admin_eval_valid_meta",
+        "strict": false,
+        "leakproof": false,
+        "parallel": "u",
+        "kind": "f",
+        "cost": 100,
+        "rows": 0,
+        "returnsSet": false,
+        "argumentDefaults": 0,
+        "noSupport": true,
+        "noSqlBody": true,
+        "argumentNames": [
+          "value"
+        ]
+      },
+      {
+        "name": "admin_record_compose",
+        "strict": false,
+        "leakproof": false,
+        "parallel": "u",
+        "kind": "f",
+        "cost": 100,
+        "rows": 0,
+        "returnsSet": false,
+        "argumentDefaults": 0,
+        "noSupport": true,
+        "noSqlBody": true,
+        "argumentNames": [
+          "row_value",
+          "changes"
+        ]
+      }
+    ],
+    "revision_relation": {
+      "table": {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=r/postgres}",
+        "rls": true,
+        "kind": "r",
+        "name": "admin_evaluation_catalog_revision",
+        "owner": "postgres",
+        "schema": "pipeline_control",
+        "force_rls": false,
+        "persistence": "p"
+      },
+      "columns": [
+        {
+          "acl": null,
+          "name": "singleton",
+          "type": "boolean",
+          "default": "true",
+          "identity": "",
+          "not_null": true,
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "revision",
+          "type": "bigint",
+          "default": "1",
+          "identity": "",
+          "not_null": true,
+          "generated": ""
+        }
+      ],
+      "indexes": [
+        {
+          "name": "pipeline_control.admin_evaluation_catalog_revision_pkey",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": true,
+          "definition": "CREATE UNIQUE INDEX admin_evaluation_catalog_revision_pkey ON pipeline_control.admin_evaluation_catalog_revision USING btree (singleton)"
+        }
+      ],
+      "policies": null,
+      "triggers": null,
+      "constraints": [
+        {
+          "name": "admin_evaluation_catalog_revision_pkey",
+          "type": "p",
+          "validated": true,
+          "definition": "PRIMARY KEY (singleton)"
+        },
+        {
+          "name": "admin_evaluation_catalog_revision_singleton_check",
+          "type": "c",
+          "validated": true,
+          "definition": "CHECK (singleton)"
+        }
+      ]
+    }
+  },
+  "catalogAfter": {
+    "functions": [
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804753",
+        "name": "admin_eval_address_status",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text",
+        "language": "plpgsql",
+        "signature": "value jsonb",
+        "prosrc_md5": "df80d23d6c7bfd130582c66ad992a0d6",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "df80d23d6c7bfd130582c66ad992a0d6"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804755",
+        "name": "admin_eval_descriptor",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "jsonb",
+        "language": "plpgsql",
+        "signature": "value jsonb",
+        "prosrc_md5": "52f6982cf1369999bd204cae4c3a2c24",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "52f6982cf1369999bd204cae4c3a2c24"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804746",
+        "name": "admin_eval_display_name",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text",
+        "language": "plpgsql",
+        "signature": "value jsonb",
+        "prosrc_md5": "1b979d28e5fb5775b3ba28c311170fc7",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "1b979d28e5fb5775b3ba28c311170fc7"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804751",
+        "name": "admin_eval_epoch",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\"",
+          "TimeZone=UTC",
+          "DateStyle=ISO, MDY"
+        ],
+        "schema": "pipeline_control",
+        "returns": "numeric",
+        "language": "plpgsql",
+        "signature": "value text",
+        "prosrc_md5": "652ca0089389ef1ae78d27a6be2579b6",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "652ca0089389ef1ae78d27a6be2579b6"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804749",
+        "name": "admin_eval_filter_number",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "double precision",
+        "language": "plpgsql",
+        "signature": "value text, allow_fraction boolean",
+        "prosrc_md5": "768c25dfd02180122c547679930a5713",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "768c25dfd02180122c547679930a5713"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804742",
+        "name": "admin_eval_flags",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "jsonb",
+        "language": "plpgsql",
+        "signature": "value jsonb",
+        "prosrc_md5": "bbe5e06a8c57f71a444a9caebcf67c0b",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "bbe5e06a8c57f71a444a9caebcf67c0b"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804748",
+        "name": "admin_eval_js_trim",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text",
+        "language": "sql",
+        "signature": "value text",
+        "prosrc_md5": "09850b8241ea710b40451c464138015d",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "09850b8241ea710b40451c464138015d"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804769",
+        "name": "admin_eval_matches",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "boolean",
+        "language": "plpgsql",
+        "signature": "d jsonb, q jsonb",
+        "prosrc_md5": "915f97eb5752842676d5064f310e29b2",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "915f97eb5752842676d5064f310e29b2"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804741",
+        "name": "admin_eval_metrics",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "jsonb",
+        "language": "plpgsql",
+        "signature": "value jsonb",
+        "prosrc_md5": "a42a78fd3e17ee2947823d845650a1ef",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "a42a78fd3e17ee2947823d845650a1ef"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804743",
+        "name": "admin_eval_name_key",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text",
+        "language": "sql",
+        "signature": "value text",
+        "prosrc_md5": "ac8a25f004e5095d688449dd4ef079fb",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "ac8a25f004e5095d688449dd4ef079fb"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804744",
+        "name": "admin_eval_name_tokens",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text[]",
+        "language": "sql",
+        "signature": "value text",
+        "prosrc_md5": "43d1e939aee842cc8b3d12452ba596d1",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "43d1e939aee842cc8b3d12452ba596d1"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804745",
+        "name": "admin_eval_names_compatible",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "boolean",
+        "language": "plpgsql",
+        "signature": "origin text, candidate text",
+        "prosrc_md5": "e4d796436827963a2ddb5d86920b793f",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "e4d796436827963a2ddb5d86920b793f"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804770",
+        "name": "admin_eval_row",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "jsonb",
+        "language": "sql",
+        "signature": "r public.restaurants",
+        "prosrc_md5": "e7274ebdc1fd6204a7484cb7d4b13184",
+        "volatility": "s",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "e7274ebdc1fd6204a7484cb7d4b13184"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804750",
+        "name": "admin_eval_valid_meta",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "boolean",
+        "language": "sql",
+        "signature": "value jsonb",
+        "prosrc_md5": "774600adcd53c397c05ab784ea942871",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "774600adcd53c397c05ab784ea942871"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1804752",
+        "name": "admin_eval_video_id",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text",
+        "language": "sql",
+        "signature": "value text",
+        "prosrc_md5": "6c83a8c5a6e5d9b9827b78cdb1d8b70a",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "6c83a8c5a6e5d9b9827b78cdb1d8b70a"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1805064",
+        "name": "admin_record_assert_operator",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "void",
+        "language": "plpgsql",
+        "signature": "actor uuid",
+        "prosrc_md5": "66c81cdf010c25e47401ca3c548d6412",
+        "volatility": "v",
+        "security_definer": true,
+        "prosrc_trimmed_md5": "85ad779f4cfb26978f95c83dd2151ea0"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1805058",
+        "name": "admin_record_compose",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "jsonb",
+        "language": "plpgsql",
+        "signature": "row_value jsonb, changes jsonb",
+        "prosrc_md5": "6a2d22c8eb01e13476f50092a0975e41",
+        "volatility": "v",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "12e756825f2db5f959f3dcacbaea5a7d"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1805046",
+        "name": "admin_record_hash",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "text",
+        "language": "sql",
+        "signature": "value jsonb",
+        "prosrc_md5": "d3ed0df2873e01677ce0fb83562eb4f1",
+        "volatility": "i",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "b9570c6303c32c173d22ce833ce30558"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1805062",
+        "name": "admin_record_patch",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "void",
+        "language": "plpgsql",
+        "signature": "id_value uuid, changes jsonb, actor uuid, approve boolean",
+        "prosrc_md5": "657ea5ddc589f03bb0d92bf137c5040a",
+        "volatility": "v",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "bc2102432906c2f64174b94d6e0bbbc2"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1805061",
+        "name": "admin_record_write",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "void",
+        "language": "plpgsql",
+        "signature": "id_value uuid, row_value jsonb, actor uuid, approve boolean",
+        "prosrc_md5": "6115ad201646155827d2be6c45527a34",
+        "volatility": "v",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "4dddbf4cca821f231519f56d4b2b2f89"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "oid": "1804767",
+        "name": "clear_admin_eval_read_index",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "trigger",
+        "language": "plpgsql",
+        "signature": "",
+        "prosrc_md5": "b1c86134d121a29cbc4bbb69549dd581",
+        "volatility": "v",
+        "security_definer": true,
+        "prosrc_trimmed_md5": "b1c86134d121a29cbc4bbb69549dd581"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "oid": "1804765",
+        "name": "update_admin_eval_read_index",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "pipeline_control",
+        "returns": "trigger",
+        "language": "plpgsql",
+        "signature": "",
+        "prosrc_md5": "1d84c30af7f1c0afac1cb6328ba7c5f6",
+        "volatility": "v",
+        "security_definer": true,
+        "prosrc_trimmed_md5": "1d84c30af7f1c0afac1cb6328ba7c5f6"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "oid": "1805065",
+        "name": "admin_record_action",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "returns": "jsonb",
+        "language": "plpgsql",
+        "signature": "p_actor uuid, p_phase text, p_operation_id uuid, p_action text, p_target_ids uuid[], p_payload jsonb, p_preview_hash text",
+        "prosrc_md5": "973d91c5cbd852c7566faea39bc2c0f5",
+        "volatility": "v",
+        "security_definer": false,
+        "prosrc_trimmed_md5": "e74bf1740a974c9ae73646c018e4dd36"
+      }
+    ],
+    "tables": [
+      {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=r/postgres}",
+        "rls": true,
+        "owner": "postgres",
+        "table": "admin_evaluation_read_index",
+        "schema": "pipeline_control",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "not_null": true
+          },
+          {
+            "name": "descriptor",
+            "type": "jsonb",
+            "not_null": true
+          },
+          {
+            "name": "latest",
+            "type": "numeric",
+            "not_null": true
+          },
+          {
+            "name": "created",
+            "type": "numeric",
+            "not_null": true
+          },
+          {
+            "name": "video",
+            "type": "text",
+            "not_null": false
+          }
+        ],
+        "force_rls": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=rwdDxtm/postgres,anon=r/postgres,authenticated=rw/postgres,privacy_workflow_owner=r/postgres}",
+        "rls": true,
+        "owner": "postgres",
+        "table": "restaurants",
+        "schema": "public",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "not_null": true
+          },
+          {
+            "name": "approved_name",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "phone",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "categories",
+            "type": "text[]",
+            "not_null": false
+          },
+          {
+            "name": "lat",
+            "type": "numeric",
+            "not_null": false
+          },
+          {
+            "name": "lng",
+            "type": "numeric",
+            "not_null": false
+          },
+          {
+            "name": "road_address",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "jibun_address",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "english_address",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "address_elements",
+            "type": "jsonb",
+            "not_null": false
+          },
+          {
+            "name": "origin_address",
+            "type": "jsonb",
+            "not_null": false
+          },
+          {
+            "name": "youtube_meta",
+            "type": "jsonb",
+            "not_null": false
+          },
+          {
+            "name": "trace_id",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "reasoning_basis",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "evaluation_results",
+            "type": "jsonb",
+            "not_null": false
+          },
+          {
+            "name": "source_type",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "geocoding_success",
+            "type": "boolean",
+            "not_null": false
+          },
+          {
+            "name": "geocoding_false_stage",
+            "type": "integer",
+            "not_null": false
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "is_missing",
+            "type": "boolean",
+            "not_null": false
+          },
+          {
+            "name": "is_not_selected",
+            "type": "boolean",
+            "not_null": false
+          },
+          {
+            "name": "review_count",
+            "type": "integer",
+            "not_null": false
+          },
+          {
+            "name": "created_by",
+            "type": "uuid",
+            "not_null": false
+          },
+          {
+            "name": "updated_by_admin_id",
+            "type": "uuid",
+            "not_null": false
+          },
+          {
+            "name": "created_at",
+            "type": "timestamp with time zone",
+            "not_null": false
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamp with time zone",
+            "not_null": false
+          },
+          {
+            "name": "db_error_message",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "db_error_details",
+            "type": "jsonb",
+            "not_null": false
+          },
+          {
+            "name": "tzuyang_review",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "youtube_link",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "search_count",
+            "type": "integer",
+            "not_null": false
+          },
+          {
+            "name": "weekly_search_count",
+            "type": "integer",
+            "not_null": false
+          },
+          {
+            "name": "origin_name",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "naver_name",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "trace_id_name_source",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "channel_name",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "description_map_url",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "recollect_version",
+            "type": "jsonb",
+            "not_null": false
+          },
+          {
+            "name": "google_name",
+            "type": "text",
+            "not_null": false
+          },
+          {
+            "name": "category",
+            "type": "text",
+            "not_null": false
+          }
+        ],
+        "force_rls": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "pipeline_control.admin_evaluation_read_index_pkey",
+        "ready": true,
+        "table": "pipeline_control.admin_evaluation_read_index",
+        "valid": true,
+        "unique": true,
+        "primary": true,
+        "definition": "CREATE UNIQUE INDEX admin_evaluation_read_index_pkey ON pipeline_control.admin_evaluation_read_index USING btree (id)"
+      },
+      {
+        "name": "pipeline_control.admin_evaluation_read_keyset",
+        "ready": true,
+        "table": "pipeline_control.admin_evaluation_read_index",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX admin_evaluation_read_keyset ON pipeline_control.admin_evaluation_read_index USING btree (latest DESC, created DESC, id DESC)"
+      },
+      {
+        "name": "pipeline_control.admin_evaluation_read_video",
+        "ready": true,
+        "table": "pipeline_control.admin_evaluation_read_index",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX admin_evaluation_read_video ON pipeline_control.admin_evaluation_read_index USING btree (video, created DESC, id)"
+      },
+      {
+        "name": "public.admin_evaluation_warning_source_order",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX admin_evaluation_warning_source_order ON public.restaurants USING btree (created_at DESC, id)"
+      },
+      {
+        "name": "public.idx_restaurants_active_video_identity",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": true,
+        "primary": false,
+        "definition": "CREATE UNIQUE INDEX idx_restaurants_active_video_identity ON public.restaurants USING btree (public.extract_youtube_video_id(youtube_link), public.normalize_restaurant_identity_name(public.resolve_restaurant_identity_name(approved_name, origin_name, naver_name, google_name))) WHERE ((status <> 'deleted'::text) AND (public.extract_youtube_video_id(youtube_link) <> ''::text) AND (public.normalize_restaurant_identity_name(public.resolve_restaurant_identity_name(approved_name, origin_name, naver_name, google_name)) IS NOT NULL))"
+      },
+      {
+        "name": "public.idx_restaurants_categories_gin",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX idx_restaurants_categories_gin ON public.restaurants USING gin (categories) WHERE (status = 'approved'::text)"
+      },
+      {
+        "name": "public.restaurant_review_active_address",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurant_review_active_address ON public.restaurants USING btree (btrim(jibun_address)) WHERE (status <> 'deleted'::text)"
+      },
+      {
+        "name": "public.restaurant_review_active_phone",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurant_review_active_phone ON public.restaurants USING btree (NULLIF(regexp_replace(phone, '[^0-9]'::text, ''::text, 'g'::text), ''::text)) WHERE (status <> 'deleted'::text)"
+      },
+      {
+        "name": "public.restaurant_review_video_identity",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurant_review_video_identity ON public.restaurants USING btree (public.extract_youtube_video_id(youtube_link), public.normalize_restaurant_identity_name(COALESCE(origin_name, approved_name, naver_name, ''::text)))"
+      },
+      {
+        "name": "public.restaurants_approved_name_trgm_idx",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurants_approved_name_trgm_idx ON public.restaurants USING gin (approved_name extensions.gin_trgm_ops)"
+      },
+      {
+        "name": "public.restaurants_categories_gin_idx",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurants_categories_gin_idx ON public.restaurants USING gin (categories)"
+      },
+      {
+        "name": "public.restaurants_duplicate_duplicate_pkey",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": true,
+        "primary": true,
+        "definition": "CREATE UNIQUE INDEX restaurants_duplicate_duplicate_pkey ON public.restaurants USING btree (id)"
+      },
+      {
+        "name": "public.restaurants_duplicate_duplicate_trace_id_key",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": true,
+        "primary": false,
+        "definition": "CREATE UNIQUE INDEX restaurants_duplicate_duplicate_trace_id_key ON public.restaurants USING btree (trace_id)"
+      },
+      {
+        "name": "public.restaurants_status_approved_name_idx",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurants_status_approved_name_idx ON public.restaurants USING btree (status, approved_name)"
+      },
+      {
+        "name": "public.restaurants_status_lat_lng_idx",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurants_status_lat_lng_idx ON public.restaurants USING btree (status, lat, lng)"
+      },
+      {
+        "name": "public.restaurants_status_review_count_idx",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurants_status_review_count_idx ON public.restaurants USING btree (status, review_count DESC)"
+      },
+      {
+        "name": "public.restaurants_status_weekly_search_count_idx",
+        "ready": true,
+        "table": "public.restaurants",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX restaurants_status_weekly_search_count_idx ON public.restaurants USING btree (status, weekly_search_count DESC) WHERE (weekly_search_count > 0)"
+      }
+    ],
+    "policies": [
+      {
+        "name": "g014_privacy_workflow_owner_restaurants_source",
+        "roles": [
+          "1788689"
+        ],
+        "table": "public.restaurants",
+        "command": "r",
+        "qual_md5": "b326b5062b2f0e69046810717534cb09",
+        "check_md5": null,
+        "permissive": true
+      },
+      {
+        "name": "restaurants_authenticated_admin_update",
+        "roles": [
+          "16481"
+        ],
+        "table": "public.restaurants",
+        "command": "w",
+        "qual_md5": "f2ddbda9dd15ef1ade0efab8ce3704e3",
+        "check_md5": "f2ddbda9dd15ef1ade0efab8ce3704e3",
+        "permissive": true
+      },
+      {
+        "name": "restaurants_public_approved_select",
+        "roles": [
+          "16480",
+          "16481"
+        ],
+        "table": "public.restaurants",
+        "command": "r",
+        "qual_md5": "da73743c71ce2dedcca80eb02b23f7b6",
+        "check_md5": null,
+        "permissive": true
+      }
+    ],
+    "triggers": [
+      {
+        "name": "admin_eval_read_index_row",
+        "table": "public.restaurants",
+        "enabled": "O",
+        "function": "pipeline_control.update_admin_eval_read_index()",
+        "definition_md5": "264dabb5435ce9539765596b9b4d2b56"
+      },
+      {
+        "name": "admin_eval_read_index_truncate",
+        "table": "public.restaurants",
+        "enabled": "O",
+        "function": "pipeline_control.clear_admin_eval_read_index()",
+        "definition_md5": "9aa3abe9d9cd9d03d1a345703d3da158"
+      },
+      {
+        "name": "admin_evaluation_display_revision_after_write",
+        "table": "public.restaurants",
+        "enabled": "O",
+        "function": "pipeline_control.bump_admin_evaluation_revision()",
+        "definition_md5": "559db16e33d17fc4c046d5bfc675b93d"
+      },
+      {
+        "name": "admin_evaluation_revision_after_write",
+        "table": "public.restaurants",
+        "enabled": "O",
+        "function": "pipeline_control.bump_admin_evaluation_revision()",
+        "definition_md5": "45778c3e7f6fe6a22e8a648c7ceebf96"
+      }
+    ],
+    "schemas": [
+      {
+        "acl": "{postgres=UC/postgres,service_role=U/postgres,privacy_workflow_owner=U/postgres}",
+        "schema": "pipeline_control"
+      },
+      {
+        "acl": "{pg_database_owner=UC/pg_database_owner,=U/pg_database_owner,postgres=U/pg_database_owner,anon=U/pg_database_owner,authenticated=U/pg_database_owner,service_role=U/pg_database_owner,privacy_workflow_owner=UC/pg_database_owner}",
+        "schema": "public"
+      }
+    ],
+    "column_acls": [
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "id"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "approved_name"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "categories"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "lat"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "lng"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "jibun_address"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "trace_id"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "source_type"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "geocoding_success"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "status"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "updated_by_admin_id"
+      },
+      {
+        "acl": "{service_role=a/postgres}",
+        "column": "youtube_link"
+      }
+    ],
+    "target_sha256": {
+      "admin_eval_valid_meta": "fc0a64561235fc42175570c9f080725d0e6bda9330fb122e9bbb4eb37b788f59",
+      "admin_record_compose": "8ecadf3542e5558dc7e26c430f1a4dfd00244c80c056c1173fb1349bc641f929"
+    },
+    "index_column_acl_count": 0,
+    "target_properties": [
+      {
+        "name": "admin_eval_valid_meta",
+        "strict": false,
+        "leakproof": false,
+        "parallel": "u",
+        "kind": "f",
+        "cost": 100,
+        "rows": 0,
+        "returnsSet": false,
+        "argumentDefaults": 0,
+        "noSupport": true,
+        "noSqlBody": true,
+        "argumentNames": [
+          "value"
+        ]
+      },
+      {
+        "name": "admin_record_compose",
+        "strict": false,
+        "leakproof": false,
+        "parallel": "u",
+        "kind": "f",
+        "cost": 100,
+        "rows": 0,
+        "returnsSet": false,
+        "argumentDefaults": 0,
+        "noSupport": true,
+        "noSqlBody": true,
+        "argumentNames": [
+          "row_value",
+          "changes"
+        ]
+      }
+    ],
+    "revision_relation": {
+      "table": {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=r/postgres}",
+        "rls": true,
+        "kind": "r",
+        "name": "admin_evaluation_catalog_revision",
+        "owner": "postgres",
+        "schema": "pipeline_control",
+        "force_rls": false,
+        "persistence": "p"
+      },
+      "columns": [
+        {
+          "acl": null,
+          "name": "singleton",
+          "type": "boolean",
+          "default": "true",
+          "identity": "",
+          "not_null": true,
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "revision",
+          "type": "bigint",
+          "default": "1",
+          "identity": "",
+          "not_null": true,
+          "generated": ""
+        }
+      ],
+      "indexes": [
+        {
+          "name": "pipeline_control.admin_evaluation_catalog_revision_pkey",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": true,
+          "definition": "CREATE UNIQUE INDEX admin_evaluation_catalog_revision_pkey ON pipeline_control.admin_evaluation_catalog_revision USING btree (singleton)"
+        }
+      ],
+      "policies": null,
+      "triggers": null,
+      "constraints": [
+        {
+          "name": "admin_evaluation_catalog_revision_pkey",
+          "type": "p",
+          "validated": true,
+          "definition": "PRIMARY KEY (singleton)"
+        },
+        {
+          "name": "admin_evaluation_catalog_revision_singleton_check",
+          "type": "c",
+          "validated": true,
+          "definition": "CHECK (singleton)"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "apps/web/scripts/admin-record-sql-successor.mjs": "c9b2c3335598bc21a5a721182ae45aae0d009be8684e7a1a2a0871e0cb921466",
+    "apps/web/scripts/apply-supabase-migration.mjs": "02c404e0be3e81b7c8d4d7766ff29e750b1797f5ad49b5f496168170e21192d4",
+    "apps/web/scripts/privacy-safe-cli-log.mjs": "23acce06424335d2d3597c236d7e5d30731b04d9f75fa75cff7a93bff0cc6e97",
+    "apps/web/scripts/review-media-sql-successor.mjs": "4f3dacb6f51a669bf64209b380b19e8274d2703101fc50f815153237f4a99d93",
+    "apps/web/scripts/supabase-migration-bundle.mjs": "fcebc20dc4846606dc14bdbe658a07daa32430ad632e52383151f5c22d22efb9",
+    "apps/web/scripts/supabase-migration-transaction.mjs": "c67bdff4c63b1bf1b4a157863b3eb5253b5973a8fb54b7fd49351270787bed26",
+    "apps/web/scripts/thumbnail-local-owner.mjs": "1a6e45cd3af10084799f5c5b0824abc99057ecd8fa6484da5282d105bc73afca",
+    "apps/web/scripts/thumbnail-production-successor.mjs": "5f5001880e367199dd63c5d93c2716c818fe93f78c0420cabd1ce8bb9df2791a",
+    "apps/web/scripts/vercel-rollback-readback.mjs": "fa3876153f0e949d23115612cb34bc545c6c29bccb6ba2fd6042a38e70555e04",
+    "backend/supabase/certificates/prod-ca-2021.crt": "700723581420dd1ac98fd7e9ac529f0ef210eadcaf87fc868a3ad7d114c2f3b7",
+    "backend/supabase/scripts/g037_supabase_statement_vector.mjs": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd"
+  },
+  "scope": {
+    "functions": [
+      "pipeline_control.admin_eval_valid_meta(jsonb)",
+      "pipeline_control.admin_record_compose(jsonb,jsonb)"
+    ],
+    "derivedIndex": "pipeline_control.admin_evaluation_read_index",
+    "businessRows": "unchanged_inside_transaction",
+    "outsideCohort": "unchanged_inside_transaction",
+    "macRestaurantDml": "allowed_subject_to_bounded_share_lock",
+    "graphQLCacheSequence": "nontransactional_invalidation_may_advance_even_on_rollback",
+    "catalogRevision": {
+      "relation": "pipeline_control.admin_evaluation_catalog_revision",
+      "write": "exact_singleton_increment_once_in_same_outer_transaction",
+      "lock": "FOR UPDATE NOWAIT after restaurant and index relation locks"
+    }
+  },
+  "fences": {
+    "generalFreeze": "active",
+    "githubProducer": "disabled_manually",
+    "privilegedCatalogWriters": "common_serializer_no_out_of_band",
+    "directIndexWriters": "common_serializer_no_out_of_band",
+    "producerRuntimeSettings": "preserve"
+  },
+  "readinessEvidence": "sponsorship-hosted-readiness-v474; actual PG17.6 2026-10-28T21:46:19Z; not execution authority",
+  "additionalFailClosedPrecondition": "Derived-index column ACL count must be zero. Target STRICT/LEAKPROOF/PARALLEL/kind/cost/rows/support/default/argument metadata must match immutable-source defaults. These fields were not independently enumerated in v474 and must be verified by the fresh read-only preflight; they are requirements, not claims of observed hosted state.",
+  "sourcePolicy": {
+    "repository": "twoimo/tzudong",
+    "branch": "main",
+    "protected": true,
+    "receiptFreshnessSeconds": 60,
+    "revisionBinding": "External fresh protectedMain receipt plus independent GitHub branch protection and Git main-tip readback; no feature-head or ancestor pin. Reconcile retains the original receipt after main advances."
+  },
+  "migrations": [
+    {
+      "path": "backend/supabase/migrations/20261028195647_sponsorship_base_metadata_manual_confirmation.sql",
+      "sha256": "d0a91f3c1729b05b0aee508058973aecaa13f187f3f7e89ea9b2f71e415d82b9",
+      "originalStatementVector": [
+        "-- Base metadata is independent of the optional sponsorship supplement.\n-- Preserve existing function OIDs/owners/ACLs, guarded action admission, and RLS.\nSET LOCAL lock_timeout='2s'",
+        "CREATE OR REPLACE FUNCTION pipeline_control.admin_eval_valid_meta(value jsonb)\nRETURNS boolean LANGUAGE sql IMMUTABLE SECURITY INVOKER SET search_path='' AS $$\n SELECT coalesce(jsonb_typeof(value)='object'\n  AND jsonb_typeof(value->'title')='string' AND jsonb_typeof(value->'publishedAt')='string'\n  AND jsonb_typeof(value->'is_shorts')='boolean' AND jsonb_typeof(value->'duration')='number',false);\n$$",
+        "CREATE OR REPLACE FUNCTION pipeline_control.admin_record_compose(row_value jsonb, changes jsonb) RETURNS jsonb\nLANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$\nDECLARE k text; meta jsonb; ads jsonb; incoming_meta jsonb;\nBEGIN\n IF jsonb_typeof(changes) IS DISTINCT FROM 'object' OR EXISTS(SELECT 1 FROM jsonb_object_keys(changes) x WHERE x<>ALL(ARRAY[\n  'approved_name','phone','categories','youtube_link','tzuyang_review','road_address','jibun_address','english_address','address_elements','lat','lng','geocoding_success','youtube_meta']))\n THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;\n FOREACH k IN ARRAY ARRAY['approved_name','phone','youtube_link','tzuyang_review','road_address','jibun_address','english_address'] LOOP\n  IF changes ? k AND (jsonb_typeof(changes->k) NOT IN ('string','null') OR length(changes->>k)>4000) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;\n END LOOP;\n IF (changes ? 'approved_name' AND (nullif(btrim(changes->>'approved_name'),'') IS NULL OR length(changes->>'approved_name')>160))\n  OR (changes ? 'phone' AND length(changes->>'phone')>80)\n  OR (changes ? 'youtube_link' AND changes->'youtube_link'<>'null'::jsonb AND changes->>'youtube_link' !~ '^https://(www\\.)?youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$')\n  OR (changes ? 'geocoding_success' AND jsonb_typeof(changes->'geocoding_success')<>'boolean')\n  OR (changes ? 'youtube_meta' AND jsonb_typeof(changes->'youtube_meta')<>'object')\n  OR (changes ? 'address_elements' AND jsonb_typeof(changes->'address_elements') NOT IN ('array','object','null'))\n THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_RESTAURANT'; END IF;\n FOREACH k IN ARRAY ARRAY['lat','lng'] LOOP\n  IF changes ? k THEN\n   IF jsonb_typeof(changes->k)<>'number' THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_RESTAURANT'; END IF;\n   IF (changes->>k)::numeric NOT BETWEEN (CASE k WHEN 'lat' THEN -90 ELSE -180 END) AND (CASE k WHEN 'lat' THEN 90 ELSE 180 END) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_RESTAURANT'; END IF;\n  END IF;\n END LOOP;\n IF changes ? 'categories' THEN\n  IF jsonb_typeof(changes->'categories')<>'array' THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_RESTAURANT'; END IF;\n  IF jsonb_array_length(changes->'categories') NOT BETWEEN 1 AND 15 OR EXISTS(SELECT 1 FROM jsonb_array_elements(changes->'categories') x WHERE jsonb_typeof(x)<>'string' OR x#>>'{}'<>ALL(ARRAY['치킨','중식','돈까스·회','피자','패스트푸드','찜·탕','족발·보쌈','분식','카페·디저트','한식','고기','양식','아시안','야식','도시락'])) OR (SELECT count(*)<>count(DISTINCT x) FROM jsonb_array_elements(changes->'categories') x) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_RESTAURANT'; END IF;\n END IF;\n IF changes ? 'youtube_meta' THEN\n  IF EXISTS(SELECT 1 FROM jsonb_object_keys(changes->'youtube_meta') meta_key WHERE meta_key<>ALL(ARRAY['title','published_at','duration','is_shorts','is_ads','what_ads','sponsorship_confirmation'])) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;\n  incoming_meta:=changes->'youtube_meta';\n  FOREACH k IN ARRAY ARRAY['title','published_at'] LOOP\n   IF incoming_meta ? k AND (jsonb_typeof(incoming_meta->k)<>'string' OR length(incoming_meta->>k)>4000) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;\n  END LOOP;\n  IF incoming_meta ? 'duration' THEN\n   IF jsonb_typeof(incoming_meta->'duration')<>'number' THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;\n   IF (incoming_meta->>'duration')::numeric<0 THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;\n  END IF;\n  IF (incoming_meta ? 'is_shorts' AND jsonb_typeof(incoming_meta->'is_shorts')<>'boolean')\n   OR (incoming_meta ? 'is_ads' AND jsonb_typeof(incoming_meta->'is_ads')<>'boolean') THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;\n  IF incoming_meta ? 'what_ads' AND incoming_meta->'what_ads'<>'null'::jsonb THEN\n   IF jsonb_typeof(incoming_meta->'what_ads')<>'array' THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;\n   IF jsonb_array_length(incoming_meta->'what_ads')>20 OR EXISTS(SELECT 1 FROM jsonb_array_elements(incoming_meta->'what_ads') x WHERE jsonb_typeof(x)<>'string' OR length(x#>>'{}')>4000) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;\n  END IF;\n  -- An explicit manual decision is distinct from an automatic/legacy field projection.\n  -- The caller cannot supply provenance or actor identity; the existing guarded\n  -- operation binds actor/targets/payload/fingerprint and commits the audit.\n  IF incoming_meta ? 'sponsorship_confirmation' THEN\n   IF incoming_meta->>'sponsorship_confirmation' IS NULL\n    OR incoming_meta->>'sponsorship_confirmation' NOT IN ('detected','confirmed_none')\n    OR NOT (incoming_meta ? 'is_ads' AND incoming_meta ? 'what_ads')\n    OR incoming_meta->'is_ads' IS DISTINCT FROM to_jsonb(incoming_meta->>'sponsorship_confirmation'='detected')\n   THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;\n   IF incoming_meta->>'sponsorship_confirmation'='confirmed_none' THEN\n    IF incoming_meta->'what_ads' IS DISTINCT FROM 'null'::jsonb THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;\n   ELSE\n    IF jsonb_typeof(incoming_meta->'what_ads') IS DISTINCT FROM 'array' THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;\n    IF jsonb_array_length(incoming_meta->'what_ads')=0 OR EXISTS(\n     SELECT 1 FROM jsonb_array_elements_text(incoming_meta->'what_ads') x\n     WHERE pipeline_control.admin_eval_js_trim(x)=''\n    ) THEN RAISE EXCEPTION 'RECORD_ACTION_INVALID_PAYLOAD'; END IF;\n   END IF;\n  END IF;\n  meta:=CASE WHEN jsonb_typeof(row_value->'youtube_meta')='object' THEN row_value->'youtube_meta' ELSE '{}'::jsonb END;\n  ads:=CASE WHEN jsonb_typeof(meta->'ads_info')='object' THEN meta->'ads_info' ELSE '{}'::jsonb END;\n  FOREACH k IN ARRAY ARRAY['title','duration','is_shorts'] LOOP\n   IF incoming_meta ? k THEN meta:=meta||jsonb_build_object(k,incoming_meta->k); END IF;\n  END LOOP;\n  IF incoming_meta ? 'published_at' THEN meta:=meta||jsonb_build_object('publishedAt',incoming_meta->'published_at'); END IF;\n  IF incoming_meta ? 'is_ads' THEN ads:=ads||jsonb_build_object('is_ads',incoming_meta->'is_ads'); END IF;\n  IF incoming_meta ? 'what_ads' THEN\n   -- Canonical consumers use nullable advertising text. A single wrapped text\n   -- round-trips exactly; ordered names retain their text in a readable list.\n   ads:=ads||jsonb_build_object('what_ads',CASE WHEN incoming_meta->'what_ads'='null'::jsonb THEN NULL::text ELSE\n    (SELECT string_agg(value,', ' ORDER BY ordinal) FROM jsonb_array_elements_text(incoming_meta->'what_ads') WITH ORDINALITY a(value,ordinal)) END);\n  END IF;\n  IF incoming_meta ? 'sponsorship_confirmation' THEN\n   -- Replace only stale sponsorship analysis. Other metadata and ads keys survive.\n   ads:=ads||jsonb_build_object('sponsor_analysis',jsonb_build_object(\n    'status','completed','outcome',incoming_meta->>'sponsorship_confirmation',\n    'source','manual_admin','version','manual-sponsorship-v1',\n    'reason','explicit_admin_confirmation','source_sha256',NULL));\n  END IF;\n  IF incoming_meta ? 'is_ads' OR incoming_meta ? 'what_ads' OR meta ? 'ads_info' THEN meta:=meta||jsonb_build_object('ads_info',ads); END IF;\n  changes:=changes||jsonb_build_object('youtube_meta',meta);\n END IF;\n RETURN row_value||changes;\nEND $$",
+        "-- Serialize against restaurant writers so the derived snapshot cannot overwrite\n-- a concurrent trigger's newer descriptor. This lock changes no business row.\nLOCK TABLE public.restaurants IN SHARE MODE",
+        "WITH affected AS MATERIALIZED (\n SELECT r.id,pipeline_control.admin_eval_descriptor(to_jsonb(r)||jsonb_build_object('name',r.approved_name)) AS d\n FROM public.restaurants r\n WHERE pipeline_control.admin_eval_valid_meta(r.youtube_meta)\n  AND NOT coalesce(jsonb_typeof(r.youtube_meta->'ads_info')='object'\n   AND jsonb_typeof(r.youtube_meta#>'{ads_info,is_ads}')='boolean'\n   AND jsonb_typeof(r.youtube_meta#>'{ads_info,what_ads}') IN ('string','null'),false)\n)\nINSERT INTO pipeline_control.admin_evaluation_read_index AS saved(id,descriptor,latest,created,video)\n SELECT id,d,(d->>'latest')::numeric,(d->>'created')::numeric,d->>'video' FROM affected\n ON CONFLICT(id) DO UPDATE SET descriptor=EXCLUDED.descriptor,latest=EXCLUDED.latest,\n  created=EXCLUDED.created,video=EXCLUDED.video\n WHERE saved.descriptor IS DISTINCT FROM EXCLUDED.descriptor"
+      ],
+      "statementVectorSha256": "ba2154c3f8aadc1d203d49376bf3eacb30e686032bd7a75450d6cbc87f79ac48"
+    },
+    {
+      "path": "backend/supabase/migrations/20261028225926_sponsorship_catalog_revision_invalidation.sql",
+      "sha256": "551c52c0f46f3283b9b6a12239bf3ba91eda784a8570950e18dddade2c642d4f",
+      "originalStatementVector": [
+        "-- Run in the same installation transaction as the sponsorship descriptor rebuild.\n-- The restaurant revision trigger does not run for direct derived-index writes.\n-- Advancing this singleton invalidates cached pages and revision-bound cursors.\nDO $sponsorship_catalog_revision$\nDECLARE changed_rows bigint;\nBEGIN\n  UPDATE pipeline_control.admin_evaluation_catalog_revision\n  SET revision = revision + 1\n  WHERE singleton;\n  GET DIAGNOSTICS changed_rows = ROW_COUNT;\n  IF changed_rows <> 1 THEN\n    RAISE EXCEPTION 'SPONSORSHIP_CATALOG_REVISION_UNAVAILABLE';\n  END IF;\nEND\n$sponsorship_catalog_revision$"
+      ],
+      "statementVectorSha256": "9b72d4faa1a0beb0a5194c3c339aaf3e165029f9a058983353a5a3f47c8162cb"
+    }
+  ],
+  "bundleSha256": "b217266cb633f5a7fded6c7b29822d2927e8ecea37739f5837a0c7f61dba7987"
+}
