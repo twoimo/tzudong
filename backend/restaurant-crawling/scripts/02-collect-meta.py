@@ -470,6 +470,30 @@ def detect_changes(
     return changes
 
 
+def fatal_ad_quota_code(error: Exception) -> Optional[str]:
+    """Classify structured 429 quota errors without exposing provider text."""
+    if getattr(error, "status_code", None) != 429:
+        return None
+    fields = [getattr(error, "code", None), getattr(error, "type", None)]
+    body = getattr(error, "body", None)
+    if isinstance(body, dict):
+        # The SDK normally unwraps `error`; accept either exception body shape.
+        nested = body.get("error")
+        for data in (body, nested):
+            if isinstance(data, dict):
+                fields.extend((data.get("code"), data.get("type")))
+    for code in (
+        "credit_balance_exhausted",
+        "organization_spend_limit_exceeded",
+        "project_spend_limit_exceeded",
+        "organization_usage_limit_exceeded",
+        "insufficient_quota",
+    ):
+        if any(isinstance(value, str) and value == code for value in fields):
+            return code
+    return None
+
+
 def analyze_ad_content(
     openai_client: OpenAI, text: str, logger: PipelineLogger
 ) -> Optional[List[str]]:
@@ -531,6 +555,11 @@ def analyze_ad_content(
         if error_name == "AuthenticationError" or getattr(error, "status_code", None) == 401:
             OPENAI_AD_ANALYSIS_DISABLED_REASON = "invalid_api_key"
             logger.warning(f"op=ad_analysis_auth_failed error={error_name}")
+            return None
+        quota_code = fatal_ad_quota_code(error)
+        if quota_code:
+            OPENAI_AD_ANALYSIS_DISABLED_REASON = quota_code
+            logger.warning(f"op=ad_analysis_failed error={error_name} code={quota_code}")
             return None
         logger.warning(f"op=ad_analysis_failed error={error_name}")
         return None

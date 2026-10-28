@@ -81,6 +81,69 @@ describe('bounded nightly unit failure source coordinates', () => {
     }
   });
 
+  test('admits the real per-isolated record stream and aggregates it to one line', () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'nightly-unit-stream-'));
+    const log = path.join(dir, 'unit.log');
+    try {
+      const clean = (source: string) => ({ schema: 'nightly-unit-failure-sites-v2', test_count: 3, failure_count: 0, skip_count: 0, sites: [], omitted_site_count: 0 });
+      const failing = { schema: 'nightly-unit-failure-sites-v2', test_count: 2, failure_count: 1, skip_count: 0, sites: [{ file: 'tests-unit/thumbnail-release-publish-recovery.test.ts', test_index: 1, line: 10, kind: 'failure' }], omitted_site_count: 0 };
+      const general = clean('tests-unit/nightly-unit-failure-sites.test.ts');
+      const iso1 = clean('tests-unit/account-deletion-contract.test.ts');
+      const iso2 = clean('tests-unit/sentry-admin.test.ts');
+      const stream = [general, iso1, iso2, failing].map(value => `NIGHTLY_UNIT_DIAGNOSTIC=${JSON.stringify(value)}`).join('\n');
+      writeFileSync(log, `discarded-private-log-${canary}\n${stream}\n`, { mode: 0o600 });
+      const r = spawnSync('python3', [script, '--log', log, '--exit-code', '1'], { encoding: 'utf8' });
+      expect(r.status).toBe(0);
+      const lines = r.stdout.trim().split('\n');
+      expect(lines.length).toBe(1);
+      const aggregate = JSON.parse(lines[0].replace('NIGHTLY_UNIT_DIAGNOSTIC=', ''));
+      expect(aggregate).toEqual({
+        schema: 'nightly-unit-failure-sites-v2', test_count: 11, failure_count: 1,
+        skip_count: 0, sites: failing.sites, omitted_site_count: 0,
+      });
+      expect(r.stdout + r.stderr).not.toContain(canary);
+      // A fully clean stream passes with the failing exit code rejected.
+      writeFileSync(log, [general, iso1, iso2].map(value => `NIGHTLY_UNIT_DIAGNOSTIC=${JSON.stringify(value)}`).join('\n'), { mode: 0o600 });
+      const green = spawnSync('python3', [script, '--log', log, '--exit-code', '0'], { encoding: 'utf8' });
+      expect(green.status).toBe(0);
+      expect(JSON.parse(green.stdout.trim().replace('NIGHTLY_UNIT_DIAGNOSTIC=', '')).test_count).toBe(9);
+      const crashed = spawnSync('python3', [script, '--log', log, '--exit-code', '1'], { encoding: 'utf8' });
+      expect(crashed.status).toBe(1);
+      expect(crashed.stdout).toBe('');
+    } finally {
+      try { unlinkSync(log); } catch {} rmdirSync(dir);
+    }
+  });
+
+  test('rejects impossible streams: failing record not last, general failure followed by more', () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'nightly-unit-stream-'));
+    const log = path.join(dir, 'unit.log');
+    try {
+      const clean = () => ({ schema: 'nightly-unit-failure-sites-v2', test_count: 1, failure_count: 0, skip_count: 0, sites: [], omitted_site_count: 0 });
+      const failing = (source: string) => ({ schema: 'nightly-unit-failure-sites-v2', test_count: 1, failure_count: 1, skip_count: 0, sites: [{ file: source, test_index: 0, line: 10, kind: 'failure' }], omitted_site_count: 0 });
+      for (const payloads of [
+        [clean(), failing('tests-unit/sentry-admin.test.ts'), clean()],
+        [failing('tests-unit/sentry-admin.test.ts'), clean()],
+        [failing('tests-unit/sentry-admin.test.ts')],
+      ]) {
+        writeFileSync(log, payloads.map(value => `NIGHTLY_UNIT_DIAGNOSTIC=${JSON.stringify(value)}`).join('\n'), { mode: 0o600 });
+        // A middle failing record or trailing records after a general failure
+        // cannot come from the real runner; only a lone failing general batch
+        // is a describable run.
+        const code = payloads.length === 1 ? '1' : '1';
+        const r = spawnSync('python3', [script, '--log', log, '--exit-code', code], { encoding: 'utf8' });
+        if (payloads.length === 1) {
+          expect(r.status).toBe(0);
+        } else {
+          expect(r.status).toBe(1);
+          expect(r.stdout).toBe('');
+        }
+      }
+    } finally {
+      try { unlinkSync(log); } catch {} rmdirSync(dir);
+    }
+  });
+
   test('validates log coordinates again and refuses symlinks or unknown data fields', () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'nightly-unit-sites-'));
     const log = path.join(dir, 'unit.log');
@@ -130,5 +193,44 @@ describe('bounded nightly unit failure source coordinates', () => {
       }
       unlinkSync(log); rmdirSync(dir);
     }
+  });
+
+  test('passes one bounded gap record through on rejection without retaining content', () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'nightly-unit-gap-'));
+    const log = path.join(dir, 'unit.log');
+    try {
+      const gap = JSON.stringify({ schema: 'nightly-unit-diagnostic-gap-v1', stage: 'derive', xml_bytes: 0, exit_code: -9, signal: 9 });
+      writeFileSync(log, `discarded-private-log-${canary}\nNIGHTLY_UNIT_DIAGNOSTIC_GAP=${gap}\n`, { mode: 0o600 });
+      const r = spawnSync('python3', [script, '--log', log, '--exit-code', '1'], { encoding: 'utf8' });
+      if (process.platform === 'win32') { expect(r.status).toBe(1); return; }
+      expect(r.status).toBe(1);
+      expect(r.stdout).toBe(`NIGHTLY_UNIT_DIAGNOSTIC_GAP=${gap}\n`);
+      expect(r.stdout + r.stderr).not.toContain(canary);
+      expect(r.stderr.trim()).toBe('unit_diagnostic_unavailable');
+      const three = [1, 2, 3].map(() => `NIGHTLY_UNIT_DIAGNOSTIC_GAP=${gap}`).join('\n');
+      writeFileSync(log, `${three}\n`, { mode: 0o600 });
+      const over = spawnSync('python3', [script, '--log', log], { encoding: 'utf8' });
+      expect(over.status).toBe(1);
+      expect(over.stdout.split('\n').filter((line) => line.startsWith('NIGHTLY_UNIT_DIAGNOSTIC_GAP='))).toHaveLength(2);
+      expect(over.stdout + over.stderr).not.toContain(canary);
+      const bad = JSON.stringify({ schema: 'nightly-unit-diagnostic-gap-v1', stage: 'derive', xml_bytes: 0, exit_code: -9, signal: 9, raw: canary });
+      writeFileSync(log, `NIGHTLY_UNIT_DIAGNOSTIC_GAP=${bad}\n`, { mode: 0o600 });
+      const rejected = spawnSync('python3', [script, '--log', log], { encoding: 'utf8' });
+      expect(rejected.status).toBe(1);
+      expect(rejected.stdout).toBe('');
+      expect(rejected.stdout + rejected.stderr).not.toContain(canary);
+    } finally {
+      unlinkSync(log); rmdirSync(dir);
+    }
+  });
+
+  test('run-linux emits a bounded gap record instead of a silent rejection', () => {
+    if (process.platform !== 'linux') return;
+    const r = spawnSync('python3', [script, '--run-linux'], { input: 'not-json', encoding: 'utf8' });
+    expect(r.status).toBe(1);
+    const line = r.stdout.trim();
+    expect(line.startsWith('NIGHTLY_UNIT_DIAGNOSTIC_GAP=')).toBe(true);
+    const gap = JSON.parse(line.slice('NIGHTLY_UNIT_DIAGNOSTIC_GAP='.length));
+    expect(gap).toEqual({ schema: 'nightly-unit-diagnostic-gap-v1', stage: 'input', xml_bytes: 0, exit_code: null, signal: null });
   });
 });

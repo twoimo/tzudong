@@ -72,6 +72,42 @@ VALUES
     '2026-01-01T00:00:00Z'::timestamptz
   );
 
+-- Disabled administrator fixture: the account row keeps account_status
+-- 'active' but carries a non-null disabled_at, the cross-path state named by
+-- #3366 verification criteria. The authenticated probe below must deny it,
+-- matching the fail-closed disabled_at check in
+-- apps/web/lib/auth/require-admin.ts (require-admin-fail-closed.test.ts).
+SAVEPOINT disabled_admin_fixture;
+INSERT INTO auth.users (id, aud, role, email, encrypted_password, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+VALUES (
+  '00000000-0000-4000-8000-000000000499'::uuid,
+  'authenticated', 'authenticated', 'disabled-admin@local.invalid', 'disabled',
+  '{}'::jsonb, '{}'::jsonb,
+  pg_catalog.clock_timestamp(), pg_catalog.clock_timestamp()
+);
+INSERT INTO public.user_roles (user_id, role)
+VALUES ('00000000-0000-4000-8000-000000000499'::uuid, 'admin');
+-- The on_auth_user_created trigger (handle_new_user, migration
+-- 20260813085342) auto-creates this user's status row as ('active', NULL) on
+-- the auth.users insert above, so an INSERT here would duplicate the primary
+-- key. Flip the trigger-created row to the cross-path state instead, with a
+-- fail-closed row-count guard.
+DO $$
+DECLARE
+  updated_rows integer;
+BEGIN
+  UPDATE public.user_account_status
+  SET disabled_at = '2026-01-01T00:00:00Z'::timestamptz
+  WHERE user_id = '00000000-0000-4000-8000-000000000499'::uuid
+    AND account_status = 'active'
+    AND disabled_at IS NULL;
+  GET DIAGNOSTICS updated_rows = ROW_COUNT;
+  IF updated_rows <> 1 THEN
+    RAISE EXCEPTION 'local_runtime_disabled_admin_fixture_rowcount';
+  END IF;
+END
+$$;
+
 SET LOCAL ROLE anon;
 DO $$
 DECLARE
@@ -251,6 +287,25 @@ BEGIN
     RAISE EXCEPTION 'local_runtime_authenticated_admin_read_failed';
   END IF;
 
+  -- #3366: an administrator whose status row stays 'active' but has a non-null
+  -- disabled_at must be denied by the caller-bound predicate, the same answer
+  -- requireAdmin() gives for that row (require-admin-fail-closed.test.ts).
+  PERFORM pg_catalog.set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-4000-8000-000000000499',
+    true
+  );
+
+  IF public.is_current_user_active_admin() IS NOT FALSE THEN
+    RAISE EXCEPTION 'local_runtime_disabled_admin_was_admitted';
+  END IF;
+
+  PERFORM pg_catalog.set_config(
+    'request.jwt.claim.sub',
+    pg_catalog.current_setting('tzudong.test_user_id'),
+    true
+  );
+
   -- Every legacy RLS caller now uses the same caller-bound predicate. Merely
   -- reading all affected relations catches a revoked-helper regression before
   -- a browser route encounters it.
@@ -293,6 +348,8 @@ END
 $$;
 
 RESET ROLE;
+ROLLBACK TO SAVEPOINT disabled_admin_fixture;
+RELEASE SAVEPOINT disabled_admin_fixture;
 SET LOCAL ROLE service_role;
 DO $$
 DECLARE
