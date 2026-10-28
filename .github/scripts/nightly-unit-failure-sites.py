@@ -184,23 +184,49 @@ def main() -> int:
                     for line in body.decode("utf-8").splitlines() if line.startswith(GAP_PREFIX)]
             if len(gaps) > 2:
                 fail()
-            if not 1 <= len(records) <= 2:
-                fail()
             files = inventory(root)
+            # The runner emits one record for the general batch, then one record
+            # per isolated file, stopping at the first failing isolated file.
+            # Admit that real stream: at most one general record plus one record
+            # per inventoried test file. The 32MiB body cap bounds every line.
+            if not 1 <= len(records) <= 1 + len(files):
+                fail()
             payloads = [validate(json.loads(record), files) for record in records]
-            # General failure stops the runner; isolated tests run only after
-            # general success. A partial success cannot describe a full run.
-            if (len(payloads) == 1 and payloads[0]["failure_count"] == 0) or (len(payloads) == 2 and payloads[0]["failure_count"] != 0):
+            # Legacy single records pass through; mixed legacy streams cannot be
+            # aggregated safely.
+            if any(payload["schema"] == "nightly-unit-failure-sites-v1" for payload in payloads) and len(payloads) != 1:
+                fail()
+            # General failure stops the runner; isolated files run only after
+            # general success, and the runner exits at the first failing
+            # isolated file, so a failing record can only be the last one.
+            # A partial success cannot describe a full run.
+            if len(payloads) == 1 and payloads[0]["failure_count"] == 0:
+                fail()
+            if payloads[0]["failure_count"] != 0 and len(payloads) != 1:
+                fail()
+            if any(payload["failure_count"] != 0 for payload in payloads[1:-1]):
                 fail()
             if len(sys.argv) == 5:
                 code = sys.argv[4]
                 if sys.argv[3] != "--exit-code" or not code.isascii() or not code.isdigit() or not 0 <= int(code) <= 255:
                     fail()
-                complete_success = len(payloads) == 2 and all(p["failure_count"] == 0 for p in payloads)
+                complete_success = all(p["failure_count"] == 0 for p in payloads)
                 if (int(code) == 0) != complete_success:
                     fail()
-            for payload in payloads:
-                print(PREFIX + json.dumps(payload, separators=(",", ":")))
+            if len(payloads) == 1:
+                aggregate = payloads[0]
+            else:
+                failures = sum(p["failure_count"] for p in payloads)
+                # Keep the public single-line shape: one aggregate v2 record.
+                aggregate = validate({
+                    "schema": "nightly-unit-failure-sites-v2",
+                    "test_count": sum(p["test_count"] for p in payloads),
+                    "failure_count": failures,
+                    "skip_count": sum(p["skip_count"] for p in payloads),
+                    "sites": [site for p in payloads for site in p["sites"]][:MAX_SITES],
+                    "omitted_site_count": failures - min(failures, MAX_SITES),
+                }, files)
+            print(PREFIX + json.dumps(aggregate, separators=(",", ":")))
         elif len(sys.argv) == 2 and sys.argv[1] == "--run-linux":
             if not hasattr(os, "memfd_create"):
                 fail()
