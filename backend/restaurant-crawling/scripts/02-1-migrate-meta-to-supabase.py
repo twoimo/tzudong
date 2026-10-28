@@ -23,6 +23,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from utils.privacy_log import safe_error_name
+from utils.sponsorship_projection import confirmed_sponsorship_fields
 from utils.runtime_paths import load_backend_env, resolve_backend_root
 from utils.supabase_rest import (
     HostedRestRejected,
@@ -83,6 +84,24 @@ def parse_timestamp(ts_str: Optional[str]) -> Optional[str]:
         return datetime.fromisoformat(ts_str).isoformat()
     except Exception:
         return None
+
+
+def publish_metadata_batch(supabase: Client, rows: List[Dict[str, Any]]) -> int:
+    """Stable-id insert-if-absent, then patch only known fields; no stale read/merge.
+
+    videos.is_ads is nullable but defaults to false: new UNKNOWN must explicitly
+    insert NULL. On conflicts ignore the insert, then omit unknown ad fields from
+    UPDATE, preserving concurrently written positive/negative values and names.
+    """
+    initial = [{"is_ads": None, "advertisers": None, **row} for row in rows]
+    supabase.table("videos").upsert(initial, on_conflict="id", ignore_duplicates=True).execute()
+    for row in rows:
+        response = supabase.table("videos").update(
+            {key: value for key, value in row.items() if key != "id"}
+        ).eq("id", row["id"]).execute()
+        if not isinstance(response.data, list) or len(response.data) != 1 or response.data[0].get("id") != row["id"]:
+            raise RuntimeError("metadata_base_write_unverified")
+    return len(rows)
 
 def migrate_meta(supabase: Optional[Client], channel: str, dry_run: bool = False):
     """메타 데이터 마이그레이션 (Upsert)"""
@@ -161,7 +180,6 @@ def migrate_meta(supabase: Optional[Client], channel: str, dry_run: bool = False
             "comment_count": latest_stats.get("comment_count"),
             "latest_recollect_id": latest_record.get("recollect_id", 0),
             "is_shorts": latest_record.get("is_shorts", False),
-            "is_ads": ads_info.get("is_ads", False),
             "youtube_link": latest_record.get("youtube_link", f"https://www.youtube.com/watch?v={video_id}"),
             "channel_name": latest_record.get("channel_name", channel),
             "title": latest_record.get("title"),
@@ -169,20 +187,19 @@ def migrate_meta(supabase: Optional[Client], channel: str, dry_run: bool = False
             "category": latest_record.get("category"),
             "thumbnail_url": latest_record.get("thumbnail_url"),
             "thumbnail_hash": latest_record.get("thumbnail_hash"),
-            "advertisers": ads_info.get("what_ads") or [],
             "tags": latest_record.get("tags", []),
             "recollect_vars": latest_record.get("recollect_vars", []),
             "meta_history": meta_history,
             "updated_at": datetime.now().isoformat()
         }
+        row_data.update(confirmed_sponsorship_fields(ads_info))
         
         batch_data.append(row_data)
         
         if len(batch_data) >= flush_at:
             if not dry_run:
                 try:
-                    supabase.table("videos").upsert(batch_data).execute()
-                    total_upserted += len(batch_data)
+                    total_upserted += publish_metadata_batch(supabase, batch_data)
                 except Exception as error:
                     print(f"[ERROR] 배치 업서트 실패 ({len(batch_data)}개): {safe_error_name(error)}")
                     raise
@@ -192,8 +209,7 @@ def migrate_meta(supabase: Optional[Client], channel: str, dry_run: bool = False
     if batch_data:
         if not dry_run:
             try:
-                supabase.table("videos").upsert(batch_data).execute()
-                total_upserted += len(batch_data)
+                total_upserted += publish_metadata_batch(supabase, batch_data)
             except Exception as error:
                 print(f"[ERROR] 마지막 배치 업서트 실패: {safe_error_name(error)}")
                 raise

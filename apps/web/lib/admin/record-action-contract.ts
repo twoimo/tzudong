@@ -16,7 +16,13 @@ const changeFields = z.strictObject({
   lat: z.number().finite().min(-90).max(90).optional(), lng: z.number().finite().min(-180).max(180).optional(),
   geocoding_success: z.boolean().optional(),
   youtube_meta: z.strictObject({title: text.optional(), published_at: text.optional(), duration: z.number().nonnegative().optional(),
-    is_shorts: z.boolean().optional(), is_ads: z.boolean().optional(), what_ads: z.array(text).max(20).nullable().optional()}).optional(),
+    is_shorts: z.boolean().optional(), is_ads: z.boolean().optional(), what_ads: z.array(text).max(20).nullable().optional(),
+    sponsorship_confirmation: z.enum(['detected', 'confirmed_none']).optional(),
+  }).refine(meta => meta.sponsorship_confirmation === undefined || (
+    meta.is_ads === (meta.sponsorship_confirmation === 'detected') &&
+    (meta.sponsorship_confirmation === 'confirmed_none' ? meta.what_ads === null
+      : Array.isArray(meta.what_ads) && meta.what_ads.length > 0 && meta.what_ads.every(name => name.length > 0))
+  )).optional(),
 });
 const changes = changeFields.refine(value => Object.keys(value).length > 0);
 export type RestaurantRecordChanges = z.infer<typeof changes>;

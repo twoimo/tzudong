@@ -5,8 +5,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 import unittest
-import httpx
-from openai import APIStatusError, AuthenticationError, RateLimitError
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 from contextlib import redirect_stdout
@@ -21,144 +19,40 @@ class Logger:
         return lambda *args, **kwargs: None
 
 
-class AdAnalysisQuotaTests(unittest.TestCase):
-    def setUp(self):
-        self.client = Mock()
-        self.client.chat.completions.create.return_value.choices = [
-            Mock(message=Mock(content='["fixture sponsor"]'))]
-        self.log = Mock()
-        for patcher in (
-            patch.object(collect_meta, 'OPENAI_AD_ANALYSIS_DISABLED_REASON', None),
-            patch.object(collect_meta, 'OPENAI_AD_ANALYSIS_FAILURE_COUNT', 0),
-            patch.object(collect_meta, 'get_api_config', return_value={
-                'openai': {'model': 'gpt-4o-mini'}}),
-        ):
-            patcher.start()
-            self.addCleanup(patcher.stop)
-
-    @staticmethod
-    def provider_error(body, status=429):
-        response = httpx.Response(status, request=httpx.Request('POST', 'https://fixture.invalid'))
-        cls = AuthenticationError if status == 401 else RateLimitError if status == 429 else APIStatusError
-        return cls('private provider message: credit_balance_exhausted', response=response, body=body)
-
-    def analyze(self):
-        return collect_meta.analyze_ad_content(self.client, '광고 fixture', self.log)
-
-    def test_fatal_codes_stop_later_sdk_calls_but_count_every_incomplete_attempt(self):
-        for code in ('credit_balance_exhausted', 'organization_spend_limit_exceeded',
-                     'project_spend_limit_exceeded', 'organization_usage_limit_exceeded',
-                     'insufficient_quota'):
-            for shape in ('top', 'nested', 'attributes'):
-                with self.subTest(code=code, shape=shape):
-                    collect_meta.OPENAI_AD_ANALYSIS_DISABLED_REASON = None
-                    collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT = 0
-                    fields = {'code': code, 'type': 'insufficient_quota', 'message': 'private body'}
-                    error = self.provider_error({'error': fields} if shape == 'nested' else fields)
-                    if shape == 'attributes':
-                        error.body = None
-                    self.client.reset_mock()
-                    self.log.reset_mock()
-                    self.client.chat.completions.create.side_effect = error
-                    self.assertIsNone(self.analyze())
-                    self.assertIsNone(self.analyze())
-                    self.assertIsNone(self.analyze())
-                    self.client.chat.completions.create.assert_called_once()
-                    self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT, 3)
-                    self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_DISABLED_REASON, code)
-                    logged = str(self.log.mock_calls)
-                    self.assertIn('code='+code, logged)
-                    self.assertNotIn('private', logged)
-
-    def test_transient_unknown_and_malformed_429_allow_next_video_to_succeed(self):
-        for body in (
-            {'code': 'rate_limit_exceeded', 'type': 'tokens'},
-            {'code': 'private\ncredit_balance_exhausted', 'type': 'private type'},
-            {'error': {'code': 'private code', 'message': 'insufficient_quota'}},
-            {'code': ['insufficient_quota'], 'type': {'code': 'credit_balance_exhausted'}},
-            {'error': 'insufficient_quota'}, ['credit_balance_exhausted'], None,
-        ):
-            with self.subTest(body=body):
-                self.client.reset_mock()
-                self.log.reset_mock()
-                before = collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT
-                response = Mock(choices=[Mock(message=Mock(content='["fixture sponsor"]'))])
-                self.client.chat.completions.create.side_effect = [self.provider_error(body), response]
-                self.assertIsNone(self.analyze())
-                self.assertIsNone(collect_meta.OPENAI_AD_ANALYSIS_DISABLED_REASON)
-                self.assertEqual(self.analyze(), ['fixture sponsor'])
-                self.assertEqual(self.client.chat.completions.create.call_count, 2)
-                self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT, before+1)
-                self.assertNotIn('private', str(self.log.mock_calls))
-                self.assertNotIn('credit_balance_exhausted', str(self.log.mock_calls))
-                self.assertNotIn('insufficient_quota', str(self.log.mock_calls))
-
-    def test_insufficient_quota_type_and_non_429_boundary(self):
-        for body in ({'type': 'insufficient_quota'}, {'error': {'type': 'insufficient_quota'}}):
-            with self.subTest(body=body):
-                self.assertEqual(collect_meta.fatal_ad_quota_code(self.provider_error(body)),
-                                 'insufficient_quota')
-        self.client.chat.completions.create.side_effect = [
-            self.provider_error({'code': 'credit_balance_exhausted'}, status=503),
-            Mock(choices=[Mock(message=Mock(content='["fixture sponsor"]'))]),
-        ]
-        self.assertIsNone(self.analyze())
-        self.assertIsNone(collect_meta.OPENAI_AD_ANALYSIS_DISABLED_REASON)
-        self.assertEqual(self.analyze(), ['fixture sponsor'])
-
-    def test_existing_authentication_disablement_is_preserved(self):
-        self.client.chat.completions.create.side_effect = self.provider_error(
-            {'code': 'private auth code'}, status=401)
-        self.assertIsNone(self.analyze())
-        self.assertIsNone(self.analyze())
-        self.client.chat.completions.create.assert_called_once()
-        self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_DISABLED_REASON, 'invalid_api_key')
-        self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT, 2)
-        self.assertNotIn('private', str(self.log.mock_calls))
-
-    def test_success_and_legitimate_no_attribution_keep_provider_configuration(self):
-        for content, expected in (('["fixture sponsor"]', ['fixture sponsor']), ('None', None)):
-            with self.subTest(content=content):
-                self.client.chat.completions.create.return_value.choices[0].message.content = content
-                self.assertEqual(self.analyze(), expected)
-        self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT, 0)
-        self.assertIsNone(collect_meta.OPENAI_AD_ANALYSIS_DISABLED_REASON)
-        for call in self.client.chat.completions.create.call_args_list:
-            self.assertEqual(call.kwargs['model'], 'gpt-4o-mini')
-            self.assertEqual(call.kwargs['temperature'], 0.3)
-
-
 class MetadataCheckpointTests(unittest.TestCase):
-    def test_changed_ad_recipe_runs_before_certifying_an_unchanged_unscheduled_video(self):
+    def test_batch_preserves_full_description_for_the_offline_supplement(self):
+        description = 'ordinary text\n' * 600 + '본 영상은 LateCo의 유료광고를 포함합니다.'
+        youtube = Mock()
+        youtube.videos.return_value.list.return_value.execute.return_value = {
+            'items': [{'id': VID, 'snippet': {'description': description},
+                       'contentDetails': {'duration': 'PT5M'}, 'statistics': {}}]}
+        with patch.object(collect_meta, 'get_image_hash', side_effect=AssertionError('no thumbnail URL')):
+            row = collect_meta.get_video_meta_batch(youtube, [VID], 'fixture')[VID]
+        self.assertEqual(row['description'], description)
+        self.assertEqual(collect_meta.analyze_ad_content(row['description'])['what_ads'], ['LateCo'])
+
+    def test_changed_rule_does_not_replay_a_verified_completed_record(self):
         row={**ROW,'description':'광고 fixture','ads_info':{'is_ads':True,'what_ads':['old fixture']}}
         self.file.write_text(json.dumps(row)+'\n')
         day=collect_meta.datetime.now(collect_meta.KST).date().isoformat()
         collect_meta.save_checked_cache(self.channel,{VID:collect_meta.checkpoint(day,'old-recipe',row)})
-        client=object()
-        with patch.object(collect_meta,'get_video_meta_batch',return_value={VID:dict(row)}),patch.object(collect_meta,'detect_changes',return_value=[]), \
-             patch.object(collect_meta,'get_schedule_frequency',return_value=None),patch.object(collect_meta,'save_thumbnail_file'), \
-             patch.object(collect_meta,'analyze_ad_content',return_value=['new fixture']) as analyze:
-            collect_meta.collect_channel_meta('fixture',None,client,Logger())
-        analyze.assert_called_once()
-        saved=collect_meta.get_latest_meta(self.channel,VID)
-        self.assertEqual(saved['ads_info']['what_ads'],['new fixture'])
-        cache=collect_meta.load_checked_cache(self.channel)[VID]
-        self.assertEqual(cache['outputHash'],collect_meta.canonical_digest(saved))
-        with patch.object(collect_meta,'get_video_meta_batch') as supplier:
-            collect_meta.collect_channel_meta('fixture',None,client,Logger())
+        before=self.file.read_bytes()
+        with patch.object(collect_meta,'get_video_meta_batch') as supplier, patch.object(collect_meta,'supplement_ads') as analyze:
+            self.run_collection()
         supplier.assert_not_called()
-
-    def test_failed_ad_recipe_does_not_publish_a_checkpoint_or_replace_old_metadata(self):
-        row={**ROW,'description':'광고 fixture'};self.file.write_text(json.dumps(row)+'\n');before=self.file.read_bytes()
-        def failed(*args):
-            collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT+=1
-            return None
-        with patch.object(collect_meta,'get_video_meta_batch',return_value={VID:dict(row)}),patch.object(collect_meta,'detect_changes',return_value=[]), \
-             patch.object(collect_meta,'get_schedule_frequency',return_value=None),patch.object(collect_meta,'save_thumbnail_file'), \
-             patch.object(collect_meta,'analyze_ad_content',side_effect=failed):
-            collect_meta.collect_channel_meta('fixture',None,object(),Logger())
+        analyze.assert_not_called()
         self.assertEqual(self.file.read_bytes(),before)
-        self.assertNotIn(VID,collect_meta.load_checked_cache(self.channel))
+
+    def test_unknown_supplement_completes_base_metadata_without_erasing_known_attribution(self):
+        row={**ROW,'description':'old','ads_info':{'is_ads':False,'what_ads':None}}
+        self.file.write_text(json.dumps(row)+'\n')
+        with patch.object(collect_meta,'get_video_meta_batch',return_value={VID:{**row,'title':'changed','description':'ambiguous mention'}}), patch.object(collect_meta,'save_thumbnail_file',return_value=True):
+            self.run_collection()
+        saved=collect_meta.get_latest_meta(self.channel,VID)
+        self.assertFalse(saved['ads_info']['is_ads'])
+        self.assertEqual(saved['ads_info']['sponsor_analysis']['status'],'unknown')
+        self.assertTrue(saved['ads_info']['sponsor_analysis']['retained_previous'])
+        self.assertEqual(collect_meta.load_checked_cache(self.channel)[VID]['outputHash'],collect_meta.canonical_digest(saved))
 
     def test_missing_or_changed_recipe_without_analyzer_preserves_prior_ad_attribution(self):
         row={**ROW,'description':'광고 fixture','ads_info':{'is_ads':True,'what_ads':['known sponsor']}}
@@ -168,26 +62,26 @@ class MetadataCheckpointTests(unittest.TestCase):
                 collect_meta.save_checked_cache(self.channel,{} if checkpoint is None else {VID:checkpoint})
                 with patch.object(collect_meta,'get_video_meta_batch',return_value={VID:dict(row)}), \
                      patch.object(collect_meta,'detect_changes',return_value=[]),patch.object(collect_meta,'get_schedule_frequency',return_value=None), \
-                     patch.object(collect_meta,'analyze_ad_content',side_effect=AssertionError('disabled provider invoked')):
+                     patch.object(collect_meta,'check_thumbnail_exists',return_value=True):
                     self.run_collection()
                 saved=collect_meta.get_latest_meta(self.channel,VID)
                 self.assertEqual(saved['ads_info']['what_ads'],['known sponsor'])
                 self.assertEqual(collect_meta.load_checked_cache(self.channel)[VID]['outputHash'],collect_meta.canonical_digest(saved))
 
-    def test_changed_ad_evidence_without_analyzer_does_not_certify_null_or_stale_attribution(self):
-        row={**ROW,'description':'광고 original','ads_info':{'is_ads':True,'what_ads':['known sponsor']}}
-        self.file.write_text(json.dumps(row)+'\n');before=self.file.read_bytes()
-        with patch.object(collect_meta,'get_video_meta_batch',return_value={VID:{**row,'description':'광고 changed'}}), \
-             patch.object(collect_meta,'get_schedule_frequency',return_value=None), \
-             patch.object(collect_meta,'analyze_ad_content',side_effect=AssertionError('disabled provider invoked')):
+    def test_unknown_changed_source_keeps_positive_and_does_not_repeat_base_collection(self):
+        row={**ROW,'description':'old','ads_info':{'is_ads':True,'what_ads':['known sponsor']}}
+        self.file.write_text(json.dumps(row)+'\n')
+        with patch.object(collect_meta,'get_video_meta_batch',return_value={VID:{**row,'title':'changed','description':'광고 changed'}}) as supplier:
             self.run_collection();self.run_collection()
-        self.assertEqual(self.file.read_bytes(),before)
-        self.assertNotIn(VID,collect_meta.load_checked_cache(self.channel))
+        saved=collect_meta.get_latest_meta(self.channel,VID)
+        self.assertEqual(saved['ads_info']['what_ads'],['known sponsor'])
+        self.assertEqual(saved['ads_info']['sponsor_analysis']['outcome'],'unknown')
+        self.assertEqual(supplier.call_count,1)
 
     def test_failed_thumbnail_backfill_stays_pending_until_a_verified_save_on_restart(self):
         row={**ROW,'thumbnail_url':VALID_URL}
         recipe=collect_meta.canonical_digest({'code':collect_meta.METADATA_RECIPE_HASH,
-            'adModel':collect_meta.get_api_config().get('openai',{}).get('model','gpt-4o-mini'),'adsAnalysisEnabled':False})
+            'scope':'base_metadata'})
         for failure in ['download','validation','link']:
             with self.subTest(failure=failure):
                 self.file.write_text(json.dumps(row)+'\n');before=self.file.read_bytes()
@@ -302,29 +196,24 @@ class ScopedMetadataTests(unittest.TestCase):
         self.client = Mock()
         self.client.chat.completions.create.return_value.choices = [
             Mock(message=Mock(content='["fixture sponsor"]'))]
-        self.row = {**ROW, 'description': '광고 fixture', 'thumbnail_url': VALID_URL,
+        self.row = {**ROW, 'description': '본 영상은 FixtureCo의 유료광고를 포함합니다.', 'thumbnail_url': VALID_URL,
                     'thumbnail_hash': hashlib.md5(JPEG_FIXTURE).hexdigest()}
         self.log = Mock()
         patches = [
             patch.object(collect_meta, '__file__', str(root / 'scripts' / '02-collect-meta.py')),
             patch.object(collect_meta, 'get_channel_info', return_value={
                 'data_path': 'restaurant-crawling/data/fixture'}),
-            patch.object(collect_meta, 'get_api_config', return_value={
-                'openai': {'model': 'fixture-model'}}),
             patch.object(collect_meta, 'get_api_key', return_value='unit-only-key'),
             patch.object(collect_meta.os, 'environ', {}),
             patch.object(collect_meta, 'build', return_value=object()),
-            patch.object(collect_meta, 'OpenAI', return_value=self.client),
             patch.object(collect_meta, 'PipelineLogger', return_value=self.log),
             patch.object(collect_meta, 'get_video_meta_batch', side_effect=lambda *_: {VID: dict(self.row)}),
             patch.object(collect_meta.requests, 'get', side_effect=lambda *_a, **_k: FixtureResponse(chunks=[JPEG_FIXTURE])),
-            patch.object(collect_meta, 'OPENAI_AD_ANALYSIS_DISABLED_REASON', None),
-            patch.object(collect_meta, 'OPENAI_AD_ANALYSIS_FAILURE_COUNT', 0),
         ]
         self.mocks = [p.start() for p in patches]
         for p in patches:
             self.addCleanup(p.stop)
-        self.build, self.openai, self.supplier = self.mocks[5], self.mocks[6], self.mocks[8]
+        self.build, self.supplier = self.mocks[4], self.mocks[6]
 
     def run_cli(self, *extra):
         output = io.StringIO()
@@ -334,7 +223,7 @@ class ScopedMetadataTests(unittest.TestCase):
 
     def recipe(self):
         return collect_meta.canonical_digest({'code': collect_meta.METADATA_RECIPE_HASH,
-                                             'adModel': 'fixture-model', 'adsAnalysisEnabled': True})
+                                             'scope': 'base_metadata'})
 
     def put_current_checkpoint(self):
         self.file.write_text(json.dumps(ROW)+'\n')
@@ -362,10 +251,9 @@ class ScopedMetadataTests(unittest.TestCase):
         self.assertIn('op=metadata_scoped_complete', output)
         self.supplier.assert_called_once()
         self.assertEqual(self.supplier.call_args.args[1], [VID])
-        self.client.chat.completions.create.assert_called_once()
-        self.assertEqual(self.client.chat.completions.create.call_args.kwargs['model'], 'fixture-model')
+        self.client.chat.completions.create.assert_not_called()
         saved = collect_meta.get_latest_meta(self.channel, VID)
-        self.assertEqual(saved['ads_info']['what_ads'], ['fixture sponsor'])
+        self.assertEqual(saved['ads_info']['what_ads'], ['FixtureCo'])
         self.assertTrue(collect_meta.verified_today(json.loads(self.cache.read_text())[VID],
                         collect_meta.datetime.now(collect_meta.KST).date().isoformat(), self.recipe(), saved))
         self.assert_unselected_unchanged(before)
@@ -375,7 +263,6 @@ class ScopedMetadataTests(unittest.TestCase):
         before = (self.cache.read_bytes(), self.file.read_bytes(), self.cache.stat().st_mtime_ns)
         self.assertEqual(self.run_cli()[0], 0)
         self.build.assert_not_called()
-        self.openai.assert_not_called()
         self.supplier.assert_not_called()
         self.assertEqual((self.cache.read_bytes(), self.file.read_bytes(), self.cache.stat().st_mtime_ns), before)
 
@@ -406,21 +293,14 @@ class ScopedMetadataTests(unittest.TestCase):
         self.assertEqual(saved['recollect_id'], 7)
         self.assertEqual(json.loads(self.cache.read_text())[VID]['outputHash'], collect_meta.canonical_digest(saved))
 
-    def test_disabled_analyzer_or_date_only_checkpoint_cannot_skip(self):
-        for prior in ['legacy-date', collect_meta.checkpoint(
-                collect_meta.datetime.now(collect_meta.KST).date().isoformat(),
-                collect_meta.canonical_digest({'code': collect_meta.METADATA_RECIPE_HASH,
-                    'adModel': 'fixture-model', 'adsAnalysisEnabled': False}), ROW)]:
-            with self.subTest(prior=prior):
-                self.file.write_text(json.dumps(ROW)+'\n')
-                cache = json.loads(self.cache.read_text())
-                cache[VID] = prior
-                self.cache.write_text(json.dumps(cache))
-                self.supplier.reset_mock()
-                self.client.chat.completions.create.reset_mock()
-                self.assertEqual(self.run_cli()[0], 0)
-                self.supplier.assert_called_once()
-                self.client.chat.completions.create.assert_called_once()
+    def test_date_only_checkpoint_cannot_skip_but_verified_legacy_recipe_can(self):
+        self.put_current_checkpoint()
+        cache=json.loads(self.cache.read_text())
+        cache[VID]=collect_meta.datetime.now(collect_meta.KST).date().isoformat()
+        self.cache.write_text(json.dumps(cache))
+        self.assertEqual(self.run_cli()[0],0)
+        self.supplier.assert_called_once()
+        self.client.chat.completions.create.assert_not_called()
 
     def test_scope_rejections_are_fixed_nonzero_before_provider_or_append(self):
         cases = [
@@ -435,7 +315,6 @@ class ScopedMetadataTests(unittest.TestCase):
                 self.assertEqual(collect_meta.main(argv), 2)
                 self.assertIn('code='+expected, output.getvalue())
         self.build.assert_not_called()
-        self.openai.assert_not_called()
         self.assertFalse(self.file.exists())
 
     def test_unregistered_or_noncanonical_channel_cannot_construct_provider(self):
@@ -467,7 +346,6 @@ class ScopedMetadataTests(unittest.TestCase):
                 self.assertIn('code='+expected, output)
                 self.assertEqual(self.cache.read_bytes(), before)
         self.build.assert_not_called()
-        self.openai.assert_not_called()
         self.supplier.assert_not_called()
         self.assertFalse(self.file.exists())
 
@@ -484,60 +362,21 @@ class ScopedMetadataTests(unittest.TestCase):
                 self.assertFalse(self.file.exists())
                 self.assertEqual(self.cache.read_bytes(), before)
 
-    def test_ads_failure_never_appends_or_certifies_and_hides_diagnostics(self):
-        self.client.chat.completions.create.side_effect = RuntimeError('private provider body')
-        before = self.cache.read_bytes()
-        code, output = self.run_cli()
-        self.assertEqual(code, 1)
-        self.assertIn('code=metadata_ads_incomplete', output)
-        self.assertNotIn('private', output)
-        self.assertFalse(self.file.exists())
-        self.assertEqual(self.cache.read_bytes(), before)
+    def test_unknown_ad_text_is_separate_from_successful_base_collection(self):
+        self.row['description']='광고 문의'
+        self.assertEqual(self.run_cli()[0],0)
+        saved=collect_meta.get_latest_meta(self.channel,VID)
+        self.assertIsNone(saved['ads_info']['is_ads'])
+        self.assertIsNone(saved['ads_info']['what_ads'])
+        self.assertEqual(saved['ads_info']['sponsor_analysis']['outcome'],'unknown')
+        self.assertIn(VID,json.loads(self.cache.read_text()))
+        self.client.chat.completions.create.assert_not_called()
 
-    def test_fatal_quota_preserves_partial_metadata_and_checkpoints_and_scoped_nonzero(self):
-        complete_vid, missing_vid = 'otherID_003', 'otherID_004'
-        rows = {
-            complete_vid: {**self.row, 'youtube_link': f'https://www.youtube.com/watch?v={complete_vid}',
-                           'description': 'ordinary fixture'},
-            VID: dict(self.row),
-            missing_vid: {**self.row, 'youtube_link': f'https://www.youtube.com/watch?v={missing_vid}'},
-        }
-        self.urls.write_text(''.join(row['youtube_link']+'\n' for row in rows.values()))
-        prior = {**self.row, 'description': '광고 prior',
-                 'ads_info': {'is_ads': True, 'what_ads': ['prior sponsor']}}
-        self.file.write_text(json.dumps(prior)+'\n')
-        cache = json.loads(self.cache.read_text())
-        cache[VID] = collect_meta.checkpoint('2000-01-01', 'prior-recipe', prior)
-        self.cache.write_text(json.dumps(cache))
-        before = self.snapshot()
-        prior_bytes = self.file.read_bytes()
-        self.client.chat.completions.create.side_effect = AdAnalysisQuotaTests.provider_error({
-            'code': 'credit_balance_exhausted', 'type': 'insufficient_quota', 'message': 'private body'})
-        with patch.object(collect_meta, 'get_video_meta_batch', return_value=rows):
-            result = collect_meta.collect_channel_meta('fixture', object(), self.client, self.log)
-        self.assertEqual(result, {'success': 1})
-        self.client.chat.completions.create.assert_called_once()
-        self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT, 2)
-        self.assertEqual(self.file.read_bytes(), prior_bytes)
-        self.assertFalse((self.channel / 'meta' / f'{missing_vid}.jsonl').exists())
-        after = json.loads(self.cache.read_text())
-        for vid, entry in before['cache'].items():
-            self.assertEqual(after[vid], entry)
-        self.assertNotIn(missing_vid, after)
-        saved = collect_meta.get_latest_meta(self.channel, complete_vid)
-        today = collect_meta.datetime.now(collect_meta.KST).date().isoformat()
-        self.assertTrue(collect_meta.verified_today(after[complete_vid], today, self.recipe(), saved))
-        self.assertFalse(collect_meta.verified_today(after[VID], today, self.recipe(), prior))
-        self.assert_unselected_unchanged(before)
-        # A required scoped retry must still fail closed even though the SDK is disabled.
-        cache_bytes = self.cache.read_bytes()
-        status, output = self.run_cli()
-        self.assertEqual(status, 1)
-        self.assertIn('code=metadata_ads_incomplete', output)
-        self.assertEqual(self.file.read_bytes(), prior_bytes)
-        self.assertEqual(self.cache.read_bytes(), cache_bytes)
-        self.assertEqual(collect_meta.OPENAI_AD_ANALYSIS_FAILURE_COUNT, 3)
-        self.client.chat.completions.create.assert_called_once()
+    def test_scoped_collection_only_requires_youtube_credentials(self):
+        with patch.object(collect_meta,'get_api_key',side_effect=lambda provider: 'unit-only-key' if provider=='youtube' else None) as keys:
+            self.assertEqual(self.run_cli()[0],0)
+        keys.assert_called_once_with('youtube')
+        self.client.chat.completions.create.assert_not_called()
 
     def test_thumbnail_failure_never_appends_or_certifies(self):
         before = self.cache.read_bytes()
@@ -561,7 +400,7 @@ class ScopedMetadataTests(unittest.TestCase):
                 self.assertIn('code='+expected, output)
                 self.assertFalse(self.file.exists())
                 self.assertEqual(self.cache.read_bytes(), before)
-                self.row = {**ROW, 'description': '광고 fixture', 'thumbnail_url': VALID_URL,
+                self.row = {**ROW, 'description': '본 영상은 FixtureCo의 유료광고를 포함합니다.', 'thumbnail_url': VALID_URL,
                             'thumbnail_hash': hashlib.md5(JPEG_FIXTURE).hexdigest()}
 
     def test_cache_corruption_is_preserved_before_any_provider(self):
@@ -589,19 +428,17 @@ class ScopedMetadataTests(unittest.TestCase):
         with patch.object(collect_meta, 'collect_channel_meta') as collect:
             with redirect_stdout(io.StringIO()):
                 self.assertIsNone(collect_meta.main(['--channel', 'fixture', '--skip-ads']))
-            collect.assert_called_once_with('fixture', self.build.return_value, None, self.log)
-        self.openai.assert_not_called()
+            collect.assert_called_once_with('fixture', self.build.return_value, None, self.log, skip_ads=True)
 
     def test_default_all_channels_keeps_existing_provider_and_iteration(self):
         with patch.object(collect_meta, 'get_all_channels', return_value={'fixture': {}, 'second': {}}), \
              patch.object(collect_meta, 'collect_channel_meta') as collect, redirect_stdout(io.StringIO()):
             self.assertIsNone(collect_meta.main([]))
         self.build.assert_called_once_with('youtube', 'v3', developerKey='unit-only-key')
-        self.openai.assert_called_once_with(api_key='unit-only-key')
         self.assertEqual([call.args for call in collect.call_args_list], [
-            ('fixture', self.build.return_value, self.client, self.log),
-            ('second', self.build.return_value, self.client, self.log)])
-        self.assertTrue(all(not call.kwargs for call in collect.call_args_list))
+            ('fixture', self.build.return_value, None, self.log),
+            ('second', self.build.return_value, None, self.log)])
+        self.assertTrue(all(call.kwargs == {'skip_ads':False} for call in collect.call_args_list))
 
     def test_scoped_writers_share_the_existing_channel_lock(self):
         with ThreadPoolExecutor(max_workers=2) as pool:
@@ -609,7 +446,6 @@ class ScopedMetadataTests(unittest.TestCase):
                 'fixture', None, None, Logger(), video_id=VID), range(2)))
         self.assertEqual(sorted(result['success'] for result in results), [0, 1])
         self.build.assert_called_once()
-        self.openai.assert_called_once()
         self.supplier.assert_called_once()
         self.assertEqual(len(self.file.read_text().splitlines()), 1)
 
