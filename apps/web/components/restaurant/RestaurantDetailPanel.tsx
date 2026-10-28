@@ -1053,6 +1053,7 @@ export function RestaurantDetailPanel({
 
                 <MapPanelHeader
                     title={restaurant.name}
+                    variant={isMobile ? 'sheet' : 'panel'}
                     wrapTitle
                     titleAs="h2"
                     count={viewMode === 'reviews' ? totalReviewCount : undefined}
@@ -1078,7 +1079,7 @@ export function RestaurantDetailPanel({
                     onClose={viewMode === 'reviews' ? handleBackToDetail : onClose}
                     closeLabel={viewMode === 'reviews' ? '상세 정보로 돌아가기' : (showDesktopBackButton && !isMobile ? '이전 목록으로 돌아가기' : isMobile ? '이전 화면으로 돌아가기' : '맛집 상세 닫기')}
                     closeAction={viewMode === 'reviews' || showDesktopBackButton || isMobile ? 'back' : 'close'}
-                    actions={(
+                    actions={viewMode === 'detail' ? (
                         <>
                             {/* 공유하기 버튼 */}
                             {viewMode === 'detail' && (
@@ -1117,7 +1118,7 @@ export function RestaurantDetailPanel({
                                 </Button>
                             )}
                         </>
-                    )}
+                    ) : undefined}
                 />
                 {viewMode === 'detail' && (
                     <div className="shrink-0 border-b border-border px-3 py-2 empty:hidden">
