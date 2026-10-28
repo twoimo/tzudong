@@ -119,5 +119,17 @@ describe('home detail stylesheet ownership', () => {
     // Map destination icons retain their rings; the removed blur stays absent.
     expect(css).toContain('.ring-1');
     expect(css).not.toContain('.backdrop-blur-\\[1px\\]');
+
+    // The deferred detail sheet also renders the shared map header. Its own
+    // stylesheet must carry the responsive rules after its base utilities;
+    // otherwise later basis-full/flex-wrap rules override the home stylesheet.
+    for (const selector of [
+      '.min-\\[360px\\]\\:basis-auto',
+      '.min-\\[360px\\]\\:flex-nowrap',
+      '.\\[\\&\\>button\\]\\:h-11',
+      '.\\[\\&\\>button\\]\\:w-11',
+    ]) {
+      expect(css.includes(selector), `detail CSS must include ${selector}`).toBe(true);
+    }
   }, 60_000);
 });
