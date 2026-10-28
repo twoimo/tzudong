@@ -155,6 +155,7 @@ const FROZEN_SOURCE_SCOPES: Record<string, readonly string[]> = {
     '@source "../components/reviews";',
     '@source "../components/auth";',
     '@source "../components/ui";',
+    '@source "../components/home/map-panel-chrome.tsx";',
     '@source not "../**/*.test.*";',
     '@source not "../tests-unit";',
   ],
