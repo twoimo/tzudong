@@ -48,7 +48,18 @@ describe('bounded nightly unit failure source coordinates', () => {
         input: JSON.stringify({ xml: report, files: [file], exit_code }), encoding: 'utf8',
       });
       expect(r.status).toBe(accepted ? 0 : 1);
-      if (!accepted) { expect(r.stdout).toBe(''); expect(r.stderr.trim()).toBe('unit_diagnostic_unavailable'); }
+      if (!accepted) {
+        const line = r.stdout.trim();
+        expect(line.startsWith('NIGHTLY_UNIT_DIAGNOSTIC_GAP=')).toBe(true);
+        const gap = JSON.parse(line.slice('NIGHTLY_UNIT_DIAGNOSTIC_GAP='.length));
+        expect(gap.schema).toBe('nightly-unit-diagnostic-gap-v2');
+        expect(gap.stage).toBe('derive');
+        expect(gap.reason).toBe(exit_code === null ? 'exit_code_type' : 'exit_failure_mismatch');
+        expect(gap.exit_code).toBe(typeof exit_code === 'number' ? exit_code : null);
+        expect(gap.signal).toBe(exit_code === -9 ? 9 : null);
+        expect(gap.xml_bytes).toBe(Buffer.byteLength(report, 'utf8'));
+        expect(r.stdout + r.stderr).not.toContain(canary);
+      }
     }
   });
 
@@ -67,17 +78,23 @@ describe('bounded nightly unit failure source coordinates', () => {
   });
 
   test('rejects foreign source, entity expansion, inconsistent counts and invalid lines', () => {
-    for (const report of [
-      xml('', '', '../../private-file'),
-      '<!DOCTYPE testsuites [<!ENTITY x "private-value">]>' + xml(),
-      xml().replace('tests="2"', 'tests="9"'),
-      xml('', '', file, '0'), xml('', '', file, '99999999'),
-      xml('', '', file, 'NaN'),
-    ]) {
+    for (const [report, reason] of [
+      [xml('', '', '../../private-file'), 'unadmitted_case_file'],
+      ['<!DOCTYPE testsuites [<!ENTITY x "private-value">]>' + xml(), 'doctype_or_entity'],
+      [xml().replace('tests="2"', 'tests="9"'), 'tests_mismatch'],
+      [xml('', '', file, '0'), 'line_range'], [xml('', '', file, '99999999'), 'line_range'],
+      [xml('', '', file, 'NaN'), 'bad_line'],
+    ] as const) {
       const r = derive(report);
       expect(r.status).toBe(1);
-      expect(r.stdout).toBe('');
-      expect(r.stderr.trim()).toBe('unit_diagnostic_unavailable');
+      const line = r.stdout.trim();
+      expect(line.startsWith('NIGHTLY_UNIT_DIAGNOSTIC_GAP=')).toBe(true);
+      const gap = JSON.parse(line.slice('NIGHTLY_UNIT_DIAGNOSTIC_GAP='.length));
+      expect(gap.schema).toBe('nightly-unit-diagnostic-gap-v2');
+      expect(gap.stage).toBe('derive');
+      expect(gap.reason).toBe(reason);
+      expect(gap.xml_bytes).toBe(Buffer.byteLength(report, 'utf8'));
+      expect(r.stdout + r.stderr).not.toContain(canary);
     }
   });
 
