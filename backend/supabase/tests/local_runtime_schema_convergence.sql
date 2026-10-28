@@ -77,6 +77,7 @@ VALUES
 -- #3366 verification criteria. The authenticated probe below must deny it,
 -- matching the fail-closed disabled_at check in
 -- apps/web/lib/auth/require-admin.ts (require-admin-fail-closed.test.ts).
+SAVEPOINT disabled_admin_fixture;
 INSERT INTO auth.users (id, aud, role, email, encrypted_password, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 VALUES (
   '00000000-0000-4000-8000-000000000499'::uuid,
@@ -347,6 +348,8 @@ END
 $$;
 
 RESET ROLE;
+ROLLBACK TO SAVEPOINT disabled_admin_fixture;
+RELEASE SAVEPOINT disabled_admin_fixture;
 SET LOCAL ROLE service_role;
 DO $$
 DECLARE
