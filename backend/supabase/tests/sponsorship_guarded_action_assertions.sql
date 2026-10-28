@@ -3,13 +3,16 @@
 -- (an existing synthetic restaurant with UNKNOWN analysis). Creates no account.
 -- The savepoint also restores business rows, revisions, operations and audit after testing.
 SAVEPOINT sponsorship_guarded_fixture;
-CREATE TEMP TABLE sponsorship_action_fixture(actor uuid,target uuid) ON COMMIT DROP;
-INSERT INTO sponsorship_action_fixture VALUES (:'sponsor_actor'::uuid, :'sponsor_target'::uuid);
+-- Typed inputs stay local to this savepoint; avoid DDL-triggered sequence changes.
+SELECT pg_catalog.set_config('tzudong.test_sponsor_actor', :'sponsor_actor'::uuid::text, true) AS sponsor_actor_setting,
+       pg_catalog.set_config('tzudong.test_sponsor_target', :'sponsor_target'::uuid::text, true) AS sponsor_target_setting
+\gset
 DO $guarded$
 DECLARE v_actor uuid; target uuid; op uuid; receipt jsonb; applied jsonb; again jsonb;
  before_row jsonb; saved jsonb; expected jsonb; payload jsonb; outcome text; denied boolean;
 BEGIN
- SELECT f.actor,f.target INTO STRICT v_actor,target FROM sponsorship_action_fixture f;
+ v_actor:=pg_catalog.current_setting('tzudong.test_sponsor_actor')::uuid;
+ target:=pg_catalog.current_setting('tzudong.test_sponsor_target')::uuid;
  PERFORM pipeline_control.admin_record_assert_operator(v_actor);
  SELECT to_jsonb(r) INTO STRICT before_row FROM public.restaurants r WHERE id=target;
  IF before_row#>>'{youtube_meta,ads_info,sponsor_analysis,status}' IS DISTINCT FROM 'unknown'
