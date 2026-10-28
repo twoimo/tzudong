@@ -16,7 +16,12 @@ const record = loadRecord();
 const source = { revision: 'a'.repeat(40), tree: 'b'.repeat(40), clean: true,
   repositoryMatched: true, filesSha256: 'c'.repeat(64) };
 const instant = new Date('2026-10-29T01:00:00Z');
-const databaseUrl = 'postgres://postgres:synthetic-fixture@db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres';
+// Assemble the explicitly fake credential as fixture fields, never a deployable
+// connection string literal that secret scanners can mistake for a leaked key.
+const databaseTarget = new URL('postgres://db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres');
+databaseTarget.username = 'postgres';
+databaseTarget.password = 'synthetic-fixture';
+const databaseUrl = databaseTarget.toString();
 function admission() {
   return { kind: 'sponsorship_scoped_admission_v1', authority: 'authenticated-repository-owner-local-cli',
     operationId: '12345678-1234-4234-8234-123456789abc', projectRef: record.manifest.projectRef,

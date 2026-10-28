@@ -213,8 +213,11 @@ function integrationFixture(directory: string) {
       indexHash: hash('synthetic derived values'), untouchedCount: 1, untouchedHash: hash('synthetic outside cohort') } };
   const replies: (string | Error)[] = [JSON.stringify({ readOnly: 'on', state: prior })];
   const calls: { sql: string; readOnly: boolean }[] = [];
+  const databaseTarget = new URL(`postgres://db.${record.manifest.projectRef}.supabase.co:5432/postgres`);
+  databaseTarget.username = 'postgres';
+  databaseTarget.password = 'synthetic-fixture';
   const options = { record, admission,
-    databaseUrl: `postgres://postgres:synthetic-fixture@db.${record.manifest.projectRef}.supabase.co:5432/postgres`,
+    databaseUrl: databaseTarget.toString(),
     journal: new OriginalJournal({ directory }), now: () => instant,
     readSource: () => ({ ...source }), readAdmission: () => structuredClone(admission),
     readFences: () => ({ generalFreeze: 'active', githubProducer: 'disabled_manually' }),
