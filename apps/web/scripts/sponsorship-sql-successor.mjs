@@ -18,11 +18,12 @@ import { migrationEnvelope, atomicMigrationSql } from './supabase-migration-tran
 import { selectDirectDatabaseTransport, readOriginalStatementVector } from './apply-supabase-migration.mjs';
 import { assertSuccessorDatabaseTarget } from './admin-record-sql-successor.mjs';
 import { createThumbnailPsqlRunner } from './thumbnail-production-successor.mjs';
+import { validatePredecessorPolicy, readPredecessorCustody, assertPredecessorBeforeImage } from './sponsorship-predecessor-custody.mjs';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 export const MANIFEST_PATH = '.github/sponsorship-sql-successor.v1.json';
 export const SCRIPT_PATH = 'apps/web/scripts/sponsorship-sql-successor.mjs';
-export const MANIFEST_SHA256 = '4c6e9e290d54a596a4a36aa998dc394a9a0e825a57a38daf9e469564810ae2e1';
+export const MANIFEST_SHA256 = 'af0174f282d12431cdf81981b7d9667c0f12cd9111fcb4d1497234b513fe3735';
 export const CUSTODY = join(homedir(), '.local/state/tzudong-sponsorship-sql-successor', 'aqlcofblfxdrjhhdmarw', MANIFEST_SHA256);
 const MAX_BYTES = 256 * 1024;
 const sha = value => createHash('sha256').update(value).digest('hex');
@@ -38,6 +39,15 @@ const protectedMainKeys = ['repository', 'branch', 'sha', 'protected', 'observed
 function regular(path) {
   if (realpathSync(path) !== resolve(path) || !lstatSync(path).isFile()) fail('SPONSORSHIP_SOURCE_FILE_INVALID');
   return readFileSync(path);
+}
+export function terminalCompilerSha256() {
+  // Hash the source bytes, not runtime Function#toString transformations in Bun.
+  const source = regular(resolve(ROOT, SCRIPT_PATH)).toString('utf8');
+  const marker = source.indexOf('\nexport function terminalQuery(');
+  const start = marker + 1;
+  const end = source.indexOf('\nexport function expectedTerminal(', start);
+  if (marker < 0 || end < start) fail('SPONSORSHIP_CORRECTION_DRIFT');
+  return sha(source.slice(start + 'export '.length, end).trimEnd());
 }
 export function loadRecord({ read = p => regular(resolve(ROOT, p)) } = {}) {
   const raw = read(MANIFEST_PATH);
@@ -59,7 +69,7 @@ export function loadRecord({ read = p => regular(resolve(ROOT, p)) } = {}) {
 function assertRecord(record) {
   if (!record || sha(record.raw) !== MANIFEST_SHA256 || !equal(JSON.parse(record.raw), record.manifest)) fail('SPONSORSHIP_MANIFEST_DRIFT');
   const m = record.manifest;
-  if (m.schemaVersion !== 2 || m.migrations.length !== 2 || record.bytes.length !== 2 || record.plans.length !== 2
+  if (m.schemaVersion !== 3 || m.migrations.length !== 2 || record.bytes.length !== 2 || record.plans.length !== 2
     || sha(JSON.stringify(m.migrations.map(({ path, sha256, statementVectorSha256 }) => ({ path, sha256, statementVectorSha256 })))) !== m.bundleSha256) fail('SPONSORSHIP_VECTOR_DRIFT');
   for (const [i, migration] of m.migrations.entries()) {
     const plan = migrationEnvelope(record.bytes[i], migration, migration.originalStatementVector);
@@ -67,6 +77,13 @@ function assertRecord(record) {
       || plan.originalVector.length !== [5, 1][i]
       || plan.version !== ['20261028195647', '20261028225926'][i]) fail('SPONSORSHIP_VECTOR_DRIFT');
   }
+  validatePredecessorPolicy(m.predecessor);
+  const correction = m.materialCorrection;
+  if (!correction || !equal(Object.keys(correction).sort(), ['kind', 'previousTerminalCompilerSha256', 'terminalCompilerSha256'])
+    || correction.kind !== 'materialized_terminal_evaluation'
+    || correction.previousTerminalCompilerSha256 !== 'e5d1d5c1649edb7ba90f931a6f65b60f5c3048eb5c4e006d80a5622eea90f29a'
+    || correction.terminalCompilerSha256 !== terminalCompilerSha256()
+    || correction.terminalCompilerSha256 === correction.previousTerminalCompilerSha256) fail('SPONSORSHIP_CORRECTION_DRIFT');
 }
 function git(args) {
   const p = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8', timeout: 15000 });
@@ -86,9 +103,10 @@ export function validateAdmission(record, admission, source, now, { reconcile = 
   assertRecord(record);
   const m = record.manifest;
   if (!admission || !equal(Object.keys(admission).sort(), [...admissionKeys].sort())
-    || admission.kind !== 'sponsorship_scoped_admission_v2'
+    || admission.kind !== 'sponsorship_scoped_admission_v3'
     || admission.authority !== 'authenticated-repository-owner-local-cli'
     || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(admission.operationId)
+    || admission.operationId === m.predecessor.operationId
     || admission.projectRef !== m.projectRef || admission.databaseName !== m.databaseName
     || admission.manifestSha256 !== MANIFEST_SHA256 || admission.bundleSha256 !== m.bundleSha256
     || admission.scopeSha256 !== sha(JSON.stringify(m.scope))
@@ -174,19 +192,26 @@ export function terminalQuery(record, before) {
   const catalog = `(${record.manifest.catalogExpression}=${json(record.manifest.catalogAfter)})`;
   // No custom function can run on a drifted catalog. The pinned descriptor and
   // transitive helpers are IMMUTABLE; compose (VOLATILE) is NEVER invoked here.
-  const cohortCorrect = `CASE WHEN ${catalog} THEN NOT EXISTS(
- SELECT 1 FROM public.restaurants r LEFT JOIN pipeline_control.admin_evaluation_read_index i ON i.id=r.id
- CROSS JOIN LATERAL (SELECT pipeline_control.admin_eval_descriptor(to_jsonb(r)||jsonb_build_object('name',r.approved_name)) AS d) expected
- WHERE (${candidate}) AND (i.id IS NULL OR i.descriptor IS DISTINCT FROM expected.d
+  const cohortCorrect = `CASE WHEN catalog.ok THEN NOT EXISTS(
+ SELECT 1 FROM expected LEFT JOIN pipeline_control.admin_evaluation_read_index i ON i.id=expected.id
+ WHERE (i.id IS NULL OR i.descriptor IS DISTINCT FROM expected.d
  OR i.latest IS DISTINCT FROM (expected.d->>'latest')::numeric OR i.created IS DISTINCT FROM (expected.d->>'created')::numeric
  OR i.video IS DISTINCT FROM expected.d->>'video')) ELSE false END`;
-  return `SELECT jsonb_build_object('identity',(${identity}),'catalog',${catalog},'ledger',${ledgerExpression(record)},
+  // Keep the SELECT entrypoint for the bundle's readbacks. Materialization stops
+  // field references from expanding the full snapshot/catalog/descriptor work.
+  // CASE also guards the custom call itself, independently of filter placement.
+  return `SELECT state FROM (WITH snapshot AS MATERIALIZED (SELECT ${dataExpression} AS d),
+ catalog AS MATERIALIZED (SELECT ${catalog} AS ok),
+ expected AS MATERIALIZED (
+ SELECT r.id, CASE WHEN catalog.ok THEN pipeline_control.admin_eval_descriptor(to_jsonb(r)||jsonb_build_object('name',r.approved_name)) ELSE NULL END AS d
+ FROM public.restaurants r CROSS JOIN catalog WHERE catalog.ok AND (${candidate}))
+ SELECT jsonb_build_object('identity',(${identity}),'catalog',catalog.ok,'ledger',${ledgerExpression(record)},
  'revision',${revisionExpression},
  'businessUnchanged',d->'businessHash'=${json(before.data.businessHash)} AND d->'businessCount'=${json(before.data.businessCount)},
  'cohortUnchanged',d->'cohortHash'=${json(before.data.cohortHash)} AND d->'cohortCount'=${json(before.data.cohortCount)},
  'untouchedUnchanged',d->'untouchedHash'=${json(before.data.untouchedHash)} AND d->'untouchedCount'=${json(before.data.untouchedCount)},
- 'indexCountCorrect',(SELECT count(*) FROM pipeline_control.admin_evaluation_read_index)=${before.data.untouchedCount}+${before.data.cohortCount},
- 'cohortCorrect',(${cohortCorrect})) AS state FROM (SELECT ${dataExpression} AS d) snapshot`;
+ 'indexCountCorrect',(d->>'indexCount')::bigint=${before.data.untouchedCount}+${before.data.cohortCount},
+ 'cohortCorrect',(${cohortCorrect})) AS state FROM snapshot CROSS JOIN catalog) terminal`;
 }
 export function expectedTerminal(record, before, applied = 2) {
   validatePrior(record, before);
@@ -340,11 +365,13 @@ export function createSponsorshipPsqlRunner(databaseUrl, { environment = process
 
 /** Injected adapters are for tests/library use. CLI exposes no adapter/path overrides. */
 export function executeSponsorship(mode, { record, admission, readSource, readAdmission, readFences, readProtectedMain,
-  transport, databaseUrl, journal, now = () => new Date() }) {
+  readPredecessor, validateBeforeImage, transport, databaseUrl, journal, now = () => new Date() }) {
   if (!['preflight', 'apply', 'reconcile'].includes(mode)) fail('SPONSORSHIP_ARGUMENT_INVALID');
   assertRecord(record);
+  if (typeof readPredecessor !== 'function' || typeof validateBeforeImage !== 'function') fail('SPONSORSHIP_PREDECESSOR_REQUIRED');
   assertSuccessorDatabaseTarget(databaseUrl, { projectRef: record.manifest.projectRef, databaseName: 'postgres' });
   const revalidate = () => {
+    readPredecessor();
     if (!equal(readAdmission(), admission)) fail('SPONSORSHIP_ADMISSION_DRIFT');
     const source = readSource();
     validateAdmission(record, admission, source, now(), { reconcile: mode === 'reconcile' });
@@ -360,13 +387,14 @@ export function executeSponsorship(mode, { record, admission, readSource, readAd
   if (mode === 'preflight') {
     if (original) fail('SPONSORSHIP_ORIGINAL_ALREADY_EXISTS');
     const before = parse(transport(databaseUrl, preflightSql(record), true), true);
-    validatePrior(record, before); revalidate();
+    validatePrior(record, before); validateBeforeImage(before); revalidate();
     const first = { event: 'prepared', identity, before, sqlSha256: sha(applySql(record, admission, before)) };
     journal.prepare(first);
     return { status: 'prepared', identity, prior: before, replayAllowed: false };
   }
   if (!original) fail('SPONSORSHIP_ORIGINAL_REQUIRED');
   validatePrior(record, original.first.before);
+  validateBeforeImage(original.first.before);
   const sql = applySql(record, admission, original.first.before);
   if (sha(sql) !== original.first.sqlSha256) fail('SPONSORSHIP_SQL_BINDING_INVALID');
   if (mode === 'reconcile') {
@@ -424,7 +452,8 @@ export function runSponsorship(mode = 'prepare', { environment = process.env } =
     source: currentSource(record), custody: CUSTODY, scopeSha256: sha(JSON.stringify(record.manifest.scope)),
     sourcePolicy: record.manifest.sourcePolicy, protectedMainReceiptFields: protectedMainKeys,
     requiredAdmissionFields: admissionKeys, admissionEncoding: 'JSON.stringify(receipt) + newline; private regular file mode 0600',
-    admissionKind: 'sponsorship_scoped_admission_v2', authority: 'authenticated-repository-owner-local-cli',
+    admissionKind: 'sponsorship_scoped_admission_v3', authority: 'authenticated-repository-owner-local-cli',
+    predecessor: record.manifest.predecessor, materialCorrection: record.manifest.materialCorrection,
     fences: record.manifest.fences, maxAdmissionWindowSeconds: 600, executionReady: false };
   if (!['preflight', 'apply', 'reconcile'].includes(mode)) fail('SPONSORSHIP_ARGUMENT_INVALID');
   privateDirectory(CUSTODY);
@@ -435,8 +464,11 @@ export function runSponsorship(mode = 'prepare', { environment = process.env } =
   validateAdmission(record, admission, currentSource(record), new Date(), { reconcile: mode === 'reconcile' });
   const { databaseUrl } = selectDirectDatabaseTransport(environment);
   const transport = createSponsorshipPsqlRunner(databaseUrl, { environment });
+  const readPredecessor = () => readPredecessorCustody(record.manifest.predecessor);
   return executeSponsorship(mode, { record, admission, readSource: () => { loadRecord(); return currentSource(record); },
-    readAdmission, readFences: observeFences, readProtectedMain: observeProtectedMain, transport, databaseUrl, journal: new OriginalJournal() });
+    readAdmission, readFences: observeFences, readProtectedMain: observeProtectedMain, readPredecessor,
+    validateBeforeImage: before => assertPredecessorBeforeImage(readPredecessor(), before),
+    transport, databaseUrl, journal: new OriginalJournal() });
 }
 export function sponsorshipResultExitCode(result) {
   return ['source_prepared_not_admitted', 'prepared', 'committed'].includes(result?.status)

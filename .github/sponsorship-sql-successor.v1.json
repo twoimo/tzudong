@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 2,
-  "kind": "sponsorship_atomic_migration_bundle_successor",
+  "schemaVersion": 3,
+  "kind": "tzudong-sponsorship-atomic-materialized-successor-v3",
   "projectRef": "aqlcofblfxdrjhhdmarw",
   "databaseName": "postgres",
   "serverVersionNum": 170006,
@@ -2068,7 +2068,8 @@
     "apps/web/scripts/thumbnail-production-successor.mjs": "5f5001880e367199dd63c5d93c2716c818fe93f78c0420cabd1ce8bb9df2791a",
     "apps/web/scripts/vercel-rollback-readback.mjs": "fa3876153f0e949d23115612cb34bc545c6c29bccb6ba2fd6042a38e70555e04",
     "backend/supabase/certificates/prod-ca-2021.crt": "700723581420dd1ac98fd7e9ac529f0ef210eadcaf87fc868a3ad7d114c2f3b7",
-    "backend/supabase/scripts/g037_supabase_statement_vector.mjs": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd"
+    "backend/supabase/scripts/g037_supabase_statement_vector.mjs": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd",
+    "apps/web/scripts/sponsorship-predecessor-custody.mjs": "ec7f7a1ec0d39f9c6f177913b8c5553a416361d77c7692405e050e6d39f32f3a"
   },
   "scope": {
     "functions": [
@@ -2084,7 +2085,9 @@
       "relation": "pipeline_control.admin_evaluation_catalog_revision",
       "write": "exact_singleton_increment_once_in_same_outer_transaction",
       "lock": "FOR UPDATE NOWAIT after restaurant and index relation locks"
-    }
+    },
+    "guardEvaluation": "materialized_catalog_snapshot_and_cohort_descriptor_once_with_exact_state_contract",
+    "predecessorBeforeImage": "fresh_full_state_must_equal_exact_spent_original_preimage"
   },
   "fences": {
     "generalFreeze": "active",
@@ -2124,5 +2127,27 @@
       "statementVectorSha256": "9b72d4faa1a0beb0a5194c3c339aaf3e165029f9a058983353a5a3f47c8162cb"
     }
   ],
-  "bundleSha256": "b217266cb633f5a7fded6c7b29822d2927e8ecea37739f5837a0c7f61dba7987"
+  "bundleSha256": "b217266cb633f5a7fded6c7b29822d2927e8ecea37739f5837a0c7f61dba7987",
+  "predecessor": {
+    "schemaVersion": 1,
+    "kind": "spent_original_source_correction",
+    "projectRef": "aqlcofblfxdrjhhdmarw",
+    "operationId": "79cb8243-04a8-49be-93c2-a4339500a332",
+    "sourceRevision": "57ee855957b0fd07bd4406ba60bac8e6a2310437",
+    "manifestSha256": "4c6e9e290d54a596a4a36aa998dc394a9a0e825a57a38daf9e469564810ae2e1",
+    "admissionValueSha256": "3896637163fb9e6928e75de95111a77e6cc3a2d92909812bce6a7b3a47b8dd79",
+    "sendSqlSha256": "ca767a5cb56612d887b34429da804d8d77590e9d2751905eecb76e65110e2926",
+    "expectedFileHashes": {
+      "admission.json": "c2582191905ffd096e4fcc1feaf1d73025052285cffc02764fdc6f1ad7114763",
+      "original.jsonl": "4a05e55e08031e53184b910b0a23a4d3232f5b5bbc0d8b6b91ad6aae50662cc6",
+      "send.lock": "48fcd99b44cf910b5e5d7132cefe2dcc4456ebe912019d2e7bfcb8d9d3fe3f4c"
+    },
+    "requireFreshBeforeImage": true,
+    "replayAllowed": false
+  },
+  "materialCorrection": {
+    "kind": "materialized_terminal_evaluation",
+    "previousTerminalCompilerSha256": "e5d1d5c1649edb7ba90f931a6f65b60f5c3048eb5c4e006d80a5622eea90f29a",
+    "terminalCompilerSha256": "b7e4af2adfa7964ed64a77d810f7e8e3d32011aa4f36afddcd61e1cecbb7f486"
+  }
 }
