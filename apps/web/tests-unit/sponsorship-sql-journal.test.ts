@@ -215,7 +215,6 @@ function integrationFixture(directory: string) {
   const calls: { sql: string; readOnly: boolean }[] = [];
   const databaseTarget = new URL(`postgres://db.${record.manifest.projectRef}.supabase.co:5432/postgres`);
   databaseTarget.username = 'postgres';
-  databaseTarget.password = 'synthetic-fixture';
   const options = { record, admission,
     databaseUrl: databaseTarget.toString(),
     journal: new OriginalJournal({ directory }), now: () => instant,
