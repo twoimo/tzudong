@@ -36,30 +36,32 @@ function isTranscriptYtDlpTreeCleanupFailure(error) {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function loadEnvironment() {
+async function loadEnvironment(roots = [path.resolve(__dirname, '../../..'), path.resolve(__dirname, '../../../../tzudong')]) {
     const envPath = path.resolve(__dirname, '../.env');
     if (fs.existsSync(envPath)) {
         const { config } = await import('dotenv');
         config({ path: envPath, quiet: true });
     }
+    // .venv 패키지 경로는 폴백이 실제로 해당 인터프리터를 선택했을 때만
+    // 같은 루트에서 파생해 바인딩한다. 운영자가 지정한 PYTHON_CMD에
+    // 다른 환경의 패키지를 주입하지 않는다.
+    let venvRoot = null;
     if (!process.env.PYTHON_CMD) {
-        for (const root of [path.resolve(__dirname, '../../..'), path.resolve(__dirname, '../../../../tzudong')]) {
+        for (const root of roots) {
             const venvPy = path.join(root, '.venv/bin/python3');
             if (fs.existsSync(venvPy)) {
                 process.env.PYTHON_CMD = venvPy;
+                venvRoot = root;
                 break;
             }
         }
     }
-    if (!process.env.PYTHONPATH) {
-        for (const root of [path.resolve(__dirname, '../../..'), path.resolve(__dirname, '../../../../tzudong')]) {
-            const venvLib = path.join(root, '.venv/lib');
-            if (fs.existsSync(venvLib)) {
-                const pyDirs = fs.readdirSync(venvLib).filter(name => name.startsWith('python3.'));
-                if (pyDirs.length > 0) {
-                    process.env.PYTHONPATH = path.join(venvLib, pyDirs[0], 'site-packages');
-                    break;
-                }
+    if (venvRoot && !process.env.PYTHONPATH) {
+        const venvLib = path.join(venvRoot, '.venv/lib');
+        if (fs.existsSync(venvLib)) {
+            const pyDirs = fs.readdirSync(venvLib).filter(name => name.startsWith('python3.'));
+            if (pyDirs.length > 0) {
+                process.env.PYTHONPATH = path.join(venvLib, pyDirs[0], 'site-packages');
             }
         }
     }
@@ -1143,7 +1145,7 @@ async function main(args = process.argv.slice(2), {
     return hasFailures ? 1 : 0;
 }
 
-export { collectChannelTranscripts, fetchTranscriptYtDlp, getTranscript, isValidTranscriptRecord, main, updateNoTranscriptPermanent };
+export { collectChannelTranscripts, fetchTranscriptYtDlp, getTranscript, isValidTranscriptRecord, loadEnvironment, main, updateNoTranscriptPermanent };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
     main().then(exitCode => {
@@ -1152,4 +1154,4 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
         logFailure('error', 'TRANSCRIPT_COLLECTION_FATAL', error);
         process.exit(1);
     });
-}
+        }
