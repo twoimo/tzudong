@@ -1,3 +1,4 @@
+import { normalizeSponsorshipInfo } from '@/lib/sponsorship-state';
 import type { DbConflictInfo, EvaluationRecord, EvaluationRecordStatus, RestaurantInfo } from '@/types/evaluation';
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
 
@@ -240,14 +241,12 @@ export function parseEvaluationResults(value: unknown): EvaluationRecord['evalua
 }
 
 export function parseYoutubeMeta(value: unknown): EvaluationRecord['youtube_meta'] {
-  if (!isRecord(value) || !isRecord(value.ads_info)) return null;
+  if (!isRecord(value)) return null;
   if (
     typeof value.title !== 'string'
     || typeof value.publishedAt !== 'string'
     || typeof value.is_shorts !== 'boolean'
-    || typeof value.duration !== 'number'
-    || typeof value.ads_info.is_ads !== 'boolean'
-    || !isNullableString(value.ads_info.what_ads)
+    || typeof value.duration !== 'number' || !Number.isFinite(value.duration) || value.duration < 0
   ) {
     return null;
   }
@@ -257,10 +256,7 @@ export function parseYoutubeMeta(value: unknown): EvaluationRecord['youtube_meta
     publishedAt: value.publishedAt,
     is_shorts: value.is_shorts,
     duration: value.duration,
-    ads_info: {
-      is_ads: value.ads_info.is_ads,
-      what_ads: value.ads_info.what_ads,
-    },
+    ads_info: normalizeSponsorshipInfo(value.ads_info),
   };
   return parsedMeta;
 }

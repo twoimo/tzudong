@@ -38,18 +38,17 @@ from utils.config_loader import (
     get_all_channels,
     get_channel_data_path,
     get_api_key,
-    get_api_config,
 )
 from utils.logger import PipelineLogger
 from utils.runtime_paths import load_backend_env, get_backend_log_dir, resolve_backend_root
 from utils.privacy_log import safe_error_name
 from utils.stage_cache import atomic_write, stage_lock, canonical_digest
 from utils.metadata_checkpoint import latest_metadata, checkpoint, verified_today, last_sequence, append_metadata
+from utils.sponsorship_disclosure import analyze_disclosure, supplement_ads
 METADATA_RECIPE_HASH = hashlib.sha256(Path(__file__).read_bytes() + Path(latest_metadata.__code__.co_filename).read_bytes()).hexdigest()
 
 try:
     from googleapiclient.discovery import build
-    from openai import OpenAI
 except ImportError:
     print("op=required_dependencies_missing")
     sys.exit(1)
@@ -63,8 +62,6 @@ KST = timezone(timedelta(hours=9))
 
 # 로그 디렉토리
 LOG_DIR = get_backend_log_dir(BACKEND_ROOT, "restaurant-crawling")
-OPENAI_AD_ANALYSIS_DISABLED_REASON: Optional[str] = None
-OPENAI_AD_ANALYSIS_FAILURE_COUNT = 0
 
 
 def extract_video_id(url: str) -> Optional[str]:
@@ -470,99 +467,9 @@ def detect_changes(
     return changes
 
 
-def fatal_ad_quota_code(error: Exception) -> Optional[str]:
-    """Classify structured 429 quota errors without exposing provider text."""
-    if getattr(error, "status_code", None) != 429:
-        return None
-    fields = [getattr(error, "code", None), getattr(error, "type", None)]
-    body = getattr(error, "body", None)
-    if isinstance(body, dict):
-        # The SDK normally unwraps `error`; accept either exception body shape.
-        nested = body.get("error")
-        for data in (body, nested):
-            if isinstance(data, dict):
-                fields.extend((data.get("code"), data.get("type")))
-    for code in (
-        "credit_balance_exhausted",
-        "organization_spend_limit_exceeded",
-        "project_spend_limit_exceeded",
-        "organization_usage_limit_exceeded",
-        "insufficient_quota",
-    ):
-        if any(isinstance(value, str) and value == code for value in fields):
-            return code
-    return None
-
-
-def analyze_ad_content(
-    openai_client: OpenAI, text: str, logger: PipelineLogger
-) -> Optional[List[str]]:
-    """광고/협찬 주체를 GPT-4o-mini로 분석"""
-    global OPENAI_AD_ANALYSIS_DISABLED_REASON
-    global OPENAI_AD_ANALYSIS_FAILURE_COUNT
-
-    if OPENAI_AD_ANALYSIS_DISABLED_REASON:
-        OPENAI_AD_ANALYSIS_FAILURE_COUNT += 1
-        return None
-
-    text_preview = text[:100]
-
-    try:
-        api_config = get_api_config()
-        model = api_config.get("openai", {}).get("model", "gpt-4o-mini")
-
-        # 타이머는 생략하거나 PipelineLogger 특성에 맞게 사용 (여기선 try-except 내 단순 호출)
-        response = openai_client.chat.completions.create(
-            model=model,
-            temperature=0.3,
-            messages=[
-                {
-                    "role": "system",
-                    "content": """광고/협찬/지원을 한 **정확한 주체들의 전체 이름**을 **리스트** 형식으로 답변하세요.
-예시: ['하이트진로', '영양군청']
-주체를 찾을 수 없으면 'None'을 출력합니다.""",
-                },
-                {"role": "user", "content": text_preview},
-            ],
-        )
-
-        content = response.choices[0].message.content.strip()
-
-        if not content or content.lower() == "none":
-            return None
-
-        try:
-            parsed = json.loads(content)
-        except json.JSONDecodeError:
-            try:
-                import ast
-
-                parsed = ast.literal_eval(content)
-            except Exception:
-                parsed = [content]
-
-        if isinstance(parsed, str):
-            parsed = [parsed]
-        elif not isinstance(parsed, list):
-            parsed = [str(parsed)]
-
-        parsed = [str(x).strip() for x in parsed if str(x).strip()]
-        return parsed if parsed else None
-
-    except Exception as error:
-        OPENAI_AD_ANALYSIS_FAILURE_COUNT += 1
-        error_name = safe_error_name(error)
-        if error_name == "AuthenticationError" or getattr(error, "status_code", None) == 401:
-            OPENAI_AD_ANALYSIS_DISABLED_REASON = "invalid_api_key"
-            logger.warning(f"op=ad_analysis_auth_failed error={error_name}")
-            return None
-        quota_code = fatal_ad_quota_code(error)
-        if quota_code:
-            OPENAI_AD_ANALYSIS_DISABLED_REASON = quota_code
-            logger.warning(f"op=ad_analysis_failed error={error_name} code={quota_code}")
-            return None
-        logger.warning(f"op=ad_analysis_failed error={error_name}")
-        return None
+def analyze_ad_content(text: str) -> Dict[str, Any]:
+    """Offline, full-description first-party disclosure analysis; no provider fallback."""
+    return analyze_disclosure(text)
 
 
 def get_video_meta_batch(
@@ -626,7 +533,7 @@ def get_video_meta_batch(
                 "published_at": snippet.get("publishedAt"),
                 "duration": duration_seconds,
                 "is_shorts": duration_seconds <= 180,
-                "description": snippet.get("description", "")[:500],
+                "description": snippet.get("description", ""),
                 "category": snippet.get("categoryId"),
                 "tags": snippet.get("tags", []),
                 "thumbnail_url": thumb_url,
@@ -807,21 +714,21 @@ def _scoped_checked_cache(channel_path: Path) -> Dict[str, Any]:
         raise ScopedMetadataError("metadata_checkpoint_invalid") from None
 
 
-def collect_channel_meta(channel_name: str, youtube, openai_client: Optional[OpenAI], logger: PipelineLogger,
-                         *, video_id: Optional[str] = None) -> Dict[str, Any]:
+def collect_channel_meta(channel_name: str, youtube, openai_client: Any, logger: PipelineLogger,
+                         *, video_id: Optional[str] = None, skip_ads: bool = False) -> Dict[str, Any]:
     if video_id is not None:
         _validate_metadata_scope(channel_name, video_id)
     channel_path = Path(__file__).parent.parent / "data" / channel_name
     with stage_lock(channel_path / '.receipts' / 'metadata-collection'):
-        return _collect_channel_meta(channel_name, youtube, openai_client, logger, video_id=video_id)
+        return _collect_channel_meta(channel_name, youtube, openai_client, logger, video_id=video_id, skip_ads=skip_ads)
 
 
 def _collect_channel_meta(
     channel_name: str,
     youtube,
-    openai_client: Optional[OpenAI],
+    openai_client: Any,
     logger: PipelineLogger,
-    *, video_id: Optional[str] = None,
+    *, video_id: Optional[str] = None, skip_ads: bool = False,
 ) -> Dict[str, Any]:
 
     channel_path = Path(__file__).parent.parent / "data" / channel_name
@@ -897,15 +804,17 @@ def _collect_channel_meta(
     # 캐시 로드
     checked_cache = (_scoped_checked_cache(channel_path) if video_id is not None
                      else load_checked_cache(channel_path))
-    recipe = canonical_digest({'code': METADATA_RECIPE_HASH,
-        'adModel': get_api_config().get('openai', {}).get('model', 'gpt-4o-mini'),
-        'adsAnalysisEnabled': video_id is not None or openai_client is not None})
+    # This checkpoint certifies base metadata/thumbnail persistence, not sponsorship.
+    recipe = canonical_digest({'code': METADATA_RECIPE_HASH, 'scope': 'base_metadata'})
 
     skipped_today_count = 0
 
     for vid in video_ids:
         meta = get_latest_meta(channel_path, vid)
-        if verified_today(checked_cache.get(vid), today_str, recipe, meta):
+        entry = checked_cache.get(vid)
+        # A rule/code change alone must not replay an already verified daily record.
+        saved_recipe = entry.get('recipe') if isinstance(entry, dict) else None
+        if isinstance(saved_recipe, str) and verified_today(entry, today_str, saved_recipe, meta):
             skipped_today_count += 1
             continue
         # Date-only cache entries and output existence never establish completion.
@@ -926,11 +835,9 @@ def _collect_channel_meta(
     if video_id is not None:
         # Resolve the unchanged provider route only after locked input/cache checks.
         youtube_api_key = get_api_key("youtube")
-        openai_api_key = (get_api_key("openai") or os.environ.get("OPENAI_API_KEY") or "").strip()
-        if not youtube_api_key or not openai_api_key:
+        if not youtube_api_key:
             raise ScopedMetadataError("metadata_provider_not_configured")
         youtube = build("youtube", "v3", developerKey=youtube_api_key)
-        openai_client = OpenAI(api_key=openai_api_key)
 
     # 배치 처리
 
@@ -966,8 +873,6 @@ def _collect_channel_meta(
                 if not isinstance(current_meta.get("thumbnail_hash"), str) or not re.fullmatch(r"[0-9a-f]{32}", current_meta["thumbnail_hash"]):
                     raise ScopedMetadataError("metadata_thumbnail_incomplete")
             previous_meta = get_latest_meta(channel_path, vid)
-            prior_checkpoint = checked_cache.get(vid)
-            recipe_changed = not isinstance(prior_checkpoint,dict) or prior_checkpoint.get('recipe') != recipe
 
             # 2. 변경 사항 감지 -> List[str] (viral 포함)
             recollect_vars = detect_changes(
@@ -1022,7 +927,7 @@ def _collect_channel_meta(
             # 하지만 new_video는 is_changed에 포함되지 않으므로(recollect_vars=["new_video"]),
             # new_video인 경우 위에서 schedule_reason="new_video"로 처리됨.
 
-            if not (is_changed or is_scheduled or recipe_changed):
+            if not (is_changed or is_scheduled):
                 # 수집 안 함. 하지만 썸네일 백필 체크
                 prev_id = previous_meta.get("recollect_id", 0)
                 if not check_thumbnail_exists(channel_path, vid, prev_id):
@@ -1037,7 +942,7 @@ def _collect_channel_meta(
                 continue
 
             # [수정] 변경사항 없이 스케줄링에 의한 수집인 경우, 하루 1회만 허용
-            if not is_changed and is_scheduled and already_collected_today and not recipe_changed:
+            if not is_changed and is_scheduled and already_collected_today:
                 logger.debug("op=video_skip_collected_today")
                 if video_id is not None:
                     prev_id = previous_meta.get("recollect_id", 0)
@@ -1065,33 +970,14 @@ def _collect_channel_meta(
                         raise ScopedMetadataError("metadata_thumbnail_incomplete")
                     continue
 
-            # OpenAI 분석 (옵션)
-            ad_keywords = ["협찬", "광고", "지원"]
-            description = current_meta.get("description", "")
-            is_ads = any(keyword in description for keyword in ad_keywords)
-
-            what_ads = None
-            prior_ads = previous_meta.get("ads_info", {}).get("what_ads") if previous_meta else None
-            if prior_ads and openai_client is None and previous_meta.get('description') != description:
-                # Without an analyzer, changed evidence cannot replace known attribution
-                # with either stale content or a fabricated null completion.
-                continue
-            if is_ads:
-                # Disabling analysis or upgrading the checkpoint must not erase an
-                # unchanged source's known attribution. Enabled recipe changes reanalyse.
-                if previous_meta and (not recipe_changed or openai_client is None) and previous_meta.get('description') == description and prior_ads:
-                    what_ads = previous_meta["ads_info"]["what_ads"]
-                elif openai_client:
-                    # 신규 분석
-                    failures_before=OPENAI_AD_ANALYSIS_FAILURE_COUNT
-                    what_ads = analyze_ad_content(openai_client, description, logger)
-                    if OPENAI_AD_ANALYSIS_FAILURE_COUNT != failures_before:
-                        # Provider failures are not completed recipe execution.
-                        if video_id is not None:
-                            raise ScopedMetadataError("metadata_ads_incomplete")
-                        continue
-
-            current_meta["ads_info"] = {"is_ads": is_ads, "what_ads": what_ads}
+            # Sponsorship is a separate supplement. Unknown must not block base
+            # collection or erase historical positive/negative attribution.
+            current_meta["ads_info"] = supplement_ads(
+                current_meta.get("description"),
+                previous_meta.get("ads_info") if previous_meta else None,
+                previous_meta.get("description") if previous_meta else None,
+                enabled=not skip_ads,
+            )
 
             # 7. 메타데이터 추가
             current_meta["recollect_id"] = new_id
@@ -1164,7 +1050,6 @@ def main(argv=None):
         return status
 
     youtube_api_key = get_api_key("youtube")
-    openai_api_key = (get_api_key("openai") or os.environ.get("OPENAI_API_KEY") or "").strip()
 
     if not youtube_api_key:
         print("op=youtube_api_key_missing")
@@ -1172,19 +1057,16 @@ def main(argv=None):
 
     youtube = build("youtube", "v3", developerKey=youtube_api_key)
 
-    openai_client = None
-    if not args.skip_ads and openai_api_key:
-        openai_client = OpenAI(api_key=openai_api_key)
 
     logger = PipelineLogger(phase="collect-meta", log_dir=LOG_DIR)
     logger.start_stage()
 
     try:
         if args.channel:
-            collect_channel_meta(args.channel, youtube, openai_client, logger)
+            collect_channel_meta(args.channel, youtube, None, logger, skip_ads=args.skip_ads)
         else:
             for ch in get_all_channels():
-                collect_channel_meta(ch, youtube, openai_client, logger)
+                collect_channel_meta(ch, youtube, None, logger, skip_ads=args.skip_ads)
     except Exception as error:
         logger.error(f"op=collect_meta_failed error={safe_error_name(error)}")
     finally:
