@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { test } from 'node:test';
+import { test as nodeTest } from 'node:test';
 import { readPredecessorCustody, validatePredecessorPolicy, assertPredecessorBeforeImage } from '../sponsorship-predecessor-custody.mjs';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
@@ -13,6 +13,11 @@ const line = value => `${JSON.stringify(value)}\n`;
 const copy = value => structuredClone(value);
 const fileNames = ['admission.json', 'original.jsonl', 'send.lock'];
 const fail = /SPONSORSHIP_PREDECESSOR_/;
+const posixCustody = {
+  skip: process.platform === 'win32'
+    ? 'Requires POSIX UID and 0700/0600 custody enforcement; no Windows permission downgrade.' : false,
+};
+const test = (name, fn) => nodeTest(name, posixCustody, fn);
 function fixture(t) {
   const directory = fs.mkdtempSync(join(fs.realpathSync(tmpdir()), 'sponsorship-predecessor-'));
   fs.chmodSync(directory, 0o700);
