@@ -343,17 +343,19 @@ def _resolve_python_env(env: dict, roots: tuple | None = None) -> dict:
     """Resolve PYTHON_CMD and bind repo .venv package paths.
 
     An explicit PYTHON_CMD is honored: command names are resolved through
-    PATH, and existing interpreter paths are kept as-is. The repository
-    .venv is only a fallback when no usable interpreter was selected, and
-    only then are its site-packages/bin directories bound into the child
-    environment, derived from the same root that supplied the interpreter.
+    the PATH of the given environment, and existing interpreter paths are
+    kept as-is. The repository .venv is only a fallback when no usable
+    interpreter was selected - an explicit command that cannot be resolved
+    still falls back, matching the previous policy - and only then are its
+    site-packages/bin directories bound into the child environment, derived
+    from the same root that supplied the interpreter.
     """
     env = dict(env)
     if roots is None:
         roots = (REPO_ROOT, REPO_ROOT.parent / "tzudong")
     python = env.get("PYTHON_CMD")
     if python and not Path(python).is_file():
-        resolved = shutil.which(python)
+        resolved = shutil.which(python, path=env.get("PATH"))
         if resolved:
             python = resolved
     fallback_root = None
