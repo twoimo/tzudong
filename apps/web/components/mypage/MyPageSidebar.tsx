@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useHomeReturnHref } from "@/hooks/use-home-return-href";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/no-toast";
 import {
@@ -68,6 +69,7 @@ export function MyPageSidebar() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, signOut, profileNickname } = useAuth();
+  const homeReturnHref = useHomeReturnHref(user?.id ?? null);
   const { data: profile } = useUserProfile(user?.id ?? "");
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [nicknameSaving, setNicknameSaving] = useState(false);
@@ -487,7 +489,7 @@ export function MyPageSidebar() {
       </div>
       <div className="sticky bottom-0 mt-auto border-t border-border bg-card p-4">
         <Button asChild variant="outline" className="min-h-11 w-full justify-center gap-2 rounded-xl">
-          <Link href="/" data-mypage-return-to-map="true">
+          <Link href={homeReturnHref} data-mypage-return-to-map="true">
             <Map className="h-4 w-4" aria-hidden="true" />
             지도로 돌아가기
           </Link>
