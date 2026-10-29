@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 // Match normalized text, but return only original source slices as company names.
 export const DISCLOSURE_VERSION = 'first-party-disclosure-v1';
 const subject = String.raw`(?:(?:본|이|이번)\s*(?:영상|콘텐츠)(?:은|는|이|가)\s*)`;
-const name = String.raw`(?<sponsor>.+?)`;
+const name = String.raw`(?<sponsor>[\s\S]+?)`;
 const positive = [
     subject + name + String.raw`\s*(?:의|와의|과의)\s*(?:유료\s*광고|광고|협찬)(?:을|를)?\s*(?:포함(?:하고\s*있(?:습니다|어요)|합니다)|진행(?:하고\s*있(?:습니다|어요)|합니다)|입니다)`,
     String.raw`(?:` + subject + String.raw`|(?:저희|우리|저)(?:는|가)?\s+)?` + name + String.raw`\s*(?:으?로부터|에게서)\s*(?:유료\s*광고|광고|협찬)(?:을|를)?\s*(?:받았습니다|받았어요|받아\s*(?:제작|진행)(?:했습니다|하였습니다|되었습니다|됐습니다))`,
@@ -82,6 +82,21 @@ function uncertainPeriod(left: string, right: string): boolean {
         || /^\s*(?:inc|ltd|llc|corp|co)\b/iu.test(right));
 }
 
+function independentDisclosure(content: string, chunks: { index: number; end: number }[], index: number): boolean {
+    const start = chunks[index].index;
+    if (!/^(?:(?:본|이|이번)\s*(?:영상|콘텐츠)(?:은|는|이|가)|(?:저희|우리|저)(?:는|가)?\s+|this\s+(?:video|content)\s+|(?:i|we)\s+)/iu.test(content.slice(start, start + 1024).trimStart())) return false;
+    for (let count = 1; count <= Math.min(3, chunks.length - index); count++) {
+        const last = chunks[index + count - 1];
+        if (count > 1 && /[.!?。！？]/u.test(content.slice(chunks[index + count - 2].end, last.index))) break;
+        const raw = content.slice(start, last.end);
+        const delimiter = content.slice(last.end).match(/^[.!?。！？]+/u)?.[0] ?? '';
+        if (Array.from(raw.trim()).length > 1024 || /[?？]/u.test(delimiter) || uncertainPeriod(raw, content.slice(last.end, last.end + 128))) continue;
+        const statement = raw.trim().replace(/[.!?。！？]+$/u, '').trimEnd();
+        if (negative.some(pattern => pattern.test(statement)) || unnamed.test(statement) || positive.some(pattern => pattern.test(statement))) return true;
+    }
+    return false;
+}
+
 export function analyzeDisclosure(source: unknown): Disclosure {
     const digest = typeof source === 'string' ? createHash('sha256').update(source, 'utf8').digest('hex') : null;
     const result = (outcome: Disclosure['sponsor_analysis']['outcome'], reason: string, names: string[] | null = null): Disclosure => ({
@@ -128,6 +143,11 @@ export function analyzeDisclosure(source: unknown): Disclosure {
                     const prior = chunks[i + count - 2];
                     if (/[.!?。！？]/u.test(content.slice(prior.end, last.index))) break;
                 }
+                // A physical newline may continue a denial or company name.
+                // Commit only at a sentence/paragraph end, never its prefix.
+                const next = chunks[i + count];
+                if (next && !/[.!?。！？]/u.test(content.slice(end, next.index)) &&
+                    !independentDisclosure(content, chunks, i + count)) continue;
                 const raw = content.slice(start, end);
                 if (/[?？]$/u.test(raw.trim())) continue;
                 const statement = raw.trim().replace(/[.!?。！？]+$/u, '').trimEnd();

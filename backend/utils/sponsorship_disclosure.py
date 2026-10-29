@@ -10,7 +10,7 @@ import unicodedata
 VERSION = "first-party-disclosure-v1"
 SOURCE = "description_rules"
 SUBJECT = r"(?:(?:본|이|이번)\s*(?:영상|콘텐츠)(?:은|는|이|가)\s*)"
-NAME = r"(?P<sponsor>.+?)"
+NAME = r"(?P<sponsor>[\s\S]+?)"
 POSITIVE = [
     SUBJECT + NAME + r"\s*(?:의|와의|과의)\s*(?:유료\s*광고|광고|협찬)(?:을|를)?\s*(?:포함(?:하고\s*있(?:습니다|어요)|합니다)|진행(?:하고\s*있(?:습니다|어요)|합니다)|입니다)",
     r"(?:" + SUBJECT + r"|(?:저희|우리|저)(?:는|가)?\s+)?" + NAME + r"\s*(?:으?로부터|에게서)\s*(?:유료\s*광고|광고|협찬)(?:을|를)?\s*(?:받았습니다|받았어요|받아\s*(?:제작|진행)(?:했습니다|하였습니다|되었습니다|됐습니다))",
@@ -80,6 +80,25 @@ def _uncertain_period(left, right):
                 or re.match(r"\s*(?:inc|ltd|llc|corp|co)\b", right, re.I))
 
 
+def _independent_disclosure(content, chunks, index):
+    start = chunks[index][0]
+    if not re.match(r"(?:(?:본|이|이번)\s*(?:영상|콘텐츠)(?:은|는|이|가)|(?:저희|우리|저)(?:는|가)?\s+|this\s+(?:video|content)\s+|(?:i|we)\s+)",
+                    content[start:start+1024].lstrip(), re.I):
+        return False
+    for count in range(1, min(3, len(chunks)-index)+1):
+        end = chunks[index+count-1][1]
+        if count > 1 and re.search(r"[.!?。！？]", content[chunks[index+count-2][1]:chunks[index+count-1][0]]):
+            break
+        raw = content[start:end]
+        delimiter = re.match(r"[.!?。！？]+", content[end:])
+        if len(raw.strip()) > 1024 or (delimiter and re.search(r"[?？]", delimiter.group())) or _uncertain_period(raw, content[end:end+128]):
+            continue
+        statement = raw.strip().rstrip(".!?。！？").rstrip()
+        if any(pattern.fullmatch(statement) for pattern in NEGATIVE) or UNNAMED.fullmatch(statement) or any(pattern.fullmatch(statement) for pattern in POSITIVE):
+            return True
+    return False
+
+
 def analyze_disclosure(source):
     digest = hashlib.sha256(source.encode("utf-8")).hexdigest() if isinstance(source, str) else None
 
@@ -133,6 +152,11 @@ def analyze_disclosure(source):
                 start, end = chunks[i][0], chunks[i+count-1][1]
                 if count > 1 and re.search(r"[.!?。！？]", content[chunks[i+count-2][1]:chunks[i+count-1][0]]):
                     break
+                # A physical newline may continue a denial or company name.
+                # Commit only at a sentence/paragraph end, never its prefix.
+                if (i + count < len(chunks) and not re.search(r"[.!?。！？]", content[end:chunks[i+count][0]])
+                        and not _independent_disclosure(content, chunks, i+count)):
+                    continue
                 raw = content[start:end].strip()
                 if raw.endswith(("?", "？")):
                     continue

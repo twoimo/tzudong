@@ -572,5 +572,235 @@
     "names": [
       "7-Eleven"
     ]
+  },
+  {
+    "id": "wrapped-named-english-denial",
+    "description": "This video is not sponsored\nby ACME.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "wrapped-named-english-denial-crlf",
+    "description": "This video is not sponsored\r\nby ACME.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "wrapped-named-english-denial-unicode",
+    "description": "This video is not sponsored by ACME.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "wrapped-english-company-conjunction",
+    "description": "This video is sponsored by ACME\nand Beta.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "wrapped-english-company-name",
+    "description": "This video is sponsored by Samsung\nElectronics.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "wrapped-english-company-suffix",
+    "description": "This video is sponsored by ACME\nCo.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "wrapped-english-prefix-original-width",
+    "description": "This video is sponsored\nby\nＡＣＭＥ.",
+    "outcome": "detected",
+    "names": [
+      "ＡＣＭＥ"
+    ]
+  },
+  {
+    "id": "wrapped-complete-english-negative",
+    "description": "This video\nis not sponsored.",
+    "outcome": "confirmed_none",
+    "names": null
+  },
+  {
+    "id": "wrapped-complete-korean-negative",
+    "description": "본 영상은 광고가\n아닙니다.",
+    "outcome": "confirmed_none",
+    "names": null
+  },
+  {
+    "id": "wrapped-korean-retraction",
+    "description": "본 영상은 ACME의 광고입니다\n가 아니라 Beta의 광고입니다.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "wrapped-over-three-lines-denial",
+    "description": "This video is not sponsored\nby\nACME\nand Beta.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "terminated-english-disclosure-followed-line",
+    "description": "This video is sponsored by ACME.\nThank you for watching.",
+    "outcome": "detected",
+    "names": [
+      "ACME"
+    ]
+  },
+  {
+    "id": "terminated-english-disclosure-followed-paragraph",
+    "description": "This video is sponsored by ACME.\n\nThank you for watching.",
+    "outcome": "detected",
+    "names": [
+      "ACME"
+    ]
+  },
+  {
+    "id": "review-negative-from",
+    "description": "This content includes no sponsorship\nfrom ACME.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-negative-three-lines",
+    "description": "This video is not\nsponsored\nby ACME.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-negative-crlf-fullwidth",
+    "description": "This video is not sponsored\r\n  by ＡＣＭＥ.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-korean-named-negative",
+    "description": "본 영상은 ACME의\n광고가 아닙니다.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-korean-supported-clause-wrap",
+    "description": "본 영상은\nACME의 유료광고를 포함합니다.",
+    "outcome": "detected",
+    "names": [
+      "ACME"
+    ]
+  },
+  {
+    "id": "review-unnamed-prefix-resolves-to-named",
+    "description": "This video is sponsored\nby ACME.",
+    "outcome": "detected",
+    "names": [
+      "ACME"
+    ]
+  },
+  {
+    "id": "review-brand-and-continuation",
+    "description": "This video is sponsored by Johnson\nand Johnson.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-conjunction-on-separate-line",
+    "description": "This video is sponsored by ACME\nand\nBeta.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-comma-company-continuation",
+    "description": "This video is sponsored by ACME\n, Beta.",
+    "outcome": "detected",
+    "names": [
+      "ACME",
+      "Beta"
+    ]
+  },
+  {
+    "id": "review-negative-period-stops-continuation",
+    "description": "This video is not sponsored.\nby ACME.",
+    "outcome": "confirmed_none",
+    "names": null
+  },
+  {
+    "id": "review-positive-period-stops-continuation",
+    "description": "This video is sponsored by ACME.\nand Beta.",
+    "outcome": "detected",
+    "names": [
+      "ACME"
+    ]
+  },
+  {
+    "id": "review-negative-blank-paragraph",
+    "description": "This video is not sponsored\n\nby ACME.",
+    "outcome": "confirmed_none",
+    "names": null
+  },
+  {
+    "id": "review-positive-blank-paragraph",
+    "description": "This video is sponsored by ACME\n\nand Beta.",
+    "outcome": "detected",
+    "names": [
+      "ACME"
+    ]
+  },
+  {
+    "id": "review-korean-ambiguous-conjunction-wrap",
+    "description": "본 영상은 ACME와\nBeta의 협찬입니다.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-question-on-continuation",
+    "description": "This video is sponsored by ACME\nand Beta?",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-negative-unicode-terminal",
+    "description": "This video is not sponsored。\nby ACME.",
+    "outcome": "confirmed_none",
+    "names": null
+  },
+  {
+    "id": "review-independent-first-party-lines",
+    "description": "This video is sponsored by ACME\nThis video is sponsored by Beta.",
+    "outcome": "detected",
+    "names": [
+      "ACME",
+      "Beta"
+    ]
+  },
+  {
+    "id": "review-emoji-combining-offsets",
+    "description": "🍽️\n\nThis video is sponsored\nby Café.",
+    "outcome": "detected",
+    "names": [
+      "Café"
+    ]
+  },
+  {
+    "id": "review-emoji-hangul-jamo-offsets",
+    "description": "🍽️\n\n본 영상은\n한글의\n협찬입니다.",
+    "outcome": "detected",
+    "names": [
+      "한글"
+    ]
+  },
+  {
+    "id": "review-emoji-zero-width-original-name",
+    "description": "🍽️\n\nThis video is sponsored by\nA​ＣＭＥ.",
+    "outcome": "detected",
+    "names": [
+      "A​ＣＭＥ"
+    ]
+  },
+  {
+    "id": "review-continuation-exceeds-three-lines",
+    "description": "This video is sponsored by ACME\nand\nBeta\nKorea.",
+    "outcome": "unknown",
+    "names": null
   }
 ]

@@ -5,11 +5,24 @@ import unittest
 from unittest.mock import patch
 
 from backend.utils.sponsorship_disclosure import analyze_disclosure, supplement_ads, VERSION
+from backend.utils.sponsorship_projection import confirmed_sponsorship_fields
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sponsorship-disclosure.json"
 
 
 class DisclosureTests(unittest.TestCase):
+    def test_wrapped_statements_never_erase_or_truncate_saved_attribution(self):
+        for description in ["This video is not sponsored\nby ACME.",
+                            "This video is sponsored by ACME\nand Beta."]:
+            self.assertEqual(confirmed_sponsorship_fields(analyze_disclosure(description)), {})
+            for prior in [{"is_ads": True, "what_ads": ["SavedCo"]},
+                          {"is_ads": False, "what_ads": None}]:
+                result = supplement_ads(description, prior, "old description")
+                self.assertEqual(result["is_ads"], prior["is_ads"])
+                self.assertEqual(result["what_ads"], prior["what_ads"])
+                self.assertTrue(result["sponsor_analysis"]["retained_previous"])
+                self.assertEqual(confirmed_sponsorship_fields(result), {})
+
     def test_shared_golden_cases(self):
         for case in json.loads(FIXTURE.read_text()):
             with self.subTest(case=case["id"]):
