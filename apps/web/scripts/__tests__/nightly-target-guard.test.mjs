@@ -179,7 +179,7 @@ async function runOfflineModule(suite, failure, runnerSource = source, validateO
     fetch: forbidden('network'),
     setTimeout: forbidden('runner timer'),
   }, { codeGeneration: { strings: false, wasm: false } });
-  const module = new vm.SourceTextModule(
+  const runnerModule = new vm.SourceTextModule(
     runnerSource.replaceAll('.supabase.co', '.supabase.invalid'),
     {
       context,
@@ -216,7 +216,7 @@ async function runOfflineModule(suite, failure, runnerSource = source, validateO
     ['./nightly-playwright-failure-evidence.mjs', evidenceBoundary],
   ]);
   const linked = new Map();
-  await module.link((specifier) => {
+  await runnerModule.link((specifier) => {
     imports.push(specifier);
     if (linked.has(specifier)) return linked.get(specifier);
     let dependency;
@@ -236,7 +236,7 @@ async function runOfflineModule(suite, failure, runnerSource = source, validateO
   });
   let watchdog;
   try {
-    await module.evaluate({ timeout: 1_000 });
+    await runnerModule.evaluate({ timeout: 1_000 });
     await Promise.race([
       finished,
       new Promise((_, reject) => {
