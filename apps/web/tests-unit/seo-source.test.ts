@@ -45,12 +45,29 @@ describe('SEO source contracts', () => {
     test('home page has crawlable metadata and lightweight structured data', () => {
         const homePageSource = source('app/page.tsx');
         const seoSource = source('lib/seo.ts');
+        const rootLayoutSource = source('app/layout.tsx');
 
         expect(homePageSource).toContain('type="application/ld+json"');
         expect(homePageSource).toContain('JSON.stringify(homeJsonLd)');
         expect(seoSource).toContain("'@type': 'WebSite'");
         expect(seoSource).toContain("'@type': 'WebApplication'");
+        expect(seoSource).toContain("'@type': 'Dataset'");
+        expect(seoSource).toContain("'@type': 'FAQPage'");
+        expect(seoSource).toContain("'@type': 'Organization'");
+        expect(rootLayoutSource).toContain('href="/llms.txt"');
+        expect(rootLayoutSource).toContain("manifest: '/manifest.webmanifest'");
+        expect(existsSync(join(import.meta.dir, '..', 'public/llms.txt'))).toBe(true);
+        expect(existsSync(join(import.meta.dir, '..', 'public/llms-full.txt'))).toBe(true);
         expect(seoSource).not.toContain('SearchAction');
+        // Unsupported public claims must stay absent: no physical-location geo
+        // tags (coverage is not a service location), no unverified rating
+        // aggregate, no sameAs identity link, no static version duplicate.
+        expect(rootLayoutSource).not.toContain('geo.position');
+        expect(rootLayoutSource).not.toContain('ICBM');
+        expect(rootLayoutSource).not.toContain('geo.region');
+        expect(seoSource).not.toContain('aggregateRating');
+        expect(seoSource).not.toContain('sameAs');
+        expect(seoSource).not.toContain('softwareVersion');
     });
 
     test('public app routes have unique segment metadata at the layout boundary', () => {
