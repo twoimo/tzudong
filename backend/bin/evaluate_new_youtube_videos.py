@@ -11,6 +11,7 @@ import argparse
 import json
 import math
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -338,6 +339,47 @@ def _fresh_locally_evaluated_ids(evaluation: Path, crawling: Path, channel: str,
         return set()
 
 
+def _resolve_python_env(env: dict, roots: tuple | None = None) -> dict:
+    """Resolve PYTHON_CMD and bind repo .venv package paths.
+
+    An explicit PYTHON_CMD is honored: command names are resolved through
+    PATH, and existing interpreter paths are kept as-is. The repository
+    .venv is only a fallback when no usable interpreter was selected, and
+    only then are its site-packages/bin directories bound into the child
+    environment, derived from the same root that supplied the interpreter.
+    """
+    env = dict(env)
+    if roots is None:
+        roots = (REPO_ROOT, REPO_ROOT.parent / "tzudong")
+    python = env.get("PYTHON_CMD")
+    if python and not Path(python).is_file():
+        resolved = shutil.which(python)
+        if resolved:
+            python = resolved
+    fallback_root = None
+    if not python or not Path(python).is_file():
+        for root in roots:
+            candidate = root / ".venv" / "bin" / "python3"
+            if candidate.is_file():
+                python = str(candidate)
+                fallback_root = root
+                break
+        if not python:
+            python = "python3"
+    env["PYTHON_CMD"] = python
+    if fallback_root is not None:
+        candidate_lib = fallback_root / ".venv" / "lib"
+        if candidate_lib.is_dir():
+            matches = sorted(candidate_lib.glob("python3.*/site-packages"))
+            if matches:
+                venv_site = str(matches[-1])
+                current_pp = env.get("PYTHONPATH", "")
+                env["PYTHONPATH"] = f"{venv_site}:{current_pp}" if current_pp else venv_site
+                venv_bin = str(Path(venv_site).parents[2] / "bin")
+                env["PATH"] = f"{venv_bin}:{env.get('PATH', '')}"
+    return env
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--channel", default="tzuyang")
@@ -364,30 +406,8 @@ def main(argv: list[str] | None = None) -> int:
         current_source_revision, rpc_transport, observe_deliveries, local_video_inputs_present,
     )
     hosted = set(hosted_youtube)
-    env = os.environ.copy()
-    python = env.get("PYTHON_CMD")
-    if not python or not Path(python).is_file():
-        for root in (REPO_ROOT, REPO_ROOT.parent / "tzudong"):
-            candidate = root / ".venv" / "bin" / "python3"
-            if candidate.is_file():
-                python = str(candidate)
-                break
-        if not python:
-            python = "python3"
-    env["PYTHON_CMD"] = python
-    venv_site = None
-    for root in (REPO_ROOT, REPO_ROOT.parent / "tzudong"):
-        candidate_lib = root / ".venv" / "lib"
-        if candidate_lib.is_dir():
-            matches = sorted(candidate_lib.glob("python3.*/site-packages"))
-            if matches:
-                venv_site = str(matches[-1])
-                break
-    if venv_site:
-        current_pp = env.get("PYTHONPATH", "")
-        env["PYTHONPATH"] = f"{venv_site}:{current_pp}" if current_pp else venv_site
-        venv_bin = str(Path(venv_site).parents[2] / "bin")
-        env["PATH"] = f"{venv_bin}:{env.get('PATH', '')}"
+    env = _resolve_python_env(os.environ.copy())
+    python = env["PYTHON_CMD"]
     crawling = REPO_ROOT / "backend/restaurant-crawling/data" / args.channel
     evaluation = REPO_ROOT / "backend/restaurant-evaluation/data" / args.channel
     urls_path = crawling / "urls.txt"
