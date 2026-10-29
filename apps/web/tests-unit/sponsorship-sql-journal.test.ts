@@ -195,7 +195,7 @@ function integrationFixture(directory: string) {
   const source = { revision: 'a'.repeat(40), tree: 'b'.repeat(40), clean: true,
     repositoryMatched: true, filesSha256: 'c'.repeat(64) };
   const admission = {
-    kind: 'sponsorship_scoped_admission_v2', authority: 'authenticated-repository-owner-local-cli',
+    kind: 'sponsorship_scoped_admission_v3', authority: 'authenticated-repository-owner-local-cli',
     operationId, projectRef: record.manifest.projectRef, databaseName: 'postgres',
     manifestSha256: MANIFEST_SHA256, bundleSha256: record.manifest.bundleSha256, scopeSha256: hash(JSON.stringify(record.manifest.scope)),
     sourceRevision: source.revision, sourceTree: source.tree, sourceFilesSha256: source.filesSha256,
@@ -222,6 +222,8 @@ function integrationFixture(directory: string) {
     readSource: () => ({ ...source }), readAdmission: () => structuredClone(admission),
     readFences: () => ({ generalFreeze: 'active', githubProducer: 'disabled_manually' }),
     readProtectedMain: () => ({ ...admission.protectedMain }),
+    // Explicit synthetic adapters; production binds the private predecessor reader.
+    readPredecessor: () => undefined, validateBeforeImage: (_before: unknown) => undefined,
     transport: (_url: string, sql: string, singleTransaction: boolean) => {
       assert.equal(singleTransaction, true);
       calls.push({ sql, readOnly: sql.startsWith('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;') });
