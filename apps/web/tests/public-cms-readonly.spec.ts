@@ -165,8 +165,14 @@ for (const size of sizes.slice(1, 3)) {
     await expect(empty).toBeVisible();
     const search = page.getByPlaceholder('맛집명 검색…');
     if (!(await search.isVisible())) await page.getByRole('button', { name: '도장 필터 펼치기', exact: true }).click();
-    outage = true;
+    const readsBeforeOffline = reads;
+    await page.context().setOffline(true);
     await search.fill('합성읽기검증');
+    await expect(empty).toBeHidden();
+    await expect(error).toBeHidden();
+    expect(reads).toBe(readsBeforeOffline);
+    outage = true;
+    await page.context().setOffline(false);
     await expect.poll(() => readStates.some(read => read.search && read.outage), { timeout: 15_000 }).toBe(true);
     // The installed SDK retries 503 reads before Query's own retries finish.
     await expect(error).toBeVisible({ timeout: 45_000 });
