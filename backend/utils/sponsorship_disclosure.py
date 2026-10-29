@@ -54,6 +54,25 @@ def _normalized_source(source):
     return "".join(chars), spans
 
 
+def _without_fenced_code(text):
+    # Carry fence state across blank paragraphs, including an unclosed fence.
+    # Mask in place so emitted names retain their original source offsets.
+    fence = None
+    lines = []
+    for line in text.split("\n"):
+        inside = fence is not None
+        if fence:
+            close = re.fullmatch(r" *(`{3,}|~{3,}) *", line)
+            if close and close.group(1)[0] == fence[0] and len(close.group(1)) >= fence[1]:
+                fence = None
+        else:
+            opening = re.fullmatch(r" *(`{3,}|~{3,})(.*)", line)
+            if opening and (opening.group(1)[0] != "`" or "`" not in opening.group(2)):
+                fence = (opening.group(1)[0], len(opening.group(1)))
+        lines.append(" " * len(line) if inside or fence is not None else line)
+    return "\n".join(lines)
+
+
 def _valid_name(name):
     if not 1 <= len(name) <= 80 or not any(unicodedata.category(c).startswith("L") for c in name):
         return False
@@ -112,6 +131,7 @@ def analyze_disclosure(source):
     if not isinstance(source, str):
         return result("unknown", "description_unavailable")
     text, spans = _normalized_source(source)
+    text = _without_fenced_code(text)
     names, seen = [], set()
     negative = False
     ambiguous = False

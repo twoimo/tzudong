@@ -23,6 +23,19 @@ class DisclosureTests(unittest.TestCase):
                 self.assertTrue(result["sponsor_analysis"]["retained_previous"])
                 self.assertEqual(confirmed_sponsorship_fields(result), {})
 
+    def test_fenced_examples_across_paragraphs_preserve_saved_attribution(self):
+        for statement in ["This video is not sponsored.", "This video is sponsored by ACME."]:
+            for fence in ["```", "~~~"]:
+                description = f"{fence}\n\n{statement}\n\n{fence}"
+                self.assertEqual(confirmed_sponsorship_fields(analyze_disclosure(description)), {})
+                for prior in [{"is_ads": True, "what_ads": ["SavedCo"]},
+                              {"is_ads": False, "what_ads": None}]:
+                    result = supplement_ads(description, prior, "old description")
+                    self.assertEqual(result["is_ads"], prior["is_ads"])
+                    self.assertEqual(result["what_ads"], prior["what_ads"])
+                    self.assertTrue(result["sponsor_analysis"]["retained_previous"])
+                    self.assertEqual(confirmed_sponsorship_fields(result), {})
+
     def test_shared_golden_cases(self):
         for case in json.loads(FIXTURE.read_text()):
             with self.subTest(case=case["id"]):

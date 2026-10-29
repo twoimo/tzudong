@@ -66,6 +66,25 @@ function normalizedSource(source: string) {
     return { text, spans };
 }
 
+function withoutFencedCode(text: string): string {
+    // Carry fence state across blank paragraphs, including an unclosed fence.
+    // Mask UTF-16 units in place so emitted names retain their source offsets.
+    let fence: { marker: string; length: number } | null = null;
+    return text.split('\n').map((line) => {
+        const inside = fence !== null;
+        if (fence) {
+            const close = line.match(/^ *(`{3,}|~{3,}) *$/u);
+            if (close && close[1][0] === fence.marker && close[1].length >= fence.length) fence = null;
+        } else {
+            const open = line.match(/^ *(`{3,}|~{3,})(.*)$/u);
+            if (open && (open[1][0] !== '`' || !open[2].includes('`'))) {
+                fence = { marker: open[1][0], length: open[1].length };
+            }
+        }
+        return inside || fence !== null ? ' '.repeat(line.length) : line;
+    }).join('\n');
+}
+
 function validName(value: string) {
     return Array.from(value).length >= 1 && Array.from(value).length <= 80
         && !/[.!?]\s/u.test(value) && /\p{L}/u.test(value) && /^[\p{L}\p{N} &.'’()-]+$/u.test(value)
@@ -106,7 +125,9 @@ export function analyzeDisclosure(source: unknown): Disclosure {
             source: 'description_rules', version: DISCLOSURE_VERSION, source_sha256: digest },
     });
     if (typeof source !== 'string') return result('unknown', 'description_unavailable');
-    const { text, spans } = normalizedSource(source);
+    const normalized = normalizedSource(source);
+    const text = withoutFencedCode(normalized.text);
+    const spans = normalized.spans;
     const names: string[] = [];
     const seen = new Set<string>();
     let hasNegative = false;

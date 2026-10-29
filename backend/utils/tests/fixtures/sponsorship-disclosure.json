@@ -802,5 +802,175 @@
     "description": "This video is sponsored by ACME\nand\nBeta\nKorea.",
     "outcome": "unknown",
     "names": null
+  },
+  {
+    "id": "review-fence-backtick-negative",
+    "description": "```\n\nThis video is not sponsored.\n\n```",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-backtick-positive",
+    "description": "```\n\nThis video is sponsored by ACME.\n\n```",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-tilde-positive",
+    "description": "~~~text\n\nThis video is sponsored by ACME.\n\n~~~",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-tilde-negative",
+    "description": "~~~\n\nThis video is not sponsored.\n\n~~~",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-unclosed-negative",
+    "description": "```\n\nThis video is not sponsored.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-unclosed-positive",
+    "description": "~~~python\n\nThis video is sponsored by ACME.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-short-close",
+    "description": "````\n\nThis video is not sponsored.\n\n```\n\nThis video is sponsored by ACME.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-wrong-close-marker",
+    "description": "```\n\nThis video is not sponsored.\n~~~\n\nThis video is sponsored by ACME.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-close-with-text",
+    "description": "```\n\nThis video is not sponsored.\n```not a close\n\nThis video is sponsored by ACME.",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-longer-close",
+    "description": "```text\n\nThis video is not sponsored.\n\n````\n\nThis video is sponsored by ACME.",
+    "outcome": "detected",
+    "names": [
+      "ACME"
+    ]
+  },
+  {
+    "id": "review-fence-tilde-longer-close",
+    "description": "~~~~\n\nThis video is sponsored by ACME.\n~~~~~\n\nThis video is not sponsored.",
+    "outcome": "confirmed_none",
+    "names": null
+  },
+  {
+    "id": "review-fence-indented",
+    "description": "   ```text\n\nThis video is sponsored by ACME.\n\n   ```",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-deeply-indented",
+    "description": "     ```\n\nThis video is not sponsored.\n\n     ```",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-nested-shorter-fence",
+    "description": "````text\n```\n\nThis video is sponsored by ACME.\n\n```\n````",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-after-code-no-blank",
+    "description": "```\nThis video is not sponsored.\n```\nThis video is sponsored by ACME.",
+    "outcome": "detected",
+    "names": [
+      "ACME"
+    ]
+  },
+  {
+    "id": "review-fence-before-code-no-blank",
+    "description": "This video is sponsored by ACME.\n```\n\nThis video is not sponsored.\n\n```",
+    "outcome": "detected",
+    "names": [
+      "ACME"
+    ]
+  },
+  {
+    "id": "review-fence-outside-negative",
+    "description": "This video is not sponsored.\n\n```\n\nThis video is sponsored by ACME.\n\n```",
+    "outcome": "confirmed_none",
+    "names": null
+  },
+  {
+    "id": "review-fence-outside-after-two-blocks",
+    "description": "```\n\nThis video is not sponsored.\n\n```\n\n~~~\n\nThis video is sponsored by ACME.\n\n~~~\n\nThis video is sponsored by Beta.",
+    "outcome": "detected",
+    "names": [
+      "Beta"
+    ]
+  },
+  {
+    "id": "review-fence-crlf",
+    "description": "```text\r\n\r\nThis video is sponsored by ACME.\r\n\r\n```",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-unicode-line-separator",
+    "description": "```  This video is not sponsored.  ```",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-compatibility-backticks",
+    "description": "｀｀｀\n\nThis video is sponsored by ACME.\n\n｀｀｀",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-offset-after-emoji-code",
+    "description": "```\n🍽️\n\nThis video is not sponsored.\n```\n\nThis video is sponsored by Café.",
+    "outcome": "detected",
+    "names": [
+      "Café"
+    ]
+  },
+  {
+    "id": "review-fence-offset-after-jamo-code",
+    "description": "~~~\n가\n\nThis video is not sponsored.\n~~~\n\n본 영상은 한글의 협찬입니다.",
+    "outcome": "detected",
+    "names": [
+      "한글"
+    ]
+  },
+  {
+    "id": "review-fence-fenced-contradictions",
+    "description": "```\n\nThis video is not sponsored.\n\nThis video is sponsored by ACME.\n\n```",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-first-line-opener-and-language",
+    "description": "```korean\n\n본 영상은 ACME의 협찬입니다.\n\n```",
+    "outcome": "unknown",
+    "names": null
+  },
+  {
+    "id": "review-fence-empty-code-outside",
+    "description": "```\n\n```\n\nThis video is sponsored by ACME.",
+    "outcome": "detected",
+    "names": [
+      "ACME"
+    ]
   }
 ]

@@ -18,6 +18,17 @@ describe('offline first-party disclosure shared contract', () => {
             expect({ ...existing, ...changes }).toEqual(existing);
         }
     });
+    test('fenced examples across paragraphs emit no attribution overwrite', () => {
+        for (const statement of ['This video is not sponsored.', 'This video is sponsored by ACME.']) {
+            for (const fence of ['```', '~~~']) {
+                const changes = confirmedSponsorshipChanges(analyzeDisclosure(`${fence}\n\n${statement}\n\n${fence}`));
+                expect(changes).toEqual({});
+                for (const existing of [{ is_ads: true, what_ads: ['SavedCo'] }, { is_ads: false, what_ads: null }]) {
+                    expect({ ...existing, ...changes }).toEqual(existing);
+                }
+            }
+        }
+    });
     for (const fixture of cases) {
         test(fixture.id, () => {
             const result = analyzeDisclosure(fixture.description);
