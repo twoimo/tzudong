@@ -325,7 +325,7 @@ export default function StampPage() {
 
     // --- 데이터 패칭: 맛집 정보 ---
     // 병합된 전체 맛집 수 조회 (useRestaurants 훅 사용 - 병합 로직 적용됨)
-    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading, isError: isRestaurantsError, refetch: refetchRestaurants } = useRestaurants({
+    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading, isError: isRestaurantsError, isSuccess: isRestaurantsSuccess, refetch: refetchRestaurants } = useRestaurants({
         enabled: true,
         includeVerifiedReviewCounts: false,
     });
@@ -367,7 +367,7 @@ export default function StampPage() {
     }, [allMergedRestaurants, authLoading, isRestaurantsLoading, reviewContinuationQuery, router, user]);
 
     // 검색 시 사용할 전체 맛집 데이터 조회 (RPC 함수 사용)
-    const { data: allRestaurants = [], isLoading: isSearchLoading, isError: isSearchError, refetch: refetchSearch } = useQuery({
+    const { data: allRestaurants = [], isLoading: isSearchLoading, isError: isSearchError, isSuccess: isSearchSuccess, refetch: refetchSearch } = useQuery({
         queryKey: ['all-restaurants', searchQuery],
         queryFn: async () => {
             if (!searchQuery.trim()) return [];
@@ -903,6 +903,7 @@ export default function StampPage() {
     // [Check before render]
     const isStampSearchActive = !!searchQuery.trim();
     const isStampReadError = isStampSearchActive ? isSearchError : isRestaurantsError;
+    const isStampReadSuccess = isStampSearchActive ? isSearchSuccess : isRestaurantsSuccess;
     const isStampDynamicLoading = !isMounted || (isStampSearchActive ? isSearchLoading : isRestaurantsLoading);
     const shouldShowStampFilterToggle = !isMounted || isMobileOrTablet;
     const shouldShowStampViewToggle = isMounted && !isMobileOrTablet;
@@ -1154,7 +1155,7 @@ export default function StampPage() {
                             className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background"
                             data-stamp-loading-behavior="static-shell-dynamic-skeleton"
                         >
-                            {!isStampDynamicLoading && !isStampReadError && filteredAndSortedRestaurants.length === 0 && (
+                            {!isStampDynamicLoading && isStampReadSuccess && filteredAndSortedRestaurants.length === 0 && (
                                 <div role="status" className="mb-4 grid min-h-40 place-items-center rounded-2xl border border-dashed border-border bg-muted/30 p-5 text-center text-sm text-muted-foreground">
                                     <div>
                                         <Trophy className="mx-auto mb-2 h-10 w-10 rounded-full bg-primary/10 p-2 text-primary/70" aria-hidden="true" />
