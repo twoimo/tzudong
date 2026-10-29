@@ -372,6 +372,9 @@ jobs:
       - name: Verify fixed pending custody SQL operation
         run: node --test apps/web/scripts/__tests__/hosted-pending-custody-operation.test.mjs
 
+      - name: Verify transcript collector Python environment binding
+        run: node --test backend/restaurant-crawling/scripts/tests/collect-transcript-env.test.mjs
+
       - name: Verify pipeline receipts, review completeness and resource limits
         run: |
           command -v jq
