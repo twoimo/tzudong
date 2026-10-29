@@ -130,8 +130,15 @@ def validate(payload: object, files: dict[str, int]) -> dict:
         file = site["file"]
         if not isinstance(file, str) or file not in files:
             fail()
-        if not count(site["test_index"]) or type(site["line"]) is not int or not 1 <= site["line"] <= files[file]:
+        line = site["line"]
+        if not count(site["test_index"]):
             fail()
+        # v2 records may carry a line-less site: Bun omits the line attribute
+        # when an entry has no recorded source position. Legacy v1 stays
+        # integer-only.
+        if legacy or line is not None:
+            if type(line) is not int or not 1 <= line <= files[file]:
+                fail()
         if site["kind"] not in {"failure", "error"}:
             fail()
         identity = (file, site["test_index"])
@@ -185,6 +192,16 @@ def derive(data: dict, root: Path) -> dict:
             skipped += 1
         elif outcomes:
             failed += 1
+            if "line" not in case.attrib:
+                # Bun omits the line attribute when a test entry has no
+                # recorded source position (test_command.rs writes line only
+                # when line_no > 0), e.g. All-scope hook error entries. Keep the
+                # admitted file and positional index as a line-less site instead
+                # of discarding the whole run as an opaque gap. Only an ABSENT
+                # attribute admits this: a present-but-empty line="" is not
+                # evidence of an omitted attribute and stays a bad_line gap.
+                sites.append({"file": file, "test_index": index, "line": None, "kind": outcomes[0]})
+                continue
             line = case.get("line", "")
             if not line.isascii() or not line.isdigit():
                 reject("bad_line")
