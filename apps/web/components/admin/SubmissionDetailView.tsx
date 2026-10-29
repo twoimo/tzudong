@@ -1,4 +1,5 @@
 'use client';
+import { sponsorshipLabel, sponsorshipState, type SponsorshipInfo, type SponsorshipAnalysis } from '@/lib/sponsorship-state';
 import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
@@ -70,7 +71,9 @@ export interface SubmissionItem {
             published_at?: string;
             duration?: number;
             is_shorts?: boolean;
-            is_ads?: boolean;
+            is_ads?: boolean | null;
+            sponsor_analysis?: SponsorshipAnalysis;
+            ads_info?: SponsorshipInfo;
             what_ads?: string[] | null;
         } | null;
     } | null;
@@ -113,7 +116,9 @@ export interface SubmissionRecord {
             published_at?: string;
             duration?: number;
             is_shorts?: boolean;
-            is_ads?: boolean;
+            is_ads?: boolean | null;
+            sponsor_analysis?: SponsorshipAnalysis;
+            ads_info?: SponsorshipInfo;
             what_ads?: string[] | null;
         } | null;
     } | null;
@@ -148,7 +153,7 @@ export interface ItemDecision {
         publishedAt: string;
         duration: number;
         is_shorts: boolean;
-        ads_info: { is_ads: boolean; what_ads: string[] | null };
+        ads_info: SponsorshipInfo;
     } | null;
 }
 
@@ -275,7 +280,7 @@ async function fetchYoutubeMetadata(youtubeLink: string): Promise<{
     publishedAt: string;
     duration: number;
     is_shorts: boolean;
-    ads_info: { is_ads: boolean; what_ads: string[] | null };
+    ads_info: SponsorshipInfo;
 } | null> {
     const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(youtubeLink);
     if (!canonicalYoutubeUrl) return null;
@@ -877,7 +882,7 @@ export function SubmissionDetailView({
                                             ) : (
                                                 <Sparkles className="h-3 w-3 mr-1" />
                                             )}
-                                            {decision?.metaFetched ? '메타 완료' : '메타데이터 가져오기'}
+                                            {decision?.metaFetched ? '기본 메타 완료' : '메타데이터 가져오기'}
                                         </Button>
                                     </div>
 
@@ -931,16 +936,9 @@ export function SubmissionDetailView({
                                                         {metaData.is_shorts && <Badge variant="outline" className="ml-1 text-2xs">Shorts</Badge>}
                                                     </p>
                                                     <div className="flex items-center gap-1">
-                                                        {metaData.ads_info.is_ads ? (
-                                                            <>
-                                                                <Badge variant="destructive" className="text-2xs">광고</Badge>
-                                                                {metaData.ads_info.what_ads && metaData.ads_info.what_ads.length > 0 && (
-                                                                    <span className="text-muted-foreground">({metaData.ads_info.what_ads.join(', ')})</span>
-                                                                )}
-                                                            </>
-                                                        ) : (
-                                                            <Badge variant="secondary" className="text-2xs">광고 아님</Badge>
-                                                        )}
+                                                        <Badge variant={sponsorshipState(metaData.ads_info) === 'detected' ? 'destructive' : 'secondary'} className="text-2xs">
+                                                            {sponsorshipLabel(metaData.ads_info)}
+                                                        </Badge>
                                                     </div>
                                                 </div>
                                             ) : (
@@ -1015,16 +1013,9 @@ export function SubmissionDetailView({
                                                                     {originalMeta.is_shorts && <Badge variant="outline" className="ml-1 text-2xs">Shorts</Badge>}
                                                                 </p>
                                                                 <div className="flex items-center gap-1">
-                                                                    {originalMeta.is_ads ? (
-                                                                        <>
-                                                                            <Badge variant="destructive" className="text-2xs">광고</Badge>
-                                                                            {originalMeta.what_ads && originalMeta.what_ads.length > 0 && (
-                                                                                <span className="text-muted-foreground">({originalMeta.what_ads.join(', ')})</span>
-                                                                            )}
-                                                                        </>
-                                                                    ) : (
-                                                                        <Badge variant="secondary" className="text-2xs">광고 아님</Badge>
-                                                                    )}
+                                                                    <Badge variant={sponsorshipState(originalMeta.ads_info ?? originalMeta) === 'detected' ? 'destructive' : 'secondary'} className="text-2xs">
+                                                                        {sponsorshipLabel(originalMeta.ads_info ?? originalMeta)}
+                                                                    </Badge>
                                                                 </div>
                                                             </div>
                                                         ) : (

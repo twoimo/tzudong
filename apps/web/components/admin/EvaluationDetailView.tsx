@@ -1,3 +1,4 @@
+import { sponsorshipLabel } from '@/lib/sponsorship-state';
 import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import React, { useState, useEffect, useMemo, useCallback, useId, memo } from 'react';
 import Image from 'next/image';
@@ -678,9 +679,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                     {formattedPublishedAt}
                                 </InfoItem>
                                 <InfoItem label="광고">
-                                    {record.youtube_meta?.ads_info?.is_ads
-                                        ? `있음 (${record.youtube_meta.ads_info.what_ads})`
-                                        : '없음'}
+                                    {sponsorshipLabel(record.youtube_meta?.ads_info)}
                                 </InfoItem>
                             </div>
                             <InfoItem label="링크">

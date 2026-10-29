@@ -1,3 +1,4 @@
+import { youtubeMetadataChanges, sponsorshipState, sponsorshipLabel, manualSponsorshipChanges } from '@/lib/sponsorship-state';
 import {
     useState,
     useEffect,
@@ -384,7 +385,8 @@ function AdminRestaurantEditor({
         address_elements: null as AddressElementsValue,
         phone: "",
         categories: [] as string[],
-        youtube_reviews: [] as { id: string; youtube_link: string; tzuyang_review: string }[],
+        youtube_reviews: [] as { id: string; youtube_link: string; tzuyang_review: string;
+            sponsorshipDecision?: 'detected' | 'confirmed_none'; sponsorCompanies?: string }[],
         lat: "",
         lng: "",
     });
@@ -775,6 +777,11 @@ function AdminRestaurantEditor({
             toast.error('새 영상 링크와 쯔양 리뷰를 입력해주세요'); return;
         }
         const originalRows = new Map([...(restaurant ? [restaurant, ...(restaurant.mergedRestaurants ?? [])] : [])].map(row => [row.id, row]));
+        for (const review of formData.youtube_reviews) {
+            if (review.sponsorshipDecision && !manualSponsorshipChanges(review.sponsorshipDecision, review.sponsorCompanies)) {
+                toast.error('광고를 확정하려면 회사명을 한 줄에 하나씩 입력해주세요.'); return;
+            }
+        }
         const perTargetChanges: Array<{ id: string; changes: RestaurantRecordChanges }> = [];
         for (const review of formData.youtube_reviews.filter(row => !row.id.startsWith('new-') && !!restaurant)) {
             const original = originalRows.get(review.id);
@@ -785,6 +792,7 @@ function AdminRestaurantEditor({
                 changes.youtube_link = canonical;
             }
             if (review.tzuyang_review.trim() !== (original?.tzuyang_review ?? '').trim()) changes.tzuyang_review = review.tzuyang_review.trim() || null;
+            if (review.sponsorshipDecision) changes.youtube_meta = manualSponsorshipChanges(review.sponsorshipDecision, review.sponsorCompanies)!;
             if (Object.keys(changes).length > 0) perTargetChanges.push({ id: review.id, changes });
         }
         setIsSubmitting(true);
@@ -810,17 +818,12 @@ function AdminRestaurantEditor({
             for (const review of newReviews) {
                 const video = toVideoChanges(review);
                 const meta = await fetchYouTubeMeta(video.youtube_link!);
-                const ads = meta?.ads_info && typeof meta.ads_info === 'object' ? meta.ads_info : meta;
-                const whatAds = ads?.what_ads;
-                // Keep only the public DTO fields; provider diagnostics never enter a request or log.
-                const youtube_meta: RestaurantRecordChanges['youtube_meta'] = meta && typeof meta === 'object' ? {
-                    ...(typeof meta.title === 'string' ? { title: meta.title } : {}),
-                    ...(typeof (meta.published_at ?? meta.publishedAt) === 'string' ? { published_at: meta.published_at ?? meta.publishedAt } : {}),
-                    ...(typeof meta.duration === 'number' ? { duration: meta.duration } : {}),
-                    ...(typeof meta.is_shorts === 'boolean' ? { is_shorts: meta.is_shorts } : {}),
-                    ...(typeof ads?.is_ads === 'boolean' ? { is_ads: ads.is_ads } : {}),
-                    ...(typeof whatAds === 'string' ? { what_ads: [whatAds] } : whatAds === null ? { what_ads: null } : Array.isArray(whatAds) && whatAds.every((item: unknown) => typeof item === 'string') ? { what_ads: whatAds } : {}),
-                } : undefined;
+                const youtube_meta = review.sponsorshipDecision
+                    ? { ...youtubeMetadataChanges(meta), ...manualSponsorshipChanges(review.sponsorshipDecision, review.sponsorCompanies) }
+                    : youtubeMetadataChanges(meta);
+                if (!review.sponsorshipDecision && meta && sponsorshipState(meta.ads_info ?? meta) === 'unknown') {
+                    toast.warning('기본 메타데이터는 가져왔습니다. 광고 판정은 미확인이며 기존 광고 정보는 변경하지 않습니다.');
+                }
                 if (!youtube_meta) toast.warning('영상 메타데이터를 가져오지 못했습니다. 입력한 영상과 리뷰를 확인해주세요.');
                 additions.push({ ...completeChanges, ...video, ...(youtube_meta ? { youtube_meta } : {}) });
             }
@@ -1342,6 +1345,31 @@ function AdminRestaurantEditor({
                                                         placeholder="쯔양이 어떤 리뷰를 남겼는지 입력해주세요..."
                                                         rows={3}
                                                     />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor={`sponsorship_${index}`} className="text-xs">광고 판정</Label>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {sponsorshipLabel(((restaurant ? [restaurant, ...(restaurant.mergedRestaurants ?? [])] : [])
+                                                            .find(row => row.id === review.id)?.youtube_meta as { ads_info?: unknown } | null)?.ads_info)}
+                                                    </p>
+                                                    <select id={`sponsorship_${index}`} className="w-full rounded-md border bg-background p-2 text-sm"
+                                                        value={review.sponsorshipDecision ?? 'keep'}
+                                                        onChange={event => {
+                                                            const decision = event.target.value;
+                                                            setFormData(previous => ({ ...previous, youtube_reviews: previous.youtube_reviews.map((row, i) => i === index
+                                                                ? { ...row, sponsorshipDecision: decision === 'detected' || decision === 'confirmed_none' ? decision : undefined }
+                                                                : row) }));
+                                                        }}>
+                                                        <option value="keep">기존 판정 유지 (새 영상은 자동 판정)</option>
+                                                        <option value="detected">광고 있음으로 직접 확정</option>
+                                                        <option value="confirmed_none">광고 아님으로 직접 확정</option>
+                                                    </select>
+                                                    {review.sponsorshipDecision === 'detected' && <>
+                                                        <Label htmlFor={`sponsor_companies_${index}`} className="text-xs">광고 회사명 (한 줄에 하나)</Label>
+                                                        <Textarea id={`sponsor_companies_${index}`} value={review.sponsorCompanies ?? ''} rows={2}
+                                                            onChange={event => setFormData(previous => ({ ...previous,
+                                                                youtube_reviews: previous.youtube_reviews.map((row, i) => i === index ? { ...row, sponsorCompanies: event.target.value } : row) }))} />
+                                                    </>}
                                                 </div>
                                             </Card>
                                         ))}
