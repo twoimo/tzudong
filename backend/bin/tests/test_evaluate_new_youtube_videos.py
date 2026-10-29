@@ -500,11 +500,6 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
         self.assertIn("apply_hosted_pending_candidates.py", runner)
         self.assertIn("TZUDONG_PIPELINE_SOURCE", runner)
 
-if __name__ == "__main__":
-    unittest.main()
-
-
-
 class ResolvePythonEnvTests(unittest.TestCase):
     def _make_venv(self, root: Path) -> Path:
         venv_bin = root / ".venv" / "bin"
@@ -540,10 +535,9 @@ class ResolvePythonEnvTests(unittest.TestCase):
             fake_py = fakebin / "python3"
             fake_py.write_text("#!/bin/sh\n", encoding="utf-8")
             fake_py.chmod(0o755)
-            with patch.dict("os.environ", {"PATH": str(fakebin)}):
-                env = module._resolve_python_env(
-                    {"PATH": str(fakebin), "PYTHON_CMD": "python3", "PYTHONPATH": "/operator/lib"},
-                    roots=(root,))
+            env = module._resolve_python_env(
+                {"PATH": str(fakebin), "PYTHON_CMD": "python3", "PYTHONPATH": "/operator/lib"},
+                roots=(root,))
             self.assertEqual(env["PYTHON_CMD"], str(fake_py))
             self.assertEqual(env["PYTHONPATH"], "/operator/lib")
             self.assertNotIn(".venv", env["PATH"].split(":")[0])
@@ -561,3 +555,7 @@ class ResolvePythonEnvTests(unittest.TestCase):
             self.assertEqual(env["PYTHON_CMD"], str(ext_py))
             self.assertNotIn(".venv", env.get("PYTHONPATH", ""))
             self.assertNotIn(".venv", env["PATH"])
+
+
+if __name__ == "__main__":
+    unittest.main()
