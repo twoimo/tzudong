@@ -98,7 +98,7 @@ jobs:
           ! git symbolic-ref -q HEAD
 
       - name: Set up the platform-aware private Docker runtime
-        uses: docker/setup-docker-action@2bf61fb9464cc67f0cbdeabed6aa0380accd1c70 # v5
+        uses: docker/setup-docker-action@7ec28a010822b4626af4874f9448a4b05ac6f3e5 # v5
         with:
           version: v29.8.2
           context: tzudong-catalog-ci
