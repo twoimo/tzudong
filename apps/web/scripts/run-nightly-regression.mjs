@@ -18,6 +18,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { realpathSync } from 'node:fs';
 import { config as loadEnv } from 'dotenv';
+import { assertHostedNightlyTargetAllowed } from './nightly-target-guard.mjs';
 import {
   completeNightlyCleanupTasks,
   preparePrivatePlaywrightReport,
@@ -940,6 +941,7 @@ function validateHostedEnvironment(environment) {
     throw new Error('Hosted nightly Supabase project reference is invalid.');
   }
   const parsedUrl = new URL(environment.NEXT_PUBLIC_SUPABASE_URL.trim());
+  assertHostedNightlyTargetAllowed(projectRef, parsedUrl);
   const expectedHost = `${projectRef}.supabase.co`;
   if (
     parsedUrl.protocol !== 'https:'
