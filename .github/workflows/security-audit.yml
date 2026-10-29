@@ -54,6 +54,8 @@ on:
       - 'backend/utils/tests/test_pipeline_restart_integration.py'
       - 'backend/utils/tests/resource-budget.test.mjs'
       - 'backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh'
+      - 'backend/restaurant-crawling/scripts/03-collect-transcript.js'
+      - 'backend/restaurant-crawling/scripts/tests/collect-transcript-env.test.mjs'
       - 'backend/bin/tests/test_check_deployment_descriptor_set_unittest.py'
       - 'backend/bin/tests/test_metrics_contract_report_unittest.py'
       - 'backend/bin/tests/test_observability_up_unittest.py'
@@ -371,6 +373,9 @@ jobs:
 
       - name: Verify fixed pending custody SQL operation
         run: node --test apps/web/scripts/__tests__/hosted-pending-custody-operation.test.mjs
+
+      - name: Verify transcript collector Python environment binding
+        run: node --test backend/restaurant-crawling/scripts/tests/collect-transcript-env.test.mjs
 
       - name: Verify pipeline receipts, review completeness and resource limits
         run: |

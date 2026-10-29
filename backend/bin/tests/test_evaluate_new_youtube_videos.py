@@ -500,5 +500,62 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
         self.assertIn("apply_hosted_pending_candidates.py", runner)
         self.assertIn("TZUDONG_PIPELINE_SOURCE", runner)
 
+class ResolvePythonEnvTests(unittest.TestCase):
+    def _make_venv(self, root: Path) -> Path:
+        venv_bin = root / ".venv" / "bin"
+        venv_bin.mkdir(parents=True, exist_ok=True)
+        venv_py = venv_bin / "python3"
+        venv_py.write_text("#!/bin/sh\n", encoding="utf-8")
+        venv_py.chmod(0o755)
+        site = root / ".venv" / "lib" / "python3.12" / "site-packages"
+        site.mkdir(parents=True, exist_ok=True)
+        return site
+
+    def test_unset_python_cmd_falls_back_to_repo_venv_and_binds_packages(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            site = self._make_venv(root)
+            env = module._resolve_python_env({"PATH": "/usr/bin"}, roots=(root,))
+            self.assertEqual(env["PYTHON_CMD"], str(root / ".venv" / "bin" / "python3"))
+            self.assertTrue(env["PYTHONPATH"].startswith(str(site)))
+            self.assertTrue(env["PATH"].startswith(str(root / ".venv" / "bin")))
+
+    def test_unset_python_cmd_without_venv_uses_plain_python3(self):
+        with tempfile.TemporaryDirectory() as td:
+            env = module._resolve_python_env({"PATH": "/usr/bin"}, roots=(Path(td),))
+            self.assertEqual(env["PYTHON_CMD"], "python3")
+            self.assertNotIn(".venv", env.get("PYTHONPATH", ""))
+
+    def test_explicit_command_name_is_resolved_through_path_not_overridden(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            self._make_venv(root)
+            fakebin = root / "fakebin"
+            fakebin.mkdir()
+            fake_py = fakebin / "python3"
+            fake_py.write_text("#!/bin/sh\n", encoding="utf-8")
+            fake_py.chmod(0o755)
+            env = module._resolve_python_env(
+                {"PATH": str(fakebin), "PYTHON_CMD": "python3", "PYTHONPATH": "/operator/lib"},
+                roots=(root,))
+            self.assertEqual(env["PYTHON_CMD"], str(fake_py))
+            self.assertEqual(env["PYTHONPATH"], "/operator/lib")
+            self.assertNotIn(".venv", env["PATH"].split(":")[0])
+
+    def test_explicit_absolute_interpreter_gets_no_venv_package_injection(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            self._make_venv(root)
+            ext = root / "external" / "bin"
+            ext.mkdir(parents=True)
+            ext_py = ext / "python3"
+            ext_py.write_text("#!/bin/sh\n", encoding="utf-8")
+            env = module._resolve_python_env(
+                {"PATH": "/usr/bin", "PYTHON_CMD": str(ext_py)}, roots=(root,))
+            self.assertEqual(env["PYTHON_CMD"], str(ext_py))
+            self.assertNotIn(".venv", env.get("PYTHONPATH", ""))
+            self.assertNotIn(".venv", env["PATH"])
+
+
 if __name__ == "__main__":
     unittest.main()
