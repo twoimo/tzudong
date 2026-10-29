@@ -18,6 +18,7 @@ const labels: Record<string, string> = {
   youtube_link: '영상 링크', tzuyang_review: '영상 리뷰', road_address: '도로명 주소', jibun_address: '지번 주소', english_address: '영문 주소', restaurant_address: '주소',
   address_elements: '주소 정보', lat: '위도', lng: '경도', geocoding_success: '주소 확인', youtube_meta: '영상 정보', title: '영상 제목',
   published_at: '게시일', duration: '길이(초)', is_shorts: '쇼츠', is_ads: '광고', what_ads: '광고 내용',
+  sponsorship_confirmation: '광고 판정 직접 확정', detected: '광고 있음', confirmed_none: '광고 아님',
 };
 function ProposedValue({ value }: { value: unknown }) {
   if (value === null) return <span>비움</span>;

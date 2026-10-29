@@ -1,3 +1,4 @@
+import { youtubeMetadataChanges } from '@/lib/sponsorship-state';
 import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import { useRecordAction } from '@/lib/admin/use-record-action';
 import { shouldNotifyRecordActionError, recordActionErrorMessage } from '@/lib/admin/record-action-client';
@@ -96,10 +97,7 @@ function DbConflictEditor({ record: incomingRecord, open, onOpenChange, onSucces
     try {
       const meta = record.youtube_meta;
       const incomingChanges: RestaurantRecordChanges = {
-        ...(meta ? { youtube_meta: {
-          title: meta.title, published_at: meta.publishedAt, duration: meta.duration, is_shorts: meta.is_shorts,
-          is_ads: meta.ads_info.is_ads, what_ads: meta.ads_info.what_ads ? [meta.ads_info.what_ads] : null,
-        } } : {}),
+        ...(meta ? { youtube_meta: youtubeMetadataChanges(meta) } : {}),
         youtube_link: canonicalYoutubeUrl, tzuyang_review: newInfo.tzuyang_review || null,
         ...(newInfo.category ? { categories: [newInfo.category] as RestaurantRecordChanges['categories'] } : {}),
       };

@@ -478,11 +478,10 @@ describe('public API security source contracts', () => {
     expect(youtubeMetaSource).not.toContain("searchParams.set('key'");
     expect(youtubeMetaSource).toContain("MAX_REQUEST_BYTES = 2 * 1024");
     expect(youtubeMetaSource).toContain("MAX_PROVIDER_BYTES = 512 * 1024");
-    expect(youtubeMetaSource).toContain("response_format: {");
-    expect(youtubeMetaSource).toContain("type: 'json_schema'");
-    expect(youtubeMetaSource).toContain("max_completion_tokens: 256");
-    expect(youtubeMetaSource).toContain("maxItems: MAX_SPONSOR_COUNT");
-    expect(youtubeMetaSource).toContain("hasPositiveFirstPartySponsorEvidence");
+    expect(youtubeMetaSource).toContain("ads_info: analyzeDisclosure(videoData.description)");
+    expect(youtubeMetaSource).not.toContain("OpenAI");
+    expect(youtubeMetaSource).not.toContain("OPENAI_API_KEY");
+    expect(youtubeMetaSource).not.toContain("openai_sponsor_analysis");
     expect(youtubeMetaSource).toContain("redirect: 'error'");
     expect(youtubeMetaSource).toContain("'Cache-Control': 'no-store'");
     expect(youtubeMetaSource).not.toContain("request.json()");

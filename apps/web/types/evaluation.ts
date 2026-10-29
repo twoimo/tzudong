@@ -1,3 +1,4 @@
+import type { SponsorshipInfo } from '@/lib/sponsorship-state';
 // 평가 레코드 타입 정의 (restaurants 테이블 기반)
 
 export interface NaverAddressInfo {
@@ -160,10 +161,7 @@ export interface EvaluationRecord {
     publishedAt: string;
     is_shorts: boolean;
     duration: number;
-    ads_info: {
-      is_ads: boolean;
-      what_ads: string | null;
-    };
+    ads_info: SponsorshipInfo;
   } | null;
 
   unique_id: string | null;
