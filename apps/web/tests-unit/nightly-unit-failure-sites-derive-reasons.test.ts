@@ -89,6 +89,85 @@ raise SystemExit(m.main())
   });
 });
 
+describe('line-less failure sites (no recorded source position)', () => {
+  const hookXml = `<testsuites tests="1" failures="1" skipped="0"><testsuite><testcase name="(unnamed)" file="${file}"><failure message="${canary}">${canary}</failure></testcase></testsuite></testsuites>`;
+
+  test('accepts a failure entry with an absent line attribute as a bounded line-less site', () => {
+    const r = run({ xml: hookXml, files: [file], exit_code: 1 });
+    expect(r.status).toBe(0);
+    expect(JSON.parse(r.stdout)).toEqual({
+      schema: 'nightly-unit-failure-sites-v2', test_count: 1, failure_count: 1,
+      skip_count: 0, sites: [{ file, test_index: 0, line: null, kind: 'failure' }],
+      omitted_site_count: 0,
+    });
+    expect(r.stdout + r.stderr).not.toContain(canary);
+    expect(r.stdout).not.toContain('(unnamed)');
+  });
+
+  test('still rejects present-but-malformed, present-but-empty, and out-of-range lines', () => {
+    const malformed = hookXml.replace('><failure', ' line="NaN"><failure');
+    expectGap(run({ xml: malformed, files: [file], exit_code: 1 }), 'bad_line', malformed, 1, null);
+    // A present-but-empty line="" is not evidence of Bun's omitted attribute:
+    // only an absent attribute admits a line-less site.
+    const empty = hookXml.replace('><failure', ' line=""><failure');
+    expectGap(run({ xml: empty, files: [file], exit_code: 1 }), 'bad_line', empty, 1, null);
+    const oor = hookXml.replace('><failure', ' line="99999999"><failure');
+    expectGap(run({ xml: oor, files: [file], exit_code: 1 }), 'line_range', oor, 1, null);
+  });
+
+  test('aggregates a line-less v2 record through --log and rejects a line-less legacy v1 record', () => {
+    if (process.platform === 'win32') return;
+    const { mkdtempSync, rmdirSync } = require('node:fs') as typeof import('node:fs');
+    const os = require('node:os') as typeof import('node:os');
+    const { writeFileSync: write, unlinkSync: unlink } = require('node:fs') as typeof import('node:fs');
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'nightly-unit-lineless-'));
+    const log = path.join(dir, 'unit.log');
+    try {
+      const v2 = { schema: 'nightly-unit-failure-sites-v2', test_count: 1, failure_count: 1, skip_count: 0, sites: [{ file, test_index: 0, line: null, kind: 'failure' }], omitted_site_count: 0 };
+      write(log, `NIGHTLY_UNIT_DIAGNOSTIC=${JSON.stringify(v2)}\n`, { mode: 0o600 });
+      const ok = spawnSync('python3', [script, '--log', log, '--exit-code', '1'], { encoding: 'utf8' });
+      expect(ok.status).toBe(0);
+      expect(ok.stdout.trim()).toBe(`NIGHTLY_UNIT_DIAGNOSTIC=${JSON.stringify(v2)}`);
+      const v1 = { schema: 'nightly-unit-failure-sites-v1', test_count: 1, failure_count: 1, skip_count: 0, sites: [{ file, test_index: 0, line: null, kind: 'failure' }] };
+      write(log, `NIGHTLY_UNIT_DIAGNOSTIC=${JSON.stringify(v1)}\n`, { mode: 0o600 });
+      const legacy = spawnSync('python3', [script, '--log', log], { encoding: 'utf8' });
+      expect(legacy.status).toBe(1);
+      expect(legacy.stdout).toBe('');
+    } finally {
+      try { unlink(log); } catch {}
+      rmdirSync(dir);
+    }
+  });
+
+  test('real --run-linux path: env-gated All-scope hook failure yields a line-less site, residue passes', () => {
+    if (process.platform !== 'linux') return;
+    const probe = 'tests-unit/zz-extractor-probe-hook.test.ts';
+    const probePath = path.resolve(probe);
+    const content = `import { beforeAll, expect, test } from 'bun:test';\nbeforeAll(() => { if (process.env.EXTRACTOR_PROBE_HOOK_THROW === '1') { throw new Error('${canary}'); } });\ntest('extractor probe residue-safe', () => { expect(1).toBe(1); });\n`;
+    try {
+      expect(process.env.EXTRACTOR_PROBE_HOOK_THROW).toBeUndefined();
+      writeFileSync(probePath, content);
+      const failing = spawnSync('python3', [script, '--run-linux'], {
+        input: JSON.stringify({ files: [probe] }), encoding: 'utf8',
+        env: { ...process.env, EXTRACTOR_PROBE_HOOK_THROW: '1' },
+      });
+      expect(failing.status).toBe(1);
+      const payload = JSON.parse(failing.stdout);
+      expect(payload.schema).toBe('nightly-unit-failure-sites-v2');
+      expect(payload.failure_count).toBe(1);
+      expect(payload.sites).toEqual([{ file: probe, test_index: 0, line: null, kind: 'failure' }]);
+      expect(failing.stdout + failing.stderr).not.toContain(canary);
+      const residue = spawnSync('python3', [script, '--run-linux'], {
+        input: JSON.stringify({ files: [probe] }), encoding: 'utf8',
+      });
+      expect(residue.status).toBe(0);
+      expect(JSON.parse(residue.stdout).failure_count).toBe(0);
+    } finally {
+      try { if (existsSync(probePath)) unlinkSync(probePath); } catch {}
+    }
+  }, 60000);
+});
+
 describe('gap v2 validation in --log mode', () => {
   const { mkdtempSync, rmdirSync } = require('node:fs') as typeof import('node:fs');
   const os = require('node:os') as typeof import('node:os');
