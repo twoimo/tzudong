@@ -1154,6 +1154,15 @@ export default function StampPage() {
                             className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background"
                             data-stamp-loading-behavior="static-shell-dynamic-skeleton"
                         >
+                            {!isStampDynamicLoading && !isStampReadError && filteredAndSortedRestaurants.length === 0 && (
+                                <div role="status" className="mb-4 grid min-h-40 place-items-center rounded-2xl border border-dashed border-border bg-muted/30 p-5 text-center text-sm text-muted-foreground">
+                                    <div>
+                                        <Trophy className="mx-auto mb-2 h-10 w-10 rounded-full bg-primary/10 p-2 text-primary/70" aria-hidden="true" />
+                                        <p className="font-medium text-foreground">조건에 맞는 도장 맛집이 없습니다</p>
+                                        <p className="mt-1 text-xs leading-5">검색어를 줄이거나 필터를 초기화해 다시 확인해 보세요.</p>
+                                    </div>
+                                </div>
+                            )}
                             {isStampDynamicLoading ? (
                                 <div className="space-y-3">
                                     {showStampGuide && (
