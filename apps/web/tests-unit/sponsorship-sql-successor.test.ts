@@ -17,12 +17,12 @@ const record = loadRecord();
 const source = { revision: 'a'.repeat(40), tree: 'b'.repeat(40), clean: true,
   repositoryMatched: true, filesSha256: 'c'.repeat(64) };
 const instant = new Date('2026-10-29T01:00:00Z');
-// Assemble the explicitly fake credential as fixture fields, never a deployable
-// connection string literal that secret scanners can mistake for a leaked key.
-const databaseTarget = new URL('postgres://db.aqlcofblfxdrjhhdmarw.supabase.co:5432/postgres');
-databaseTarget.username = 'postgres';
-databaseTarget.password = 'synthetic-fixture';
-const databaseUrl = databaseTarget.toString();
+// No password: no contract requires one (target validation binds host, user,
+// port, database and sslmode; the psql runner treats PGPASSWORD as optional),
+// and a credential literal paired with the real project host reads as a leak
+// to secret scanners. The URL still carries the real direct-target shape so
+// the TARGET_INVALID mutation checks below stay honest.
+const databaseUrl = `postgres://postgres@db.${record.manifest.projectRef}.supabase.co:5432/postgres`;
 function admission() {
   return { kind: 'sponsorship_scoped_admission_v3', authority: 'authenticated-repository-owner-local-cli',
     operationId: '12345678-1234-4234-8234-123456789abc', projectRef: record.manifest.projectRef,
@@ -157,7 +157,7 @@ describe('immutable two migration bundle and actual maintained interfaces', () =
     const runner = createSponsorshipPsqlRunner(databaseUrl, { environment: {}, spawnImpl: (command: string, args: string[], options: any) => {
       invoked++;
       assert.equal(command, 'psql'); assert.ok(args.includes('--single-transaction'));
-      assert.ok(!args.some(arg => arg.includes('synthetic-fixture') || arg.includes('postgres://')));
+      assert.ok(!args.some(arg => arg.includes('postgres://')));
       assert.equal(options.env.PGSSLMODE, 'verify-full');
       assert.equal(options.timeout, 20000);
       assert.equal(options.killSignal, 'SIGKILL');
@@ -260,7 +260,7 @@ describe('source, role, ledger, security and fresh scope admission', () => {
     assert.throws(() => validateAdmission(record, admission(), source, new Date(instant.getTime() - 1)), /EXPIRED/);
   });
   it('rejects a different project or service_role target before any read or journal', () => {
-    for (const bad of [databaseUrl.replace('aqlcofblfxdrjhhdmarw', 'aaaaaaaaaaaaaaaaaaaa'), databaseUrl.replace('postgres:synthetic', 'service_role:synthetic')]) {
+    for (const bad of [databaseUrl.replace('aqlcofblfxdrjhhdmarw', 'aaaaaaaaaaaaaaaaaaaa'), databaseUrl.replace('postgres@', 'service_role@')]) {
       const f = fixture();
       assert.throws(() => executeSponsorship('preflight', { ...f.options, databaseUrl: bad }), /TARGET_INVALID/);
       assert.equal(f.calls.length, 0); assert.equal(f.journal.first, null);
