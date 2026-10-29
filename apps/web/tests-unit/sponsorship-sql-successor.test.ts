@@ -4,10 +4,11 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { loadRecord, MANIFEST_SHA256, ROOT, executeSponsorship, validateAdmission,
   validatePrior, priorQuery, terminalQuery, preflightSql, applySql, reconcileSql,
   expectedTerminal, disposition, identityFor, parseAdmissionBytes, observeProtectedMain,
-  validateProtectedMain, createSponsorshipPsqlRunner, sponsorshipResultExitCode } from '../scripts/sponsorship-sql-successor.mjs';
+  validateProtectedMain, createSponsorshipPsqlRunner, sponsorshipResultExitCode, terminalCompilerSha256 } from '../scripts/sponsorship-sql-successor.mjs';
 import { statementSpans } from '../scripts/supabase-migration-transaction.mjs';
 import { selectDirectDatabaseTransport } from '../scripts/apply-supabase-migration.mjs';
 
@@ -23,7 +24,7 @@ databaseTarget.username = 'postgres';
 databaseTarget.password = 'synthetic-fixture';
 const databaseUrl = databaseTarget.toString();
 function admission() {
-  return { kind: 'sponsorship_scoped_admission_v2', authority: 'authenticated-repository-owner-local-cli',
+  return { kind: 'sponsorship_scoped_admission_v3', authority: 'authenticated-repository-owner-local-cli',
     operationId: '12345678-1234-4234-8234-123456789abc', projectRef: record.manifest.projectRef,
     databaseName: 'postgres', manifestSha256: MANIFEST_SHA256, bundleSha256: record.manifest.bundleSha256, scopeSha256: hash(JSON.stringify(record.manifest.scope)),
     sourceRevision: source.revision, sourceTree: source.tree, sourceFilesSha256: source.filesSha256,
@@ -61,6 +62,8 @@ function fixture() {
     now: () => clock.value, readSource: () => ({ ...source }), readAdmission: () => structuredClone(a),
     readFences: () => ({ generalFreeze: 'active', githubProducer: 'disabled_manually' }),
     readProtectedMain: () => ({ ...a.protectedMain, observedAt: clock.value.toISOString() }),
+    // Explicit synthetic adapters; production binds the private predecessor reader.
+    readPredecessor: () => undefined, validateBeforeImage: (_before: unknown) => undefined,
     transport: (_url: string, sql: string, single: boolean) => {
       calls.push({ sql, single });
       const reply = replies.shift();
@@ -71,6 +74,57 @@ function fixture() {
   function prepare() { replies.push(ro(prior())); return executeSponsorship('preflight', options); }
   return { a, journal, calls, clock, replies, options, prepare };
 }
+
+describe('material source correction and linked spent predecessor', () => {
+  it('pins the changed terminal compiler and never reuses the predecessor operation identity', () => {
+    assert.equal(record.manifest.schemaVersion, 3);
+    assert.notEqual(record.manifest.materialCorrection.terminalCompilerSha256,
+      record.manifest.materialCorrection.previousTerminalCompilerSha256);
+    assert.equal(record.manifest.materialCorrection.terminalCompilerSha256, terminalCompilerSha256());
+    assert.notEqual(MANIFEST_SHA256, record.manifest.predecessor.manifestSha256);
+    const a = admission(); a.operationId = record.manifest.predecessor.operationId;
+    assert.throws(() => validateAdmission(record, a, source, instant), /ADMISSION_BINDING_INVALID/);
+  });
+  it('requires both predecessor adapters before any transport or new journal', () => {
+    for (const key of ['readPredecessor', 'validateBeforeImage']) {
+      const f = fixture();
+      assert.throws(() => executeSponsorship('preflight', { ...f.options, [key]: undefined }), /PREDECESSOR_REQUIRED/);
+      assert.equal(f.calls.length, 0); assert.equal(f.journal.first, null);
+    }
+  });
+  it('stops on a changed predecessor before a read or journal', () => {
+    const f = fixture();
+    f.options.readPredecessor = () => { throw new Error('SPONSORSHIP_PREDECESSOR_HASH_MISMATCH'); };
+    assert.throws(() => f.prepare(), /PREDECESSOR_HASH_MISMATCH/);
+    assert.equal(f.calls.length, 0); assert.equal(f.journal.first, null);
+  });
+  it('compares the actual fresh full preflight before creating its own original', () => {
+    const f = fixture();
+    f.options.validateBeforeImage = state => {
+      if (!isDeepStrictEqual(state, prior())) throw new Error('SPONSORSHIP_PREDECESSOR_BEFORE_IMAGE_MISMATCH');
+    };
+    const changed = prior(); changed.data.businessHash = hash('concurrent legitimate data change');
+    f.replies.push(ro(changed));
+    assert.throws(() => executeSponsorship('preflight', f.options), /PREDECESSOR_BEFORE_IMAGE_MISMATCH/);
+    assert.equal(f.calls.length, 1); assert.equal(f.journal.first, null);
+  });
+  it('checks its saved beforeimage against the predecessor before reserving a send', () => {
+    const f = fixture(); f.prepare();
+    f.options.validateBeforeImage = () => { throw new Error('SPONSORSHIP_PREDECESSOR_BEFORE_IMAGE_MISMATCH'); };
+    assert.throws(() => executeSponsorship('apply', f.options), /PREDECESSOR_BEFORE_IMAGE_MISMATCH/);
+    assert.equal(f.calls.length, 1); assert.equal(f.journal.spent, false);
+  });
+  it('keeps a post-reservation predecessor change spent without sending or retrying', () => {
+    const f = fixture(); f.prepare(); let reads = 0;
+    f.options.readPredecessor = () => {
+      if (++reads === 3) throw new Error('SPONSORSHIP_PREDECESSOR_CUSTODY_CHANGED');
+    };
+    assert.equal(executeSponsorship('apply', f.options).status, 'unconfirmed');
+    assert.equal(f.journal.spent, true); assert.equal(f.calls.length, 1);
+    assert.throws(() => executeSponsorship('apply', f.options), /RECONCILE_REQUIRED/);
+    assert.equal(f.calls.length, 1);
+  });
+});
 
 describe('immutable two migration bundle and actual maintained interfaces', () => {
   it('pins five plus one original statements and retains both exact migration byte sequences', () => {
@@ -152,7 +206,7 @@ describe('actual offline CLI packaging and completion contract', () => {
     assert.equal(result.manifestSha256, MANIFEST_SHA256); assert.equal(result.statementCount, 6);
     assert.deepEqual(result.migrations.map((m: any) => m.statementCount), [5, 1]);
     assert.equal(result.bundleSha256, record.manifest.bundleSha256);
-    assert.equal(result.admissionKind, 'sponsorship_scoped_admission_v2');
+    assert.equal(result.admissionKind, 'sponsorship_scoped_admission_v3');
     const git = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8', timeout: 15000 });
     assert.equal(git.status, 0); assert.equal(result.source.revision, git.stdout.trim());
     assert.match(result.source.filesSha256, /^[a-f0-9]{64}$/);
