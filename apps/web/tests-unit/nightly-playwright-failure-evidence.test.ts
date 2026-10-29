@@ -670,6 +670,10 @@ describe("nightly Playwright failure evidence", () => {
         join(appRoot, "scripts/nightly-playwright-failure-evidence.mjs"),
         join(fixtureScripts, "nightly-playwright-failure-evidence.mjs"),
       );
+      copyFileSync(
+        join(appRoot, "scripts/nightly-target-guard.mjs"),
+        join(fixtureScripts, "nightly-target-guard.mjs"),
+      );
       writeFileSync(evidence, "stale-evidence", { mode: 0o600 });
       writeFileSync(privateReport, "stale-private-report", { mode: 0o600 });
       const result = spawnSync(nightlyCliNode, ["scripts/run-nightly-regression.mjs"], {
@@ -704,6 +708,10 @@ describe("nightly Playwright failure evidence", () => {
       copyFileSync(
         join(appRoot, "scripts/nightly-playwright-failure-evidence.mjs"),
         join(fixtureScripts, "nightly-playwright-failure-evidence.mjs"),
+      );
+      copyFileSync(
+        join(appRoot, "scripts/nightly-target-guard.mjs"),
+        join(fixtureScripts, "nightly-target-guard.mjs"),
       );
       const environment = { ...process.env };
       delete environment.NIGHTLY_ENV_FILE;
@@ -751,6 +759,10 @@ describe("nightly Playwright failure evidence", () => {
       copyFileSync(
         join(appRoot, "scripts/nightly-playwright-failure-evidence.mjs"),
         join(fixtureScripts, "nightly-playwright-failure-evidence.mjs"),
+      );
+      copyFileSync(
+        join(appRoot, "scripts/nightly-target-guard.mjs"),
+        join(fixtureScripts, "nightly-target-guard.mjs"),
       );
       writeFileSync(evidence, JSON.stringify({ stale: "previously-approved" }), { mode: 0o600 });
       writeFileSync(privateReport, "stale-private-report", { mode: 0o644 });
