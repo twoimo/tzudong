@@ -6,6 +6,7 @@ import { Maximize2, UserRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContextBase";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useHomeViewportMode } from "@/hooks/useHomeViewportMode";
+import { useRememberHomeReturnHref } from "@/hooks/use-home-return-href";
 import { toast } from "@/lib/no-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { isPublicRestrictedMode } from "@/lib/site-config";
@@ -296,6 +297,11 @@ export default function HomeClient() {
   const visibleDetailTitle = visibleDetailRestaurant
     ? buildBrowserTitle(visibleDetailRestaurant.name)
     : null;
+  useRememberHomeReturnHref(user?.id ?? null, {
+    restaurantId: visibleDetailRestaurant?.id ?? null,
+    mapMode,
+    focusZoom: mapFocusZoom,
+  });
   useDocumentTitle(visibleDetailTitle);
   const toCompactRestaurant = useCallback(
     (restaurant: Restaurant | null): HomeRestoreCompactRestaurant | null => {

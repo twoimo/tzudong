@@ -22,6 +22,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 import { useMyPageScrollRestoration } from "@/hooks/use-mypage-scroll-restoration";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { useHomeReturnHref } from "@/hooks/use-home-return-href";
 import { pageHeaderTitleClass, pageHeaderDescriptionClass } from "@/components/home/map-panel-chrome";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -173,6 +174,7 @@ export function MyPageLayoutContent({
   // after this subtree commits rather than regenerating its server HTML.
   const isHydrated = useHydration();
   const user = isHydrated ? authUser : null;
+  const homeReturnHref = useHomeReturnHref(user?.id ?? null);
   const userLoading = !isHydrated || authLoading;
   const router = useRouter();
   const pathname = usePathname();
@@ -283,7 +285,7 @@ export function MyPageLayoutContent({
               )}
             </div>
             <Button asChild variant="outline" className="mt-3 min-h-11 w-full rounded-xl">
-              <Link href="/">지도로 돌아가기</Link>
+              <Link href={homeReturnHref}>지도로 돌아가기</Link>
             </Button>
           </div>
           <div
