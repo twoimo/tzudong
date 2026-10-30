@@ -31,7 +31,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Set up pinned Python
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # actions/setup-python@v5
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # actions/setup-python@v7.1.0
         with:
           python-version: '3.12.10'
       - name: Install pinned source-test dependencies

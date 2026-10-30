@@ -12,7 +12,7 @@ import yaml
 ROOT = Path(__file__).parents[3]
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "g038-account-deletion-successor.yml"
 CHECKOUT = "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
-SETUP_PYTHON = "actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38"
+SETUP_PYTHON = "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0"
 ATTEST = "actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be"
 UPLOAD = "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08"
 JOB_IF = (
