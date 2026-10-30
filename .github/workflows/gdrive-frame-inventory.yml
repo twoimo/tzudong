@@ -1,4 +1,3 @@
-
 name: GDrive frame inventory
 run-name: GDrive read-only inventory · ${{ inputs.main_sha }}
 
@@ -42,7 +41,6 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 1
           persist-credentials: false
-
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # actions/setup-python@v7.1.0
         with:

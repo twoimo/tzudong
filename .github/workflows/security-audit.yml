@@ -1,4 +1,3 @@
-
 name: Security
 run-name: ${{ github.event.pull_request.title || format('Security · {0}', github.ref_name) }}
 
@@ -284,7 +283,6 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
-
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # actions/setup-python@v7.1.0
         with:
@@ -330,7 +328,6 @@ jobs:
           git cat-file -e '2d7a8f6ed5fe9e14d8f5046f45a4ea2d45fb725c^{commit}'
 
       - name: Set up Python
-
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # actions/setup-python@v7.1.0
         with:
           python-version: '3.11'
@@ -587,7 +584,6 @@ jobs:
 
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # actions/setup-python@v7.1.0
-
         with:
           python-version: '3.11'
 
