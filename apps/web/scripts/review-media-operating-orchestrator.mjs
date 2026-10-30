@@ -247,7 +247,7 @@ function readBoundedDescriptor(descriptor, status, code) {
   return bytes.subarray(0, offset);
 }
 
-function readPrivateCanonicalJson(path, code = 'SUCCESSOR_OPERATING_ORCHESTRATOR_INPUT_INVALID') {
+export function readPrivateCanonicalJson(path, code = 'SUCCESSOR_OPERATING_ORCHESTRATOR_INPUT_INVALID') {
   const absolute = assertOutsideRepository(path, code);
   const parent = assertPrivateDirectory(dirname(absolute), code);
   let descriptor;
@@ -305,7 +305,7 @@ function syncDirectory(path, fsyncImpl = fsyncSync) {
   }
 }
 
-function writeExclusiveCanonical(path, value, fsyncImpl = fsyncSync) {
+export function writeExclusiveCanonical(path, value, fsyncImpl = fsyncSync) {
   const absolute = assertOutsideRepository(
     path,
     'SUCCESSOR_OPERATING_ORCHESTRATOR_PRIVATE_CUSTODY_INVALID',
@@ -337,7 +337,7 @@ function writeExclusiveCanonical(path, value, fsyncImpl = fsyncSync) {
   return Object.freeze({ bytes, path: absolute, sha256: sha256(bytes) });
 }
 
-function createExclusivePrivateDirectory(path, fsyncImpl = fsyncSync) {
+export function createExclusivePrivateDirectory(path, fsyncImpl = fsyncSync) {
   const absolute = assertOutsideRepository(
     path,
     'SUCCESSOR_OPERATING_ORCHESTRATOR_PRIVATE_CUSTODY_INVALID',

@@ -145,7 +145,7 @@ function validateManifestShape(manifest) {
     || manifest.executorRole !== 'postgres'
     || manifest.stateRootAlgorithm !== 'review-media-ledger-identity/v1'
     || !Number.isSafeInteger(manifest.advisoryLockKey)
-    || manifest.launchPolicy?.state !== 'held') {
+    || !['held', 'ready'].includes(manifest.launchPolicy?.state)) {
     fail('RECEIPT_OCR_POST106_ACL_CONTRACT_INVALID');
   }
   exactKeys(manifest.launchPolicy, ['code', 'reason', 'state']);
@@ -441,15 +441,17 @@ function compilePlan(record, { mode }) {
     buildAclSealSql(record, { mode }),
   );
   const lockTag = `$receipt_ocr_post106_acl_${sha256(String(record.manifest.advisoryLockKey)).slice(0, 16)}$`;
+  const transactionBodySql = `SET LOCAL idle_in_transaction_session_timeout='30s';\nDO ${lockTag} BEGIN PERFORM pg_advisory_xact_lock(${record.manifest.advisoryLockKey}::bigint); END ${lockTag};\n${basePlan.sql}\n${atomic107}\n`;
   return Object.freeze({
     basePlan,
     finalReadback: migration.terminalReadback,
     id: record.manifest.id,
     migration,
     plan,
-    priorReadback: migration.expectedPriorState,
-    sql: `BEGIN;\nSET LOCAL idle_in_transaction_session_timeout='30s';\nDO ${lockTag} BEGIN PERFORM pg_advisory_xact_lock(${record.manifest.advisoryLockKey}::bigint); END ${lockTag};\n${basePlan.sql}\n${atomic107}\nCOMMIT;\n`,
+    priorReadback: basePlan.priorReadback,
+    sql: `BEGIN;\n${transactionBodySql}COMMIT;\n`,
     stateQuery: terminalQuery,
+    transactionBodySql,
     transactionMode: 'single-explicit-outer-transaction',
   });
 }

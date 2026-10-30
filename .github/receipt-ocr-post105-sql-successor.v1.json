@@ -24,7 +24,7 @@
   },
   "predecessor": {
     "manifestPath": ".github/review-media-evidence-prefixed-feature-successor.v1.json",
-    "manifestSha256": "45b7f146f31bca9afb863152fd616529e90562fb1b3ecbaa409c218439d41867",
+    "manifestSha256": "f57298585dcad7b3949ddff7fe7127fe2d4705e7c50b0b3d912c7fe0df80c444",
     "ledgerCount": 105,
     "terminalIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c"
   },
@@ -61,7 +61,7 @@
   "toolchain": [
     {
       "path": "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs",
-      "sha256": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda"
+      "sha256": "0515e7c2cf3cf28aa5fa370350b8aaa109f5dbc9969227ac3600cb536daa181a"
     }
   ]
 }
