@@ -3,7 +3,7 @@ python-dotenv==1.2.4
 yt-dlp[default]==2026.10.21
 pyyaml==6.0.3
 tqdm==4.70.1
-openai==3.37.0
+openai==3.40.0
 requests==2.34.2
 langchain==1.4.7
 langchain-community==0.4.2
