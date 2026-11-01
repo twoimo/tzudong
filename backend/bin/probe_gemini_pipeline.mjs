@@ -30,7 +30,9 @@ async function main() {
     const apiKey = credentialSource ? credentials[credentialSource].trim() : '';
     if (!apiKey) throw new Error('PROBE_KEY_MISSING');
     // Gemini 3.6+ deprecates sampling overrides. Keep the explicit 3.8 model and all existing caps.
-    const config = { maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: 'MEDIUM' } };
+    // The durable receipt declares configuredMaxAttempts: 1, so pin SDK automatic continuation off:
+    // js-genai >= 2.30 would otherwise send extra paid requests behind this one recorded attempt.
+    const config = { maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: 'MEDIUM' }, automaticContinuation: false };
     const report = {
         schemaVersion: 1,
         kind: 'real_provider_connectivity_probe',

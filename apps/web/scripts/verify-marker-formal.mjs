@@ -1,6 +1,7 @@
 import { mkdtemp, mkdir, readFile, writeFile, rm, symlink, copyFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { isExpectedMutationFailure } from './marker-formal-result.mjs';
 
 // Bounded checks against actual TS/DOM behavior. No solver or provider service
 // is installed, and mutations are confined to disposable copies of named files.
@@ -9,7 +10,9 @@ const tests = ['tests-formal/marker-state-model.test.mjs', 'tests-unit/evidence-
   'tests-unit/popularity-input-boundary.test.ts', 'tests-unit/evidence-cohort-shadow.test.ts',
   'tests-unit/visible-marker-review-bubbles.test.ts'];
 const copied = [
-  'lib/marker-pool.ts', 'lib/retained-marker-accessibility.ts', 'lib/naver-map-event-cleanup.ts', 'lib/youtube-url.ts',
+  'lib/marker-pool.ts', 'lib/naver-marker-native-activation.ts',
+  'lib/retained-marker-accessibility.ts', 'lib/naver-map-event-cleanup.ts', 'lib/youtube-url.ts',
+  'scripts/verify-marker-formal.mjs', 'scripts/marker-formal-result.mjs',
   'lib/visible-marker-review-bubbles.ts', 'lib/review-photo-url.ts', 'lib/profile-avatar-url.ts',
   ...['popularity-marker.ts', 'scoring.ts', 'frames.ts', 'constants.ts', 'guards.ts', 'errors.ts', 'types.ts', 'storage-key.mjs']
     .map(file => `lib/evidence-engineering/${file}`),
@@ -37,8 +40,8 @@ const mutants = [
     after: '    if (cached && cached.markerContent === markerContent) {',
     test: tests[0], failure: 'all 9,216 active/reacquired visual transitions' },
   { id: 'released-callback', file: 'lib/marker-pool.ts',
-    before: '        marker.__onClick = undefined;\n        syncRetainedMarkerAccessibility(marker, true);',
-    after: '        syncRetainedMarkerAccessibility(marker, true);',
+    before: '        marker.__onClick = undefined;\n        this.releaseNativeActivation(marker);\n        syncRetainedMarkerAccessibility(marker, true);',
+    after: '        this.releaseNativeActivation(marker);\n        syncRetainedMarkerAccessibility(marker, true);',
     test: tests[0], failure: 'every pool/click action sequence through depth four' },
   { id: 'retained-review-mask', file: 'lib/marker-pool.ts',
     before: '        const element = marker.getElement();\n        const patched =',
@@ -90,8 +93,7 @@ for (const mutant of mutants) {
     await writeFile(path, source.replace(mutant.before, mutant.after));
     const result = run(scratch, [mutant.test]);
     // A missing browser/import or other harness failure is not mutation detection.
-    const detected = result.exitCode !== 0 && result.output.includes(`(fail) ${mutant.failure}`)
-      && !/FORMAL_BROWSER_REQUIRED|Cannot find module|BuildMessage/.test(result.output);
+    const detected = isExpectedMutationFailure(result, mutant.failure);
     mutations.push({ id: mutant.id, detected, ...result });
     console.log(`${mutant.id}: ${detected ? 'detected' : 'NOT DETECTED'}`);
     if (!detected) throw new Error(`MUTATION_NOT_DETECTED:${mutant.id}\n${result.output}`);
