@@ -32,12 +32,81 @@ export function supabaseRestFailureCode(kind: 'rows' | 'count' | 'rpc', status: 
             : `supabase_rest_count_failed:${safeStatus}`;
 }
 
+export class SupabaseRestRowsError extends Error {
+    constructor(readonly status: number, readonly code?: 'PGRST200') {
+        super(supabaseRestFailureCode('rows', status));
+    }
+}
+
 async function discardResponseBody(response: Response) {
     try {
         await response.body?.cancel();
     } catch {
         // The status code is the trace. Body text stays out of logs and errors.
     }
+}
+
+async function readMissingRelationCode(response: Response): Promise<'PGRST200' | undefined> {
+    if (response.status !== 400) {
+        await discardResponseBody(response);
+        return undefined;
+    }
+
+    // Read actual bytes, not Content-Length. Retain only the recovery code;
+    // provider message/details/hint and row payloads never enter the error.
+    const maxBytes = 8192;
+    const maxReadMs = 250;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let expired = false;
+    try {
+        reader = response.body?.getReader();
+        if (!reader) return undefined;
+        const bodyReader = reader;
+        const deadlineAt = Date.now() + maxReadMs;
+        const deadline = new Promise<undefined>((resolve) => {
+            timer = setTimeout(() => {
+                expired = true;
+                resolve(undefined);
+            }, maxReadMs);
+        });
+        const readCode = async (): Promise<'PGRST200' | undefined> => {
+            const decoder = new TextDecoder('utf-8', { fatal: true });
+            let bytes = 0;
+            let text = '';
+            for (;;) {
+                const { done, value } = await bodyReader.read();
+                if (expired || Date.now() >= deadlineAt) return undefined;
+                if (done) break;
+                bytes += value.byteLength;
+                if (bytes > maxBytes) return undefined;
+                text += decoder.decode(value, { stream: true });
+            }
+            const body: unknown = JSON.parse(text + decoder.decode());
+            if (body && typeof body === 'object' && !Array.isArray(body)
+                && (body as { code?: unknown }).code === 'PGRST200') {
+                return 'PGRST200';
+            }
+            return undefined;
+        };
+        return await Promise.race([readCode(), deadline]);
+    } catch {
+        // Unreadable/malformed errors keep the original fixed HTTP failure.
+    } finally {
+        if (timer !== undefined) clearTimeout(timer);
+        try {
+            // Cleanup must not wait for a stalled/rejecting transport either.
+            void reader?.cancel().catch(() => {});
+        } catch {
+            // Cleanup diagnostics are also untrusted.
+        }
+        try {
+            reader?.releaseLock();
+        } catch {
+            // A release failure must not replace the fixed HTTP error.
+        }
+    }
+    return undefined;
 }
 
 export function postgrestIn(values: readonly string[]) {
@@ -76,8 +145,8 @@ export async function fetchSupabaseRows<T>(table: string, query: SupabaseRestQue
             await discardResponseBody(response);
             return [];
         }
-        await discardResponseBody(response);
-        throw new Error(supabaseRestFailureCode('rows', response.status));
+        const code = await readMissingRelationCode(response);
+        throw new SupabaseRestRowsError(response.status, code);
     }
 
     try {

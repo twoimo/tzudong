@@ -4,7 +4,7 @@ import { buildOverseasCountryAddressOrFilter, sanitizePostgrestOrTerm } from "@/
 import { perfMonitor } from "@/lib/performance-monitor";
 import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import type { Tables } from "@/integrations/supabase/types";
-import { fetchSupabaseRows, postgrestArrayOverlap, postgrestIn } from "@/lib/supabase-rest-client";
+import { fetchSupabaseRows, postgrestArrayOverlap, postgrestIn, SupabaseRestRowsError } from "@/lib/supabase-rest-client";
 import { buildRelatedVerifiedReviewCountMap } from "@/lib/restaurant-review-counts";
 import { fetchVerifiedReviewCountRows } from "@/lib/verified-review-count-rows";
 import {
@@ -99,7 +99,7 @@ export function selectWithoutEvidenceEmbed(select: string): string {
 }
 
 export function isMissingEvidenceRelationError(error: unknown): boolean {
-    return error instanceof Error && error.message.includes("PGRST200");
+    return error instanceof SupabaseRestRowsError && error.status === 400 && error.code === 'PGRST200';
 }
 
 export async function fetchRestaurantsRecoveringMissingEmbed<T>(
