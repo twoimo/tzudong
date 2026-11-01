@@ -73,6 +73,8 @@ export function generateWithProjectBudget(ai, request, timeoutMs = 300000) {
         model,
         config: {
             ...omitUnsupportedGeminiSampling(model, request.config),
+            // SDK >=2.30 default-enables continuation loops; one admitted operation stays one HTTP request.
+            automaticContinuation: false,
             abortSignal: signal,
             httpOptions: { ...request.config?.httpOptions, timeout: timeoutMs, retryOptions: { attempts: 1 } },
         },
