@@ -38,7 +38,16 @@ function fileFixture(t) {
 test('pinned SDK chunk upload sends resumable start and literal file bytes with the client timeout', async t => {
   const installed = JSON.parse(fs.readFileSync(new URL('../../../node_modules/@google/genai/package.json', import.meta.url)));
   const lock = JSON.parse(fs.readFileSync(new URL('../../../package-lock.json', import.meta.url)));
-  assert.equal(installed.version, '2.24.0');
+  const manifest = JSON.parse(fs.readFileSync(new URL('../../../package.json', import.meta.url)));
+  const range = manifest.dependencies['@google/genai'];
+  const bounds = /^(\^)?(\d+)\.(\d+)\.(\d+)$/.exec(range || '');
+  assert.ok(bounds, `@google/genai manifest dependency must be a pinned semver range, got ${range}`);
+  const [lockedMajor, lockedMinor, lockedPatch] = bounds.slice(2).map(Number);
+  const [sdkMajor, sdkMinor, sdkPatch] = installed.version.split('.').map(Number);
+  const satisfies = bounds[1] === '^'
+    ? sdkMajor === lockedMajor && (sdkMinor > lockedMinor || (sdkMinor === lockedMinor && sdkPatch >= lockedPatch))
+    : installed.version === `${lockedMajor}.${lockedMinor}.${lockedPatch}`;
+  assert.ok(satisfies, `installed @google/genai ${installed.version} must satisfy manifest range ${range}`);
   assert.equal(installed.version, lock.packages['node_modules/@google/genai'].version);
   const { file, bytes } = fileFixture(t);
   const requests = [];

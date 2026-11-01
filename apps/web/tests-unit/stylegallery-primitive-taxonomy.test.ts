@@ -30,7 +30,7 @@ const packageABindingCoverageMatrix = {
   publicHomeShell: ['viewport-shell', 'overlay-stack', 'cluster'],
   naverMap: ['overlay-stack', 'frame'],
   mobileControls: ['cluster', 'wrap-row', 'overlay-stack'],
-  homeMobileThemeFilterReel: ['reel', 'cluster'],
+  homeMobileThemeFilterWrap: ['cluster', 'wrap-row'],
   visibleMarkerListDetail: ['list-detail', 'frame', 'stack'],
   adminShellSidebar: ['fixed-sidenav-shell', 'scroll-body-shell', 'sidebar'],
   adminOverviewMapInfo: ['panel-layout', 'list-detail', 'frame', 'cluster'],
@@ -90,15 +90,22 @@ const g003SourceCoverageMatrix = {
       },
     ],
   },
-  homeMobileThemeFilterReel: {
+  homeMobileThemeFilterWrap: {
     files: [
       {
         path: 'components/home/MobileControlOverlay.tsx',
         contains: [
           'id="tzudong-mobile-category-slider"',
-          'data-layout-primitives="reel cluster"',
-          'data-allow-horizontal-scroll="true"',
-          'data-horizontal-scroll-owner="mobile-theme-filter-reel"',
+          'data-layout-primitives="cluster wrap-row"',
+          '<HomeMapThemeFilters',
+        ],
+      },
+      {
+        path: 'components/home/HomeMapThemeFilters.tsx',
+        contains: [
+          'flex-wrap',
+          'min-h-[44px]',
+          'aria-pressed={isSelected}',
         ],
       },
     ],
@@ -254,6 +261,7 @@ function readSource(relativePath: string) {
 const publicMapLayoutSources = [
   'components/home/home-map-container.tsx',
   'components/home/MobileControlOverlay.tsx',
+  'components/home/HomeMapThemeFilters.tsx',
   'components/home/SubmissionFloatingButton.tsx',
   'components/map/naver-map-surface.tsx',
 ] as const;
@@ -316,7 +324,7 @@ function assertSourceCoverage(surface: string, contract: SourceCoverageContract)
     const source = readSource(file.path);
 
     for (const expectedSource of file.contains) {
-      expect(source, `${surface} source ${file.path} should contain ${expectedSource}`).toContain(expectedSource);
+      expect(source.includes(expectedSource), `${surface} source ${file.path} should contain ${expectedSource}`).toBe(true);
     }
   }
 }
@@ -377,7 +385,7 @@ describe('StyleGallery primitive taxonomy source contract', () => {
     }
   });
 
-  test('G012 public map keeps the reel narrow and fixed controls shrink-safe and keyboard-safe', () => {
+  test('G012 public map wraps theme filters and keeps fixed controls shrink-safe and keyboard-safe', () => {
     const homeMapSource = readSource('components/home/home-map-container.tsx');
     const mobileControlsSource = readSource('components/home/MobileControlOverlay.tsx');
     const submissionSource = readSource('components/home/SubmissionFloatingButton.tsx');
@@ -392,9 +400,9 @@ describe('StyleGallery primitive taxonomy source contract', () => {
       (match) => match[1],
     );
 
-    expect(horizontalOverflowUtilities).toEqual(['overflow-x-auto']);
-    expect(horizontalOwners).toEqual(['mobile-theme-filter-reel']);
-    expect(mobileControlsSource).toContain('data-allow-horizontal-scroll="true"');
+    expect(horizontalOverflowUtilities).toEqual([]);
+    expect(horizontalOwners).toEqual([]);
+    expect(readSource('components/home/HomeMapThemeFilters.tsx')).toContain('flex-wrap');
     expect(mobileControlsSource).toContain('id="tzudong-mobile-category-slider"');
 
     expect(homeMapSource).toContain(
@@ -417,7 +425,7 @@ describe('StyleGallery primitive taxonomy source contract', () => {
     expect(submissionSource).toContain('env(safe-area-inset-right)');
     expect(mobileControlsSource).toContain('aria-label="지도 상단 제어"');
     expect(mobileControlsSource).toContain('aria-label="맛집 검색 열기"');
-    expect(mobileControlsSource).toContain('focus-visible:ring-2 focus-visible:ring-primary');
+    expect(readSource('components/home/HomeMapThemeFilters.tsx')).toContain('focus-visible:ring-2 focus-visible:ring-primary');
     expect(mobileControlsSource).toContain('getFocusTrapContainers(searchLayerRef.current');
     expect(mobileControlsSource).toContain('focus({ preventScroll: true })');
     expect(mobileControlsSource).toContain('mobileSheetTriggerRef');
@@ -446,7 +454,9 @@ describe('StyleGallery primitive taxonomy source contract', () => {
 
     expect(mobileControlsSource).toContain('{isAdmin && (');
     expect(submissionSource).toContain('{isAdmin && (');
-    expect(homeMapSource).toContain('const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));');
+    expect(homeMapSource).toContain('const NaverMapView = lazy(loadNaverMap);');
+    expect(readSource('lib/naver-map-loader.ts')).toContain("import('@/components/map/NaverMapView')");
+    expect(homeMapSource).not.toMatch(/^import\s+NaverMapView\b/m);
     expect(homeMapSource).toMatch(/const OverseasMap\s*=\s*lazy\(/);
     expect(homeMapSource).not.toMatch(/^import\s+OverseasMap\b/m);
     expect(overseasLoaderSource).toMatch(/\bimport\(\s*['"]@\/components\/map\/OverseasMap['"]\s*\)/);

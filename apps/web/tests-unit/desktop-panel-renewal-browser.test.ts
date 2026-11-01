@@ -29,11 +29,16 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Panel from './components/home/home-desktop-control-panel';
+import { buildHomeMapResultSummary } from './lib/home-map-result-summary';
+const filters = { categories: [], minRating: 0, minReviews: 0, minUserVisits: 0, minJjyangVisits: 0 };
+// HomeClient supplies this required result boundary in production. Derive the
+// synthetic empty result through the same helper rather than inventing counts.
+const resultSummary = buildHomeMapResultSummary({ data: [], isPending: false, isError: false, mapMode: 'domestic', selectedCountry: null, filters });
 const fixture = globalThis.__fixture = { held: new Set(globalThis.__heldPanels || []), failed: new Set(globalThis.__failedPanels || []), waiters: {}, calls: [], auth: [], locationCalls: 0,
   release(name) { this.held.delete(name); for (const resolve of (this.waiters[name] || [])) resolve(); this.waiters[name] = []; },
   async load(name, loader) { this.calls.push(name); if (this.held.has(name)) await new Promise(resolve => (this.waiters[name] ||= []).push(resolve)); if (this.failed.has(name)) throw new Error('offline-fixture'); return loader(); }
 };
-function Fixture(){const [auth,setAuth]=useState(globalThis.__holdAuth?{user:null,isAuthLoading:true}:{user:{id:'fixture-self'},isAuthLoading:false});const [detail,setDetail]=useState(null);fixture.setAuth=setAuth;fixture.setDetail=setDetail;fixture.closeDetail=()=>setDetail(null);return <Panel mapMode="domestic" onDeviceLocationClick={()=>{fixture.locationCalls++;}} deviceLocation={globalThis.__deviceLocation} selectedRegion={null} selectedCountry={null} selectedCategories={[]} filters={{}} onRegionChange={()=>{}} onCountryChange={()=>{}} onCategoryChange={()=>{}} onThemeChange={()=>{}} onRestaurantSelect={setDetail} onRestaurantSearch={setDetail} onSearchExecute={()=>{}} panelRestaurant={detail} isPanelOpen={Boolean(detail)} onDetailPanelBack={()=>{setDetail(null);return true;}} {...auth} />;}
+function Fixture(){const [auth,setAuth]=useState(globalThis.__holdAuth?{user:null,isAuthLoading:true}:{user:{id:'fixture-self'},isAuthLoading:false});const [detail,setDetail]=useState(null);fixture.setAuth=setAuth;fixture.setDetail=setDetail;fixture.closeDetail=()=>setDetail(null);return <Panel mapMode="domestic" onDeviceLocationClick={()=>{fixture.locationCalls++;}} deviceLocation={globalThis.__deviceLocation} selectedRegion={null} selectedCountry={null} selectedCategories={[]} filters={filters} resultSummary={resultSummary} onRegionChange={()=>{}} onCountryChange={()=>{}} onCategoryChange={()=>{}} onThemeChange={()=>{}} onRestaurantSelect={setDetail} onRestaurantSearch={setDetail} onSearchExecute={()=>{}} panelRestaurant={detail} isPanelOpen={Boolean(detail)} onDetailPanelBack={()=>{setDetail(null);return true;}} {...auth} />;}
 createRoot(document.getElementById('root')).render(<QueryClientProvider client={new QueryClient()}><Fixture/></QueryClientProvider>);
 `;
 
@@ -94,12 +99,16 @@ export async function renewalPanelBundle(surface: 'desktop' | 'mobile' | 'outer-
   const browser = await chromium.launch({ executablePath: chrome, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', route => route.request().resourceType() === 'document'
       ? route.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body><div id="root"></div></body></html>' })
       : route.abort());
     await page.goto('https://renewal.test/');
     await page.addScriptTag({ content: await renewalPanelBundle() });
     const search = page.getByRole('textbox', { name: '맛집 검색어 입력' });
+    try { await browserExpect(search).toBeVisible(); }
+    catch (error) { throw new Error(JSON.stringify({ errors, body: await page.locator('body').innerText() }), { cause: error }); }
     await search.fill('정원');
     await page.getByRole('button', { name: '정원분식 선택', exact: true }).click();
     await browserExpect(page.getByRole('button', { name: '상세 닫기', exact: true })).toBeVisible();
@@ -114,6 +123,7 @@ export async function renewalPanelBundle(surface: 'desktop' | 'mobile' | 'outer-
     });
     await browserExpect(search).toHaveValue('정원');
     await browserExpect(page.getByRole('button', { name: '정원분식 선택', exact: true })).toBeVisible();
+    expect(errors).toEqual([]);
   } finally { await browser.close(); }
 }, 30_000);
 

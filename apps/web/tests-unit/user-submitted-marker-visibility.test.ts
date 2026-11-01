@@ -9,6 +9,9 @@ import {
   USER_SUBMITTED_RESTAURANT_SOURCE_TYPE,
 } from '../lib/restaurant-marker-kind';
 
+import { buildHomeMapResultSummary } from '../lib/home-map-result-summary';
+import type { Restaurant } from '../types/restaurant';
+
 const appRoot = join(import.meta.dir, '..');
 
 type MarkerKindSignatureRestaurant = Parameters<typeof buildRestaurantMarkerKindSignature>[0][number];
@@ -54,7 +57,9 @@ describe('user-submitted marker visibility contract', () => {
     expect(homeClient).toContain('onUserSubmittedMarkersToggle={handleUserSubmittedMarkerToggle}');
     expect(homeClient).toContain('isAdmin={isAdmin}');
 
-    expect(naverMapView).toContain('return unfilteredDisplayRestaurants.filter((restaurant) => !isUserSubmittedRestaurant(restaurant));');
+    expect(naverMapView).toContain('useHomeMapResults({');
+    expect(naverMapView).toContain('const displayRestaurants = restaurants;');
+    expect(readSource('hooks/use-home-map-results.ts')).toContain('requireComplete: true, homeMapMode: mapMode, showUserSubmittedMarkers');
     expect(naverMapView).toContain('showUserSubmittedMarkers ? restaurantLookup : buildRestaurantLookup(displayRestaurants)');
     expect(naverMapView).toContain('[displayRestaurants, restaurantLookup, showUserSubmittedMarkers]');
     expect(naverMapView).toContain('showUserSubmittedMarkers || !isUserSubmittedRestaurant(publishedSearchedRestaurant)');
@@ -71,6 +76,23 @@ describe('user-submitted marker visibility contract', () => {
       expect(source).toContain('사용자 제보 맛집 마커 숨기기');
       expect(source).toContain('사용자 제보 맛집 마커 보이기');
       expect(source).toContain('bg-blue-600 hover:bg-blue-700 text-white border-transparent');
+    }
+  });
+
+  test('shared membership removes direct and merged submissions from rows, counts and facets together', () => {
+    const row = (id: string, extra: Partial<Restaurant> = {}) => ({
+      id, name: id, lat: 37.5, lng: 127, road_address: '서울특별시 중구', categories: ['한식'], ...extra,
+    } as Restaurant);
+    const rows = [row('ordinary', { source_type: 'youtube' }),
+      row('direct', { source_type: USER_SUBMITTED_RESTAURANT_SOURCE_TYPE }),
+      row('merged', { source_type: 'youtube', mergedRestaurants: [row('child', { source_type: USER_SUBMITTED_RESTAURANT_SOURCE_TYPE })] })];
+    for (const show of [true, false]) {
+      const result = buildHomeMapResultSummary({ data: rows, isPending: false, isError: false,
+        mapMode: 'domestic', selectedCountry: null, showUserSubmittedMarkers: show,
+        filters: { categories: [], minRating: 0, minReviews: 0, minUserVisits: 0, minJjyangVisits: 0 } });
+      expect(result.restaurants.map((r) => r.id)).toEqual(show ? ['ordinary', 'direct', 'merged'] : ['ordinary']);
+      expect(result.count).toBe(show ? 3 : 1);
+      expect(result.categoryCounts).toEqual({ 한식: show ? 3 : 1 });
     }
   });
 

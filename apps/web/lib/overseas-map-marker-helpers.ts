@@ -24,9 +24,9 @@ export function buildOverseasMarkerHtml({
     const safeName = escapeHtmlAttribute(name);
 
     return wrapMarkerWithPopularityTier(`
-        <div class="marker-container relative h-full w-full cursor-pointer hover:scale-110">
-            <img src="${safeImagePath}" class="h-full w-full object-contain" alt="${safeName}" draggable="false" />
-        </div>
+        <button type="button" aria-label="${safeName} 상세 보기" class="marker-container relative h-full w-full cursor-pointer border-0 bg-transparent p-0 hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary">
+            <img src="${safeImagePath}" class="h-full w-full object-contain" alt="" draggable="false" />
+        </button>
     `, publicPopularityTier(popularityTier));
 }
 

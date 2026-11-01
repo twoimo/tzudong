@@ -4,6 +4,7 @@ interface RetainedMarkerAccessibility {
 }
 
 const OWNER_ATTRIBUTE = 'data-tzudong-retained-marker-hidden';
+const INERT_OWNER_ATTRIBUTE = 'data-tzudong-retained-marker-inert';
 const MARKER_SELECTOR = '[data-testid="marker"]';
 const OVERLAY_SELECTOR = '[data-visible-marker-review-bubble-anchor="true"]';
 
@@ -87,9 +88,21 @@ export function syncRetainedMarkerAccessibility(
             root.setAttribute(OWNER_ATTRIBUTE, 'true');
             root.setAttribute('aria-hidden', 'true');
         }
-    } else if (root.getAttribute(OWNER_ATTRIBUTE) === 'true') {
-        root.removeAttribute(OWNER_ATTRIBUTE);
-        root.removeAttribute('aria-hidden');
+        // Native marker and sibling review buttons must also leave Tab order.
+        // Inert masks the whole overlay without overwriting individual tabindex.
+        if (root.getAttribute('inert') === null) {
+            root.setAttribute(INERT_OWNER_ATTRIBUTE, 'true');
+            root.setAttribute('inert', '');
+        }
+    } else {
+        if (root.getAttribute(OWNER_ATTRIBUTE) === 'true') {
+            root.removeAttribute(OWNER_ATTRIBUTE);
+            root.removeAttribute('aria-hidden');
+        }
+        if (root.getAttribute(INERT_OWNER_ATTRIBUTE) === 'true') {
+            root.removeAttribute(INERT_OWNER_ATTRIBUTE);
+            root.removeAttribute('inert');
+        }
     }
     marker.__tzudongRetainedMarkerAriaHidden = hidden;
 }

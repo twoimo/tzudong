@@ -324,6 +324,10 @@ describe('mobile home map regression guards', () => {
         const desktopPanelSource = source('components/home/home-desktop-control-panel.tsx');
         expect(desktopPanelSource).toContain('선택하면 즉시 적용됩니다.');
         expect(desktopPanelSource).toContain('onCategoryChange={onCategoryChange}');
+        expect(desktopPanelSource).toContain('resultSummary={resultSummary}');
+        const categoryFilterSource = source('components/filters/CategoryFilter.tsx');
+        expect(categoryFilterSource).toContain('onSelect={() => handleCategoryToggle(category)}');
+        expect(categoryFilterSource).toContain('onCategoryChange(newCategories)');
     });
 
     test('G012 mobile sheets and details own fixed map-control safe area', () => {

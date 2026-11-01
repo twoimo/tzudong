@@ -121,6 +121,24 @@ test('shared client migrates the exact legacy model while preserving prompt and 
     }finally{await fixture.close();}
 });
 
+test('automatic continuation stays off so an upgraded SDK cannot loop behind one budget admission',async()=>{
+    const bodies=[];
+    const fixture=await serverFixture(async(req,res)=>{
+        let data='';for await(const chunk of req)data+=chunk;
+        bodies.push(JSON.parse(data));
+        res.writeHead(200,{'content-type':'application/json'});
+        res.end(JSON.stringify({candidates:[{content:{role:'model',parts:[{text:'{"ok":true}'}]},continuationToken:'fixture-continuation-token'}],usageMetadata:{promptTokenCount:3,candidatesTokenCount:5,totalTokenCount:8}}));
+    });
+    try {
+        const ai=createGeminiClient('fixture');
+        const result=await generateWithProjectBudget(ai,{model:'gemini-3.8-flash',contents:'fixture',config:{httpOptions:{baseUrl:fixture.baseUrl}}},1000);
+        assert.equal(result.text,'{"ok":true}');
+        // js-genai >= 2.30 answers this continuation response with follow-up requests unless pinned off.
+        assert.equal(bodies.length,1);
+        assert.equal(await leases(),0);
+    } finally{await fixture.close();}
+});
+
 test('deadline aborts but does not release a project permit while the SDK promise remains unsettled',async()=>{
     let settle;let announced;const started=new Promise(resolve=>announced=resolve);
     let signal;let secondStarted=false;
@@ -267,6 +285,7 @@ globalThis.fetch = async (input, init) => {
     : value === 'synthetic-generic-key' ? 'generic' : value === 'synthetic-legacy-key' ? 'legacy' : 'unexpected';
   fs.appendFileSync(process.env.FX_PROBE_WIRE, JSON.stringify({ path: url.pathname, method: request.method,
     body: await request.json(), keySource }) + '\\n');
+  if (process.env.FX_PROBE_MODE === 'continuation') return Response.json({ candidates: [{ content: { role: 'model', parts: [{ text: '{"ok":true}' }] }, continuationToken: 'fixture-continuation-token' }], usageMetadata: { promptTokenCount: 3, candidatesTokenCount: 5, totalTokenCount: 8 } });
   if (process.env.FX_PROBE_MODE === 'crash') process.exit(86);
   if (process.env.FX_PROBE_MODE === 'lost_ack') throw new TypeError('synthetic response unavailable');
   if (process.env.FX_PROBE_MODE === 'hold') await new Promise(resolve => setTimeout(resolve, 800));
@@ -302,7 +321,7 @@ globalThis.fetch = async (input, init) => {
         const report = JSON.parse(fs.readFileSync(fx.output, 'utf8'));
         assert.equal(report.model, 'gemini-3.8-flash');
         assert.equal(report.credentialSource, 'GEMINI_CREDITS_API_KEY');
-        assert.deepEqual(report.config, { maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: 'MEDIUM' } });
+        assert.deepEqual(report.config, { maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: 'MEDIUM' }, automaticContinuation: false });
         assert.deepEqual(report.configuredBudget, { projectScope: 'offline-probe-fixture', requestsPerMinute: 37, concurrency: 1 });
         assert.equal(report.configuredMaxAttempts, 1); assert.equal(report.apiCallsStarted, 1);
         assert.equal(report.status, 'ok'); assert.equal(report.resultUnconfirmed, false);
@@ -317,6 +336,13 @@ globalThis.fetch = async (input, init) => {
         for (const secret of ['synthetic-funded-key', 'synthetic-generic-key', 'synthetic-legacy-key']) {
             assert.equal(saved.includes(secret), false); assert.equal(stdout.includes(secret), false);
         }
+    });
+    await t.test('provider continuation response cannot fan out extra paid requests behind one receipt', async () => {
+        const fx = setup('continuation', allKeys, 'continuation');
+        await fx.invoke();
+        assert.equal(fx.requests().length, 1); assertRequest(fx.requests()[0], 'funded');
+        const report = JSON.parse(fs.readFileSync(fx.output, 'utf8'));
+        assert.equal(report.apiCallsStarted, 1); assert.equal(report.configuredMaxAttempts, 1); assert.equal(report.status, 'ok');
     });
     await t.test('SDK model provenance preserves a returned revision and rejects unknown metadata', async () => {
         for (const [name, returned, expected, provenance] of [

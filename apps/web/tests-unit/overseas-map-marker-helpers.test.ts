@@ -29,15 +29,15 @@ describe('overseas map marker helpers', () => {
             });
 
             expect(html).toContain(`src="${imagePath}"`);
-            expect(html).toContain('alt="테스트 식당"');
-            expect(html).toContain('class="marker-container relative h-full w-full cursor-pointer hover:scale-110"');
+            expect(html).toContain('<button type="button" aria-label="테스트 식당 상세 보기"');
+            expect(html).toContain('alt=""');
             expect(html).toContain('class="h-full w-full object-contain"');
             expect(html).toContain('draggable="false"');
             expect(html).not.toContain('style=');
         }
     });
 
-    test('fails closed for unsafe marker image values and escapes alt text', () => {
+    test('fails closed for unsafe marker image values and escapes the button name', () => {
         const unsafeImagePaths = [
             'javascript:alert(1)',
             'data:image/svg+xml,<svg onload=alert(1)>',
@@ -54,7 +54,7 @@ describe('overseas map marker helpers', () => {
             });
 
             expect(html).toContain(`src="${MARKER_IMAGE_FALLBACK}"`);
-            expect(html).toContain('alt="해외 &quot;식당&quot; &lt;img&gt;"');
+            expect(html).toContain('aria-label="해외 &quot;식당&quot; &lt;img&gt; 상세 보기"');
             expect(html).not.toContain('onerror="alert(1)');
             expect(html).not.toContain('<img>');
         }
