@@ -37,6 +37,18 @@ export const metadata: Metadata = {
     title: DEFAULT_TITLE,
     description: DEFAULT_DESCRIPTION,
     applicationName: SITE_NAME,
+    keywords: [
+        '쯔양 맛집',
+        '쯔동여지도',
+        '쯔양 맛집 지도',
+        '유튜브 맛집 지도',
+        '먹방 맛집',
+        '서울 맛집',
+        '전국 맛집',
+        '도장 깨기',
+        'Tzuyang restaurant map',
+    ],
+    manifest: '/manifest.webmanifest',
     alternates: {
         canonical: '/',
     },
@@ -87,6 +99,10 @@ export const viewport = {
     width: 'device-width',
     initialScale: 1,
     viewportFit: 'cover',
+    themeColor: [
+        { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+        { media: '(prefers-color-scheme: dark)', color: '#09090b' },
+    ],
 };
 
 export default async function RootLayout({
@@ -104,6 +120,9 @@ export default async function RootLayout({
             suppressHydrationWarning
         >
             <head>
+                {/* [AEO] AI Engine Discovery */}
+                <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM Content Summary" />
+                <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLM Full Dataset Context" />
                 <script
                     nonce={nonce}
                     suppressHydrationWarning

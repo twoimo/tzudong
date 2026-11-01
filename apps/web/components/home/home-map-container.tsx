@@ -29,6 +29,7 @@ import {
 import type { DeviceMapLocation } from '@/lib/device-location-map';
 import type { HomeMapLayoutMode, HomeMapPanelSide } from '@/lib/home-map-user-preferences';
 import { loadOverseasMap } from '@/lib/overseas-map-loader';
+import { loadNaverMap } from '@/lib/naver-map-loader';
 import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
 
 import {
@@ -37,7 +38,7 @@ import {
     type HomeMapContextualRestaurantsPayload,
 } from '@/lib/home-map-contextual-restaurants';
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
-const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
+const NaverMapView = lazy(loadNaverMap);
 const OverseasMap = lazy(loadOverseasMap);
 const RestaurantDetailPanel = lazy(() =>
     // Load through the deferred-panel barrel so app/home-detail-globals.css

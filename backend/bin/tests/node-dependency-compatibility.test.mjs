@@ -166,7 +166,116 @@ test('GenAI caller imports and consumed SDK methods remain available offline', (
   });
 });
 
-for (const context of ['node_modules/minimatch/package.json', 'node_modules/gaxios/node_modules/minimatch/package.json']) {
+// Intended lock shape after the in-range gaxios/google-auth-library refresh
+// AND the vendored puppeteer-extra-plugin-user-data-dir repair (rimraf ->
+// fs.rm): the whole rimraf/glob/minimatch chain leaves the backend tree, so
+// the intended minimatch shape is ZERO copies. Contexts are discovered from
+// the actual lock and the physical install. Discovery never silently narrows
+// what gets checked: unreadable directories throw, nesting deeper than the
+// explicit cap fails a named test, and symlinked package directories fail
+// discovery instead of being skipped. A planted-copy probe proves the census
+// is not vacuous at zero.
+const intendedMinimatchContexts = [];
+const maxMinimatchNestingSegments = 12;
+
+function lockMinimatchContexts() {
+  const lock = JSON.parse(fs.readFileSync(path.join(backendRoot, 'package-lock.json'), 'utf8'));
+  return Object.keys(lock.packages)
+    .filter((key) => /(^|\/)node_modules\/minimatch$/.test(key))
+    .map((key) => `${key}/package.json`)
+    .sort();
+}
+
+function installedMinimatchContexts() {
+  const found = [];
+  function visitPackageDir(packageDir) {
+    const relative = path.relative(backendRoot, packageDir);
+    if (path.basename(packageDir) === 'minimatch') {
+      assert.ok(
+        fs.existsSync(path.join(packageDir, 'package.json')),
+        `minimatch directory without package.json at ${relative}`,
+      );
+      // Lock keys and intended contexts are POSIX-shaped; normalize disk
+      // discovery so the comparison holds on Windows local runs too.
+      found.push(`${relative.split(path.sep).join('/')}/package.json`);
+    }
+    const nested = path.join(packageDir, 'node_modules');
+    if (fs.existsSync(nested)) walkNodeModules(nested);
+  }
+  function walkNodeModules(nodeModulesDir) {
+    for (const entry of fs.readdirSync(nodeModulesDir, { withFileTypes: true })) {
+      if (entry.name === '.bin') continue;
+      const entryPath = path.join(nodeModulesDir, entry.name);
+      const relative = path.relative(backendRoot, entryPath);
+      assert.ok(
+        !entry.isSymbolicLink(),
+        `unexpected symlinked package directory at ${relative}; discovery must not silently skip it`,
+      );
+      if (!entry.isDirectory()) continue;
+      assert.ok(
+        relative.split(path.sep).length <= maxMinimatchNestingSegments,
+        `node_modules nesting deeper than ${maxMinimatchNestingSegments} path segments at ${relative}; raise the cap deliberately, never skip`,
+      );
+      if (entry.name.startsWith('@')) {
+        for (const scoped of fs.readdirSync(entryPath, { withFileTypes: true })) {
+          const scopedPath = path.join(entryPath, scoped.name);
+          assert.ok(
+            !scoped.isSymbolicLink(),
+            `unexpected symlinked package directory at ${path.relative(backendRoot, scopedPath)}; discovery must not silently skip it`,
+          );
+          if (scoped.isDirectory()) visitPackageDir(scopedPath);
+        }
+      } else {
+        visitPackageDir(entryPath);
+      }
+    }
+  }
+  walkNodeModules(path.join(backendRoot, 'node_modules'));
+  return found.sort();
+}
+
+let discoveryError = null;
+let discoveredContexts = [];
+try {
+  discoveredContexts = installedMinimatchContexts();
+} catch (error) {
+  discoveryError = error;
+}
+
+test('minimatch tree discovery completes within the explicit depth cap without symlinked package dirs', () => {
+  assert.ifError(discoveryError);
+});
+
+test('minimatch lock shape matches the intended in-range refresh outcome', () => {
+  assert.ifError(discoveryError);
+  assert.deepEqual(
+    lockMinimatchContexts(),
+    intendedMinimatchContexts,
+    'package-lock minimatch entries must match the intended refreshed shape',
+  );
+  assert.deepEqual(
+    discoveredContexts,
+    intendedMinimatchContexts,
+    'installed minimatch copies must match the intended refreshed shape',
+  );
+});
+
+test('minimatch census detects a planted copy (discovery is not vacuous at zero)', (t) => {
+  const probeRoot = path.join(backendRoot, 'node_modules', 'zz-census-probe');
+  const probePkg = path.join(probeRoot, 'node_modules', 'minimatch');
+  fs.mkdirSync(probePkg, { recursive: true });
+  fs.writeFileSync(
+    path.join(probePkg, 'package.json'),
+    JSON.stringify({ name: 'minimatch', version: '0.0.0-probe' }),
+  );
+  t.after(() => fs.rmSync(probeRoot, { recursive: true, force: true }));
+  assert.ok(
+    installedMinimatchContexts().includes('node_modules/zz-census-probe/node_modules/minimatch/package.json'),
+    'discovery must find a planted minimatch copy; a zero-context census must never pass by blindness',
+  );
+});
+
+for (const context of discoveredContexts) {
   test(`brace expansion remains compatible and bounded through ${context}`, () => {
     const result = spawnSync(process.execPath, ['--input-type=module', '-e', `
       import assert from 'node:assert/strict';

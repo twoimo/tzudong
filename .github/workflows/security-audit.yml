@@ -54,6 +54,8 @@ on:
       - 'backend/utils/tests/test_pipeline_restart_integration.py'
       - 'backend/utils/tests/resource-budget.test.mjs'
       - 'backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh'
+      - 'backend/restaurant-crawling/scripts/03-collect-transcript.js'
+      - 'backend/restaurant-crawling/scripts/tests/collect-transcript-env.test.mjs'
       - 'backend/bin/tests/test_check_deployment_descriptor_set_unittest.py'
       - 'backend/bin/tests/test_metrics_contract_report_unittest.py'
       - 'backend/bin/tests/test_observability_up_unittest.py'
@@ -282,7 +284,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # actions/setup-python@v6
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # actions/setup-python@v7.1.0
         with:
           python-version: '3.11'
 
@@ -326,7 +328,7 @@ jobs:
           git cat-file -e '2d7a8f6ed5fe9e14d8f5046f45a4ea2d45fb725c^{commit}'
 
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # actions/setup-python@v6
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # actions/setup-python@v7.1.0
         with:
           python-version: '3.11'
 
@@ -371,6 +373,9 @@ jobs:
 
       - name: Verify fixed pending custody SQL operation
         run: node --test apps/web/scripts/__tests__/hosted-pending-custody-operation.test.mjs
+
+      - name: Verify transcript collector Python environment binding
+        run: node --test backend/restaurant-crawling/scripts/tests/collect-transcript-env.test.mjs
 
       - name: Verify pipeline receipts, review completeness and resource limits
         run: |
@@ -578,7 +583,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # actions/setup-python@v6
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # actions/setup-python@v7.1.0
         with:
           python-version: '3.11'
 

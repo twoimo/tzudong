@@ -42,10 +42,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { DEFAULT_FOCUS_TRAP_ALLOW_SELECTORS, getFocusTrapContainers, shouldHideModalSibling } from '@/components/ui/bottom-sheet';
 import { Region, REGIONS, Restaurant } from '@/types/restaurant';
+import { homeMapResultCountLabel, homeMapResultStatusText, reconcileHomeMapContextualResults, type HomeMapResultSummary } from '@/lib/home-map-result-summary';
 import type { FilterState } from '@/components/filters/filter-state';
-import { useQuery } from '@tanstack/react-query';
-import { fetchSupabaseRows } from '@/lib/supabase-rest-client';
-import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { toast } from '@/lib/no-toast';
 import { incrementSearchCount } from '@/lib/search-count';
 import type { User } from '@supabase/supabase-js';
@@ -54,17 +52,16 @@ import { resolveDeviceLocationButtonLabel, type DeviceMapLocation } from '@/lib/
 import { DeviceLocationDisclosure } from '@/components/home/DeviceLocationDisclosure';
 import { DeferredPanelFallback } from '@/components/home/DeferredPanelFallback';
 import { useDeferredComponentWithRetry } from '@/hooks/use-deferred-component';
-import { useOverseasCountryCounts } from '@/components/home/use-overseas-country-counts';
+import { OVERSEAS_REGION_LIST } from '@/constants/overseas-regions';
 import { isPublicRestrictedMode, siteConfig } from "@/lib/site-config";
 import {
     HOME_MAP_CONTEXTUAL_MOBILE_LIMIT,
     type HomeMapContextualRestaurantsPayload,
 } from '@/lib/home-map-contextual-restaurants';
 import {
-    HOME_MAP_THEME_FILTERS,
     type HomeMapThemeFilterId,
 } from '@/lib/home-map-theme-filters';
-import { HomeMapThemeFilterIcon } from '@/components/home/home-map-theme-filter-icons';
+import { HomeMapThemeFilters } from '@/components/home/HomeMapThemeFilters';
 import { preloadOverseasMap } from '@/lib/overseas-map-loader';
 
 declare global {
@@ -163,6 +160,7 @@ interface MobileControlOverlayProps {
     selectedCountry: string | null;
     selectedCategories: string[];
     filters: FilterState;
+    resultSummary: HomeMapResultSummary;
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
@@ -219,6 +217,7 @@ function MobileControlOverlayComponent({
     selectedCountry,
     selectedCategories,
     filters,
+    resultSummary,
     onRegionChange,
     onCountryChange,
     onCategoryChange,
@@ -310,21 +309,22 @@ function MobileControlOverlayComponent({
     const DeferredMobileBookmarkMenuButton = bookmarkMenuLoad.Component;
     const DeferredMobileNotificationMenuButton = notificationMenuLoad.Component;
     const DeferredRestaurantSearch = searchLoad.Component;
-    const countryCounts = useOverseasCountryCounts(mapMode);
+    const { regionCounts, countryCounts, categoryCounts } = resultSummary;
     const deviceLocationButtonLabel = resolveDeviceLocationButtonLabel({
         hasLocation: Boolean(deviceLocation),
         isHeadingMode: isDeviceHeadingMode,
         isPending: isDeviceLocationPending,
     });
+    const currentContextualPayload = useMemo(() => reconcileHomeMapContextualResults(resultSummary, contextualRestaurantsPayload, mapMode), [resultSummary, contextualRestaurantsPayload, mapMode]);
     const visibleMarkerRestaurants = useMemo(
         () =>
-            contextualRestaurantsPayload?.isEligible
-                ? contextualRestaurantsPayload.restaurants.slice(0, HOME_MAP_CONTEXTUAL_MOBILE_LIMIT)
+            resultSummary.active ? resultSummary.restaurants : currentContextualPayload?.mode === mapMode && currentContextualPayload.isEligible
+                ? currentContextualPayload.restaurants.slice(0, HOME_MAP_CONTEXTUAL_MOBILE_LIMIT)
                 : [],
-        [contextualRestaurantsPayload],
+        [currentContextualPayload, mapMode, resultSummary],
     );
     const visibleMarkerRestaurantCount =
-        contextualRestaurantsPayload?.totalVisibleCount ?? visibleMarkerRestaurants.length;
+        resultSummary.active ? resultSummary.count : currentContextualPayload?.mode === mapMode ? currentContextualPayload.totalVisibleCount : visibleMarkerRestaurants.length;
     const visibleMarkerRestaurantsSignature = useMemo(
         () => `${visibleMarkerRestaurantCount}:${visibleMarkerRestaurants.map((restaurant) => restaurant.id).join('|')}`,
         [visibleMarkerRestaurantCount, visibleMarkerRestaurants],
@@ -344,11 +344,11 @@ function MobileControlOverlayComponent({
     const [dismissedVisibleMarkerSheetScope, setDismissedVisibleMarkerSheetScope] =
         useState<string | null>(null);
     const canAutoShowVisibleMarkerSheet =
-        mapMode === 'domestic' &&
+        (mapMode === 'domestic' || resultSummary.active) &&
         !isMapFullscreen &&
         !isPanelOpen &&
         !panelRestaurant &&
-        visibleMarkerRestaurants.length > 0;
+        (resultSummary.active || visibleMarkerRestaurants.length > 0);
     const shouldShowVisibleMarkerListRestore =
         canAutoShowVisibleMarkerSheet &&
         activeSheet === 'none' &&
@@ -419,26 +419,6 @@ function MobileControlOverlayComponent({
     const searchPreviouslyFocusedElementRef = useRef<HTMLElement | null>(null);
     const hiddenSearchLayerSiblingStatesRef = useRef<HiddenSearchLayerSiblingState[]>([]);
     const mobileSheetTriggerRef = useRef<'region' | 'category' | null>(null);
-
-    // 맛집 데이터 조회 (지역/카테고리 카운트용) - [OPTIMIZATION] 필요한 필드만 선택
-    const { data: restaurants = [] } = useQuery({
-        queryKey: ['mobile-control-restaurants', mapMode],
-        queryFn: async () => {
-            try {
-                const data = await fetchSupabaseRows<Restaurant>('restaurants', [
-                    ['select', 'id, name:approved_name, road_address, jibun_address, categories'],
-                    ['status', 'eq.approved'],
-                ]);
-                return mergeRestaurants(data);
-            } catch {
-                return [];
-            }
-        },
-        enabled: activeSheet === 'region' || activeSheet === 'category',
-        staleTime: 1000 * 60 * 5, // 5분간 fresh
-        gcTime: 1000 * 60 * 15, // 15분간 캐시 유지
-        refetchOnWindowFocus: false, // 윈도우 포커스 시 재요청 방지
-    });
 
     const handleClose = useCallback(() => {
         setActiveSheet('none');
@@ -545,73 +525,6 @@ function MobileControlOverlayComponent({
 
         return () => window.clearTimeout(focusTimer);
     }, [activeSheet]);
-
-    // [OPTIMIZATION] 지역별 맛집 수 계산 - 단일 패스로 최적화
-    const regionCounts = useMemo(() => {
-        const counts: Record<string, number> = {};
-
-        // 특수 지역 키워드 매핑 (욕지도/울릉도는 상위 지역보다 먼저 체크해야 함)
-        const specialRegions: Record<string, string> = {
-            '울릉도': '울릉',
-            '욕지도': '욕지'
-        };
-
-        restaurants.forEach((restaurant) => {
-            const address = restaurant.road_address || restaurant.jibun_address || '';
-
-            // 1. 특수 지역 먼저 체크 (욕지도, 울릉도)
-            let matched = false;
-            for (const [region, keyword] of Object.entries(specialRegions)) {
-                if (address.includes(keyword)) {
-                    counts[region] = (counts[region] || 0) + 1;
-                    matched = true;
-                    break;
-                }
-            }
-
-            // 2. 특수 지역에 매칭되지 않았으면 일반 지역 체크
-            if (!matched) {
-                for (const region of REGIONS) {
-                    // 특수 지역은 이미 위에서 처리했으니 스킵
-                    if (region in specialRegions) continue;
-
-                    if (address.includes(region)) {
-                        counts[region] = (counts[region] || 0) + 1;
-                        break;
-                    }
-                }
-            }
-        });
-        return counts;
-    }, [restaurants]);
-
-    // [OPTIMIZATION] 카테고리별 맛집 수 계산 (선택된 지역 고려) - 지역 필터링 최적화
-    const categoryCounts = useMemo(() => {
-        const counts: Record<string, number> = {};
-
-        // 지역 키워드 매핑
-        const regionKeywords: Record<string, string> = {
-            '울릉도': '울릉',
-            '욕지도': '욕지'
-        };
-        const keyword = selectedRegion ? (regionKeywords[selectedRegion] || selectedRegion) : null;
-
-        // 지역이 선택된 경우 해당 지역만 필터링, 아니면 전체
-        const targetRestaurants = keyword
-            ? restaurants.filter((r) => {
-                const addr = r.road_address || r.jibun_address || '';
-                return addr.includes(keyword);
-            })
-            : restaurants;
-
-        for (const restaurant of targetRestaurants) {
-            const categories = restaurant.categories || [];
-            for (const category of categories) {
-                counts[category] = (counts[category] || 0) + 1;
-            }
-        }
-        return counts;
-    }, [restaurants, selectedRegion]);
 
     // Pull-to-Refresh 방지: 바텀시트가 열려있을 때 body에 overscroll-behavior 적용
     useEffect(() => {
@@ -1049,40 +962,8 @@ function MobileControlOverlayComponent({
                     {renderUserMenuButton()}
                 </div>
 
-                <div
-                    id="tzudong-mobile-category-slider"
-                    data-mobile-topic-slider="true"
-                    data-layout-primitives="reel cluster"
-                    data-allow-horizontal-scroll="true"
-                    data-horizontal-scroll-owner="mobile-theme-filter-reel"
-                    className="pointer-events-auto mt-2 flex w-full max-w-full flex-nowrap snap-x gap-2 overflow-x-auto px-0.5 pr-3 py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                >
-                    {HOME_MAP_THEME_FILTERS.map((theme) => {
-                        const isSelected = selectedTheme === theme.id;
-                        return (
-                            <Button
-                                key={theme.id}
-                                variant="secondary"
-                                size="sm"
-                                type="button"
-                                onClick={() => onThemeChange(isSelected ? null : theme.id)}
-                                aria-pressed={isSelected}
-                                aria-label={`${theme.ariaLabel}${isSelected ? ' 선택됨' : ''}`}
-                                title={`${theme.label}: ${theme.description}`}
-                                className={cn(
-                                    'pointer-events-auto inline-flex h-9 snap-start shrink-0 items-center gap-1 rounded-full shadow-sm border border-border bg-background/95',
-                                    'whitespace-nowrap px-2.5 home-map-floating-control-text text-xs font-semibold motion-reduce:transition-none hover:bg-secondary/80',
-                                    'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
-                                    isSelected
-                                        ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
-                                        : 'text-foreground'
-                                )}
-                            >
-                                <HomeMapThemeFilterIcon themeId={theme.id} />
-                                <span>{theme.label}</span>
-                            </Button>
-                        );
-                    })}
+                <div id="tzudong-mobile-category-slider" data-mobile-topic-slider="true" data-layout-primitives="cluster wrap-row" className="mt-2 min-w-0">
+                    <HomeMapThemeFilters activeThemeId={selectedTheme} onThemeChange={onThemeChange} />
                 </div>
             </div>
 
@@ -1469,7 +1350,7 @@ function MobileControlOverlayComponent({
                                             }}
                                         >
                                             <span className="font-medium">대한민국</span>
-                                            <span className="text-sm opacity-75">({restaurants.length}개)</span>
+                                            <span className="text-sm opacity-75">현재 결과 ({homeMapResultCountLabel(resultSummary, resultSummary.count ?? undefined)}개)</span>
                                         </Button>
 
                                         <div className="grid grid-cols-2 gap-2">
@@ -1488,7 +1369,7 @@ function MobileControlOverlayComponent({
                                                         }}
                                                     >
                                                         <span className="font-medium">{region}</span>
-                                                        <span className="text-xs opacity-75">({count})</span>
+                                                        <span className="text-xs opacity-75">({homeMapResultCountLabel(resultSummary, count)})</span>
                                                     </Button>
                                                 );
                                             })}
@@ -1496,7 +1377,7 @@ function MobileControlOverlayComponent({
                                     </>
                                 ) : (
                                     <div className="grid grid-cols-2 gap-2">
-                                        {Object.keys(countryCounts).map((country) => {
+                                        {OVERSEAS_REGION_LIST.map((country) => {
                                             const count = countryCounts[country] || 0;
                                             const isSelected = selectedCountry === country;
                                             return (
@@ -1510,7 +1391,7 @@ function MobileControlOverlayComponent({
                                                     }}
                                                 >
                                                     <span className="font-medium">{country}</span>
-                                                    <span className="text-xs opacity-75">({count})</span>
+                                                    <span className="text-xs opacity-75">({homeMapResultCountLabel(resultSummary, count)})</span>
                                                 </Button>
                                             );
                                         })}
@@ -1532,9 +1413,9 @@ function MobileControlOverlayComponent({
                                             <span className="truncate">맛집 목록</span>
                                             <span
                                                 className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-2xs font-semibold leading-4 text-primary-foreground"
-                                                aria-label={`맛집 목록 ${visibleMarkerRestaurantCount}곳`}
+                                                aria-label={`맛집 목록 ${visibleMarkerRestaurantCount ?? "확인 중"}곳`}
                                             >
-                                                {visibleMarkerRestaurantCount}곳
+                                                {visibleMarkerRestaurantCount ?? "—"}곳
                                             </span>
                                         </h2>
                                         <Button
@@ -1548,6 +1429,7 @@ function MobileControlOverlayComponent({
                                         </Button>
                                     </div>
                                 </div>
+                                {resultSummary.active && <p className="px-2 py-2 text-sm text-muted-foreground" role={resultSummary.status === 'error' ? 'alert' : 'status'}>{homeMapResultStatusText(resultSummary)}</p>}
                                 {visibleMarkerRestaurants.map((restaurant) => (
                                     <StampCard
                                         key={restaurant.id}
@@ -1603,7 +1485,7 @@ function MobileControlOverlayComponent({
                                                     {isSelected && <Check className="h-4 w-4" aria-hidden="true" />}
                                                     {category}
                                                 </span>
-                                                <span className="text-xs opacity-75">({count})</span>
+                                                <span className="text-xs opacity-75">({homeMapResultCountLabel(resultSummary, count)})</span>
                                             </Button>
                                         );
                                     })}

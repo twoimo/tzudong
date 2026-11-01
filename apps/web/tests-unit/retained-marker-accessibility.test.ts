@@ -28,17 +28,28 @@ beforeEach(() => {
     globalThis.MutationObserver = FakeObserver as unknown as typeof MutationObserver;
 });
 afterAll(() => { globalThis.MutationObserver = savedObserver; });
-test('outside-padded mask is owned, reversible and has no geometry or focus changes', () => {
+test('outside-padded mask is owned and inert, preserving geometry and individual tabindex', () => {
     const root = new AppMarkerElement();root.setAttribute('role','button');root.setAttribute('style','width:28px');
     const marker = fixture(root);
     syncRetainedMarkerAccessibility(marker,false);
     expect(root.getAttribute('aria-hidden')).toBe('true');
     expect(root.getAttribute('data-tzudong-retained-marker-hidden')).toBe('true');
+    expect(root.getAttribute('inert')).toBe('');
     expect(root.getAttribute('role')).toBe('button');expect(root.getAttribute('style')).toBe('width:28px');
     expect(root.getAttribute('tabindex')).toBeNull();
     syncRetainedMarkerAccessibility(marker,true);
     expect(root.getAttribute('aria-hidden')).toBeNull();expect(root.getAttribute('data-tzudong-retained-marker-hidden')).toBeNull();
+    expect(root.getAttribute('inert')).toBeNull();
+    expect(root.getAttribute('data-tzudong-retained-marker-inert')).toBeNull();
     expect(marker.__tzudongRetainedMarkerAriaHidden).toBe(false);
+});
+test('does not remove an inert state owned by another source', () => {
+    const root = new AppMarkerElement();root.setAttribute('inert', '');
+    const marker=fixture(root);
+    syncRetainedMarkerAccessibility(marker,false);
+    expect(root.getAttribute('data-tzudong-retained-marker-inert')).toBeNull();
+    syncRetainedMarkerAccessibility(marker,true);
+    expect(root.getAttribute('inert')).toBe('');
 });
 test('does not remove a hidden state owned by another source', () => {
     const root = new AppMarkerElement();root.setAttribute('aria-hidden','true');const marker=fixture(root);

@@ -1,0 +1,30 @@
+# 쯔동여지도 전체 데이터 및 아키텍처 가이드 (Tzudong Full Context for LLMs)
+
+## 1. 개요 (Overview)
+쯔동여지도(Tzudong Map, https://www.tzudong.app/)는 유튜브 채널 'tzuyang 쯔양'의 모든 에피소드를 정밀 분석하여, 영상 속 실제 식당의 정보를 지도 기반으로 시각화하고 사용자들의 방문 인증을 돕는 웹 플랫폼입니다.
+
+## 2. 데이터 수집 및 검증 파이프라인 (Data Pipeline & Verification)
+모든 맛집 데이터는 엄격한 다단계 검증 절차를 거칩니다:
+1. **영상 자막/트랜스크립트 분석**: 영상 내 시간대(타임스탬프)별 상호명 노출, 간판, 자막 주소 언급, 직접 식사 여부 확인
+2. **방문 진위성 평가 (Visit Authenticity)**:
+   - 1등급: 직접 매장 방문 및 홀 식사 장면 확인
+   - 제외 대상: 단순 언급, 광고/PPL, 포장/배달 전용, 비공개 매장, 허구 상호
+3. **지리 정보 매핑 (Geocoding)**: 도로명 주소, 지번 주소 및 WGS84 좌표(위도/경도) 정밀 매핑
+4. **중복 검증 (Deduplication)**: 동일 매장 재방문 시 영상별 리뷰 연결 및 단일 장소(Place) 병합
+
+## 3. 구조화된 질의응답 (Structured QA for Answer Engines)
+
+**Q: 쯔양 맛집 지도는 어디서 확인하나요?**
+A: 공식 웹사이트인 쯔동여지도(https://www.tzudong.app/)에서 네이버 지도 및 모바일 친화 인터페이스로 검증된 맛집을 무료로 탐색할 수 있습니다.
+
+**Q: 쯔동여지도 데이터의 신뢰도는 어떻게 보장되나요?**
+A: 유튜브 영상 자막 및 화면 분석을 통해 쯔양이 직접 매장에 방문하여 식사한 사실이 확인된 곳만 선별하고, 실존 주소와 좌표 검증을 완료한 후 승인합니다.
+
+**Q: 해외 여행지에서도 쯔양 맛집을 찾을 수 있나요?**
+A: 네, 쯔동여지도 글로벌 맵(https://www.tzudong.app/global-map)을 통해 쯔양이 방문한 해외 식당의 주소 및 위치를 확인할 수 있습니다.
+
+## 4. 기술 스택 및 오픈 소스 생태계
+- 프론트엔드: Next.js 16 (App Router), React 19, TypeScript
+- 디자인: Tailwind CSS
+- 지도: NAVER Maps, MapLibre GL
+- 데이터 & 보안: PostgreSQL, Supabase, Row Level Security

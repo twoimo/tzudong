@@ -29,7 +29,8 @@ function runRendererSource<T>(source: string, bindings: Record<string, unknown>)
 }
 
 const viewportHelperStart = rendererSource.indexOf('function getNaverMarkerViewportKey(');
-const viewportHelperEnd = rendererSource.indexOf('\ntype NaverQueryBounds', viewportHelperStart);
+const viewportHelperEnd = rendererSource.indexOf('\nconst NaverMapAnnouncementRuntime', viewportHelperStart);
+if (viewportHelperStart < 0 || viewportHelperEnd < 0) throw new Error('NAVER_VIEWPORT_HELPER_ANCHOR_MISSING');
 const getViewportKey = runRendererSource<(map: unknown, element: unknown) => string>(
     `${rendererSource.slice(viewportHelperStart, viewportHelperEnd)}\nreturn getNaverMarkerViewportKey;`,
     { fillExtendedBounds },

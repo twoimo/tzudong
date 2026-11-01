@@ -6,7 +6,7 @@ import '@/styles/maplibre-gl.css';
 import type { Restaurant } from '@/types/restaurant';
 import { syncPopularityMarkerInteraction, syncPopularityMarkerZoom } from '@/lib/evidence-engineering/popularity-marker';
 import type { FilterState } from '@/components/filters/filter-state';
-import { useRestaurants } from '@/hooks/use-restaurants';
+import { useHomeMapResults } from '@/hooks/use-home-map-results';
 import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
 import { Button } from '@/components/ui/button';
 import { OVERSEAS_MAP_STYLE_URL, OVERSEAS_MAP_WORKER_URL } from '@/lib/overseas-map-provider';
@@ -15,7 +15,6 @@ import {
     shouldFocusDeviceLocation,
     type DeviceMapLocation,
 } from '@/lib/device-location-map';
-import { buildOverseasRestaurantsQueryOptions } from '@/lib/map-query-helpers';
 import {
     DEFAULT_OVERSEAS_PADDING,
     getNextOverseasWheelSlider,
@@ -54,6 +53,7 @@ interface OverseasMapProps {
     onMapInteraction?: () => void;
     deviceLocation?: DeviceMapLocation | null;
 }
+const EMPTY_RESTAURANTS: Restaurant[] = [];
 const hasValidOverseasDeviceLocation = (
     location: DeviceMapLocation | null,
     zoom: number,
@@ -79,7 +79,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     selectedCountry,
     searchedRestaurant,
     selectedRestaurant,
-    refreshTrigger, // Used to trigger data refresh
+    refreshTrigger: _refreshTrigger,
     onRestaurantSelect,
     onMarkerClick,
     onMapReady,
@@ -117,18 +117,15 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     }, [onMapInteraction]);
 
 
-    // Filtered restaurants with optimization
-    const restaurantsOptions = useMemo(() => buildOverseasRestaurantsQueryOptions({
-        filters,
-        refreshTrigger,
-        selectedCountry,
-    }), [filters, selectedCountry, refreshTrigger]);
-
-    const { data: restaurants = [], isLoading: isLoadingRestaurants } = useRestaurants(restaurantsOptions);
+    const { data: restaurants = EMPTY_RESTAURANTS, isLoading: isLoadingRestaurants, summary } = useHomeMapResults({
+        mapMode: 'overseas', filters, selectedRegion: null, selectedCountry,
+    });
 
     const restaurantsToShow = useMemo(() => {
-        return mergeOverseasRestaurants(restaurants, searchedRestaurant).filter(hasRenderableOverseasCoordinates);
-    }, [restaurants, searchedRestaurant]);
+        if (summary.status !== 'ready') return EMPTY_RESTAURANTS;
+        return (summary.active ? restaurants : mergeOverseasRestaurants(restaurants, searchedRestaurant))
+            .filter(hasRenderableOverseasCoordinates);
+    }, [restaurants, searchedRestaurant, summary.active, summary.status]);
 
     useEffect(() => {
         if (!onVisibleRestaurantsChange) return;
