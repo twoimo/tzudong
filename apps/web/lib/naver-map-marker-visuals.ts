@@ -13,6 +13,7 @@ import {
 type NaverIndividualMarkerRestaurant = Partial<Pick<
     Restaurant,
     | 'id'
+    | 'name'
     | 'categories'
     | 'youtube_link'
     | 'youtube_links'
@@ -143,6 +144,7 @@ type IndividualMarkerVisual = {
 };
 
 type IndividualMarkerStamp = {
+    name: string;
     youtube: string;
     mergedYoutube: number;
     mergedReviews: number;
@@ -162,6 +164,7 @@ const individualVisualCache = new WeakMap<object, {
 
 function individualMarkerStampFields(restaurant: NaverIndividualMarkerRestaurant) {
     return {
+        name: restaurant.name ?? '',
         youtube: restaurant.youtube_link ?? '',
         mergedYoutube: restaurant.mergedYoutubeLinks?.length ?? 0,
         mergedReviews: restaurant.mergedTzuyangReviews?.length ?? 0,
@@ -175,7 +178,8 @@ function individualMarkerStampFields(restaurant: NaverIndividualMarkerRestaurant
 }
 
 function individualStampMatches(stamp: IndividualMarkerStamp, restaurant: NaverIndividualMarkerRestaurant) {
-    return stamp.youtube === (restaurant.youtube_link ?? '')
+    return stamp.name === (restaurant.name ?? '')
+        && stamp.youtube === (restaurant.youtube_link ?? '')
         && stamp.mergedYoutube === (restaurant.mergedYoutubeLinks?.length ?? 0)
         && stamp.mergedReviews === (restaurant.mergedTzuyangReviews?.length ?? 0)
         && stamp.mergedRestaurants === (restaurant.mergedRestaurants?.length ?? 0)
@@ -214,6 +218,7 @@ export function getNaverIndividualMarkerVisual(
         Array.isArray(restaurant.category) ? restaurant.category[0] ?? '' : restaurant.category ?? '',
         restaurant.source_type ?? '',
         popularityTier,
+        restaurant.name ?? '',
     ].join('|');
     const cached = readMarkerVisualCache(cacheKey);
     if (cached) return cached;
@@ -235,7 +240,7 @@ export function getNaverIndividualMarkerVisual(
                 : markerKind === 'seasonal'
                     ? '제철'
                     : category;
-    const content = createIndividualMarkerHTML(markerCategory, isSelected, visitCount, restaurant.id);
+    const content = createIndividualMarkerHTML(markerCategory, isSelected, visitCount, restaurant.id, restaurant.name);
     const markerHtml = markerKind !== 'category'
         ? wrapSpecialMarkerContent(content, isSelected, markerKind)
         : `<div data-restaurant-marker-kind="category" data-restaurant-marker-asset-version="${RESTAURANT_MARKER_ASSET_VERSION}">${content}</div>`;

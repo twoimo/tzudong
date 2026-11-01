@@ -202,7 +202,7 @@ describe('home map contextual visible-marker restaurants', () => {
     );
     expect(mobileOverlaySource).toContain('const VISIBLE_MARKER_SHEET_HEIGHT = 25;');
     expect(mobileOverlaySource).toContain('<span className="truncate">맛집 목록</span>');
-    expect(mobileOverlaySource).toContain('aria-label={`맛집 목록 ${visibleMarkerRestaurantCount}곳`}');
+    expect(mobileOverlaySource).toContain('aria-label={`맛집 목록 ${visibleMarkerRestaurantCount ?? "확인 중"}곳`}');
     expect(mobileOverlaySource).toContain('aria-label="맛집 목록 닫기"');
     expect(mobileOverlaySource).toContain('onClick={handleVisibleMarkerSheetClose}');
     expect(mobileOverlaySource).toContain('density="dense"');
