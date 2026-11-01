@@ -492,16 +492,19 @@ export async function fetchPopularRestaurants({
     ),
   );
 
-  const restaurants = (await attachPopularYouTubeMetrics(
-    mergeRestaurants(data ?? [])
-      .filter(isApprovedRestaurant)
-      .filter((restaurant) =>
-        matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
-      ),
-  ))
-    .sort((a, b) => (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0));
+  const cohort = mergeRestaurants(data ?? [])
+    .filter(isApprovedRestaurant)
+    .filter((restaurant) =>
+      matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
+    );
 
-  const reviewLikesById = await fetchReviewLikeTotals(restaurants.map((restaurant) => restaurant.id));
+  // KPI enrichment preserves the cohort's IDs, membership and order, so the
+  // independent like totals can load alongside it before any final ranking.
+  const [restaurants, reviewLikesById] = await Promise.all([
+    attachPopularYouTubeMetrics(cohort),
+    fetchReviewLikeTotals(cohort.map((restaurant) => restaurant.id)),
+  ]);
+  restaurants.sort((a, b) => (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0));
   restaurants.sort((a, b) => comparePopularRestaurants(a, b, reviewLikesById));
   restaurants.splice(limit);
 
