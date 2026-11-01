@@ -13,6 +13,7 @@
 
 import { syncRetainedMarkerAccessibility } from './retained-marker-accessibility';
 import { detachNaverMapMarker, removeNaverMapListener } from './naver-map-event-cleanup';
+import { bindNaverMarkerNativeActivation } from './naver-marker-native-activation';
 
 type MarkerClickEvent = unknown;
 
@@ -117,6 +118,51 @@ export class MarkerPool {
     // The SDK may return a cloned descriptor. The pool owns the last applied
     // snapshot; review patches must not depend on mutating getIcon() results.
     private renderedIcons = new WeakMap<PooledMarker, MarkerIconLike>();
+    private nativeMarkerMaps = new WeakMap<PooledMarker, unknown>();
+    private nativeMapOwners = new Map<unknown, {
+        markers: Set<PooledMarker>;
+        dispose: (() => void) | null;
+    }>();
+
+    private releaseNativeActivation(marker: PooledMarker): void {
+        const map = this.nativeMarkerMaps.get(marker);
+        this.nativeMarkerMaps.delete(marker);
+        const owner = this.nativeMapOwners.get(map);
+        if (!owner) return;
+        owner.markers.delete(marker);
+        if (owner.markers.size === 0) {
+            owner.dispose?.();
+            this.nativeMapOwners.delete(map);
+        }
+    }
+
+    private retainNativeActivation(marker: PooledMarker, map: unknown): void {
+        if (this.nativeMarkerMaps.get(marker) !== map) this.releaseNativeActivation(marker);
+        if (map == null) return;
+        let owner = this.nativeMapOwners.get(map);
+        if (!owner) {
+            owner = { markers: new Set(), dispose: null };
+            this.nativeMapOwners.set(map, owner);
+        }
+        owner.markers.add(marker);
+        this.nativeMarkerMaps.set(marker, map);
+        if (!owner.dispose) {
+            const currentOwner = owner;
+            owner.dispose = bindNaverMarkerNativeActivation(map, (button) => {
+                for (const current of currentOwner.markers) {
+                    try {
+                        if (!current.__tzudongRetainedMarkerAriaHidden
+                            && current.getMap() === map && current.getElement()?.contains?.(button)) {
+                            return current.__onClick;
+                        }
+                    } catch {
+                        // A failed SDK handle cannot establish current ownership.
+                    }
+                }
+                return undefined;
+            });
+        }
+    }
 
     /** 풀 최대 크기 (메모리 제한) */
     private readonly MAX_POOL_SIZE = 1000;
@@ -218,6 +264,7 @@ export class MarkerPool {
         marker.__onClick = onClick;
 
         this.active.set(id, marker);
+        this.retainNativeActivation(marker, map);
         return marker;
     }
 
@@ -257,6 +304,7 @@ export class MarkerPool {
         // Detached/evicted markers must not retain a render's restaurant/state
         // closure or dispatch a queued click for a no-longer-active place.
         marker.__onClick = undefined;
+        this.releaseNativeActivation(marker);
         syncRetainedMarkerAccessibility(marker, true);
         const detached = detachNaverMapMarker(marker);
         if (detached && this.pool.length < this.MAX_POOL_SIZE) {
@@ -354,6 +402,9 @@ export class MarkerPool {
      * 풀 전체 정리 (컴포넌트 언마운트 시)
      */
     public clear(): void {
+        this.nativeMapOwners.forEach((owner) => owner.dispose?.());
+        this.nativeMapOwners.clear();
+        this.nativeMarkerMaps = new WeakMap();
         this.active.forEach((marker) => {
             marker.__onClick = undefined;
             syncRetainedMarkerAccessibility(marker, true);
