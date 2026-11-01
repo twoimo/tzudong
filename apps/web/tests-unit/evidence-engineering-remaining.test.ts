@@ -7,6 +7,7 @@ import { badgeViewerPhase } from "../components/restaurant/PopularityBadge";
 import { publicEvidenceFrames, publicReviewedVideoFrames, publicEvidenceImageSource, publicFramePresentation } from "../components/restaurant/RestaurantEvidenceCarousel";
 import { BADGE_BYTE_COUNT_IS_PASS_THRESHOLD, POPULARITY_BADGE_KINDS } from "../components/restaurant/PopularityBadge";
 import { buildRestaurantSelectFields, fetchRestaurantsRecoveringMissingEmbed, RESTAURANT_EVIDENCE_FRAME_EMBED, RESTAURANT_MERGE_SELECT } from "../hooks/use-restaurants";
+import { SupabaseRestRowsError } from "../lib/supabase-rest-client";
 import { naverPlaceSearchUrl, operationalCaution } from "../components/restaurant/OperationalCautionNotice";
 import {
   applyEvidenceModeration,
@@ -281,7 +282,7 @@ describe("evidence engineering remaining tasks", () => {
       const chosen = String(query.find(([key]) => key === "select")?.[1]);
       calls.push(chosen);
       if (chosen.includes("restaurant_evidence_frames(")) {
-        throw new Error("Supabase REST restaurants failed: 400 PGRST200 relation missing");
+        throw new SupabaseRestRowsError(400, "PGRST200");
       }
       return [{ id: "kept" }];
     });
