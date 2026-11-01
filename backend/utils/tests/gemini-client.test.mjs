@@ -464,3 +464,19 @@ globalThis.fetch = async (input, init) => {
         }
     }
 });
+
+test('automatic continuation stays off so an upgraded SDK cannot loop behind one budget admission', async () => {
+    let requests = 0;
+    const continuationBody = { candidates: [{ finishReason: 'CONTINUATION', continuationToken: 'fixture-token', content: { role: 'model', parts: [{ text: '{"ok":true}' }] } }], usageMetadata: { promptTokenCount: 3, candidatesTokenCount: 5, totalTokenCount: 8 } };
+    const fixture = await serverFixture((_req, res) => {
+        requests++;
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify(continuationBody));
+    });
+    try {
+        const ai = createGeminiClient('fixture');
+        const result = await generateWithProjectBudget(ai, { model: 'gemini-3.8-flash', contents: 'fixture', config: { httpOptions: { baseUrl: fixture.baseUrl } } }, 1000);
+        assert.equal(result.text, '{"ok":true}');
+        assert.equal(requests, 1);
+    } finally { await fixture.close(); }
+});
