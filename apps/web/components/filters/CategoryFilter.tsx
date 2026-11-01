@@ -11,6 +11,7 @@ import { mergeRestaurants } from "@/hooks/use-restaurants";
 import { buildOverseasCountryAddressOrFilter } from "@/lib/overseas-region-matching";
 import { buildRestaurantRegionAddressOrFilter } from "@/lib/popular-restaurants";
 import { MapFilterTriggerLabel } from './MapFilterTriggerLabel';
+import { homeMapResultCountLabel, type HomeMapResultSummary } from '@/lib/home-map-result-summary';
 
 interface CategoryFilterProps {
     selectedCategories: string[];
@@ -22,6 +23,7 @@ interface CategoryFilterProps {
     contentAlign?: "start" | "center" | "end";
     contentClassName?: string;
     compactTrigger?: boolean;
+    resultSummary?: HomeMapResultSummary;
 }
 
 const CATEGORIES = [
@@ -52,6 +54,7 @@ const CategoryFilter = ({
     contentAlign = "start",
     contentClassName,
     compactTrigger = false,
+    resultSummary,
 }: CategoryFilterProps) => {
     const [isOpen, setIsOpen] = useState(false);
 
@@ -90,7 +93,7 @@ const CategoryFilter = ({
                 return [];
             }
         },
-        enabled: true,
+        enabled: !resultSummary,
         staleTime: 10 * 60 * 1000,
         gcTime: 30 * 60 * 1000,
         refetchOnWindowFocus: false,
@@ -98,6 +101,7 @@ const CategoryFilter = ({
 
     // 카테고리별 맛집 수 계산 (병합된 데이터 기준)
     const categoryCounts = useMemo(() => {
+        if (resultSummary) return resultSummary.categoryCounts;
         const counts: Record<string, number> = {};
 
         restaurants.forEach((restaurant) => {
@@ -108,10 +112,14 @@ const CategoryFilter = ({
         });
 
         return counts;
-    }, [restaurants]);
+    }, [restaurants, resultSummary]);
 
     // 전체 맛집 수 (병합된 데이터 기준)
-    const totalCount = restaurants.length;
+    const totalCount = resultSummary ? resultSummary.count ?? undefined : restaurants.length;
+    const totalCaption = resultSummary?.status === 'error' ? '맛집 결과 확인 불가'
+        : resultSummary?.status === 'pending' ? '맛집 결과 불러오는 중'
+        : resultSummary?.status === 'select-country' ? '국가를 선택해 주세요'
+        : `전체 ${totalCount}개`;
 
     const handleCategoryToggle = (category: string) => {
         const newCategories = selectedCategories.includes(category)
@@ -150,7 +158,7 @@ const CategoryFilter = ({
                                 }
                             </span>
                             {selectedCategories.length === 0 && (
-                                <span className="ml-2 shrink-0 whitespace-nowrap text-xs text-muted-foreground">({totalCount}개)</span>
+                                <span className="ml-2 shrink-0 whitespace-nowrap text-xs text-muted-foreground">({resultSummary ? homeMapResultCountLabel(resultSummary, totalCount) : totalCount}개)</span>
                             )}
                         </div>
                     </div>}
@@ -174,7 +182,7 @@ const CategoryFilter = ({
                                 <p className="mt-0.5 text-xs text-muted-foreground">
                                     {selectedCategories.length > 0
                                         ? `${selectedCategories.length}개 선택됨`
-                                        : `전체 ${totalCount}개`}
+                                        : totalCaption}
                                 </p>
                             </div>
                             {selectedCategories.length > 0 && (
@@ -199,7 +207,7 @@ const CategoryFilter = ({
                         </CommandEmpty>
                         <CommandGroup className="p-0">
                             <div className="flex items-center justify-between px-2 py-2">
-                                <span className="text-xs font-medium text-muted-foreground">전체 {totalCount}개</span>
+                                <span className="text-xs font-medium text-muted-foreground">{totalCaption}</span>
                                 {selectedCategories.length > 0 && (
                                     <span className="rounded-full bg-primary/10 px-2 py-0.5 text-2xs font-medium text-primary">
                                         {selectedCategories.length}개 선택
@@ -226,7 +234,9 @@ const CategoryFilter = ({
                                             <span className="truncate text-sm font-medium">{category}</span>
                                         </div>
                                         <span className="ml-3 shrink-0 rounded-full bg-muted px-2 py-0.5 text-2xs tabular-nums text-muted-foreground">
-                                            {count}개
+                                            {resultSummary && resultSummary.status !== 'ready'
+                                                ? homeMapResultCountLabel(resultSummary, undefined)
+                                                : `${count}개`}
                                         </span>
                                     </CommandItem>
                                 );

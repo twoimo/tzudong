@@ -58,6 +58,7 @@ import {
   type HomeRestoreSnapshotV1,
 } from "@/lib/home-detail-route-state";
 import { findOverseasRegionKeyForRestaurant } from "@/lib/overseas-region-matching";
+import { preloadNaverMap } from "@/lib/naver-map-loader";
 
 function HomeMapContainerPendingShell() {
   return (
@@ -120,6 +121,7 @@ const HomeClientSidePanels = dynamic(() => import("./home-client-sidepanels"), {
 const HomeClientEffects = dynamic(() => import("./home-client-effects"), {
   ssr: false,
 });
+import { useHomeMapResults } from "@/hooks/use-home-map-results";
 import { useHomeState } from "./hooks/useHomeState";
 import { useHomeHandlers } from "./hooks/useHomeHandlers";
 import { useRestaurantPopupListener } from "./hooks/useRestaurantPopupListener";
@@ -208,6 +210,12 @@ export default function HomeClient() {
   const isDesktop = viewportMode === "desktop";
   const isMobileOrTablet = viewportMode === "mobileOrTablet";
   const [mapMode, setMapMode] = useState<"domestic" | "overseas">("domestic");
+  useEffect(() => {
+    if (!isViewportResolved || mapMode !== "domestic") return;
+    // URL restoration may still be resolving the initial mode in this commit.
+    if (new URL(window.location.href).searchParams.get("mapMode") === "overseas") return;
+    preloadNaverMap();
+  }, [isViewportResolved, mapMode]);
   const [activePanel, setActivePanel] = useState<"map" | "detail" | "control">(
     "map",
   );
@@ -279,6 +287,10 @@ export default function HomeClient() {
   const [mapMountKey] = useState(() => Date.now());
 
   const state = useHomeState(mapMode);
+  const { summary: resultSummary } = useHomeMapResults({
+    mapMode, filters: state.filters, selectedRegion: state.selectedRegion,
+    selectedCountry: state.selectedCountry, showUserSubmittedMarkers,
+  });
   const {
     clearRestaurantDetailSelection,
     closeRestaurantDetailPanel,
@@ -1319,6 +1331,7 @@ export default function HomeClient() {
 
       {isViewportResolved && !(isMobileOrTablet && isMapFullscreen) && (
         <HomeControlPanel
+          resultSummary={resultSummary}
           viewportMode={viewportMode}
           mapMode={mapMode}
           selectedRegion={state.selectedRegion}

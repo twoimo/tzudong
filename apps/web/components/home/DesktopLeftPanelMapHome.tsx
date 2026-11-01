@@ -21,15 +21,19 @@ import { BrandSectionHeading } from '@/components/ui/brand-section-heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { incrementSearchCount } from '@/lib/search-count';
 import {
+  attachPopularRankTrends,
   excludeRestaurantsAlreadyShown,
   fetchLatestRestaurantPage,
+  fetchPopularRankSnapshots,
   fetchPopularRestaurants,
   getLatestRestaurantsQueryKey,
+  getPopularRankSnapshotsQueryKey,
   getPopularRestaurantsQueryKey,
   type LatestRestaurantSort,
   type PopularRankTrend,
   POPULAR_RESTAURANTS_QUERY_KEY,
 } from '@/lib/popular-restaurants';
+import { homeMapResultStatusText, reconcileHomeMapContextualResults, type HomeMapResultSummary } from '@/lib/home-map-result-summary';
 import type { Restaurant } from '@/types/restaurant';
 import {
   HOME_MAP_CONTEXTUAL_DESKTOP_LIMIT,
@@ -38,6 +42,7 @@ import {
 
 type DesktopLeftPanelMapHomeProps = {
   onRestaurantOpen: (restaurant: Restaurant) => void;
+  resultSummary?: HomeMapResultSummary;
   selectedRegion?: string | null;
   isKoreanOnly?: boolean;
   contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;
@@ -99,6 +104,7 @@ function DesktopRestaurantCardSkeleton() {
 
 export default function DesktopLeftPanelMapHome({
   onRestaurantOpen,
+  resultSummary,
   selectedRegion,
   isKoreanOnly = true,
   contextualRestaurantsPayload = null,
@@ -119,6 +125,7 @@ export default function DesktopLeftPanelMapHome({
         limit: POPULAR_RESTAURANT_LIMIT,
         selectedRegion,
         isKoreanOnly,
+        includeRankTrends: false,
       }),
     [isKoreanOnly, selectedRegion],
   );
@@ -132,7 +139,13 @@ export default function DesktopLeftPanelMapHome({
       }),
     [isKoreanOnly, latestRestaurantSort, selectedRegion],
   );
-  const { data: popularRestaurants = [], isLoading } = useQuery({
+  const {
+    data: popularRestaurantRows,
+    isLoading,
+    isSuccess: isPopularListReady,
+    isPlaceholderData: isPopularListPlaceholder,
+  } = useQuery({
+    enabled: !resultSummary?.active,
     queryKey: desktopLeftPanelHomePopularQueryKey,
     queryFn: async () => {
       try {
@@ -141,6 +154,7 @@ export default function DesktopLeftPanelMapHome({
           fetchLimit: POPULAR_RESTAURANT_QUERY_LIMIT,
           selectedRegion,
           isKoreanOnly,
+          includeRankTrends: false,
         });
       } catch {
         return [];
@@ -149,6 +163,31 @@ export default function DesktopLeftPanelMapHome({
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 30,
   });
+  // Historical rank metadata must never gate the primary list or its ready state.
+  const { data: rankSnapshots, isError: isRankSnapshotError } = useQuery({
+    queryKey: getPopularRankSnapshotsQueryKey({
+      limit: POPULAR_RESTAURANT_LIMIT,
+      selectedRegion,
+      isKoreanOnly,
+    }),
+    queryFn: () => fetchPopularRankSnapshots({
+      limit: POPULAR_RESTAURANT_LIMIT,
+      selectedRegion,
+      isKoreanOnly,
+    }),
+    enabled: !resultSummary?.active && isPopularListReady && !isPopularListPlaceholder && Boolean(popularRestaurantRows?.length),
+    // The shared provider retains previous query data; never carry trends across scopes.
+    placeholderData: undefined,
+    retry: false,
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+  });
+  const popularRestaurants = useMemo(() => {
+    const restaurants = popularRestaurantRows ?? [];
+    return rankSnapshots && !isPopularListPlaceholder && !isRankSnapshotError
+      ? attachPopularRankTrends(restaurants, rankSnapshots.snapshots, rankSnapshots.hasSnapshotPeriod)
+      : restaurants;
+  }, [popularRestaurantRows, rankSnapshots, isPopularListPlaceholder, isRankSnapshotError]);
   const {
     data: latestRestaurantPages,
     fetchNextPage: fetchNextLatestRestaurantPage,
@@ -156,6 +195,7 @@ export default function DesktopLeftPanelMapHome({
     isFetchingNextPage: isFetchingNextLatestRestaurantPage,
     isLoading: isLatestLoading,
   } = useInfiniteQuery({
+    enabled: !resultSummary?.active,
     queryKey: desktopLeftPanelHomeLatestQueryKey,
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
@@ -180,9 +220,9 @@ export default function DesktopLeftPanelMapHome({
     gcTime: 1000 * 60 * 30,
   });
   useEffect(() => {
-    if (isLoading || isLatestLoading) return;
+    if (resultSummary?.active ? resultSummary.status === 'pending' : isLoading || isLatestLoading) return;
     document.documentElement.dataset.homePanelReady = "true";
-  }, [isLatestLoading, isLoading]);
+  }, [isLatestLoading, isLoading, resultSummary?.active, resultSummary?.status]);
   useEffect(() => () => {
     delete document.documentElement.dataset.homePanelReady;
   }, []);
@@ -201,16 +241,19 @@ export default function DesktopLeftPanelMapHome({
     () => visibleLatestRestaurants.slice(0, visibleLatestRestaurantCount),
     [visibleLatestRestaurantCount, visibleLatestRestaurants],
   );
+  const currentContextualPayload = useMemo(() => resultSummary
+    ? reconcileHomeMapContextualResults(resultSummary, contextualRestaurantsPayload, isKoreanOnly ? 'domestic' : 'overseas')
+    : contextualRestaurantsPayload, [resultSummary, contextualRestaurantsPayload, isKoreanOnly]);
   const contextualRestaurants = useMemo(
     () =>
-      isKoreanOnly && contextualRestaurantsPayload?.mode === 'domestic' && contextualRestaurantsPayload.isEligible
-        ? contextualRestaurantsPayload.restaurants.slice(0, HOME_MAP_CONTEXTUAL_DESKTOP_LIMIT)
+      isKoreanOnly && currentContextualPayload?.mode === 'domestic' && currentContextualPayload.isEligible
+        ? currentContextualPayload.restaurants.slice(0, HOME_MAP_CONTEXTUAL_DESKTOP_LIMIT)
         : [],
-    [contextualRestaurantsPayload, isKoreanOnly],
+    [currentContextualPayload, isKoreanOnly],
   );
   const hasContextualRestaurants = contextualRestaurants.length > 0;
   const visibleMarkerRestaurantCount =
-    contextualRestaurantsPayload?.totalVisibleCount ?? contextualRestaurants.length;
+    currentContextualPayload?.totalVisibleCount ?? contextualRestaurants.length;
   const hasBufferedLatestRestaurants =
     visibleLatestRestaurantCount < visibleLatestRestaurants.length;
   const hasMoreLatestRestaurants =
@@ -221,6 +264,7 @@ export default function DesktopLeftPanelMapHome({
   }, [isKoreanOnly, latestRestaurantSort, selectedRegion]);
 
   const showMoreLatestRestaurants = useCallback(() => {
+    if (resultSummary?.active) return;
     if (hasBufferedLatestRestaurants) {
       setVisibleLatestRestaurantCount((currentCount) =>
         Math.min(
@@ -240,10 +284,12 @@ export default function DesktopLeftPanelMapHome({
     hasNextLatestRestaurantPage,
     isFetchingNextLatestRestaurantPage,
     visibleLatestRestaurants.length,
+    resultSummary?.active,
   ]);
 
   useEffect(() => {
     if (
+      resultSummary?.active ||
       isLatestLoading ||
       visibleLatestRestaurants.length > 0 ||
       !hasNextLatestRestaurantPage ||
@@ -259,6 +305,7 @@ export default function DesktopLeftPanelMapHome({
     isFetchingNextLatestRestaurantPage,
     isLatestLoading,
     visibleLatestRestaurants.length,
+    resultSummary?.active,
   ]);
 
   useEffect(() => {
@@ -321,6 +368,23 @@ export default function DesktopLeftPanelMapHome({
     },
     [],
   );
+
+  if (resultSummary?.active) {
+    return (
+      <section className="h-full min-h-0 overflow-y-auto bg-background" data-home-filter-results="true" aria-label="현재 지도 필터 결과" aria-busy={resultSummary.status === 'pending'}>
+        <MapPanelHeader title="필터 결과" titleIcon={<MapPin />} count={resultSummary.count ?? undefined} countUnit="곳" />
+        <p className="px-3 py-2 text-sm text-muted-foreground" role={resultSummary.status === 'error' ? 'alert' : 'status'}>{homeMapResultStatusText(resultSummary)}</p>
+        <div className="grid grid-cols-1 gap-3 px-3 pb-3">
+          {resultSummary.restaurants.map((restaurant) => (
+            <StampCard key={restaurant.id} restaurant={restaurant} isVisited={false} isUserStampsReady={false}
+              currentThumbnailIndex={restaurantThumbnailIndexes[restaurant.id] ?? 0}
+              onThumbnailChange={handleRestaurantThumbnailChange} onClick={handleRestaurantOpen}
+              size="default" stampSize="compact" showAddress layout="list" categoryFallback="맛집" />
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section

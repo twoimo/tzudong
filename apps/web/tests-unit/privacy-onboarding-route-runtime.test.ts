@@ -40,6 +40,9 @@ function fixture(settings: {
   origin?: string;
   vercelUrl?: string;
   vercelBranchUrl?: string;
+  challengeFailure?: 'error' | 'null' | 'throw' | 'commit-then-error' | 'commit-then-throw';
+  challengeReceipt?: (receipt: Record<string, unknown>) => unknown;
+  advancePolicyAtChallenge?: boolean;
 } = {}) {
   const secret = crypto.randomBytes(48).toString('hex');
   const runtimeOrigin = settings.origin ?? origin;
@@ -55,7 +58,7 @@ function fixture(settings: {
   };
   const state = {
     policyId: crypto.randomUUID(), userId: crypto.randomUUID(), auditId: crypto.randomUUID(),
-    events: [], challenges: new Map(), confirmed: false, active: true,
+    events: [], challenges: new Map(), challengeAudits: new Map(), confirmed: false, active: true,
     signupCalls: 0, simulatedIdentityMutations: 0, blockedExternalCalls: 0,
     confirmCalls: 0, confirmAccepted: 0, digestMatched: false, nonceMatched: false, capturedSessionReadbacks: 0,
     argumentBindingsValid: true, signupEmailRedirectTo: null as string | null,
@@ -88,11 +91,30 @@ function fixture(settings: {
       effectiveAt: '2026-01-01T00:00:00Z', publishedAt: '2026-01-01T00:00:00Z', approvalBound: true,
     } };
     if (name === 'create_privacy_onboarding_challenge') {
+      const error = { code: '55000', message: 'SYNTHETIC_CHALLENGE_FAILURE_DETAIL' };
+      if (settings.advancePolicyAtChallenge) {
+        state.policyId = crypto.randomUUID();
+        return { error: { code: '23514', message: 'SYNTHETIC_POLICY_CHANGED' }, data: null };
+      }
+      if (settings.challengeFailure === 'error') return { error, data: null };
+      if (settings.challengeFailure === 'null') return { error: null, data: null };
+      if (settings.challengeFailure === 'throw') throw new Error('SYNTHETIC_CHALLENGE_FAILURE_DETAIL');
+
+      // This is a synthetic provider commit, independent of the response the
+      // route receives. A rejected/lost reply must not erase this evidence.
       const id = crypto.randomUUID();
+      const auditId = crypto.randomUUID();
       state.challenges.set(id, { ...args, consumed: false });
+      state.challengeAudits.set(auditId, {
+        challengeId: id, policyVersionId: args.p_policy_version_id, ageBand: args.p_age_band,
+        expiresAt: args.p_expires_at,
+      });
       state.argumentBindingsValid &&= args.p_policy_version_id === state.policyId && args.p_age_band === 'age_14_plus';
-      return { error: null, data: { schemaVersion: 1, challengeId: id, policyVersionId: state.policyId,
-        ageBand: args.p_age_band, expiresAt: args.p_expires_at, auditId: state.auditId } };
+      const receipt = { schemaVersion: 1, challengeId: id, policyVersionId: state.policyId,
+        ageBand: args.p_age_band, expiresAt: args.p_expires_at, auditId };
+      if (settings.challengeFailure === 'commit-then-throw') throw new Error('SYNTHETIC_CHALLENGE_FAILURE_DETAIL');
+      if (settings.challengeFailure === 'commit-then-error') return { error, data: receipt };
+      return { error: null, data: settings.challengeReceipt ? settings.challengeReceipt({ ...receipt }) : receipt };
     }
     if (name === 'read_signup_profile_state') {
       state.argumentBindingsValid &&= args.p_user_id === state.userId && args.p_expected_nickname === 'fixture';
@@ -225,6 +247,134 @@ function fixture(settings: {
   const signup = (next = '/') => ({ action: 'password_signup', email: 'fixture@example.invalid', password: crypto.randomBytes(8).toString('hex'), nickname: 'fixture', next });
   return { state, lib, route, callback, completeCallback, policy, env, origin: runtimeOrigin, post, start, signup };
 }
+
+// These tests call only the real route/validators, never the AuthModal or a
+// browser. The follow-up is an adversarial password_signup request without an
+// issued capability; it is not a retry of the challenge or a real signup.
+async function assertRejectedChallenge(f: ReturnType<typeof fixture>, response, options: {
+  status: number;
+  code: string;
+  committed: number;
+  challengeCalls?: number;
+}) {
+  const body = await response.json();
+  assert('bounded failure response', response.status === options.status && body.code === options.code
+    && Object.keys(body).sort().join(',') === 'code,message' && typeof body.message === 'string');
+  assert('provider failure details never escape', !JSON.stringify(body).includes('SYNTHETIC_'));
+  assert('failure cannot be cached', response.headers.get('cache-control') === 'no-store');
+  assert('no usable onboarding or recovery cookie', cookieCleared(response, f.lib.ONBOARDING_CHALLENGE_COOKIE)
+    && cookieCleared(response, f.lib.ONBOARDING_PASSWORD_RECOVERY_COOKIE));
+  assert('no session or PKCE cookie publication', !response.cookies.getAll().some(cookie => cookie.name.startsWith('sb-')));
+
+  const retainedCookies = response.cookies.getAll().filter(cookie => cookie.value && cookie.maxAge !== 0);
+  const attemptedSignup = await f.route.POST(f.post(f.signup(), retainedCookies));
+  assert('rejected start cannot authorize password signup', attemptedSignup.status === 400
+    && (await attemptedSignup.json()).code === 'ONBOARDING_CHALLENGE_INVALID');
+  assert('no downstream identity, confirmation or eligibility work', f.state.signupCalls === 0
+    && f.state.confirmCalls === 0 && f.state.simulatedIdentityMutations === 0 && !f.state.confirmed
+    && f.state.active && !f.state.events.includes('read_signup_profile_state')
+    && !f.state.events.includes('get_privacy_eligibility_for_user')
+    && !f.state.events.some(event => event.startsWith('signOut')));
+  assert('no challenge retry', f.state.events.filter(event => event === 'create_privacy_onboarding_challenge').length
+    === (options.challengeCalls ?? 1));
+  assert('commit count survives response rejection', f.state.challenges.size === options.committed
+    && f.state.challengeAudits.size === options.committed);
+  for (const [challengeId, challenge] of f.state.challenges) {
+    const audits = [...f.state.challengeAudits.values()].filter(audit => audit.challengeId === challengeId);
+    assert('committed challenge remains unconsumed with its original audit', challenge.consumed === false
+      && audits.length === 1 && audits[0].policyVersionId === challenge.p_policy_version_id
+      && audits[0].ageBand === challenge.p_age_band && audits[0].expiresAt === challenge.p_expires_at);
+  }
+  assert('no external calls', f.state.blockedExternalCalls === 0);
+}
+
+describe('synthetic route boundary: challenge issuance failures and uncertain commits', () => {
+  test('valid challenge binds one committed audit and issues a usable capability', async () => {
+    const f = fixture();
+    const { response, cookie } = await f.start('password');
+    const body = await response.json();
+    const challenge = cookie?.value ? f.lib.readOnboardingChallenge(cookie.value) : null;
+    assert('valid receipt is admitted', response.status === 201 && challenge !== null
+      && f.state.challenges.size === 1 && f.state.challengeAudits.size === 1);
+    assert('capability belongs to the committed challenge', Boolean(challenge
+      && f.state.challenges.has(challenge.challengeId) && body.challengeId === challenge.challengeId
+      && [...f.state.challengeAudits.values()].some(audit => audit.challengeId === challenge.challengeId
+        && audit.policyVersionId === challenge.policyVersionId && audit.expiresAt === body.expiresAt)));
+    assert('issuance does not create an account', f.state.signupCalls === 0 && f.state.confirmCalls === 0);
+    const created = await f.route.POST(f.post(f.signup(), [cookie]));
+    assert('accepted capability reaches the existing synthetic signup flow once', created.status === 201
+      && f.state.signupCalls === 1 && f.state.confirmAccepted === 1 && f.state.challenges.get(challenge.challengeId).consumed);
+    assert('no external calls', f.state.blockedExternalCalls === 0);
+  });
+
+  for (const failure of ['error', 'null', 'throw', 'commit-then-error', 'commit-then-throw'] as const) {
+    test(`challenge ${failure} fails closed without retry or downstream signup`, async () => {
+      const f = fixture({ challengeFailure: failure });
+      const { response } = await f.start('password');
+      const thrown = failure === 'throw' || failure === 'commit-then-throw';
+      await assertRejectedChallenge(f, response, {
+        status: thrown ? 503 : 409,
+        code: thrown ? 'ONBOARDING_UNAVAILABLE' : 'ONBOARDING_CHALLENGE_UNAVAILABLE',
+        committed: failure.startsWith('commit-') ? 1 : 0,
+      });
+    });
+  }
+
+  test('policy changes after metadata GET are rejected before challenge creation', async () => {
+    const f = fixture();
+    const metadata = await f.route.GET(new next.NextRequest(`${origin}/api/privacy/onboarding`));
+    const policy = await metadata.json();
+    assert('client first received a valid policy', metadata.status === 200 && policy.id === f.state.policyId);
+    f.state.policyId = crypto.randomUUID();
+    const response = await f.route.POST(f.post({
+      policyVersion: policy.id, ageBand: 'age_14_plus', intent: 'password', policyAcknowledged: true,
+    }));
+    await assertRejectedChallenge(f, response, {
+      status: 409, code: 'ONBOARDING_CHALLENGE_UNAVAILABLE', committed: 0, challengeCalls: 0,
+    });
+    assert('POST revalidated the policy without retry', f.state.events.filter(event => event === 'get_current_privacy_policy_version').length === 2);
+  });
+
+  test('policy changes at the RPC boundary reject the stale request without retry', async () => {
+    const f = fixture({ advancePolicyAtChallenge: true });
+    const { response } = await f.start('password');
+    await assertRejectedChallenge(f, response, {
+      status: 409, code: 'ONBOARDING_CHALLENGE_UNAVAILABLE', committed: 0,
+    });
+  });
+
+  for (const missing of ['schemaVersion', 'challengeId', 'policyVersionId', 'ageBand', 'expiresAt', 'auditId']) {
+    test(`committed success missing ${missing} cannot issue a signup capability`, async () => {
+      const f = fixture({ challengeReceipt: receipt => { delete receipt[missing]; return receipt; } });
+      const { response } = await f.start('password');
+      await assertRejectedChallenge(f, response, {
+        status: 409, code: 'ONBOARDING_CHALLENGE_UNAVAILABLE', committed: 1,
+      });
+    });
+  }
+
+  const invalidReceipts: Array<{ label: string; change: (receipt: Record<string, unknown>) => unknown }> = [
+    { label: 'extra field', change: receipt => ({ ...receipt, unexpected: true }) },
+    { label: 'wrong expiry', change: receipt => ({ ...receipt, expiresAt: new Date(Date.parse(String(receipt.expiresAt)) + 1).toISOString() }) },
+    { label: 'same instant with noncanonical expiry format', change: receipt => ({ ...receipt, expiresAt: String(receipt.expiresAt).replace(/Z$/, '+00:00') }) },
+    { label: 'different policy', change: receipt => ({ ...receipt, policyVersionId: crypto.randomUUID() }) },
+    { label: 'different age band', change: receipt => ({ ...receipt, ageBand: 'under_14' }) },
+    { label: 'wrong schema version', change: receipt => ({ ...receipt, schemaVersion: 2 }) },
+    { label: 'invalid challenge identity', change: receipt => ({ ...receipt, challengeId: 'invalid' }) },
+    { label: 'invalid audit identity', change: receipt => ({ ...receipt, auditId: 'invalid' }) },
+    { label: 'array wrapper', change: receipt => [receipt] },
+    { label: 'null after commit', change: () => null },
+  ];
+  for (const { label, change } of invalidReceipts) {
+    test(`committed success with ${label} remains unconsumed and fails closed`, async () => {
+      const f = fixture({ challengeReceipt: change });
+      const { response } = await f.start('password');
+      await assertRejectedChallenge(f, response, {
+        status: 409, code: 'ONBOARDING_CHALLENGE_UNAVAILABLE', committed: 1,
+      });
+    });
+  }
+});
 
 describe('privacy onboarding full route runtime contracts', () => {
   for (const emailConfirmation of [false, true]) test(`password start -> create -> recovery replay (email confirmation ${emailConfirmation})`, async () => {

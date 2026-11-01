@@ -350,12 +350,14 @@ describe("mobile and desktop parity source contracts", () => {
       "app/mypage/mypage-layout-content.tsx",
     );
 
+    const themeFiltersSource = source("components/home/HomeMapThemeFilters.tsx");
+    expect(mobileOverlaySource).toContain("<HomeMapThemeFilters");
+    expect(homeDesktopControlPanelSource).toContain("<HomeMapThemeFilters");
     expect(mobileOverlaySource).toContain("min-h-11");
     expect(mobileOverlaySource).toContain('aria-label="맛집 검색 열기"');
-    expect(mobileOverlaySource).toContain("aria-pressed={isSelected}");
-    expect(mobileOverlaySource).toContain(
-      "pointer-events-auto inline-flex h-9 snap-start shrink-0 items-center gap-1 rounded-full",
-    );
+    expect(themeFiltersSource).toContain("aria-pressed={isSelected}");
+    expect(themeFiltersSource).toContain("min-h-[44px]");
+    expect(themeFiltersSource).toContain("whitespace-normal");
     expect(mobileOverlaySource).toContain("text-xs font-medium");
     expect(mobileOverlaySource).toContain(
       "rounded-full h-8 px-2 home-map-floating-control-text text-xs font-medium",
@@ -363,8 +365,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(homeAppGlobalsSource).toContain(".home-map-floating-control-text");
     expect(homeAppGlobalsSource).toContain("font-size: 0.75rem");
     expect(homeAppGlobalsSource).toContain("line-height: 1rem");
-    expect(mobileOverlaySource.match(/home-map-floating-control-text/g)).toHaveLength(5);
-    expect(homeDesktopControlPanelSource.match(/home-map-floating-control-text/g)).toHaveLength(6);
+    expect(themeFiltersSource).toContain("home-map-floating-control-text");
     expect(mobileOverlaySource).not.toContain(
       "pointer-events-auto inline-flex h-11 min-h-11 snap-start shrink-0 items-center gap-1 rounded-full",
     );
@@ -375,9 +376,10 @@ describe("mobile and desktop parity source contracts", () => {
       "w-[clamp(84px,28vw,105px)] h-11 min-h-11 px-2",
     );
     expect(mobileOverlaySource).toContain("data-mobile-topic-slider");
-    expect(mobileOverlaySource).toContain("flex w-full max-w-full flex-nowrap snap-x gap-2 overflow-x-auto px-0.5");
+    expect(themeFiltersSource).toContain("flex-wrap");
+    expect(themeFiltersSource).not.toContain("overflow-x-auto");
     expect(mobileOverlaySource).not.toContain("mt-2 -mx-3 flex snap-x");
-    expect(mobileOverlaySource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
+    expect(themeFiltersSource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
     expect(mobileOverlaySource).toContain("카테고리 필터 열기");
     expect(mobileOverlaySource).toContain('aria-expanded={false}');
     expect(mobileOverlaySource).toContain('data-mobile-map-sheet-trigger="region"');
@@ -599,10 +601,9 @@ describe("mobile and desktop parity source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       "flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full",
     );
-    expect(homeDesktopControlPanelSource).toContain("HOME_MAP_THEME_FILTERS.map");
-    expect(homeDesktopControlPanelSource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
-    expect(mobileOverlaySource).toContain("<span>{theme.label}</span>");
-    expect(homeDesktopControlPanelSource).toContain("<span>{theme.label}</span>");
+    expect(themeFiltersSource).toContain("HOME_MAP_THEME_FILTERS.map");
+    expect(themeFiltersSource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
+    expect(themeFiltersSource).toContain("{theme.label}</span>");
     expect(mobileOverlaySource).not.toContain("theme.shortLabel");
     expect(homeDesktopControlPanelSource).not.toContain("theme.shortLabel");
     expect(themeFilterIconSource).toContain('"hot-view": TrendingUp');
@@ -610,7 +611,8 @@ describe("mobile and desktop parity source contracts", () => {
     expect(themeFilterIconSource).toContain('"fresh-video": Clock3');
     expect(themeFilterIconSource).toContain('"repeat-video": Repeat2');
     expect(themeFilterIconSource).toContain('"fan-signal": Sparkles');
-    expect(homeDesktopControlPanelSource).toContain("!w-full !min-w-0");
+    expect(homeDesktopControlPanelSource).toContain("<CategoryFilter");
+    expect(homeDesktopControlPanelSource).toContain("compactTrigger");
     expect(homeDesktopControlPanelSource).toContain("국내 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("해외 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("쯔동여지도 검색하기");
@@ -698,10 +700,11 @@ describe("mobile and desktop parity source contracts", () => {
       "'이전 목록으로 돌아가기'",
     );
     expect(restaurantDetailPanelSource).toContain(
-      "{isAdmin && onEditRestaurant && viewMode === 'detail' && (",
+      "{isAdmin && onEditRestaurant ? (",
     );
+    expect(restaurantDetailPanelSource).toContain("{viewMode === 'detail' ? (");
     expect(restaurantDetailPanelSource).toContain(
-      "showDesktopBackButton && !isMobile",
+      "const showBackButton = isMobile || showDesktopBackButton;",
     );
     const sharedPanelHeaderSource = source("components/home/map-panel-chrome.tsx");
     // Header actions and close behavior are exercised in renewal-chrome-browser.test.ts.

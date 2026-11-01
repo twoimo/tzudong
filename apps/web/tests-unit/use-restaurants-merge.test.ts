@@ -7,6 +7,7 @@ import { OVERSEAS_REGIONS } from '../constants/overseas-regions';
 import * as overseasMatching from '../lib/overseas-region-matching';
 import * as restClient from '../lib/supabase-rest-client';
 import * as homeMapThemeFilters from '../lib/home-map-theme-filters';
+import * as homeMapResultSummary from '../lib/home-map-result-summary';
 import type { Restaurant } from '../types/restaurant';
 import * as publishedPopularity from '../lib/evidence-engineering/published-popularity';
 
@@ -90,12 +91,14 @@ function regionQueryFixture(regions = OVERSEAS_REGIONS) {
             ...restClient,
             fetchSupabaseRows: async (table: string, query: Array<[string, string | number]>) => {
                 requests.push({ table, query });
-                return rows;
+                const offset = query.find(([key]) => key === 'offset')?.[1];
+                return offset === undefined ? rows : rows.slice(Number(offset), Number(offset) + 1);
             },
         },
         '@/lib/restaurant-review-counts': { buildRelatedVerifiedReviewCountMap: unexpected },
         '@/lib/verified-review-count-rows': { fetchVerifiedReviewCountRows: unexpected },
         '@/lib/home-map-theme-filters': homeMapThemeFilters,
+        '@/lib/home-map-result-summary': homeMapResultSummary,
         '@/lib/home-map-youtube-kpi': {
             enrichRestaurantsWithHomeMapYoutubeKpiMetrics: async (restaurants: Restaurant[]) => restaurants,
         },
@@ -641,5 +644,35 @@ describe('mergeRestaurants', () => {
 
         expect(counters.similarityChecks).toBeGreaterThanOrEqual(0);
         expect(counters.mainSelectionComparisons).toBeGreaterThanOrEqual(0);
+    });
+});
+
+
+describe('complete home map query contract', () => {
+    test('relative themes exclude other modes and hidden submissions before choosing the percentile', async () => {
+        const fixture = regionQueryFixture();
+        fixture.rows.splice(0, fixture.rows.length,
+            makeRestaurant({ id: 'domestic-high', approved_name: '국내 높은 식당', road_address: '서울특별시 중구 세종대로 1', youtube_link: 'https://youtu.be/aaaaaaaaaaa', youtube_meta: { viewCount: 100 } }),
+            makeRestaurant({ id: 'domestic-low', approved_name: '국내 낮은 가게', road_address: '서울특별시 중구 을지로 2', youtube_link: 'https://youtu.be/bbbbbbbbbbb', youtube_meta: { viewCount: 10 } }),
+            makeRestaurant({ id: 'overseas-high', approved_name: '해외 높은 점포', road_address: '도쿄', lat: 35, lng: 139, youtube_link: 'https://youtu.be/ccccccccccc', youtube_meta: { viewCount: 1000 } }),
+            makeRestaurant({ id: 'hidden-submitted', approved_name: '숨긴 제보 식당', road_address: '서울특별시 중구 청계천로 3', source_type: 'user_submission_new', youtube_link: 'https://youtu.be/ddddddddddd', youtube_meta: { viewCount: 500 } }),
+        );
+        const query = fixture.useRestaurants({ requireComplete: true, includeVerifiedReviewCounts: false,
+            homeMapMode: 'domestic', showUserSubmittedMarkers: false, featuredTheme: 'hot-view' });
+        expect((await query.queryFn()).map((restaurant) => restaurant.id)).toEqual(['domestic-high']);
+    });
+    test('complete query consumes every capped page before merge and uses deterministic ordering', async () => {
+        const fixture = regionQueryFixture();
+        const query = fixture.useRestaurants({ requireComplete: true, includeVerifiedReviewCounts: false });
+        const result = await query.queryFn();
+        expect(result.map((restaurant) => restaurant.id)).toEqual(['second-id', 'first-id']);
+        expect(fixture.requests.map(({ query }) => query.find(([key]) => key === 'offset')?.[1])).toEqual([0, 1, 2]);
+        expect(fixture.requests[0].query).toContainEqual(['order', 'approved_name.asc,id.asc']);
+        expect(query.queryKey).toContain('complete');
+    });
+    test('missing theme metrics cannot turn a nonempty complete query into a false zero', async () => {
+        const fixture = regionQueryFixture();
+        const query = fixture.useRestaurants({ requireComplete: true, includeVerifiedReviewCounts: false, featuredTheme: 'hot-view' });
+        await expect(query.queryFn()).rejects.toThrow('restaurant_theme_metrics_unavailable');
     });
 });

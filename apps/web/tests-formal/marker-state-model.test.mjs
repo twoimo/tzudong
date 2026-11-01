@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import { chromium } from '@playwright/test';
 
 const root = join(import.meta.dir, '..');
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const executablePath = existsSync(chrome) ? chrome : chromium.executablePath();
+// Match the project's pinned Playwright browser rather than the user's app.
+const executablePath = chromium.executablePath();
 
 // Import the real pool and markup. Only the provider is substituted; HTML is
 // parsed and compared by Chromium, not by a copy of the production patcher.

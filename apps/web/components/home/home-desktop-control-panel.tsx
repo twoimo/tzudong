@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import CategoryFilter from "@/components/filters/CategoryFilter";
 const loadDropdownMenu = () => import("@/components/ui/dropdown-menu");
 const DropdownMenu = dynamic(() => loadDropdownMenu().then((mod) => mod.DropdownMenu), {
   loading: () => (
@@ -48,17 +49,17 @@ const DropdownMenuItem = dynamic(() =>
 const DropdownMenuTrigger = dynamic(() =>
   loadDropdownMenu().then((mod) => mod.DropdownMenuTrigger),
 );
-import RegionSelector from "@/components/region/RegionSelector";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { preloadOverseasMap } from "@/lib/overseas-map-loader";
 import DesktopLeftPanelMapHome from "@/components/home/DesktopLeftPanelMapHome";
-import CategoryFilter from "@/components/filters/CategoryFilter";
+
 import { OVERSEAS_REGION_LIST } from "@/constants/overseas-regions";
+import { homeMapResultCountLabel, type HomeMapResultSummary } from '@/lib/home-map-result-summary';
 import type { FilterState } from "@/components/filters/filter-state";
 import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-contextual-restaurants";
 import { isPublicRestrictedMode } from "@/lib/site-config";
 import type { Announcement } from "@/types/announcement";
-import type { Region, Restaurant } from "@/types/restaurant";
-import { useOverseasCountryCounts } from "@/components/home/use-overseas-country-counts";
+import { REGIONS, type Region, type Restaurant } from "@/types/restaurant";
 import { useHomeRouteMemory } from "@/hooks/use-home-route-memory";
 import { useDeferredComponent } from "@/hooks/use-deferred-component";
 import { DeferredPanelFallback } from "@/components/home/DeferredPanelFallback";
@@ -88,10 +89,9 @@ import {
   type HomeMapUserPreferences,
 } from "@/lib/home-map-user-preferences";
 import {
-  HOME_MAP_THEME_FILTERS,
   type HomeMapThemeFilterId,
 } from "@/lib/home-map-theme-filters";
-import { HomeMapThemeFilterIcon } from "@/components/home/home-map-theme-filter-icons";
+import { HomeMapThemeFilters } from "@/components/home/HomeMapThemeFilters";
 import type { User } from "@supabase/supabase-js";
 import {
   Bell,
@@ -269,6 +269,7 @@ interface HomeDesktopControlPanelProps {
   selectedCountry: string | null;
   selectedCategories: string[];
   filters: FilterState;
+  resultSummary: HomeMapResultSummary;
   onRegionChange: (region: Region | null) => void;
   onCountryChange: (country: string) => void;
   onCategoryChange: (categories: string[]) => void;
@@ -810,6 +811,7 @@ export default function HomeDesktopControlPanel({
   selectedCountry,
   selectedCategories,
   filters,
+  resultSummary,
   onRegionChange,
   onCountryChange,
   onCategoryChange,
@@ -842,7 +844,6 @@ export default function HomeDesktopControlPanel({
   const router = useRouter();
   const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
   const initialRoutePanel = searchParams.get("panel");
-  const countryCounts = useOverseasCountryCounts(mapMode);
   const desktopSearchShellRef = useRef<HTMLDivElement>(null);
   const desktopSearchInputRef = useRef<HTMLInputElement>(null);
   const [activeLeftPanelView, setActiveLeftPanelView] =
@@ -1566,33 +1567,7 @@ export default function HomeDesktopControlPanel({
             onMouseDownCapture={handlePanelMouseDownCapture}
             onFocusCapture={handlePanelFocusCapture}
           >
-            <div className="flex min-w-0 max-w-full items-center gap-2 overflow-x-auto rounded-full p-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {HOME_MAP_THEME_FILTERS.map((theme) => {
-                const isSelected = selectedTheme === theme.id;
-                return (
-                  <Button
-                    key={theme.id}
-                    variant="ghost"
-                    size="sm"
-                    type="button"
-                    onClick={() => onThemeChange(isSelected ? null : theme.id)}
-                    aria-pressed={isSelected}
-                    aria-label={`${theme.ariaLabel}${isSelected ? " 선택됨" : ""}`}
-                    title={`${theme.label}: ${theme.description}`}
-                    className={cn(
-                      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 home-map-floating-control-text text-xs font-semibold shadow-sm motion-reduce:transition-none",
-                      "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                      isSelected
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background/95 text-foreground hover:bg-secondary/80",
-                    )}
-                  >
-                    <HomeMapThemeFilterIcon themeId={theme.id} />
-                    <span>{theme.label}</span>
-                  </Button>
-                );
-              })}
-            </div>
+            <HomeMapThemeFilters activeThemeId={selectedTheme} onThemeChange={onThemeChange} />
           </div>
 
           <div
@@ -1642,47 +1617,36 @@ export default function HomeDesktopControlPanel({
                 </Button>
               </div>
             )}
-            {mapMode === "domestic" ? (
-              <RegionSelector
-                selectedRegion={selectedRegion}
-                onRegionChange={onRegionChange}
-                onRegionSelect={onSearchExecute}
-                className="!h-8 !w-full !min-w-0 gap-1 rounded-full border-border bg-background/95 px-2 home-map-floating-control-text text-xs font-medium shadow-sm hover:bg-secondary/80 [&>svg]:h-3.5 [&>svg]:w-3.5"
-                compactTrigger
-                contentSide="top"
-                contentAlign="start"
-              />
-            ) : (
-              <Select
-                value={selectedCountry || undefined}
-                onValueChange={onCountryChange}
-              >
-                <SelectTrigger className="h-8 w-full min-w-0 rounded-full border-border bg-background/95 px-2 home-map-floating-control-text text-xs font-medium shadow-sm hover:bg-secondary/80 [&>span]:truncate">
-                  <SelectValue placeholder="해외 지역" />
-                </SelectTrigger>
-                <SelectContent
-                  side="top"
-                  align="start"
-                  className="z-[180] max-h-[min(24rem,calc(100dvh-8rem))] rounded-2xl border-border shadow-2xl"
-                >
-                  {OVERSEAS_REGION_LIST.map((region) => (
-                    <SelectItem key={region} value={region}>
-                      {region} ({countryCounts[region] || 0}개)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
+            <Select
+              value={mapMode === "domestic" ? selectedRegion || "all" : selectedCountry || undefined}
+              onValueChange={(value) => {
+                if (mapMode === "overseas") onCountryChange(value);
+                else { const region = value === "all" ? null : value as Region; onRegionChange(region); onSearchExecute(region); }
+              }}
+            >
+              <SelectTrigger aria-label="지역 선택" className="h-8 w-full min-w-0 rounded-full border-border bg-background/95 px-2 text-xs font-medium shadow-sm">
+                <SelectValue placeholder="해외 지역" />
+              </SelectTrigger>
+              <SelectContent side="top" align="start" className="z-[180] max-h-[min(24rem,calc(100dvh-8rem))] rounded-2xl">
+                <p className="px-2 py-1 text-xs text-muted-foreground">현재 지도 결과 내 지역별 수</p>
+                {mapMode === "domestic" && <SelectItem value="all">대한민국 ({homeMapResultCountLabel(resultSummary, resultSummary.count ?? undefined)}개)</SelectItem>}
+                {(mapMode === "domestic" ? REGIONS : OVERSEAS_REGION_LIST).map((region) => (
+                  <SelectItem key={region} value={region}>
+                    {region} ({homeMapResultCountLabel(resultSummary, (mapMode === "domestic" ? resultSummary.regionCounts : resultSummary.countryCounts)[region])}개)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <CategoryFilter
               selectedCategories={selectedCategories}
               onCategoryChange={onCategoryChange}
-              selectedRegion={mapMode === "domestic" ? selectedRegion : null}
-              selectedCountry={mapMode === "overseas" ? selectedCountry : null}
-              className="h-8 w-full min-w-0 gap-1 rounded-full border-border bg-background/95 px-2 home-map-floating-control-text text-xs font-medium shadow-sm hover:bg-secondary/80 [&_svg]:size-3.5"
+              selectedRegion={selectedRegion}
+              selectedCountry={selectedCountry}
+              resultSummary={resultSummary}
               compactTrigger
               contentSide="top"
               contentAlign="start"
+              className="h-8 w-full min-w-0 rounded-full border-border bg-background/95 px-2 text-xs font-medium shadow-sm"
             />
           </div>
         </>
@@ -2109,6 +2073,7 @@ export default function HomeDesktopControlPanel({
                   </div>
                 ) : shouldShowDesktopMapHome ? (
                   <DesktopLeftPanelMapHome
+                    resultSummary={resultSummary}
                     onRestaurantOpen={
                       handleInlinePanelRestaurantOpen as (
                         restaurant: Restaurant,
