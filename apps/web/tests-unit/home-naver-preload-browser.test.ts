@@ -75,6 +75,18 @@ beforeAll(async () => {
                     loader: 'ts', resolveDir: app,
                 }));
             }
+            if (process.env.HOME_NAVER_PRELOAD_CONTROL === 'raw-mode-guard') {
+                builder.onResolve({ filter: /hooks\/use-home-naver-preload$/ }, () => ({ path: 'raw-guard.ts', namespace: 'raw-guard' }));
+                builder.onLoad({ filter: /.*/, namespace: 'raw-guard' }, () => {
+                    const source = readFileSync(join(app, 'hooks/use-home-naver-preload.ts'), 'utf8');
+                    const predicate = 'resolveHomeDetailMapModeParam(new URLSearchParams(window.location.search))';
+                    expect(source.split(predicate)).toHaveLength(2);
+                    return {
+                        contents: source.replace(predicate, "new URL(window.location.href).searchParams.get('mapMode')"),
+                        loader: 'ts', resolveDir: app,
+                    };
+                });
+            }
             builder.onResolve({ filter: /^@\// }, ({ path }) => {
                 const resolved = ['', '.ts', '.tsx'].map(suffix => join(app, path.slice(2)) + suffix).find(existsSync);
                 return resolved ? { path: resolved } : undefined;
@@ -146,6 +158,36 @@ for (const query of ['?stateMode=overseas&mapMode=overseas', '?mapMode=overseas'
         expect(requests()).toBe(0);
         expect(await page.evaluate('window.__moduleRequests||0')).toBe(0);
         expect(await page.locator('script[data-tzudong-naver-maps]').count()).toBe(0);
+    }));
+}
+
+// Keep React state initially domestic, as in HomeClient. These cases do not use
+// the fixture's changeMode helper, which also synchronizes the URL.
+for (const [name, query] of [
+    ['legacy overseas alias', '?restaurant=fixture&mode=overseas'],
+    ['canonical overseas mode', '?restaurant=fixture&mapMode=overseas'],
+    ['canonical overseas priority', '?mapMode=overseas&mode=domestic'],
+    ['invalid canonical fallback to overseas', '?mapMode=invalid&mode=overseas'],
+]) {
+    browserTest(`excludes ${name} before mode restoration`, async () => run(query, ['success'], async (page, requests) => {
+        await page.getByRole('button', { name: 'rerender', exact: true }).click();
+        await ui(page.getByTestId('generation')).toHaveText('1');
+        expect(requests()).toBe(0);
+        expect(await page.evaluate('window.__moduleRequests||0')).toBe(0);
+        expect(await page.locator('script[data-tzudong-naver-maps]').count()).toBe(0);
+    }));
+}
+
+for (const [name, query] of [
+    ['canonical domestic priority', '?mapMode=domestic&mode=overseas'],
+    ['invalid canonical fallback to domestic', '?mapMode=invalid&mode=domestic'],
+    ['invalid modes without an overseas exclusion', '?mapMode=invalid&mode=invalid'],
+]) {
+    browserTest(`starts domestic preload for ${name}`, async () => run(query, ['success'], async (page, requests) => {
+        await ui.poll(requests).toBe(1);
+        expect(await page.evaluate('window.__moduleRequests')).toBe(1);
+        expect(await page.locator('script[data-tzudong-naver-maps]').count()).toBe(1);
+        expect(await page.evaluate('window.__mapInstances')).toBe(0);
     }));
 }
 
