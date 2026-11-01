@@ -17,9 +17,15 @@ export function useHomeMapResults({ mapMode, filters, selectedRegion, selectedCo
         ? buildNaverRestaurantsQueryOptions({ compact: true, filters, selectedRegion })
         : buildOverseasRestaurantsQueryOptions({ filters, selectedCountry, refreshTrigger: 0 });
     const query = useRestaurants({ ...options, requireComplete: true, homeMapMode: mapMode, showUserSubmittedMarkers });
+    // Shared provider placeholders belong to the previous filter, not this result set.
+    const isPending = query.isPending || query.isPlaceholderData;
     const summary = useMemo(() => buildHomeMapResultSummary({
-        data: query.data, isPending: query.isPending, isError: query.isError,
+        data: query.data, isPending, isError: query.isError,
         mapMode, selectedCountry, filters, showUserSubmittedMarkers,
-    }), [query.data, query.isPending, query.isError, mapMode, selectedCountry, filters, showUserSubmittedMarkers]);
-    return { ...query, data: summary.status === 'ready' ? summary.restaurants : undefined, summary };
+    }), [query.data, isPending, query.isError, mapMode, selectedCountry, filters, showUserSubmittedMarkers]);
+    return {
+        ...query, isPending, isLoading: isPending && query.isFetching,
+        isSuccess: query.isSuccess && !isPending, status: isPending ? 'pending' as const : query.status,
+        data: summary.status === 'ready' ? summary.restaurants : undefined, summary,
+    };
 }
