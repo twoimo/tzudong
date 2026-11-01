@@ -227,20 +227,31 @@ def is_valid_context(text: str) -> bool:
 
 def check_openai_compatible_connection(base_url: str, model: str) -> bool:
     try:
-        resp = requests.get(f"{openai_compatible_root(base_url)}/v1/models", timeout=5)
+        api_key = os.environ.get("TRANSCRIPT_CONTEXT_API_KEY") or ""
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        resp = requests.get(
+            f"{openai_compatible_root(base_url)}/v1/models",
+            headers=headers,
+            timeout=5,
+            allow_redirects=False,
+        )
         if resp.status_code != 200:
             print("op=openai_connection_http_failed")
             return False
 
-        models = resp.json().get("data", [])
-        found = any(m.get("id") == model for m in models)
+        payload = resp.json()
+        models = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(models, list):
+            print("op=openai_connection_invalid_response")
+            return False
+        found = any(isinstance(item, dict) and item.get("id") == model for item in models)
         if not found:
             print("op=openai_model_unavailable")
             return False
 
         print("op=openai_connection_succeeded")
         return True
-    except requests.exceptions.RequestException as error:
+    except (requests.exceptions.RequestException, ValueError) as error:
         print(f"op=openai_connection_failed error={safe_error_name(error)}")
         return False
 
