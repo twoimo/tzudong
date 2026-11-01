@@ -12,12 +12,12 @@ async function fixtureBundle() {
     import React, { useState } from 'react';
     import { createRoot } from 'react-dom/client';
     import OverseasMap from './components/map/OverseasMap';
-    const initial = { id: 'refresh-marker', name: '처음 식당', lat: 35, lng: 139, categories: ['한식'], popularity_tier: 'fire' };
+    const initial = { id: 'refresh-marker', name: '처음 식당', road_address: '일본 도쿄 합성 주소', lat: 35, lng: 139, categories: ['한식'], popularity_tier: 'fire' };
     globalThis.__rows = [initial]; globalThis.__sdk = { creations: 0, additions: 0, visibleIds: [], jumps: [], clicks: [] };
     function App() {
       const [version, update] = useState(0);
       globalThis.__refresh = patch => { globalThis.__rows = [{ ...globalThis.__rows[0], ...patch }]; update(v => v + 1); };
-      return <OverseasMap filters={{ categories: [], minRating: 0, minReviews: 0, minUserVisits: 0, minJjyangVisits: 0 }} selectedCountry={null} searchedRestaurant={null}
+      return <OverseasMap filters={{ categories: [], minRating: 0, minReviews: 0, minUserVisits: 0, minJjyangVisits: 0 }} selectedCountry="일본" searchedRestaurant={null}
         selectedRestaurant={globalThis.__rows[0]} refreshTrigger={version} mapFocusZoom={12 + version}
         onMapReady={move => { globalThis.__externalMove = move; }}
         onVisibleRestaurantsChange={rows => { globalThis.__sdk.visibleIds = rows.map(row => row.id); }}
@@ -51,7 +51,11 @@ async function fixtureBundle() {
       builder.onResolve({ filter: /hooks\/use-restaurants$/ }, () => ({ path: 'rows', namespace: 'stub' }));
       builder.onResolve({ filter: /\.css$/ }, () => ({ path: 'css', namespace: 'stub' }));
       builder.onLoad({ filter: /.*/, namespace: 'stub' }, args => ({ loader: 'ts', contents: args.path === 'sdk' ? sdk
-        : args.path === 'rows' ? 'export const useRestaurants = () => ({ data: globalThis.__rows, isLoading: false });' : '' }));
+        : args.path === 'rows' ? `export const useRestaurants = options => {
+            globalThis.__queryOptions = options;
+            return { data: globalThis.__rows, isLoading: false, isPending: false,
+              isFetching: false, isError: false, isSuccess: true, status: 'success' };
+          };` : '' }));
       builder.onResolve({ filter: /^@\// }, args => ({ path: Bun.resolveSync('./' + args.path.slice(2), appRoot) }));
     }}] });
   expect(result.success).toBe(true);
@@ -71,11 +75,19 @@ async function fixtureBundle() {
           ? route.fulfill({ contentType: 'text/html', body: '<!doctype html><body></body>' }) : route.abort());
         await page.goto('https://marker-refresh.test/'); await page.addScriptTag({ content: script });
         const marker = page.locator('#marker-refresh-marker');
-        try { await ui(marker.locator('img')).toHaveAttribute('alt', '처음 식당'); }
+        // The real marker exposes its name on the button, while its category
+        // image is decorative. Assert both parts of that accessibility contract.
+        const markerButton = marker.locator('button.marker-container');
+        try { await ui(markerButton).toHaveAccessibleName('처음 식당 상세 보기'); }
         catch (error) { throw new Error(JSON.stringify({ errors, body: await page.locator('body').innerText() }), { cause: error }); }
+        await ui(marker.locator('img')).toHaveAttribute('alt', '');
+        expect(await page.evaluate(() => (window as unknown as { __queryOptions: object }).__queryOptions)).toMatchObject({
+          enabled: true, region: '일본', requireComplete: true, homeMapMode: 'overseas',
+        });
         await marker.evaluate(element => { (window as unknown as { __retained: Element }).__retained = element; });
         await page.evaluate(() => (window as unknown as { __refresh: (row: object) => void }).__refresh({ name: '최신 식당', categories: ['고기'], lat: 36, lng: 140 }));
-        await ui(marker.locator('img')).toHaveAttribute('alt', '최신 식당');
+        await ui(markerButton).toHaveAccessibleName('최신 식당 상세 보기');
+        await ui(marker.locator('img')).toHaveAttribute('alt', '');
         await ui(marker.locator('img')).toHaveAttribute('src', /meat_bbq/);
         await ui(marker).toHaveAttribute('data-coordinates', '[140,36]');
         await ui(marker).toHaveClass(/selected/);
