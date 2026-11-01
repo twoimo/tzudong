@@ -4,6 +4,23 @@ import { getNaverIndividualMarkerVisual } from '../lib/naver-map-marker-visuals'
 import type { Restaurant } from '../types/restaurant';
 
 describe('naver map marker visuals', () => {
+    test('refreshes a renamed restaurant in both cache layers and escapes its accessible name', () => {
+        const restaurant = { id: 'renamed-marker', name: '기존 식당', categories: ['한식'] };
+        for (const selected of [false, true]) {
+            expect(getNaverIndividualMarkerVisual(restaurant, selected).content).toContain('aria-label="기존 식당 상세 보기"');
+        }
+        restaurant.name = '새 식당 "<본점>"';
+        for (const selected of [false, true]) {
+            for (const row of [restaurant, { ...restaurant }]) {
+                const visual = getNaverIndividualMarkerVisual(row, selected);
+                expect(visual.content).toContain('aria-label="새 식당 &quot;&lt;본점&gt;&quot; 상세 보기"');
+                expect(visual.content).not.toContain('기존 식당');
+                expect(visual.content).toContain('<button type="button"');
+                expect(visual.content).not.toContain('alt="marker"');
+            }
+        }
+    });
+
     test('refreshes both cached selection states when the public popularity tier changes in place', () => {
         const restaurant: Pick<Restaurant, 'id' | 'categories' | 'popularity_tier'> = {
             id: 'tier-mutation-marker',

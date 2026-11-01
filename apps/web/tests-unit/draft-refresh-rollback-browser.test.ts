@@ -1,6 +1,7 @@
 import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import {test,expect,beforeAll,afterAll} from 'bun:test';
 import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
@@ -95,7 +96,14 @@ let capsuleParent:string;
 let capsule:string;
 beforeAll(async()=>{
  capsuleParent=mkdtempSync(join(tmpdir(),'tzudong-draft-rollback-'));capsule=join(capsuleParent,'candidate');
- const proc=Bun.spawn(['python3',join(import.meta.dir,'../scripts/prepare-draft-compatible-rollback.py'),'--base','56427320a44fdd65a86dc49e7e63d80dd9935c2e','--output',capsule],{stdout:'pipe',stderr:'pipe'});
+ // Shallow CI checkouts (the nightly default) do not contain the pinned base commit; fetch exactly it when absent.
+ const repoRoot=join(import.meta.dir,'../..'),rollbackBase='56427320a44fdd65a86dc49e7e63d80dd9935c2e';
+ if(spawnSync('git',['rev-parse','--verify',`${rollbackBase}^{commit}`],{cwd:repoRoot,stdio:'ignore',timeout:10000}).status!==0){
+  // Hard-bound the one-time fetch so a hung network can never outlive the 20s hook budget.
+  const fetched=spawnSync('git',['fetch','--depth=1','origin',rollbackBase],{cwd:repoRoot,encoding:'utf8',timeout:10000,killSignal:'SIGKILL'});
+  expect(fetched.status,fetched.stderr||String(fetched.error??'')).toBe(0);
+ }
+ const proc=Bun.spawn(['python3',join(import.meta.dir,'../scripts/prepare-draft-compatible-rollback.py'),'--base',rollbackBase,'--output',capsule],{stdout:'pipe',stderr:'pipe'});
  const stderr=await new Response(proc.stderr).text();expect(await proc.exited,stderr).toBe(0);
  const manifest=JSON.parse(readFileSync(join(capsule,'manifest.json'),'utf8'));
  for(const [path,hash] of Object.entries(manifest.files))expect(createHash('sha256').update(readFileSync(join(capsule,'files',path))).digest('hex')).toBe(hash);

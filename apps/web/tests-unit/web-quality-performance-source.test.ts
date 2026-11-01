@@ -452,7 +452,8 @@ describe("web quality performance source contracts", () => {
       "? ['restaurants-categories', selectedRegion, selectedCountry]",
     );
     expect(categoryFilterSource).toContain(": ['restaurants-count']");
-    expect(categoryFilterSource).toContain("enabled: true,");
+    expect(categoryFilterSource).toContain("enabled: !resultSummary,");
+    expect(categoryFilterSource).toContain("if (resultSummary) return resultSummary.categoryCounts;");
     expect(categoryFilterSource).not.toContain("enabled: isOpen,");
     expect(regionSelectorSource).toContain("contentSide?:");
     expect(regionSelectorSource).toContain("z-[180]");
@@ -1327,15 +1328,12 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).not.toContain(
       'import RestaurantSearch from "@/components/search/RestaurantSearch"',
     );
-    expect(homeDesktopControlPanelSource).toContain(
-      "components/region/RegionSelector",
-    );
+    expect(homeClientSource).toContain("useHomeMapResults");
+    expect(homeDesktopControlPanelSource).toContain("resultSummary.regionCounts");
     expect(homeDesktopControlPanelSource).toContain(
       "components/filters/CategoryFilter",
     );
-    expect(homeDesktopControlPanelSource).toContain(
-      "useOverseasCountryCounts(mapMode)",
-    );
+    expect(homeDesktopControlPanelSource).toContain("resultSummary.countryCounts");
     expect(homeDesktopControlPanelSource).toContain(
       'data-desktop-left-map-panel="true"',
     );
@@ -1527,10 +1525,11 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       "flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full",
     );
-    expect(homeDesktopControlPanelSource).toContain("HOME_MAP_THEME_FILTERS.map");
-    expect(homeDesktopControlPanelSource).toContain("<span>{theme.label}</span>");
+    expect(source("components/home/HomeMapThemeFilters.tsx")).toContain("HOME_MAP_THEME_FILTERS.map");
+    expect(source("components/home/HomeMapThemeFilters.tsx")).toContain("{theme.label}</span>");
     expect(homeDesktopControlPanelSource).not.toContain("theme.shortLabel");
-    expect(homeDesktopControlPanelSource).toContain("!w-full !min-w-0");
+    expect(homeDesktopControlPanelSource).toContain("<CategoryFilter");
+    expect(homeDesktopControlPanelSource).toContain("compactTrigger");
     expect(homeDesktopControlPanelSource).toContain("국내 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("해외 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("쯔동여지도 검색하기");
@@ -1700,10 +1699,11 @@ describe("web quality performance source contracts", () => {
       "'이전 목록으로 돌아가기'",
     );
     expect(restaurantDetailPanelSource).toContain(
-      "{isAdmin && onEditRestaurant && viewMode === 'detail' && (",
+      "{isAdmin && onEditRestaurant ? (",
     );
+    expect(restaurantDetailPanelSource).toContain("{viewMode === 'detail' ? (");
     expect(restaurantDetailPanelSource).toContain(
-      "showDesktopBackButton && !isMobile",
+      "const showBackButton = isMobile || showDesktopBackButton;",
     );
     const sharedPanelHeaderSource = source("components/home/map-panel-chrome.tsx");
     // Actual header geometry/actions are covered by renewal-chrome-browser.test.ts.
@@ -1867,7 +1867,7 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).not.toContain(
       "setShouldLoadSearch(true)",
     );
-    expect(mobileControlSource).toContain("useOverseasCountryCounts(mapMode)");
+    expect(mobileControlSource).toContain("const { regionCounts, countryCounts, categoryCounts } = resultSummary;");
     expect(mobileControlSource).toContain(
       "initialIntent?: 'search' | 'bookmark' | 'notification' | 'user' | null",
     );
@@ -1884,9 +1884,7 @@ describe("web quality performance source contracts", () => {
     expect(mobileControlSource).toContain(
       "<DropdownMenu open={isNotificationMenuOpen} onOpenChange={handleNotificationMenuOpenChange}>",
     );
-    expect(mobileControlSource).toContain(
-      "enabled: activeSheet === 'region' || activeSheet === 'category'",
-    );
+    expect(mobileControlSource).toContain("homeMapResultCountLabel(resultSummary");
     expect(mobileControlSource).toContain('role="dialog"');
     expect(mobileControlSource).not.toContain("transition-all");
     expect(mobileControlSource).toContain('aria-modal="true"');
@@ -1901,8 +1899,8 @@ describe("web quality performance source contracts", () => {
       "searchPreviouslyFocusedElementRef.current?.focus",
     );
     expect(mobileControlSource).toContain("inertSibling.inert = true");
-    expect(mobileControlSource).toContain("aria-pressed={isSelected}");
-    expect(mobileControlSource).toContain("aria-label={`${theme.ariaLabel}${isSelected ? ' 선택됨' : ''}`}");
+    expect(source("components/home/HomeMapThemeFilters.tsx")).toContain("aria-pressed={isSelected}");
+    expect(source("components/home/HomeMapThemeFilters.tsx")).toContain("aria-label={`${theme.label}: ${theme.ariaLabel}`}");
     expect(mobileControlSource).toContain("카테고리 필터 열기");
     expect(mobileControlSource).toContain("min-h-11");
     expect(mobileControlSource).toContain('<DeferredPanelFallback title="검색"');
@@ -1923,7 +1921,8 @@ describe("web quality performance source contracts", () => {
     expect(regionSelectorSource).not.toContain(
       "@/integrations/supabase/client",
     );
-    expect(categoryFilterSource).toContain("enabled: true,");
+    expect(categoryFilterSource).toContain("enabled: !resultSummary,");
+    expect(categoryFilterSource).toContain("if (resultSummary) return resultSummary.categoryCounts;");
     expect(categoryFilterSource).toContain("fetchSupabaseRows");
     expect(categoryFilterSource).toContain(
       "? ['restaurants-categories', selectedRegion, selectedCountry]",
@@ -2019,9 +2018,8 @@ describe("web quality performance source contracts", () => {
     expect(source("hooks/use-restaurants.tsx")).not.toContain(
       'import { supabase } from "@/integrations/supabase/client"',
     );
-    expect(source("components/home/MobileControlOverlay.tsx")).toContain(
-      "fetchSupabaseRows",
-    );
+    expect(source("hooks/use-home-map-results.ts")).toContain("useRestaurants");
+    expect(mobileControlSource).toContain("resultSummary: HomeMapResultSummary");
     expect(source("components/home/MobileControlOverlay.tsx")).not.toContain(
       "import { supabase } from '@/integrations/supabase/client'",
     );
@@ -2171,11 +2169,9 @@ describe("web quality performance source contracts", () => {
       "pt-[calc(env(safe-area-inset-top)+10px)]",
     );
     expect(mobileControlSource).toContain("flex h-12");
-    expect(mobileControlSource).toContain(
-      "className=\"pointer-events-auto mt-2 flex w-full",
-    );
-    expect(mobileControlSource).toContain("inline-flex h-9");
-    expect(mobileControlSource).toContain("py-0.5");
+    expect(mobileControlSource).toContain('data-mobile-topic-slider="true"');
+    expect(source("components/home/HomeMapThemeFilters.tsx")).toContain("min-h-[44px]");
+    expect(source("components/home/HomeMapThemeFilters.tsx")).toContain("p-0.5");
     expect(homeAppGlobalsSource).toContain('overflow-wrap: anywhere');
     expect(homeAppGlobalsSource).toContain('grid-template-columns: 1.25rem minmax(0, 1fr)');
     expect(homeAppGlobalsSource).toContain('max-height: min(20rem, calc(100dvh - 24rem))');
@@ -2569,10 +2565,8 @@ describe("web quality performance source contracts", () => {
     expect(naverMapSidepanelsSource).not.toContain(
       "<Suspense fallback={<NaverMapDetailPanelSkeleton />}>",
     );
-    expect(naverMapSource).toContain("resolveNaverRestaurantQueryBounds");
-    expect(naverMapSource).toContain(
-      "shouldUseFullMapData: shouldRunNoncriticalMapEffects",
-    );
+    expect(naverMapSource).toContain("useHomeMapResults");
+    expect(source("hooks/use-home-map-results.ts")).toContain("requireComplete: true");
     expect(
       naverMapSource.match(/activateNoncriticalMapEffects\(\);/g)?.length,
     ).toBeGreaterThanOrEqual(3);
@@ -2599,9 +2593,9 @@ describe("web quality performance source contracts", () => {
       '<Avatar className="h-8 w-8 bg-primary/10">',
     );
     expect(reviewCardSource).toContain("<AvatarImage");
-    expect(reviewCardSource).toContain(
-      '<AvatarFallback className="bg-primary/10">',
-    );
+    expect(reviewCardSource).toContain("<AvatarFallback");
+    expect(reviewCardSource).toContain('role="img"');
+    expect(reviewCardSource).toContain("프로필 사진 대체 표시");
     expect(reviewCardSource).toContain("setOptimisticLike({");
     expect(reviewCardSource).toContain("pendingLikeRef.current");
     expect(reviewCardSource).toContain(

@@ -11,7 +11,7 @@ import { usePathname } from "next/navigation";
 
 import { buildHomeMapActivationPlan, isEmbeddedHomeRuntimeWindow } from "@/app/home-map-runtime-activation";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
-import { useRestaurants } from "@/hooks/use-restaurants";
+import { useHomeMapResults } from '@/hooks/use-home-map-results';
 import type { FilterState } from "@/components/filters/filter-state";
 import type { Restaurant, Region } from "@/types/restaurant";
 import type { Announcement } from "@/types/announcement";
@@ -114,9 +114,7 @@ import {
     resolveSearchSelectionReleasePlan,
 } from "@/lib/mobile-home-search-selection";
 import {
-    buildNaverRestaurantsQueryOptions,
     resolveNaverRestaurantEmptyStateMessage,
-    resolveNaverRestaurantQueryBounds,
 } from "@/lib/map-query-helpers";
 import {
     fillExtendedBounds,
@@ -306,43 +304,9 @@ function getNaverMarkerViewportKey(map: NaverMapLike, mapElement: HTMLElement | 
     ]);
 }
 
-type NaverQueryBounds = {
-    south: number;
-    west: number;
-    north: number;
-    east: number;
-};
-
-const NAVER_FIRST_LOAD_VIEWPORT_DEGREES_BY_ZOOM = [
-    { minZoom: 14, lat: 0.08, lng: 0.10 },
-    { minZoom: 13, lat: 0.14, lng: 0.18 },
-    { minZoom: 12, lat: 0.28, lng: 0.36 },
-    { minZoom: 11, lat: 0.50, lng: 0.65 },
-    { minZoom: 10, lat: 0.95, lng: 1.20 },
-    { minZoom: 9, lat: 1.70, lng: 2.20 },
-    { minZoom: 0, lat: 4.20, lng: 5.20 },
-] as const;
-
 const NaverMapAnnouncementRuntime = lazy(() => import("@/components/map/NaverMapAnnouncementRuntime"));
 const NaverMapPresenceRuntime = lazy(() => import("@/components/map/NaverMapPresenceRuntime"));
 const HydratedDetailRestaurant = lazy(() => import("@/components/home/HydratedDetailRestaurant"));
-
-function resolveInitialNaverQueryBounds(selectedRegion: Region | null): NaverQueryBounds | undefined {
-    const regionKey = selectedRegion ?? '전국';
-    const config = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
-    if (!config) return undefined;
-
-    const [lat, lng] = config.center;
-    const span = NAVER_FIRST_LOAD_VIEWPORT_DEGREES_BY_ZOOM.find(({ minZoom }) => config.zoom >= minZoom)
-        ?? NAVER_FIRST_LOAD_VIEWPORT_DEGREES_BY_ZOOM[NAVER_FIRST_LOAD_VIEWPORT_DEGREES_BY_ZOOM.length - 1];
-
-    return {
-        south: lat - span.lat / 2,
-        west: lng - span.lng / 2,
-        north: lat + span.lat / 2,
-        east: lng + span.lng / 2,
-    };
-}
 
 // 상수 정의
 const PANEL_WIDTH = 400; // 상세 패널 너비 (px)
@@ -1916,43 +1880,26 @@ const NaverMapView = memo(({
         });
     }, []);
 
-    const firstLoadViewportBounds = useMemo(
-        () => resolveInitialNaverQueryBounds(selectedRegion),
-        [selectedRegion],
-    );
-    const restaurantQueryBounds = useMemo(
-        () => resolveNaverRestaurantQueryBounds({
-            firstLoadViewportBounds,
-            shouldUseFullMapData: shouldRunNoncriticalMapEffects,
-        }),
-        [firstLoadViewportBounds, shouldRunNoncriticalMapEffects],
-    );
-
-    // useRestaurants 옵션 메모이제이션
-    const restaurantQueryOptions = useMemo(() => buildNaverRestaurantsQueryOptions({
-        bounds: restaurantQueryBounds,
-        compact: true,
-        filters,
-        selectedRegion,
-    }), [filters, restaurantQueryBounds, selectedRegion]);
     const {
-        data: restaurants = [],
+        data: restaurants = EMPTY_CONTEXTUAL_RESTAURANTS,
         isFetching: isFetchingRestaurants,
         isLoading: isLoadingRestaurants,
         refetch,
-    } = useRestaurants(restaurantQueryOptions);
+        summary: resultSummary,
+    } = useHomeMapResults({
+        mapMode: 'domestic', filters, selectedRegion, selectedCountry: null, showUserSubmittedMarkers,
+    });
     const restaurantEmptyStateMessage = useMemo(
-        () => resolveNaverRestaurantEmptyStateMessage(filters, restaurants),
-        [filters, restaurants],
+        () => resultSummary.status === 'error'
+            ? '맛집 결과를 불러오지 못했습니다'
+            : resolveNaverRestaurantEmptyStateMessage(filters, restaurants),
+        [filters, restaurants, resultSummary.status],
     );
 
     const handleReviewSuccess = useMemo(
         () => buildNaverMapReviewSuccessHandler({ refetch, showMapToast }),
         [refetch, showMapToast]
     );
-
-    // 지역 변경 시 로딩 중에도 이전 마커를 유지하기 위한 상태
-    const [previousRestaurants, setPreviousRestaurants] = useState<Restaurant[]>([]);
 
     // 지역이나 필터가 바뀌면 맛집 개수 배지 표시 플래그를 리셋 (새 쿼리에서 다시 1번 표시)
     useEffect(() => {
@@ -1972,10 +1919,6 @@ const NaverMapView = memo(({
             restaurantsLength: restaurants.length,
             settleDelayMs: RESTAURANT_COUNT_TOAST_SETTLE_DELAY_MS,
         });
-
-        if (countUpdatePlan.shouldStorePreviousRestaurants) {
-            setPreviousRestaurants(restaurants);
-        }
 
         if (isLoadingRestaurants || isFetchingRestaurants || restaurants.length === 0) {
             setShowRestaurantCount(false);
@@ -2049,15 +1992,8 @@ const NaverMapView = memo(({
         window.dispatchEvent(new CustomEvent('openAnnouncementDetail', { detail: announcementToastPayload }));
     }, [announcementToastPayload]);
 
-    // 표시할 마커 데이터 (로딩 중에는 이전 데이터를 사용) - 메모이제이션
-    const unfilteredDisplayRestaurants = useMemo(() => {
-        return isLoadingRestaurants && previousRestaurants.length > 0 ? previousRestaurants : restaurants;
-    }, [isLoadingRestaurants, previousRestaurants, restaurants]);
-
-    const displayRestaurants = useMemo(() => {
-        if (showUserSubmittedMarkers) return unfilteredDisplayRestaurants;
-        return unfilteredDisplayRestaurants.filter((restaurant) => !isUserSubmittedRestaurant(restaurant));
-    }, [showUserSubmittedMarkers, unfilteredDisplayRestaurants]);
+    // Map, count and list consume the same complete current query result.
+    const displayRestaurants = restaurants;
 
     useEffect(() => {
         if (!showUserSubmittedMarkers) {
@@ -2089,8 +2025,8 @@ const NaverMapView = memo(({
 
     const expandedClusterRestaurantSnapshotRef = useRef(new Map<string, Restaurant>());
     const restaurantLookup = useMemo(
-        () => buildRestaurantLookup(unfilteredDisplayRestaurants),
-        [unfilteredDisplayRestaurants],
+        () => buildRestaurantLookup(displayRestaurants),
+        [displayRestaurants],
     );
     const displayRestaurantLookup = useMemo(
         () => showUserSubmittedMarkers ? restaurantLookup : buildRestaurantLookup(displayRestaurants),
@@ -2098,12 +2034,14 @@ const NaverMapView = memo(({
     );
     const { idSet: displayRestaurantIds, mergedRestaurantIds } = displayRestaurantLookup;
     const { byId: restaurantById, mergedRestaurantById } = restaurantLookup;
+    const allowSelectionMarker = (restaurant: Restaurant | null) => resultSummary.status === 'ready'
+        && (!resultSummary.active || Boolean(restaurant && (displayRestaurantIds.has(restaurant.id) || mergedRestaurantById.has(restaurant.id))));
     const markerVisibleActiveSearchedRestaurant =
-        showUserSubmittedMarkers || !isUserSubmittedRestaurant(publishedSearchedRestaurant)
+        allowSelectionMarker(publishedSearchedRestaurant) && (showUserSubmittedMarkers || !isUserSubmittedRestaurant(publishedSearchedRestaurant))
             ? publishedSearchedRestaurant
             : null;
     const markerVisibleSelectedRestaurant =
-        showUserSubmittedMarkers || !isUserSubmittedRestaurant(publishedSelectedRestaurant)
+        allowSelectionMarker(publishedSelectedRestaurant) && (showUserSubmittedMarkers || !isUserSubmittedRestaurant(publishedSelectedRestaurant))
             ? publishedSelectedRestaurant
             : null;
     const expandedClusterRetainIds = useMemo(() => {

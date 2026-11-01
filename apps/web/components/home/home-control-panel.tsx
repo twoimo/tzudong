@@ -3,6 +3,7 @@
 import { memo, useEffect, useState, type ComponentType } from 'react';
 import type { Region, Restaurant } from '@/types/restaurant';
 import type { Announcement } from '@/types/announcement';
+import type { HomeMapResultSummary } from '@/lib/home-map-result-summary';
 import type { FilterState } from '@/components/filters/filter-state';
 import type { HomeViewportMode } from '@/hooks/useHomeViewportMode';
 import type { User } from '@supabase/supabase-js';
@@ -24,6 +25,7 @@ type HomeDesktopControlPanelProps = {
     selectedCountry: string | null;
     selectedCategories: string[];
     filters: FilterState;
+    resultSummary: HomeMapResultSummary;
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
@@ -73,6 +75,7 @@ export interface HomeControlPanelProps {
     selectedCountry: string | null;
     selectedCategories: string[];
     filters: FilterState;
+    resultSummary: HomeMapResultSummary;
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
@@ -120,6 +123,7 @@ function HomeControlPanelComponent({
     selectedCountry,
     selectedCategories,
     filters,
+    resultSummary,
     onRegionChange,
     onCountryChange,
     onCategoryChange,
@@ -203,6 +207,7 @@ function HomeControlPanelComponent({
                 selectedCountry={selectedCountry}
                 selectedCategories={selectedCategories}
                 filters={filters}
+                resultSummary={resultSummary}
                 onRegionChange={onRegionChange}
                 onCountryChange={onCountryChange}
                 onCategoryChange={onCategoryChange}
@@ -242,6 +247,7 @@ function HomeControlPanelComponent({
             selectedCountry={selectedCountry}
             selectedCategories={selectedCategories}
             filters={filters}
+            resultSummary={resultSummary}
             onRegionChange={onRegionChange}
             onCountryChange={onCountryChange}
             onCategoryChange={onCategoryChange}

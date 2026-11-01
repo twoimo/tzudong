@@ -678,6 +678,21 @@
       ],
       "classification": "local_ephemeral",
       "vcsTracked": false
+    },
+    {
+      "path": "backend/vendor",
+      "depth": 2,
+      "ownership": "Backend 공급망 고정(vendored) npm tarball 보관 경계",
+      "allowedContents": [
+        "취약점 우회용 고정 npm tarball 산출물(.tgz)과 출처 문서"
+      ],
+      "forbiddenContents": [
+        "압축 해제된 node_modules 트리",
+        "시크릿 값 리터럴",
+        "부동(latest) 해상도 산출물"
+      ],
+      "classification": "source",
+      "vcsTracked": true
     }
   ]
 }

@@ -51,14 +51,14 @@ describe('home map theme filters', () => {
             '조회수가 높은 쯔양 영상 맛집 필터',
         );
         expect(HOME_MAP_THEME_FILTERS.find((filter) => filter.id === 'comment-hot')?.description).toContain(
-            '댓글 수가 현재 결과 상위권',
+            '최대 댓글 수 상위 20%',
         );
         expect(HOME_MAP_THEME_FILTERS.find((filter) => filter.id === 'fresh-video')?.description).toContain('90일');
         expect(HOME_MAP_THEME_FILTERS.find((filter) => filter.id === 'repeat-video')?.description).toContain(
             '2개 이상',
         );
         expect(HOME_MAP_THEME_FILTERS.find((filter) => filter.id === 'fan-signal')?.description).toContain(
-            '댓글 밀도',
+            '댓글/조회수 비율',
         );
 
         for (const id of HOME_MAP_THEME_FILTER_IDS) {

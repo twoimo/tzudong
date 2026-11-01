@@ -14,7 +14,7 @@ export interface ReviewCardProps {
         id: string;
         userId: string;
         userName: string;
-        userAvatarUrl?: string; // 선택적 속성
+        userAvatarUrl?: string | null; // 공개 프로필 summary에서 제공한 참조만 사용
         restaurantId?: string; // optional for share URL
         restaurantName: string;
         content: string;
@@ -96,6 +96,8 @@ export const ReviewCard = React.memo(function ReviewCard({
         () => resolveProfileAvatarUrl(review.userAvatarUrl, review.userId),
         [review.userAvatarUrl, review.userId],
     );
+    const avatarName = review.userName.trim() || '사용자';
+    const avatarInitial = Array.from(review.userName.trim())[0];
 
     // [PERFORMANCE] 인접 이미지 프리로드 (±1 인덱스)
     useEffect(() => {
@@ -289,12 +291,20 @@ export const ReviewCard = React.memo(function ReviewCard({
                         {profileAvatarUrl && (
                             <AvatarImage
                                 src={profileAvatarUrl}
-                                alt={review.userName}
+                                alt={`${avatarName} 프로필 사진`}
                                 className="object-cover"
                             />
                         )}
-                        <AvatarFallback className="bg-primary/10">
-                            <User className="w-4 h-4 text-primary" />
+                        <AvatarFallback
+                            className="bg-muted text-foreground text-sm font-semibold"
+                            role="img"
+                            aria-label={`${avatarName} 프로필 사진 대체 표시`}
+                        >
+                            {avatarInitial ? (
+                                <span aria-hidden="true">{avatarInitial}</span>
+                            ) : (
+                                <User className="w-4 h-4" aria-hidden="true" />
+                            )}
                         </AvatarFallback>
                     </Avatar>
                     <div>
