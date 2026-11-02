@@ -10,6 +10,6 @@ langchain-community==0.4.2
 langchain-ollama==1.1.0
 langchain-openai==1.7.3
 supabase==2.33.0
-curl_cffi==0.16.3
+curl_cffi==0.17.0
 scrapling[fetchers]==0.5
 playwright==1.64.1
