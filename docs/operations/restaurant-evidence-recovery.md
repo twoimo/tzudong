@@ -60,6 +60,41 @@ acquisition. No automatic terminal-cleanup predicate is introduced here.
 
 ## Operating admission
 
+Installation uses the dedicated
+`.github/restaurant-evidence-recovery-installation.v1.json` manifest and
+`apps/web/scripts/restaurant-evidence-recovery-installation.mjs` controller.
+The existing generic Supabase release manifest, compiler and G016 admission
+remain unchanged; do not append this migration or repin another feature's
+frozen release contracts. The dedicated controller reuses the existing atomic
+transaction, original SQL statement vector and terminal readback helpers.
+
+An offline inspection needs no credentials or database connection:
+
+```sh
+node apps/web/scripts/restaurant-evidence-recovery-installation.mjs --dry-run
+```
+
+After normal protected promotion, installation requires a separately approved,
+short-lived operator admission bound to the exact protected main commit, tree,
+project, manifest, SQL and operation identity. The admission explicitly records
+a one-operation exception while `G037_WRITE_FREEZE` remains `active`. Do not
+construct an admission from this document or a passing CI receipt: neither is
+operator authorization. The controller requires private regular admission
+files and an exclusive, durable intent journal; retain both privately.
+
+```sh
+node apps/web/scripts/restaurant-evidence-recovery-installation.mjs \
+  --apply --admission /private/task/admission.json --journal /private/task/install.jsonl
+node apps/web/scripts/restaurant-evidence-recovery-installation.mjs --verify-terminal-state
+```
+
+The paths above are placeholders. Database credentials come only from the
+existing approved direct-Postgres transport, never command arguments or
+receipts. A journal collision blocks another apply. An uncertain acknowledgment
+permits read-only reconciliation of the original operation, never resubmitting
+DDL under another identity. Terminal verification is read-only and cannot
+authorize installation or worker activation.
+
 The `daily-compute` job keeps its `G037_WRITE_FREEZE == cleared` condition.
 The separate `hosted-pending-apply` job retains its exact default-branch,
 protected-ref and `TZUDONG_HOSTED_DATA_PLANE_APPROVED == 1` admission. Re-enabling

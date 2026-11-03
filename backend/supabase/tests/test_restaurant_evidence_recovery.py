@@ -797,8 +797,9 @@ class RestaurantEvidenceRecoveryTests(unittest.TestCase):
         self.canonical_checks()
 
     def test_release_manifest_readback_binds_sources_and_rejects_permission_drift(self):
-        manifest = json.loads((SOURCE.parents[3] / '.github/supabase-migration-release-manifest.v1.json').read_text())
-        entry = next(item for item in manifest['migrations'] if item['id'] == 'restaurant_evidence_recovery')
+        manifest = json.loads((SOURCE.parents[3] / '.github/restaurant-evidence-recovery-installation.v1.json').read_text())
+        entry = manifest['migration']
+        self.assertEqual(entry['id'], 'restaurant_evidence_recovery')
         self.assertEqual(entry['sha256'], hashlib.sha256(SOURCE.read_bytes()).hexdigest())
 
         def observe(contract):

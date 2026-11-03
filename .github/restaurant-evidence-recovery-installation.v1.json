@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "id": "restaurant_evidence_recovery_installation_v1",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "protectedSource": {
+    "repository": "twoimo/tzudong",
+    "remote": "origin",
+    "ref": "refs/heads/main",
+    "repositoryUrl": "https://github.com/twoimo/tzudong.git"
+  },
+  "legacyManifest": {
+    "path": ".github/supabase-migration-release-manifest.v1.json",
+    "sha256": "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d"
+  },
+  "helpers": [
+    {
+      "path": "apps/web/scripts/apply-supabase-migration.mjs",
+      "sha256": "02c404e0be3e81b7c8d4d7766ff29e750b1797f5ad49b5f496168170e21192d4"
+    },
+    {
+      "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+      "sha256": "c67bdff4c63b1bf1b4a157863b3eb5253b5973a8fb54b7fd49351270787bed26"
+    },
+    {
+      "path": "backend/supabase/scripts/g037_supabase_statement_vector.mjs",
+      "sha256": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd"
+    }
+  ],
+  "applyPolicy": {
+    "defaultMode": "dry-run",
+    "operator": "twoimo",
+    "maximumAdmissionAgeSeconds": 900,
+    "freezeVariable": "G037_WRITE_FREEZE",
+    "requiredFreezeValue": "active",
+    "approval": "explicit-one-off-exception-required"
+  },
+  "migration": {
+    "id": "restaurant_evidence_recovery",
+    "path": "backend/supabase/migrations/20261103171649_restaurant_evidence_recovery.sql",
+    "sha256": "55e3c61f20d1c7c24dd7c5cd000d2a081ddf65c8ca3657621d4b222b6062acc4",
+    "expectedPriorState": {
+      "query": "SELECT json_build_object('restaurant_evidence_recovery_absent',coalesce((to_regclass('pipeline_control.restaurant_evidence_recovery_jobs') IS NULL AND NOT EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE (n.nspname='public' AND p.proname LIKE 'restaurant_evidence_recovery_%') OR (n.nspname='pipeline_control' AND p.proname LIKE 'evidence_recovery_%')) AND to_regclass('pipeline_control.restaurant_review_policy') IS NOT NULL AND to_regprocedure('public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)') IS NOT NULL AND (SELECT encode(sha256(convert_to(d.prosrc,'UTF8')),'hex')||':'||encode(sha256(convert_to(c.prosrc,'UTF8')),'hex') FROM pg_proc d,pg_proc c WHERE d.oid=to_regprocedure('privacy_retention.assert_g014_definer_contract()') AND c.oid=to_regprocedure('privacy_retention.assert_g014_catalog_contract()')) IN ('a19e2e07f8ae82246faa0a81c63a64be386c8333fb7558b772e5b1b1949ce6d1:c8560d4128ac98ec83a26328b124e448a50266bdb638daaa9bed4b93d2abeb3f','bb8dc8d2e4020f70b2332cbdf6acf465a97cbc4d582f9f14415330247ae34131:5c5971a5578e09db25a41e88474f1da15acfbd658571ba28f29e8c226e4d1883')),false))::text;\n",
+      "expected": {
+        "restaurant_evidence_recovery_absent": true
+      }
+    },
+    "terminalReadback": {
+      "query": "SELECT json_build_object('restaurant_evidence_recovery_verified', coalesce((\n  EXISTS(SELECT 1 FROM pg_class c WHERE c.oid=to_regclass('pipeline_control.restaurant_evidence_recovery_jobs') AND c.relrowsecurity AND pg_get_userbyid(c.relowner)='postgres')\n  AND (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname LIKE 'restaurant_evidence_recovery_%')=4\n  AND NOT EXISTS(SELECT 1 FROM (VALUES\n    ('public.restaurant_evidence_recovery_context(uuid,uuid)','26f96b27c62e77a3473f9738e26a3d5bc70512ea7a6e32d65978d33e6b63a0a1','v',ARRAY['search_path=\"\"','lock_timeout=2s']::text[]),\n    ('public.restaurant_evidence_recovery_status(uuid,uuid)','36d4b6466413ba10a57f7a214641a85975c0c12ee557bd1cd53c11bd98c4ec59','s',ARRAY['search_path=\"\"']::text[]),\n    ('public.restaurant_evidence_recovery_admin(uuid,text,uuid,uuid,uuid,bigint,text,text,text,text)','afe9076f60160cf8af8c1d0e447c545f7df76b97943031c43b30035b49decfba','v',ARRAY['search_path=\"\"','lock_timeout=2s']::text[]),\n    ('public.restaurant_evidence_recovery_worker(text,uuid,uuid,jsonb)','15820752ee5e8619f38542aff74238a499b43a84892e6e023a1406227ac433b1','v',ARRAY['search_path=\"\"','lock_timeout=2s']::text[])\n  ) expected(signature,sha,volatility,config)\n  LEFT JOIN pg_proc p ON p.oid=to_regprocedure(expected.signature)\n  WHERE p.oid IS NULL OR p.prosecdef OR pg_get_userbyid(p.proowner)<>'postgres' OR p.prokind<>'f' OR p.proretset OR p.proisstrict OR p.proleakproof\n    OR p.prorettype<>'jsonb'::regtype OR p.provolatile::text<>expected.volatility OR p.proconfig IS DISTINCT FROM expected.config\n    OR encode(sha256(convert_to(p.prosrc,'UTF8')),'hex')<>expected.sha\n    OR NOT has_function_privilege('service_role',p.oid,'EXECUTE')\n    OR EXISTS(SELECT 1 FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE a.grantee NOT IN(p.proowner,'service_role'::regrole) OR a.is_grantable)\n    OR (SELECT count(*) FROM privacy_retention.g014_public_rpc_allowlist a WHERE a.source_signature=expected.signature AND a.function_schema='public' AND a.function_name=p.proname AND a.identity_arguments=p.proargtypes::text AND a.grantee='service_role')<>1\n    OR EXISTS(SELECT 1 FROM privacy_retention.g014_public_rpc_allowlist a WHERE a.source_signature=expected.signature AND a.grantee<>'service_role'))\n  AND (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='pipeline_control' AND p.proname LIKE 'evidence_recovery_%')=4\n  AND NOT EXISTS(SELECT 1 FROM (VALUES\n    ('pipeline_control.evidence_recovery_input_sha(jsonb)','62dafdb645cf2339ba5622e6dc55f3028e3355444177d5fafb4f6974d467c127'),\n    ('pipeline_control.evidence_recovery_guard(uuid,uuid,bigint,text,text,uuid)','c01330a1da5e788437945f8fec1c5753f86f857e74ffd1445956802c23aa07da'),\n    ('pipeline_control.evidence_recovery_metadata(pipeline_control.restaurant_evidence_recovery_jobs,jsonb)','282e2e800232826f754897e549d2fd27e957ed5da47afdea4bba5a9d605fed27'),\n    ('pipeline_control.evidence_recovery_validate_result(jsonb,jsonb,text)','178a666e4f00107bdee1de05744d0ac5311218470e970a4c18e02b50d790dc40')\n  ) expected(signature,sha) LEFT JOIN pg_proc p ON p.oid=to_regprocedure(expected.signature)\n  WHERE p.oid IS NULL OR p.prosecdef OR pg_get_userbyid(p.proowner)<>'postgres' OR p.proconfig IS DISTINCT FROM ARRAY['search_path=\"\"']::text[]\n    OR encode(sha256(convert_to(p.prosrc,'UTF8')),'hex')<>expected.sha OR NOT has_function_privilege('service_role',p.oid,'EXECUTE')\n    OR EXISTS(SELECT 1 FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE a.grantee NOT IN(p.proowner,'service_role'::regrole) OR a.is_grantable))\n  AND (SELECT encode(sha256(convert_to(d.prosrc,'UTF8')),'hex')||':'||encode(sha256(convert_to(c.prosrc,'UTF8')),'hex') FROM pg_proc d,pg_proc c WHERE d.oid=to_regprocedure('privacy_retention.assert_g014_definer_contract()') AND c.oid=to_regprocedure('privacy_retention.assert_g014_catalog_contract()')) IN ('0f952ddc2eed4f592a5809cbb3371a1531c206b4152c34f3dca44f603e0c3e25:2321fb4ecf9c7857b400ca2face09875bbd00852c54860b758c636106834069c','e879e3d3083f969cee5968b4064703bd7cc8227cc78e1950c78b06a8a0e5ddfa:ef150f03928a8dfaeaa4365558408afe38454786f3965863219ba879b0d3ca05')\n  AND NOT EXISTS(SELECT 1 FROM pg_proc p WHERE p.oid IN(to_regprocedure('privacy_retention.assert_g014_definer_contract()'),to_regprocedure('privacy_retention.assert_g014_catalog_contract()'))\n    AND (NOT p.prosecdef OR pg_get_userbyid(p.proowner)<>'privacy_workflow_owner' OR p.proconfig IS DISTINCT FROM ARRAY['search_path=\"\"']::text[]))\n  AND NOT has_table_privilege('anon','pipeline_control.restaurant_evidence_recovery_jobs','SELECT,INSERT,UPDATE,DELETE')\n  AND NOT has_table_privilege('authenticated','pipeline_control.restaurant_evidence_recovery_jobs','SELECT,INSERT,UPDATE,DELETE')\n  AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['SELECT','INSERT','UPDATE']) privilege WHERE NOT has_table_privilege('service_role','pipeline_control.restaurant_evidence_recovery_jobs',privilege))\n  AND NOT has_table_privilege('service_role','pipeline_control.restaurant_evidence_recovery_jobs','DELETE')\n), false))::text;\n",
+      "expected": {
+        "restaurant_evidence_recovery_verified": true
+      }
+    }
+  }
+}
