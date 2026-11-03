@@ -13,9 +13,12 @@ describe('admin evaluation missing metric UI contracts', () => {
 
     expect(tableSource).not.toContain('renderEvaluationRerunBadge');
     expect(tableSource).not.toContain('evaluation_incomplete');
-    expect(tableSource).toContain('disabled={loading || needsEvaluationRerun(record) || !canApproveAddressConsistencyRecord(record)}');
+    expect(tableSource).toContain("eligibility?.state === 'local_checks_passed' && !needsEvaluationRerun(record) && canApproveAddressConsistencyRecord(record)");
+    expect(tableSource).toContain('disabled={loading || (!approvalUnknown && !canApprove)}');
+    expect(tableSource).toContain('EvaluationApprovalReasons');
     expect(tableSource).not.toContain('평가 재실행' + ' 필요');
-    expect(slideSource).toContain('const canApproveCurrent = !needsMetricRerun && canApproveAddressConsistencyRecord(currentRecord);');
+    expect(slideSource).toContain("const canApproveCurrent = eligibility?.state === 'local_checks_passed' && !needsMetricRerun && canApproveAddressConsistencyRecord(currentRecord);");
+    expect(slideSource).toContain('if (approvalUnknown) requestDetails?.();');
     expect(slideSource).not.toContain('평가 재실행' + ' 필요');
     expect(pageSource).toContain('if (needsEvaluationRerun(record))');
     expect(detailSource).not.toContain('GitHub Actions 평가 단계 재실행' + ' 후보');
