@@ -708,7 +708,14 @@ describe("web quality performance source contracts", () => {
     expect(homeRuntimeShellSource).not.toContain("animate-bounce");
     expect(homeRuntimeShellSource).not.toContain("@keyframes");
     expect(homeRuntimeShellSource).not.toContain("지도를 준비하고 있어요");
-    expect(homeRuntimeShellSource).not.toContain("쯔동여지도 검색하기");
+    const staticSampleStart = homeRuntimeShellSource.indexOf("function HomeStaticSkeleton()");
+    const staticSampleEnd = homeRuntimeShellSource.indexOf("function HomeRuntimePendingShell(");
+    expect(staticSampleStart).toBeGreaterThanOrEqual(0);
+    expect(staticSampleEnd).toBeGreaterThan(staticSampleStart);
+    const staticSample = homeRuntimeShellSource.slice(staticSampleStart, staticSampleEnd);
+    expect(staticSample).toContain('aria-hidden="true"');
+    expect(staticSample).toContain("pointer-events-none");
+    expect(staticSample).not.toMatch(/<(?:button|input|a)(?:\s|>)/);
     expect(homeRuntimeShellSource).not.toContain("bg-[radial-gradient");
     expect(homeRuntimeShellSource).not.toContain("bg-[linear-gradient");
     expect(homeRuntimeShellSource).toContain(
