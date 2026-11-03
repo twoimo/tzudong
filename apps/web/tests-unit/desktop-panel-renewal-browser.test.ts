@@ -141,7 +141,7 @@ export async function renewalPanelBundle(surface: 'desktop' | 'mobile' | 'outer-
         await page.goto('https://renewal.test/?panel=bookmarks');
         await page.evaluate(() => Object.assign(globalThis, { __holdAuth: true }));
         await page.addScriptTag({ content: script });
-        await browserExpect(page.getByRole('status')).toContainText('북마크');
+        await browserExpect(page.getByRole('region', { name: '북마크 패널', exact: true }).getByRole('status')).toContainText('북마크');
         expect(new URL(page.url()).searchParams.get('panel')).toBe('bookmarks');
         expect(await page.evaluate(() => (globalThis as unknown as { __fixture: { auth: unknown[] } }).__fixture.auth)).toEqual([]);
         await page.evaluate(signedIn => {
@@ -208,7 +208,7 @@ export async function renewalPanelBundle(surface: 'desktop' | 'mobile' | 'outer-
     await page.goto('https://renewal.test/?panel=notifications');
     await page.evaluate(() => Object.assign(globalThis, { __heldPanels: ['알림'], __failedPanels: ['알림'] }));
     await page.addScriptTag({ content: script });
-    await browserExpect(page.getByRole('status')).toContainText('알림');
+    await browserExpect(page.getByRole('region', { name: '알림 패널', exact: true }).getByRole('status')).toContainText('알림');
     await browserExpect(page.getByTestId('map-home')).toHaveCount(0);
     await page.evaluate(() => (globalThis as unknown as { __fixture: { release(name: string): void } }).__fixture.release('알림'));
     await browserExpect(page.getByRole('alert')).toContainText('다시 시도');
@@ -219,7 +219,7 @@ export async function renewalPanelBundle(surface: 'desktop' | 'mobile' | 'outer-
     await page.goto('https://renewal.test/?panel=bookmarks');
     await page.evaluate(() => Object.assign(globalThis, { __heldPanels: ['북마크'] }));
     await page.addScriptTag({ content: script });
-    await browserExpect(page.getByRole('status')).toContainText('북마크');
+    await browserExpect(page.getByRole('region', { name: '북마크 패널', exact: true }).getByRole('status')).toContainText('북마크');
     await page.locator('[data-desktop-map-menu-trigger="true"][data-state]').click();
     await page.getByRole('menuitem', { name: '알림 패널 열기', exact: true }).click();
     await browserExpect(page.locator('[data-loaded-panel="알림"]')).toBeVisible();
