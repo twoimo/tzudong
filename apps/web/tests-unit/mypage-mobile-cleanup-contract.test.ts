@@ -437,8 +437,12 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(layoutSource).not.toContain(
       "rounded-3xl border border-border bg-card p-4",
     );
-    expect(layoutSource).toContain("STAT_SKELETON_WIDTHS.map");
-    expect(layoutSource).toContain("ACTION_SKELETON_WIDTHS.map");
+    expect(layoutSource).toContain("<LoadingSurface");
+    expect(layoutSource).not.toContain("STAT_SKELETON_WIDTHS");
+    expect(layoutSource).toContain("grid gap-2 sm:grid-cols-3");
+    expect(layoutSource).not.toContain("ACTION_SKELETON_WIDTHS");
+    expect(layoutSource).toContain("grid gap-2 sm:grid-cols-2");
+    expect(layoutSource).toContain('data-mypage-content-actions-skeleton="true"');
     expect(routeLoadingSource).toContain("return null;");
     expect(routeLoadingSource).not.toContain("animate-pulse");
     expect(sectionSkeletonSource).toContain(

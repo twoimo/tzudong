@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingSurface } from '@/components/ui/loading-surface';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { adminReviewModerationStatus, selectAdminModerationRows, type AdminModerationFilter, type AdminModerationSort } from '@/lib/admin/submission-list-view-model';
 import { toast } from '@/lib/no-toast';
@@ -1224,21 +1224,50 @@ export function SubmissionListView({
     const filterClassName = 'h-11 min-w-0 rounded-md border border-input bg-background px-2 text-xs md:h-8';
     const listCategoryBadgeClassName = 'px-1.5 py-0 text-[11px]';
     const renderListSkeletonCards = (label: string) => (
-        <div ref={submissionListSkeleton.ref} className={listBodyClassName} role="status" aria-busy="true" aria-label={`${label} 목록 로딩 중`}>
-            <Skeleton className="h-8 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-            {Array.from({ length: submissionListSkeleton.count }).map((_, index) => (
-                <Card key={index} className="rounded-lg border p-2">
-                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_80px_72px] sm:items-center">
-                        <div className="min-w-0 space-y-1.5">
-                            <Skeleton className="h-3.5 w-3/4 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                            <Skeleton className="h-2.5 w-5/6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                        </div>
-                        <Skeleton className="h-6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                        <Skeleton className="h-7 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                    </div>
-                </Card>
-            ))}
+        <div
+            ref={submissionListSkeleton.ref}
+            className={listBodyClassName}
+            role="status"
+            aria-busy="true"
+            aria-label={`${label} 목록 로딩 중`}
+        >
+
+            <LoadingSurface label={label + " 목록 로딩 중"}>
+
+                <div className="flex h-8 items-center rounded-md border px-3 text-xs">검토 항목과 처리 상태</div>
+
+                <div className="space-y-2">
+
+                    {
+                        Array.from({ length: submissionListSkeleton.count }, (_, index) => (
+                            <article key={index} className="min-h-[68px] rounded-lg border p-2">
+
+                                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_80px_72px] sm:items-center">
+
+                                    <div className="min-w-0 space-y-1.5">
+
+                                        <h3 className="text-sm font-semibold">맛집 제보</h3>
+
+                                        <p className="text-xs">제보 내용과 참고 정보</p>
+
+                                    </div>
+
+                                    <span className="text-xs">검토 상태</span>
+
+                                    <span className="text-xs">상세 보기</span>
+
+                                </div>
+
+                            </article>
+                        ))
+                    }
+
+                </div>
+
+            </LoadingSurface>
+
             <div className="h-4" />
+
         </div>
     );
 

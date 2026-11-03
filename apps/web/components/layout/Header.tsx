@@ -16,7 +16,7 @@ import {
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingSurface } from "@/components/ui/loading-surface";
 import { useNotifications } from "@/contexts/NotificationContextBase";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -48,13 +48,11 @@ interface HeaderProps {
   hideToggleSidebar?: boolean;
 }
 
-function HeaderActionSkeleton({ label, className }: { label: string; className?: string }) {
+function HeaderActionLoading({ label, className }: { label: string; className?: string }) {
   return (
-    <Skeleton
-      role="status"
-      aria-label={label}
-      className={cn("h-11 w-11 flex-shrink-0 rounded-xl motion-reduce:animate-none", className)}
-    />
+    <LoadingSurface label={label} className={cn("h-11 w-11 flex-shrink-0 rounded-xl", className)}>
+      <span className="flex h-11 w-11 items-center justify-center text-sm">메뉴</span>
+    </LoadingSurface>
   );
 }
 
@@ -321,7 +319,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
       {/* 중앙: 공지 배너 - 로딩 중 스켈레톤으로 레이아웃 고정 */}
       {shouldShowBannerSkeleton ? (
-        <div className={cn(HEADER_BANNER_FRAME_CLASS, "h-7 bg-secondary/30 md:h-8")} aria-hidden />
+        <div className={cn(HEADER_BANNER_FRAME_CLASS, "h-7 overflow-hidden md:h-8")} aria-hidden>
+          <LoadingSurface label="공지 배너 로딩 중"><p className="text-xs leading-7 md:leading-8">쯔동여지도 소식을 만나보세요</p></LoadingSurface>
+        </div>
       ) : currentBanner ? (
         <div
           aria-live="polite"
@@ -395,7 +395,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
         {/* 알림 */}
         {shouldShowNotificationSkeleton && (
-          <HeaderActionSkeleton label="알림 로딩 중" />
+          <HeaderActionLoading label="알림 로딩 중" />
         )}
         {shouldShowHeaderIcons && (
           <DropdownMenu>
@@ -445,14 +445,17 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               <DropdownMenuSeparator className="my-2 bg-border" />
               <ScrollArea className="h-72 max-h-[min(70vh,28rem)] pr-1">
                 {isNotificationsLoading ? (
-                  <div role="status" aria-label="알림 목록 로딩 중" className="space-y-3 rounded-xl bg-background/70 p-3">
-                    {[0, 1, 2].map((item) => (
-                      <div key={item} className="space-y-2">
-                        <Skeleton className="h-4 w-3/4 rounded" />
-                        <Skeleton className="h-3 w-full rounded" />
-                      </div>
-                    ))}
-                  </div>
+                  <LoadingSurface label="알림 목록 로딩 중" className="space-y-3 rounded-xl bg-background/70 p-3">
+                    <div className="space-y-3">
+                      {Array.from({ length: 3 }, (_, index) => (
+                        <article key={index} className="space-y-2">
+                          <h3 className="text-sm font-medium leading-4">새로운 알림</h3>
+                          <p className="text-xs leading-3 text-muted-foreground">맛집과 방문 이야기를 확인해 보세요</p>
+
+                        </article>
+                      ))}
+                    </div>
+                  </LoadingSurface>
                 ) : isNotificationsError ? (
                   <div role="status" className="grid min-h-40 place-items-center rounded-xl bg-background/70 p-4 text-center text-sm text-muted-foreground">
                     <div>
@@ -530,17 +533,17 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
         {/* 북마크 - 드롭다운 */}
         {shouldShowBookmarkSkeleton && (
-          <HeaderActionSkeleton label="북마크 로딩 중" />
+          <HeaderActionLoading label="북마크 로딩 중" />
         )}
         {shouldShowHeaderIcons && (
-          <Suspense fallback={<HeaderActionSkeleton label="북마크 로딩 중" />}>
-            {HeaderBookmarkMenuButton ? <HeaderBookmarkMenuButton /> : <HeaderActionSkeleton label="북마크 로딩 중" />}
+          <Suspense fallback={<HeaderActionLoading label="북마크 로딩 중" />}>
+            {HeaderBookmarkMenuButton ? <HeaderBookmarkMenuButton /> : <HeaderActionLoading label="북마크 로딩 중" />}
           </Suspense>
         )}
 
         {/* 전체화면 - 데스크탑에서만 표시 */}
         {shouldShowFullscreenSkeleton && (
-          <HeaderActionSkeleton label="전체화면 로딩 중" className="hidden md:block" />
+          <HeaderActionLoading label="전체화면 로딩 중" className="hidden md:block" />
         )}
         {shouldShowHeaderIcons && (
           <Button
@@ -557,7 +560,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
         {/* 로그인 상태 */}
         {shouldShowAccountSkeleton && (
-          <HeaderActionSkeleton label="사용자 메뉴 로딩 중" />
+          <HeaderActionLoading label="사용자 메뉴 로딩 중" />
         )}
         {shouldShowHeaderIcons && (
           <DropdownMenu>

@@ -708,7 +708,14 @@ describe("web quality performance source contracts", () => {
     expect(homeRuntimeShellSource).not.toContain("animate-bounce");
     expect(homeRuntimeShellSource).not.toContain("@keyframes");
     expect(homeRuntimeShellSource).not.toContain("지도를 준비하고 있어요");
-    expect(homeRuntimeShellSource).not.toContain("쯔동여지도 검색하기");
+    const staticSampleStart = homeRuntimeShellSource.indexOf("function HomeStaticSkeleton()");
+    const staticSampleEnd = homeRuntimeShellSource.indexOf("function HomeRuntimePendingShell(");
+    expect(staticSampleStart).toBeGreaterThanOrEqual(0);
+    expect(staticSampleEnd).toBeGreaterThan(staticSampleStart);
+    const staticSample = homeRuntimeShellSource.slice(staticSampleStart, staticSampleEnd);
+    expect(staticSample).toContain('aria-hidden="true"');
+    expect(staticSample).toContain("pointer-events-none");
+    expect(staticSample).not.toMatch(/<(?:button|input|a)(?:\s|>)/);
     expect(homeRuntimeShellSource).not.toContain("bg-[radial-gradient");
     expect(homeRuntimeShellSource).not.toContain("bg-[linear-gradient");
     expect(homeRuntimeShellSource).toContain(
@@ -1206,7 +1213,7 @@ describe("web quality performance source contracts", () => {
     );
     expect(desktopLeftPanelMapHomeSource).toContain("grid grid-cols-1 gap-3");
     expect(desktopLeftPanelMapHomeSource).toContain(
-      "function DesktopRestaurantCardSkeleton",
+      "label=\"최근 추가된 맛집 로딩 중\"",
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
       "function getPopularRankTrendBadge",
@@ -1241,7 +1248,7 @@ describe("web quality performance source contracts", () => {
       "<DesktopRestaurantCardSkeleton key={index} withRank />",
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
-      "<DesktopRestaurantCardSkeleton key={index} />",
+      "<LoadingSurface className=\"grid grid-cols-1 gap-3\"",
     );
     expect(desktopLeftPanelMapHomeSource).toContain("<StampCard");
     expect(desktopLeftPanelMapHomeSource).toContain('size="default"');
@@ -2434,13 +2441,13 @@ describe("web quality performance source contracts", () => {
       'data-testid="stamp-page-skeleton"',
     );
     expect(skeletonLoadersSource).toContain(
-      "shrink-0 space-y-4 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4",
+      "shrink-0 border-b px-3 py-3 sm:px-5 sm:py-4",
     );
     expect(skeletonLoadersSource).toContain(
-      "basis-[min(11rem,100%)] space-y-2",
+      "label=\"도장 페이지를 불러오는 중\"",
     );
     expect(skeletonLoadersSource).toContain(
-      "ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2",
+      "grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-6",
     );
     expect(stampLoadingSource).toContain("return null");
     expect(stampLoadingSource).not.toContain("StampPageSkeleton");
@@ -2459,9 +2466,9 @@ describe("web quality performance source contracts", () => {
       "setDisplayLimit(prev => prev + STAMP_PAGE_SIZE)",
     );
     expect(stampPageSource).toContain(
-      "StampGridSkeleton count={STAMP_PAGE_SIZE}",
+      "length: STAMP_PAGE_SIZE",
     );
-    expect(countSourceMatches(stampPageSource, /<StampGridSkeleton\b/g)).toBe(
+    expect(countSourceMatches(stampPageSource, /label="도장 맛집 목록 로딩 중"/g)).toBe(
       1,
     );
     expect(stampPageSource).toContain(
@@ -2550,7 +2557,7 @@ describe("web quality performance source contracts", () => {
       "UserProfileProgressiveSkeleton, UserProfileTabSkeleton",
     );
     expect(userProfileProgressiveSkeletonSource).toContain(
-      'import { Skeleton } from "@/components/ui/skeleton"',
+      'import { LoadingSurface } from "@/components/ui/loading-surface"',
     );
     expect(userProfilePanelSource).not.toContain(
       'import { GlobalLoader } from "@/components/ui/global-loader"',
@@ -2777,20 +2784,20 @@ describe("web quality performance source contracts", () => {
     expect(stampOverlaySource).toContain('size="default"');
     expect(stampOverlaySource).toContain("const STAMP_PAGE_SIZE = 5");
     expect(stampOverlaySource).toContain(
-      "const skeletonCardCount = STAMP_PAGE_SIZE",
+      "const loadingCardCount = STAMP_PAGE_SIZE",
     );
     expect(stampOverlaySource).toContain("shouldShowStampOverlaySkeleton");
-    expect(stampOverlaySource).toContain("count={skeletonCardCount}");
+    expect(stampOverlaySource).toContain("length: loadingCardCount");
     expect(
-      countSourceMatches(stampOverlaySource, /<StampGridSkeleton\b/g),
+      countSourceMatches(stampOverlaySource, /<LoadingSurface\b/g),
     ).toBe(1);
     expect(stampOverlaySource).toContain(
-      "const skeletonGridColumns = singleColumnCards",
+      "const loadingGridColumns = singleColumnCards",
     );
     expect(stampOverlaySource).toContain(
       "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-4",
     );
-    expect(stampOverlaySource).toContain("columns={skeletonGridColumns}");
+    expect(stampOverlaySource).toContain("className={cn(\"grid gap-3\", loadingGridColumns)}");
     expect(stampOverlaySource).toContain(
       "mt-4 grid grid-cols-1 gap-2 overflow-hidden sm:grid-cols-2",
     );
@@ -2875,7 +2882,7 @@ describe("web quality performance source contracts", () => {
       'data-mobile-leaderboard-panel-list="true"',
     );
     expect(leaderboardPageSource).toContain("mobilePanel");
-    expect(leaderboardPageSource).toContain('className="px-4"');
+    expect(leaderboardPageSource).toContain('className="w-full p-4 px-4"');
     expect(leaderboardPageSource).toContain('variant="page"');
     const sharedHeaderSource = source("components/home/map-panel-chrome.tsx");
     expect(sharedHeaderSource).toContain("flex flex-wrap items-start justify-between gap-3");
@@ -2883,17 +2890,17 @@ describe("web quality performance source contracts", () => {
     expect(leaderboardLoadingSource).not.toContain("compactLeftPanel");
     expect(leaderboardLoadingSource).toContain("return null");
     expect(leaderboardLoadingSource).toContain("한 번만");
-    expect(leaderboardPageSource).toContain('className="px-4"');
+    expect(leaderboardPageSource).toContain('className="w-full p-4 px-4"');
     expect(leaderboardSkeletonSource).toContain("compactLeftPanel?: boolean");
     expect(leaderboardSkeletonSource).toContain("compactLeftPanel = false");
     expect(leaderboardSkeletonSource).toContain(
-      'compactLeftPanel ? "px-2 py-4" : "p-4"',
+      'useFilledSkeletonCount(compactLeftPanel ? 52 : 56, count)',
     );
     expect(leaderboardSkeletonSource).toContain(
-      'compactLeftPanel ? "gap-2" : "gap-3"',
+      'compact={compactLeftPanel}',
     );
     expect(leaderboardSkeletonSource).toContain(
-      'compactLeftPanel ? "w-7" : "w-9"',
+      'showHeader={showHeader}',
     );
     expect(leaderboardOverlaySource).toContain("compactLeftPanel");
     expect(leaderboardListSource).toContain(
@@ -3455,9 +3462,9 @@ describe("web quality performance source contracts", () => {
     expect(myPageLayoutContentSource).not.toContain(
       "rounded-3xl border border-border bg-card p-4",
     );
-    expect(myPageLayoutContentSource).toContain("STAT_SKELETON_WIDTHS.map");
-    expect(myPageLayoutContentSource).toContain("ACTION_SKELETON_WIDTHS.map");
-    expect(myPageLayoutContentSource).toContain("<Skeleton");
+    expect(myPageLayoutContentSource).toContain("[\"리뷰\", \"도장\", \"북마크\"].map");
+    expect(myPageLayoutContentSource).toContain("[\"프로필 관리\", \"나의 리뷰\", \"저장한 맛집\", \"제보 내역\"].map");
+    expect(myPageLayoutContentSource).toContain("<LoadingSurface");
     expect(myPageLayoutContentSource).not.toContain("<GlobalLoader");
     expect(myPageSectionSkeletonSource).toContain(
       'data-mypage-section-loading="true"',
@@ -3471,7 +3478,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageSectionSkeletonSource).not.toContain(
       "rounded-2xl border border-border bg-card p-4",
     );
-    expect(myPageSectionSkeletonSource).toContain("<Skeleton");
+    expect(myPageSectionSkeletonSource).toContain("<LoadingSurface");
     expect(myPageLoadingSource).toContain("return null;");
     expect(myPageLoadingSource).toContain("동적 영역만 해당 위치에서 한 번");
     expect(myPageLoadingSource).not.toContain("<MyPageSectionSkeleton />");
@@ -3904,7 +3911,7 @@ describe("web quality performance source contracts", () => {
     expect(globalMapLoadingSource).toContain("한 번만");
     expect(globalMapLoadingSource).not.toContain("<MapSkeleton");
     expect(globalMapLoadingSource).not.toContain("GlobalLoader");
-    expect(globalMapPageSource).toContain("function GlobalMapSearchSkeleton()");
+    expect(globalMapPageSource).toContain("function GlobalMapSearchLoading()");
     expect(globalMapPageSource).toContain(
       'data-global-map-search-skeleton="true"',
     );
@@ -3949,7 +3956,7 @@ describe("web quality performance source contracts", () => {
     expect(leaderboardLoadingSource).toContain("return null");
     expect(leaderboardLoadingSource).not.toContain("<LeaderboardSkeleton");
     expect(source("app/leaderboard/page.tsx")).toContain(
-      "<LeaderboardSkeleton",
+      'label="랭킹 목록 로딩 중"',
     );
     expect(source("app/loading.tsx")).toContain("return null");
     expect(
@@ -4032,7 +4039,7 @@ describe("web quality performance source contracts", () => {
       {
         route: "app/leaderboard/loading.tsx",
         owner: "app/leaderboard/page.tsx",
-        marker: "<LeaderboardSkeleton",
+        marker: 'label="랭킹 목록 로딩 중"',
       },
       {
         route: "app/mypage/loading.tsx",
@@ -4081,7 +4088,7 @@ describe("web quality performance source contracts", () => {
     expect(
       countSourceMatches(
         source("app/leaderboard/page.tsx"),
-        /<LeaderboardSkeleton\b/g,
+        /label="랭킹 목록 로딩 중"/g,
       ),
     ).toBe(1);
     expect(
@@ -4105,7 +4112,7 @@ describe("web quality performance source contracts", () => {
     expect(
       countSourceMatches(
         source("app/global-map/page.tsx"),
-        /<GlobalMapSearchSkeleton\s*\/>/g,
+        /<GlobalMapSearchLoading\s*\/>/g,
       ),
     ).toBe(1);
   });

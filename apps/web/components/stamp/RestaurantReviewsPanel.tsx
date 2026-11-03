@@ -1,3 +1,4 @@
+import { LoadingSurface } from "@/components/ui/loading-surface";
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -154,20 +155,21 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                         ))}
                     </div>
                 ) : isLoading ? (
-                    /* 로딩 중 스켈레톤 */
-                    <div className="space-y-4">
-                        {[1, 2, 3].map((i) => (
-                            <Card key={i} className="p-0 overflow-hidden">
-                                <div>
-                                    <div className="w-full aspect-square bg-muted" />
-                                    <div className="p-3 space-y-2">
-                                        <div className="h-3 bg-muted rounded w-1/4" />
-                                        <div className="h-3 bg-muted rounded w-3/4" />
+                    <LoadingSurface label="맛집 리뷰 목록 로딩 중">
+                        <div className="space-y-4">
+                            {[1, 2, 3].map((item) => (
+                                <article key={item} className="overflow-hidden rounded-xl border bg-card">
+                                    <svg viewBox="0 0 320 320" role="img" aria-label="리뷰 사진" className="aspect-square w-full">
+                                        <path d="M0 260 90 90 180 180 250 60 320 230V320H0Z" fill="currentColor" opacity="0.12" />
+                                    </svg>
+                                    <div className="space-y-2 p-3">
+                                        <h3 className="truncate text-xs font-medium leading-3">맛집 여행자</h3>
+                                        <p className="truncate text-xs leading-3">방문 이야기를 만나보세요</p>
                                     </div>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    </LoadingSurface>
                 ) : (
                     /* 빈 상태 */
                     <div className="flex flex-col items-center justify-center px-4 text-center" style={{ minHeight: 'calc(100vh - 400px)' }}>

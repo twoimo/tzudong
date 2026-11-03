@@ -16,7 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingSurface } from '@/components/ui/loading-surface';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1158,61 +1158,117 @@ export function EvaluationTable({
 
   const loadMoreSentinel = hasMore && onLoadMore ? <div ref={loadMoreSentinelRef} className="h-8" /> : null;
   const mobileLoadingCards = (
-    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" role="status" aria-busy="true" aria-label="맛집 검수 카드 로딩 중">
-      {Array.from({ length: mobileSkeletonCount }).map((_, index) => (
-        <div key={index} className="rounded-lg border bg-card p-2">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-              <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-              <div className="grid grid-cols-3 gap-1.5">
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-              </div>
-            </div>
-          </div>
+    <div className="lg:hidden" role="status" aria-busy="true" aria-label="맛집 검수 카드 로딩 중">
+
+      <LoadingSurface label="맛집 검수 카드 로딩 중" className="col-span-full">
+
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+
+          {
+            Array.from({ length: mobileSkeletonCount }, (_, index) => (
+              <article key={index} className="rounded-md border border-border/70 bg-card p-3">
+
+                <div className="flex items-center gap-2">
+
+                  <svg
+                    viewBox="0 0 64 48"
+                    role="img"
+                    aria-label="맛집 사진"
+                    className="h-12 w-16 shrink-0 rounded-md border"
+                  >
+
+                    <rect width="64" height="48" fill="currentColor" opacity="0.1" />
+
+                  </svg>
+
+                  <div className="min-w-0 flex-1 space-y-1.5">
+
+                    <h3 className="text-sm font-semibold">맛집 검수 항목</h3>
+
+                    <p className="text-xs">영상과 맛집 정보</p>
+
+                    <div className="grid grid-cols-3 gap-1.5 text-xs">
+
+                      <span>검수</span>
+
+                      <span>위치</span>
+
+                      <span>분류</span>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </article>
+            ))
+          }
+
         </div>
-      ))}
+
+      </LoadingSurface>
+
     </div>
   );
-  const desktopSkeletonMetricColumns = [
-    DESKTOP_TABLE_COLUMNS.score,
-    cn(DESKTOP_TABLE_COLUMNS.score, 'hidden lg:table-cell'),
-    cn(DESKTOP_TABLE_COLUMNS.boolean, 'hidden lg:table-cell'),
-    cn(DESKTOP_TABLE_COLUMNS.score, 'hidden lg:table-cell'),
-    DESKTOP_TABLE_COLUMNS.address,
-    cn(DESKTOP_TABLE_COLUMNS.category, 'hidden lg:table-cell'),
-    cn(DESKTOP_TABLE_COLUMNS.category, 'hidden lg:table-cell'),
-  ];
-  const desktopLoadingRows = Array.from({ length: desktopSkeletonCount }).map((_, index) => (
-    <TableRow key={`evaluation-loading-${index}`} aria-hidden="true">
-      <TableCell className={cn(DESKTOP_TABLE_COLUMNS.expander, "sticky left-0 z-10 bg-card px-2")}>
-        <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
+  const desktopLoadingRows = (
+    <TableRow>
+
+      <TableCell colSpan={11} className="p-0">
+
+        <LoadingSurface label="맛집 검수 목록 로딩 중">
+
+          <table className="w-full table-fixed text-xs">
+
+            <tbody>
+
+              {
+                Array.from({ length: desktopSkeletonCount }, (_, index) => (
+                  <tr key={index} className="h-[72px]">
+
+                    <td className={DESKTOP_TABLE_COLUMNS.expander}>선택</td>
+
+                    <td className={DESKTOP_TABLE_COLUMNS.restaurant}>
+
+                      <p className="text-sm font-semibold">맛집 검수 항목</p>
+
+                      <p className="mt-1">영상과 맛집 정보</p>
+
+                    </td>
+
+                    {
+                      [
+
+                        DESKTOP_TABLE_COLUMNS.score,
+                        cn(DESKTOP_TABLE_COLUMNS.score, 'hidden lg:table-cell'),
+                        cn(DESKTOP_TABLE_COLUMNS.boolean, 'hidden lg:table-cell'),
+                        cn(DESKTOP_TABLE_COLUMNS.score, 'hidden lg:table-cell'),
+                        DESKTOP_TABLE_COLUMNS.address,
+                        cn(DESKTOP_TABLE_COLUMNS.category, 'hidden lg:table-cell'),
+                        cn(DESKTOP_TABLE_COLUMNS.category, 'hidden lg:table-cell')
+                      ].map((columnClass, cellIndex) => (
+                        <td key={cellIndex} className={cn(columnClass, DESKTOP_METRIC_CELL)}>검토 정보</td>
+                      ))
+                    }
+
+                    <td className={DESKTOP_TABLE_COLUMNS.status}>검수 상태</td>
+
+                    <td className={DESKTOP_TABLE_COLUMNS.actions}>상세 보기</td>
+
+                  </tr>
+                ))
+              }
+
+            </tbody>
+
+          </table>
+
+        </LoadingSurface>
+
       </TableCell>
-      <TableCell className={cn(DESKTOP_TABLE_COLUMNS.restaurant, "px-3 lg:sticky lg:left-12 lg:z-10 lg:bg-card")}>
-        <div className="space-y-1.5">
-          <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-          <div className="flex items-center gap-1.5">
-            <Skeleton className="h-6 w-9 shrink-0 rounded-sm motion-reduce:animate-none" aria-hidden="true" />
-            <Skeleton className="h-2.5 min-w-0 flex-1 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-          </div>
-        </div>
-      </TableCell>
-      {desktopSkeletonMetricColumns.map((columnClass, cellIndex) => (
-        <TableCell key={cellIndex} className={cn(columnClass, DESKTOP_METRIC_CELL)}>
-          <Skeleton className="mx-auto h-5 w-8 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-        </TableCell>
-      ))}
-      <TableCell className={cn(DESKTOP_TABLE_COLUMNS.status, "sticky right-[136px] z-10 bg-card px-2 text-center")}>
-        <Skeleton className="mx-auto h-6 w-14 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-      </TableCell>
-      <TableCell className={cn(DESKTOP_TABLE_COLUMNS.actions, "sticky right-0 z-10 bg-card px-2 text-center")}>
-        <Skeleton className="mx-auto h-7 w-20 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-      </TableCell>
+
     </TableRow>
-  ));
+  );
 
   const mobileCards = (
     <>
