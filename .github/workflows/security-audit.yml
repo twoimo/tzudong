@@ -309,8 +309,8 @@ jobs:
 
   orchestration-readiness:
     runs-on: ubuntu-latest
-    # The recovered full contract suite extends beyond the original focused job.
-    timeout-minutes: 10
+    # Include retained-source verification and descriptor tooling after checkout.
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -417,7 +417,7 @@ jobs:
 
       - name: Verify recovered observability and readiness-agent boundaries
         run: >-
-          python -m unittest
+          python -m unittest -v
           backend.utils.tests.test_operational_source_recovery
           backend.utils.tests.test_platform_modernization_reconciliation
           backend.utils.tests.test_duplicate_checker_jsonl
