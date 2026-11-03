@@ -57,6 +57,7 @@ interface EvaluationTableProps {
   onRegisterMissing?: (record: EvaluationRecord) => void;
   onResolveConflict?: (record: EvaluationRecord) => void;
   onEdit?: (record: EvaluationRecord) => void;
+  onRecover?: (record: EvaluationRecord) => void;
   loading?: boolean;
   readFailed?: boolean;
   isDeletedFilterActive?: boolean; // 삭제 필터 활성화 여부
@@ -644,6 +645,7 @@ export function EvaluationTable({
   onRegisterMissing,
   onResolveConflict,
   onEdit,
+  onRecover,
   loading,
   readFailed = false,
   isDeletedFilterActive = false,
@@ -1606,6 +1608,7 @@ export function EvaluationTable({
                   <EvaluationRowDetails
                     record={record}
                     onEdit={() => onEdit?.(record)}
+                    onRecover={onRecover ? () => onRecover(record) : undefined}
                   />
                 </div>
               </div>
@@ -1866,6 +1869,7 @@ export function EvaluationTable({
                         <EvaluationRowDetails
                           record={record}
                           onEdit={() => onEdit?.(record)}
+                          onRecover={onRecover ? () => onRecover(record) : undefined}
                         />
                       </div>
                     </TableCell>

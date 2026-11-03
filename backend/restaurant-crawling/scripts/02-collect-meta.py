@@ -473,17 +473,31 @@ def analyze_ad_content(text: str) -> Dict[str, Any]:
 
 
 def get_video_meta_batch(
-    youtube, video_ids: List[str], channel_name: str = None
+    youtube, video_ids: List[str], channel_name: str = None, *, expected_channel_id: Optional[str] = None
 ) -> Dict[str, Dict]:
     """YouTube API 배치 요청 (최대 50개)"""
     import concurrent.futures
     results = {}
     try:
+        if expected_channel_id is not None and len(video_ids) != 1:
+            raise ScopedMetadataError('metadata_identity_mismatch')
         response = (
             youtube.videos()
             .list(part="snippet,contentDetails,statistics", id=",".join(video_ids))
             .execute()
         )
+
+        # Review repair verifies the actual uploader before thumbnails or any
+        # persisted output. The channel argument alone is not source evidence.
+        if expected_channel_id is not None:
+            items = response.get('items') if isinstance(response, dict) else None
+            if items == []:
+                raise ScopedMetadataError('metadata_provider_incomplete')
+            if (not isinstance(items, list) or len(items) != 1 or not isinstance(items[0], dict)
+                    or items[0].get('id') != video_ids[0]
+                    or not isinstance(items[0].get('snippet'), dict)
+                    or items[0]['snippet'].get('channelId') != expected_channel_id):
+                raise ScopedMetadataError('metadata_identity_mismatch')
 
         items_data = []
         urls_to_fetch = []
@@ -556,7 +570,14 @@ def get_video_meta_batch(
                     ),
                 },
             }
+            if expected_channel_id is not None:
+                results[vid]['channel_id'] = expected_channel_id
     except Exception as error:
+        if expected_channel_id is not None:
+            if isinstance(error, ScopedMetadataError): raise
+            status = getattr(getattr(error, 'resp', None), 'status', None)
+            transient = isinstance(error, (TimeoutError, ConnectionError)) or status == 429 or (type(status) is int and 500 <= status < 600)
+            raise ScopedMetadataError('metadata_provider_transient' if transient else 'metadata_provider_incomplete') from None
         print(f"op=video_metadata_batch_failed error={safe_error_name(error)}")
 
     return results
@@ -714,13 +735,39 @@ def _scoped_checked_cache(channel_path: Path) -> Dict[str, Any]:
         raise ScopedMetadataError("metadata_checkpoint_invalid") from None
 
 
+def _review_metadata_path(data_path: Path, channel_name: str, video_id: str) -> Path:
+    """Admit an owned scratch tree for a missing single-video metadata file."""
+    path = Path(data_path)
+    try:
+        info = path.stat()
+        corpus = (Path(__file__).parent.parent / 'data').resolve()
+        if (not path.is_absolute() or path.resolve() != path or not path.is_dir()
+                or info.st_uid != os.getuid() or info.st_mode & 0o077
+                or path == corpus or corpus in path.parents
+                or any(entry.is_symlink() for entry in path.rglob('*'))
+                or (path / 'urls.txt').read_text(encoding='utf-8').splitlines() != [f'https://www.youtube.com/watch?v={video_id}']
+                or (path / 'meta' / f'{video_id}.jsonl').exists()):
+            raise ValueError('scratch')
+    except (OSError, ValueError):
+        raise ScopedMetadataError('metadata_review_path_invalid', 2) from None
+    return path
+
+
 def collect_channel_meta(channel_name: str, youtube, openai_client: Any, logger: PipelineLogger,
-                         *, video_id: Optional[str] = None, skip_ads: bool = False) -> Dict[str, Any]:
+                         *, video_id: Optional[str] = None, skip_ads: bool = False,
+                         review_data_path: Optional[Path] = None) -> Dict[str, Any]:
     if video_id is not None:
         _validate_metadata_scope(channel_name, video_id)
+    elif review_data_path is not None:
+        raise ScopedMetadataError('metadata_review_path_invalid', 2)
     channel_path = Path(__file__).parent.parent / "data" / channel_name
+    if review_data_path is not None:
+        channel_path = _review_metadata_path(review_data_path, channel_name, video_id)
     with stage_lock(channel_path / '.receipts' / 'metadata-collection'):
-        return _collect_channel_meta(channel_name, youtube, openai_client, logger, video_id=video_id, skip_ads=skip_ads)
+        if review_data_path is not None:
+            _review_metadata_path(review_data_path, channel_name, video_id)
+        return _collect_channel_meta(channel_name, youtube, openai_client, logger, video_id=video_id,
+                                     skip_ads=skip_ads, review_data_path=review_data_path)
 
 
 def _collect_channel_meta(
@@ -728,10 +775,13 @@ def _collect_channel_meta(
     youtube,
     openai_client: Any,
     logger: PipelineLogger,
-    *, video_id: Optional[str] = None, skip_ads: bool = False,
+    *, video_id: Optional[str] = None, skip_ads: bool = False, review_data_path: Optional[Path] = None,
 ) -> Dict[str, Any]:
 
     channel_path = Path(__file__).parent.parent / "data" / channel_name
+    if review_data_path is not None:
+        if video_id is None: raise ScopedMetadataError('metadata_review_path_invalid', 2)
+        channel_path = _review_metadata_path(review_data_path, channel_name, video_id)
     urls_path = channel_path / "urls.txt"
     deleted_path = channel_path / "deleted_urls.txt"
 
@@ -847,7 +897,13 @@ def _collect_channel_meta(
         logger.progress(i, len(video_ids), f"Batch {i//BATCH_SIZE + 1}")
 
         # 1. 배치의 현재 메타데이터 가져오기
-        current_metas = get_video_meta_batch(youtube, batch_ids, channel_name)
+        if review_data_path is None:
+            current_metas = get_video_meta_batch(youtube, batch_ids, channel_name)
+        else:
+            expected_channel = get_channel_info(channel_name).get('channel_id')
+            if not isinstance(expected_channel, str) or not re.fullmatch(r'UC[A-Za-z0-9_-]{22}', expected_channel):
+                raise ScopedMetadataError('metadata_channel_unregistered', 2)
+            current_metas = get_video_meta_batch(youtube, batch_ids, channel_name, expected_channel_id=expected_channel)
         recipe_completed = set()
         expected_output_hash = None
 
