@@ -26,8 +26,8 @@ const pinnedVector=(sql:string,version='20261009123000')=>{
   }finally{rmSync(directory,{force:true,recursive:true});}
 };
 
-test('four exact source envelopes agree with pinned provider-source parser and preserve body bytes',()=>{
-  for(const name of ['20261004190259_admin_record_guarded_actions.sql','20261004192657_admin_evaluation_raw_warning_groups.sql','20261004194715_admin_evaluation_raw_warning_invoker_contract.sql','20261009022915_restaurant_review_manual_preview_eligibility.sql']){
+test('reviewed source envelopes agree with pinned provider-source parser and preserve body bytes',()=>{
+  for(const name of ['20261004190259_admin_record_guarded_actions.sql','20261004192657_admin_evaluation_raw_warning_groups.sql','20261004194715_admin_evaluation_raw_warning_invoker_contract.sql','20261009022915_restaurant_review_manual_preview_eligibility.sql','20261103171649_restaurant_evidence_recovery.sql']){
     const path=`backend/supabase/migrations/${name}`;const bytes=readFileSync(new URL(`../../../${path}`,import.meta.url));
     const m={...migration,path,sha256:createHash('sha256').update(bytes).digest('hex')};
     const v=readOriginalStatementVector(m,bytes);const p=migrationEnvelope(bytes,m,v);
@@ -214,7 +214,7 @@ test('conflict/unknown are fixed outcomes and not-applied retains bounded failur
   expect(reconciliationSql(plan(),migration)).not.toContain('SELECT value FROM (');
 });
 test('existing caller preserves pinned dry-run and valid provider-owned verify-only shape',async()=>{
-  const manifest=JSON.parse(readFileSync(RELEASE_MIGRATION_MANIFEST_PATH,'utf8'));const pin='515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d';
+  const manifest=JSON.parse(readFileSync(RELEASE_MIGRATION_MANIFEST_PATH,'utf8'));const pin='b8dcec6684f9c49cd17d80e5f8e9c1f22e29a00bc7a3642ab1917eb1c11d195b';
   for(const m of manifest.migrations.filter((x:{id:string})=>x.id.startsWith('g016_'))){
     const receipt={version:1,provider:'supabase',migration_id:m.id,migration_sha256:m.sha256,manifest_sha256:pin,receipt_id:'fixture-provider-123'};
     let calls=0;const result=await main(['--migration-id',m.id,'--verify-terminal-state','--provider-receipt',JSON.stringify(receipt)],{environment:{RELEASE_MIGRATION_MANIFEST_SHA256:pin,PROVIDER_MIGRATION_RECEIPT_SHA256:sha(JSON.stringify(receipt)+'\n'),SUPABASE_DB_URL:'fixture'},runPsqlImpl:()=>{calls++;return JSON.stringify(m.terminalReadback.expected);},readVectorImpl:()=>{throw Error('must not build apply envelope');}});

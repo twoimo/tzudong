@@ -29,6 +29,7 @@ interface EvaluationSlideViewProps {
     onRegisterMissing?: (record: EvaluationRecord) => void;
     onResolveConflict?: (record: EvaluationRecord) => void;
     onEdit?: (record: EvaluationRecord) => void;
+    onRecover?: (record: EvaluationRecord) => void;
     loading?: boolean;
     readFailed?: boolean;
     onRequestDetails?: (record: EvaluationRecord) => Promise<boolean>;
@@ -44,6 +45,7 @@ export function EvaluationSlideView({
     onRegisterMissing,
     onResolveConflict,
     onEdit,
+    onRecover,
     loading,
     readFailed = false,
     onRequestDetails,
@@ -320,7 +322,7 @@ export function EvaluationSlideView({
 
             {/* Main Content Area - Split View using unified component */}
             <div className="flex-1">
-                <EvaluationDetailView record={currentRecord} autoHeight onRequestDetails={requestDetails} />
+                <EvaluationDetailView record={currentRecord} autoHeight onRequestDetails={requestDetails} onRecover={onRecover ? () => onRecover(currentRecord) : undefined} />
             </div>
 
             {isMobile && (

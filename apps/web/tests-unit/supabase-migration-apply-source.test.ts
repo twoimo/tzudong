@@ -15,7 +15,7 @@ import {
   validateReleaseMigrationManifest,
 } from "../scripts/apply-supabase-migration.mjs";
 
-const MANIFEST_SHA256 = "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d";
+const MANIFEST_SHA256 = "b8dcec6684f9c49cd17d80e5f8e9c1f22e29a00bc7a3642ab1917eb1c11d195b";
 const manifestBytes = readFileSync(RELEASE_MIGRATION_MANIFEST_PATH);
 const manifestDocument = JSON.parse(manifestBytes.toString("utf8"));
 const migration = manifestDocument.migrations[0];
@@ -124,6 +124,11 @@ describe("reviewed Supabase migration apply contract", () => {
           id: "g016_onboarding_confirmation_freshness",
           path: "backend/supabase/migrations/20260801000200_g016_onboarding_confirmation_freshness.sql",
           sha256: "a116b2d0a71304b0c6cd6ceca05344e198709384381451b250d7145d4fe12d3e",
+        }),
+        expect.objectContaining({
+          id: "restaurant_evidence_recovery",
+          path: "backend/supabase/migrations/20261103171649_restaurant_evidence_recovery.sql",
+          sha256: "55e3c61f20d1c7c24dd7c5cd000d2a081ddf65c8ca3657621d4b222b6062acc4",
         }),
       ],
     });
