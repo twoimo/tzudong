@@ -270,6 +270,26 @@ class NativeVisualTests(unittest.TestCase):
         self.assertEqual(len(inputs.report['reviewQuotes']),1)
         self.assertTrue(inputs.report['fullTranscriptProvidedToJudge'])
 
+    def test_long_transcript_preserves_all_values_under_existing_privacy_bounds(self):
+        self.blobs['transcript']['transcript'].extend(
+            {'start':131.0+i,'duration':1.0,'text':'계속되는 공개 음식 평가 문맥입니다.'} for i in range(400))
+        self.blobs['transcript']['unused_collector_diagnostic']='unused collector context stays local'
+        self.save();inputs=self.validate()
+        self.assertEqual(len(inputs.records['transcript']['transcript']),401)
+        self.assertNotIn('unused_collector_diagnostic',inputs.records['transcript'])
+        self.assertEqual(inputs.records['transcript']['transcript'],self.blobs['transcript']['transcript'])
+
+    def test_unsafe_last_privacy_page_rejects_before_claim_and_can_be_corrected(self):
+        self.blobs['transcript']['transcript'].extend(
+            {'start':131.0+i,'duration':1.0,'text':'계속되는 공개 음식 평가 문맥입니다.'} for i in range(100))
+        self.blobs['transcript']['transcript'][-1]['text']='private-person@example.invalid'
+        self.save();observed=self.run_worker()
+        self.assertEqual(observed['code'],'source_input_invalid')
+        self.assertNotIn('claim',[c[0] for c in self.rpc.calls]);self.assertFalse(self.calls)
+        self.assertFalse((self.state/(JOB+'.jsonl')).exists())
+        self.blobs['transcript']['transcript'][-1]['text']='공개 음식 평가 문맥으로 수정했습니다.'
+        self.save();self.assertEqual(self.run_worker()['state'],'draft');self.assertEqual(len(self.calls),1)
+
     def test_single_claim_one_judge_and_existing_journal_never_redispatches(self):
         self.assertEqual(self.run_worker()['state'],'draft');self.assertEqual(len(self.calls),1)
         with patch.object(native,'validate_packet',side_effect=AssertionError('replayed')):

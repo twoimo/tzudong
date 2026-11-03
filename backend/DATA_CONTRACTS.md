@@ -42,6 +42,9 @@ extraction basis, corpus bytes and recollect references remain immutable.
 At most eight actual review quotes are checked against full hashed transcript
 bytes/indices/times and retained as navigation cues. The full verified transcript
 remains in the judgment context, including unselected or contradictory text.
+Every complete segment is screened in bounded pages under the unchanged central
+privacy limits. An unsafe page rejects the whole source; strings are never split
+or truncated. Unused collector metadata is not forwarded to the judgment.
 Native sign/address observations are labeled `native_observer_report`, with
 approximate cue time, separately from real transcript/review text. Pixels are
 not sent to the model and observations do not create evidence-family labels.

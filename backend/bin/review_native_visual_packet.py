@@ -130,6 +130,19 @@ def correction_join(packet, public):
             'joinScope':'literal_locality_parcel_and_provider_road','independentEvidenceFamiliesAdded':[]}
 
 
+def check_source_privacy(observations, observer_id, title, transcript, node):
+    """Screen every source value under the unchanged central per-value bounds.
+
+    Pages preserve complete segment objects and strings. Nothing is truncated
+    or split inside a value; an unsafe late page rejects the entire input.
+    """
+    from backend.bin.run_restaurant_evidence_recovery import privacy_check
+    need(isinstance(transcript,list) and bool(transcript))
+    privacy_check({'observations':observations,'observerId':observer_id,'title':title},node)
+    for start in range(0,len(transcript),32):
+        privacy_check({'transcript':transcript[start:start+32]},node)
+
+
 def inspect_sources(packet, directory, *, cue_only=False, allow_conflict=False):
     """Validate local bytes and declared native observation, not job authority."""
     from backend.bin.run_restaurant_review_automation import review_target, validate_transcript, youtube_id
@@ -198,7 +211,9 @@ def inspect_sources(packet, directory, *, cue_only=False, allow_conflict=False):
              and isinstance(q['text'],str) and 0 < len(q['text']) <= 1024 and q['text'] in segment['text'])
     # Selected quotes help locate evidence; they must never remove potentially
     # qualifying or contradictory context from the existing one judgment.
-    return matches[0],{**transcript,'source':'native_verified_full_transcript'}
+    return matches[0],{'youtube_link':transcript['youtube_link'],'channel_name':'tzuyang',
+                      'recollect_id':transcript['recollect_id'],'transcript':transcript['transcript'],
+                      'source':'native_verified_full_transcript'}
 
 
 @dataclass(frozen=True)
@@ -253,8 +268,7 @@ def validate_packet(path, binding, *, original=None, node='node'):
         report['locationCorroboration'] = correction
         if correction is not None:
             privacy_check({k:correction[k] for k in ('originAddress','observedAddress','providerParcelAddress','providerRoadAddress','apiSourceUrl')},node)
-        privacy_check({'observations':report['observations'],'observerId':packet['observer']['id'],
-                       'title':meta['title'],'transcript':transcript['transcript']},node)
+        check_source_privacy(report['observations'],packet['observer']['id'],meta['title'],transcript['transcript'],node)
         if original is None:return {'packetSha256':sha(raw)}
         need(digest(original) == binding['rowSha256']
              and digest({k:v for k,v in original.items() if k not in VOLATILE}) == binding['inputSha256'])
