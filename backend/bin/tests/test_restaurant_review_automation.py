@@ -134,6 +134,12 @@ class ReviewWorkerTests(unittest.TestCase):
         calls=[]
         def command(argv,**kwargs):
             calls.append(Path(argv[1]).name)
+            if Path(argv[1]).name=='review_recheck_meta.py':
+                self.assertEqual(argv[2:4],['tzuyang',video])
+                target=Path(argv[4])/'meta'/(video+'.jsonl');target.parent.mkdir()
+                target.write_text(json.dumps({'youtube_link':link,'channel_name':'tzuyang',
+                    'channel_id':worker.review_target('tzuyang')['channel_id'],'title':'verified fixture title','recollect_id':0})+'\n')
+                return subprocess.CompletedProcess(argv,0)
             if Path(argv[1]).name in ['09-target-selection.py','review_rule_evaluation.py']:
                 folder='selection' if '09-target' in argv[1] else 'rule_results'
                 target=Path(argv[argv.index('--evaluation-path')+1])/'evaluation'/folder/(video+'.jsonl')
@@ -150,15 +156,24 @@ class ReviewWorkerTests(unittest.TestCase):
                 return subprocess.CompletedProcess(argv,0)
             self.assertIn(Path(argv[1]).name,['parse_laaj_evaluation.py','12-transform.py'])
             return subprocess.run(argv,**kwargs)
-        with tempfile.TemporaryDirectory() as folder:
-            transcript=Path(folder)/'tzuyang/transcript'/(video+'.jsonl');transcript.parent.mkdir(parents=True)
-            transcript.write_text(json.dumps({'youtube_link':link,'channel_name':'tzuyang','transcript':[{'start':0,'text':'synthetic subtitle'}]})+'\n')
-            result=worker.evaluate(original,Path(folder),run_command=command,decision_context={'inputSha256':'a'*64})
-        self.assertEqual(calls,['09-target-selection.py','review_rule_evaluation.py','review_decision_gemini.mjs','parse_laaj_evaluation.py','12-transform.py'])
-        self.assertEqual(result['gemini_decision']['recommendation'],'recheck')
-        self.assertEqual(result['evaluation_results']['rb_grounding_TF']['eval_value'],True)
-        self.assertEqual(result['lat'],37.5)
-        self.assertNotIn('status',result)
+        for repair,resolve_channel in [(False,False),(True,False),(True,True)]:
+            calls.clear();proofs=[]
+            row={**original,'youtube_meta':{} if repair else original['youtube_meta']}
+            if resolve_channel: row['channel_name']=None
+            before=json.dumps(row,sort_keys=True)
+            with self.subTest(repair=repair,resolve_channel=resolve_channel),tempfile.TemporaryDirectory() as folder:
+                transcript=Path(folder)/'tzuyang/transcript'/(video+'.jsonl');transcript.parent.mkdir(parents=True)
+                transcript.write_text(json.dumps({'youtube_link':link,'channel_name':'tzuyang','transcript':[{'start':0,'text':'synthetic subtitle'}]})+'\n')
+                result=worker.evaluate(row,Path(folder),run_command=command,decision_context={'inputSha256':'a'*64},
+                    source_proof_sink=proofs.append,expected_channel='tzuyang' if resolve_channel else None)
+            self.assertEqual(calls,(['review_recheck_meta.py'] if repair else [])+['09-target-selection.py','review_rule_evaluation.py','review_decision_gemini.mjs','parse_laaj_evaluation.py','12-transform.py'])
+            self.assertEqual(calls.count('review_decision_gemini.mjs'),1)
+            self.assertEqual(len(proofs),1);self.assertEqual(proofs[0]['metadataUploaderVerified'],repair)
+            self.assertEqual(json.dumps(row,sort_keys=True),before)
+            self.assertEqual(result['gemini_decision']['recommendation'],'recheck')
+            self.assertEqual(result['evaluation_results']['rb_grounding_TF']['eval_value'],True)
+            self.assertEqual(result['lat'],37.5)
+            self.assertNotIn('status',result)
 
     def test_null_claim_distinguishes_active_rechecks_from_an_empty_queue(self):
         for queued,running in [(0,1),(1,0),(0,0)]:
@@ -282,7 +297,7 @@ class ReviewWorkerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             with self.assertRaises(worker.WorkerFailure) as raised:
                 worker.evaluate({'channel_name':'tzuyang','youtube_link':'https://youtu.be/ABCDEFGHIJK'},Path(folder),decision_context={'inputSha256':'a'*64},run_command=lambda *args,**kwargs:self.fail('command launched'))
-        self.assertEqual(raised.exception.code,'source_unavailable')
+        self.assertEqual(raised.exception.code,'source_original_evidence_missing')
 
     def test_result_identifier_and_admin_fields_cannot_escape(self):
         metrics=self.complete_metrics()
@@ -352,7 +367,7 @@ class ReviewWorkerTests(unittest.TestCase):
                 path=root/'ABCDEFGHIJK.jsonl';path.write_text(json.dumps(record)+'\n');before=path.read_bytes()
                 with self.assertRaises(worker.WorkerFailure) as raised:
                     worker.evaluate({'channel_name':'tzuyang','youtube_link':'https://youtu.be/ABCDEFGHIJK'},folder,decision_context={'inputSha256':'a'*64},run_command=lambda *a,**k:self.fail('command called'))
-                self.assertEqual(raised.exception.code,'source_unavailable');self.assertEqual(path.read_bytes(),before)
+                self.assertEqual(raised.exception.code,'source_input_invalid');self.assertEqual(path.read_bytes(),before)
         for duration in [None,0,1.25]:
             record={'transcript':[{'start':0,'text':'fixture','duration':duration}]}
             self.assertIs(worker.validate_transcript(record),record)

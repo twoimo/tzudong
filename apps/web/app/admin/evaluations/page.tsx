@@ -1,5 +1,7 @@
 "use client";
 
+import { EvaluationEvidenceRecovery } from '@/components/admin/EvaluationEvidenceRecovery';
+
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 
@@ -64,11 +66,6 @@ import {
   normalizeAdminPendingCountsResponse,
   type AdminPendingCountsResponse,
 } from '@/lib/admin/pending-counts';
-import {
-  MISSING_EVALUATION_AUTO_DELETE_MESSAGE,
-  getMissingEvaluationAutoDeleteReason,
-  shouldAutoDeleteMissingEvaluationRecord,
-} from '@/lib/admin-auto-delete-missing-evaluation';
 import {
   findSameVideoDuplicateWarningCandidates,
   formatSameVideoDuplicateWarning,
@@ -935,6 +932,7 @@ function AdminEvaluationPage({
   const [selectedConflictRecord, setSelectedConflictRecord] = useState<EvaluationRecord | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [createRestaurantOpen, setCreateRestaurantOpen] = useState(false);
+  const [recoveryRecord, setRecoveryRecord] = useState<EvaluationRecord | null>(null);
   const [selectedEditRecord, setSelectedEditRecord] = useState<EvaluationRecord | null>(null);
 
   const detailRequestsRef = useRef(new Map<string, { promise: Promise<EvaluationRecord | null>; token: symbol; epoch: number }>());
@@ -1436,49 +1434,12 @@ function AdminEvaluationPage({
         return;
       }
 
-      let typedRecords = data
+      const typedRecords = data
         .map(normalizeEvaluationRecord)
         .filter((record): record is EvaluationRecord => record !== null)
         .map(withAdminEvaluationDisplayName);
-      const autoDeleteTargets = typedRecords.filter(shouldAutoDeleteMissingEvaluationRecord);
-
-      if (autoDeleteTargets.length > 0 && user?.id && isLegacyBrowserAdminMutationEnabled()) {
-        const updatedAt = new Date().toISOString();
-        const autoDeleteIds = autoDeleteTargets.map((record) => record.id);
-
-        const { error: autoDeleteError } = await supabase
-          .from('restaurants')
-          .update({
-            status: 'deleted',
-            db_error_message: MISSING_EVALUATION_AUTO_DELETE_MESSAGE,
-            updated_by_admin_id: user.id,
-            updated_at: updatedAt,
-          })
-          .in('id', autoDeleteIds);
-
-        if (autoDeleteError) throw autoDeleteError;
-
-        const autoDeleteIdSet = new Set(autoDeleteIds);
-        typedRecords = typedRecords.map((record) => (
-          autoDeleteIdSet.has(record.id)
-            ? {
-                ...record,
-                status: 'deleted',
-                db_error_message: MISSING_EVALUATION_AUTO_DELETE_MESSAGE,
-                updated_by_admin_id: user.id,
-                updated_at: updatedAt,
-              }
-            : record
-        ));
-
-        const reasonSummary = [...new Set(autoDeleteTargets
-          .map(getMissingEvaluationAutoDeleteReason)
-          .filter(Boolean))].join(' · ');
-        toast({
-          title: '미발견 맛집 자동 삭제',
-          description: `${autoDeleteTargets.length}건을 삭제 상태로 전환했습니다.${reasonSummary ? ` (${reasonSummary})` : ''}`,
-        });
-      }
+      // Loading an incomplete source never authorizes a write. Evidence recovery
+      // and cleanup use separate reviewed, source-bound server operations.
 
       setAllRecords(typedRecords);
 
@@ -1523,7 +1484,7 @@ function AdminEvaluationPage({
     } finally {
       setLoading(false);
     }
-  }, [toast, user?.id, legacyEvaluationLoad, evaluationPageQuery]);
+  }, [toast, legacyEvaluationLoad, evaluationPageQuery]);
   useEffect(() => { reloadPagesRef.current = async () => { if (!recordViewsFenceRef.current) await loadAllRecords(); }; }, [loadAllRecords]);
 
   // 초기 데이터 로드
@@ -1735,6 +1696,11 @@ function AdminEvaluationPage({
     if (!full) return;
     setSelectedConflictRecord(full);
     setConflictPanelOpen(true);
+  };
+
+  const handleEvidenceRecovery = async (record: EvaluationRecord) => {
+    const full = await ensureEvaluationDetails(record);
+    if (full) setRecoveryRecord(full);
   };
 
   const handleEdit = async (record: EvaluationRecord) => {
@@ -2427,6 +2393,7 @@ function AdminEvaluationPage({
             onRegisterMissing={handleRegisterMissing}
             onResolveConflict={handleResolveConflict}
             onEdit={handleEdit}
+            onRecover={handleEvidenceRecovery}
             onRequestDetails={async record => Boolean(await ensureEvaluationDetails(record))}
             loading={loading || recordViewsInvalidated}
             readFailed={showPageReadError}
@@ -2442,6 +2409,7 @@ function AdminEvaluationPage({
               onRegisterMissing={handleRegisterMissing}
               onResolveConflict={handleResolveConflict}
               onEdit={handleEdit}
+              onRecover={handleEvidenceRecovery}
               loading={loading || recordViewsInvalidated}
               readFailed={showPageReadError}
               evalFilters={evalFilters}
@@ -2464,6 +2432,8 @@ function AdminEvaluationPage({
           </div>
         )}
       </div>
+
+      <EvaluationEvidenceRecovery record={recoveryRecord} onClose={() => setRecoveryRecord(null)} />
 
       <AdminRestaurantModal
         isOpen={createRestaurantOpen}

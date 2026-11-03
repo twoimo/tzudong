@@ -161,7 +161,8 @@ class RuleEvaluationPrecisionLiftTests(unittest.TestCase):
 
         self.assertFalse(category_results[0]["eval_value"])
 
-    def test_unique_exact_title_region_match_promotes_true(self):
+    @patch.object(rule_eval, "ncp_geocode_addresses", return_value=None)
+    def test_unique_exact_title_region_match_promotes_true(self, _geocode):
         result = rule_eval.evaluate_with_unique_naver_title_match(
             "을밀대",
             "서울특별시 마포구",
