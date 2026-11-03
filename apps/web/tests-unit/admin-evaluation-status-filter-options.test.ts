@@ -167,7 +167,25 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
 
     expect(tableSource).toContain('canApproveAddressConsistencyRecord');
     expect(slideSource).toContain('canApproveAddressConsistencyRecord');
-    expect(tableSource).not.toContain('const canApprove =');
+    const desktopRowStart = tableSource.indexOf('const EvaluationTableRow =');
+    const mobileCardsStart = tableSource.indexOf('const mobileCards = (');
+    expect(desktopRowStart).toBeGreaterThanOrEqual(0);
+    expect(mobileCardsStart).toBeGreaterThan(desktopRowStart);
+
+    for (const tablePathSource of [
+      tableSource.slice(desktopRowStart, mobileCardsStart),
+      tableSource.slice(mobileCardsStart),
+    ]) {
+      const approvalGates = [...tablePathSource.matchAll(/const\s+canApprove\s*=\s*([^;]+);/g)];
+      expect(approvalGates).toHaveLength(1);
+      const conditions = approvalGates[0]![1]!.split(/\s*&&\s*/).map((condition) => condition.trim());
+      expect(conditions).toHaveLength(3);
+      expect(conditions).toEqual(expect.arrayContaining([
+        "eligibility?.state === 'local_checks_passed'",
+        '!needsEvaluationRerun(record)',
+        'canApproveAddressConsistencyRecord(record)',
+      ]));
+    }
     expect(tableSource).not.toMatch(/disabled=\{loading \|\| !record\.geocoding_success\}/);
     expect(slideSource).not.toMatch(/disabled=\{loading \|\| !currentRecord\.geocoding_success\}/);
   });

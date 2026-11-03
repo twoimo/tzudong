@@ -1,5 +1,7 @@
 import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import { getEvaluationConflictTargetId } from '@/lib/admin/normalize-evaluation-record';
+import { parseApprovalEligibility } from '@/lib/admin/evaluation-approval-eligibility';
+import { EvaluationApprovalReasons } from './EvaluationApprovalReasons';
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo, memo, forwardRef } from 'react';
 import NextImage from 'next/image';
 import { EvaluationRecord } from '@/types/evaluation';
@@ -306,6 +308,7 @@ interface EvaluationTableRowProps {
   record: EvaluationRecord;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  onRequestDetails?: (record: EvaluationRecord) => Promise<boolean>;
   onApprove: (record: EvaluationRecord) => void;
   onDelete: (record: EvaluationRecord) => void;
   onRestore?: (record: EvaluationRecord) => void;
@@ -325,6 +328,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
       record,
       isExpanded,
       onToggleExpand,
+      onRequestDetails,
       onApprove,
       onDelete,
       onRestore,
@@ -338,6 +342,11 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
     },
     ref
   ) {
+    const eligibility = parseApprovalEligibility(record.approval_eligibility);
+    const approvalUnknown = !eligibility || eligibility.state === 'unknown';
+    const approvalReasonsId = `evaluation-desktop-approval-${record.id}`;
+    const canApprove = eligibility?.state === 'local_checks_passed' && !needsEvaluationRerun(record) && canApproveAddressConsistencyRecord(record);
+    const requestDetails = () => { if (onRequestDetails) void onRequestDetails(record); else onToggleExpand(); };
     const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record.youtube_link);
     const videoId = extractCanonicalYouTubeVideoId(canonicalYoutubeUrl);
     const restaurantName = getAdminEvaluationDisplayName(record);
@@ -569,13 +578,15 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
                   <Button
                     size="sm"
                     className="h-8 w-8 p-0"
-                    aria-label="검수 항목 승인"
+                    aria-label={approvalUnknown ? '승인 전 상세 확인' : '검수 항목 승인'}
+                    aria-describedby={approvalReasonsId}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onApprove(record);
+                      if (approvalUnknown) requestDetails();
+                      else if (canApprove) onApprove(record);
                     }}
-                    disabled={loading || needsEvaluationRerun(record) || !canApproveAddressConsistencyRecord(record)}
-                    title={needsEvaluationRerun(record) ? '평가값/근거 확인 후 승인하세요' : '검수 항목 승인'}
+                    disabled={loading || (!approvalUnknown && !canApprove)}
+                    title={approvalUnknown ? '승인 전 상세 확인' : canApprove ? '최종 서버 검사 필요' : '승인 불가 사유 확인'}
                   >
                     <Check className="h-4 w-4" aria-hidden="true" />
                   </Button>
@@ -615,6 +626,9 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
               </>
             )}
           </div>
+          {record.status !== 'approved' && record.status !== 'deleted' && (
+            <EvaluationApprovalReasons eligibility={eligibility ?? undefined} id={approvalReasonsId} onRequestDetails={requestDetails} loading={loading} />
+          )}
 
         </TableCell>
       </TableRow>
@@ -1208,6 +1222,11 @@ export function EvaluationTable({
         const videoId = extractCanonicalYouTubeVideoId(canonicalYoutubeUrl);
         const thumbnailInfo = videoId ? thumbnailData[videoId] : null;
         const isExpanded = expandedId === record.id;
+        const eligibility = parseApprovalEligibility(record.approval_eligibility);
+        const approvalUnknown = !eligibility || eligibility.state === 'unknown';
+        const approvalReasonsId = `evaluation-mobile-approval-${record.id}`;
+        const canApprove = eligibility?.state === 'local_checks_passed' && !needsEvaluationRerun(record) && canApproveAddressConsistencyRecord(record);
+        const requestDetails = () => { if (onRequestDetails) void onRequestDetails(record); else void toggleExpand(record.id); };
         const mobileRestaurantName = getAdminEvaluationDisplayName(record);
         const mobileVideoLabel = hasAdminEvaluationYoutubeTitle(record)
           ? getAdminEvaluationVideoLabel(record)
@@ -1329,6 +1348,9 @@ export function EvaluationTable({
                 {groundingValue !== '-' && <Badge variant="outline" className={cn('admin-evaluation-signal', record.evaluation_results?.rb_grounding_TF?.eval_value === true ? 'admin-evaluation-positive' : 'admin-evaluation-negative')}>근거 {groundingValue}</Badge>}
             </div>}
 
+            {record.status !== 'approved' && record.status !== 'deleted' && (
+              <EvaluationApprovalReasons eligibility={eligibility ?? undefined} id={approvalReasonsId} onRequestDetails={requestDetails} loading={loading} />
+            )}
             <div className="mt-2 flex flex-wrap gap-1.5">
             {record.status !== 'deleted' && (record.is_missing || record.status === 'missing') && onRegisterMissing && <Button size="sm" variant="outline" className="h-11 shrink-0 rounded-lg px-2" disabled={loading} onClick={event => { event.stopPropagation(); onRegisterMissing(record); }}>누락 등록</Button>}
             {record.status !== 'deleted' && (record.status === 'db_conflict' || getEvaluationConflictTargetId(record)) && onResolveConflict && <Button size="sm" variant="outline" className="h-11 shrink-0 rounded-lg px-2" disabled={loading} onClick={event => { event.stopPropagation(); onResolveConflict(record); }}>충돌 해결</Button>}
@@ -1385,13 +1407,15 @@ export function EvaluationTable({
                       className="h-11 min-w-0 flex-1 rounded-lg"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onApprove(record);
+                        if (approvalUnknown) requestDetails();
+                        else if (canApprove) onApprove(record);
                       }}
-                      disabled={loading || needsEvaluationRerun(record) || !canApproveAddressConsistencyRecord(record)}
-                      title={needsEvaluationRerun(record) ? '평가값/근거 확인 후 승인하세요' : undefined}
+                      disabled={loading || (!approvalUnknown && !canApprove)}
+                      aria-describedby={approvalReasonsId}
+                      title={approvalUnknown ? '승인 전 상세 확인' : canApprove ? '최종 서버 검사 필요' : '승인 불가 사유 확인'}
                     >
                       <Check className="mr-1 h-3.5 w-3.5" />
-                      승인
+                      {approvalUnknown ? '상세 확인' : '승인'}
                     </Button>
                   )}
                   {onEdit && (
@@ -1765,6 +1789,7 @@ export function EvaluationTable({
                     record={record}
                     isExpanded={expandedId === record.id}
                     onToggleExpand={() => toggleExpand(record.id)}
+                    onRequestDetails={onRequestDetails}
                     onApprove={onApprove}
                     onDelete={onDelete}
                     onRestore={onRestore}
