@@ -30,7 +30,7 @@ import {
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import { AppToaster } from '@/components/ui/app-toaster';
 import { ScrollEffects } from '@/components/layout/ScrollEffects';
-import { LoadingPreview } from '@/components/ui/loading-surface';
+import { LoadingPreview, LoadingSurface } from '@/components/ui/loading-surface';
 
 const OverlayLayout = lazy(() => import('@/components/layout/OverlayLayout'));
 
@@ -319,12 +319,20 @@ function HomeStaticSkeleton() {
         >
             <div className="h-full max-xl:hidden">
                 <div className="h-full w-[min(392px,calc(100vw-32px))] border-r border-border bg-card p-4">
-                    <LoadingPreview kind="navigation" showHeader={false} label="검색창을 준비하는 중" />
+                    <LoadingSurface label="검색창을 준비하는 중" className="h-11">
+                        <div className="flex h-11 items-center rounded-full border border-border px-4 text-sm">
+                            <span>쯔동여지도 검색하기</span>
+                        </div>
+                    </LoadingSurface>
                     <LoadingPreview kind="list" rows={6} label="맛집 목록을 준비하는 중" />
                 </div>
             </div>
             <div className="xl:hidden">
-                <LoadingPreview kind="navigation" showHeader={false} className="mx-3 mt-[calc(env(safe-area-inset-top)+10px)]" label="검색창을 준비하는 중" />
+                <LoadingSurface className="mx-3 mt-[calc(env(safe-area-inset-top)+10px)] h-12" label="검색창을 준비하는 중">
+                    <div className="flex h-12 items-center rounded-full border border-border px-4 text-sm">
+                        <span>쯔동여지도 검색하기</span>
+                    </div>
+                </LoadingSurface>
             </div>
         </div>
     );
