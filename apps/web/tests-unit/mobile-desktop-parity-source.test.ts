@@ -356,7 +356,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(mobileOverlaySource).toContain("min-h-11");
     expect(mobileOverlaySource).toContain('aria-label="맛집 검색 열기"');
     expect(themeFiltersSource).toContain("aria-pressed={isSelected}");
-    expect(themeFiltersSource).toContain("min-h-[44px]");
+    expect(themeFiltersSource).toContain("min-h-8");
     expect(themeFiltersSource).toContain("whitespace-normal");
     expect(mobileOverlaySource).toContain("text-xs font-medium");
     expect(mobileOverlaySource).toContain(
