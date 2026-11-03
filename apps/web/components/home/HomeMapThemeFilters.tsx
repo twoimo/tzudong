@@ -63,13 +63,6 @@ export function HomeMapThemeFilters({
           </Fragment>
         );
       })}
-      <p data-map-marker-legend="true" className="basis-full rounded-lg bg-background/95 px-2 py-1 text-xs leading-relaxed text-foreground shadow-sm">
-        묶음 숫자: 맛집 수 · 빨간 배지: 쯔양 방문 횟수
-        <span className="sr-only">지도 핀은 Tab으로 이동하고 Enter 또는 Space로 열 수 있습니다.</span>
-        {activeThemeId && <span className="block text-muted-foreground">
-          {HOME_MAP_THEME_FILTERS.find((theme) => theme.id === activeThemeId)?.description}
-        </span>}
-      </p>
     </div>
   );
 }
