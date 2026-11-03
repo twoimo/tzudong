@@ -39,21 +39,20 @@ describe("admin storyboard thinking trace source contract", () => {
     expect(componentSource).not.toContain("browser-openai-api-key");
   });
 
-  test("keeps the glass shimmer skeleton available in both global style bundles", () => {
+  test("uses measured module previews without retired cut-image shimmer rules", () => {
     const globalsSource = source("app/globals.css");
     const appGlobalsSource = source("app/app-globals.css");
 
+    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    expect(consoleSource).toContain("<LoadingSurface");
+    expect(consoleSource).toContain('data-storyboard-module-loading-frame-grid="true"');
+    expect(consoleSource).toContain('data-storyboard-viewport-fit="bounded"');
+    expect(consoleSource).not.toContain("admin-module-loading-shimmer");
     for (const cssSource of [globalsSource, appGlobalsSource]) {
-      expect(cssSource).toContain("storyboard-glass-shimmer");
-      expect(cssSource).toContain(
-        '[data-storyboard-cut-image-skeleton="true"]',
-      );
-      expect(cssSource).toContain(
-        '[data-storyboard-cut-image-shimmer="true"]',
-      );
-      expect(cssSource).toContain(
-        '[data-storyboard-cut-image-skeleton-active="true"]',
-      );
+      expect(cssSource).not.toContain("storyboard-glass-shimmer");
+      expect(cssSource).not.toContain('[data-storyboard-cut-image-skeleton="true"]');
+      expect(cssSource).not.toContain('[data-storyboard-cut-image-shimmer="true"]');
+      expect(cssSource).not.toContain('[data-storyboard-cut-image-skeleton-active="true"]');
     }
   });
 });

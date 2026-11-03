@@ -11,6 +11,7 @@ import { openExternalUrl } from '@/lib/open-external-url';
 import { extractCanonicalYouTubeVideoId, normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { getYoutubeThumbnailCandidates, shouldTryNextYoutubeThumbnailCandidate } from '@/lib/youtube-thumbnail';
 import { AlertTriangle } from 'lucide-react';
+import { EvaluationApprovalReasons } from './EvaluationApprovalReasons';
 import {
     explainAddressConsistency,
     getAddressConsistencyAhpSummary,
@@ -31,6 +32,7 @@ interface EvaluationDetailViewProps {
     record: EvaluationRecord;
     className?: string;
     autoHeight?: boolean; // true일 경우 내부 스크롤 없이 콘텐츠 높이에 맞춰 늘어남
+    onRequestDetails?: () => void;
 }
 
 type EvaluationTone = 'pink' | 'blue' | 'purple' | 'green' | 'indigo' | 'orange' | 'teal' | 'yellow';
@@ -221,7 +223,7 @@ const addressGuidanceToneClasses: Record<AddressConsistencyTriageTone, string> =
     info: 'border-sky-200 bg-sky-50 text-sky-700',
 };
 
-export const EvaluationDetailView = memo(function EvaluationDetailView({ record, className, autoHeight = false }: EvaluationDetailViewProps) {
+export const EvaluationDetailView = memo(function EvaluationDetailView({ record, className, autoHeight = false, onRequestDetails }: EvaluationDetailViewProps) {
     // Operator flow anchor: review -> decision capture -> guarded apply -> readback/recrawl.
 
     const [embedError, setEmbedError] = useState(false);
@@ -315,7 +317,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
     const addressGuidance = getAddressConsistencyOperatorGuidance(record);
     const addressSignals = getAddressConsistencyTriageSignals(record);
     const addressConsistencyStatus = getAddressConsistencyStatus(record);
-    const evaluationCompletenessIssues = getEvaluationCompletenessIssues(record);
+    const evaluationCompletenessIssues = record.approval_eligibility?.state === 'unknown' ? [] : getEvaluationCompletenessIssues(record);
     const hasMetricIssue = (key: EvaluationMetricKey) => evaluationCompletenessIssues.some((issue) => issue.key === key);
     const getMetricBasisText = (key: EvaluationMetricKey, value: unknown) => {
         if (hasMetricIssue(key)) return getEvaluationBasisOrRerunText(value);
@@ -371,6 +373,9 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                 </li>
                             ))}
                         </ul>
+                    )}
+                    {record.status !== 'approved' && !isDeleted && (
+                        <EvaluationApprovalReasons eligibility={record.approval_eligibility} onRequestDetails={onRequestDetails} />
                     )}
                 </div>
             </SectionPanel>

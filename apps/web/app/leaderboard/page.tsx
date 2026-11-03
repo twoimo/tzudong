@@ -1,5 +1,8 @@
 'use client';
 
+import { LoadingSurface } from "@/components/ui/loading-surface";
+import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
+
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { preferredScrollBehavior } from "@/lib/motion/scroll-behavior";
@@ -8,7 +11,6 @@ import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
 import { Trophy, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
-import { LeaderboardSkeleton } from "@/components/ui/skeleton-loaders";
 import {
     Popover,
     PopoverContent,
@@ -18,6 +20,25 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { BREAKPOINTS } from "@/hooks/useDeviceType";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
+
+function LeaderboardLoadingList() {
+    const { ref: loadingListRef, count: loadingRowCount } = useFilledSkeletonCount(56, 8);
+    return (
+        <div ref={loadingListRef}>
+            <LoadingSurface label="랭킹 목록 로딩 중" className="w-full p-4 px-4" style={{ contain: "content" }}>
+                <ol className="space-y-3">
+                    {Array.from({ length: loadingRowCount }, (_, index) => (
+                        <li key={index} className="flex items-center gap-3 py-2">
+                            <span className="inline-flex h-9 w-9 items-center justify-center text-sm">{index + 1}</span>
+                            <span className="min-w-0 flex-1 truncate text-sm leading-4">맛집 여행자</span>
+                            <span className="text-sm leading-4">00개</span>
+                        </li>
+                    ))}
+                </ol>
+            </LoadingSurface>
+        </div>
+    );
+}
 
 export default function LeaderboardPage() {
     const router = useRouter();
@@ -172,11 +193,7 @@ export default function LeaderboardPage() {
                 <div>
                     <div data-mobile-leaderboard-panel-list="true">
                         {isLoading ? (
-                            <LeaderboardSkeleton
-                                count={8}
-                                showHeader={false}
-                                className="px-4"
-                            />
+                            <LeaderboardLoadingList />
                         ) : (
                             <LeaderboardList
                                 users={displayedUsers}

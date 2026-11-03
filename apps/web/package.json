@@ -118,6 +118,7 @@
     "remark-gfm": "^4.0.1",
     "server-only": "0.0.1",
     "sharp": "0.35.5",
+    "skullet": "0.0.3",
     "supercluster": "^9.1.0",
     "swr": "^2.5.1",
     "tailwind-merge": "^3.7.0",

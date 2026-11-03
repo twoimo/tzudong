@@ -1,3 +1,4 @@
+import { LoadingSurface } from "@/components/ui/loading-surface";
 import { Suspense, type ComponentType, type MouseEvent, type RefObject } from 'react';
 
 import type { Restaurant } from '@/types/restaurant';
@@ -36,18 +37,19 @@ const loadReviewModal = async () => {
     return mod.ReviewModal as ComponentType<ReviewModalProps>;
 };
 
-function NaverMapDetailPanelSkeleton() {
+function NaverMapDetailPanelLoading() {
     return (
-        <div
-            role="status"
-            aria-label="맛집 상세 패널 로딩 중"
-            className="flex h-full flex-col gap-3 bg-background p-4"
-            data-map-detail-panel-skeleton="true"
-        >
-            <div className="h-48 rounded-2xl bg-muted" />
-            <div className="h-5 w-2/3 rounded bg-muted" />
-            <div className="h-3 w-full rounded bg-muted" />
-            <div className="h-3 w-1/2 rounded bg-muted" />
+        <div className="h-full bg-background" data-map-detail-panel-skeleton="true">
+            <LoadingSurface label="맛집 상세 패널 로딩 중" className="h-full p-4">
+                <article className="space-y-3">
+                    <svg viewBox="0 0 320 192" role="img" aria-label="맛집 사진" className="h-48 w-full rounded-2xl">
+                        <path d="M0 160 90 64 170 128 240 48 320 144V192H0Z" fill="currentColor" opacity="0.12" />
+                    </svg>
+                    <h2 className="text-lg font-semibold leading-5">영상 속 맛집</h2>
+                    <p className="text-xs leading-3">맛집 소개와 방문 이야기를 만나보세요</p>
+                    <p className="text-xs leading-3">음식과 여행을 함께 기록해요</p>
+                </article>
+            </LoadingSurface>
         </div>
     );
 }
@@ -101,7 +103,7 @@ export function NaverMapDetailPanelShell({
                         />
                     </Suspense>
                 ) : (
-                    <NaverMapDetailPanelSkeleton />
+                    <NaverMapDetailPanelLoading />
                 )}
             </div>
         </div>

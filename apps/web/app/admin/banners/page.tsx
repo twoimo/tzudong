@@ -29,7 +29,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingSurface } from '@/components/ui/loading-surface';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import {
     Plus,
@@ -79,45 +79,58 @@ function formatListDateTime(value: string | null | undefined) {
 }
 
 function InlineCountSkeleton({ className }: { className?: string }) {
-    return <span className={cn("inline-block h-3 w-6 rounded-full bg-muted/70 align-middle animate-pulse motion-reduce:animate-none", className)} aria-hidden="true" />;
+    return (
+        <LoadingSurface label="배너 수 집계 중" className={cn("inline-flex w-6 align-middle", className)}>
+
+            <span className="text-xs">00</span>
+
+        </LoadingSurface>
+    );
 }
 
 function BannerListItemSkeleton({ index }: { index: number }) {
     return (
-        <div className="w-full rounded-lg border border-border bg-background/80 p-2 text-left" aria-hidden="true">
-            <div className="flex gap-2">
-                <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-md border border-border">
-                    <Skeleton className="h-full w-full rounded-none motion-reduce:animate-none" />
-                </div>
+        <LoadingSurface
+            label="배너 목록 로딩 중"
+            className="w-full rounded-lg border border-border bg-background/80 p-2 text-left"
+        >
+
+            <article className="flex min-h-20 gap-2">
+
+                <svg
+                    viewBox="0 0 64 48"
+                    className="h-12 w-16 shrink-0 rounded-md border"
+                    role="img"
+                    aria-label="배너 이미지"
+                >
+
+                    <rect width="64" height="48" fill="currentColor" opacity="0.1" />
+
+                </svg>
+
                 <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
-                            <Skeleton className={cn("h-5 rounded-full motion-reduce:animate-none", index % 2 === 0 ? "w-32" : "w-24")} />
-                        </p>
-                        <Badge variant="outline" className="shrink-0 rounded-full text-2xs">
-                            <Skeleton className="h-3 w-6 rounded-full motion-reduce:animate-none" />
-                        </Badge>
+
+                    <h3 className="text-sm font-semibold">
+
+                        {index % 2 === 0 ? "맛집 소식 배너" : "새로운 소식"}
+
+                    </h3>
+
+                    <p className="mt-1 text-xs">배너 안내 내용</p>
+
+                    <div className="mt-1 flex gap-2 text-xs">
+
+                        <span>게시 상태</span>
+
+                        <span>노출 위치</span>
+
                     </div>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        <Skeleton className="h-4 w-4/5 rounded-full motion-reduce:animate-none" />
-                    </p>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                        <Badge variant="secondary" className="rounded-full text-2xs">
-                            <Skeleton className="h-3 w-14 rounded-full motion-reduce:animate-none" />
-                        </Badge>
-                        <Badge variant="secondary" className="rounded-full text-2xs">
-                            <Skeleton className="h-3 w-12 rounded-full motion-reduce:animate-none" />
-                        </Badge>
-                        {index % 2 === 0 && (
-                            <span className="inline-flex items-center text-2xs text-primary">
-                                <ExternalLink className="mr-0.5 h-3 w-3" aria-hidden="true" />
-                                <Skeleton className="h-3 w-6 rounded-full motion-reduce:animate-none" />
-                            </span>
-                        )}
-                    </div>
+
                 </div>
-            </div>
-        </div>
+
+            </article>
+
+        </LoadingSurface>
     );
 }
 

@@ -1010,16 +1010,16 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(stampOverlaySource).toContain("const STAMP_PAGE_SIZE = 5");
     expect(stampOverlaySource).toContain(
-      "const skeletonCardCount = STAMP_PAGE_SIZE",
+      "const loadingCardCount = STAMP_PAGE_SIZE",
     );
-    expect(stampOverlaySource).toContain("count={skeletonCardCount}");
+    expect(stampOverlaySource).toContain("Array.from({ length: loadingCardCount }");
     expect(stampOverlaySource).toContain(
-      "const skeletonGridColumns = singleColumnCards",
+      "const loadingGridColumns = singleColumnCards",
     );
     expect(stampOverlaySource).toContain(
       "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-4",
     );
-    expect(stampOverlaySource).toContain("columns={skeletonGridColumns}");
+    expect(stampOverlaySource).toContain('className={cn("grid gap-3", loadingGridColumns)}');
     expect(stampOverlaySource).toContain('? "grid grid-cols-1 gap-3 md:gap-3"');
     expect(stampOverlaySource).toContain(
       "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4",

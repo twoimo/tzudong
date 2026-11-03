@@ -15,6 +15,7 @@ import { parseReviewAutomationSnapshot, parseReviewAutomationPreview, type Revie
 const REASONS: Record<string, string> = {
   all_checks_passed: '필수 조건 통과', admin_or_terminal: '관리자 수정·기존 결정 보호', not_a_target: '추출 대상 아님',
   database_or_identity_conflict: '데이터 충돌', name_requires_review: '상호 확인 필요', location_requires_review: '주소·좌표 확인 필요',
+  location_identity_mismatch: '위치 근거와 원본 장소명 불일치',
   location_evidence_incomplete: '위치 근거 부족', independent_location_evidence_required: '독립 위치 근거 부족',
   missing_evaluation: '평가값 재검수', missing_basis: '평가 근거 재검수', evaluation_failed: '평가 조건 미충족',
   source_incomplete: '원본 정보 부족', duplicate_requires_review: '중복 확인 필요', worker_lease_expired: '실행 결과 확인 필요',
