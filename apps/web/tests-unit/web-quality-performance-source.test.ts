@@ -2170,7 +2170,7 @@ describe("web quality performance source contracts", () => {
     );
     expect(mobileControlSource).toContain("flex h-12");
     expect(mobileControlSource).toContain('data-mobile-topic-slider="true"');
-    expect(source("components/home/HomeMapThemeFilters.tsx")).toContain("min-h-[44px]");
+    expect(source("components/home/HomeMapThemeFilters.tsx")).toContain("min-h-8");
     expect(source("components/home/HomeMapThemeFilters.tsx")).toContain("p-0.5");
     expect(homeAppGlobalsSource).toContain('overflow-wrap: anywhere');
     expect(homeAppGlobalsSource).toContain('grid-template-columns: 1.25rem minmax(0, 1fr)');
