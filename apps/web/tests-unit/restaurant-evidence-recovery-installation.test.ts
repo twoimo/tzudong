@@ -1,6 +1,6 @@
 import { afterAll, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { chmodSync, existsSync, lstatSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, lstatSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +15,8 @@ const sha = (value: string | Buffer) => createHash('sha256').update(value).diges
 const project = 'aqlcofblfxdrjhhdmarw';
 const revision = 'a'.repeat(40), tree = 'b'.repeat(40);
 const directories: string[] = [];
+// Operating admission requires POSIX ownership/modes; Windows stays fail-closed.
+const posixTest = process.platform === 'win32' ? test.skip : test;
 afterAll(() => { for (const path of directories) rmSync(path, { force: true, recursive: true }); });
 const context = () => ({ repository: 'twoimo/tzudong', operator: 'twoimo', protected: true, clean: true,
   mainSha: revision, headSha: revision, remoteSha: revision, treeSha: tree,
@@ -22,7 +24,7 @@ const context = () => ({ repository: 'twoimo/tzudong', operator: 'twoimo', prote
 // Entirely synthetic transport credentials: never connect to this endpoint.
 const environment = { SUPABASE_DB_URL: `postgresql://postgres:synthetic@db.${project}.supabase.co/postgres?sslmode=require` };
 function fixture(update: any = {}) {
-  const directory = mkdtempSync(join(tmpdir(), 'recovery-install-test-')); directories.push(directory); chmodSync(directory, 0o700);
+  const directory = mkdtempSync(join(realpathSync(tmpdir()), 'recovery-install-test-')); directories.push(directory); chmodSync(directory, 0o700);
   const journal = join(directory, 'intent.jsonl'), admission = join(directory, 'admission.json');
   const value = { schemaVersion: 1, operator: 'twoimo', operationId: '11111111-1111-4111-8111-111111111111',
     projectRef: project, manifestSha256: record.manifestSha256, sqlSha256: record.migration.sha256,
@@ -70,7 +72,7 @@ test('strict CLI accepts no query, path, digest override, duplicate mode or inco
 test('missing admission rejects before any live context or database', () => {
   expect(rejected(['--apply', '--admission', '/absent/synthetic-admission', '--journal', '/absent/journal'], 'INSTALL_ADMISSION_INVALID')).toBe(0);
 });
-test('every admission binding and scoped freeze exception is required before database', () => {
+posixTest('every admission binding and scoped freeze exception is required before database', () => {
   for (const update of [{ projectRef: 'wrong' }, { operator: 'other' }, { operationId: 'not-uuid' },
     { manifestSha256: 'f'.repeat(64) }, { sqlSha256: 'f'.repeat(64) }, { protectedMainSha: 'bad' },
     { treeSha: 'bad' }, { journalPathSha256: 'f'.repeat(64) }, { unexpected: true },
@@ -79,20 +81,20 @@ test('every admission binding and scoped freeze exception is required before dat
     rejected(fixture(update).args, 'INSTALL_ADMISSION_INVALID');
   }
 });
-test('expired, future or longer-than-15-minute admissions reject before database', () => {
+posixTest('expired, future or longer-than-15-minute admissions reject before database', () => {
   for (const update of [{ expiresAt: new Date(Date.now() - 1000).toISOString() },
     { issuedAt: new Date(Date.now() + 10000).toISOString() },
     { expiresAt: new Date(Date.now() + 901000).toISOString() }, { expiresAt: 'invalid' }]) {
     rejected(fixture(update).args, 'INSTALL_ADMISSION_EXPIRED');
   }
 });
-test('admission symlink, non-private file and non-private journal directory reject', () => {
+posixTest('admission symlink, non-private file and non-private journal directory reject', () => {
   const first = fixture(); const link = join(first.directory, 'linked.json'); symlinkSync(first.admission, link);
   rejected(['--apply', '--admission', link, '--journal', first.journal], 'INSTALL_ADMISSION_INVALID');
   chmodSync(first.admission, 0o644); rejected(first.args, 'INSTALL_ADMISSION_INVALID');
   const second = fixture(); chmodSync(second.directory, 0o755); rejected(second.args, 'INSTALL_JOURNAL_INVALID');
 });
-test('live actor, protected main, local HEAD/tree, remote and unchanged active G037 all bind before database', () => {
+posixTest('live actor, protected main, local HEAD/tree, remote and unchanged active G037 all bind before database', () => {
   for (const update of [{ operator: 'other-account' }, { repository: 'other/repo' }, { protected: false }, { clean: false },
     { mainSha: 'c'.repeat(40) }, { headSha: 'c'.repeat(40) }, { treeSha: 'c'.repeat(40) },
     { remoteSha: 'c'.repeat(40) }, { remoteUrl: 'https://github.com/other/tzudong.git' },
@@ -100,10 +102,14 @@ test('live actor, protected main, local HEAD/tree, remote and unchanged active G
     rejected(fixture().args, 'INSTALL_CONTEXT_INVALID', { readLiveContext: () => ({ ...context(), ...update }) });
   }
 });
-test('only exact direct project or project-bound session pooler usernames admit a database', () => {
+posixTest('only exact direct project or project-bound session pooler usernames admit a database', () => {
   const f = fixture();
-  for (const url of ['postgresql://postgres:synthetic@db.wrong.supabase.co/postgres?sslmode=require',
-    'postgresql://postgres.wrong:synthetic@aws-0-ap-northeast-2.pooler.supabase.com/postgres?sslmode=require',
+  const wrongProject = new URL(environment.SUPABASE_DB_URL);
+  wrongProject.hostname = 'db.wrong.supabase.co';
+  const wrongPoolerUser = new URL(environment.SUPABASE_DB_URL);
+  wrongPoolerUser.hostname = 'aws-0-ap-northeast-2.pooler.supabase.com';
+  wrongPoolerUser.username = 'postgres.wrong';
+  for (const url of [wrongProject.toString(), wrongPoolerUser.toString(),
     environment.SUPABASE_DB_URL.replace('?sslmode=require', ''),
     environment.SUPABASE_DB_URL.replace('/postgres?', '/other?'),
     environment.SUPABASE_DB_URL.replace('.co/postgres', '.co:6543/postgres')]) {
@@ -119,21 +125,21 @@ test('verify-only uses an explicit READ ONLY transaction and cannot claim instal
     } });
   expect(calls).toBe(1); expect(value.migrationApplied).toBe(false);
 });
-test('false or malformed prior precondition prevents journal creation and DDL', () => {
+posixTest('false or malformed prior precondition prevents journal creation and DDL', () => {
   for (const output of ['{}', 'private-invalid-json', '{"restaurant_evidence_recovery_absent":false}']) {
     const f = fixture(); let calls = 0;
     expect(() => main(f.args, { environment, readLiveContext: context, runPsqlImpl: () => { calls++; return output; } })).toThrow('INSTALL_PRIOR_MISMATCH');
     expect(calls).toBe(1); expect(existsSync(f.journal)).toBe(false);
   }
 });
-test('fresh context and expiry are checked again after precondition, before durable DDL intent', () => {
+posixTest('fresh context and expiry are checked again after precondition, before durable DDL intent', () => {
   const f = fixture(); let contexts = 0, calls = 0;
   expect(() => main(f.args, { environment,
     readLiveContext: () => ({ ...context(), operator: ++contexts === 1 ? 'twoimo' : 'other' }),
     runPsqlImpl: () => { calls++; return prior; } })).toThrow('INSTALL_CONTEXT_INVALID');
   expect(calls).toBe(1); expect(existsSync(f.journal)).toBe(false);
 });
-test('exclusive fsynced 0600 intent precedes one DDL, then fixed confirmed outcome', () => {
+posixTest('exclusive fsynced 0600 intent precedes one DDL, then fixed confirmed outcome', () => {
   const f = fixture(); let calls = 0;
   const value = main(f.args, { environment, readLiveContext: context, runPsqlImpl: (_url: string, sql: string, transaction: boolean) => {
     calls++; if (calls === 1) { expect(sql.startsWith('BEGIN READ ONLY;')).toBe(true); expect(existsSync(f.journal)).toBe(false); return prior; }
@@ -146,7 +152,7 @@ test('exclusive fsynced 0600 intent precedes one DDL, then fixed confirmed outco
   expect(journal).not.toContain('synthetic'); expect(journal).not.toContain('postgresql:');
   rejected(f.args, 'INSTALL_JOURNAL_EXISTS');
 });
-test('uncertain ACK reconciles exactly once, persists unconfirmed and never replays existing intent', () => {
+posixTest('uncertain ACK reconciles exactly once, persists unconfirmed and never replays existing intent', () => {
   const f = fixture(); let calls = 0;
   expect(() => main(f.args, { environment, readLiveContext: context, runPsqlImpl: () => {
     calls++; if (calls === 1) return prior;
@@ -158,13 +164,13 @@ test('uncertain ACK reconciles exactly once, persists unconfirmed and never repl
   expect(journal.trim().split('\n').map(line => JSON.parse(line).stage)).toEqual(['ddl_intent', 'unconfirmed']);
   expect(journal).not.toContain('canary'); rejected(f.args, 'INSTALL_JOURNAL_EXISTS');
 });
-test('existing empty, truncated, symlink and uncertain journals all prohibit database dispatch', () => {
+posixTest('existing empty, truncated, symlink and uncertain journals all prohibit database dispatch', () => {
   for (const content of ['', '{truncated', '{"stage":"unconfirmed"}\n']) {
     const f = fixture(); writeFileSync(f.journal, content, { mode: 0o600 }); rejected(f.args, 'INSTALL_JOURNAL_EXISTS');
   }
   const f = fixture(); symlinkSync(join(f.directory, 'absent'), f.journal); rejected(f.args, 'INSTALL_JOURNAL_EXISTS');
 });
-test('errors expose fixed codes even if a transport contains private diagnostics', () => {
+posixTest('errors expose fixed codes even if a transport contains private diagnostics', () => {
   const f = fixture();
   expect(() => main(f.args, { environment, readLiveContext: context, runPsqlImpl: () => { throw Error('private-canary'); } })).toThrow('INSTALL_OUTCOME_UNCONFIRMED');
   expect(boundedInstallationError(Error('private-canary')).message).toBe('INSTALL_OUTCOME_UNCONFIRMED');

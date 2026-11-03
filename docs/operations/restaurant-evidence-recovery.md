@@ -81,6 +81,8 @@ a one-operation exception while `G037_WRITE_FREEZE` remains `active`. Do not
 construct an admission from this document or a passing CI receipt: neither is
 operator authorization. The controller requires private regular admission
 files and an exclusive, durable intent journal; retain both privately.
+Operating installation requires POSIX file ownership and permissions on macOS
+or Linux. Windows cannot supply this admission contract and stays fail-closed.
 
 ```sh
 node apps/web/scripts/restaurant-evidence-recovery-installation.mjs \
