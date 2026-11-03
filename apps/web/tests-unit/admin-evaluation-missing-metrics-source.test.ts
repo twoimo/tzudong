@@ -39,6 +39,8 @@ describe('admin evaluation missing metric UI contracts', () => {
     expect(pageSource).not.toContain('EVALUATION_DELETE_CONFIRMATION');
     expect(pageSource).toContain("recordActions.run({ action: 'restaurant.restore'");
     expect(pageSource).toContain('{recordActions.dialog}');
-    expect(pageSource).toContain('shouldAutoDeleteMissingEvaluationRecord');
+    expect(pageSource).not.toContain('shouldAutoDeleteMissingEvaluationRecord');
+    expect(pageSource).not.toContain('autoDeleteTargets');
+    expect(pageSource).toContain("recordActions.run({ action: 'restaurant.delete'");
   });
 });

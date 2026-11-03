@@ -1005,6 +1005,7 @@ jobs:
             --channel tzuyang \
             --limit 3 \
             --review-automation \
+            --evidence-recovery \
             --preview-out backend/log/cron/hosted-apply-preview.json
       - name: Export current terminal inputs
         id: terminal_export

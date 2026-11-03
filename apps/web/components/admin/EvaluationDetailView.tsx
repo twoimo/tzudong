@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback, useId, memo } from 'r
 import Image from 'next/image';
 import { EvaluationRecord, LocationMatchResult } from '@/types/evaluation';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { formatCategoryText } from '@/lib/category-utils';
@@ -33,6 +34,7 @@ interface EvaluationDetailViewProps {
     className?: string;
     autoHeight?: boolean; // true일 경우 내부 스크롤 없이 콘텐츠 높이에 맞춰 늘어남
     onRequestDetails?: () => void;
+    onRecover?: () => void;
 }
 
 type EvaluationTone = 'pink' | 'blue' | 'purple' | 'green' | 'indigo' | 'orange' | 'teal' | 'yellow';
@@ -223,7 +225,7 @@ const addressGuidanceToneClasses: Record<AddressConsistencyTriageTone, string> =
     info: 'border-sky-200 bg-sky-50 text-sky-700',
 };
 
-export const EvaluationDetailView = memo(function EvaluationDetailView({ record, className, autoHeight = false, onRequestDetails }: EvaluationDetailViewProps) {
+export const EvaluationDetailView = memo(function EvaluationDetailView({ record, className, autoHeight = false, onRequestDetails, onRecover }: EvaluationDetailViewProps) {
     // Operator flow anchor: review -> decision capture -> guarded apply -> readback/recrawl.
 
     const [embedError, setEmbedError] = useState(false);
@@ -377,6 +379,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                     {record.status !== 'approved' && !isDeleted && (
                         <EvaluationApprovalReasons eligibility={record.approval_eligibility} onRequestDetails={onRequestDetails} />
                     )}
+                    {record.status === 'hold' && onRecover && <Button size="sm" variant="outline" onClick={onRecover}>근거 보강·처리 이력</Button>}
                 </div>
             </SectionPanel>
 
