@@ -382,6 +382,7 @@ jobs:
         run: |
           command -v jq
           python -m unittest backend.bin.tests.test_restaurant_review_automation backend.utils.tests.test_stage_execution backend.utils.tests.test_pipeline_restart_integration
+          python -m unittest backend.bin.tests.test_restaurant_evidence_recovery backend.bin.tests.test_recovery_pipeline_budget backend.bin.tests.test_review_input_repair backend.bin.tests.test_review_native_visual_packet
           node --test backend/utils/tests/resource-budget.test.mjs
 
       - name: Install Helm for actual local descriptor rendering

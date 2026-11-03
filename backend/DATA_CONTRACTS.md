@@ -22,6 +22,35 @@ pipeline READMEs; this file is the compact change-review checklist.
 
 ## Stage contracts
 
+Selected evidence-recovery jobs may explicitly supply `--native-visual-packet`
+with the existing `--allow-worker-write`; default reads ignore the packet and
+`--next` rejects it. This private packet is provenance, not new authorization.
+Rejected local inputs and read-only preflight failures do not spend a queued
+job's execution journal. After correction the same untouched job is usable;
+existing claim/provider journals continue to prohibit replay.
+The pure local validator binds exact job/row/input hashes, a clean accepted-source
+checkout recipe, same-host owner custody, publisher/clip/frame/transcript byte
+hashes and an owner-attested native observer record. Local origin/main binding
+does not itself attest fresh hosted branch protection; release holds still apply.
+Only NFC/whitespace is ignored for observed-name/address comparison. A conflict
+blocks unless one of the two fixed target cases supplies explicit correction
+intent plus an independently hashed current public-place receipt joining exact
+name/locality/parcel/listed road. Then only the fresh scratch address may use the
+corroborated road; the source-origin conflict remains explicit and no full
+administrative equivalence is inferred. Unjoined conflicts block. Original rows,
+extraction basis, corpus bytes and recollect references remain immutable.
+At most eight actual review quotes are checked against full hashed transcript
+bytes/indices/times and retained as navigation cues. The full verified transcript
+remains in the judgment context, including unselected or contradictory text.
+Native sign/address observations are labeled `native_observer_report`, with
+approximate cue time, separately from real transcript/review text. Pixels are
+not sent to the model and observations do not create evidence-family labels.
+Private observer identities stay local; the judgment receives minimized method,
+observation time and source-digest provenance.
+The observed address enters scratch crawling only after direct scene binding;
+existing independent location rules and one existing judgment remain unchanged.
+No extraction SDK, new schedule, RPC/result/SQL contract or approval gate changes.
+
 Pipeline step identifiers are part of the executable contract:
 `enrich`, `gemini_crawling`, `target_selection`, `rule_evaluation`,
 `laaj_evaluation`, `transform`, and `supabase_insert`.
