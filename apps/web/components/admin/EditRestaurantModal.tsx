@@ -217,18 +217,12 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
     const trimmedName = formData.name.trim();
 
     if (!trimmedAddress) {
-      toast({
-        variant: 'destructive',
-        title: '주소를 입력해주세요',
-      });
+      setGeocodingError('주소를 입력해주세요');
       return;
     }
 
     if (!trimmedName) {
-      toast({
-        variant: 'destructive',
-        title: '음식점명을 입력해주세요',
-      });
+      setGeocodingError('음식점명을 입력해주세요');
       return;
     }
 
@@ -239,10 +233,6 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
       setGeocodingResults([]);
       setSelectedGeocodingIndex(null);
 
-
-      toast({
-        title: '네이버 Geocoding API로 검색 중...',
-      });
 
       // 1. 전체 주소로 지오코딩 (최대 3개)
       const fullAddressResults = await geocodeAddressMultiple(trimmedAddress);
@@ -264,27 +254,13 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
         setAddressChanged(false); // 지오코딩 성공 시 플래그 초기화
         setInitialAddress(trimmedAddress); // 새로운 주소를 초기 주소로 설정
 
-        toast({
-          title: '지오코딩 성공',
-          description: `${enrichedResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`,
-        });
       } else {
-        toast({
-          variant: 'destructive',
-          title: '주소를 찾을 수 없습니다',
-          description: '다른 주소를 시도하거나 주소를 직접 확인해주세요.',
-        });
         setGeocodingError('주소를 찾을 수 없습니다.');
       }
     } catch (error: unknown) {
 
       const message = adminGeocodeErrorMessage(error);
       setGeocodingError(message);
-      toast({
-        variant: 'destructive',
-        title: '네이버 지오코딩 실패',
-        description: message,
-      });
     } finally {
       setGeocodingNaver(false);
     }
@@ -632,14 +608,15 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
     <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className={`${ADMIN_MODAL_CONTENT_MD_FLEX} !overflow-hidden`} onInteractOutside={event => event.preventDefault()}>
-        <DialogHeader>
+        <DialogHeader className="shrink-0">
           <DialogTitle>맛집 정보 편집</DialogTitle>
           <DialogDescription>
             정보를 수정해 저장하거나, 재지오코딩 후 승인 처리할 수 있습니다.
           </DialogDescription>
         </DialogHeader>
 
-        <fieldset disabled={loading || geocodingNaver} className="min-h-0 flex-1 space-y-4 overflow-y-auto py-4 pr-1">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-4 pr-1">
+        <fieldset disabled={loading || geocodingNaver} className="m-0 min-w-0 space-y-4 border-0 p-0">
           <div className="rounded-lg border p-3">
             <p className="text-xs text-muted-foreground">저장된 데이터의 승인 사전검사입니다. 수정한 내용은 저장 후 최신 상세 정보에서 다시 확인하세요.</p>
             <EvaluationApprovalReasons eligibility={record?.approval_eligibility} />
@@ -759,7 +736,7 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
 
           {/* 지오코딩 에러 메시지 */}
           {geocodingError && (
-            <div className="rounded-lg p-3 bg-red-50 dark:bg-red-950 border border-red-200">
+            <div role="alert" className="rounded-lg p-3 bg-red-50 dark:bg-red-950 border border-red-200">
               <div className="flex items-center gap-2 mb-2">
                 <Label className="text-sm font-medium">지오코딩 결과</Label>
                 <Badge variant="destructive">실패</Badge>
@@ -1026,6 +1003,7 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
             />
           </div>
         </fieldset>
+        </div>
         {confirmedReceipt && <Button variant="outline" onClick={() => void refreshAfterAction(confirmedReceipt)}>현재 정보 다시 불러오기</Button>}
 
         <DialogFooter className={`${ADMIN_MODAL_FOOTER_DIVIDER} shrink-0 bg-background`}>

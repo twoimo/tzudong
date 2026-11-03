@@ -677,12 +677,12 @@ function AdminRestaurantEditor({
         const trimmedName = formData.name.trim();
 
         if (!trimmedAddress) {
-            toast.error('주소를 입력해주세요');
+            setGeocodingError('주소를 입력해주세요');
             return;
         }
 
         if (!trimmedName) {
-            toast.error('음식점명을 입력해주세요');
+            setGeocodingError('음식점명을 입력해주세요');
             return;
         }
 
@@ -693,8 +693,6 @@ function AdminRestaurantEditor({
         setIsGeocoded(false);
 
         try {
-            toast.info('네이버 Geocoding API로 검색 중...');
-
             // 전체 주소와 기존 시/군/구 fallback을 같은 관리자 API로 조회한다.
             const fullAddressResults = await geocodeAddressMultiple(trimmedAddress);
 
@@ -709,15 +707,12 @@ function AdminRestaurantEditor({
 
             if (uniqueResults.length > 0) {
                 setGeocodingResults(uniqueResults);
-                toast.success(`${uniqueResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`);
             } else {
                 setGeocodingError('주소 후보를 찾지 못했습니다. 건물 주소와 지점을 확인한 뒤 다시 조회해주세요.');
-                toast.error('주소를 찾을 수 없습니다');
             }
         } catch (error) {
             const message = adminGeocodeErrorMessage(error);
             setGeocodingError(message);
-            toast.error(message);
         } finally {
             setIsGeocodingNaver(false);
         }
@@ -952,7 +947,8 @@ function AdminRestaurantEditor({
             className={adminRestaurantFormClass}
         >
             {shouldRenderSheetFrame && adminRestaurantSheetHeader}
-            <fieldset disabled={isSubmitting || isGeocodingNaver} className={adminRestaurantBodyClass}>
+            <div className={adminRestaurantBodyClass}>
+            <fieldset disabled={isSubmitting || isGeocodingNaver} className="m-0 min-w-0 border-0 p-0">
                 <div className="space-y-4">
                     <div className="rounded-md bg-primary/5 px-3 py-2 text-sm text-foreground">
                         저장하면 지도에 반영됩니다.
@@ -1365,6 +1361,7 @@ function AdminRestaurantEditor({
                     })}
                 </div>
             </fieldset>
+            </div>
             {confirmedReceipt && <Button type="button" variant="outline" onClick={() => void refreshAfterAction(confirmedReceipt)}>현재 정보 다시 불러오기</Button>}
 
             <DialogFooter className={adminRestaurantFooterClass}>

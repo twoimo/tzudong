@@ -255,8 +255,8 @@ export function EvaluationSlideView({
             onPointerCancel={handleSlidePointerCancel}
         >
             {/* Top Navigation Bar - Compact */}
-            <div className={cn("border-b bg-card shrink-0", isMobile ? "px-3 py-2" : "px-3 py-2 h-14")}>
-                <div className={cn("flex items-center justify-between gap-2", isMobile ? "" : "h-full")}>
+            <div className="min-h-14 shrink-0 border-b bg-card px-3 py-2">
+                <div className="flex min-h-8 items-center justify-between gap-2">
                     <div className={cn("flex items-center gap-2", isMobile ? "shrink-0" : "overflow-hidden")}>
                         <div className="flex items-center space-x-1 shrink-0">
                             <Button variant="outline" size="icon" className="h-8 w-8" aria-label="이전 후보" onClick={() => onNavigate(currentIndex - 1)} disabled={!canMovePrev}>
