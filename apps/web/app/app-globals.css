@@ -95,7 +95,8 @@
 [data-thumbnail-module-loading-card-glass],
 [data-thumbnail-module-loading-chat],
 [data-thumbnail-module-loading-canvas-frame="true"],
-[data-thumbnail-module-loading-tool-glass] {
+[data-thumbnail-module-loading-tool-glass],
+[data-thumbnail-generation-skeleton="true"] {
   contain: paint;
 }
 
