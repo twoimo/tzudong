@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { BrandSectionHeading } from '@/components/ui/brand-section-heading';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingSurface } from "@/components/ui/loading-surface";
 import { incrementSearchCount } from '@/lib/search-count';
 import {
   attachPopularRankTrends,
@@ -87,18 +87,20 @@ function getPopularRankTrendBadge(trend?: PopularRankTrend | null) {
   };
 }
 
-function DesktopRestaurantCardSkeleton() {
+function DesktopRestaurantCardPreview() {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-      <Skeleton className="aspect-video w-full rounded-none" />
+    <article className="relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+      <svg viewBox="0 0 320 180" role="img" aria-label="맛집 사진" className="aspect-video w-full">
+        <path d="M0 150 80 50 160 110 250 30 320 130V180H0Z" fill="currentColor" opacity="0.12" />
+      </svg>
       <div className="space-y-1.5 p-3">
         <div className="flex items-center justify-between gap-2">
-          <Skeleton className="h-4 w-28 rounded-full" />
-          <Skeleton className="h-4 w-12 rounded-full" />
+          <h3 className="text-sm font-medium leading-4">영상 속 맛집</h3>
+          <span className="text-xs leading-4">방문</span>
         </div>
-        <Skeleton className="h-3 w-40 rounded-full" />
+        <p className="text-xs leading-3">맛있는 여행을 함께해요</p>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -449,22 +451,20 @@ export default function DesktopLeftPanelMapHome({
 
           <div className="divide-y divide-border/70">
             {isLoading ? (
-              <div
-                className="divide-y divide-border/70"
-                role="status"
-                aria-live="polite"
-                aria-label="인기 검색 맛집 로딩 중"
-                data-desktop-left-panel-popular-skeleton="true"
-              >
-                {Array.from({ length: POPULAR_RESTAURANT_LIMIT }, (_, index) => (
-                  <div key={index} className="flex items-center gap-2 px-1 py-2">
-                    <Skeleton className="h-6 w-6 rounded-full" />
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <Skeleton className="h-4 w-24 rounded-full" />
-                      <Skeleton className="h-3 w-40 rounded-full" />
-                    </div>
+              <div data-desktop-left-panel-popular-skeleton="true">
+                <LoadingSurface label="인기 검색 맛집 로딩 중" className="divide-y divide-border/70">
+                  <div className="divide-y divide-border/70">
+                    {Array.from({ length: POPULAR_RESTAURANT_LIMIT }, (_, index) => (
+                      <article key={index} className="flex items-center gap-2 px-1 py-2">
+                        <span className="inline-flex h-6 w-6 items-center justify-center text-xs">{index + 1}</span>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <h3 className="text-sm font-medium leading-4">영상 속 맛집</h3>
+                          <p className="text-xs leading-3">맛있는 여행을 함께해요</p>
+                        </div>
+                      </article>
+                    ))}
                   </div>
-                ))}
+                </LoadingSurface>
               </div>
             ) : popularRestaurants.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
@@ -565,19 +565,14 @@ export default function DesktopLeftPanelMapHome({
 
           <div className="grid grid-cols-1 gap-3">
             {isLatestLoading ? (
-              <div
-                className="grid grid-cols-1 gap-3"
-                role="status"
-                aria-live="polite"
-                aria-label="최근 추가된 맛집 로딩 중"
-                data-desktop-left-panel-latest-skeleton="true"
-              >
-                {Array.from(
-                  { length: LATEST_RESTAURANT_INITIAL_RENDER_COUNT },
-                  (_, index) => (
-                    <DesktopRestaurantCardSkeleton key={index} />
-                  ),
-                )}
+              <div data-desktop-left-panel-latest-skeleton="true">
+                <LoadingSurface className="grid grid-cols-1 gap-3" label="최근 추가된 맛집 로딩 중">
+                  <div className="grid grid-cols-1 gap-3">
+                    {Array.from({ length: LATEST_RESTAURANT_INITIAL_RENDER_COUNT }, (_, index) => (
+                      <DesktopRestaurantCardPreview key={index} />
+                    ))}
+                  </div>
+                </LoadingSurface>
               </div>
             ) : visibleLatestRestaurants.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-3 py-5 text-center text-xs text-muted-foreground">
@@ -611,14 +606,9 @@ export default function DesktopLeftPanelMapHome({
                     data-desktop-left-panel-latest-load-more="true"
                   >
                     {isFetchingNextLatestRestaurantPage ? (
-                      <div
-                        className="grid grid-cols-1 gap-3"
-                        role="status"
-                        aria-live="polite"
-                        aria-label="최근 추가된 맛집 추가 로딩 중"
-                      >
-                        <DesktopRestaurantCardSkeleton />
-                      </div>
+                      <LoadingSurface className="grid grid-cols-1 gap-3" label="최근 추가된 맛집 추가 로딩 중">
+                        <DesktopRestaurantCardPreview />
+                      </LoadingSurface>
                     ) : (
                       <button
                         type="button"

@@ -83,7 +83,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingPreview, LoadingSurface } from '@/components/ui/loading-surface';
 import {
   Tooltip as UiTooltip,
   TooltipContent as UiTooltipContent,
@@ -766,6 +766,7 @@ function AdminEvaluationModuleStaticShell({
       className="flex h-full min-h-0 flex-col overflow-hidden"
       data-admin-evaluation-dynamic-loading-shell="true"
     >
+
       <AdminPageHeader
         title={getAdminModuleTitle(moduleId)}
         icon={ClipboardCheck}
@@ -773,109 +774,253 @@ function AdminEvaluationModuleStaticShell({
         data-admin-module-header="compact"
         data-admin-module-header-module={moduleId}
         data-admin-sidebar-module-loading-header="true"
-        actions={<div className="flex items-center justify-end gap-1.5" data-admin-evaluation-view-actions="top-right">
-            <Button type="button" variant="secondary" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="리스트 뷰" aria-pressed="true">
+        actions={
+          <div
+            className="flex items-center justify-end gap-1.5"
+            data-admin-evaluation-view-actions="top-right"
+          >
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled
+              className="h-8 w-8 p-0 disabled:opacity-100"
+              aria-label="리스트 뷰"
+              aria-pressed="true"
+            >
+
               <LayoutList className="h-4 w-4" aria-hidden="true" />
+
               <span className="sr-only">리스트</span>
+
             </Button>
-            <Button type="button" variant="ghost" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="슬라이드 뷰" aria-pressed="false">
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled
+              className="h-8 w-8 p-0 disabled:opacity-100"
+              aria-label="슬라이드 뷰"
+              aria-pressed="false"
+            >
+
               <MonitorPlay className="h-4 w-4" aria-hidden="true" />
+
               <span className="sr-only">슬라이드</span>
+
             </Button>
-          </div>}
+
+          </div>
+        }
       />
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 p-2">
+
         <div className="space-y-2 lg:hidden" data-admin-evaluation-static-loading-controls="true">
+
           <div className="grid grid-cols-3 gap-1.5">
-            {ADMIN_EVALUATION_STATIC_STATUS_FILTERS.map((label, index) => (
-              <Button
-                key={label}
-                type="button"
-                variant={index === 0 ? "default" : "outline"}
-                size="sm"
-                disabled
-                className="h-8 min-w-0 rounded-full px-2 text-xs font-medium disabled:opacity-100"
-                aria-pressed={index === 0}
-              >
-                {label}
-              </Button>
-            ))}
+
+            {
+              ADMIN_EVALUATION_STATIC_STATUS_FILTERS.map((label, index) => (
+                <Button
+                  key={label}
+                  type="button"
+                  variant={index === 0 ? "default" : "outline"}
+                  size="sm"
+                  disabled
+                  className="h-8 min-w-0 rounded-full px-2 text-xs font-medium disabled:opacity-100"
+                  aria-pressed={index === 0}
+                >
+
+                  {label}
+
+                </Button>
+              ))
+            }
+
           </div>
 
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-            <div className="flex h-9 items-center rounded-md border bg-background pl-8 pr-3 text-sm text-muted-foreground">
+
+            <Search
+              className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+
+            <div
+              className="flex h-9 items-center rounded-md border bg-background pl-8 pr-3 text-sm text-muted-foreground"
+            >
               영상 제목 검색...
             </div>
+
           </div>
 
           <div className="flex min-w-0 items-center justify-between gap-2 py-0.5">
+
             <div className="min-w-0 truncate px-0.5 text-xs text-muted-foreground">
+
               <span>검수 항목</span>
+
               <span className="ml-1 font-medium">집계 중</span>
+
             </div>
+
             <div className="flex shrink-0 items-center gap-1">
-              <Button type="button" variant="outline" size="sm" disabled className="h-8 rounded-full px-2.5 text-xs font-semibold disabled:opacity-100">
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled
+                className="h-8 rounded-full px-2.5 text-xs font-semibold disabled:opacity-100"
+              >
                 상세 필터
               </Button>
-              <Button type="button" variant="ghost" size="sm" disabled aria-label="필터 초기화" className="h-8 w-8 rounded-full p-0 text-muted-foreground disabled:opacity-100">
-                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-              </Button>
-            </div>
-          </div>
-        </div>
 
-        <div ref={mobileSkeletonRef} className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" aria-hidden="true">
-          {Array.from({ length: mobileSkeletonCount }).map((_, index) => (
-            <div key={index} className="rounded-md border border-border/70 bg-card p-3 shadow-none">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" />
-                  <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" />
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                    <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                    <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div ref={desktopSkeletonRef} className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex">
-          <div className="bg-muted/35 lg:grid lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]" aria-hidden="true">
-            {Array.from({ length: 9 }).map((_, index) => (
-              <div key={index} className="px-2 py-2">
-                <Skeleton className={index === 1 ? "h-3 w-24 rounded-full motion-reduce:animate-none" : "mx-auto h-3 w-12 rounded-full motion-reduce:animate-none"} />
-              </div>
-            ))}
-          </div>
-          <div className="space-y-1 bg-muted/20 p-1">
-            {Array.from({ length: desktopSkeletonCount }).map((_, rowIndex) => (
-              <div
-                key={rowIndex}
-                className="grid items-center gap-2 p-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled
+                aria-label="필터 초기화"
+                className="h-8 w-8 rounded-full p-0 text-muted-foreground disabled:opacity-100"
               >
-                <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                <div className="flex min-w-0 items-center gap-2">
-                  <Skeleton className="h-10 w-14 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                    <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                  </div>
-                </div>
-                {Array.from({ length: 6 }).map((__, cellIndex) => (
-                  <Skeleton key={cellIndex} className="h-6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                ))}
-                <Skeleton className="h-7 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-              </div>
-            ))}
+
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+
+              </Button>
+
+            </div>
+
           </div>
+
         </div>
+
+        <div
+          ref={mobileSkeletonRef}
+          className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2 lg:hidden"
+          aria-hidden="true"
+        >
+
+          <LoadingSurface label="검수 카드 로딩 중" className="col-span-full">
+
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+
+              {
+                Array.from({ length: mobileSkeletonCount }, (_, index) => (
+                  <article key={index} className="rounded-md border border-border/70 bg-card p-3">
+
+                    <div className="flex items-center gap-2">
+
+                      <svg
+                        viewBox="0 0 64 48"
+                        role="img"
+                        aria-label="맛집 사진"
+                        className="h-12 w-16 shrink-0 rounded-md border"
+                      >
+
+                        <rect width="64" height="48" fill="currentColor" opacity="0.1" />
+
+                      </svg>
+
+                      <div className="min-w-0 flex-1 space-y-1.5">
+
+                        <h3 className="text-sm font-semibold">맛집 검수 항목</h3>
+
+                        <p className="text-xs">영상과 맛집 정보</p>
+
+                        <div className="grid grid-cols-3 gap-1.5 text-xs">
+
+                          <span>검수</span>
+
+                          <span>위치</span>
+
+                          <span>분류</span>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  </article>
+                ))
+              }
+
+            </div>
+
+          </LoadingSurface>
+
+        </div>
+
+        <div
+          ref={desktopSkeletonRef}
+          className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex"
+        >
+
+          <LoadingSurface label="검수 목록 로딩 중">
+
+            <div
+              className="grid bg-muted/35 px-2 py-2 text-xs lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
+            >
+
+              {
+                ["선택", "검수 항목", "평가", "분류", "상태", "주소", "영상", "기록", "작업"].map(label => (
+                  <span key={label}>
+
+                    {label}
+
+                  </span>
+                ))
+              }
+
+            </div>
+
+            <div className="divide-y divide-border">
+
+              {
+                Array.from({ length: desktopSkeletonCount }, (_, index) => (
+                  <div
+                    key={index}
+                    className="grid min-h-16 items-center gap-2 p-2 text-xs lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
+                  >
+
+                    <span>선택</span>
+
+                    <div>
+
+                      <p className="text-sm font-semibold">맛집 검수 항목</p>
+
+                      <p className="mt-1">영상과 맛집 정보</p>
+
+                    </div>
+
+                    {
+                      ["평가", "분류", "상태", "주소", "영상", "기록"].map(label => (
+                        <span key={label}>
+
+                          {label}
+
+                        </span>
+                      ))
+                    }
+
+                    <span>상세 보기</span>
+
+                  </div>
+                ))
+              }
+
+            </div>
+
+          </LoadingSurface>
+
+        </div>
+
       </div>
+
     </div>
   );
 }
@@ -3726,235 +3871,48 @@ function AdminDashboardKpiValueSkeleton() {
       data-admin-dashboard-dynamic-skeleton="kpi"
       aria-hidden="true"
     >
-      <div className="min-w-0 flex-1 space-y-2">
-        <Skeleton className="h-8 w-32 max-w-full rounded-full motion-reduce:animate-none" />
-        <Skeleton className="h-3 w-24 max-w-full rounded-full motion-reduce:animate-none" />
-      </div>
-      <Skeleton className="h-11 w-24 shrink-0 rounded-xl motion-reduce:animate-none" />
+
+      <LoadingSurface label="관리자 지표 조회 중" className="w-full">
+
+        <div className="flex min-w-0 items-center justify-between gap-3">
+
+          <div>
+
+            <p className="text-3xl font-semibold">000</p>
+
+            <p className="mt-2 text-xs">집계 현황</p>
+
+          </div>
+
+          <span className="rounded-xl border p-3 text-sm">최근 추이</span>
+
+        </div>
+
+      </LoadingSurface>
+
     </div>
   );
 }
 
-function AdminDashboardPanelBodySkeleton({
-  variant = "chart",
-}: {
-  variant?: AdminDashboardSkeletonVariant;
-}) {
+function AdminDashboardPanelBodySkeleton({ variant = "chart" }: { variant?: AdminDashboardSkeletonVariant }) {
   const { ref: tableSkeletonRef, count: tableSkeletonCount } = useFilledSkeletonCount(28, 5);
-  if (variant === "table") {
-    return (
-      <div
-        ref={tableSkeletonRef}
-        className="min-h-0 flex-1 space-y-2 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
-        data-admin-dashboard-dynamic-skeleton="table"
-        aria-hidden="true"
-      >
-        {Array.from({ length: tableSkeletonCount }).map((_, index) => (
-          <div
-            key={index}
-            className="grid grid-cols-[minmax(0,1fr)_4rem_4rem] gap-3"
-          >
-            <Skeleton className="h-4 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-4 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-4 rounded-full motion-reduce:animate-none" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === "ops") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 gap-3"
-        data-admin-dashboard-dynamic-skeleton="ops"
-        aria-hidden="true"
-      >
-        {Array.from({ length: 2 }).map((_, sectionIndex) => (
-          <div key={sectionIndex} className="grid gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <Skeleton className="h-4 w-20 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-4 w-12 rounded-full motion-reduce:animate-none" />
-            </div>
-            {Array.from({ length: 4 }).map((__, rowIndex) => (
-              <div
-                key={rowIndex}
-                className="grid grid-cols-[5.5rem_minmax(0,1fr)_3rem] items-center gap-2"
-              >
-                <Skeleton className="h-3 rounded-full motion-reduce:animate-none" />
-                <Skeleton className="h-2 rounded-full motion-reduce:animate-none" />
-                <Skeleton className="h-3 rounded-full motion-reduce:animate-none" />
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === "bubble") {
-    return (
-      <div
-        className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
-        data-admin-dashboard-dynamic-skeleton="bubble"
-        aria-hidden="true"
-      >
-        <div className="absolute inset-x-5 bottom-10 h-0.5 bg-border/60" />
-        <div className="absolute inset-y-5 left-10 w-0.5 bg-border/60" />
-        {[
-          ["left-[9%] top-[58%] h-10 w-10", "bg-teal-100 dark:bg-teal-950/45"],
-          ["left-[25%] top-[38%] h-14 w-14", "bg-teal-100/80 dark:bg-teal-950/35"],
-          [
-            "left-[43%] top-[52%] h-11 w-11",
-            "bg-teal-100/60 dark:bg-teal-950/25",
-          ],
-          [
-            "left-[62%] top-[30%] h-16 w-16",
-            "bg-muted-foreground/20 dark:bg-muted-foreground/18",
-          ],
-          [
-            "left-[78%] top-[62%] h-9 w-9",
-            "bg-muted-foreground/10 dark:bg-muted-foreground/12",
-          ],
-        ].map(([positionClassName, colorClassName], index) => (
-          <Skeleton
-            key={index}
-            className={cn(
-              "absolute rounded-full motion-reduce:animate-none",
-              positionClassName,
-              colorClassName,
-            )}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === "line") {
-    return (
-      <div
-        className="min-h-0 flex-1 rounded-xl border border-border/70 bg-background p-3"
-        data-admin-dashboard-dynamic-skeleton="line"
-        aria-hidden="true"
-      >
-        <div className="relative h-full min-h-[8rem] overflow-hidden">
-          <div className="absolute inset-x-1 top-1/4 h-0.5 bg-border/50" />
-          <div className="absolute inset-x-1 top-1/2 h-0.5 bg-border/50" />
-          <div className="absolute inset-x-1 top-3/4 h-0.5 bg-border/50" />
-          <svg
-            className="absolute inset-0 h-full w-full text-muted/80"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            focusable="false"
-          >
-            <polyline
-              points="2,68 18,44 34,58 50,30 66,48 82,24 98,38"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <polyline
-              points="2,48 18,56 34,34 50,52 66,26 82,45 98,28"
-              fill="none"
-              stroke="currentColor"
-              strokeOpacity="0.62"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <polyline
-              points="2,75 18,72 34,82 50,61 66,70 82,54 98,63"
-              fill="none"
-              stroke="currentColor"
-              strokeOpacity="0.42"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton
-              key={index}
-              className="absolute bottom-0 h-2 w-2 rounded-full motion-reduce:animate-none"
-              style={{ left: `${7 + index * 17}%` }}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (variant === "stacked") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 content-evenly gap-2 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
-        data-admin-dashboard-dynamic-skeleton="stacked"
-        aria-hidden="true"
-      >
-        {Array.from({ length: 3 }).map((_, rowIndex) => (
-          <div key={rowIndex} className="grid gap-1.5">
-            <div className="flex items-center justify-between gap-3">
-              <Skeleton className="h-3 w-16 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-3 w-24 rounded-full motion-reduce:animate-none" />
-            </div>
-            <div className="flex h-9 overflow-hidden rounded-xl bg-muted/40">
-              {[28, 23, 19, 17, 13].map((width, segmentIndex) => (
-                <Skeleton
-                  key={segmentIndex}
-                  className="h-full rounded-none motion-reduce:animate-none"
-                  style={{
-                    width: `${width + ((rowIndex + segmentIndex) % 3)}%`,
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === "diagnosis") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-1"
-        data-admin-dashboard-dynamic-skeleton="diagnosis"
-        aria-hidden="true"
-      >
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div
-            key={index}
-            className="flex min-h-0 flex-col justify-between rounded-xl border border-border/70 bg-muted/20 px-2 py-1.5"
-          >
-            <Skeleton className="h-4 w-20 rounded-full motion-reduce:animate-none" />
-            <div className="space-y-1">
-              <Skeleton className="h-3 w-full rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-3 w-3/4 rounded-full motion-reduce:animate-none" />
-            </div>
-            <Skeleton className="h-1.5 w-full rounded-full motion-reduce:animate-none" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <div
-      className="min-h-0 flex-1 rounded-xl border border-border/70 bg-background p-3"
-      data-admin-dashboard-dynamic-skeleton="chart"
+      ref={variant === "table" ? tableSkeletonRef : undefined}
+      className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
+      data-admin-dashboard-dynamic-skeleton={variant}
       aria-hidden="true"
     >
-      <div className="flex h-full min-h-[8rem] items-end gap-3">
-        {Array.from({ length: 7 }).map((_, index) => (
-          <Skeleton
-            key={index}
-            className="flex-1 rounded-t-xl motion-reduce:animate-none"
-            style={{ height: `${36 + ((index * 17) % 48)}%` }}
-          />
-        ))}
-      </div>
+
+      <LoadingPreview
+        kind={variant === "table" ? "table" : variant === "ops" ? "list" : variant === "diagnosis" ? "dashboard" : "chart"}
+        rows={variant === "table" ? tableSkeletonCount : 2}
+        compact
+        showHeader={false}
+        label="관리자 지표 조회 중"
+        className="h-full min-h-32"
+      />
+
     </div>
   );
 }
@@ -4508,11 +4466,15 @@ function AdminDashboardKpiCard({
             data-admin-dashboard-kpi-title-actions="single-line-scroll"
           >
             {isLoading ? (
-              <Skeleton
-                className="h-5 w-20 shrink-0 rounded-full motion-reduce:animate-none"
-                data-admin-dashboard-dynamic-skeleton="delta"
-                aria-label={`${title} 기간 대비 로딩 중`}
-              />
+              <div data-admin-dashboard-dynamic-skeleton="delta">
+
+                <LoadingSurface label={title + " 기간 대비 로딩 중"} className="h-5 w-20 shrink-0">
+
+                  <span className="text-xs">00.0%</span>
+
+                </LoadingSurface>
+
+              </div>
             ) : delta !== undefined ? (
               <AdminDashboardInlineTooltip
                 label={`${title} ${deltaLabel}`}
@@ -4594,10 +4556,11 @@ function AdminDashboardKpiCard({
         </div>
       )}
       {isLoading ? (
-        <Skeleton
-          className="h-1.5 rounded-full motion-reduce:animate-none"
-          aria-hidden="true"
-        />
+        <LoadingSurface label="지표 비율 조회 중" className="h-1.5 overflow-hidden">
+
+          <progress max={100} value={40} className="block h-1.5 w-full" />
+
+        </LoadingSurface>
       ) : (
         <div className="grid gap-1.5">
           <div
@@ -5946,8 +5909,16 @@ function AdminDashboardCollectionLogPopover({
         <div className="max-h-[70vh] space-y-2.5 overflow-y-auto p-3">
           {isLoading ? (
             <div className="space-y-2">
-              <Skeleton className="h-20 rounded-2xl" />
-              <Skeleton className="h-16 rounded-2xl" />
+
+              <LoadingPreview
+                kind="list"
+                rows={2}
+                compact
+                showHeader={false}
+                label="수집 상태 조회 중"
+                className="min-h-36"
+              />
+
             </div>
           ) : null}
 
@@ -9421,9 +9392,16 @@ function AuditPlaceholder() {
 
         {isAuditFirstLoad ? (
           <div className="admin-detail-section space-y-2 p-3" aria-label="감사 로그 로딩 중">
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-16 rounded-2xl" />
+
+            <LoadingPreview
+              kind="list"
+              rows={3}
+              compact
+              showHeader={false}
+              label="감사 로그 로딩 중"
+              className="min-h-48"
+            />
+
           </div>
         ) : null}
 
@@ -9677,25 +9655,6 @@ type AdminConsoleCanvasSkeletonConfig = {
   variant: AdminConsoleCanvasSkeletonVariant;
 };
 
-const ADMIN_CONSOLE_CANVAS_SKELETON_ROWS = [0, 1, 2, 3, 4, 5] as const;
-const ADMIN_CONSOLE_CANVAS_SKELETON_CARDS = [
-  "primary",
-  "secondary",
-  "tertiary",
-  "quaternary",
-] as const;
-const ADMIN_CONSOLE_CANVAS_SKELETON_METRICS = [
-  "metric-a",
-  "metric-b",
-  "metric-c",
-  "metric-d",
-] as const;
-const ADMIN_CONSOLE_CANVAS_SKELETON_TIMELINE = [
-  "queued",
-  "checking",
-  "applying",
-  "readback",
-] as const;
 
 function getAdminConsoleModuleLoadingSkeleton(
   moduleId: AdminModuleId,
@@ -9841,66 +9800,43 @@ function AdminConsoleCanvasSkeleton({ moduleId }: { moduleId: AdminModuleId }) {
   );
 }
 
-function AdminConsoleSkeletonMetricStrip({
-  className,
-}: {
-  className?: string;
-}) {
+function AdminConsoleSkeletonMetricStrip({ className }: { className?: string }) {
   return (
-    <div className={cn("grid shrink-0 gap-2 sm:grid-cols-2 xl:grid-cols-4", className)}>
-      {ADMIN_CONSOLE_CANVAS_SKELETON_METRICS.map((metric) => (
-        <div
-          key={metric}
-          className="min-h-20 rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-        >
-          <Skeleton className="h-3 w-20 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="mt-3 h-6 w-24 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="mt-3 h-2 w-full rounded-full motion-reduce:animate-none" />
-        </div>
-      ))}
-    </div>
+    <LoadingSurface label="관리자 집계 로딩 중">
+
+      <div className={cn("grid shrink-0 gap-2 sm:grid-cols-2 xl:grid-cols-4", className)}>
+
+        {
+          ["등록 현황", "처리 현황", "최근 기록", "검토 현황"].map(label => (
+            <div key={label} className="min-h-20 rounded-xl border border-border bg-card/95 p-3">
+
+              <p className="text-xs">
+
+                {label}
+
+              </p>
+
+              <p className="mt-3 text-xl font-semibold">000</p>
+
+            </div>
+          ))
+        }
+
+      </div>
+
+    </LoadingSurface>
   );
 }
 
-function AdminConsoleSkeletonRows({
-  count = ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.length,
-  withMedia = false,
-}: {
-  count?: number;
-  withMedia?: boolean;
-}) {
-  return (
-    <div className="space-y-1 bg-muted/20 p-1">
-      {ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.slice(0, count).map((row) => (
-        <div
-          key={row}
-          className={cn(
-            "grid items-center gap-2 px-3 py-3",
-            withMedia
-              ? "sm:grid-cols-[56px_minmax(0,1fr)_90px]"
-              : "sm:grid-cols-[minmax(0,1fr)_80px]",
-          )}
-        >
-          {withMedia ? (
-            <Skeleton className="h-10 w-14 rounded-md motion-reduce:animate-none" />
-          ) : null}
-          <div className="min-w-0 space-y-1.5">
-            <Skeleton className="h-4 w-4/5 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-3 w-3/5 rounded-full motion-reduce:animate-none" />
-          </div>
-          <Skeleton className="h-7 rounded-lg motion-reduce:animate-none" />
-        </div>
-      ))}
-    </div>
-  );
-}
+
 
 function AdminConsoleCanvasSkeletonBody({
   variant,
 }: {
   variant: AdminConsoleCanvasSkeletonVariant;
 }) {
+  const listKind = variant === "insights-grid" || variant === "route-map" ? "chart" : variant === "user-table" || variant === "evaluation-table" ? "table" : "list";
+  const detailKind = variant === "insights-grid" || variant === "route-map" ? "chart" : variant === "banner-editor" ? "form" : "cards";
   if (variant === "evaluation-table" || variant === "submission-queue") {
     return (
       <div
@@ -9908,26 +9844,28 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-evaluation="viewport-table"
       >
+
         <AdminConsoleSkeletonMetricStrip className="xl:grid-cols-5" />
+
         <section
           className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card/95"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          <div className="grid bg-muted/30 px-3 py-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(5,78px)_112px]">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((cell) => (
-              <Skeleton
-                key={cell}
-                className="h-3 w-20 rounded-full motion-reduce:animate-none"
-              />
-            ))}
-          </div>
-          <AdminConsoleSkeletonRows count={6} withMedia />
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   if (variant === "refresh-history") {
     return (
       <div
@@ -9935,32 +9873,42 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-refresh-history="viewport-split"
       >
+
         <section
           className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          <div className="bg-muted/30 px-3 py-2">
-            <Skeleton className="h-4 w-32 rounded-full motion-reduce:animate-none" />
-          </div>
-          <AdminConsoleSkeletonRows count={6} />
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
         <section
           className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3 md:grid-cols-2"
           aria-hidden="true"
           data-admin-sidebar-module-loading-detail="true"
         >
-          {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
-            <Skeleton
-              key={card}
-              className="h-full min-h-28 rounded-xl motion-reduce:animate-none"
-            />
-          ))}
+
+          <LoadingPreview
+            kind={detailKind}
+            rows={4}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   if (variant === "banner-editor") {
     return (
       <div
@@ -9968,35 +9916,42 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-banners="viewport-editor"
       >
+
         <section
           className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          <div className="bg-muted/30 px-3 py-2">
-            <Skeleton className="h-4 w-28 rounded-full motion-reduce:animate-none" />
-          </div>
-          <AdminConsoleSkeletonRows count={5} withMedia />
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
         <section
           className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(300px,0.8fr)]"
           aria-hidden="true"
           data-admin-sidebar-module-loading-detail="true"
         >
-          <Skeleton className="min-h-48 rounded-2xl motion-reduce:animate-none" />
-          <div className="space-y-2">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.slice(0, 5).map((row) => (
-              <Skeleton
-                key={row}
-                className="h-10 rounded-lg motion-reduce:animate-none"
-              />
-            ))}
-          </div>
+
+          <LoadingPreview
+            kind={detailKind}
+            rows={4}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   if (variant === "user-table") {
     return (
       <div
@@ -10004,26 +9959,28 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-users="viewport-table"
       >
+
         <AdminConsoleSkeletonMetricStrip />
+
         <section
           className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card/95"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          <div className="grid bg-muted/30 px-3 py-2 md:grid-cols-[minmax(0,1.2fr)_120px_120px_96px]">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((cell) => (
-              <Skeleton
-                key={cell}
-                className="h-3 w-24 rounded-full motion-reduce:animate-none"
-              />
-            ))}
-          </div>
-          <AdminConsoleSkeletonRows count={6} />
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   if (variant === "insights-grid") {
     return (
       <div
@@ -10031,26 +9988,42 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-insights="viewport-charts"
       >
+
         <section
           className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
           aria-hidden="true"
           data-admin-sidebar-module-loading-detail="true"
         >
-          <AdminConsoleSkeletonMetricStrip />
-          <Skeleton className="min-h-72 flex-1 rounded-2xl motion-reduce:animate-none" />
+
+          <LoadingPreview
+            kind={detailKind}
+            rows={4}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
         <section
           className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          <Skeleton className="min-h-48 rounded-2xl motion-reduce:animate-none" />
-          <AdminConsoleSkeletonRows count={4} />
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   if (variant === "route-map") {
     return (
       <div
@@ -10058,27 +10031,42 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-routes="viewport-map"
       >
+
         <section
           className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
           aria-hidden="true"
           data-admin-sidebar-module-loading-detail="true"
         >
-          <Skeleton className="h-full min-h-96 rounded-2xl motion-reduce:animate-none" />
+
+          <LoadingPreview
+            kind={detailKind}
+            rows={4}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
         <section
           className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          <div className="bg-muted/30 px-3 py-2">
-            <Skeleton className="h-4 w-36 rounded-full motion-reduce:animate-none" />
-          </div>
-          <AdminConsoleSkeletonRows count={6} />
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   if (variant === "llm-workspace" || variant === "audit-log") {
     return (
       <div
@@ -10086,45 +10074,62 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-ops="viewport-cards"
       >
+
         <section
           className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          {ADMIN_CONSOLE_CANVAS_SKELETON_TIMELINE.map((item) => (
-            <div key={item} className="rounded-xl border border-border/70 p-3">
-              <Skeleton className="h-4 w-32 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="mt-3 h-3 w-full rounded-full motion-reduce:animate-none" />
-              <Skeleton className="mt-2 h-3 w-4/5 rounded-full motion-reduce:animate-none" />
-            </div>
-          ))}
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
         <section
           className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
           aria-hidden="true"
           data-admin-sidebar-module-loading-detail="true"
         >
-          <Skeleton className="min-h-32 rounded-2xl motion-reduce:animate-none" />
-          <Skeleton className="min-h-32 rounded-2xl motion-reduce:animate-none" />
+
+          <LoadingPreview
+            kind={detailKind}
+            rows={4}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   return (
     <div
       className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,1.05fr)]"
       data-admin-sidebar-module-loading-grid="true"
     >
+
       <section
         className="min-h-[300px] overflow-hidden rounded-xl border border-border bg-card/95 lg:min-h-0"
         aria-hidden="true"
         data-admin-sidebar-module-loading-list="true"
       >
-        <div className="bg-muted/30 px-3 py-2">
-          <Skeleton className="h-4 w-28 rounded-full motion-reduce:animate-none" />
-        </div>
-        <AdminConsoleSkeletonRows count={5} />
+
+        <LoadingPreview
+          kind={listKind}
+          rows={6}
+          compact
+          label="관리자 화면 로딩 중"
+          className="h-full min-h-0"
+        />
+
       </section>
 
       <section
@@ -10132,23 +10137,17 @@ function AdminConsoleCanvasSkeletonBody({
         aria-hidden="true"
         data-admin-sidebar-module-loading-detail="true"
       >
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <div className="space-y-1.5">
-            <Skeleton className="h-5 w-36 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-3 w-56 max-w-full rounded-full motion-reduce:animate-none" />
-          </div>
-          <Skeleton className="h-8 w-20 rounded-lg motion-reduce:animate-none" />
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
-            <Skeleton
-              key={card}
-              className="h-24 rounded-xl motion-reduce:animate-none"
-            />
-          ))}
-          <Skeleton className="h-32 rounded-xl motion-reduce:animate-none sm:col-span-2" />
-        </div>
+
+        <LoadingPreview
+          kind={detailKind}
+          rows={4}
+          compact
+          label="관리자 화면 로딩 중"
+          className="h-full min-h-0"
+        />
+
       </section>
+
     </div>
   );
 }
@@ -10162,15 +10161,12 @@ function AdminStoryboardModuleLoadingSkeleton() {
       data-storyboard-module-loading="true"
       data-storyboard-module-loading-layout="page-shell"
       data-storyboard-viewport-fit="bounded"
-      style={{
-        height: "calc(var(--full-height, 100vh) - 2rem)",
-        maxHeight: "100%",
-        minHeight: 0,
-      }}
+      style={{ height: "calc(var(--full-height, 100vh) - 2rem)", maxHeight: "100%", minHeight: 0 }}
       role="status"
       aria-busy="true"
       aria-label="스토리보드 생성 화면 로딩 중"
     >
+
       <AdminPageHeader
         title={getAdminModuleTitle("storyboard")}
         icon={Clapperboard}
@@ -10178,154 +10174,127 @@ function AdminStoryboardModuleLoadingSkeleton() {
         data-admin-module-header="compact"
         data-admin-module-header-module="storyboard"
       />
+
       <div
         className="grid min-h-0 flex-1 gap-3 overflow-hidden p-2"
         data-storyboard-desktop-split-layout="inline-grid"
         data-storyboard-module-loading-grid="true"
         style={{
+
           display: "grid",
-          gridTemplateColumns:
-            "var(--storyboard-split-columns, minmax(0, 1fr) minmax(320px, 400px))",
-          gridTemplateRows: "var(--storyboard-split-rows, minmax(0, 1fr))",
+          gridTemplateColumns: "var(--storyboard-split-columns, minmax(0, 1fr) minmax(320px, 400px))",
+          gridTemplateRows: "var(--storyboard-split-rows, minmax(0, 1fr))"
         }}
       >
-        <Card
-          className="flex min-h-0 flex-col overflow-hidden rounded-md border border-border/70 bg-card shadow-none"
+
+        <section
+          className="flex min-h-0 flex-col overflow-hidden rounded-md border border-border/70 bg-card shadow-none p-3"
           aria-label="스토리보드 도우미 준비 영역"
           data-storyboard-module-loading-chat-shell="static"
           style={{
+
             gridColumn: "var(--storyboard-input-panel-column, 2)",
             gridRow: "var(--storyboard-input-panel-row, 1)",
-            minWidth: 0,
+            minWidth: 0
           }}
         >
-          <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                  <MessageSquareText className="h-3.5 w-3.5" aria-hidden="true" />
-                </span>
-                <div className="h-4 w-32 rounded-full bg-muted/80" />
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <div className="h-4 w-4 rounded-full bg-muted/80" />
-                <div className="h-8 w-8 rounded-full bg-muted/70" />
-                <div className="h-8 w-8 rounded-full bg-muted/70" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col p-3 pt-0">
-            <div
-              className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-background"
-              data-storyboard-module-loading-chat="true"
-            >
-              <div className="min-h-0 flex-1 space-y-3 overflow-hidden p-3">
-                <div className="max-w-[88%] space-y-2">
-                  <div className="h-3 w-56 max-w-full rounded-full bg-muted-foreground/14" />
-                  <div className="h-3 w-40 max-w-full rounded-full bg-muted-foreground/12" />
-                  <div className="mt-2 flex gap-2">
-                    <div className="h-7 w-20 rounded-full border border-border/60 bg-background" />
-                    <div className="h-7 w-20 rounded-full bg-primary/75" />
-                  </div>
-                </div>
-                <div className="max-w-[92%] space-y-2">
-                  <div className="h-3 w-64 max-w-full rounded-full bg-muted-foreground/14" />
-                  <div className="h-3 w-48 max-w-full rounded-full bg-muted-foreground/12" />
-                  <div className="h-3 w-52 max-w-full rounded-full bg-muted-foreground/12" />
-                </div>
-              </div>
-              <div
-                className="shrink-0 bg-muted/25 p-2.5"
-                data-storyboard-module-loading-composer="true"
-              >
-                <div className="flex h-11 items-center gap-2 rounded-full border border-border/70 bg-background px-3">
-                  <div className="h-5 w-5 shrink-0 rounded-full bg-muted/80" />
-                  <div className="h-3 flex-1 rounded-full bg-muted-foreground/12" />
-                  <div className="h-9 w-9 shrink-0 rounded-full bg-muted/80" />
-                </div>
-              </div>
-            </div>
-            <span className="sr-only">
-              스토리보드 도우미 영역을 준비하고 있습니다.
-            </span>
-          </CardContent>
-        </Card>
 
-        <Card
-          className="flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
+          <div className="min-h-0 flex-1" data-storyboard-module-loading-chat="true">
+
+            <LoadingSurface label="스토리보드 도우미 준비 중">
+
+              <div className="space-y-4">
+
+                <h2 className="text-sm font-semibold">스토리보드 도우미</h2>
+
+                <p className="max-w-[88%] rounded-xl border p-3 text-sm">영상의 주제와 장면 구성을 준비해요.</p>
+
+                <p className="ml-auto max-w-[88%] rounded-xl border p-3 text-sm">장면의 분위기와 흐름</p>
+
+              </div>
+
+            </LoadingSurface>
+
+          </div>
+
+          <div className="shrink-0" data-storyboard-module-loading-composer="true">
+
+            <LoadingPreview kind="navigation" compact showHeader={false} label="스토리보드 입력 영역 준비 중" />
+
+          </div>
+
+        </section>
+
+        <section
+          className="flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none p-2"
           aria-label="스토리보드 캔버스 준비 영역"
           data-storyboard-module-loading-canvas="true"
           style={{
+
             gridColumn: "var(--storyboard-result-panel-column, 1)",
             gridRow: "var(--storyboard-result-panel-row, 1)",
-            minWidth: 0,
+            minWidth: 0
           }}
         >
-          <CardHeader className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="h-4 w-12 shrink-0 rounded-full bg-muted/80" />
-              <div className="h-6 w-20 shrink-0 rounded-full border border-border/70 bg-background" />
-              <div className="h-3 w-48 max-w-[32vw] rounded-full bg-muted/70" />
-            </div>
-            <div
-              className="ml-auto flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden px-1 py-1"
-              data-storyboard-module-loading-toolbar="true"
-            >
-              <div className="h-8 w-16 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-32 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-24 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-28 shrink-0 rounded-md bg-muted/70" />
-            </div>
-          </CardHeader>
-          <CardContent className="min-h-0 flex-1 p-2 pt-1">
-            <div
-              className="h-full min-h-0"
-              data-storyboard-module-loading-frame-grid="true"
-              aria-hidden="true"
-            >
-              {STORYBOARD_MODULE_LOADING_CUT_NOS.map((cutNo) => (
+
+          <div className="shrink-0" data-storyboard-module-loading-toolbar="true">
+
+            <LoadingPreview kind="navigation" compact showHeader={false} label="장면 도구 준비 중" />
+
+          </div>
+
+          <div className="min-h-0 flex-1" data-storyboard-module-loading-frame-grid="true">
+
+            {
+              STORYBOARD_MODULE_LOADING_CUT_NOS.map(cutNo => (
                 <div
-                  key={`storyboard-loading-cut-${cutNo}`}
-                  className="relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/80"
+                  key={cutNo}
+                  className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/80"
                   data-storyboard-module-loading-cut={String(cutNo)}
+                  data-storyboard-module-loading-glass="false"
+                  data-storyboard-module-loading-shimmer="false"
                 >
-                  <div className="relative min-h-0 flex-1 overflow-hidden bg-muted/70">
-                    <span className="absolute left-3 top-3 z-10 h-5 w-14 rounded-full bg-slate-700/70" />
-                    <span className="absolute right-3 top-3 z-10 h-6 w-12 rounded-full bg-white/80" />
-                    <span
-                      className="absolute inset-0 bg-background/20"
-                      aria-hidden="true"
-                      data-storyboard-module-loading-glass="true"
-                    />
-                    <span
-                      className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-foreground/5"
-                      aria-hidden="true"
-                      data-storyboard-module-loading-shimmer="true"
-                    />
-                  </div>
-                  <div className="shrink-0 space-y-1 bg-background/90 px-2.5 py-1.5">
-                    <div className="grid items-center gap-2 rounded-lg bg-muted/15 px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
-                      <div className="h-4 rounded-full bg-muted/65" />
-                      <div className="h-3 rounded-full bg-muted-foreground/12" />
-                    </div>
-                    <div className="grid items-center gap-2 rounded-lg bg-rose-500/[0.045] px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
-                      <div className="h-4 rounded-full bg-rose-100/70" />
-                      <div className="h-3 rounded-full bg-muted-foreground/12" />
-                    </div>
-                    <div className="grid items-center gap-2 rounded-lg bg-amber-400/[0.10] px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
-                      <div className="h-4 rounded-full bg-amber-100/75" />
-                      <div className="h-3 rounded-full bg-muted-foreground/12" />
-                    </div>
-                  </div>
+
+                  <LoadingSurface label="스토리보드 장면 준비 중" className="h-full">
+
+                    <article className="flex h-full min-h-0 flex-col">
+
+                      <svg viewBox="0 0 320 180" role="img" aria-label="장면 미리보기" className="min-h-0 w-full flex-1">
+
+                        <rect width="320" height="180" fill="currentColor" opacity="0.08" />
+
+                      </svg>
+
+                      <div className="shrink-0 space-y-1 px-3 py-2 text-xs">
+
+                        <p>
+
+                          {"장면 "}
+
+                          {cutNo}
+
+                        </p>
+
+                        <p>화면 구성과 대사</p>
+
+                        <p>장면 설명</p>
+
+                      </div>
+
+                    </article>
+
+                  </LoadingSurface>
+
                 </div>
-              ))}
-            </div>
-            <span className="sr-only">
-              스토리보드 캔버스 영역을 준비하고 있습니다.
-            </span>
-          </CardContent>
-        </Card>
+              ))
+            }
+
+          </div>
+
+        </section>
+
       </div>
+
     </section>
   );
 }
@@ -10337,234 +10306,156 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
       data-thumbnail-module-loading="true"
       data-thumbnail-module-loading-layout="page-shell"
       data-thumbnail-module-loading-parity="storyboard-shell"
+      data-thumbnail-module-loading-glass-shell="false"
+      data-thumbnail-module-loading-page-shimmer="false"
       role="status"
       aria-busy="true"
       aria-label="유튜브 썸네일 생성 화면 로딩 중"
     >
-      <span
-        className="pointer-events-none absolute inset-0 z-0 bg-muted/35"
-        aria-hidden="true"
-        data-thumbnail-module-loading-glass-shell="true"
-      />
-      <span
-        className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/3 z-0 w-1/3 bg-foreground/5"
-        aria-hidden="true"
-        data-thumbnail-module-loading-page-shimmer="true"
-      />
+
       <AdminPageHeader
         title={getAdminModuleTitle("youtube-thumbnail-generator")}
         icon={ImageIcon}
-        className="relative z-10"
         data-admin-sidebar-module-loading-header="true"
         data-admin-module-header="compact"
         data-admin-module-header-module="youtube-thumbnail-generator"
       />
-      <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden p-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
-        <Card
-          className="relative order-2 flex min-h-0 flex-col overflow-hidden border border-border/70 bg-background/86 shadow-none"
+
+      <div
+        className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden p-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
+      >
+
+        <section
+          className="order-2 flex min-h-0 flex-col overflow-hidden border border-border/70 bg-background p-3"
           aria-label="유튜브 썸네일 도우미 준비 영역"
           data-thumbnail-module-loading-chat-shell="static"
           data-thumbnail-module-loading-card-glass="chat"
+          data-thumbnail-module-loading-chat-shell-glass="false"
+          data-thumbnail-module-loading-chat-shell-shimmer="false"
         >
-          <span
-            className="pointer-events-none absolute inset-0 bg-muted/30"
-            aria-hidden="true"
-            data-thumbnail-module-loading-chat-shell-glass="true"
-          />
-          <span
-            className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-foreground/5"
-            aria-hidden="true"
-            data-thumbnail-module-loading-chat-shell-shimmer="true"
-          />
-          <CardHeader className="relative z-10 shrink-0 space-y-1 p-3 pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle className="flex min-w-0 items-center gap-2 text-base">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
-                  <MessageSquareText className="h-4 w-4" aria-hidden="true" />
-                </span>
-                <span className="min-w-0 truncate">
-                  유튜브 썸네일 생성 도우미
-                </span>
-              </CardTitle>
-              <Badge
-                variant="outline"
-                className="h-6 shrink-0 rounded-full px-2 text-2xs"
-              >
-                준비 중
-              </Badge>
+
+          <div
+            className="flex min-h-0 flex-1 flex-col"
+            data-thumbnail-module-loading-chat="true"
+            data-thumbnail-module-loading-chat-tone="neutral-storyboard"
+            data-thumbnail-module-loading-chat-glass="false"
+            data-thumbnail-module-loading-chat-shimmer="false"
+          >
+
+            <div className="min-h-0 flex-1 overflow-hidden" data-thumbnail-module-loading-chat-log="true">
+
+              <LoadingSurface label="썸네일 도우미 준비 중">
+
+                <div className="space-y-4 text-sm">
+
+                  <div className="max-w-[86%] space-y-2" data-thumbnail-module-loading-chat-message="assistant">
+
+                    <p className="rounded-md border p-3" data-thumbnail-module-loading-chat-bubble="guide">썸네일의 주제와 구성을 준비해요.</p>
+
+                    <div className="flex gap-2 text-xs" data-thumbnail-module-loading-chat-actions="outside-bubble">
+
+                      <span className="rounded-full border px-3 py-1">구성</span>
+
+                      <span className="rounded-full border px-3 py-1">스타일</span>
+
+                    </div>
+
+                  </div>
+
+                  <p
+                    className="ml-auto max-w-[78%] rounded-2xl border p-3"
+                    data-thumbnail-module-loading-chat-message="user"
+                  >이미지와 제목 구성</p>
+
+                  <div className="max-w-[86%]" data-thumbnail-module-loading-chat-message="assistant">
+
+                    <p className="rounded-2xl border p-3" data-thumbnail-module-loading-chat-bubble="assistant">캔버스에서 배치를 확인해요.</p>
+
+                  </div>
+
+                </div>
+
+              </LoadingSurface>
+
             </div>
-          </CardHeader>
-          <CardContent className="relative z-10 flex min-h-0 flex-1 flex-col p-3 pt-0">
-            <div
-              className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border/70 bg-background shadow-none"
-              data-thumbnail-module-loading-chat="true"
-              data-thumbnail-module-loading-chat-tone="neutral-storyboard"
-            >
-              <span
-                className="pointer-events-none absolute inset-0 bg-muted/20"
-                aria-hidden="true"
-                data-thumbnail-module-loading-chat-glass="true"
-              />
-              <span
-                className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-foreground/5"
-                aria-hidden="true"
-                data-thumbnail-module-loading-chat-shimmer="true"
-              />
-              <div
-                className="relative z-10 min-h-0 flex-1 space-y-3 overflow-hidden p-3"
-                data-thumbnail-module-loading-chat-log="true"
-                aria-hidden="true"
-              >
-                <div
-                  className="flex gap-2"
-                  data-thumbnail-module-loading-chat-message="assistant"
-                >
-                  <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-muted/80">
-                    <div className="h-3.5 w-3.5 rounded-full bg-muted-foreground/20" />
-                  </div>
-                  <div className="max-w-[86%] space-y-1 text-left">
-                    <div className="h-2.5 w-14 rounded-full bg-muted-foreground/18" />
-                    <div
-                      className="space-y-2 rounded-md bg-background px-3 py-2 shadow-none ring-1 ring-border/60"
-                      data-thumbnail-module-loading-chat-bubble="guide"
-                    >
-                      <div className="h-3 w-44 max-w-full rounded-full bg-muted-foreground/14" />
-                      <div className="h-3 w-64 max-w-full rounded-full bg-muted-foreground/12" />
-                    </div>
-                    <div
-                      className="flex flex-wrap gap-1.5 pl-1"
-                      data-thumbnail-module-loading-chat-actions="outside-bubble"
-                    >
-                      <div className="h-7 w-20 rounded-full border border-border/70 bg-background/80" />
-                      <div className="h-7 w-20 rounded-full bg-muted/80" />
-                    </div>
-                  </div>
-                </div>
 
-                <div
-                  className="flex justify-end gap-2"
-                  data-thumbnail-module-loading-chat-message="user"
-                >
-                  <div className="max-w-[78%] space-y-1 text-right">
-                    <div className="ml-auto h-2.5 w-5 rounded-full bg-muted-foreground/16" />
-                    <div className="rounded-2xl rounded-br-md bg-muted/70 px-3 py-2">
-                      <div className="h-3 w-56 max-w-full rounded-full bg-muted-foreground/16" />
-                    </div>
-                  </div>
-                  <div className="mt-5 h-7 w-7 shrink-0 rounded-full bg-muted/80" />
-                </div>
+            <div className="shrink-0" data-thumbnail-module-loading-composer="true">
 
-                <div
-                  className="flex gap-2"
-                  data-thumbnail-module-loading-chat-message="assistant"
-                >
-                  <div className="mt-5 h-7 w-7 shrink-0 rounded-full bg-muted/80" />
-                  <div className="max-w-[86%] space-y-1 text-left">
-                    <div className="h-2.5 w-16 rounded-full bg-muted-foreground/16" />
-                    <div
-                      className="space-y-2 rounded-2xl rounded-bl-md border border-border/60 bg-muted/55 px-3 py-2"
-                      data-thumbnail-module-loading-chat-bubble="assistant"
-                    >
-                      <div className="h-3 w-48 max-w-full rounded-full bg-muted-foreground/16" />
-                      <div className="h-3 w-32 max-w-full rounded-full bg-muted-foreground/12" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div
-                className="relative z-10 shrink-0 bg-muted/25 p-2.5"
-                data-thumbnail-module-loading-composer="true"
-                aria-hidden="true"
-              >
-                <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background px-3 py-2">
-                  <div className="h-3 flex-1 rounded-full bg-muted-foreground/12" />
-                  <div className="h-9 w-9 shrink-0 rounded-full bg-muted/80" />
-                </div>
-              </div>
+              <LoadingPreview kind="navigation" compact showHeader={false} label="썸네일 입력 영역 준비 중" />
+
             </div>
-            <span className="sr-only">
-              도우미 영역의 말풍선과 입력창을 준비하고 있습니다.
-            </span>
-          </CardContent>
-        </Card>
 
-        <Card
-          className="relative order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/72 shadow-none"
+          </div>
+
+        </section>
+
+        <section
+          className="order-1 flex min-h-0 flex-col overflow-hidden bg-card/70 p-3"
           aria-label="유튜브 썸네일 캔버스 로딩"
           data-thumbnail-module-loading-canvas="true"
           data-thumbnail-module-loading-card-glass="canvas"
+          data-thumbnail-module-loading-canvas-shell-glass="false"
+          data-thumbnail-module-loading-canvas-shell-shimmer="false"
         >
-          <span
-            className="pointer-events-none absolute inset-0 bg-muted/30"
-            aria-hidden="true"
-            data-thumbnail-module-loading-canvas-shell-glass="true"
-          />
-          <span
-            className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-foreground/5"
-            aria-hidden="true"
-            data-thumbnail-module-loading-canvas-shell-shimmer="true"
-          />
-          <CardHeader className="relative z-10 flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
-            <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
-              <span className="shrink-0 whitespace-nowrap font-semibold">
-                캔버스 편집 / PNG 내보내기
-              </span>
-            </CardTitle>
-            <div className="ml-auto hidden min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden pb-1 sm:flex">
-              <div className="h-8 w-24 shrink-0 rounded-md border border-input bg-background" />
-              <div className="h-8 w-20 shrink-0 rounded-md border border-input bg-background" />
-              <div className="h-8 w-24 shrink-0 rounded-md border border-input bg-background" />
-              <div className="h-8 w-24 shrink-0 rounded-md bg-muted/80" />
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 pt-0">
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-              <div
-                className="relative aspect-video w-full max-w-full overflow-hidden rounded-lg border border-border bg-muted/70 shadow-none"
-                data-thumbnail-module-loading-canvas-frame="true"
-                data-thumbnail-module-loading-canvas-aspect="16:9"
-              >
-                <span
-                  className="absolute inset-0 bg-background/20"
-                  aria-hidden="true"
-                  data-thumbnail-module-loading-canvas-glass="true"
-                />
-                <span
-                  className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-foreground/5"
-                  aria-hidden="true"
-                  data-thumbnail-module-loading-shimmer="true"
-                />
-              </div>
-            </div>
+
+          <h2 className="shrink-0 py-2 text-sm font-semibold">캔버스 편집 / PNG 내보내기</h2>
+
+          <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+
             <div
-              className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-6"
-              data-thumbnail-module-loading-toolbar="true"
+              className="relative aspect-video w-full max-w-full overflow-hidden rounded-lg border border-border"
+              data-thumbnail-module-loading-canvas-frame="true"
+              data-thumbnail-module-loading-canvas-aspect="16:9"
+              data-thumbnail-module-loading-canvas-glass="false"
+              data-thumbnail-module-loading-shimmer="false"
             >
-              {THUMBNAIL_MODULE_LOADING_TOOL_IDS.map((toolId) => (
-                <div
-                  key={`thumbnail-module-loading-tool-${toolId}`}
-                  className="relative h-8 overflow-hidden rounded-md border border-border/60 bg-muted/40"
-                >
-                  <span
-                    className="absolute inset-0 bg-background/10"
-                    aria-hidden="true"
-                    data-thumbnail-module-loading-tool-glass="true"
-                  />
-                  <span
-                    className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-foreground/5"
-                    aria-hidden="true"
-                    data-thumbnail-module-loading-tool-shimmer="true"
-                  />
-                </div>
-              ))}
+
+              <LoadingSurface label="썸네일 캔버스 준비 중" className="h-full">
+
+                <svg viewBox="0 0 320 180" role="img" aria-label="썸네일 미리보기" className="h-full w-full">
+
+                  <rect width="320" height="180" fill="currentColor" opacity="0.08" />
+
+                  <text x="24" y="90" fontSize="24">영상 제목</text>
+
+                </svg>
+
+              </LoadingSurface>
+
             </div>
-          </CardContent>
-        </Card>
+
+          </div>
+
+          <div
+            className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-6"
+            data-thumbnail-module-loading-toolbar="true"
+          >
+
+            {
+              THUMBNAIL_MODULE_LOADING_TOOL_IDS.map(toolId => (
+                <div
+                  key={toolId}
+                  className="h-8 overflow-hidden rounded-md border border-border/60"
+                  data-thumbnail-module-loading-tool-glass="false"
+                  data-thumbnail-module-loading-tool-shimmer="false"
+                >
+
+                  <LoadingSurface label="썸네일 도구 준비 중">
+
+                    <span className="block px-2 py-1 text-xs">편집 도구</span>
+
+                  </LoadingSurface>
+
+                </div>
+              ))
+            }
+
+          </div>
+
+        </section>
+
       </div>
-      <span className="sr-only">
-        유튜브 썸네일 페이지 구조와 캔버스, 채팅 도우미를 함께 준비하고
-        있습니다.
-      </span>
+
     </section>
   );
 }
