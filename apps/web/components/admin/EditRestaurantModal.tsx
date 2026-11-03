@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { EvaluationRecord } from '@/types/evaluation';
+import { EvaluationApprovalReasons } from './EvaluationApprovalReasons';
 import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
@@ -46,6 +47,7 @@ import { shouldNotifyRecordActionError, recordActionErrorMessage } from '@/lib/a
 import type { RecordActionReceipt, RestaurantRecordChanges } from '@/lib/admin/record-action-contract';
 import { isEvaluationRecordStatus, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
 import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
+import { adminGeocodeErrorMessage, fetchAdminGeocode, fetchAdminPlaceItems, hasValidGeocodeCoordinates } from '@/lib/admin/admin-geocode-client';
 import { parseCategoryList } from '@/lib/category-utils';
 import { RESTAURANT_CATEGORIES } from '@/constants/categories';
 import {
@@ -73,20 +75,6 @@ interface FormData {
   youtube_link: string; // 유튜브 링크 추가
 }
 
-interface NaverGeocodingResponse {
-  addresses?: Array<{
-    roadAddress: string;
-    jibunAddress: string;
-    englishAddress: string;
-    addressElements: unknown;
-    x: string;
-    y: string;
-  }>;
-  errorMessage?: string;
-}
-
-type NaverGeocodingAddress = NonNullable<NaverGeocodingResponse['addresses']>[number];
-
 interface GeocodingResult {
   road_address: string;
   jibun_address: string;
@@ -96,6 +84,7 @@ interface GeocodingResult {
   y: string;
   place_name?: string;
   place_phone?: string;
+  metadata_warning?: string;
 }
 
 interface NaverLocalSearchItem {
@@ -104,15 +93,6 @@ interface NaverLocalSearchItem {
   roadAddress?: string;
   telephone?: string;
 }
-
-interface NaverLocalSearchResponse {
-  items?: NaverLocalSearchItem[];
-}
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-  void error;
-  return fallback;
-};
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -218,6 +198,7 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
   // 선택된 지오코딩 결과
   const [selectedGeocodingIndex, setSelectedGeocodingIndex] = useState<number | null>(null);
   const [geocodingDirty, setGeocodingDirty] = useState(false);
+  const [geocodingQueried, setGeocodingQueried] = useState(false);
   const [geocodingError, setGeocodingError] = useState<string | null>(null);
 
   // 승인 확인 모달 상태
@@ -263,13 +244,13 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
         title: '네이버 Geocoding API로 검색 중...',
       });
 
-      // 1. name + 전체 주소로 지오코딩 (최대 3개)
-      const fullAddressResults = await geocodeAddressMultiple(trimmedName, trimmedAddress, 3);
+      // 1. 전체 주소로 지오코딩 (최대 3개)
+      const fullAddressResults = await geocodeAddressMultiple(trimmedAddress);
 
-      // 2. name + 주소의 시/군/구까지만 잘라서 지오코딩 (최대 3개)
+      // 2. 시/군/구 주소로 추가 조회 (최대 3개, 같은 쿼리 반복 제외)
       const shortAddress = extractCityDistrictGu(trimmedAddress);
-      const shortAddressResults = shortAddress
-        ? await geocodeAddressMultiple(trimmedName, shortAddress, 3)
+      const shortAddressResults = shortAddress && shortAddress !== trimmedAddress
+        ? await geocodeAddressMultiple(shortAddress)
         : [];
 
       // 3. 두 결과를 합치고 중복 제거 (지번 주소 기준)
@@ -278,6 +259,7 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
       const enrichedResults = await enrichGeocodingResultsWithPlaceMetadata(trimmedName, uniqueResults);
 
       if (enrichedResults.length > 0) {
+        setGeocodingQueried(true);
         setGeocodingResults(enrichedResults);
         setAddressChanged(false); // 지오코딩 성공 시 플래그 초기화
         setInitialAddress(trimmedAddress); // 새로운 주소를 초기 주소로 설정
@@ -296,7 +278,7 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
       }
     } catch (error: unknown) {
 
-      const message = getErrorMessage(error, '네이버 지오코딩에 실패했습니다');
+      const message = adminGeocodeErrorMessage(error);
       setGeocodingError(message);
       toast({
         variant: 'destructive',
@@ -312,35 +294,21 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
     const searchAddress = result.road_address || result.jibun_address;
     const query = [name, searchAddress].filter(Boolean).join(' ').trim();
 
-    if (!query) return {};
-
     try {
-      const response = await fetch('/api/naver-search', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, display: 5 }),
-      });
-      if (!response.ok) {
-
-        return {};
-      }
-
-      const data = await response.json() as NaverLocalSearchResponse;
-      const bestMatch = findBestNaverPlaceMatch(data.items || [], result);
-
-      if (!bestMatch) return {};
+      const items = await fetchAdminPlaceItems(query);
+      const bestMatch = findBestNaverPlaceMatch(items, result);
+      if (!bestMatch) return { metadata_warning: '일치하는 장소명·전화 정보를 찾지 못했습니다. 입력값을 확인해주세요.' };
 
       const placeName = sanitizeNaverPlaceTitle(bestMatch.title);
       const placePhone = (bestMatch.telephone || '').trim();
+      if (!placeName && !placePhone) return { metadata_warning: '장소명·전화 정보가 없습니다. 기존 입력값을 유지합니다.' };
 
       return {
         ...(placeName ? { place_name: placeName } : {}),
         ...(placePhone ? { place_phone: placePhone } : {}),
       };
     } catch (error) {
-
-      return {};
+      return { metadata_warning: `장소명·전화 정보 조회 실패: ${adminGeocodeErrorMessage(error)} 기존 입력값을 유지합니다.` };
     }
   };
 
@@ -371,64 +339,24 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
   const removeDuplicateAddresses = (addresses: GeocodingResult[]): GeocodingResult[] => {
     const seen = new Set<string>();
     return addresses.filter(addr => {
-      if (seen.has(addr.jibun_address)) {
-        return false;
-      }
-      seen.add(addr.jibun_address);
+      const key = addr.jibun_address.trim() || addr.road_address.trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
   };
 
   // 지오코딩 함수 (여러 개 결과 반환)
-  const geocodeAddressMultiple = async (name: string, address: string, limit: number = 3): Promise<GeocodingResult[]> => {
-    try {
-      // 주소만 사용 (이름 제외) - Geocoding API는 주소만 필요
-
-
-      // Supabase Edge Function을 통해 지오코딩 호출 (CORS 우회)
-      const { data, error } = await supabase.functions.invoke('naver-geocode', {
-        body: { query: address, count: limit }
-      });
-
-
-
-      if (error) {
-
-        throw new Error('NAVER_GEOCODE_REQUEST_FAILED');
-      }
-
-      if (!data) {
-
-        return [];
-      }
-
-      if (data.error) {
-
-        throw new Error('NAVER_GEOCODE_PROVIDER_FAILED');
-      }
-
-
-
-      if (!data.addresses || data.addresses.length === 0) {
-
-        return [];
-      }
-
-
-
-      // 최대 limit개까지만 반환
-      return data.addresses.slice(0, limit).map((addr: NaverGeocodingAddress) => ({
-        road_address: addr.roadAddress,
-        jibun_address: addr.jibunAddress,
-        english_address: addr.englishAddress,
-        address_elements: encodeJson(addr.addressElements),
-        x: addr.x,
-        y: addr.y,
-      }));
-    } catch (error) {
-
-      throw error; // 에러를 다시 throw하여 상위에서 처리
-    }
+  const geocodeAddressMultiple = async (address: string): Promise<GeocodingResult[]> => {
+    const addresses = await fetchAdminGeocode(address);
+    return addresses.map(addr => ({
+      road_address: addr.roadAddress,
+      jibun_address: addr.jibunAddress,
+      english_address: addr.englishAddress,
+      address_elements: encodeJson(addr.addressElements),
+      x: addr.x,
+      y: addr.y,
+    }));
   };
 
   const buildChanges = (forApproval = false): RestaurantRecordChanges => {
@@ -438,9 +366,15 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
     if (forApproval || formData.name.trim() !== initial.name?.trim()) changes.approved_name = formData.name.trim();
     if (formData.phone.trim() !== initial.phone?.trim()) changes.phone = formData.phone.trim() || null;
     if (forApproval || JSON.stringify(formData.categories) !== JSON.stringify(initial.categories)) changes.categories = formData.categories as RestaurantRecordChanges['categories'];
-    if (formData.youtube_link.trim() !== initial.youtube_link?.trim()) {
-      const youtube = formData.youtube_link.trim();
-      changes.youtube_link = youtube ? normalizeCanonicalYouTubeWatchUrl(youtube) || youtube : null;
+    const youtube = formData.youtube_link.trim();
+    const canonicalYoutube = normalizeCanonicalYouTubeWatchUrl(youtube);
+    if (forApproval) {
+      if (!canonicalYoutube) throw new Error('INVALID_YOUTUBE_URL');
+      // Already canonical, unchanged links need no patch; legacy spelling must reach the validator canonically.
+      if (canonicalYoutube !== youtube || youtube !== initial.youtube_link?.trim()) changes.youtube_link = canonicalYoutube;
+    } else if (youtube !== initial.youtube_link?.trim()) {
+      // Invalid input remains invalid for the guarded validator; never substitute another video.
+      changes.youtube_link = canonicalYoutube || youtube || null;
     }
     if (formData.tzuyang_review.trim() !== initial.tzuyang_review?.trim()) changes.tzuyang_review = formData.tzuyang_review.trim() || null;
     if (selected && (forApproval || geocodingDirty)) Object.assign(changes, {
@@ -558,7 +492,7 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
       const address = record.restaurant_info.naver_address_info?.jibun_address ||
         record.restaurant_info.naver_address_info?.road_address ||
         record.restaurant_info.origin_address ||
-        '';
+        (typeof record.origin_address?.address === 'string' ? record.origin_address.address : '');
 
       // 카테고리 초기값 설정
       let initialCategories: string[] = [];
@@ -608,7 +542,9 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
       setFormData(initialForm);
 
       // 기존 지오코딩 결과가 있다면 표시
-      if (record.restaurant_info.naver_address_info) {
+      if (record.geocoding_success === true && record.restaurant_info.naver_address_info
+        && hasValidGeocodeCoordinates(record.restaurant_info.naver_address_info.x, record.restaurant_info.naver_address_info.y)
+        && (record.restaurant_info.naver_address_info.jibun_address?.trim() || record.restaurant_info.naver_address_info.road_address?.trim())) {
         try {
           const existingResult: GeocodingResult = {
             road_address: record.restaurant_info.naver_address_info.road_address || '',
@@ -704,6 +640,10 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
         </DialogHeader>
 
         <fieldset disabled={loading || geocodingNaver} className="min-h-0 flex-1 space-y-4 overflow-y-auto py-4 pr-1">
+          <div className="rounded-lg border p-3">
+            <p className="text-xs text-muted-foreground">저장된 데이터의 승인 사전검사입니다. 수정한 내용은 저장 후 최신 상세 정보에서 다시 확인하세요.</p>
+            <EvaluationApprovalReasons eligibility={record?.approval_eligibility} />
+          </div>
           {/* 유튜브 링크 편집 */}
           <div className="space-y-2">
             <Label htmlFor="edit-youtube-link">YouTube 링크</Label>
@@ -812,6 +752,9 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
               placeholder="예: 서울특별시 마포구 양화로 160"
               rows={2}
             />
+            <p className="text-xs text-muted-foreground">
+              입력된 원본 주소는 검증된 위치 근거가 아닙니다. 주소·좌표를 저장해도 기존 위치 근거와 실패한 평가 항목은 재평가되지 않습니다. 별도 재검수 결과를 확인해주세요.
+            </p>
           </div>
 
           {/* 지오코딩 에러 메시지 */}
@@ -832,7 +775,7 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
                 <Label className="text-sm font-medium">
                   지오코딩 결과 ({geocodingResults.length}개)
                 </Label>
-                <Badge variant="default" className="bg-green-600">성공</Badge>
+                <Badge variant="outline">{geocodingQueried ? '주소 조회 완료' : '저장된 주소·좌표'}</Badge>
               </div>
 
               <div className="space-y-2">
@@ -846,11 +789,11 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
                       // 선택된 옵션의 주소와 네이버 장소 검색 메타데이터를 실시간 업데이트
                       setFormData(prev => ({
                         ...prev,
-                        address: result.jibun_address,
+                        address: result.jibun_address || result.road_address,
                         ...(result.place_name ? { name: result.place_name } : {}),
                         ...(result.place_phone ? { phone: result.place_phone } : {}),
                       }));
-                      setInitialAddress(result.jibun_address);
+                      setInitialAddress(result.jibun_address || result.road_address);
                       setAddressChanged(false);
                     }}
                     className={`w-full text-left p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedGeocodingIndex === index
@@ -872,6 +815,9 @@ function EditRestaurantEditor({ record: incomingRecord, open, onOpenChange, onSu
                       </div>
                     </div>
 
+                    {result.metadata_warning && (
+                      <p className="mb-2 text-sm text-amber-700 dark:text-amber-300" role="status">{result.metadata_warning}</p>
+                    )}
                     <div className="space-y-1 text-sm">
                       {result.place_name && (
                         <div>

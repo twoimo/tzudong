@@ -42,6 +42,7 @@ import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { getAdminEvaluationDisplayName, matchesAdminEvaluationSearch } from '@/lib/admin-evaluation-name';
 import { getAddressConsistencyStatus, hasUnconfirmedPublicMapLocation } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
+import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { buildCanonicalAdminEvaluationsHref, type AdminConsoleRouteModuleId } from '@/lib/admin/admin-module-routing';
 import { useRecordAction } from '@/lib/admin/use-record-action';
 import { shouldNotifyRecordActionError, recordActionErrorMessage, recordActionMediaNotice, RECORD_VIEWS_INVALIDATED_EVENT, RECORD_ACTION_APPLIED_EVENT } from '@/lib/admin/record-action-client';
@@ -825,7 +826,7 @@ function AdminEvaluationPage({
   const detailRequestsRef = useRef(new Map<string, { promise: Promise<EvaluationRecord | null>; token: symbol; epoch: number }>());
   const ensureEvaluationDetails = useCallback(async (record: EvaluationRecord): Promise<EvaluationRecord | null> => {
     if (recordViewsFenceRef.current || (!legacyEvaluationLoad && (pageReadError || pageRevisionRef.current === null))) return null;
-    if (!record.read_summary) return record;
+    if (!record.read_summary && record.approval_eligibility && record.approval_eligibility.state !== 'unknown') return record;
     const existing = detailRequestsRef.current.get(record.id);
     if (existing?.epoch === pageEpochRef.current) return existing.promise;
     const epoch = pageEpochRef.current;
@@ -1467,6 +1468,18 @@ function AdminEvaluationPage({
     const full = await ensureEvaluationDetails(record);
     if (!full) return;
     record = full;
+    // The DTO is computed before lossy normalization. It is advisory; the
+    // guarded action still performs the authoritative current-row SQL checks.
+    if (record.approval_eligibility?.state !== 'local_checks_passed') {
+      toast({
+        variant: 'destructive',
+        title: '승인 사전검사 확인 필요',
+        description: record.approval_eligibility?.state === 'blocked'
+          ? '이 항목의 승인 불가 사유를 확인하고 근거를 보완해 주세요.'
+          : '상세 정보를 다시 확인한 뒤 승인해 주세요.',
+      });
+      return;
+    }
     if (needsEvaluationRerun(record)) {
       toast({
         variant: 'destructive',
@@ -1538,8 +1551,8 @@ function AdminEvaluationPage({
       if (duplicateCheck.isDuplicate) {
 
         // 🔥 수정: 유튜브 링크 비교 로직 개선
-        const currentYoutubeLink = youtubeLink?.trim() || null;
-        const matchedYoutubeLink = duplicateCheck.matchedRestaurant?.youtube_link?.trim() || null;
+        const currentYoutubeLink = normalizeCanonicalYouTubeWatchUrl(youtubeLink);
+        const matchedYoutubeLink = normalizeCanonicalYouTubeWatchUrl(duplicateCheck.matchedRestaurant?.youtube_link);
 
 
         // 유튜브 링크가 다른 경우: 확인 모달 표시
@@ -2300,6 +2313,7 @@ function AdminEvaluationPage({
             onRegisterMissing={handleRegisterMissing}
             onResolveConflict={handleResolveConflict}
             onEdit={handleEdit}
+            onRequestDetails={async record => Boolean(await ensureEvaluationDetails(record))}
             loading={loading || recordViewsInvalidated}
             readFailed={showPageReadError}
           />
