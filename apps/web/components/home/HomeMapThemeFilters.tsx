@@ -47,7 +47,7 @@ export function HomeMapThemeFilters({
               aria-describedby={themeDescriptionId}
               title={`${theme.label}: ${theme.description}`}
               className={cn(
-                "h-auto min-h-[44px] min-w-0 max-w-full gap-1.5 whitespace-normal rounded-full border px-2.5 py-2 text-left home-map-floating-control-text text-xs font-semibold shadow-sm motion-reduce:transition-none",
+                "h-auto min-h-8 min-w-0 max-w-full gap-1.5 whitespace-normal rounded-full border px-2.5 py-1.5 text-left home-map-floating-control-text text-xs font-semibold shadow-sm motion-reduce:transition-none",
                 "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                 isSelected
                   ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"

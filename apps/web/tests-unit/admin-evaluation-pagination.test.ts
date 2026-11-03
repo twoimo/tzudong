@@ -76,7 +76,7 @@ describe('lazy evidence projection',()=>{
     const reasons=[null,'insufficient_evidence','multi_candidate','cross_country_mismatch'];
     let cases=0;
     for(const status of statuses) for(const reason of reasons) for(const geocoding of [true,false]) {
-      const raw=row(++cases,{status,geocoding_success:geocoding,reasoning_basis:'fixture basis',evaluation_results:{location_match_TF:{eval_value:geocoding,pending_reason:reason},visit_authenticity:{eval_value:1,eval_basis:'fixture basis'}}});
+      const raw=row(++cases,{status,geocoding_success:geocoding,reasoning_basis:'fixture basis',tzuyang_review:'fixture review',trace_id:'fixture trace',db_error_details:null,evaluation_results:{location_match_TF:{eval_value:geocoding,pending_reason:reason},visit_authenticity:{eval_value:1,eval_basis:'fixture basis'}}});
       const full=withAdminEvaluationDisplayName(normalizeEvaluationRecord(raw)!);
       const summary=normalizeEvaluationRecord(summarizeEvaluationRecord(raw,full))!;
       expect(getAddressConsistencyStatus(summary)).toBe(getAddressConsistencyStatus(full));

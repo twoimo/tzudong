@@ -35,13 +35,14 @@ import { ClipboardCheck, Loader2, LayoutList, MonitorPlay, RotateCcw, Search, Se
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { RECORD_CATEGORIES } from '@/lib/admin/record-action-contract';
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingSurface } from '@/components/ui/loading-surface';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { getAdminEvaluationDisplayName, matchesAdminEvaluationSearch } from '@/lib/admin-evaluation-name';
 import { getAddressConsistencyStatus, hasUnconfirmedPublicMapLocation } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
+import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { buildCanonicalAdminEvaluationsHref, type AdminConsoleRouteModuleId } from '@/lib/admin/admin-module-routing';
 import { useRecordAction } from '@/lib/admin/use-record-action';
 import { shouldNotifyRecordActionError, recordActionErrorMessage, recordActionMediaNotice, RECORD_VIEWS_INVALIDATED_EVENT, RECORD_ACTION_APPLIED_EVENT } from '@/lib/admin/record-action-client';
@@ -639,23 +640,57 @@ function AdminEvaluationStaticMobileLoadingControls() {
 
 function AdminEvaluationStaticCardSkeleton({ count }: { count: number }) {
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" aria-hidden="true">
-      {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className="rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" />
-              <div className="grid grid-cols-3 gap-1.5">
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-              </div>
-            </div>
-          </div>
+    <div className="min-h-0 flex-1 lg:hidden" aria-hidden="true">
+
+      <LoadingSurface label="검수 카드 로딩 중" className="col-span-full">
+
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+
+          {
+            Array.from({ length: count }, (_, index) => (
+              <article key={index} className="rounded-md border border-border/70 bg-card p-3">
+
+                <div className="flex items-center gap-2">
+
+                  <svg
+                    viewBox="0 0 64 48"
+                    role="img"
+                    aria-label="맛집 사진"
+                    className="h-12 w-16 shrink-0 rounded-md border"
+                  >
+
+                    <rect width="64" height="48" fill="currentColor" opacity="0.1" />
+
+                  </svg>
+
+                  <div className="min-w-0 flex-1 space-y-1.5">
+
+                    <h3 className="text-sm font-semibold">맛집 검수 항목</h3>
+
+                    <p className="text-xs">영상과 맛집 정보</p>
+
+                    <div className="grid grid-cols-3 gap-1.5 text-xs">
+
+                      <span>검수</span>
+
+                      <span>위치</span>
+
+                      <span>분류</span>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </article>
+            ))
+          }
+
         </div>
-      ))}
+
+      </LoadingSurface>
+
     </div>
   );
 }
@@ -684,64 +719,144 @@ function AdminEvaluationRouteSkeleton() {
       aria-label="관리자 데이터 검수 화면 로딩 중"
       className="flex h-full min-h-0 flex-col overflow-hidden"
     >
+
       <span className="sr-only">관리자 데이터 검수 화면의 필터, 테이블 행, 액션 영역을 불러오는 중입니다.</span>
+
       <div className="border-b border-border bg-card px-3 py-2.5">
+
         <div className="flex min-h-10 items-start justify-between gap-2.5 lg:items-center">
+
           <div className="min-w-0 flex-1">
+
             <div className="flex items-center gap-2">
+
               <AdminEvaluationTitleIcon embedded />
+
               <h1 className="truncate text-base font-semibold leading-6">관리자 데이터 검수</h1>
+
             </div>
+
             <div className="mt-0.5 truncate text-xs text-muted-foreground">
               필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중
             </div>
+
           </div>
-          <div className="flex shrink-0 items-center justify-end gap-1.5" data-admin-evaluation-view-actions="top-right">
-            <Button type="button" variant="secondary" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="리스트 뷰" aria-pressed="true">
+
+          <div
+            className="flex shrink-0 items-center justify-end gap-1.5"
+            data-admin-evaluation-view-actions="top-right"
+          >
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled
+              className="h-8 w-8 p-0 disabled:opacity-100"
+              aria-label="리스트 뷰"
+              aria-pressed="true"
+            >
+
               <LayoutList className="h-4 w-4" aria-hidden="true" />
+
               <span className="sr-only">리스트</span>
+
             </Button>
-            <Button type="button" variant="ghost" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="슬라이드 뷰" aria-pressed="false">
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled
+              className="h-8 w-8 p-0 disabled:opacity-100"
+              aria-label="슬라이드 뷰"
+              aria-pressed="false"
+            >
+
               <MonitorPlay className="h-4 w-4" aria-hidden="true" />
+
               <span className="sr-only">슬라이드</span>
+
             </Button>
+
           </div>
+
         </div>
+
       </div>
+
       <div ref={mobileCardsRef} className="flex min-h-0 flex-1 flex-col gap-3 p-2">
+
         <AdminEvaluationStaticMobileLoadingControls />
+
         <AdminEvaluationStaticCardSkeleton count={mobileCardsCount} />
-        <div ref={frameRef} className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex">
-          <div className="border-b bg-muted/35 lg:grid lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]" aria-hidden="true">
-            {Array.from({ length: 9 }).map((_, index) => (
-              <div key={index} className="px-2 py-2">
-                <Skeleton className={index === 1 ? "h-3 w-24 rounded-full motion-reduce:animate-none" : "mx-auto h-3 w-12 rounded-full motion-reduce:animate-none"} />
-              </div>
-            ))}
-          </div>
-          <div className="divide-y divide-border">
-            {Array.from({ length: rowCount }).map((_, rowIndex) => (
-              <div
-                key={rowIndex}
-                className="grid items-center gap-2 p-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
-              >
-                <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                <div className="flex min-w-0 items-center gap-2">
-                  <Skeleton className="h-10 w-14 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                    <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
+
+        <div
+          ref={frameRef}
+          className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex"
+        >
+
+          <LoadingSurface label="검수 목록 로딩 중">
+
+            <div
+              className="grid bg-muted/35 px-2 py-2 text-xs lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
+            >
+
+              {
+                ["선택", "검수 항목", "평가", "분류", "상태", "주소", "영상", "기록", "작업"].map(label => (
+                  <span key={label}>
+
+                    {label}
+
+                  </span>
+                ))
+              }
+
+            </div>
+
+            <div className="divide-y divide-border">
+
+              {
+                Array.from({ length: rowCount }, (_, index) => (
+                  <div
+                    key={index}
+                    className="grid min-h-16 items-center gap-2 p-2 text-xs lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
+                  >
+
+                    <span>선택</span>
+
+                    <div>
+
+                      <p className="text-sm font-semibold">맛집 검수 항목</p>
+
+                      <p className="mt-1">영상과 맛집 정보</p>
+
+                    </div>
+
+                    {
+                      ["평가", "분류", "상태", "주소", "영상", "기록"].map(label => (
+                        <span key={label}>
+
+                          {label}
+
+                        </span>
+                      ))
+                    }
+
+                    <span>상세 보기</span>
+
                   </div>
-                </div>
-                {Array.from({ length: 6 }).map((__, cellIndex) => (
-                  <Skeleton key={cellIndex} className="h-6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                ))}
-                <Skeleton className="h-7 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-              </div>
-            ))}
-          </div>
+                ))
+              }
+
+            </div>
+
+          </LoadingSurface>
+
         </div>
+
       </div>
+
     </div>
   );
 }
@@ -825,7 +940,7 @@ function AdminEvaluationPage({
   const detailRequestsRef = useRef(new Map<string, { promise: Promise<EvaluationRecord | null>; token: symbol; epoch: number }>());
   const ensureEvaluationDetails = useCallback(async (record: EvaluationRecord): Promise<EvaluationRecord | null> => {
     if (recordViewsFenceRef.current || (!legacyEvaluationLoad && (pageReadError || pageRevisionRef.current === null))) return null;
-    if (!record.read_summary) return record;
+    if (!record.read_summary && record.approval_eligibility && record.approval_eligibility.state !== 'unknown') return record;
     const existing = detailRequestsRef.current.get(record.id);
     if (existing?.epoch === pageEpochRef.current) return existing.promise;
     const epoch = pageEpochRef.current;
@@ -1467,6 +1582,18 @@ function AdminEvaluationPage({
     const full = await ensureEvaluationDetails(record);
     if (!full) return;
     record = full;
+    // The DTO is computed before lossy normalization. It is advisory; the
+    // guarded action still performs the authoritative current-row SQL checks.
+    if (record.approval_eligibility?.state !== 'local_checks_passed') {
+      toast({
+        variant: 'destructive',
+        title: '승인 사전검사 확인 필요',
+        description: record.approval_eligibility?.state === 'blocked'
+          ? '이 항목의 승인 불가 사유를 확인하고 근거를 보완해 주세요.'
+          : '상세 정보를 다시 확인한 뒤 승인해 주세요.',
+      });
+      return;
+    }
     if (needsEvaluationRerun(record)) {
       toast({
         variant: 'destructive',
@@ -1538,8 +1665,8 @@ function AdminEvaluationPage({
       if (duplicateCheck.isDuplicate) {
 
         // 🔥 수정: 유튜브 링크 비교 로직 개선
-        const currentYoutubeLink = youtubeLink?.trim() || null;
-        const matchedYoutubeLink = duplicateCheck.matchedRestaurant?.youtube_link?.trim() || null;
+        const currentYoutubeLink = normalizeCanonicalYouTubeWatchUrl(youtubeLink);
+        const matchedYoutubeLink = normalizeCanonicalYouTubeWatchUrl(duplicateCheck.matchedRestaurant?.youtube_link);
 
 
         // 유튜브 링크가 다른 경우: 확인 모달 표시
@@ -2300,6 +2427,7 @@ function AdminEvaluationPage({
             onRegisterMissing={handleRegisterMissing}
             onResolveConflict={handleResolveConflict}
             onEdit={handleEdit}
+            onRequestDetails={async record => Boolean(await ensureEvaluationDetails(record))}
             loading={loading || recordViewsInvalidated}
             readFailed={showPageReadError}
           />

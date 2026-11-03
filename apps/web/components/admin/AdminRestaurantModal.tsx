@@ -39,6 +39,7 @@ import { useRecordAction } from '@/lib/admin/use-record-action';
 import { shouldNotifyRecordActionError, recordActionErrorMessage, type RecordActionInput } from '@/lib/admin/record-action-client';
 import type { RecordActionReceipt, RestaurantRecordChanges } from '@/lib/admin/record-action-contract';
 import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
+import { adminGeocodeErrorMessage, fetchAdminGeocode } from '@/lib/admin/admin-geocode-client';
 import { RESTAURANT_DESTRUCTIVE_ACTION_CONFIRMATIONS } from "@/lib/admin/restaurant-destructive-action-contract";
 import { Check, Loader2, ChevronDown, X } from "lucide-react";
 import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
@@ -291,20 +292,6 @@ interface GeocodingResultItem {
     y: string;
 }
 
-interface NaverGeocodeAddressItem {
-    roadAddress: string;
-    jibunAddress: string;
-    englishAddress: string;
-    addressElements: AddressElementsValue;
-    x: string;
-    y: string;
-}
-
-interface NaverGeocodeResponse {
-    error?: string;
-    addresses?: NaverGeocodeAddressItem[];
-}
-
 export function AdminRestaurantModal(props: AdminRestaurantModalProps) {
     return props.isOpen ? <AdminRestaurantEditor {...props} /> : null;
 }
@@ -369,6 +356,7 @@ function AdminRestaurantEditor({
     const [deletedReviewIds, setDeletedReviewIds] = useState<string[]>([]); // X 버튼으로 삭제된 기존 레코드 ID 추적
     const [customCategory, setCustomCategory] = useState(""); // 커스텀 카테고리 입력용
     const [isGeocodingNaver, setIsGeocodingNaver] = useState(false);
+    const [geocodingError, setGeocodingError] = useState<string | null>(null);
     const [isGeocoded, setIsGeocoded] = useState(false); // 재지오코딩 완료 여부
     const [geocodingResults, setGeocodingResults] = useState<GeocodingResultItem[]>([]);
     const [selectedGeocodingIndex, setSelectedGeocodingIndex] = useState<number | null>(null);
@@ -411,6 +399,7 @@ function AdminRestaurantEditor({
             lng: "",
         });
         setIsGeocoded(false);
+        setGeocodingError(null);
         setGeocodingResults([]);
         setSelectedGeocodingIndex(null);
     }, []);
@@ -670,29 +659,16 @@ function AdminRestaurantEditor({
     };
 
     // 지오코딩 함수 (여러 개 결과 반환)
-    const geocodeAddressMultiple = async (name: string, address: string, limit: number = 3) => {
-        try {
-            const { data, error } = await supabase.functions.invoke('naver-geocode', {
-                body: { query: address, count: limit }
-            });
-            const geocodeData = data as NaverGeocodeResponse | null;
-
-            if (error) throw new Error('NAVER_GEOCODE_REQUEST_FAILED');
-            if (!geocodeData || geocodeData.error) throw new Error('NAVER_GEOCODE_PROVIDER_FAILED');
-            if (!geocodeData.addresses || geocodeData.addresses.length === 0) return [];
-
-            return geocodeData.addresses.slice(0, limit).map((addr) => ({
-                road_address: addr.roadAddress,
-                jibun_address: addr.jibunAddress,
-                english_address: addr.englishAddress,
-                address_elements: addr.addressElements,
-                x: addr.x,
-                y: addr.y,
-            }));
-        } catch (error) {
-
-            throw error;
-        }
+    const geocodeAddressMultiple = async (address: string) => {
+        const addresses = await fetchAdminGeocode(address);
+        return addresses.map((addr) => ({
+            road_address: addr.roadAddress,
+            jibun_address: addr.jibunAddress,
+            english_address: addr.englishAddress,
+            address_elements: addr.addressElements as AddressElementsValue,
+            x: addr.x,
+            y: addr.y,
+        }));
     };
 
     // 재지오코딩 버튼 핸들러 - 네이버
@@ -701,30 +677,28 @@ function AdminRestaurantEditor({
         const trimmedName = formData.name.trim();
 
         if (!trimmedAddress) {
-            toast.error('주소를 입력해주세요');
+            setGeocodingError('주소를 입력해주세요');
             return;
         }
 
         if (!trimmedName) {
-            toast.error('음식점명을 입력해주세요');
+            setGeocodingError('음식점명을 입력해주세요');
             return;
         }
 
         setIsGeocodingNaver(true);
+        setGeocodingError(null);
         setGeocodingResults([]);
         setSelectedGeocodingIndex(null);
         setIsGeocoded(false);
 
         try {
-            toast.info('네이버 Geocoding API로 검색 중...');
+            // 전체 주소와 기존 시/군/구 fallback을 같은 관리자 API로 조회한다.
+            const fullAddressResults = await geocodeAddressMultiple(trimmedAddress);
 
-            // 1. name + 전체 주소로 지오코딩 (최대 3개)
-            const fullAddressResults = await geocodeAddressMultiple(trimmedName, trimmedAddress, 3);
-
-            // 2. name + 시/군/구까지만 (최대 3개)
             const shortAddress = extractCityDistrictGu(trimmedAddress);
-            const shortAddressResults = shortAddress
-                ? await geocodeAddressMultiple(trimmedName, shortAddress, 3)
+            const shortAddressResults = shortAddress && shortAddress !== trimmedAddress
+                ? await geocodeAddressMultiple(shortAddress)
                 : [];
 
             // 3. 합치고 중복 제거
@@ -733,13 +707,12 @@ function AdminRestaurantEditor({
 
             if (uniqueResults.length > 0) {
                 setGeocodingResults(uniqueResults);
-                toast.success(`${uniqueResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`);
             } else {
-                toast.error('주소를 찾을 수 없습니다');
+                setGeocodingError('주소 후보를 찾지 못했습니다. 건물 주소와 지점을 확인한 뒤 다시 조회해주세요.');
             }
         } catch (error) {
-
-            toast.error('네이버 지오코딩에 실패했습니다');
+            const message = adminGeocodeErrorMessage(error);
+            setGeocodingError(message);
         } finally {
             setIsGeocodingNaver(false);
         }
@@ -974,7 +947,8 @@ function AdminRestaurantEditor({
             className={adminRestaurantFormClass}
         >
             {shouldRenderSheetFrame && adminRestaurantSheetHeader}
-            <fieldset disabled={isSubmitting || isGeocodingNaver} className={adminRestaurantBodyClass}>
+            <div className={adminRestaurantBodyClass}>
+            <fieldset disabled={isSubmitting || isGeocodingNaver} className="m-0 min-w-0 border-0 p-0">
                 <div className="space-y-4">
                     <div className="rounded-md bg-primary/5 px-3 py-2 text-sm text-foreground">
                         저장하면 지도에 반영됩니다.
@@ -1161,7 +1135,13 @@ function AdminRestaurantEditor({
                                         <Input
                                             id="searchAddress"
                                             value={formData.searchAddress}
-                                            onChange={(e) => setFormData({ ...formData, searchAddress: e.target.value })}
+                                            onChange={(e) => {
+                                                setFormData({ ...formData, searchAddress: e.target.value });
+                                                setIsGeocoded(false);
+                                                setGeocodingResults([]);
+                                                setSelectedGeocodingIndex(null);
+                                                setGeocodingError(null);
+                                            }}
                                             placeholder="서울시 강남구... or Las Vegas..."
                                             className="flex-1"
                                             autoComplete="street-address"
@@ -1184,6 +1164,7 @@ function AdminRestaurantEditor({
                                             )}
                                         </Button>
                                     </div>
+                                    {geocodingError && <p role="alert" className="text-sm text-destructive">{geocodingError}</p>}
                                     {isGeocoded && selectedGeocodingIndex !== null && (
                                         <p className="flex items-center gap-1.5 text-sm font-medium text-green-700 dark:text-green-300"><Check className="h-4 w-4" aria-hidden="true" />주소와 좌표를 선택했습니다</p>
                                     )}
@@ -1380,6 +1361,7 @@ function AdminRestaurantEditor({
                     })}
                 </div>
             </fieldset>
+            </div>
             {confirmedReceipt && <Button type="button" variant="outline" onClick={() => void refreshAfterAction(confirmedReceipt)}>현재 정보 다시 불러오기</Button>}
 
             <DialogFooter className={adminRestaurantFooterClass}>

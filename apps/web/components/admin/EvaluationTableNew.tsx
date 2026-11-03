@@ -1,5 +1,7 @@
 import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import { getEvaluationConflictTargetId } from '@/lib/admin/normalize-evaluation-record';
+import { parseApprovalEligibility } from '@/lib/admin/evaluation-approval-eligibility';
+import { EvaluationApprovalReasons } from './EvaluationApprovalReasons';
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo, memo, forwardRef } from 'react';
 import NextImage from 'next/image';
 import { EvaluationRecord } from '@/types/evaluation';
@@ -14,7 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingSurface } from '@/components/ui/loading-surface';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -306,6 +308,7 @@ interface EvaluationTableRowProps {
   record: EvaluationRecord;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  onRequestDetails?: (record: EvaluationRecord) => Promise<boolean>;
   onApprove: (record: EvaluationRecord) => void;
   onDelete: (record: EvaluationRecord) => void;
   onRestore?: (record: EvaluationRecord) => void;
@@ -325,6 +328,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
       record,
       isExpanded,
       onToggleExpand,
+      onRequestDetails,
       onApprove,
       onDelete,
       onRestore,
@@ -338,6 +342,11 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
     },
     ref
   ) {
+    const eligibility = parseApprovalEligibility(record.approval_eligibility);
+    const approvalUnknown = !eligibility || eligibility.state === 'unknown';
+    const approvalReasonsId = `evaluation-desktop-approval-${record.id}`;
+    const canApprove = eligibility?.state === 'local_checks_passed' && !needsEvaluationRerun(record) && canApproveAddressConsistencyRecord(record);
+    const requestDetails = () => { if (onRequestDetails) void onRequestDetails(record); else onToggleExpand(); };
     const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record.youtube_link);
     const videoId = extractCanonicalYouTubeVideoId(canonicalYoutubeUrl);
     const restaurantName = getAdminEvaluationDisplayName(record);
@@ -569,13 +578,15 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
                   <Button
                     size="sm"
                     className="h-8 w-8 p-0"
-                    aria-label="검수 항목 승인"
+                    aria-label={approvalUnknown ? '승인 전 상세 확인' : '검수 항목 승인'}
+                    aria-describedby={approvalReasonsId}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onApprove(record);
+                      if (approvalUnknown) requestDetails();
+                      else if (canApprove) onApprove(record);
                     }}
-                    disabled={loading || needsEvaluationRerun(record) || !canApproveAddressConsistencyRecord(record)}
-                    title={needsEvaluationRerun(record) ? '평가값/근거 확인 후 승인하세요' : '검수 항목 승인'}
+                    disabled={loading || (!approvalUnknown && !canApprove)}
+                    title={approvalUnknown ? '승인 전 상세 확인' : canApprove ? '최종 서버 검사 필요' : '승인 불가 사유 확인'}
                   >
                     <Check className="h-4 w-4" aria-hidden="true" />
                   </Button>
@@ -615,6 +626,9 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
               </>
             )}
           </div>
+          {record.status !== 'approved' && record.status !== 'deleted' && (
+            <EvaluationApprovalReasons eligibility={eligibility ?? undefined} id={approvalReasonsId} onRequestDetails={requestDetails} loading={loading} />
+          )}
 
         </TableCell>
       </TableRow>
@@ -1144,61 +1158,117 @@ export function EvaluationTable({
 
   const loadMoreSentinel = hasMore && onLoadMore ? <div ref={loadMoreSentinelRef} className="h-8" /> : null;
   const mobileLoadingCards = (
-    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" role="status" aria-busy="true" aria-label="맛집 검수 카드 로딩 중">
-      {Array.from({ length: mobileSkeletonCount }).map((_, index) => (
-        <div key={index} className="rounded-lg border bg-card p-2">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-              <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-              <div className="grid grid-cols-3 gap-1.5">
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-              </div>
-            </div>
-          </div>
+    <div className="lg:hidden" role="status" aria-busy="true" aria-label="맛집 검수 카드 로딩 중">
+
+      <LoadingSurface label="맛집 검수 카드 로딩 중" className="col-span-full">
+
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+
+          {
+            Array.from({ length: mobileSkeletonCount }, (_, index) => (
+              <article key={index} className="rounded-md border border-border/70 bg-card p-3">
+
+                <div className="flex items-center gap-2">
+
+                  <svg
+                    viewBox="0 0 64 48"
+                    role="img"
+                    aria-label="맛집 사진"
+                    className="h-12 w-16 shrink-0 rounded-md border"
+                  >
+
+                    <rect width="64" height="48" fill="currentColor" opacity="0.1" />
+
+                  </svg>
+
+                  <div className="min-w-0 flex-1 space-y-1.5">
+
+                    <h3 className="text-sm font-semibold">맛집 검수 항목</h3>
+
+                    <p className="text-xs">영상과 맛집 정보</p>
+
+                    <div className="grid grid-cols-3 gap-1.5 text-xs">
+
+                      <span>검수</span>
+
+                      <span>위치</span>
+
+                      <span>분류</span>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </article>
+            ))
+          }
+
         </div>
-      ))}
+
+      </LoadingSurface>
+
     </div>
   );
-  const desktopSkeletonMetricColumns = [
-    DESKTOP_TABLE_COLUMNS.score,
-    cn(DESKTOP_TABLE_COLUMNS.score, 'hidden lg:table-cell'),
-    cn(DESKTOP_TABLE_COLUMNS.boolean, 'hidden lg:table-cell'),
-    cn(DESKTOP_TABLE_COLUMNS.score, 'hidden lg:table-cell'),
-    DESKTOP_TABLE_COLUMNS.address,
-    cn(DESKTOP_TABLE_COLUMNS.category, 'hidden lg:table-cell'),
-    cn(DESKTOP_TABLE_COLUMNS.category, 'hidden lg:table-cell'),
-  ];
-  const desktopLoadingRows = Array.from({ length: desktopSkeletonCount }).map((_, index) => (
-    <TableRow key={`evaluation-loading-${index}`} aria-hidden="true">
-      <TableCell className={cn(DESKTOP_TABLE_COLUMNS.expander, "sticky left-0 z-10 bg-card px-2")}>
-        <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
+  const desktopLoadingRows = (
+    <TableRow>
+
+      <TableCell colSpan={11} className="p-0">
+
+        <LoadingSurface label="맛집 검수 목록 로딩 중">
+
+          <table className="w-full table-fixed text-xs">
+
+            <tbody>
+
+              {
+                Array.from({ length: desktopSkeletonCount }, (_, index) => (
+                  <tr key={index} className="h-[72px]">
+
+                    <td className={DESKTOP_TABLE_COLUMNS.expander}>선택</td>
+
+                    <td className={DESKTOP_TABLE_COLUMNS.restaurant}>
+
+                      <p className="text-sm font-semibold">맛집 검수 항목</p>
+
+                      <p className="mt-1">영상과 맛집 정보</p>
+
+                    </td>
+
+                    {
+                      [
+
+                        DESKTOP_TABLE_COLUMNS.score,
+                        cn(DESKTOP_TABLE_COLUMNS.score, 'hidden lg:table-cell'),
+                        cn(DESKTOP_TABLE_COLUMNS.boolean, 'hidden lg:table-cell'),
+                        cn(DESKTOP_TABLE_COLUMNS.score, 'hidden lg:table-cell'),
+                        DESKTOP_TABLE_COLUMNS.address,
+                        cn(DESKTOP_TABLE_COLUMNS.category, 'hidden lg:table-cell'),
+                        cn(DESKTOP_TABLE_COLUMNS.category, 'hidden lg:table-cell')
+                      ].map((columnClass, cellIndex) => (
+                        <td key={cellIndex} className={cn(columnClass, DESKTOP_METRIC_CELL)}>검토 정보</td>
+                      ))
+                    }
+
+                    <td className={DESKTOP_TABLE_COLUMNS.status}>검수 상태</td>
+
+                    <td className={DESKTOP_TABLE_COLUMNS.actions}>상세 보기</td>
+
+                  </tr>
+                ))
+              }
+
+            </tbody>
+
+          </table>
+
+        </LoadingSurface>
+
       </TableCell>
-      <TableCell className={cn(DESKTOP_TABLE_COLUMNS.restaurant, "px-3 lg:sticky lg:left-12 lg:z-10 lg:bg-card")}>
-        <div className="space-y-1.5">
-          <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-          <div className="flex items-center gap-1.5">
-            <Skeleton className="h-6 w-9 shrink-0 rounded-sm motion-reduce:animate-none" aria-hidden="true" />
-            <Skeleton className="h-2.5 min-w-0 flex-1 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-          </div>
-        </div>
-      </TableCell>
-      {desktopSkeletonMetricColumns.map((columnClass, cellIndex) => (
-        <TableCell key={cellIndex} className={cn(columnClass, DESKTOP_METRIC_CELL)}>
-          <Skeleton className="mx-auto h-5 w-8 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-        </TableCell>
-      ))}
-      <TableCell className={cn(DESKTOP_TABLE_COLUMNS.status, "sticky right-[136px] z-10 bg-card px-2 text-center")}>
-        <Skeleton className="mx-auto h-6 w-14 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-      </TableCell>
-      <TableCell className={cn(DESKTOP_TABLE_COLUMNS.actions, "sticky right-0 z-10 bg-card px-2 text-center")}>
-        <Skeleton className="mx-auto h-7 w-20 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-      </TableCell>
+
     </TableRow>
-  ));
+  );
 
   const mobileCards = (
     <>
@@ -1208,6 +1278,11 @@ export function EvaluationTable({
         const videoId = extractCanonicalYouTubeVideoId(canonicalYoutubeUrl);
         const thumbnailInfo = videoId ? thumbnailData[videoId] : null;
         const isExpanded = expandedId === record.id;
+        const eligibility = parseApprovalEligibility(record.approval_eligibility);
+        const approvalUnknown = !eligibility || eligibility.state === 'unknown';
+        const approvalReasonsId = `evaluation-mobile-approval-${record.id}`;
+        const canApprove = eligibility?.state === 'local_checks_passed' && !needsEvaluationRerun(record) && canApproveAddressConsistencyRecord(record);
+        const requestDetails = () => { if (onRequestDetails) void onRequestDetails(record); else void toggleExpand(record.id); };
         const mobileRestaurantName = getAdminEvaluationDisplayName(record);
         const mobileVideoLabel = hasAdminEvaluationYoutubeTitle(record)
           ? getAdminEvaluationVideoLabel(record)
@@ -1329,6 +1404,9 @@ export function EvaluationTable({
                 {groundingValue !== '-' && <Badge variant="outline" className={cn('admin-evaluation-signal', record.evaluation_results?.rb_grounding_TF?.eval_value === true ? 'admin-evaluation-positive' : 'admin-evaluation-negative')}>근거 {groundingValue}</Badge>}
             </div>}
 
+            {record.status !== 'approved' && record.status !== 'deleted' && (
+              <EvaluationApprovalReasons eligibility={eligibility ?? undefined} id={approvalReasonsId} onRequestDetails={requestDetails} loading={loading} />
+            )}
             <div className="mt-2 flex flex-wrap gap-1.5">
             {record.status !== 'deleted' && (record.is_missing || record.status === 'missing') && onRegisterMissing && <Button size="sm" variant="outline" className="h-11 shrink-0 rounded-lg px-2" disabled={loading} onClick={event => { event.stopPropagation(); onRegisterMissing(record); }}>누락 등록</Button>}
             {record.status !== 'deleted' && (record.status === 'db_conflict' || getEvaluationConflictTargetId(record)) && onResolveConflict && <Button size="sm" variant="outline" className="h-11 shrink-0 rounded-lg px-2" disabled={loading} onClick={event => { event.stopPropagation(); onResolveConflict(record); }}>충돌 해결</Button>}
@@ -1385,13 +1463,15 @@ export function EvaluationTable({
                       className="h-11 min-w-0 flex-1 rounded-lg"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onApprove(record);
+                        if (approvalUnknown) requestDetails();
+                        else if (canApprove) onApprove(record);
                       }}
-                      disabled={loading || needsEvaluationRerun(record) || !canApproveAddressConsistencyRecord(record)}
-                      title={needsEvaluationRerun(record) ? '평가값/근거 확인 후 승인하세요' : undefined}
+                      disabled={loading || (!approvalUnknown && !canApprove)}
+                      aria-describedby={approvalReasonsId}
+                      title={approvalUnknown ? '승인 전 상세 확인' : canApprove ? '최종 서버 검사 필요' : '승인 불가 사유 확인'}
                     >
                       <Check className="mr-1 h-3.5 w-3.5" />
-                      승인
+                      {approvalUnknown ? '상세 확인' : '승인'}
                     </Button>
                   )}
                   {onEdit && (
@@ -1765,6 +1845,7 @@ export function EvaluationTable({
                     record={record}
                     isExpanded={expandedId === record.id}
                     onToggleExpand={() => toggleExpand(record.id)}
+                    onRequestDetails={onRequestDetails}
                     onApprove={onApprove}
                     onDelete={onDelete}
                     onRestore={onRestore}
