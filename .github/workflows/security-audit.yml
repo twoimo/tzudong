@@ -320,6 +320,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           fetch-depth: 0
+          filter: blob:none
 
       - name: Verify retained provenance commits
         run: |
