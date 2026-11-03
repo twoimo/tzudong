@@ -71,7 +71,7 @@ declare global { interface Window { __usersRead: { hold: boolean; release: () =>
       try {
         await page.goto('https://users-read.test/');
         await page.addScriptTag({ content: script });
-        const metric = (label: string) => page.locator(`[data-admin-users-summary-metric="${label}"] p`).nth(1);
+        const metric = (label: string) => page.locator(`[data-admin-users-summary-metric="${label}"]`).locator(':scope > div');
         await playwrightExpect(page.getByRole('alert')).toContainText('사용자 목록을 불러오지 못했습니다. 다시 시도해 주세요.');
         await playwrightExpect(page.getByText('등록된 사용자가 없습니다.')).toHaveCount(0);
         for (const label of ['전체 사용자', '조건 일치', '현재 페이지']) await playwrightExpect(metric(label)).toHaveText('미확인');
