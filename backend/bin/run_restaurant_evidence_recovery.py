@@ -68,6 +68,13 @@ def require(test, code='binding_invalid'):
         raise RecoveryFailure(code)
 
 
+def recovery_target(channel):
+    # This queue admits only tzuyang (including verified legacy null-channel
+    # rows). General crawler registration is not recovery-queue admission.
+    require(channel == 'tzuyang', 'recovery_channel_unsupported')
+    return review_target(channel)
+
+
 def canonical_uuid(value):
     try:
         require(isinstance(value, str) and str(uuid.UUID(value)) == value, 'argument_invalid')
@@ -328,7 +335,7 @@ def run_recovery(transport, *, job_id, channel, state_dir, allow_worker_write=Fa
     A later explicit request must use its own server-authorized job identity.
     """
     canonical_uuid(job_id)
-    review_target(channel)
+    recovery_target(channel)
     require(type(allow_worker_write) is bool, 'argument_invalid')
     state_dir = Path(state_dir)
     if not allow_worker_write:
@@ -447,7 +454,7 @@ def run_next_recovery(transport, *, channel, state_dir, allow_worker_write=False
     For the parent's existing worker hook only: this creates no schedule or job.
     The SQL `next` phase is read-only and excludes running/uncertain jobs.
     """
-    review_target(channel)
+    recovery_target(channel)
     require(type(allow_worker_write) is bool, 'argument_invalid')
     token = str(uuid.uuid4())
     value = transport('next', None, token)
@@ -482,7 +489,7 @@ def main(argv=None):
         parser.add_argument('--crawling-root', type=Path)
         parser.add_argument('--node', default=shutil.which('node') or 'node')
         args = parser.parse_args(argv)
-        review_target(args.channel)
+        recovery_target(args.channel)
         if args.job_id is not None:
             canonical_uuid(args.job_id)
         transport = RestTransport(resolve_privileged_supabase_rest_credentials())

@@ -163,6 +163,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.evidence_recovery and not args.review_automation:
         print("error=recovery_requires_review_automation")
         return 2
+    if args.evidence_recovery and args.channel != 'tzuyang':
+        print("error=recovery_channel_unsupported")
+        return 2
     _load_backend_env(REPO_ROOT)
     cadence_source_preflight(REPO_ROOT)
     env_contract_preflight("hosted-pending-apply")

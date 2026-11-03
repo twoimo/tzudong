@@ -10,7 +10,7 @@ import { applyMigrationWithTerminalReadback, readOriginalStatementVector, runPsq
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 export const INSTALLATION_MANIFEST_PATH = resolve(ROOT, '.github/restaurant-evidence-recovery-installation.v1.json');
-export const INSTALLATION_MANIFEST_SHA256 = 'e141be705b10e550239c2a5d48128f80846757480dc454b5e4f76b89c6b0c48b';
+export const INSTALLATION_MANIFEST_SHA256 = '59836bde971cbc5766e2b66e5a72c98e0aa08fd62542ed49233c9ab52fd23fe8';
 const PROJECT = 'aqlcofblfxdrjhhdmarw', REPOSITORY = 'twoimo/tzudong';
 const REMOTE = 'https://github.com/twoimo/tzudong.git';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;

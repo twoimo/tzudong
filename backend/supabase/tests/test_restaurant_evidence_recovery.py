@@ -214,7 +214,8 @@ class RestaurantEvidenceRecoveryTests(unittest.TestCase):
     def confirm(self, preview, phase, connection=None):
         return self.admin_rpc(phase, preview, operation=preview['receipt']['operationId'], job=preview['jobId'],
                           preview=preview['receipt']['previewHash'],
-                          confirmation='REQUEST EVIDENCE RECOVERY' if phase == 'request' else 'APPLY EVIDENCE RECOVERY',
+                          confirmation={'request': 'REQUEST EVIDENCE RECOVERY', 'apply': 'APPLY EVIDENCE RECOVERY',
+                                        'retire': 'RETIRE STALE EVIDENCE RECOVERY'}[phase],
                           connection=connection)
 
     def worker(self, phase, job, token, result=None, connection=None):
@@ -464,6 +465,119 @@ class RestaurantEvidenceRecoveryTests(unittest.TestCase):
         self.sql('UPDATE pipeline_control.restaurant_review_policy SET version=3')
         with self.assertRaisesRegex(self.driver.Error, 'POLICY_CHANGED'):
             self.confirm(preview, 'apply')
+
+    def test_expired_apply_read_then_new_preview_keeps_one_apply_effect(self):
+        row, queued, token, result, draft = self.draft()
+        old = self.admin_rpc('preview_apply', draft, job=draft['jobId'])
+        operation = old['receipt']['operationId']
+        self.sql("UPDATE pipeline_control.admin_record_operations SET expires_at=now()-interval '1 minute',receipt=jsonb_set(receipt,'{expiresAt}',to_jsonb(now()-interval '1 minute')) WHERE id=%s", (operation,))
+        read = self.admin_rpc('read', {'restaurantId': row['id']}, operation=operation, job=draft['jobId'])
+        self.assertEqual((read['state'], read['receipt']['state']), ('draft', 'preview'))
+        self.assertIsNone(read['receipt']['auditId'])
+        with self.assertRaisesRegex(self.driver.Error, 'PREVIEW_EXPIRED'):
+            self.confirm(old, 'apply')
+        fresh = self.admin_rpc('preview_apply', draft, job=draft['jobId'])
+        self.assertNotEqual(fresh['receipt']['operationId'], operation)
+        applied = self.confirm(fresh, 'apply')
+        self.assertEqual(self.confirm(fresh, 'apply'), applied)
+        self.assertEqual(self.scalar("SELECT count(*) FROM pipeline_control.admin_record_audit WHERE action='restaurant.evidence_recovery.apply' AND target_ids=ARRAY[%s::uuid]", (row['id'],)), 1)
+
+    def test_policy_restart_retirement_preserves_paid_draft_and_allows_new_guarded_request(self):
+        row, queued, token, result, draft = self.draft()
+        original = self.row(row['id'])
+        self.sql('UPDATE pipeline_control.restaurant_review_policy SET enabled=false,version=3')
+        with self.assertRaisesRegex(self.driver.Error, 'POLICY_CHANGED'):
+            self.admin_rpc('preview_retire', draft, job=draft['jobId'])
+        self.sql('UPDATE pipeline_control.restaurant_review_policy SET enabled=true,version=4')
+        with self.assertRaisesRegex(self.driver.Error, 'POLICY_CHANGED'):
+            self.admin_rpc('preview_apply', draft, job=draft['jobId'])
+        with self.assertRaisesRegex(self.driver.Error, 'WORK_OUTSTANDING'):
+            self.context(row)
+        preview = self.admin_rpc('preview_retire', draft, job=draft['jobId'])
+        self.assertEqual(preview['receipt']['retirementPolicyVersion'], 4)
+        self.assertEqual(self.rpc('status', (self.actor, row['id']))['jobs'][0]['retireOperationId'], preview['receipt']['operationId'])
+        self.assertEqual(self.admin_rpc('read', {'restaurantId': row['id']}, operation=preview['receipt']['operationId'], job=draft['jobId']), preview)
+        self.assertEqual(self.row(row['id']), original)
+        with self.assertRaisesRegex(self.driver.Error, 'CONFIRMATION_REQUIRED'):
+            self.admin_rpc('retire', draft, operation=preview['receipt']['operationId'], job=draft['jobId'],
+                           preview=preview['receipt']['previewHash'], confirmation='APPLY EVIDENCE RECOVERY')
+        retired = self.confirm(preview, 'retire')
+        self.assertEqual((retired['state'], retired['reason']), ('failed', 'policy_changed'))
+        self.assertEqual(self.confirm(preview, 'retire'), retired)
+        self.assertEqual(self.admin_rpc('read', {'restaurantId': row['id']}, operation=preview['receipt']['operationId'], job=draft['jobId']), retired)
+        self.assertEqual(self.row(row['id']), original)
+        with self.conn.cursor() as c:
+            c.execute('SELECT worker_token,result,result_sha256,original_row,request_operation_id FROM pipeline_control.restaurant_evidence_recovery_jobs WHERE id=%s', (draft['jobId'],))
+            kept = c.fetchone()
+        self.assertEqual((str(kept[0]), kept[1], kept[2], str(kept[4])), (token, result, draft['resultSha256'], queued['receipt']['operationId']))
+        self.assertEqual(kept[3]['reasoning_basis'], original['reasoning_basis'])
+        self.assertEqual(self.scalar('SELECT before_fingerprints=after_fingerprints FROM pipeline_control.admin_record_audit WHERE operation_id=%s', (preview['receipt']['operationId'],)), True)
+        row, replacement = self.request(row)
+        self.assertNotEqual(replacement['jobId'], draft['jobId'])
+        self.assertEqual(replacement['policyVersion'], 4)
+
+    def test_retirement_requires_actual_staleness_and_policy_source_result_cas(self):
+        row, queued, token, result, draft = self.draft()
+        with self.assertRaisesRegex(self.driver.Error, 'STATE_CONFLICT'):
+            self.admin_rpc('preview_retire', draft, job=draft['jobId'])
+        self.sql("UPDATE public.restaurants SET origin_name='new source' WHERE id=%s", (row['id'],))
+        preview = self.admin_rpc('preview_retire', draft, job=draft['jobId'])
+        self.sql('UPDATE pipeline_control.restaurant_review_policy SET version=3')
+        with self.assertRaisesRegex(self.driver.Error, 'POLICY_CHANGED'):
+            self.confirm(preview, 'retire')
+        preview = self.admin_rpc('preview_retire', draft, job=draft['jobId'])
+        self.sql("UPDATE public.restaurants SET origin_name='changed after preview' WHERE id=%s", (row['id'],))
+        with self.assertRaisesRegex(self.driver.Error, 'STALE'):
+            self.confirm(preview, 'retire')
+        preview = self.admin_rpc('preview_retire', draft, job=draft['jobId'])
+        changed = copy.deepcopy(result); changed['lat'] = 38
+        self.sql('UPDATE pipeline_control.restaurant_evidence_recovery_jobs SET result=%s WHERE id=%s', (baseline.Json(changed), draft['jobId']))
+        with self.assertRaisesRegex(self.driver.Error, 'RESULT_CHANGED'):
+            self.confirm(preview, 'retire')
+        self.sql('UPDATE pipeline_control.restaurant_evidence_recovery_jobs SET result=%s WHERE id=%s', (baseline.Json(result), draft['jobId']))
+        self.assertEqual(self.confirm(preview, 'retire')['reason'], 'policy_changed')
+
+    def test_retirement_never_cancels_running_uncertain_applied_or_possibly_applied(self):
+        for state in ['running', 'uncertain', 'applied']:
+            row, queued, token, result, draft = self.draft()
+            self.sql('UPDATE pipeline_control.restaurant_evidence_recovery_jobs SET state=%s WHERE id=%s', (state, draft['jobId']))
+            self.sql('UPDATE pipeline_control.restaurant_review_policy SET version=3')
+            with self.assertRaisesRegex(self.driver.Error, 'DRAFT_REQUIRED'):
+                self.admin_rpc('preview_retire', draft, job=draft['jobId'])
+            self.sql('UPDATE pipeline_control.restaurant_review_policy SET version=2')
+        row, queued, token, result, draft = self.draft()
+        apply_preview = self.admin_rpc('preview_apply', draft, job=draft['jobId'])
+        self.sql("UPDATE pipeline_control.admin_record_operations SET state='applied' WHERE id=%s", (apply_preview['receipt']['operationId'],))
+        self.sql('UPDATE pipeline_control.restaurant_review_policy SET version=3')
+        with self.assertRaisesRegex(self.driver.Error, 'STATE_CONFLICT'):
+            self.admin_rpc('preview_retire', draft, job=draft['jobId'])
+
+    def test_retirement_protects_authorship_operator_and_other_uncertain_work(self):
+        row, queued, token, result, draft = self.draft()
+        self.sql('UPDATE pipeline_control.restaurant_review_policy SET version=3')
+        self.sql('UPDATE public.restaurants SET updated_by_admin_id=%s WHERE id=%s', (self.actor, row['id']))
+        with self.assertRaisesRegex(self.driver.Error, 'PROTECTED'):
+            self.admin_rpc('preview_retire', draft, job=draft['jobId'])
+        self.sql('UPDATE public.restaurants SET updated_by_admin_id=NULL WHERE id=%s', (row['id'],))
+        self.sql('UPDATE pipeline_control.restaurant_review_policy SET operator_id=NULL')
+        with self.assertRaisesRegex(self.driver.Error, 'POLICY_CHANGED'):
+            self.admin_rpc('preview_retire', draft, job=draft['jobId'])
+        self.sql('UPDATE pipeline_control.restaurant_review_policy SET operator_id=%s', (self.actor,))
+        self.sql("INSERT INTO pipeline_control.restaurant_review_items(restaurant_id,fingerprint,decision,reason,state) VALUES(%s,%s,'recheck','gemini_result_uncertain','failed')", (row['id'], uuid.uuid4().hex))
+        with self.assertRaisesRegex(self.driver.Error, 'WORK_OUTSTANDING'):
+            self.admin_rpc('preview_retire', draft, job=draft['jobId'])
+
+    def test_retirement_concurrent_confirm_has_one_audit_and_source_stale_reason(self):
+        row, queued, token, result, draft = self.draft()
+        self.sql("UPDATE public.restaurants SET origin_name='changed source' WHERE id=%s", (row['id'],))
+        preview = self.admin_rpc('preview_retire', draft, job=draft['jobId'])
+        connections = [self.new_connection(), self.new_connection()]
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(lambda c: self.confirm(preview, 'retire', connection=c), connections))
+        self.assertEqual(results[0], results[1])
+        self.assertEqual(results[0]['reason'], 'source_changed')
+        self.assertEqual(self.scalar('SELECT count(*) FROM pipeline_control.admin_record_audit WHERE operation_id=%s', (preview['receipt']['operationId'],)), 1)
+        self.assertEqual(self.row(row['id'])['status'], 'hold')
 
     def test_status_latest_five_actor_scoped_and_no_non_draft_proposal(self):
         row = self.held(is_missing=True)

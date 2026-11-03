@@ -18,12 +18,13 @@ async function bundle() {
     globalThis.__recovery = fixture;
     addEventListener('admin:record-action-applied', () => fixture.events++);
     const json = (body,status=200) => new Response(JSON.stringify(body), { status, headers:{'Content-Type':'application/json'} });
-    const receipt = (request,state) => ({ operationId:request.operationId, action:request.phase.includes('apply') ? 'restaurant.evidence_recovery.apply' : 'restaurant.evidence_recovery.request',
+    const receipt = (request,state) => ({ operationId:request.operationId, action:request.phase.includes('retire') ? 'restaurant.evidence_recovery.retire' : request.phase.includes('apply') ? 'restaurant.evidence_recovery.apply' : 'restaurant.evidence_recovery.request',
+      ...(request.phase.includes('retire')?{retirementPolicyVersion:3}:{}),
       state, targetIds:[id], jobId:request.jobId, auditId:state==='applied'?'44444444-4444-4444-8444-444444444444':null,
-      previewHash:'c'.repeat(64),expiresAt:new Date(Date.now()+60000).toISOString(),readback:[{id,kind:'restaurant',status:'hold',fingerprint:'a'.repeat(64)}],mediaCleanupPending:false,
+      previewHash:'c'.repeat(64),expiresAt:new Date(Date.now()+(fixture.expiredOperationId===request.operationId?-60000:60000)).toISOString(),readback:[{id,kind:'restaurant',status:'hold',fingerprint:'a'.repeat(64)}],mediaCleanupPending:false,
       policyVersion:binding.policyVersion,rowSha256:binding.rowSha256,inputSha256:binding.inputSha256,videoId:binding.videoId });
     const metadata = (request,state,reason) => ({ schemaVersion:1,jobId:request.jobId,...binding,state,reason,resultSha256:state==='draft'||state==='applied'?'d'.repeat(64):null,receipt:null });
-    const statusJob = job => ({ ...job, receipt:null, requestOperationId:job.requestOperationId,applyOperationId:job.applyOperationId??null,proposal:job.proposal??null });
+    const statusJob = job => ({ ...job, receipt:null, requestOperationId:job.requestOperationId,applyOperationId:job.applyOperationId??null,retireOperationId:job.retireOperationId??null,proposal:job.proposal??null });
     globalThis.fetch = async (url,options) => {
       if (!options?.method) {
         fixture.calls.push({phase:'GET'});
@@ -41,11 +42,23 @@ async function bundle() {
         if(fixture.mode==='lost_ack') throw new Error('synthetic lost acknowledgment');return json(result);
       }
       if(input.phase==='read') {
+        if(fixture.mode==='operation_read_fail') return json({error:'EVIDENCE_RECOVERY_UNAVAILABLE'},503);
         const job=fixture.jobs.find(j=>j.jobId===input.jobId);
         if(!job)return json({error:'EVIDENCE_RECOVERY_NOT_FOUND'},404);
+        const retiring=job.retireOperationId===input.operationId;
+        if(retiring) return json({...metadata(input,job.state,job.reason),resultSha256:job.resultSha256,receipt:receipt({...input,phase:'preview_retire'},job.state==='failed'?'applied':'preview')});
         const applying=job.applyOperationId===input.operationId;
         const state=applying&&job.state==='applied'?'applied':job.state==='preview'||applying?'preview':'applied';
         return json({...metadata(input,job.state,job.reason),resultSha256:job.resultSha256,receipt:receipt({...input,phase:applying?'preview_apply':'preview_request'},state)});
+      }
+      if(input.phase==='preview_retire') {
+        if(fixture.mode!=='policy_changed') return json({error:'EVIDENCE_RECOVERY_STATE_CONFLICT'},409);
+        const job=fixture.jobs[0];job.retireOperationId=input.operationId;
+        return json({...metadata(input,'draft','evidence_ready'),receipt:receipt(input,'preview')});
+      }
+      if(input.phase==='retire') {
+        const job=fixture.jobs[0];job.state='failed';job.reason='policy_changed';job.proposal=null;
+        return json({...metadata(input,'failed','policy_changed'),resultSha256:job.resultSha256,receipt:receipt(input,'applied')});
       }
       if(input.phase==='preview_apply') {
         const job=fixture.jobs[0];job.applyOperationId=input.operationId;
@@ -116,11 +129,75 @@ test('recovery dialog binds the source, reconciles a lost acknowledgment and app
         await pw(page.getByRole('region', { name: '보강 내용 미리보기' })).toContainText('서울시 종로구 공개 사업장');
         await page.getByRole('button', { name: '보강 내용 확인', exact: true }).click();
         await pw(page.getByRole('button', { name: '보강 근거 저장', exact: true })).toBeEnabled();
+        const expiredOperation = await page.evaluate(() => {
+          const f=(globalThis as any).__recovery; f.expiredOperationId=f.jobs[0].applyOperationId; f.mode='operation_read_fail'; return f.expiredOperationId;
+        });
+        await page.getByRole('button', { name: '닫기', exact: true }).first().click();
+        await page.getByRole('button', { name: '검수 열기' }).click();
+        await page.getByRole('button', { name: '보강 내용 확인', exact: true }).click();
+        await pw(page.getByRole('alert')).toBeVisible();
+        await page.getByRole('button', { name: '보강 내용 확인', exact: true }).click();
+        expect(await page.evaluate(() => (globalThis as any).__recovery.calls.filter((c: any) => c.phase === 'preview_apply').length)).toBe(1);
+        await page.evaluate(() => { (globalThis as any).__recovery.mode='normal'; });
+        await page.getByRole('button', { name: '보강 내용 확인', exact: true }).click();
+        await pw(page.getByText('적용되지 않은 미리보기의 만료를 확인했습니다.', { exact: false })).toBeVisible();
+        await pw(page.getByRole('button', { name: '보강 근거 저장', exact: true })).toHaveCount(0);
+        await page.getByRole('button', { name: '보강 내용 확인', exact: true }).click();
+        await pw(page.getByRole('button', { name: '보강 근거 저장', exact: true })).toBeEnabled();
+        expect(await page.evaluate(() => (globalThis as any).__recovery.jobs[0].applyOperationId)).not.toBe(expiredOperation);
         await page.getByRole('button', { name: '보강 근거 저장', exact: true }).click();
         await pw(page.getByText('보강 근거 저장 완료', { exact: true })).toBeVisible();
         await page.getByRole('button', { name: '적용 결과 확인', exact: true }).click();
         expect(await page.evaluate(() => (globalThis as any).__recovery.calls.filter((c: any) => c.phase === 'apply').length)).toBe(1);
         expect(await page.evaluate(() => (globalThis as any).__recovery.events)).toBe(1);
+        expect(outside).toBe(0); expect(errors).toEqual([]);
+      } finally { await context.close(); }
+    }
+  } finally { await browser.close(); }
+}, 60_000);
+
+test('recovery dialog retires only a reviewed stale draft and reconciles before a new request', async () => {
+  const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
+  try {
+    const script = await bundle();
+    for (const width of [1440, 390]) {
+      const context = await browser.newContext({ viewport: { width, height: 900 } });
+      try {
+        const page = await context.newPage(); page.setDefaultTimeout(8_000);
+        const errors: string[] = []; let outside = 0;
+        page.on('pageerror', error => errors.push(error.message));
+        await page.route('**/*', route => {
+          if (route.request().url() === 'https://recovery.test/admin') return route.fulfill({ contentType: 'text/html', body: '<!doctype html><html lang="ko"><body></body></html>' });
+          outside++; return route.abort();
+        });
+        await page.goto('https://recovery.test/admin'); await page.addScriptTag({ content: script });
+        const start = page.getByRole('button', { name: '근거 복구 내용 확인', exact: true });
+        await start.click(); await page.getByRole('button', { name: '근거 복구 요청', exact: true }).click();
+        await page.evaluate(() => { (globalThis as any).__recovery.draft(); });
+        await page.getByRole('button', { name: '상태 새로 조회' }).click();
+        const retire = page.getByRole('button', { name: '이전 초안 종료 검토', exact: true });
+        await retire.click();
+        await pw(page.getByRole('alert')).toBeVisible();
+        await pw(page.getByRole('button', { name: '이전 초안 종료', exact: true })).toHaveCount(0);
+        await pw(retire).toBeEnabled();
+        expect(await page.evaluate(() => (globalThis as any).__recovery.jobs[0].state)).toBe('draft');
+        await page.evaluate(() => { (globalThis as any).__recovery.mode='policy_changed'; });
+        await retire.click();
+        await pw(page.getByRole('region', { name: '근거 복구 확인' })).toContainText('수집된 근거와 처리 이력');
+        expect(await page.evaluate(() => (globalThis as any).__recovery.calls.filter((c: any) => c.phase === 'retire').length)).toBe(0);
+        await page.getByRole('button', { name: '이전 초안 종료', exact: true }).click();
+        await pw(page.getByText('이전 초안을 종료했습니다.', { exact: false })).toBeVisible();
+        await pw(start).toBeEnabled();
+        await page.getByRole('button', { name: '닫기', exact: true }).first().click();
+        await page.getByRole('button', { name: '검수 열기' }).click();
+        await page.getByRole('button', { name: '초안 종료 결과 확인', exact: true }).click();
+        await pw(start).toBeEnabled();
+        const calls = await page.evaluate(() => (globalThis as any).__recovery.calls);
+        expect(calls.filter((c: any) => c.phase === 'retire').length).toBe(1);
+        expect(calls.find((c: any) => c.phase === 'retire').confirmation).toBe('RETIRE STALE EVIDENCE RECOVERY');
+        expect(calls.filter((c: any) => c.phase === 'apply').length).toBe(0);
+        expect(calls.filter((c: any) => c.phase === 'request').length).toBe(1);
+        expect(await page.evaluate(() => (globalThis as any).__recovery.events)).toBe(0);
         expect(outside).toBe(0); expect(errors).toEqual([]);
       } finally { await context.close(); }
     }

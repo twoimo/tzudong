@@ -20,7 +20,7 @@ const oldHold = process.env.ADMIN_RECORD_MUTATIONS_HOLD;
 
 function receipt(phase: string) {
   const preview = phase.startsWith('preview_');
-  return { operationId, action: phase.includes('apply') ? 'restaurant.evidence_recovery.apply' : 'restaurant.evidence_recovery.request', state: preview ? 'preview' : 'applied', targetIds: [restaurantId], jobId, auditId: preview ? null : auditId, previewHash: 'd'.repeat(64), expiresAt: '2099-01-01T00:00:00Z', readback: [{ id: restaurantId, kind: 'restaurant', status: 'hold', fingerprint: context.rowSha256 }], mediaCleanupPending: false, policyVersion: 2, rowSha256: context.rowSha256, inputSha256: context.inputSha256, videoId: context.videoId };
+  return { operationId, action: phase.includes('retire') ? 'restaurant.evidence_recovery.retire' : phase.includes('apply') ? 'restaurant.evidence_recovery.apply' : 'restaurant.evidence_recovery.request', state: preview ? 'preview' : 'applied', targetIds: [restaurantId], jobId, auditId: preview ? null : auditId, previewHash: 'd'.repeat(64), expiresAt: '2099-01-01T00:00:00Z', readback: [{ id: restaurantId, kind: 'restaurant', status: 'hold', fingerprint: context.rowSha256 }], mediaCleanupPending: false, policyVersion: 2, rowSha256: context.rowSha256, inputSha256: context.inputSha256, videoId: context.videoId, ...(phase.includes('retire') ? { retirementPolicyVersion: 3 } : {}) };
 }
 mock.module('@/lib/auth/require-admin', () => ({ requireAdmin: async () => allowed ? { ok: true, userId: actor } : { ok: false, response: new Response(null, { status: 403 }) } }));
 mock.module('@/lib/supabase/service-role', () => ({ createSupabaseServiceRoleClient: () => ({ rpc: async (name: string, args: Record<string, unknown>) => {
@@ -29,7 +29,7 @@ mock.module('@/lib/supabase/service-role', () => ({ createSupabaseServiceRoleCli
   if (name === 'restaurant_evidence_recovery_status') return { data: statusResult, error: null };
   if (name === 'restaurant_evidence_recovery_context') return { data: context, error: contextError };
   const phase = String(args.p_phase);
-  return { data: { ...base, jobId: responseWrongJob ? auditId : jobId, state: phase === 'preview_request' ? 'preview' : phase === 'request' ? 'queued' : phase === 'apply' ? 'applied' : 'draft', reason: 'fixture', receipt: receipt(phase) }, error: null };
+  return { data: { ...base, jobId: responseWrongJob ? auditId : jobId, state: phase === 'preview_request' ? 'preview' : phase === 'request' ? 'queued' : phase === 'apply' ? 'applied' : phase === 'retire' ? 'failed' : 'draft', reason: phase === 'retire' ? 'policy_changed' : 'fixture', receipt: receipt(phase) }, error: null };
 } }) }));
 const { GET, POST } = await import('@/app/api/admin/evaluations/recovery/route');
 const get = () => new Request(`http://127.0.0.1:18794/api/admin/evaluations/recovery?restaurantId=${restaurantId}`);
@@ -37,7 +37,7 @@ const post = (body: unknown, origin = 'http://127.0.0.1:18794') => new Request('
 beforeEach(() => {
   allowed = true; contextError = null; databaseError = null; responseWrongJob = false; calls.length = 0;
   process.env.ADMIN_RECORD_MUTATIONS_HOLD = 'cleared';
-  statusResult = { schemaVersion: 1, restaurantId, jobs: [{ ...base, state: 'draft', reason: 'evidence_ready', receipt: null, requestOperationId: jobId, applyOperationId: null, proposal }] };
+  statusResult = { schemaVersion: 1, restaurantId, jobs: [{ ...base, state: 'draft', reason: 'evidence_ready', receipt: null, requestOperationId: jobId, applyOperationId: null, retireOperationId: null, proposal }] };
 });
 afterAll(() => { if (oldHold === undefined) delete process.env.ADMIN_RECORD_MUTATIONS_HOLD; else process.env.ADMIN_RECORD_MUTATIONS_HOLD = oldHold; mock.restore(); });
 
@@ -88,7 +88,7 @@ describe('source-bound held evidence recovery route', () => {
   });
 
   test('rejects diagnostics or sensitive facts before displaying or applying a draft', async () => {
-    statusResult = { schemaVersion: 1, restaurantId, jobs: [{ ...base, state: 'draft', reason: 'evidence_ready', receipt: null, requestOperationId: jobId, applyOperationId: null, proposal: { ...proposal, evaluation_results: { visit_authenticity: { eval_value: 1, eval_basis: 'private@example.com' } } } }] };
+    statusResult = { schemaVersion: 1, restaurantId, jobs: [{ ...base, state: 'draft', reason: 'evidence_ready', receipt: null, requestOperationId: jobId, applyOperationId: null, retireOperationId: null, proposal: { ...proposal, evaluation_results: { visit_authenticity: { eval_value: 1, eval_basis: 'private@example.com' } } } }] };
     for (const response of [await GET(get()), await POST(post({ ...binding, phase: 'preview_apply' }))]) {
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'EVIDENCE_RECOVERY_PRIVACY_UNSAFE' });
@@ -97,7 +97,7 @@ describe('source-bound held evidence recovery route', () => {
   });
 
   test('a confirmed applied operation can be reconciled without a new draft or write identity', async () => {
-    statusResult = { schemaVersion: 1, restaurantId, jobs: [{ ...base, state: 'applied', reason: 'evidence_applied', receipt: null, requestOperationId: jobId, applyOperationId: operationId, proposal: null }] };
+    statusResult = { schemaVersion: 1, restaurantId, jobs: [{ ...base, state: 'applied', reason: 'evidence_applied', receipt: null, requestOperationId: jobId, applyOperationId: operationId, retireOperationId: null, proposal: null }] };
     const response = await POST(post({ ...binding, phase: 'apply', previewHash: 'd'.repeat(64), confirmation: RECOVERY_CONFIRMATIONS.apply }));
     expect(response.status).toBe(200);
     expect(calls).toHaveLength(2);
@@ -117,5 +117,30 @@ describe('source-bound held evidence recovery route', () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: 'EVIDENCE_RECOVERY_UNAVAILABLE' });
     expect(calls).toHaveLength(1);
+  });
+
+  test('explicit stale-draft retirement uses a separate confirmation and policy-bound receipt', async () => {
+    expect((await POST(post({ ...binding, phase: 'preview_retire' }))).status).toBe(200);
+    calls.length = 0;
+    expect((await POST(post({ ...binding, phase: 'retire', previewHash: 'd'.repeat(64), confirmation: RECOVERY_CONFIRMATIONS.apply }))).status).toBe(400);
+    expect(calls).toHaveLength(0);
+    const response = await POST(post({ ...binding, phase: 'retire', previewHash: 'd'.repeat(64), confirmation: RECOVERY_CONFIRMATIONS.retire }));
+    expect(response.status).toBe(200);
+    const job = await response.json();
+    expect(job.state).toBe('failed');
+    expect(job.receipt.action).toBe('restaurant.evidence_recovery.retire');
+    expect(job.receipt.retirementPolicyVersion).toBe(3);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args.p_phase).toBe('retire');
+  });
+
+  test('policy and unknown retirement failures do not execute any follow-up request', async () => {
+    for (const message of ['EVIDENCE_RECOVERY_POLICY_CHANGED', 'private-unknown-error']) {
+      calls.length = 0; databaseError = { message };
+      const response = await POST(post({ ...binding, phase: 'preview_retire' }));
+      expect(response.status).toBe(message.includes('POLICY_CHANGED') ? 409 : 503);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].args.p_phase).toBe('preview_retire');
+    }
   });
 });

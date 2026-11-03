@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const EVALUATION_RECOVERY_ENDPOINT = '/api/admin/evaluations/recovery';
-export const RECOVERY_CONFIRMATIONS = { request: 'REQUEST EVIDENCE RECOVERY', apply: 'APPLY EVIDENCE RECOVERY' } as const;
+export const RECOVERY_CONFIRMATIONS = { request: 'REQUEST EVIDENCE RECOVERY', apply: 'APPLY EVIDENCE RECOVERY', retire: 'RETIRE STALE EVIDENCE RECOVERY' } as const;
 const uuid = z.uuid();
 const sha = z.string().regex(/^[a-f0-9]{64}$/);
 const version = z.union([z.number().int().positive().safe(), z.string().regex(/^[1-9][0-9]{0,18}$/)]);
@@ -24,13 +24,14 @@ export const RecoveryProposalSchema = z.strictObject({
 });
 export type RecoveryProposal = z.infer<typeof RecoveryProposalSchema>;
 
-const actions = z.enum(['restaurant.evidence_recovery.request', 'restaurant.evidence_recovery.apply']);
+const actions = z.enum(['restaurant.evidence_recovery.request', 'restaurant.evidence_recovery.apply', 'restaurant.evidence_recovery.retire']);
 export const RecoveryReceiptSchema = z.strictObject({
   operationId: uuid, action: actions, state: z.enum(['preview', 'applied']), targetIds: z.array(uuid).length(1),
   jobId: uuid, auditId: uuid.nullable(), previewHash: sha, expiresAt: date,
   readback: z.array(z.strictObject({ id: uuid, kind: z.literal('restaurant'), status: z.string().max(64), fingerprint: sha })).length(1),
   mediaCleanupPending: z.literal(false), policyVersion: version, rowSha256: sha, inputSha256: sha, videoId: video,
-});
+  retirementPolicyVersion: version.optional(),
+}).refine(receipt => (receipt.action === 'restaurant.evidence_recovery.retire') === (receipt.retirementPolicyVersion !== undefined));
 export const RecoveryJobSchema = z.strictObject({
   schemaVersion: z.literal(1), jobId: uuid, state: z.enum(['preview', 'queued', 'running', 'draft', 'applied', 'failed', 'uncertain']),
   reason: z.string().regex(/^[a-z_]{1,64}$/), ...binding, videoId: video, resultSha256: sha.nullable(),
@@ -40,13 +41,13 @@ export type RecoveryJob = z.infer<typeof RecoveryJobSchema>;
 export const RecoveryStatusSchema = z.strictObject({
   schemaVersion: z.literal(1), restaurantId: uuid,
   jobs: z.array(RecoveryJobSchema.extend({
-    requestOperationId: uuid, applyOperationId: uuid.nullable(), proposal: RecoveryProposalSchema.nullable(),
+    requestOperationId: uuid, applyOperationId: uuid.nullable(), retireOperationId: uuid.nullable(), proposal: RecoveryProposalSchema.nullable(),
   })).max(5),
 });
 export type RecoveryStatus = z.infer<typeof RecoveryStatusSchema>;
 
 export const RecoveryRequestSchema = z.strictObject({
-  phase: z.enum(['preview_request', 'request', 'read', 'preview_apply', 'apply']),
+  phase: z.enum(['preview_request', 'request', 'read', 'preview_apply', 'apply', 'preview_retire', 'retire']),
   operationId: uuid, jobId: uuid, restaurantId: uuid,
   policyVersion: version.optional(), rowSha256: sha.optional(), inputSha256: sha.optional(),
   previewHash: sha.optional(), confirmation: z.string().max(64).optional(),
@@ -56,7 +57,7 @@ export const RecoveryRequestSchema = z.strictObject({
     return;
   }
   if (value.policyVersion === undefined || !value.rowSha256 || !value.inputSha256) ctx.addIssue({ code: 'custom', message: 'binding_required' });
-  if (value.phase === 'preview_request' || value.phase === 'preview_apply') {
+  if (value.phase === 'preview_request' || value.phase === 'preview_apply' || value.phase === 'preview_retire') {
     if (value.previewHash !== undefined || value.confirmation !== undefined) ctx.addIssue({ code: 'custom', message: 'preview_only' });
   } else if (!value.previewHash || value.confirmation !== RECOVERY_CONFIRMATIONS[value.phase]) {
     ctx.addIssue({ code: 'custom', message: 'confirmation_required' });
@@ -77,6 +78,22 @@ export const RECOVERY_ERROR_CODES = [
 export type RecoveryErrorCode = typeof RECOVERY_ERROR_CODES[number];
 export const RecoveryViewSchema = RecoveryStatusSchema.extend({ context: RecoveryContextSchema.nullable(), contextError: z.enum(RECOVERY_ERROR_CODES).nullable() });
 export type RecoveryView = z.infer<typeof RecoveryViewSchema>;
+
+/** Only a successful, identity-bound read can release an expired preview.
+ * Missing/failed reads and any applied/uncertain state preserve the old identity.
+ */
+export function canRenewRecoveryPreview(job: RecoveryStatus['jobs'][number], read: RecoveryJob | undefined,
+  action: 'apply' | 'retire', now = Date.now()): boolean {
+  const operationId = action === 'apply' ? job.applyOperationId : job.retireOperationId;
+  const receipt = read?.receipt;
+  return Boolean(operationId && receipt && receipt.operationId === operationId && receipt.state === 'preview'
+    && receipt.action === `restaurant.evidence_recovery.${action}` && receipt.auditId === null
+    && Date.parse(receipt.expiresAt) <= now && job.state === 'draft' && read?.state === 'draft'
+    && receipt.jobId === job.jobId && receipt.targetIds[0] === job.restaurantId && job.resultSha256
+    && read.jobId === job.jobId && read.restaurantId === job.restaurantId && read.videoId === job.videoId && read.resultSha256 === job.resultSha256
+    && read.rowSha256 === job.rowSha256 && read.inputSha256 === job.inputSha256
+    && String(read.policyVersion) === String(job.policyVersion));
+}
 
 export function parseRecoveryJob(value: unknown, expected: { jobId: string; restaurantId: string; operationId?: string }): RecoveryJob {
   const job = RecoveryJobSchema.parse(value);

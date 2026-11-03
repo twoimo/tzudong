@@ -76,6 +76,29 @@ class RecoveryPipelineBudgetTests(unittest.TestCase):
             self.assertEqual(runner.main(['--evidence-recovery']), 2)
         load.assert_not_called()
 
+    def test_unsupported_recovery_channel_stops_before_environment_or_any_work(self):
+        for dry in (False, True):
+            args = ['--review-automation', '--evidence-recovery', '--channel', 'meatcreator']
+            if dry:
+                args.append('--dry-run')
+            with self.subTest(dry=dry), patch.object(runner, '_load_backend_env') as load, \
+                    patch.object(runner, '_recovery_reserved_slot') as recovery_run, \
+                    patch.object(runner, '_run') as command, contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(runner.main(args), 2)
+            load.assert_not_called()
+            recovery_run.assert_not_called()
+            command.assert_not_called()
+
+    def test_general_other_channel_pipeline_keeps_its_existing_dry_run(self):
+        with patch.object(runner, '_load_backend_env'), patch.object(runner, 'cadence_source_preflight'), \
+                patch.object(runner, 'env_contract_preflight'), patch.object(runner, '_apply_local_runtime_environment'), \
+                patch.object(runner, '_recovery_reserved_slot') as recovery_run, \
+                patch.object(runner, '_run', return_value=0) as commands, contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(runner.main(['--channel', 'meatcreator', '--dry-run']), 0)
+        recovery_run.assert_not_called()
+        evaluate = next(call.args[0] for call in commands.call_args_list if call.args[0][1] == str(runner.EVALUATE))
+        self.assertEqual(evaluate[evaluate.index('--channel') + 1], 'meatcreator')
+
 
 if __name__ == '__main__':
     unittest.main()

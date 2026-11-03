@@ -87,13 +87,16 @@ export async function POST(request: Request) {
     if (result.error) return failed(fixedCode(result.error));
     const job = parseRecoveryJob(result.data, input);
     if (input.phase !== 'read') {
-      const preview = input.phase === 'preview_request' || input.phase === 'preview_apply';
-      const action = input.phase === 'preview_request' || input.phase === 'request' ? 'restaurant.evidence_recovery.request' : 'restaurant.evidence_recovery.apply';
+      const preview = input.phase.startsWith('preview_');
+      const action = input.phase === 'preview_request' || input.phase === 'request' ? 'restaurant.evidence_recovery.request'
+        : input.phase === 'preview_retire' || input.phase === 'retire' ? 'restaurant.evidence_recovery.retire' : 'restaurant.evidence_recovery.apply';
       if (!job.receipt || job.receipt.action !== action || job.receipt.state !== (preview ? 'preview' : 'applied')
         || (input.previewHash && job.receipt.previewHash !== input.previewHash)
         || String(job.policyVersion) !== String(input.policyVersion) || job.rowSha256 !== input.rowSha256 || job.inputSha256 !== input.inputSha256
         || (input.phase === 'apply' && job.state !== 'applied')
         || (input.phase === 'preview_apply' && job.state !== 'draft')
+        || (input.phase === 'preview_retire' && job.state !== 'draft')
+        || (input.phase === 'retire' && (job.state !== 'failed' || !['source_changed', 'policy_changed'].includes(job.reason)))
         || (input.phase === 'preview_request' && job.state !== 'preview')
         || (preview ? job.receipt.auditId !== null : job.receipt.auditId === null)) return failed('EVIDENCE_RECOVERY_UNAVAILABLE');
     }

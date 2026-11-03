@@ -192,14 +192,15 @@ CREATE FUNCTION public.restaurant_evidence_recovery_admin(
 <<recovery_admin>>
 DECLARE job pipeline_control.restaurant_evidence_recovery_jobs; op pipeline_control.admin_record_operations;
  row_value jsonb; expected jsonb; after_state jsonb; payload jsonb; digest text; action text; receipt jsonb;
- audit uuid; is_request boolean; changed public.restaurants; prior jsonb;
+ audit uuid; is_request boolean; is_retire boolean; changed public.restaurants; prior jsonb;
+ policy pipeline_control.restaurant_review_policy; retirement_version bigint; retirement_reason text;
 BEGIN
  IF current_user<>'service_role' THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_FORBIDDEN' USING ERRCODE='42501'; END IF;
  PERFORM pipeline_control.assert_restaurant_review_operator(p_actor);
  IF p_phase='read' THEN
   SELECT * INTO job FROM pipeline_control.restaurant_evidence_recovery_jobs WHERE id=p_job_id AND actor=p_actor;
   SELECT o.* INTO op FROM pipeline_control.admin_record_operations o WHERE o.id=p_operation_id AND o.actor=p_actor
-    AND o.action IN ('restaurant.evidence_recovery.request','restaurant.evidence_recovery.apply');
+    AND o.action IN ('restaurant.evidence_recovery.request','restaurant.evidence_recovery.apply','restaurant.evidence_recovery.retire');
   IF job.id IS NULL AND op.id IS NULL THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_NOT_FOUND'; END IF;
   IF op.id IS NOT NULL AND (op.target_ids IS DISTINCT FROM ARRAY[p_restaurant_id] OR
     op.receipt->>'jobId' IS DISTINCT FROM p_job_id::text) THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_IDEMPOTENCY_CONFLICT'; END IF;
@@ -209,22 +210,27 @@ BEGIN
   job.input_sha256:=op.receipt->>'inputSha256';job.video_id:=op.receipt->>'videoId';
   RETURN pipeline_control.evidence_recovery_metadata(job,op.receipt);
  END IF;
- IF p_phase IS NULL OR p_phase NOT IN ('preview_request','request','preview_apply','apply') OR
+ IF p_phase IS NULL OR p_phase NOT IN ('preview_request','request','preview_apply','apply','preview_retire','retire') OR
    p_operation_id IS NULL OR p_job_id IS NULL OR p_restaurant_id IS NULL OR p_policy_version IS NULL OR
    coalesce(p_row_sha256,'') !~ '^[a-f0-9]{64}$' OR coalesce(p_input_sha256,'') !~ '^[a-f0-9]{64}$'
  THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_INVALID_PAYLOAD'; END IF;
  is_request:=p_phase IN ('preview_request','request');
- action:=CASE WHEN is_request THEN 'restaurant.evidence_recovery.request' ELSE 'restaurant.evidence_recovery.apply' END;
+ is_retire:=p_phase IN ('preview_retire','retire');
+ action:=CASE WHEN is_request THEN 'restaurant.evidence_recovery.request' WHEN is_retire THEN 'restaurant.evidence_recovery.retire' ELSE 'restaurant.evidence_recovery.apply' END;
  IF p_phase LIKE 'preview_%' THEN
   IF p_preview_hash IS NOT NULL OR p_confirmation IS NOT NULL THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_INVALID_PAYLOAD'; END IF;
- ELSIF p_confirmation IS DISTINCT FROM (CASE WHEN is_request THEN 'REQUEST EVIDENCE RECOVERY' ELSE 'APPLY EVIDENCE RECOVERY' END)
+ ELSIF p_confirmation IS DISTINCT FROM (CASE WHEN is_request THEN 'REQUEST EVIDENCE RECOVERY' WHEN is_retire THEN 'RETIRE STALE EVIDENCE RECOVERY' ELSE 'APPLY EVIDENCE RECOVERY' END)
    OR coalesce(p_preview_hash,'') !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_CONFIRMATION_REQUIRED'; END IF;
- PERFORM 1 FROM pipeline_control.restaurant_review_policy WHERE singleton FOR UPDATE;
+ SELECT * INTO policy FROM pipeline_control.restaurant_review_policy WHERE singleton FOR UPDATE;
  LOCK TABLE public.restaurants IN SHARE ROW EXCLUSIVE MODE;
  SELECT * INTO job FROM pipeline_control.restaurant_evidence_recovery_jobs WHERE id=p_job_id FOR UPDATE;
  SELECT * INTO op FROM pipeline_control.admin_record_operations WHERE id=p_operation_id FOR UPDATE;
  payload:=jsonb_build_object('schemaVersion',1,'jobId',p_job_id,'restaurantId',p_restaurant_id,'policyVersion',p_policy_version,
   'rowSha256',p_row_sha256,'inputSha256',p_input_sha256,'resultSha256',CASE WHEN is_request THEN NULL ELSE job.result_sha256 END);
+ IF is_retire THEN
+  retirement_version:=CASE WHEN op.id IS NULL THEN policy.version ELSE (op.receipt->>'retirementPolicyVersion')::bigint END;
+  payload:=payload||jsonb_build_object('retirementPolicyVersion',retirement_version);
+ END IF;
  digest:=pipeline_control.admin_record_hash(payload);
  IF op.id IS NOT NULL THEN
   IF op.actor IS DISTINCT FROM p_actor OR op.action IS DISTINCT FROM action OR op.target_ids IS DISTINCT FROM ARRAY[p_restaurant_id]
@@ -239,8 +245,26 @@ BEGIN
    OR job.input_sha256 IS DISTINCT FROM p_input_sha256) THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_IDEMPOTENCY_CONFLICT'; END IF;
  IF is_request AND job.id IS NOT NULL THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_JOB_EXISTS'; END IF;
  IF NOT is_request AND (job.id IS NULL OR job.state<>'draft' OR job.result_sha256 IS NULL) THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_DRAFT_REQUIRED'; END IF;
- row_value:=pipeline_control.evidence_recovery_guard(p_actor,p_restaurant_id,p_policy_version,p_row_sha256,p_input_sha256,
-   CASE WHEN is_request THEN NULL ELSE p_job_id END);
+ IF is_retire THEN
+  -- A completed, confirmed draft only. Preserve paid work; never adopt a
+  -- running/uncertain/applied job or disguise a successful evidence apply.
+  IF retirement_version IS DISTINCT FROM policy.version THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_POLICY_CHANGED'; END IF;
+  SELECT to_jsonb(r) INTO row_value FROM public.restaurants r WHERE r.id=p_restaurant_id;
+  row_value:=pipeline_control.evidence_recovery_guard(p_actor,p_restaurant_id,policy.version,
+    pipeline_control.admin_record_hash(row_value),pipeline_control.evidence_recovery_input_sha(row_value),p_job_id);
+  IF EXISTS(SELECT 1 FROM pipeline_control.admin_record_operations o WHERE o.target_ids=ARRAY[p_restaurant_id]
+    AND o.action='restaurant.evidence_recovery.apply' AND o.receipt->>'jobId'=p_job_id::text
+    AND (o.state='applied' OR o.receipt->>'state'='applied'
+      OR EXISTS(SELECT 1 FROM pipeline_control.admin_record_audit a WHERE a.operation_id=o.id)))
+  THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_STATE_CONFLICT'; END IF;
+  retirement_reason:=CASE WHEN job.policy_version IS DISTINCT FROM policy.version THEN 'policy_changed'
+    WHEN job.row_sha256 IS DISTINCT FROM pipeline_control.admin_record_hash(row_value)
+      OR job.input_sha256 IS DISTINCT FROM pipeline_control.evidence_recovery_input_sha(row_value) THEN 'source_changed' END;
+  IF retirement_reason IS NULL THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_STATE_CONFLICT'; END IF;
+ ELSE
+  row_value:=pipeline_control.evidence_recovery_guard(p_actor,p_restaurant_id,p_policy_version,p_row_sha256,p_input_sha256,
+    CASE WHEN is_request THEN NULL ELSE p_job_id END);
+ END IF;
  expected:=pipeline_control.admin_record_snapshot('restaurant.edit',ARRAY[p_restaurant_id]);
  IF op.id IS NOT NULL AND op.expected IS DISTINCT FROM expected THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_STALE'; END IF;
  IF NOT is_request THEN
@@ -254,6 +278,8 @@ BEGIN
    'expiresAt',clock_timestamp()+interval '15 minutes','readback',pipeline_control.admin_record_readback(expected),'mediaCleanupPending',false,
    'policyVersion',p_policy_version,'rowSha256',p_row_sha256,'inputSha256',p_input_sha256,
    'videoId',public.extract_youtube_video_id(row_value->>'youtube_link'));
+   IF is_retire THEN receipt:=receipt||jsonb_build_object('retirementPolicyVersion',retirement_version,
+    'videoId',job.video_id); END IF;
    INSERT INTO pipeline_control.admin_record_operations(id,actor,action,target_ids,payload_sha,expected,preview_hash,expires_at,state,receipt)
    VALUES(p_operation_id,p_actor,action,ARRAY[p_restaurant_id],digest,expected,receipt->>'previewHash',(receipt->>'expiresAt')::timestamptz,'preview',receipt);
   ELSE receipt:=op.receipt; END IF;
@@ -276,6 +302,9 @@ BEGIN
       'source_type','is_missing','is_not_selected','evaluation_results','geocoding_success','geocoding_false_stage',
       'lat','lng','road_address','jibun_address','english_address','address_elements','categories'])),
     p_operation_id,'queued','queued') RETURNING * INTO job;
+ ELSIF is_retire THEN
+  UPDATE pipeline_control.restaurant_evidence_recovery_jobs SET state='failed',reason=retirement_reason,finished_at=clock_timestamp()
+   WHERE id=p_job_id RETURNING * INTO job;
  ELSE
   prior:=row_value;
   changed:=jsonb_populate_record(NULL::public.restaurants,row_value||(job.result-'gemini_decision'));
@@ -296,6 +325,7 @@ BEGIN
    WHERE id=p_job_id RETURNING * INTO job;
  END IF;
  after_state:=pipeline_control.admin_record_snapshot('restaurant.edit',ARRAY[p_restaurant_id]);
+ IF is_retire AND after_state IS DISTINCT FROM expected THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_READBACK_FAILED'; END IF;
  audit:=gen_random_uuid();
  INSERT INTO pipeline_control.admin_record_audit(id,operation_id,actor,action,target_ids,payload_sha,before_fingerprints,after_fingerprints)
   VALUES(audit,p_operation_id,p_actor,action,ARRAY[p_restaurant_id],digest,expected,after_state);
@@ -391,7 +421,7 @@ END $$;
 CREATE FUNCTION public.restaurant_evidence_recovery_status(p_actor uuid,p_restaurant_id uuid)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY INVOKER SET search_path='' AS $$
 DECLARE jobs jsonb:='[]'; job pipeline_control.restaurant_evidence_recovery_jobs;
- apply_id uuid; metadata jsonb; entry record; op pipeline_control.admin_record_operations;
+ apply_id uuid; retire_id uuid; metadata jsonb; entry record; op pipeline_control.admin_record_operations;
 BEGIN
  IF current_user<>'service_role' THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_FORBIDDEN' USING ERRCODE='42501'; END IF;
  PERFORM pipeline_control.assert_restaurant_review_operator(p_actor);
@@ -411,7 +441,7 @@ BEGIN
    job:=NULL;job.id:=(op.receipt->>'jobId')::uuid;job.restaurant_id:=p_restaurant_id;
    job.state:='preview';job.reason:='request_preview';job.policy_version:=(op.receipt->>'policyVersion')::bigint;
    job.row_sha256:=op.receipt->>'rowSha256';job.input_sha256:=op.receipt->>'inputSha256';job.video_id:=op.receipt->>'videoId';
-   metadata:=pipeline_control.evidence_recovery_metadata(job)||jsonb_build_object('requestOperationId',op.id,'applyOperationId',NULL,'proposal',NULL);
+   metadata:=pipeline_control.evidence_recovery_metadata(job)||jsonb_build_object('requestOperationId',op.id,'applyOperationId',NULL,'retireOperationId',NULL,'proposal',NULL);
    jobs:=jobs||jsonb_build_array(metadata);
    CONTINUE;
   END IF;
@@ -419,8 +449,11 @@ BEGIN
   SELECT o.id INTO apply_id FROM pipeline_control.admin_record_operations o
    WHERE o.actor=p_actor AND o.action='restaurant.evidence_recovery.apply' AND o.receipt->>'jobId'=job.id::text
     AND o.target_ids=ARRAY[p_restaurant_id] ORDER BY o.created_at DESC,o.id DESC LIMIT 1;
+  SELECT o.id INTO retire_id FROM pipeline_control.admin_record_operations o
+   WHERE o.actor=p_actor AND o.action='restaurant.evidence_recovery.retire' AND o.receipt->>'jobId'=job.id::text
+    AND o.target_ids=ARRAY[p_restaurant_id] ORDER BY o.created_at DESC,o.id DESC LIMIT 1;
   metadata:=pipeline_control.evidence_recovery_metadata(job)||
-   jsonb_build_object('requestOperationId',job.request_operation_id,'applyOperationId',apply_id,'proposal',NULL);
+   jsonb_build_object('requestOperationId',job.request_operation_id,'applyOperationId',apply_id,'retireOperationId',retire_id,'proposal',NULL);
   IF job.state='draft' THEN
    IF pipeline_control.admin_record_hash(job.result) IS DISTINCT FROM job.result_sha256 THEN RAISE EXCEPTION 'EVIDENCE_RECOVERY_RESULT_CHANGED'; END IF;
    PERFORM pipeline_control.evidence_recovery_validate_result(job.result,job.original_row,job.input_sha256);

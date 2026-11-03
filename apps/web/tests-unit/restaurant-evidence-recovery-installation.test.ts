@@ -48,7 +48,7 @@ test('dedicated manifest and original compiler bind exact SQL and frozen legacy 
   const document = JSON.parse(readFileSync(INSTALLATION_MANIFEST_PATH, 'utf8'));
   expect(sha(readFileSync(INSTALLATION_MANIFEST_PATH))).toBe(INSTALLATION_MANIFEST_SHA256);
   expect(document.migration).toEqual(record.migration);
-  expect(record.migration.sha256).toBe('55e3c61f20d1c7c24dd7c5cd000d2a081ddf65c8ca3657621d4b222b6062acc4');
+  expect(record.migration.sha256).toBe('c178e54997209eed0c215565ed4319d57bd4ee338f6c82a490b1788118675fd4');
   expect(document.legacyManifest.sha256).toBe('515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d');
   for (const item of [document.legacyManifest, ...document.helpers, document.migration]) {
     expect(sha(readFileSync(resolve(root, item.path)))).toBe(item.sha256);

@@ -8,7 +8,7 @@ import { getEvaluationRecoveryPlan, type EvaluationRecoveryTaskCode } from '@/li
 import { extractCanonicalYouTubeVideoId } from '@/lib/youtube-url';
 import { RECORD_ACTION_APPLIED_EVENT, RECORD_VIEWS_INVALIDATED_EVENT } from '@/lib/admin/record-action-client';
 import {
-  EVALUATION_RECOVERY_ENDPOINT, RECOVERY_CONFIRMATIONS, RecoveryViewSchema, parseRecoveryJob,
+  EVALUATION_RECOVERY_ENDPOINT, RECOVERY_CONFIRMATIONS, RecoveryViewSchema, parseRecoveryJob, canRenewRecoveryPreview,
   type RecoveryJob, type RecoveryRequest, type RecoveryView,
 } from '@/lib/admin/evaluation-recovery';
 
@@ -30,8 +30,8 @@ const REASONS: Partial<Record<string, string>> = {
   source_identity_mismatch: '영상·채널·식당의 출처가 일치하지 않습니다.',
   source_provider_transient: '수집 서비스의 일시적 오류로 확인을 마치지 못했습니다.',
   source_provider_unavailable: '수집 서비스에서 필요한 자료를 확인하지 못했습니다.',
-  source_changed: '원본이 변경돼 수집 전 요청을 종료했습니다.',
-  policy_changed: '검수 정책이 변경돼 수집 전 요청을 종료했습니다.',
+  source_changed: '원본이 변경돼 이전 요청을 종료했습니다. 기존 근거와 처리 이력은 보존합니다.',
+  policy_changed: '검수 정책이 변경돼 이전 요청을 종료했습니다. 기존 근거와 처리 이력은 보존합니다.',
   result_unconfirmed: '이전 실행 결과를 확인해야 합니다. 자동으로 재실행하지 않습니다.',
 };
 const errorText = (code: string) => messages[code] ?? '처리 결과를 확인하지 못했습니다. 새 요청을 만들지 말고 기존 처리 이력을 확인하세요.';
@@ -52,6 +52,7 @@ export function EvaluationEvidenceRecovery({ record, onClose }: { record: Evalua
   const inFlight = useRef(false);
   const [unresolved, setUnresolved] = useState<RecoveryRequest | null>(null);
   const notified = useRef(new Set<string>());
+  const reconciled = useRef(new Map<string, RecoveryJob>());
   const id = record?.id;
   const load = useCallback(async (signal?: AbortSignal) => {
     if (!id) return;
@@ -69,7 +70,7 @@ export function EvaluationEvidenceRecovery({ record, onClose }: { record: Evalua
   }, [id]);
   useEffect(() => {
     epoch.current++;
-    setView(null); setViewReady(false); setPreview(null); setError(''); setNotice(''); setUnresolved(null);
+    setView(null); setViewReady(false); setPreview(null); setError(''); setNotice(''); setUnresolved(null); reconciled.current.clear();
     if (!id) return;
     const controller = new AbortController();
     void load(controller.signal);
@@ -87,6 +88,12 @@ export function EvaluationEvidenceRecovery({ record, onClose }: { record: Evalua
       const value: unknown = await response.json();
       if (!response.ok) {
         const code = value && typeof value === 'object' && 'error' in value && typeof value.error === 'string' ? value.error : 'EVIDENCE_RECOVERY_UNAVAILABLE';
+        // These explicit preview rejections have no operation effect. A read
+        // failure or uncertain transport never releases an operation identity.
+        if (token === epoch.current && input.phase === 'preview_retire' && [
+          'EVIDENCE_RECOVERY_STATE_CONFLICT', 'EVIDENCE_RECOVERY_POLICY_CHANGED', 'EVIDENCE_RECOVERY_PROTECTED',
+          'EVIDENCE_RECOVERY_STALE', 'EVIDENCE_RECOVERY_SOURCE_REQUIRED', 'EVIDENCE_RECOVERY_WORK_OUTSTANDING',
+        ].includes(code)) setUnresolved(null);
         throw new Error(code);
       }
       const job = parseRecoveryJob(value, input);
@@ -95,14 +102,15 @@ export function EvaluationEvidenceRecovery({ record, onClose }: { record: Evalua
         changed();
       }
       if (token !== epoch.current) return;
-      if (input.phase === 'preview_apply' && view?.jobs.find(item => item.jobId === job.jobId)?.resultSha256 !== job.resultSha256) throw new Error('EVIDENCE_RECOVERY_STALE');
+      if ((input.phase === 'preview_apply' || input.phase === 'preview_retire') && view?.jobs.find(item => item.jobId === job.jobId)?.resultSha256 !== job.resultSha256) throw new Error('EVIDENCE_RECOVERY_STALE');
+      if (input.phase === 'read') reconciled.current.set(input.operationId, job);
       setUnresolved(null);
       if (job.receipt?.state === 'preview') {
-        if (Date.parse(job.receipt.expiresAt) <= Date.now()) { setPreview(null); setNotice('미리보기가 만료됐습니다. 현재 원본을 새로 확인한 뒤 다시 요청하세요.'); }
+        if (Date.parse(job.receipt.expiresAt) <= Date.now()) { setPreview(null); setNotice('적용되지 않은 미리보기의 만료를 확인했습니다. 보강 내용 또는 이전 초안 종료를 다시 확인하면 새 미리보기를 만들 수 있습니다.'); }
         else setPreview(job);
       } else {
         setPreview(null);
-        setNotice(job.state === 'applied' ? '보강 근거를 저장했습니다. 새로 조회한 원본으로 기존 승인 검사를 진행하세요.' : '처리 이력을 확인했습니다. 수집 중에도 기존 원본과 보류 상태는 유지합니다.');
+        setNotice(job.receipt?.action === 'restaurant.evidence_recovery.retire' ? '이전 초안을 종료했습니다. 근거와 처리 이력을 보존하며 현재 원본으로 새 요청을 검토할 수 있습니다.' : job.state === 'applied' ? '보강 근거를 저장했습니다. 새로 조회한 원본으로 기존 승인 검사를 진행하세요.' : '처리 이력을 확인했습니다. 수집 중에도 기존 원본과 보류 상태는 유지합니다.');
       }
       await load();
     } catch (cause) {
@@ -110,10 +118,11 @@ export function EvaluationEvidenceRecovery({ record, onClose }: { record: Evalua
     } finally { inFlight.current = false; if (token === epoch.current) setBusy(false); }
   };
 
-  const inspect = (job: RecoveryView['jobs'][number], apply: boolean) => {
-    const operationId = apply ? job.applyOperationId : job.requestOperationId;
-    if (operationId) return void send({ phase: 'read', restaurantId: job.restaurantId, jobId: job.jobId, operationId });
-    if (apply) return void send({ phase: 'preview_apply', restaurantId: job.restaurantId, jobId: job.jobId, operationId: crypto.randomUUID(), policyVersion: job.policyVersion, rowSha256: job.rowSha256, inputSha256: job.inputSha256 });
+  const inspect = (job: RecoveryView['jobs'][number], action: 'request' | 'apply' | 'retire') => {
+    const operationId = action === 'apply' ? job.applyOperationId : action === 'retire' ? job.retireOperationId : job.requestOperationId;
+    const renewable = action !== 'request' && canRenewRecoveryPreview(job, operationId ? reconciled.current.get(operationId) : undefined, action);
+    if (operationId && !renewable) return void send({ phase: 'read', restaurantId: job.restaurantId, jobId: job.jobId, operationId });
+    if (action !== 'request') return void send({ phase: action === 'apply' ? 'preview_apply' : 'preview_retire', restaurantId: job.restaurantId, jobId: job.jobId, operationId: crypto.randomUUID(), policyVersion: job.policyVersion, rowSha256: job.rowSha256, inputSha256: job.inputSha256 });
   };
   const context = view?.context;
   const sameSource = Boolean(record && context && context.restaurantId === record.id && context.originName.trim() === record.origin_name?.trim()
@@ -126,7 +135,7 @@ export function EvaluationEvidenceRecovery({ record, onClose }: { record: Evalua
   const confirm = () => {
     const receipt = preview?.receipt;
     if (!preview || !receipt || receipt.state !== 'preview' || Date.parse(receipt.expiresAt) <= Date.now()) return;
-    const phase = receipt.action === 'restaurant.evidence_recovery.request' ? 'request' : 'apply';
+    const phase = receipt.action === 'restaurant.evidence_recovery.request' ? 'request' : receipt.action === 'restaurant.evidence_recovery.retire' ? 'retire' : 'apply';
     void send({ phase, restaurantId: preview.restaurantId, jobId: preview.jobId, operationId: receipt.operationId, policyVersion: preview.policyVersion,
       rowSha256: preview.rowSha256, inputSha256: preview.inputSha256, previewHash: receipt.previewHash, confirmation: RECOVERY_CONFIRMATIONS[phase] });
   };
@@ -152,13 +161,15 @@ export function EvaluationEvidenceRecovery({ record, onClose }: { record: Evalua
         </section>}
         {view && <ul className="space-y-2" aria-label="근거 복구 이력">{view.jobs.map(job => <li key={job.jobId} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2">
           <div><p>{STATES[job.state]}</p>{REASONS[job.reason] && <p className="text-xs text-muted-foreground">{REASONS[job.reason]}</p>}</div><div className="flex gap-2">
-            {job.state === 'preview' && <Button size="sm" variant="outline" disabled={busy} onClick={() => inspect(job, false)}>기존 요청 확인</Button>}
-            {job.state === 'draft' && <Button size="sm" variant="outline" disabled={busy || !viewReady || Boolean(unresolved)} onClick={() => inspect(job, true)}>보강 내용 확인</Button>}
-            {job.state === 'applied' && <Button size="sm" variant="outline" disabled={busy} onClick={() => inspect(job, true)}>적용 결과 확인</Button>}
+            {job.state === 'preview' && <Button size="sm" variant="outline" disabled={busy} onClick={() => inspect(job, 'request')}>기존 요청 확인</Button>}
+            {job.state === 'draft' && <><Button size="sm" variant="outline" disabled={busy || !viewReady || Boolean(unresolved)} onClick={() => inspect(job, 'apply')}>보강 내용 확인</Button>
+              <Button size="sm" variant="outline" disabled={busy || !viewReady || Boolean(unresolved)} onClick={() => inspect(job, 'retire')}>이전 초안 종료 검토</Button></>}
+            {job.state === 'applied' && <Button size="sm" variant="outline" disabled={busy} onClick={() => inspect(job, 'apply')}>적용 결과 확인</Button>}
+            {job.state === 'failed' && job.retireOperationId && <Button size="sm" variant="outline" disabled={busy} onClick={() => inspect(job, 'retire')}>초안 종료 결과 확인</Button>}
           </div></li>)}</ul>}
         {preview?.receipt && <div className="space-y-2 rounded-md border border-primary p-3" role="region" aria-label="근거 복구 확인">
-          <p>{preview.receipt.action === 'restaurant.evidence_recovery.request' ? '이 맛집의 현재 영상·원본에 한정해 근거 복구를 요청합니다. 기존 보류 상태는 유지합니다.' : '위에서 확인한 보강 근거를 저장합니다. 이 단계에서는 승인하거나 제거하지 않습니다.'}</p>
-          <Button disabled={busy} onClick={confirm}>{preview.receipt.action === 'restaurant.evidence_recovery.request' ? '근거 복구 요청' : '보강 근거 저장'}</Button>
+          <p>{preview.receipt.action === 'restaurant.evidence_recovery.request' ? '이 맛집의 현재 영상·원본에 한정해 근거 복구를 요청합니다. 기존 보류 상태는 유지합니다.' : preview.receipt.action === 'restaurant.evidence_recovery.retire' ? '정책 또는 원본 변경으로 적용할 수 없는 이전 초안을 종료합니다. 수집된 근거와 처리 이력, 맛집의 보류 상태는 보존합니다. 새 수집은 별도 요청입니다.' : '위에서 확인한 보강 근거를 저장합니다. 이 단계에서는 승인하거나 제거하지 않습니다.'}</p>
+          <Button disabled={busy} onClick={confirm}>{preview.receipt.action === 'restaurant.evidence_recovery.request' ? '근거 복구 요청' : preview.receipt.action === 'restaurant.evidence_recovery.retire' ? '이전 초안 종료' : '보강 근거 저장'}</Button>
         </div>}
       </div>
       <DialogFooter>

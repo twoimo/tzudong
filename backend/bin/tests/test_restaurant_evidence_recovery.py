@@ -69,6 +69,36 @@ def result(input_sha):
 
 
 class RecoveryTests(unittest.TestCase):
+    def test_other_registered_channels_cannot_select_or_claim_the_tzuyang_queue(self):
+        for write in (False, True):
+            for exact_job in (False, True):
+                with self.subTest(write=write, exact_job=exact_job), \
+                        patch.object(worker, 'review_target', return_value={'channel_id': 'synthetic'}) as registry:
+                    options = dict(channel='meatcreator', state_dir=self.state, allow_worker_write=write)
+                    with self.assertRaisesRegex(worker.RecoveryFailure, 'recovery_channel_unsupported'):
+                        if exact_job:
+                            worker.run_recovery(self.rpc, job_id=JOB, **options)
+                        else:
+                            worker.run_next_recovery(self.rpc, **options)
+                    registry.assert_not_called()
+                    self.assertEqual(self.rpc.calls, [])
+                    self.assertEqual(self.rpc.meta['state'], 'queued')
+                    self.assertFalse(self.state.exists())
+
+    def test_unsupported_cli_channel_rejects_before_credentials_or_transport(self):
+        for selection in (['--next'], ['--job-id', JOB]):
+            output = io.StringIO()
+            with self.subTest(selection=selection), \
+                    patch.object(worker, 'resolve_privileged_supabase_rest_credentials') as credentials, \
+                    patch.object(worker, 'RestTransport') as transport, contextlib.redirect_stdout(output):
+                self.assertEqual(worker.main([*selection, '--channel', 'meatcreator', '--allow-worker-write']), 1)
+            credentials.assert_not_called()
+            transport.assert_not_called()
+            value = json.loads(output.getvalue())
+            self.assertEqual(value['code'], 'recovery_channel_unsupported')
+            self.assertFalse(value['attempted'])
+            self.assertFalse(value['paid_attempted'])
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
