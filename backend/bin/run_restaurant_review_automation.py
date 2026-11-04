@@ -30,10 +30,23 @@ from backend.pipeline_control.targets import admitted_target, CHANNELS_PATH, _pa
 
 RESULT_FIELDS = {'evaluation_results','geocoding_success','geocoding_false_stage','lat','lng','road_address','jibun_address','english_address','address_elements','naver_name','google_name','categories'}
 MAPPED_FIELDS = {'roadAddress':'road_address','jibunAddress':'jibun_address','englishAddress':'english_address','addressElements':'address_elements','category':'categories'}
+GEMINI_CONTRACT_OUTCOME_SUBTYPES = frozenset({
+    'response_model_not_admitted', 'response_candidate_count_not_one',
+    'response_completion_not_confirmed',
+    'output_budget_exhausted',
+})
+
+
+def bounded_gemini_contract_outcome(code, value):
+    return value if (code == 'gemini_decision_incomplete' and isinstance(value, str)
+                     and value in GEMINI_CONTRACT_OUTCOME_SUBTYPES) else None
 
 
 class WorkerFailure(Exception):
-    def __init__(self, code): super().__init__(code); self.code = code
+    def __init__(self, code, *, contract_outcome_subtype=None):
+        super().__init__(code)
+        self.code = code
+        self.contract_outcome_subtype = bounded_gemini_contract_outcome(code, contract_outcome_subtype)
 
 
 SOURCE_FAILURE_CODES = frozenset({
@@ -410,14 +423,16 @@ def evaluate(original, crawling_root, run_command=subprocess.run, *, decision_co
             except subprocess.TimeoutExpired: raise WorkerFailure('gemini_result_uncertain' if decision_output else 'worker_timeout') from None
             if completed.returncode:
                 code='evaluation_failed'
+                subtype=None
                 if decision_output:
                     code='gemini_result_uncertain'
                     try:
                         value=json.loads(decision_output.read_text())
                         if value.get('error') in ['gemini_configuration_invalid','gemini_result_uncertain','gemini_decision_invalid','gemini_decision_incomplete']:
                             code=value['error']
+                            subtype=bounded_gemini_contract_outcome(code,value.get('contractOutcomeSubtype'))
                     except (OSError,ValueError,AttributeError):pass
-                raise WorkerFailure(code)
+                raise WorkerFailure(code,contract_outcome_subtype=subtype)
         common=['--channel',channel,'--evaluation-path',str(evaluation),'--video-id',video_id]
         run([sys.executable,str(scripts/'09-target-selection.py'),'--crawling-path',str(crawl),*common])
         selection_file=evaluation/'evaluation/selection'/(video_id+'.jsonl')

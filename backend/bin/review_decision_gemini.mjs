@@ -8,7 +8,13 @@ export const PROMPT_VERSION = 'restaurant-review-v1';
 export const APPROVAL_CODES = ['visit_supported', 'identity_supported', 'review_grounded', 'category_supported', 'location_corroborated', 'source_consistent'];
 export const EVIDENCE_CODES = [...APPROVAL_CODES, 'insufficient_evidence', 'identity_conflict', 'location_conflict', 'review_unfaithful', 'category_conflict', 'source_conflict'];
 const METRICS = ['visit_authenticity', 'rb_inference_score', 'rb_grounding_TF', 'review_faithfulness_score', 'category_TF'];
-const fail = code => { throw Object.assign(new Error(code), { code }); };
+export const CONTRACT_OUTCOME_SUBTYPES = Object.freeze([
+  'response_model_not_admitted', 'response_candidate_count_not_one', 'response_completion_not_confirmed',
+  'output_budget_exhausted',
+]);
+const fail = (code, contractOutcomeSubtype) => {
+  throw Object.assign(new Error(code), { code, contractOutcomeSubtype });
+};
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
 
 function canonicalResponseModel(modelVersion) {
@@ -25,8 +31,13 @@ function canonicalResponseModel(modelVersion) {
 
 export function parseDecision(response, inputSha256, prompt) {
   const modelVersion = canonicalResponseModel(response?.modelVersion);
-  if (!modelVersion || response?.candidates?.length !== 1 || response.candidates[0]?.finishReason !== 'STOP')
-    fail('gemini_decision_incomplete');
+  // Preserve the existing short-circuit order and every admission predicate.
+  // Only fixed application outcomes may leave this in-memory response boundary.
+  if (!modelVersion) fail('gemini_decision_incomplete', CONTRACT_OUTCOME_SUBTYPES[0]);
+  if (response?.candidates?.length !== 1) fail('gemini_decision_incomplete', CONTRACT_OUTCOME_SUBTYPES[1]);
+  if (response.candidates[0]?.finishReason !== 'STOP')
+    fail('gemini_decision_incomplete', response.candidates[0]?.finishReason === 'MAX_TOKENS'
+      ? 'output_budget_exhausted' : 'response_completion_not_confirmed');
   let value;
   try { value = JSON.parse(requireGeminiText(response)); } catch { fail('gemini_decision_invalid'); }
   const rec = value?.recommendation;
@@ -76,7 +87,10 @@ export async function main(argv = process.argv.slice(2)) {
   } catch (error) {
     const code = ['gemini_configuration_invalid', 'gemini_result_uncertain', 'gemini_decision_invalid', 'gemini_decision_incomplete'].includes(error.code)
       ? error.code : 'gemini_result_uncertain';
-    fs.writeFileSync(output, JSON.stringify({ error: code }), { mode: 0o600 });
+    const failure = { error: code };
+    if (code === 'gemini_decision_incomplete' && CONTRACT_OUTCOME_SUBTYPES.includes(error.contractOutcomeSubtype))
+      failure.contractOutcomeSubtype = error.contractOutcomeSubtype;
+    fs.writeFileSync(output, JSON.stringify(failure), { mode: 0o600 });
     console.error('REVIEW_GEMINI_DECISION_UNCONFIRMED');
     return 1;
   }
