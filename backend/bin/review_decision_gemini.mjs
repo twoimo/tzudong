@@ -69,7 +69,7 @@ export async function judge(prompt, inputSha256, { key, generate = generateWithP
   let response;
   try {
     response = await generate(client(key), { model: MODEL, contents: prompt, config: {
-      maxOutputTokens: 4096, thinkingConfig: { thinkingLevel }, responseMimeType: 'application/json',
+      maxOutputTokens: 8192, thinkingConfig: { thinkingLevel }, responseMimeType: 'application/json',
     }}, 300000);
   } catch { fail('gemini_result_uncertain'); }
   return parseDecision(response, inputSha256, prompt);
