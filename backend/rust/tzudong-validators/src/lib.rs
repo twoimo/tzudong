@@ -354,7 +354,7 @@ mod tests {
                         "visit_authenticity",
                         list(vec![dict(vec![
                             ("name", s("식당A")),
-                            ("eval_value", Value::Int(3)),
+                            ("eval_value", Value::Int(5)),
                             ("eval_basis", s("충분한 근거 문장")),
                         ])]),
                     ),
@@ -399,6 +399,48 @@ mod tests {
     }
 
     #[test]
+    fn visit_enum_strict_integers_preserve_other_fractional_scores() {
+        let mut cases: Vec<(Value, Option<&str>)> =
+            (0..=4).map(|v| (Value::Int(v), None)).collect();
+        cases.extend([
+            (Value::None, Some("score_type")),
+            (Value::Bool(true), Some("score_type")),
+            (s("1"), Some("score_type")),
+            (Value::Float(1.0), Some("score_type")),
+            (Value::Float(1.5), Some("score_type")),
+            (Value::Float(f64::NAN), Some("score_type")),
+            (Value::Float(f64::INFINITY), Some("score_range")),
+            (Value::Int(-1), Some("score_range")),
+            (Value::Int(5), Some("score_range")),
+            (Value::Float(1e100), Some("score_range")),
+            (Value::Other("int".into()), Some("score_range")),
+        ]);
+        for (value, rule) in cases {
+            let item = |v| {
+                list(vec![dict(vec![
+                    ("eval_value", v),
+                    ("eval_basis", s("충분한 근거 문장")),
+                ])])
+            };
+            let data = dict(vec![(
+                "evaluation_results",
+                dict(vec![
+                    ("visit_authenticity", item(value)),
+                    ("rb_inference_score", item(Value::Float(1.5))),
+                    ("review_faithfulness_score", item(Value::Float(0.5))),
+                    ("rb_grounding_TF", list(vec![])),
+                    ("category_TF", list(vec![])),
+                ]),
+            )]);
+            let errors = validate_laaj_results("fixture", &data);
+            assert_eq!(errors.len(), usize::from(rule.is_some()));
+            if let Some(rule) = rule {
+                assert_eq!(errors[0].rule, rule);
+            }
+        }
+    }
+
+    #[test]
     fn laaj_accepts_values_wrappers() {
         let values_wrap =
             |items: Vec<Value>| dict(vec![("values", list(items)), ("missing", list(vec![]))]);
@@ -414,7 +456,7 @@ mod tests {
                         "visit_authenticity",
                         values_wrap(vec![dict(vec![
                             ("name", s("식당A")),
-                            ("eval_value", Value::Int(3)),
+                            ("eval_value", Value::Int(5)),
                             ("eval_basis", s("충분한 근거 문장")),
                         ])]),
                     ),
