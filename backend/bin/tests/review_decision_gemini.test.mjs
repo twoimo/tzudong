@@ -116,6 +116,7 @@ test('judge makes one call without model fallback and retains fixed errors', asy
       calls++;
       assert.equal(request.model, 'gemini-3.8-flash');
       assert.equal(request.config.responseMimeType, 'application/json');
+      assert.equal(request.config.maxOutputTokens, 8192);
       assert.equal(request.config.thinkingConfig.thinkingLevel, 'MEDIUM');
       assert(!('temperature' in request.config));
       assert.equal(timeout, 300000);
@@ -160,6 +161,8 @@ test('installed SDK uses the existing project lease and emits exactly one reques
       assert.equal(leases(), 1);
       const body = JSON.parse(options.body);
       assert.equal(body.generationConfig.responseMimeType, 'application/json');
+      assert.equal(body.generationConfig.maxOutputTokens, 8192);
+      assert.equal(body.generationConfig.thinkingConfig.thinkingLevel, 'MEDIUM');
       return new Response(JSON.stringify({ modelVersion: `models/${MODEL}-001`, candidates: [{ finishReason: 'STOP', content: {
         role: 'model', parts: [{ text: JSON.stringify(envelope()) }],
       } }], usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 8, totalTokenCount: 13 } }), { status: 200, headers: { 'content-type': 'application/json' } });
@@ -206,7 +209,7 @@ test('CLI persists only fixed application outcomes from mocked SDK responses', a
       globalThis.fetch = async (_url, options) => {
         calls++;
         const request = JSON.parse(options.body);
-        assert.equal(request.generationConfig.maxOutputTokens, 4096);
+        assert.equal(request.generationConfig.maxOutputTokens, 8192);
         assert.equal(request.generationConfig.thinkingConfig.thinkingLevel, 'MEDIUM');
         return new Response(JSON.stringify({ modelVersion: MODEL,
           candidates: [{ finishReason: 'STOP', content: { role: 'model', parts: [{ text: privateMarker }] } }],
