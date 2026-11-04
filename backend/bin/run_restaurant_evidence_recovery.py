@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from backend.bin.run_restaurant_review_automation import (
     RESULT_FIELDS, SOURCE_FAILURE_CODES, WorkerFailure, evaluate,
-    manual_failure_reason, review_target, youtube_id,
+    bounded_gemini_contract_outcome, manual_failure_reason, review_target, youtube_id,
 )
 from backend.utils.supabase_rest import resolve_privileged_supabase_rest_credentials
 
@@ -459,6 +459,9 @@ def run_recovery(transport, *, job_id, channel, state_dir, allow_worker_write=Fa
                 code = candidate
             # After paid intent, even a source-looking error is uncertain.
             try:
+                subtype = bounded_gemini_contract_outcome(code, getattr(error, 'contract_outcome_subtype', None))
+                if paid_intent and isinstance(error, WorkerFailure) and subtype is not None:
+                    journal.append('judge_contract_outcome', subtype=subtype)
                 journal.append('fail_intent', code=code)
                 ack = metadata(transport('fail', job_id, token, {'code': code}), job_id, current)
                 expected = 'failed' if code in PREPAID_FAILURES else 'uncertain'
