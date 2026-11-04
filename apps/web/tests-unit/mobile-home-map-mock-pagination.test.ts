@@ -2,7 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { fetchCompleteRestaurantRows } from "../hooks/use-restaurants";
 import { handleSupabaseRestRoute } from "../tests/mobile-home-map-helpers";
 
-const BROWSER_ORIGIN = "http://localhost:3000";
+// Mirror the fixture helpers' environment resolution so the requests stay
+// inside the nightly allowlist: strict nightly mode admits only the
+// configured loopback origins/ports.
+const SUPABASE_REST_BASE = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321").origin;
+const BROWSER_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 
 type Captured = { status?: number; body?: string; aborted?: string };
 type FixtureRow = { id: string; approved_name: string };
@@ -29,7 +33,7 @@ function makeRoute(url: string) {
 
 async function serveRestaurantsRequest(query: Array<[string, string | number]>) {
   const params = new URLSearchParams(query.map(([key, value]) => [key, String(value)]));
-  const { route, captured } = makeRoute(`http://127.0.0.1:54321/rest/v1/restaurants?${params.toString()}`);
+  const { route, captured } = makeRoute(`${SUPABASE_REST_BASE}/rest/v1/restaurants?${params.toString()}`);
   await handleSupabaseRestRoute(route as never);
   if (captured.aborted) throw new Error(`fixture route aborted: ${captured.aborted}`);
   return { status: captured.status, body: JSON.parse(captured.body ?? "null") };
