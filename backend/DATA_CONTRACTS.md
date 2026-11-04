@@ -22,6 +22,51 @@ pipeline READMEs; this file is the compact change-review checklist.
 
 ## Stage contracts
 
+Uploads collection validates each page before replacing the URL inventory.
+Valid publication dates rank current entries newest first; equal dates and
+undated entries keep provider order, and undated recency remains unknown.
+Historical URLs stay in a deterministic tail. Playlist absence never creates
+a permanent exclusion or changes an existing exclusion ledger.
+One intake may discover metadata for at most 50 eligible videos to refill
+confirmed Shorts, while evaluating at most the existing `--limit` of 1..3
+non-Short videos. Deferred long videos are not reported as evaluated.
+Visit authenticity is an integer code from 0 through 4 in completion and both
+Python/Rust validators. Valid negative codes can complete; approval still
+requires code 1 and every existing approval predicate. Fractions, booleans and
+nonfinite codes are invalid. Uncertain or incomplete delivery still blocks apply.
+
+Selected evidence-recovery jobs may explicitly supply `--native-visual-packet`
+with the existing `--allow-worker-write`; default reads ignore the packet and
+`--next` rejects it. This private packet is provenance, not new authorization.
+Rejected local inputs and read-only preflight failures do not spend a queued
+job's execution journal. After correction the same untouched job is usable;
+existing claim/provider journals continue to prohibit replay.
+The pure local validator binds exact job/row/input hashes, a clean accepted-source
+checkout recipe, same-host owner custody, publisher/clip/frame/transcript byte
+hashes and an owner-attested native observer record. Local origin/main binding
+does not itself attest fresh hosted branch protection; release holds still apply.
+Only NFC/whitespace is ignored for observed-name/address comparison. A conflict
+blocks unless one of the two fixed target cases supplies explicit correction
+intent plus an independently hashed current public-place receipt joining exact
+name/locality/parcel/listed road. Then only the fresh scratch address may use the
+corroborated road; the source-origin conflict remains explicit and no full
+administrative equivalence is inferred. Unjoined conflicts block. Original rows,
+extraction basis, corpus bytes and recollect references remain immutable.
+At most eight actual review quotes are checked against full hashed transcript
+bytes/indices/times and retained as navigation cues. The full verified transcript
+remains in the judgment context, including unselected or contradictory text.
+Every complete segment is screened in bounded pages under the unchanged central
+privacy limits. An unsafe page rejects the whole source; strings are never split
+or truncated. Unused collector metadata is not forwarded to the judgment.
+Native sign/address observations are labeled `native_observer_report`, with
+approximate cue time, separately from real transcript/review text. Pixels are
+not sent to the model and observations do not create evidence-family labels.
+Private observer identities stay local; the judgment receives minimized method,
+observation time and source-digest provenance.
+The observed address enters scratch crawling only after direct scene binding;
+existing independent location rules and one existing judgment remain unchanged.
+No extraction SDK, new schedule, RPC/result/SQL contract or approval gate changes.
+
 Pipeline step identifiers are part of the executable contract:
 `enrich`, `gemini_crawling`, `target_selection`, `rule_evaluation`,
 `laaj_evaluation`, `transform`, and `supabase_insert`.

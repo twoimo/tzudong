@@ -371,7 +371,7 @@ LAAJ_EXPECTED_KEYS = {
 
 # 점수 범위 정의
 SCORE_RANGES = {
-    "visit_authenticity": (0, 2),       # 0, 1, 2
+    "visit_authenticity": (0, 4),       # integer enum; only 1 is approval-positive
     "rb_inference_score": (0, 2),       # 0, 1, 2
     "review_faithfulness_score": (0, 1),  # 0.0 ~ 1.0
 }
@@ -413,7 +413,16 @@ def validate_laaj_results(video_id: str, data: dict) -> list[dict]:
         for item in score_items:
             val = item.get("eval_value")
             name = item.get("name", "")
-            if val is not None:
+            if score_key == "visit_authenticity":
+                if type(val) in (int, float) and (val < min_val or val > max_val):
+                    errors.append(_err(step, video_id, ValidationSeverity.ERROR.value,
+                                      "score_range", "visit_authenticity 허용 정수 코드: 0~4",
+                                      restaurant_name=name))
+                elif type(val) is not int:
+                    errors.append(_err(step, video_id, ValidationSeverity.ERROR.value,
+                                      "score_type", "visit_authenticity 값이 정수 코드가 아닙니다",
+                                      restaurant_name=name))
+            elif val is not None:
                 try:
                     val_f = float(val)
                     if not (min_val <= val_f <= max_val):
