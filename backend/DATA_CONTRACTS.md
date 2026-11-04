@@ -22,6 +22,19 @@ pipeline READMEs; this file is the compact change-review checklist.
 
 ## Stage contracts
 
+Uploads collection validates each page before replacing the URL inventory.
+Valid publication dates rank current entries newest first; equal dates and
+undated entries keep provider order, and undated recency remains unknown.
+Historical URLs stay in a deterministic tail. Playlist absence never creates
+a permanent exclusion or changes an existing exclusion ledger.
+One intake may discover metadata for at most 50 eligible videos to refill
+confirmed Shorts, while evaluating at most the existing `--limit` of 1..3
+non-Short videos. Deferred long videos are not reported as evaluated.
+Visit authenticity is an integer code from 0 through 4 in completion and both
+Python/Rust validators. Valid negative codes can complete; approval still
+requires code 1 and every existing approval predicate. Fractions, booleans and
+nonfinite codes are invalid. Uncertain or incomplete delivery still blocks apply.
+
 Selected evidence-recovery jobs may explicitly supply `--native-visual-packet`
 with the existing `--allow-worker-write`; default reads ignore the packet and
 `--next` rejects it. This private packet is provenance, not new authorization.
