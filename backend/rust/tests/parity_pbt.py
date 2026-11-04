@@ -402,6 +402,26 @@ _error_list = st.lists(
 class Property6ValidatorParity(unittest.TestCase):
     """Feature: platform-modernization, Property 6: 파이썬 ↔ 러스트 출력 동등성."""
 
+    def test_visit_integer_enum_detail_order_and_fractional_rb_parity(self):
+        from backend.pipeline_control.impl_selector import python_reference
+        values = list(range(5)) + [None, True, False, '1', 1.0, 1.5, -1, 5,
+                                  10 ** 100, 10 ** 400, float('nan'), float('inf'), -float('inf')]
+        for value in values:
+            for wrapped in (False, True):
+                for basis in ('충분한 근거 문장', ''):
+                    items = [{'name': 'fixture', 'eval_value': value, 'eval_basis': basis}]
+                    data = {'evaluation_results': {
+                        'visit_authenticity': {'values': items} if wrapped else items,
+                        'rb_inference_score': [{'eval_value': 1.5, 'eval_basis': '충분한 근거 문장'}],
+                        'review_faithfulness_score': [{'eval_value': 0.5, 'eval_basis': '충분한 근거 문장'}],
+                        'rb_grounding_TF': [], 'category_TF': [],
+                    }}
+                    with self.subTest(value=value, wrapped=wrapped, basis=bool(basis)), python_reference():
+                        # Exact sequence and every detail field; no sorting away
+                        # score-before-basis order differences.
+                        self.assertEqual(py_validators.validate_laaj_results('fixture', data),
+                                         rs_validators.validate_laaj_results('fixture', data))
+
     def test_python_whitespace_boundaries_are_preserved(self) -> None:
         whitespace = [chr(code) for code in range(0x3100) if chr(code).isspace()]
         for char in whitespace:

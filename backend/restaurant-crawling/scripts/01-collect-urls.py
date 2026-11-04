@@ -13,8 +13,10 @@ YouTube Data API v3 사용
 import os
 import sys
 import argparse
+import re
+import tempfile
+from datetime import datetime
 from pathlib import Path
-from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Set
 
 # 유틸리티 모듈 경로 추가 (backend/)
@@ -45,9 +47,6 @@ except ImportError:
 BACKEND_ROOT = resolve_backend_root(Path(__file__).resolve())
 load_backend_env(BACKEND_ROOT, prefer_local=True)
 
-# 한국 시간대 (KST, UTC+9)
-KST = timezone(timedelta(hours=9))
-
 # 로그 디렉토리 (backend/log/restaurant-crawling/)
 LOG_DIR = get_backend_log_dir(BACKEND_ROOT, "restaurant-crawling")
 
@@ -69,6 +68,8 @@ def _youtube_error_status(error: BaseException) -> int | None:
 def classify_youtube_failure(error: BaseException) -> str:
     """Map structured YouTube failures to stable, public-safe reason codes."""
     status = _youtube_error_status(error)
+    if isinstance(error, InvalidPlaylistSnapshot):
+        return "youtube_snapshot_invalid"
     if isinstance(error, ValueError):
         return "youtube_channel_not_found"
     if status in (401, 403):
@@ -78,6 +79,29 @@ def classify_youtube_failure(error: BaseException) -> str:
     if status == 429:
         return "youtube_api_rate_limited"
     return "youtube_api_request_failed"
+
+
+class InvalidPlaylistSnapshot(ValueError):
+    """An incomplete/malformed response has no absence or deletion authority."""
+
+
+def _response_items(response: Any) -> List[dict]:
+    if not isinstance(response, dict) or not isinstance(response.get("items"), list):
+        raise InvalidPlaylistSnapshot("youtube_snapshot_invalid")
+    if any(not isinstance(item, dict) for item in response["items"]):
+        raise InvalidPlaylistSnapshot("youtube_snapshot_invalid")
+    return response["items"]
+
+
+def _publication_time(value: Any) -> float | None:
+    """Only an explicitly offset, valid publication timestamp can rank a URL."""
+    if not isinstance(value, str):
+        return None
+    try:
+        published = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return published.timestamp() if published.tzinfo is not None else None
+    except (ValueError, OverflowError, OSError):
+        return None
 
 
 def load_existing_urls(urls_file: Path) -> Set[str]:
@@ -109,6 +133,7 @@ def fetch_all_video_urls(
     """
     youtube = build("youtube", "v3", developerKey=api_key)
     urls = []
+    publication_times = {}
     api_call_count = 0
     config = get_collection_config()
 
@@ -122,18 +147,21 @@ def fetch_all_video_urls(
             )
             api_call_count += 1
 
-        if not channel_response.get("items"):
+        channel_items = _response_items(channel_response)
+        if not channel_items:
             raise ValueError("youtube_channel_not_found")
-
-        channel_info = channel_response["items"][0]
-        uploads_playlist_id = channel_info["contentDetails"]["relatedPlaylists"][
-            "uploads"
-        ]
+        try:
+            uploads_playlist_id = channel_items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
+        except (KeyError, TypeError):
+            raise InvalidPlaylistSnapshot("youtube_snapshot_invalid") from None
+        if not isinstance(uploads_playlist_id, str) or not uploads_playlist_id.strip():
+            raise InvalidPlaylistSnapshot("youtube_snapshot_invalid")
         logger.info("op=youtube_channel_response status=accepted")
 
         # 플레이리스트의 모든 동영상 가져오기
         next_page_token = None
         page_count = 0
+        seen_tokens = set()
 
         while True:
             page_count += 1
@@ -153,19 +181,28 @@ def fetch_all_video_urls(
                 api_call_count += 1
 
             # URL 추출
-            for item in playlist_response.get("items", []):
-                video_id = item["contentDetails"]["videoId"]
+            items = _response_items(playlist_response)
+            for item in items:
+                details = item.get("contentDetails")
+                video_id = details.get("videoId") if isinstance(details, dict) else None
+                if not isinstance(video_id, str) or re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id) is None:
+                    raise InvalidPlaylistSnapshot("youtube_snapshot_invalid")
                 urls.append(f"https://www.youtube.com/watch?v={video_id}")
+                publication_times.setdefault(urls[-1], _publication_time(details.get("videoPublishedAt")))
 
             logger.debug(
                 f"op=youtube_playlist_page_loaded page={page_count} "
-                f"item_count={len(playlist_response.get('items', []))}"
+                f"item_count={len(items)}"
             )
 
             # 다음 페이지 확인
             next_page_token = playlist_response.get("nextPageToken")
-            if not next_page_token:
+            if next_page_token is None or next_page_token == "":
                 break
+            if (not isinstance(next_page_token, str) or not next_page_token.strip()
+                    or next_page_token in seen_tokens or not items):
+                raise InvalidPlaylistSnapshot("youtube_snapshot_invalid")
+            seen_tokens.add(next_page_token)
 
         logger.success(
             f"op=youtube_video_url_collection_completed fetched={len(urls)}"
@@ -173,6 +210,14 @@ def fetch_all_video_urls(
         logger.add_statistic("total_urls_fetched", len(urls))
         logger.add_statistic("youtube_api_calls", api_call_count)
 
+        urls = list(dict.fromkeys(urls))
+        dated_count = sum(publication_times[url] is not None for url in urls)
+        # Rank known publication dates newest first. Equal dates and undated
+        # entries retain provider order; an undated entry has unknown recency.
+        urls.sort(key=lambda url: (publication_times[url] is None,
+                                  -(publication_times[url] or 0)))
+        logger.info(f"op=youtube_url_ordering dated_count={dated_count} "
+                    f"provider_order_fallback_count={len(urls) - dated_count}")
         return urls
 
     except (HttpError, ValueError) as error:
@@ -192,21 +237,29 @@ def save_urls(
     dry_run: bool = False,
 ) -> int:
     """
-    신규 URL을 urls.txt에 추가
+    최신 스냅샷 먼저, 기존 이력은 순서를 보존한 꼬리로 저장.
 
     Returns:
         신규 저장된 URL 수
     """
-    # 폴더 생성
-    urls_file.parent.mkdir(parents=True, exist_ok=True)
-
+    urls = list(dict.fromkeys(urls))
+    historical = urls_file.read_text(encoding="utf-8").splitlines() if urls_file.exists() else []
+    merged = list(dict.fromkeys(urls + [line.strip() for line in historical if line.strip()]))
     new_urls = [url for url in urls if url not in existing_urls]
     skip_count = len(urls) - len(new_urls)
 
-    if not dry_run and new_urls:
-        with open(urls_file, "a", encoding="utf-8") as f:
-            for url in new_urls:
-                f.write(url + "\n")
+    if not dry_run:
+        urls_file.parent.mkdir(parents=True, exist_ok=True)
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=urls_file.parent,
+                                             prefix=".urls-", delete=False) as f:
+                temporary = Path(f.name)
+                f.write("".join(url + "\n" for url in merged))
+            os.replace(temporary, urls_file)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
 
     logger.info(
         f"op=youtube_url_storage_completed new_count={len(new_urls)} "
@@ -216,41 +269,6 @@ def save_urls(
     logger.add_statistic("skipped_existing", skip_count)
 
     return len(new_urls)
-
-
-def save_deleted_urls(
-    deleted_urls: List[str],
-    channel_data_path: Path,
-    urls_file: Path,
-    remaining_urls: List[str],
-    logger: PipelineLogger,
-    dry_run: bool = False,
-):
-    """
-    삭제된 URL을 deleted_urls.txt에 기록하고 urls.txt를 갱신
-    """
-    if not deleted_urls:
-        return
-
-    deleted_file = channel_data_path / "deleted_urls.txt"
-    timestamp = datetime.now(KST).isoformat()
-    
-    if not dry_run:
-        # 1. deleted_urls.txt에 추가
-        with open(deleted_file, "a", encoding="utf-8") as f:
-            for url in deleted_urls:
-                f.write(f"{url}\t{timestamp}\n")
-        
-        # 2. urls.txt 갱신 (삭제된 것 제외)
-        with open(urls_file, "w", encoding="utf-8") as f:
-            for url in remaining_urls:
-                f.write(url + "\n")
-
-    logger.warning(
-        f"op=youtube_deleted_video_reconciliation_completed "
-        f"deleted_count={len(deleted_urls)}"
-    )
-    logger.add_statistic("deleted_urls_count", len(deleted_urls))
 
 
 def collect_channel_urls(
@@ -279,27 +297,17 @@ def collect_channel_urls(
     with logger.timer("save_urls"):
         new_count = save_urls(urls, urls_file, existing_urls, logger, dry_run)
     
-    # 삭제된 영상 처리
-    # existing_urls에는 있지만, 방금 수집한 urls에는 없는 것
-    current_url_set = set(urls)
-    deleted_urls = [url for url in existing_urls if url not in current_url_set]
-    
-    if deleted_urls:
-        save_deleted_urls(
-            deleted_urls, 
-            channel_data_path, 
-            urls_file, 
-            urls, # 이번에 수집된 전체 목록이 곧 remaining_urls가 됨 (정렬 여부는 API 순서 따름)
-            logger, 
-            dry_run
-        )
+    # Playlist absence is not confirmed deletion. Preserve the historical tail
+    # and the existing permanent skip ledger without adding inferred entries.
+    absent_count = len(existing_urls - set(urls))
 
     return {
         "channel_name": channel_name,
         "channel_id": channel_id,
         "total_fetched": len(urls),
         "new_saved": new_count,
-        "deleted_count": len(deleted_urls),
+        "deleted_count": 0,
+        "absent_count": absent_count,
         "existing_count": len(existing_urls),
     }
 

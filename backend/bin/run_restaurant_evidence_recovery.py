@@ -328,7 +328,7 @@ def report(job_id, state, code, *, attempted=False, outstanding=False,
 def run_recovery(transport, *, job_id, channel, state_dir, allow_worker_write=False,
                  crawling_root=None, node='node', evaluator=evaluate,
                  privacy_validator=None, run_command=subprocess.run,
-                 selected=None, token=None):
+                 selected=None, token=None, native_visual_packet=None):
     """Exact-job transport hook. Dependencies are injectable for offline tests.
 
     Existing journal: no write/claim/provider dispatch, even after known failure.
@@ -336,6 +336,7 @@ def run_recovery(transport, *, job_id, channel, state_dir, allow_worker_write=Fa
     """
     canonical_uuid(job_id)
     recovery_target(channel)
+    require(native_visual_packet is None or selected is None, 'argument_invalid')
     require(type(allow_worker_write) is bool, 'argument_invalid')
     state_dir = Path(state_dir)
     if not allow_worker_write:
@@ -352,6 +353,20 @@ def run_recovery(transport, *, job_id, channel, state_dir, allow_worker_write=Fa
             require_node24(node, run_command)
         except RecoveryFailure:
             return report(job_id, 'blocked', 'node24_required', reserved_slots=1)
+    native_current = None
+    checked_packet = None
+    if native_visual_packet is not None and not (journal_path.exists() or journal_path.is_symlink()):
+        # A rejected local packet has no claim/provider effect. Leave this
+        # queued job reusable after fixing that input, without spending its
+        # exclusive journal. Existing journals still forbid every redispatch.
+        from backend.bin.review_native_visual_packet import validate_packet
+        try:
+            native_current = metadata(transport('read', job_id, token), job_id)
+            if native_current['state'] == 'queued':
+                checked_packet = validate_packet(native_visual_packet,native_current,node=node)
+        except Exception as error:
+            code = manual_failure_reason(error)['code'] if isinstance(error, WorkerFailure) else 'result_unconfirmed'
+            return report(job_id, 'blocked', code, reserved_slots=1)
     try:
         # Existing journal detection precedes even the local runtime probe.
         journal = Journal(state_dir, job_id, channel, token)
@@ -372,10 +387,12 @@ def run_recovery(transport, *, job_id, channel, state_dir, allow_worker_write=Fa
                       reserved_slots=1, outstanding=state in {'running', 'uncertain'}, **digests)
 
     try:
-        current = metadata(transport('read', job_id, token), job_id, selected)
+        current = native_current if native_current is not None else metadata(transport('read', job_id, token), job_id, selected)
         if current['state'] != 'queued':
             journal.append('not_queued', metadataSha256=digest(current))
             return finish(current['state'], 'not_queued', metadataSha256=digest(current))
+        if native_visual_packet is not None:
+            journal.append('native_packet_preflight', packetSha256=checked_packet['packetSha256'])
         journal.append('claim_intent', metadataSha256=digest(current))
         claim = transport('claim', job_id, token)
         checked = metadata(claim, job_id, current)
@@ -384,12 +401,19 @@ def run_recovery(transport, *, job_id, channel, state_dir, allow_worker_write=Fa
             return finish('failed', checked['reason'], metadataSha256=digest(checked))
         original, context = claimed_original(claim, current, channel)
         claim_validated = True
+        native_inputs = None
+        if native_visual_packet is not None:
+            native_inputs = validate_packet(native_visual_packet,current,original=claim['restaurant'],node=node)
+            require(native_inputs.proof['packetSha256'] == checked_packet['packetSha256'])
         journal.append('evaluation_intent', inputSha256=current['inputSha256'])
 
         def guarded_command(command, **kwargs):
             nonlocal paid_intent
             if len(command) > 1 and Path(command[1]).name == 'review_decision_gemini.mjs':
                 require(not paid_intent, 'provider_replay_blocked')
+                if native_inputs is not None:
+                    rechecked = validate_packet(native_visual_packet,current,original=claim['restaurant'],node=node)
+                    require(digest(rechecked.proof) == digest(native_inputs.proof))
                 journal.append('paid_intent')
                 paid_intent = True
             if command and command[0] == 'node':
@@ -403,9 +427,10 @@ def run_recovery(transport, *, job_id, channel, state_dir, allow_worker_write=Fa
             journal.append('source_proof', sourceProofSha256=digest(proof))
 
         attempted = True
+        native_options = {} if native_inputs is None else {'native_visual_inputs':native_inputs}
         result = evaluator(original, crawling_root or ROOT / 'backend/restaurant-crawling/data',
                            run_command=guarded_command, decision_context=context,
-                           source_proof_sink=proof_sink, expected_channel=channel)
+                           source_proof_sink=proof_sink, expected_channel=channel, **native_options)
         result_binding(result, current['inputSha256'])
         if privacy_validator is None:
             privacy_check(result, node)
@@ -454,6 +479,7 @@ def run_next_recovery(transport, *, channel, state_dir, allow_worker_write=False
     For the parent's existing worker hook only: this creates no schedule or job.
     The SQL `next` phase is read-only and excludes running/uncertain jobs.
     """
+    require(kwargs.get('native_visual_packet') is None, 'argument_invalid')
     recovery_target(channel)
     require(type(allow_worker_write) is bool, 'argument_invalid')
     token = str(uuid.uuid4())
@@ -488,14 +514,17 @@ def main(argv=None):
                             default=Path.home() / '.local/state/tzudong/evidence-recovery')
         parser.add_argument('--crawling-root', type=Path)
         parser.add_argument('--node', default=shutil.which('node') or 'node')
+        parser.add_argument('--native-visual-packet', type=Path)
         args = parser.parse_args(argv)
         recovery_target(args.channel)
+        require(args.native_visual_packet is None or args.job_id is not None, 'argument_invalid')
         if args.job_id is not None:
             canonical_uuid(args.job_id)
         transport = RestTransport(resolve_privileged_supabase_rest_credentials())
         options = dict(channel=args.channel, state_dir=args.state_dir,
                        allow_worker_write=args.allow_worker_write,
                        crawling_root=args.crawling_root, node=args.node)
+        if args.native_visual_packet is not None:options['native_visual_packet'] = args.native_visual_packet
         result = (run_next_recovery(transport, **options) if args.next else
                   run_recovery(transport, job_id=args.job_id, **options))
     except RecoveryFailure as error:
