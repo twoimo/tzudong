@@ -110,7 +110,7 @@ class RustSourceRecoveryTests(unittest.TestCase):
         transformations = candidate["candidateTransformations"]
         self.assertEqual(
             [item["id"] for item in transformations],
-            ["rustfmt-1.97.0", "root-mit-license-alignment", "python-whitespace-parity", "python-date-hash-parity"],
+            ["rustfmt-1.97.0", "root-mit-license-alignment", "python-whitespace-parity", "python-date-hash-parity", "visit-authenticity-enum-parity"],
         )
         declared_paths = {
             path
@@ -126,6 +126,13 @@ class RustSourceRecoveryTests(unittest.TestCase):
         self.assertTrue(rustfmt["paths"])
         self.assertTrue(all(path.endswith(".rs") for path in rustfmt["paths"]))
         self.assertEqual(transformations[1]["paths"], ["backend/rust/Cargo.toml"])
+        visit = transformations[4]
+        self.assertEqual((visit["kind"], visit["version"]), ("behavior-correction", "1"))
+        self.assertEqual(visit["paths"], [
+            "backend/rust/tests/parity_pbt.py",
+            "backend/rust/tzudong-validators/src/lib.rs",
+            "backend/rust/tzudong-validators/src/validators.rs",
+        ])
 
     def test_target_build_products_are_neither_source_nor_tracked(self) -> None:
         listed = subprocess.run(

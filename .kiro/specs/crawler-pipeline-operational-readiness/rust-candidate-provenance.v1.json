@@ -53,6 +53,17 @@
         "backend/rust/tzudong-upsert-payload/src/python.rs",
         "backend/rust/tzudong-upsert-payload/src/value.rs"
       ]
+    },
+    {
+      "id": "visit-authenticity-enum-parity",
+      "kind": "behavior-correction",
+      "tool": "apply_patch",
+      "version": "1",
+      "paths": [
+        "backend/rust/tests/parity_pbt.py",
+        "backend/rust/tzudong-validators/src/lib.rs",
+        "backend/rust/tzudong-validators/src/validators.rs"
+      ]
     }
   ],
   "fileCount": 36,
@@ -95,9 +106,9 @@
     },
     {
       "path": "backend/rust/tests/parity_pbt.py",
-      "gitBlobSha1": "7ecac512921f9bea99cf106dfc99d71ff5337bec",
-      "sha256": "f273dc0149f126bb817d8e6d42eeeba1ad8762a7e1c0875a6aa777d7925dc700",
-      "bytes": 21534
+      "gitBlobSha1": "f5311d3317cf255d363dcfcf7c9c390e6aa535da",
+      "sha256": "d7d9e9f79f36a57cfd5efe1837312e8123528d93516a928c880399baeab31a09",
+      "bytes": 22986
     },
     {
       "path": "backend/rust/tzudong-media-compute/Cargo.toml",
@@ -239,9 +250,9 @@
     },
     {
       "path": "backend/rust/tzudong-validators/src/lib.rs",
-      "gitBlobSha1": "ff50aa19f180820fdfbdca0ec3b66d6fc87963f6",
-      "sha256": "99fe4e73daccd321c896be549dc025d7c91bf190f32e9c3b4a19472f11d3b445",
-      "bytes": 21787
+      "gitBlobSha1": "f989f1753da8f2fb4eb24a22dc670b20366837d0",
+      "sha256": "fd6074ef20ca71e7dfead067324dd4c20f03862ede67de792df1497127429a59",
+      "bytes": 23551
     },
     {
       "path": "backend/rust/tzudong-validators/src/python.rs",
@@ -257,9 +268,9 @@
     },
     {
       "path": "backend/rust/tzudong-validators/src/validators.rs",
-      "gitBlobSha1": "3153ce4f00de381691ddd89f3465964bb5af022c",
-      "sha256": "b1c6a1fc82ca2c0ec72f9a816553460ce732e745d8228549bc2b25cb14a9f1f9",
-      "bytes": 41400
+      "gitBlobSha1": "ea1a2fab8736e55b309931fd7d6c6718c989b344",
+      "sha256": "2a53c620a6140547511aac9e4e244d9737c0660080a5ca82033abf71d2ad19b3",
+      "bytes": 42475
     },
     {
       "path": "backend/rust/tzudong-validators/src/value.rs",
