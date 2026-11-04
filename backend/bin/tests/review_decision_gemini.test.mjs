@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
-import { APPROVAL_CODES, MODEL, judge, parseDecision } from '../review_decision_gemini.mjs';
+import { APPROVAL_CODES, CONTRACT_OUTCOME_SUBTYPES, MODEL, judge, main, parseDecision } from '../review_decision_gemini.mjs';
 
 const sha = 'a'.repeat(64);
 function envelope(decision = 'approve') {
@@ -48,6 +48,47 @@ test('incomplete, ambiguous and alternate-model output cannot authorize approval
     { candidates: [] }, { candidates: [{ finishReason: 'MAX_TOKENS' }] }, { candidates: [{ finishReason: 'SAFETY' }] },
     { candidates: [{ finishReason: 'STOP' }, { finishReason: 'STOP' }] }]) {
     assert.throws(() => parseDecision({ ...response(envelope()), modelVersion, ...patch }, sha, 'fixture'), { code: 'gemini_decision_incomplete' });
+  }
+});
+
+test('fixed application outcomes preserve model/count precedence and exact output-budget mapping', () => {
+  const privateMarker = 'private-provider-canary@example.invalid';
+  const cases = [
+    [{ modelVersion: privateMarker, candidates: [] }, 'response_model_not_admitted'],
+    [{ modelVersion: privateMarker, candidates: [{ finishReason: 'MAX_TOKENS' }] }, 'response_model_not_admitted'],
+    [{ candidates: [] }, 'response_candidate_count_not_one'],
+    [{ candidates: [{ finishReason: 'MAX_TOKENS' }, { finishReason: 'STOP' }] }, 'response_candidate_count_not_one'],
+    [{ candidates: [{ finishReason: 'MAX_TOKENS' }] }, 'output_budget_exhausted'],
+    ...[undefined, null, 'SAFETY', 'max_tokens', ' MAX_TOKENS', 'MAX_TOKENS\n', privateMarker]
+      .map(finishReason => [{ candidates: [{ finishReason }] }, 'response_completion_not_confirmed']),
+  ];
+  assert.deepEqual([...CONTRACT_OUTCOME_SUBTYPES].sort(), [
+    'output_budget_exhausted', 'response_candidate_count_not_one',
+    'response_completion_not_confirmed', 'response_model_not_admitted',
+  ]);
+  for (const [patch, subtype] of cases) {
+    assert.throws(() => parseDecision({ ...response(envelope()), ...patch }, sha, privateMarker), error => {
+      assert.equal(error.code, 'gemini_decision_incomplete');
+      assert.equal(error.contractOutcomeSubtype, subtype);
+      assert(!JSON.stringify(error).includes(privateMarker));
+      assert(!JSON.stringify(error).includes('MAX_TOKENS'));
+      return true;
+    });
+  }
+});
+
+test('each incomplete application outcome uses one injected generation and never retries', async () => {
+  for (const [patch, subtype] of [
+    [{ modelVersion: null }, 'response_model_not_admitted'],
+    [{ candidates: [] }, 'response_candidate_count_not_one'],
+    [{ candidates: [{ finishReason: 'MAX_TOKENS' }] }, 'output_budget_exhausted'],
+    [{ candidates: [{}] }, 'response_completion_not_confirmed'],
+  ]) {
+    let calls = 0;
+    await assert.rejects(judge('fixture', sha, { key: 'synthetic', client: () => ({}),
+      generate: async () => { calls++; return { ...response(envelope()), ...patch }; },
+    }), { code: 'gemini_decision_incomplete', contractOutcomeSubtype: subtype });
+    assert.equal(calls, 1);
   }
 });
 
@@ -133,6 +174,57 @@ test('installed SDK uses the existing project lease and emits exactly one reques
     assert.equal(calls, 2); assert.equal(leases(), 0);
   } finally {
     globalThis.fetch = fetch;
+    for (const [key, value] of Object.entries(saved)) value === undefined ? delete process.env[key] : process.env[key] = value;
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('CLI persists only fixed application outcomes from mocked SDK responses', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'review-gemini-outcomes-'));
+  const config = { GEMINI_BUDGET_PATH: path.join(directory, 'budget.sqlite'),
+    GEMINI_BUDGET_PROJECT: 'isolated-outcome-fixture', GEMINI_REQUESTS_PER_MINUTE: '100000',
+    GEMINI_MAX_INFLIGHT: '1', GEMINI_CREDITS_API_KEY: 'synthetic-fixture-key', LAAJ_THINKING_LEVEL: 'MEDIUM' };
+  const saved = Object.fromEntries(Object.keys(config).map(key => [key, process.env[key]]));
+  const fetch = globalThis.fetch;
+  const consoleError = console.error;
+  const messages = [];
+  const privateMarker = 'private-provider-canary@example.invalid';
+  let calls = 0;
+  Object.assign(process.env, config);
+  console.error = message => messages.push(message);
+  const input = path.join(directory, 'prompt.txt');
+  const output = path.join(directory, 'response.json');
+  fs.writeFileSync(input, 'synthetic untrusted fixture', { mode: 0o600 });
+  try {
+    for (const [patch, subtype] of [
+      [{ modelVersion: privateMarker }, 'response_model_not_admitted'],
+      [{ candidates: [] }, 'response_candidate_count_not_one'],
+      [{ candidates: [{ finishReason: 'MAX_TOKENS' }] }, 'output_budget_exhausted'],
+      [{ candidates: [{ finishReason: privateMarker }] }, 'response_completion_not_confirmed'],
+    ]) {
+      const before = calls;
+      globalThis.fetch = async (_url, options) => {
+        calls++;
+        const request = JSON.parse(options.body);
+        assert.equal(request.generationConfig.maxOutputTokens, 4096);
+        assert.equal(request.generationConfig.thinkingConfig.thinkingLevel, 'MEDIUM');
+        return new Response(JSON.stringify({ modelVersion: MODEL,
+          candidates: [{ finishReason: 'STOP', content: { role: 'model', parts: [{ text: privateMarker }] } }],
+          ...patch, usageMetadata: { totalTokenCount: 4096 }, responseId: privateMarker,
+        }), { status: 200, headers: { 'content-type': 'application/json' } });
+      };
+      assert.equal(await main([input, output, sha]), 1);
+      assert.equal(calls - before, 1);
+      const raw = fs.readFileSync(output, 'utf8');
+      assert.deepEqual(JSON.parse(raw), { error: 'gemini_decision_incomplete', contractOutcomeSubtype: subtype });
+      assert(!raw.includes(privateMarker));
+      assert(!/finishReason|modelVersion|responseId|usageMetadata|totalTokenCount|MAX_TOKENS/.test(raw));
+      assert.equal(fs.statSync(output).mode & 0o777, 0o600);
+    }
+    assert.deepEqual(messages, Array(4).fill('REVIEW_GEMINI_DECISION_UNCONFIRMED'));
+  } finally {
+    globalThis.fetch = fetch;
+    console.error = consoleError;
     for (const [key, value] of Object.entries(saved)) value === undefined ? delete process.env[key] : process.env[key] = value;
     fs.rmSync(directory, { recursive: true, force: true });
   }

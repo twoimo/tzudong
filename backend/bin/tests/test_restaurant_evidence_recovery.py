@@ -138,6 +138,139 @@ class RecoveryTests(unittest.TestCase):
     def phases(self):
         return [call[0] for call in self.rpc.calls]
 
+    def failed_judge_fixture(self, payload):
+        """Real Python evaluate path; only source/rule/SDK child work is mocked."""
+        original = self.rpc.original
+        original.update(channel_name='tzuyang', reasoning_basis='synthetic source basis',
+                        origin_address={'address': 'synthetic business address'}, categories=['한식'],
+                        youtube_meta={'title': 'synthetic video'})
+        self.rpc.meta.update(rowSha256=worker.digest(original), inputSha256=worker.digest(
+            {k: v for k, v in original.items() if k not in worker.VOLATILE}))
+        corpus = self.root / 'corpus'
+        transcript = corpus / 'tzuyang/transcript/ABCDEFGHIJK.jsonl'
+        transcript.parent.mkdir(parents=True, exist_ok=True)
+        transcript.write_text(json.dumps({'youtube_link': original['youtube_link'], 'channel_name': 'tzuyang',
+                                         'transcript': [{'start': 0, 'text': 'synthetic source'}]}) + '\n')
+        source = {'origin_name': original['origin_name'], 'address': 'synthetic business address',
+                  'reasoning_basis': original['reasoning_basis'], 'youtuber_review': original['tzuyang_review'],
+                  'category': ['한식']}
+        rule = {'youtube_link': original['youtube_link'], 'channel_name': 'tzuyang',
+                'restaurants': [source], 'evaluation_target': {original['origin_name']: True},
+                'evaluation_results': {'location_match_TF': []}}
+
+        def command(argv, **kwargs):
+            name = Path(argv[1]).name
+            if name in {'09-target-selection.py', 'review_rule_evaluation.py'}:
+                folder = 'selection' if name == '09-target-selection.py' else 'rule_results'
+                path = Path(argv[argv.index('--evaluation-path') + 1]) / 'evaluation' / folder / 'ABCDEFGHIJK.jsonl'
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps(rule) + '\n')
+                return subprocess.CompletedProcess(argv, 0)
+            self.assertEqual(name, 'review_decision_gemini.mjs')
+            self.command(argv, **kwargs)  # Requires the same durable paid-intent fence.
+            Path(argv[3]).write_text(json.dumps(payload))
+            return subprocess.CompletedProcess(argv, 1)
+
+        return dict(evaluator=worker.evaluate, crawling_root=corpus, run_command=command)
+
+    def test_actual_evaluate_error_propagates_each_fixed_outcome_only_to_paid_journal(self):
+        expected = {'output_budget_exhausted', 'response_candidate_count_not_one',
+                    'response_completion_not_confirmed', 'response_model_not_admitted'}
+        for index, subtype in enumerate(sorted(expected)):
+            with self.subTest(subtype=subtype):
+                self.rpc = Transport()
+                self.state = self.root / str(index)
+                fixture = self.failed_judge_fixture({'error': 'gemini_decision_incomplete',
+                                                     'contractOutcomeSubtype': subtype,
+                                                     'diagnostics': PRIVATE, 'responseId': PRIVATE})
+                with contextlib.redirect_stdout(io.StringIO()) as stdout, contextlib.redirect_stderr(io.StringIO()) as stderr:
+                    observed = self.run_worker(**fixture)
+                self.assertEqual((observed['state'], observed['code']), ('uncertain', 'gemini_decision_incomplete'))
+                self.assertEqual((observed['paid_attempted'], observed['outstanding'], observed['reserved_slots']), (True, True, 1))
+                raw = (self.state / (JOB + '.jsonl')).read_text()
+                entries = [json.loads(line) for line in raw.splitlines()]
+                events = [entry for entry in entries if entry['stage'] == 'judge_contract_outcome']
+                self.assertEqual(events, [{'stage': 'judge_contract_outcome', 'subtype': subtype}])
+                stages = [entry['stage'] for entry in entries]
+                self.assertLess(stages.index('paid_intent'), stages.index('judge_contract_outcome'))
+                self.assertLess(stages.index('judge_contract_outcome'), stages.index('fail_intent'))
+                self.assertEqual(self.phases(), ['read', 'claim', 'fail'])
+                self.assertEqual(self.rpc.calls[-1][3], {'code': 'gemini_decision_incomplete'})
+                self.assertNotIn(PRIVATE, raw + json.dumps(observed) + stdout.getvalue() + stderr.getvalue())
+                self.assertNotIn('responseId', raw)
+                self.assertEqual(self.paid_calls, index + 1)
+
+    def test_missing_unknown_or_wrong_code_subtype_stays_broad_without_private_leak(self):
+        payloads = [{'error': 'gemini_decision_incomplete'},
+                    *[{'error': 'gemini_decision_incomplete', 'contractOutcomeSubtype': value}
+                      for value in [None, PRIVATE, {'provider': PRIVATE}, ['output_budget_exhausted'], 1]],
+                    {'error': 'gemini_decision_invalid', 'contractOutcomeSubtype': 'output_budget_exhausted'}]
+        for index, payload in enumerate(payloads):
+            with self.subTest(index=index):
+                self.rpc = Transport()
+                self.state = self.root / str(index)
+                observed = self.run_worker(**self.failed_judge_fixture(payload))
+                self.assertEqual((observed['state'], observed['code']), ('uncertain', payload['error']))
+                raw = (self.state / (JOB + '.jsonl')).read_text()
+                self.assertNotIn('judge_contract_outcome', raw)
+                self.assertNotIn(PRIVATE, raw + json.dumps(observed))
+                self.assertEqual(self.paid_calls, index + 1)
+                self.assertEqual(self.rpc.calls[-1][3], {'code': payload['error']})
+
+    def test_outcome_append_failure_preserves_paid_fence_reservation_and_no_replay(self):
+        append = worker.Journal.append
+        for index, saved_before_failure in enumerate((False, True)):
+            with self.subTest(saved_before_failure=saved_before_failure):
+                self.rpc = Transport()
+                self.state = self.root / str(index)
+                fixture = self.failed_judge_fixture({'error': 'gemini_decision_incomplete',
+                                                     'contractOutcomeSubtype': 'output_budget_exhausted'})
+
+                def failing(journal, stage, **fields):
+                    if stage == 'judge_contract_outcome':
+                        if saved_before_failure:
+                            append(journal, stage, **fields)
+                        raise OSError(PRIVATE)
+                    return append(journal, stage, **fields)
+
+                with patch.object(worker.Journal, 'append', failing):
+                    observed = self.run_worker(**fixture)
+                self.assertEqual((observed['state'], observed['code']), ('uncertain', 'result_unconfirmed'))
+                self.assertEqual((observed['paid_attempted'], observed['outstanding'], observed['reserved_slots']), (True, True, 1))
+                raw = (self.state / (JOB + '.jsonl')).read_text()
+                self.assertIn('paid_intent', raw)
+                self.assertNotIn(PRIVATE, raw + json.dumps(observed))
+                self.assertEqual(self.phases(), ['read', 'claim'])
+                calls = len(self.rpc.calls)
+                replay = self.run_worker(**fixture)
+                self.assertEqual(replay['code'], 'journal_exists_no_replay')
+                self.assertEqual((replay['outstanding'], replay['reserved_slots']), (True, 1))
+                self.assertEqual(len(self.rpc.calls), calls)
+                self.assertEqual(self.paid_calls, index + 1)
+
+    def test_unspent_or_tampered_exception_never_claims_a_paid_contract_outcome(self):
+        def unspent(*args, **kwargs):
+            raise worker.WorkerFailure('gemini_decision_incomplete', contract_outcome_subtype='output_budget_exhausted')
+        self.run_worker(evaluator=unspent)
+        self.assertNotIn('judge_contract_outcome', (self.state / (JOB + '.jsonl')).read_text())
+        self.assertEqual(self.paid_calls, 0)
+
+        self.rpc = Transport()
+        self.state = self.root / 'tampered'
+
+        def tampered(*args, **kwargs):
+            kwargs['run_command'](['node', 'review_decision_gemini.mjs'])
+            error = worker.WorkerFailure('gemini_decision_incomplete')
+            error.contract_outcome_subtype = {'private': PRIVATE}
+            raise error
+
+        observed = self.run_worker(evaluator=tampered)
+        raw = (self.state / (JOB + '.jsonl')).read_text()
+        self.assertEqual(observed['code'], 'gemini_decision_incomplete')
+        self.assertNotIn('judge_contract_outcome', raw)
+        self.assertNotIn(PRIVATE, raw + json.dumps(observed))
+        self.assertEqual(self.paid_calls, 1)
+
     def test_dry_read_only_no_state_no_evaluation(self):
         observed = self.run_worker(allow_worker_write=False)
         self.assertEqual(observed['code'], 'dry_run')
