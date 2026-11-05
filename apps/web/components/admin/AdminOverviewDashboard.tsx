@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Image as ImageIcon, Layers3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingPreview, LoadingSurface } from '@/components/ui/loading-surface';
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { AdminMapLoadErrorState } from "@/components/admin/admin-map-load-error-state";
 import { readAdminNaverCoordinate } from "@/lib/admin/naver-coordinate";
@@ -490,11 +490,25 @@ function AdminMapLoadingSkeleton() {
       aria-live="polite"
       aria-label="관리자 네이버 지도 로딩"
     >
+
       <span className="sr-only">네이버 지도를 준비하고 있습니다.</span>
+
       <div className="absolute left-3 top-3 space-y-1.5" aria-hidden="true">
-        <Skeleton className="h-7 w-24 rounded-full motion-reduce:animate-none" />
-        <Skeleton className="h-2 w-16 rounded-full motion-reduce:animate-none" />
+
+        <LoadingSurface label="관리자 네이버 지도 로딩">
+
+          <div className="space-y-1.5">
+
+            <p className="text-sm font-semibold">촬영 동선</p>
+
+            <p className="text-xs">지도 준비</p>
+
+          </div>
+
+        </LoadingSurface>
+
       </div>
+
     </div>
   );
 }
@@ -1045,33 +1059,52 @@ function AdminMapInfoPanelSkeleton() {
       aria-live="polite"
       aria-label="관리자 지도 동선 추천 로딩"
     >
+
       <section className="admin-surface shrink-0 rounded-md bg-card p-2 shadow-none">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="rounded-xl bg-background/70 p-2">
-            <Skeleton className="h-3 w-20 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="mt-2 h-6 w-40 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="mt-3 h-4 w-full rounded-full motion-reduce:animate-none" />
-            <Skeleton className="mt-2 h-4 w-4/5 rounded-full motion-reduce:animate-none" />
+
+        <LoadingSurface label="선택한 맛집 정보 로딩 중">
+
+          <div className="grid gap-2 sm:grid-cols-2">
+
+            <div className="rounded-xl bg-background/70 p-2">
+
+              <p className="text-xs">선택한 맛집</p>
+
+              <h3 className="mt-2 text-lg font-semibold">맛집 정보</h3>
+
+              <p className="mt-3 text-sm">위치와 방문 정보</p>
+
+              <p className="mt-2 text-sm">영상 안내</p>
+
+            </div>
+
+            <svg viewBox="0 0 320 180" role="img" aria-label="맛집 사진" className="aspect-video w-full rounded-lg">
+
+              <rect width="320" height="180" fill="currentColor" opacity="0.08" />
+
+            </svg>
+
           </div>
-          <div className="rounded-xl bg-background/70 p-2">
-            <Skeleton className="aspect-video w-full rounded-lg motion-reduce:animate-none" />
-          </div>
-        </div>
+
+        </LoadingSurface>
+
       </section>
-      <section ref={routeSkeletonRef} className="admin-surface rounded-md bg-card p-2.5 shadow-none lg:min-h-0 lg:flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <Skeleton className="h-5 w-28 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="h-5 w-20 rounded-full motion-reduce:animate-none" />
-        </div>
-        <div className="mt-3 space-y-1.5">
-          {Array.from({ length: routeSkeletonCount }).map((_, index) => (
-            <Skeleton
-              key={index}
-              className="h-[4.75rem] rounded-xl motion-reduce:animate-none"
-            />
-          ))}
-        </div>
+
+      <section
+        ref={routeSkeletonRef}
+        className="admin-surface rounded-md bg-card p-2.5 shadow-none lg:min-h-0 lg:flex-1"
+      >
+
+        <LoadingPreview
+          kind="list"
+          rows={routeSkeletonCount}
+          label="촬영 동선 로딩 중"
+          compact
+          style={{ minHeight: routeSkeletonCount * 76 }}
+        />
+
       </section>
+
     </aside>
   );
 }
@@ -1343,10 +1376,11 @@ function AdminMapInfoPanel({
             촬영 동선
           </p>
           {isLoading ? (
-            <Skeleton
-              className="h-5 w-20 rounded-full motion-reduce:animate-none"
-              aria-hidden="true"
-            />
+            <LoadingSurface label="촬영 동선 상태 조회 중" className="h-5 w-20">
+
+              <span className="text-xs">동선 상태</span>
+
+            </LoadingSurface>
           ) : (
             <Badge
               variant="outline"

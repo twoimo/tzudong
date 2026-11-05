@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingSurface } from "@/components/ui/loading-surface";
 import { useNotifications } from "@/contexts/NotificationContextBase";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/types/notification";
@@ -140,18 +140,17 @@ export default function MobileNotificationMenuButton({
         <DropdownMenuSeparator className="my-2 bg-border" />
         <ScrollArea className="h-72 max-h-[min(70vh,28rem)] pr-1">
           {isNotificationsLoading ? (
-            <div
-              role="status"
-              aria-label="알림 목록 로딩 중"
-              className="space-y-3 rounded-xl bg-background/70 p-3"
-            >
-              {[0, 1, 2].map((item) => (
-                <div key={item} className="space-y-2">
-                  <Skeleton className="h-4 w-3/4 rounded" />
-                  <Skeleton className="h-3 w-full rounded" />
-                </div>
-              ))}
-            </div>
+            <LoadingSurface label="알림 목록 로딩 중" className="space-y-3 rounded-xl bg-background/70 p-3">
+              <div className="space-y-3">
+                {Array.from({ length: 3 }, (_, index) => (
+                  <article key={index} className="space-y-2">
+                    <h3 className="text-sm font-medium leading-4">새로운 알림</h3>
+                    <p className="text-xs leading-3 text-muted-foreground">맛집과 방문 이야기를 확인해 보세요</p>
+
+                  </article>
+                ))}
+              </div>
+            </LoadingSurface>
           ) : isNotificationsError ? (
             <div
               role="status"

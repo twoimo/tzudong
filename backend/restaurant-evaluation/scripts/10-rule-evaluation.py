@@ -18,6 +18,7 @@ selection 데이터를 읽어와 카테고리 유효성 및 위치 정합성을 
 
 import os
 import json
+import html
 import re
 import math
 import unicodedata
@@ -595,7 +596,9 @@ def _naver_local_search_uncached(query: str, display: int = 5) -> List[Dict[str,
             items = j.get("items", []) if isinstance(j, dict) else []
             results = []
             for it in items:
-                title = re.sub(r"</?b>", "", (it.get("title") or ""))
+                # Decode the provider's HTML once, after stripping its bold tags.
+                # Encoded literal business characters must survive name matching.
+                title = html.unescape(re.sub(r"</?b>", "", (it.get("title") or "")))
                 addr = it.get("address") or it.get("roadAddress") or ""
                 raddr = it.get("roadAddress") or ""
                 mapx = it.get("mapx")

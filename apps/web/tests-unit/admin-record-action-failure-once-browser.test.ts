@@ -2,6 +2,8 @@ import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import postcss from 'postcss';
+import tailwind from '@tailwindcss/postcss';
 import { chromium, expect as playwrightExpect, type Browser } from '@playwright/test';
 import { RECORD_ACTION_CONFIRMATION } from '../lib/admin/record-action-contract';
 
@@ -14,9 +16,11 @@ const entry = `
   import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
   import AdminEvaluationRoutePage from './app/admin/evaluations/page';
   import { AppToaster } from './components/ui/app-toaster';
+  import { RECORD_ACTION_APPLIED_EVENT } from './lib/admin/record-action-client';
   const id = '33333333-3333-4333-8333-333333333333';
-  const fixture = { recordActionPosts: 0, recordAction: 'forbidden', deleted: false, refreshOk: false };
+  const fixture = { recordActionPosts: 0, applyPosts: 0, readbacks: [], appliedCallbacks: 0, recordAction: 'forbidden', deleted: false, refreshOk: false };
   globalThis.__fixture = fixture;
+  window.addEventListener(RECORD_ACTION_APPLIED_EVENT, () => { fixture.appliedCallbacks++; });
   const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } });
   const onePage = { records: [{ id, name: '권한 확인 맛집', status: 'pending' }], revision: '1', filteredTotal: 1, nextCursor: null,
     warnings: { [id]: { sameVideo: { count: 0, candidates: [], message: '' }, identity: [] } },
@@ -32,9 +36,13 @@ const entry = `
     if (url.pathname === '/api/admin/record-actions') {
       if (init.method === 'POST') fixture.recordActionPosts++;
       if (fixture.recordAction === 'forbidden') return json({ code: 'RECORD_ACTION_FORBIDDEN' }, 403);
-      if (init.method === 'POST') fixture.lastRequest = JSON.parse(init.body);
+      if (init.method === 'POST') {
+        fixture.lastRequest = JSON.parse(init.body);
+        if (fixture.lastRequest.phase === 'apply') fixture.applyPosts++;
+      }
       const body = fixture.lastRequest, applied = init.method !== 'POST' || body.phase === 'apply';
       if (applied) fixture.deleted = true;
+      if (init.method !== 'POST') fixture.readbacks.push({ status: 200, state: applied ? 'applied' : 'preview' });
       return json({ success: true, receipt: { operationId: body.operationId, action: body.action, state: applied ? 'applied' : 'preview', previewHash: 'a'.repeat(64),
         targetIds: body.targetIds, auditId: applied ? '44444444-4444-4444-8444-444444444444' : null, expiresAt: new Date(Date.now() + 900000).toISOString(),
         readback: [{ id, kind: 'restaurant', status: applied ? 'deleted' : 'pending', fingerprint: applied ? null : 'b'.repeat(64) }], mediaCleanupPending: false } });
@@ -75,6 +83,12 @@ async function bundle() {
   return built.outputs.find(output => output.path.endsWith('.js'))!.text();
 }
 
+// Match root, runtime and admin layout CSS: measured loading samples need their real geometry.
+let css: Promise<string> | undefined;
+function fixtureCss() {
+  return css ??= postcss([tailwind()]).process('@import "./app/globals.css";\n@import "./app/app-globals.css";\n@import "./styles/product-ui.css";\n@import "./styles/admin-ui.css";', { from: join(appRoot, 'record-action-fixture.css') }).then(result => result.css);
+}
+
 async function openPage(context: Awaited<ReturnType<Browser['newContext']>>, script: string) {
   const page = await context.newPage();
   page.setDefaultTimeout(5_000);
@@ -88,8 +102,18 @@ async function openPage(context: Awaited<ReturnType<Browser['newContext']>>, scr
   });
   await page.addInitScript(() => { (globalThis as unknown as { process: unknown }).process = { env: { NODE_ENV: 'test' } }; });
   await page.goto('https://record-actions.test/admin');
+  await page.addStyleTag({ content: await fixtureCss() });
   await page.addScriptTag({ content: script });
   return { page, pageErrors, external };
+}
+
+async function expectSingleConfirmedApply(page: Awaited<ReturnType<Browser['newPage']>>) {
+  expect(await page.evaluate(() => {
+    const fixture = (globalThis as unknown as { __fixture: {
+      recordActionPosts: number; applyPosts: number; readbacks: { status: number; state: string }[]; appliedCallbacks: number;
+    } }).__fixture;
+    return { posts: fixture.recordActionPosts, applyPosts: fixture.applyPosts, readbacks: fixture.readbacks, appliedCallbacks: fixture.appliedCallbacks };
+  })).toEqual({ posts: 2, applyPosts: 1, readbacks: [{ status: 200, state: 'applied' }], appliedCallbacks: 1 });
 }
 
 (existsSync(chrome) ? test : test.skip)('a record action failure shown in its dialog is not repeated as a toast', async () => {
@@ -131,12 +155,16 @@ async function openPage(context: Awaited<ReturnType<Browser['newContext']>>, scr
         await page.getByRole('button', { name: '검수 항목 삭제' }).filter({ visible: true }).first().focus();
         await page.keyboard.press('Enter');
         await page.getByLabel('변경 적용 확인 문구').fill(RECORD_ACTION_CONFIRMATION);
-        await page.getByRole('button', { name: '변경 적용' }).focus();
+        const apply = page.getByRole('button', { name: '변경 적용' });
+        await playwrightExpect(apply).toBeEnabled();
+        await apply.focus();
+        await playwrightExpect(apply).toBeFocused();
         await page.keyboard.press('Enter');
         await playwrightExpect(page.getByRole('dialog')).toHaveCount(0);
         const retry = page.locator('[data-admin-record-views-invalidated]').getByRole('button');
         await playwrightExpect(retry).toHaveText('새로 조회');
         await playwrightExpect(retry).toBeFocused();
+        await expectSingleConfirmedApply(page);
 
         await page.keyboard.press('Enter');
         await playwrightExpect(retry).toHaveText('새로 조회');
@@ -147,6 +175,7 @@ async function openPage(context: Awaited<ReturnType<Browser['newContext']>>, scr
         await playwrightExpect(page.locator('[data-admin-record-views-invalidated]')).toHaveCount(0);
         await playwrightExpect(page.getByText('표시할 데이터가 없습니다').filter({ visible: true })).toHaveCount(1);
         await playwrightExpect(page.locator('[data-admin-module-content]')).toBeFocused();
+        await expectSingleConfirmedApply(page);
         expect(external.count).toBe(0);
         expect(pageErrors).toEqual([]);
       } finally {

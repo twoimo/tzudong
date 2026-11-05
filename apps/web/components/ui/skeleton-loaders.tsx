@@ -2,162 +2,55 @@
 
 import { memo } from "react";
 import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingPreview, LoadingSurface } from "@/components/ui/loading-surface";
 import { cn } from "@/lib/utils";
 
-// [PERF] CSS containment 스타일 - 스켈레톤 컨테이너 레이아웃 격리
-const CONTAIN_STYLE = { contain: 'content' } as const;
-
-// ========== 리뷰 피드 스켈레톤 ==========
+// Compatibility exports retain route/query ownership; Skullet measures static
+// content instead of a separate collection of manually sized placeholder bars.
 function FeedSkeletonComponent({ count = 3, className }: { count?: number; className?: string }) {
-    const { ref: filledRef, count: filledCount } = useFilledSkeletonCount(280, count);
-    return (
-        <div
-            ref={filledRef}
-            className={cn("w-full max-w-2xl mx-auto p-4 space-y-4", className)}
-            style={CONTAIN_STYLE}
-            data-testid="feed-skeleton"
-            role="status"
-            aria-busy="true"
-            aria-label="리뷰 피드를 불러오는 중"
-        >
-            {Array.from({ length: filledCount }, (_, i) => (
-                <div key={i} className="space-y-3 p-4 rounded-lg border border-border/50">
-                    <div className="flex items-center gap-3">
-                        <Skeleton className="h-9 w-9 rounded-full" />
-                        <Skeleton className="h-4 w-28" />
-                    </div>
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-40 w-full rounded-lg" />
-                </div>
-            ))}
-        </div>
-    );
+    const { ref, count: filledCount } = useFilledSkeletonCount(280, count);
+    return <div ref={ref} data-testid="feed-skeleton" className={cn("w-full max-w-2xl mx-auto", className)}>
+        <LoadingSurface label="리뷰 피드를 불러오는 중" className="space-y-4 p-4">
+            {Array.from({ length: filledCount }, (_, index) => <article key={index} className="space-y-3 rounded-lg border p-4">
+                <p className="text-sm font-medium">맛집 방문 이야기</p>
+                <p className="text-sm leading-6">영상 속 음식을 찾아 떠나는 맛있는 여행을 함께해요.</p>
+                <svg viewBox="0 0 320 160" role="img" aria-label="방문 사진" className="h-40 w-full rounded-lg bg-muted"><rect width="320" height="160" fill="currentColor" opacity="0.08" /></svg>
+            </article>)}
+        </LoadingSurface>
+    </div>;
 }
 
-// ========== 도장 그리드 스켈레톤 ==========
-function StampGridSkeletonComponent({
-    count = 8,
-    columns = "grid-cols-1 md:grid-cols-3 lg:grid-cols-4",
-    showHeader = true,
-    className,
-}: {
-    count?: number;
-    columns?: string;
-    showHeader?: boolean;
-    className?: string;
+function StampGridSkeletonComponent({ count = 8, columns = "grid-cols-1 md:grid-cols-3 lg:grid-cols-4", showHeader = true, className }: {
+    count?: number; columns?: string; showHeader?: boolean; className?: string;
 }) {
-    return (
-        <div className={cn("w-full p-4 space-y-4", className)} style={CONTAIN_STYLE}>
-            {showHeader && <Skeleton className="h-6 w-32" />}
-            <div className={cn("grid gap-3", columns)}>
-                {Array.from({ length: count }, (_, i) => (
-                    <div key={i} className="space-y-2">
-                        <Skeleton className="aspect-video w-full rounded-lg" />
-                        <Skeleton className="h-4 w-3/4" />
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
+    return <LoadingSurface label="도장 목록을 불러오는 중" className={cn("w-full space-y-4 p-4", className)}>
+        {showHeader && <h2 className="text-lg font-semibold">맛집 도장 모으기</h2>}
+        <div className={cn("grid gap-3", columns)}>{Array.from({ length: count }, (_, index) => <article key={index} className="min-w-0 space-y-2">
+            <svg viewBox="0 0 320 180" role="img" aria-label="맛집 사진" className="aspect-video w-full rounded-lg bg-muted"><rect width="320" height="180" fill="currentColor" opacity="0.08" /></svg>
+            <p className="text-sm font-medium">영상 속 맛집</p>
+        </article>)}</div>
+    </LoadingSurface>;
 }
 
-// ========== 도장 페이지 전체 스켈레톤 ==========
 function StampPageSkeletonComponent() {
-    return (
-        <div
-            className="h-full overflow-hidden bg-background"
-            style={CONTAIN_STYLE}
-            data-testid="stamp-page-skeleton"
-            aria-busy="true"
-            aria-label="도장 페이지를 불러오는 중"
-        >
-            <div className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-                <div className="shrink-0 space-y-4 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1 basis-[min(11rem,100%)] space-y-2">
-                            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                                <Skeleton className="h-7 w-32 max-w-full rounded-lg" />
-                                <Skeleton className="h-4 w-12 rounded-full" />
-                            </div>
-                            <Skeleton className="h-4 w-52 max-w-full rounded-full" />
-                        </div>
-                        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2" aria-hidden="true">
-                            <Skeleton className="h-8 w-8 rounded-full" />
-                            <Skeleton className="h-10 w-10 rounded-md" />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-6">
-                        <Skeleton className="h-10 rounded-md lg:col-span-2" />
-                        <Skeleton className="h-10 rounded-md" />
-                        <Skeleton className="h-10 rounded-md" />
-                        <Skeleton className="h-10 rounded-md" />
-                        <Skeleton className="h-10 rounded-md" />
-                    </div>
-                </div>
-                <div className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background">
-                    <StampGridSkeleton count={16} showHeader={false} className="p-0" />
-                </div>
-            </div>
+    return <div className="h-full overflow-hidden bg-background" data-testid="stamp-page-skeleton">
+        <div className="flex h-full min-h-0 flex-col overflow-y-auto">
+            <LoadingSurface label="도장 페이지를 불러오는 중" className="shrink-0 border-b px-3 py-3 sm:px-5 sm:py-4">
+                <div className="space-y-4"><h1 className="text-xl font-semibold">맛집 도장</h1><p className="text-sm">새로운 맛집을 방문하고 도장을 모아보세요</p><div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-6">{["맛집 검색", "지역", "카테고리", "방문", "정렬"].map(text => <p key={text} className="rounded-md border px-3 py-3 text-sm">{text}</p>)}</div></div>
+            </LoadingSurface>
+            <div className="min-h-0 flex-1 px-4 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] sm:px-6 md:pb-6"><StampGridSkeleton count={16} showHeader={false} className="p-0" /></div>
         </div>
-    );
+    </div>;
 }
 
-// ========== 랭킹 스켈레톤 ==========
-function LeaderboardSkeletonComponent({
-    count = 8,
-    showHeader = true,
-    className,
-    compactLeftPanel = false,
-}: {
-    count?: number;
-    showHeader?: boolean;
-    className?: string;
-    compactLeftPanel?: boolean;
+function LeaderboardSkeletonComponent({ count = 8, showHeader = true, className, compactLeftPanel = false }: {
+    count?: number; showHeader?: boolean; className?: string; compactLeftPanel?: boolean;
 }) {
-    const { ref: filledRef, count: filledCount } = useFilledSkeletonCount(compactLeftPanel ? 52 : 56, count);
-    return (
-        <div
-            ref={filledRef}
-            className={cn(
-                "w-full space-y-3",
-                compactLeftPanel ? "px-2 py-4" : "p-4",
-                className,
-            )}
-            style={CONTAIN_STYLE}
-        >
-            {showHeader && <Skeleton className="h-6 w-32" />}
-            {Array.from({ length: filledCount }, (_, i) => (
-                <div
-                    key={i}
-                    className={cn(
-                        "flex items-center py-2",
-                        compactLeftPanel ? "gap-2" : "gap-3",
-                    )}
-                >
-                    <Skeleton
-                        className={cn(
-                            "h-9 rounded-full",
-                            compactLeftPanel ? "w-7" : "w-9",
-                        )}
-                    />
-                    <Skeleton className="h-4 w-24 flex-1" />
-                    <Skeleton className="h-4 w-12" />
-                </div>
-            ))}
-        </div>
-    );
+    const { ref, count: filledCount } = useFilledSkeletonCount(compactLeftPanel ? 52 : 56, count);
+    return <div ref={ref} className={cn("w-full", className)}><LoadingPreview label="랭킹을 불러오는 중" kind="list" rows={filledCount} showHeader={showHeader} compact={compactLeftPanel} /></div>;
 }
 
 export const FeedSkeleton = memo(FeedSkeletonComponent);
-FeedSkeleton.displayName = "FeedSkeleton";
-
 export const StampGridSkeleton = memo(StampGridSkeletonComponent);
-StampGridSkeleton.displayName = "StampGridSkeleton";
-
 export const StampPageSkeleton = memo(StampPageSkeletonComponent);
-StampPageSkeleton.displayName = "StampPageSkeleton";
-
 export const LeaderboardSkeleton = memo(LeaderboardSkeletonComponent);
-LeaderboardSkeleton.displayName = "LeaderboardSkeleton";
