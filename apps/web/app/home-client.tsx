@@ -58,7 +58,7 @@ import {
   type HomeRestoreSnapshotV1,
 } from "@/lib/home-detail-route-state";
 import { findOverseasRegionKeyForRestaurant } from "@/lib/overseas-region-matching";
-import { preloadNaverMap } from "@/lib/naver-map-loader";
+import { useHomeNaverPreload } from "@/hooks/use-home-naver-preload";
 
 function HomeMapContainerPendingShell() {
   return (
@@ -210,12 +210,7 @@ export default function HomeClient() {
   const isDesktop = viewportMode === "desktop";
   const isMobileOrTablet = viewportMode === "mobileOrTablet";
   const [mapMode, setMapMode] = useState<"domestic" | "overseas">("domestic");
-  useEffect(() => {
-    if (!isViewportResolved || mapMode !== "domestic") return;
-    // URL restoration may still be resolving the initial mode in this commit.
-    if (new URL(window.location.href).searchParams.get("mapMode") === "overseas") return;
-    preloadNaverMap();
-  }, [isViewportResolved, mapMode]);
+  useHomeNaverPreload(isViewportResolved, mapMode);
   const [activePanel, setActivePanel] = useState<"map" | "detail" | "control">(
     "map",
   );
