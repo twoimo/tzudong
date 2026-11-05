@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { LoadingPreview } from "@/components/ui/loading-surface";
 import { MapPanelHeader } from "@/components/home/map-panel-chrome";
 
 /** Keep the selected destination visible while its code is loading or unavailable. */
@@ -20,8 +21,8 @@ export function DeferredPanelFallback({ title, failed, onRetry, onClose }: {
   return (
     <section className="flex h-full min-h-0 flex-col" aria-label={`${title} 패널`}>
       <MapPanelHeader title={title} onClose={onClose} />
-      <div ref={statusRef} tabIndex={-1} role={failed ? "alert" : "status"}
-        aria-live="polite" aria-busy={!failed} className="space-y-4 p-4 outline-none"
+      <div ref={statusRef} tabIndex={-1} role={failed ? "alert" : undefined}
+        aria-live={failed ? "polite" : undefined} aria-busy={!failed} className="space-y-4 p-4 outline-none"
         data-deferred-panel-state={failed ? "error" : "loading"}>
         {failed ? (
           <>
@@ -29,14 +30,13 @@ export function DeferredPanelFallback({ title, failed, onRetry, onClose }: {
             <Button variant="outline" onClick={onRetry}>다시 시도</Button>
           </>
         ) : (
-          <>
-            <span className="sr-only">{title} 불러오는 중</span>
-            <div aria-hidden="true" className="space-y-3 motion-safe:animate-pulse">
-              <div className="h-16 rounded-xl bg-muted" />
-              <div className="h-16 rounded-xl bg-muted" />
-              <div className="h-16 rounded-xl bg-muted" />
-            </div>
-          </>
+          <LoadingPreview
+            kind="list"
+            rows={3}
+            showHeader={false}
+            label={title + " 불러오는 중"}
+            className="min-h-60"
+          />
         )}
       </div>
     </section>

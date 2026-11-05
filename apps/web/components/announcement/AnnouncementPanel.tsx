@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingSurface } from "@/components/ui/loading-surface";
 import { toast } from '@/lib/no-toast';
 import { Announcement, AnnouncementFormData } from '@/types/announcement';
 import { formatDistanceToNow } from 'date-fns';
@@ -99,27 +99,24 @@ export default function AnnouncementPanel({
     const contentInputRef = useRef<HTMLTextAreaElement | null>(null);
 const ITEMS_PER_PAGE = 5;
 
-function InlineCountSkeleton() {
-    return <span className="inline-block h-3 w-6 rounded-full bg-muted/70 align-middle" aria-hidden="true" />;
+function AnnouncementCountLoading() {
+    return <LoadingSurface label="공지사항 집계 중" className="inline-block h-3 w-6 align-middle"><span className="block text-xs leading-3">00</span></LoadingSurface>;
 }
 
-function AnnouncementListItemSkeleton({ index }: { index: number }) {
+function AnnouncementListItemPreview({ index }: { index: number }) {
     return (
-        <div className="w-full rounded-xl border border-border/70 bg-card px-3 py-3" aria-hidden="true">
+        <article className="w-full rounded-xl border border-border/70 bg-card px-3 py-3">
             <div className="flex min-w-0 items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                    <Skeleton className={index % 2 === 0 ? 'h-4 w-40 max-w-full rounded-full motion-reduce:animate-none' : 'h-4 w-28 max-w-full rounded-full motion-reduce:animate-none'} />
-                    <div className="mt-2 flex items-center gap-1">
-                        <Skeleton className="h-3 w-3 rounded-full motion-reduce:animate-none" />
-                        <Skeleton className={index % 3 === 0 ? 'h-3 w-16 rounded-full motion-reduce:animate-none' : 'h-3 w-20 rounded-full motion-reduce:animate-none'} />
-                    </div>
+                    <h3 className="truncate text-sm font-medium leading-4">{index % 2 === 0 ? "쯔동여지도 소식" : "새로운 공지"}</h3>
+                    <p className="mt-2 text-xs leading-3 text-muted-foreground">서비스 안내</p>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                    <Skeleton className="h-5 w-10 rounded-full motion-reduce:animate-none" />
-                    {index % 2 === 0 && <Skeleton className="h-5 w-9 rounded-full motion-reduce:animate-none" />}
+                <div className="flex shrink-0 flex-col items-end gap-1 text-xs">
+                    <span className="rounded-full border px-2 leading-5">공지</span>
+                    {index % 2 === 0 && <span className="rounded-full border px-2 leading-5">안내</span>}
                 </div>
             </div>
-        </div>
+        </article>
     );
 }
 
@@ -340,15 +337,15 @@ function AnnouncementListItemSkeleton({ index }: { index: number }) {
                         <div className="p-4 space-y-3">
                             {canManageInline && (
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                    <span className="rounded-full border border-border bg-muted/45 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                                        전체 {isAnnouncementsLoading ? <InlineCountSkeleton /> : allDisplayAnnouncements.length}
-                                    </span>
-                                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
-                                        게시 {isAnnouncementsLoading ? <InlineCountSkeleton /> : activeCount}
-                                    </span>
-                                    <span className="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-800">
-                                        배너 {isAnnouncementsLoading ? <InlineCountSkeleton /> : bannerCount}
-                                    </span>
+                                    <div aria-hidden={isAnnouncementsLoading || undefined} className="rounded-full border border-border bg-muted/45 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                                        전체 {isAnnouncementsLoading ? <AnnouncementCountLoading /> : allDisplayAnnouncements.length}
+                                    </div>
+                                    <div aria-hidden={isAnnouncementsLoading || undefined} className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+                                        게시 {isAnnouncementsLoading ? <AnnouncementCountLoading /> : activeCount}
+                                    </div>
+                                    <div aria-hidden={isAnnouncementsLoading || undefined} className="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-800">
+                                        배너 {isAnnouncementsLoading ? <AnnouncementCountLoading /> : bannerCount}
+                                    </div>
                                 </div>
                             )}
                             {canManageInline && lastActionMessage && (
@@ -357,12 +354,13 @@ function AnnouncementListItemSkeleton({ index }: { index: number }) {
                                 </Card>
                             )}
                             {isAnnouncementsLoading ? (
-                                <div className="space-y-3" role="status" aria-busy="true" aria-label="공지사항 목록 로딩 중">
-                                    <span className="sr-only">공지사항 목록 데이터를 불러오는 중입니다.</span>
-                                    {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
-                                        <AnnouncementListItemSkeleton key={index} index={index} />
-                                    ))}
-                                </div>
+                                <LoadingSurface className="space-y-3" label="공지사항 목록 로딩 중">
+                                    <div className="space-y-3">
+                                        {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
+                                            <AnnouncementListItemPreview key={index} index={index} />
+                                        ))}
+                                    </div>
+                                </LoadingSurface>
                             ) : displayAnnouncements.length === 0 ? (
                                 <Card className="p-8 text-center">
                                     <div className="text-4xl mb-3">📢</div>

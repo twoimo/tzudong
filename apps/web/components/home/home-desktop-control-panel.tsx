@@ -16,15 +16,9 @@ import Image from "next/image";
 import { MapPanelHeader } from '@/components/home/map-panel-chrome';
 import { useRouter, useSearchParams } from "next/navigation";
 import { flushSync } from "react-dom";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import CategoryFilter from "@/components/filters/CategoryFilter";
+import { HomeMapRegionFilter } from "@/components/home/HomeMapRegionFilter";
 const loadDropdownMenu = () => import("@/components/ui/dropdown-menu");
 const DropdownMenu = dynamic(() => loadDropdownMenu().then((mod) => mod.DropdownMenu), {
   loading: () => (
@@ -54,7 +48,7 @@ import { preloadOverseasMap } from "@/lib/overseas-map-loader";
 import DesktopLeftPanelMapHome from "@/components/home/DesktopLeftPanelMapHome";
 
 import { OVERSEAS_REGION_LIST } from "@/constants/overseas-regions";
-import { homeMapResultCountLabel, type HomeMapResultSummary } from '@/lib/home-map-result-summary';
+import type { HomeMapResultSummary } from '@/lib/home-map-result-summary';
 import type { FilterState } from "@/components/filters/filter-state";
 import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-contextual-restaurants";
 import { isPublicRestrictedMode } from "@/lib/site-config";
@@ -1617,26 +1611,29 @@ export default function HomeDesktopControlPanel({
                 </Button>
               </div>
             )}
-            <Select
+            <HomeMapRegionFilter
+              mapMode={mapMode}
               value={mapMode === "domestic" ? selectedRegion || "all" : selectedCountry || undefined}
+              resultSummary={resultSummary}
+              options={[
+                ...(mapMode === "domestic" ? [{
+                  value: "all",
+                  label: "대한민국",
+                  count: resultSummary.status === "ready" ? resultSummary.count ?? 0 : undefined,
+                }] : []),
+                ...(mapMode === "domestic" ? REGIONS : OVERSEAS_REGION_LIST).map((region) => ({
+                  value: region,
+                  label: region,
+                  count: resultSummary.status === "ready"
+                    ? (mapMode === "domestic" ? resultSummary.regionCounts : resultSummary.countryCounts)[region] ?? 0
+                    : undefined,
+                })),
+              ]}
               onValueChange={(value) => {
                 if (mapMode === "overseas") onCountryChange(value);
                 else { const region = value === "all" ? null : value as Region; onRegionChange(region); onSearchExecute(region); }
               }}
-            >
-              <SelectTrigger aria-label="지역 선택" className="h-8 w-full min-w-0 rounded-full border-border bg-background/95 px-2 text-xs font-medium shadow-sm">
-                <SelectValue placeholder="해외 지역" />
-              </SelectTrigger>
-              <SelectContent side="top" align="start" className="z-[180] max-h-[min(24rem,calc(100dvh-8rem))] rounded-2xl">
-                <p className="px-2 py-1 text-xs text-muted-foreground">현재 지도 결과 내 지역별 수</p>
-                {mapMode === "domestic" && <SelectItem value="all">대한민국 ({homeMapResultCountLabel(resultSummary, resultSummary.count ?? undefined)}개)</SelectItem>}
-                {(mapMode === "domestic" ? REGIONS : OVERSEAS_REGION_LIST).map((region) => (
-                  <SelectItem key={region} value={region}>
-                    {region} ({homeMapResultCountLabel(resultSummary, (mapMode === "domestic" ? resultSummary.regionCounts : resultSummary.countryCounts)[region])}개)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
             <CategoryFilter
               selectedCategories={selectedCategories}
               onCategoryChange={onCategoryChange}

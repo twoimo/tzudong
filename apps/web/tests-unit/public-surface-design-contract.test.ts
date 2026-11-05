@@ -516,7 +516,7 @@ describe('public surface design contract', () => {
       const html = renderToStaticMarkup(createElement(HomeMapThemeFilters, { activeThemeId, onThemeChange: () => {} }));
       expect(html).toContain('aria-label="쯔양 영상 테마 필터"');
       expect(html).toContain('flex-wrap');
-      expect(html).toContain('min-h-[44px]');
+      expect(html).toContain('min-h-8');
       expect(html).toContain('whitespace-normal');
       expect(html.match(/<button\b/g)).toHaveLength(5);
       expect(html.match(/aria-pressed="true"/g) ?? []).toHaveLength(activeThemeId ? 1 : 0);

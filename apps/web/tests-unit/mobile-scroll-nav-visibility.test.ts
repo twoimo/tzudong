@@ -103,7 +103,7 @@ describe("mobile mypage scroll frame guards", () => {
     );
     expect(layoutSource).not.toContain("md:mx-auto md:w-full md:max-w-6xl");
     expect(layoutSource).toContain("md:h-full md:min-h-0 md:px-4 md:py-3");
-    expect(layoutSource).toContain("Skeleton");
+    expect(layoutSource).toContain("<LoadingSurface");
     expect(layoutSource).not.toContain("GlobalLoader");
     expect(layoutSource).not.toContain("fullScreen");
   });

@@ -1,0 +1,22 @@
+{
+  "worktree": {
+    "setup": [
+      "npm ci --prefix apps/web --no-audit --no-fund"
+    ]
+  },
+  "scripts": {
+    "web": {
+      "type": "service",
+      "command": "cd apps/web && exec node scripts/dev-prewarm.mjs --port \"$PASEO_PORT\" --hosted"
+    },
+    "typecheck": {
+      "command": "npm --prefix apps/web run typecheck:native"
+    },
+    "lint": {
+      "command": "npm --prefix apps/web run lint"
+    },
+    "test": {
+      "command": "npm --prefix apps/web run test:unit"
+    }
+  }
+}

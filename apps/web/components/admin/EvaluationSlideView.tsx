@@ -15,6 +15,8 @@ import { EvaluationDetailView } from './EvaluationDetailView';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { canApproveAddressConsistencyRecord } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
+import { parseApprovalEligibility } from '@/lib/admin/evaluation-approval-eligibility';
+import { EvaluationApprovalReasons } from './EvaluationApprovalReasons';
 import { cn } from '@/lib/utils';
 
 interface EvaluationSlideViewProps {
@@ -27,8 +29,10 @@ interface EvaluationSlideViewProps {
     onRegisterMissing?: (record: EvaluationRecord) => void;
     onResolveConflict?: (record: EvaluationRecord) => void;
     onEdit?: (record: EvaluationRecord) => void;
+    onRecover?: (record: EvaluationRecord) => void;
     loading?: boolean;
     readFailed?: boolean;
+    onRequestDetails?: (record: EvaluationRecord) => Promise<boolean>;
 }
 
 export function EvaluationSlideView({
@@ -41,8 +45,10 @@ export function EvaluationSlideView({
     onRegisterMissing,
     onResolveConflict,
     onEdit,
+    onRecover,
     loading,
-    readFailed = false
+    readFailed = false,
+    onRequestDetails,
 }: EvaluationSlideViewProps) {
     const currentRecord = records[currentIndex];
     const isMobile = useIsMobile();
@@ -210,10 +216,17 @@ export function EvaluationSlideView({
     const isDeleted = currentRecord.status === 'deleted';
     const isApproved = currentRecord.status === 'approved';
     const needsMetricRerun = needsEvaluationRerun(currentRecord);
-    const canApproveCurrent = !needsMetricRerun && canApproveAddressConsistencyRecord(currentRecord);
+    const eligibility = parseApprovalEligibility(currentRecord.approval_eligibility);
+    const approvalUnknown = !eligibility || eligibility.state === 'unknown';
+    const approvalReasonsId = `evaluation-slide-approval-${currentRecord.id}`;
+    const canApproveCurrent = eligibility?.state === 'local_checks_passed' && !needsMetricRerun && canApproveAddressConsistencyRecord(currentRecord);
+    // Existing parent onEdit hydrates summaries before opening the editor.
+    const requestDetails = onRequestDetails ? () => { void onRequestDetails(currentRecord); }
+        : onEdit ? () => onEdit(currentRecord) : undefined;
 
     const handleApproveCurrent = () => {
-        onApprove(currentRecord);
+        if (approvalUnknown) requestDetails?.();
+        else if (canApproveCurrent) onApprove(currentRecord);
     };
 
     const getStatusBadge = (status: string) => {
@@ -244,8 +257,8 @@ export function EvaluationSlideView({
             onPointerCancel={handleSlidePointerCancel}
         >
             {/* Top Navigation Bar - Compact */}
-            <div className={cn("border-b bg-card shrink-0", isMobile ? "px-3 py-2" : "px-3 py-2 h-14")}>
-                <div className={cn("flex items-center justify-between gap-2", isMobile ? "" : "h-full")}>
+            <div className="min-h-14 shrink-0 border-b bg-card px-3 py-2">
+                <div className="flex min-h-8 items-center justify-between gap-2">
                     <div className={cn("flex items-center gap-2", isMobile ? "shrink-0" : "overflow-hidden")}>
                         <div className="flex items-center space-x-1 shrink-0">
                             <Button variant="outline" size="icon" className="h-8 w-8" aria-label="이전 후보" onClick={() => onNavigate(currentIndex - 1)} disabled={!canMovePrev}>
@@ -288,12 +301,13 @@ export function EvaluationSlideView({
                                     {!isApproved && (
                                         <Button
                                             onClick={handleApproveCurrent}
-                                            disabled={loading || !canApproveCurrent}
-                                            title={needsMetricRerun ? '평가값/근거 확인 후 승인하세요' : undefined}
+                                            disabled={loading || (!approvalUnknown && !canApproveCurrent)}
+                                            aria-describedby={approvalReasonsId}
+                                            title={approvalUnknown ? '승인 전 상세 확인' : canApproveCurrent ? '최종 서버 검사 필요' : '승인 불가 사유 확인'}
                                             className="bg-green-600 hover:bg-green-700 h-8"
                                             size="sm"
                                         >
-                                            <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> 승인
+                                            <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> {approvalUnknown ? '상세 확인' : '승인'}
                                         </Button>
                                     )}
                                 </>
@@ -301,11 +315,14 @@ export function EvaluationSlideView({
                         </div>
                     )}
                 </div>
+                {!isDeleted && !isApproved && (
+                    <EvaluationApprovalReasons eligibility={eligibility ?? undefined} id={approvalReasonsId} onRequestDetails={requestDetails} loading={loading} />
+                )}
             </div>
 
             {/* Main Content Area - Split View using unified component */}
             <div className="flex-1">
-                <EvaluationDetailView record={currentRecord} autoHeight />
+                <EvaluationDetailView record={currentRecord} autoHeight onRequestDetails={requestDetails} onRecover={onRecover ? () => onRecover(currentRecord) : undefined} />
             </div>
 
             {isMobile && (
@@ -334,12 +351,13 @@ export function EvaluationSlideView({
                             {!isApproved ? (
                                 <Button
                                     onClick={handleApproveCurrent}
-                                    disabled={loading || !canApproveCurrent}
-                                    title={needsMetricRerun ? '평가값/근거 확인 후 승인하세요' : undefined}
+                                    disabled={loading || (!approvalUnknown && !canApproveCurrent)}
+                                    aria-describedby={approvalReasonsId}
+                                    title={approvalUnknown ? '승인 전 상세 확인' : canApproveCurrent ? '최종 서버 검사 필요' : '승인 불가 사유 확인'}
                                     className="bg-green-600 hover:bg-green-700 h-9"
                                     size="sm"
                                 >
-                                    승인
+                                    {approvalUnknown ? '상세 확인' : '승인'}
                                 </Button>
                             ) : (
                                 <Button disabled variant="outline" size="sm" className="h-9">

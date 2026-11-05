@@ -72,7 +72,7 @@ const LAAJ_EXPECTED_KEYS: &[&str] = &[
 
 /// `SCORE_RANGES` in Python dict-literal order.
 const SCORE_RANGES: &[(&str, f64, f64)] = &[
-    ("visit_authenticity", 0.0, 2.0),
+    ("visit_authenticity", 0.0, 4.0),
     ("rb_inference_score", 0.0, 2.0),
     ("review_faithfulness_score", 0.0, 1.0),
 ];
@@ -692,7 +692,27 @@ pub fn validate_laaj_results(video_id: &str, data: &Value) -> Vec<ValidationErro
         for item in score_items {
             let val = item.get("eval_value");
             let name = get_or(item, "name", Value::Str(String::new()));
-            if !val.is_none() {
+            if score_key == "visit_authenticity" {
+                let violation = match val {
+                    Value::Int(0..=4) => None,
+                    Value::Int(_) => {
+                        Some(("score_range", "visit_authenticity 허용 정수 코드: 0~4"))
+                    }
+                    Value::Float(v) if *v < min_val || *v > max_val => {
+                        Some(("score_range", "visit_authenticity 허용 정수 코드: 0~4"))
+                    }
+                    Value::Other(kind) if kind == "int" => {
+                        Some(("score_range", "visit_authenticity 허용 정수 코드: 0~4"))
+                    }
+                    _ => Some(("score_type", "visit_authenticity 값이 정수 코드가 아닙니다")),
+                };
+                if let Some((rule, detail)) = violation {
+                    errors.push(
+                        ValidationError::new(step, video_id, ERROR, rule, detail.to_string())
+                            .with_name(name.clone()),
+                    );
+                }
+            } else if !val.is_none() {
                 match val.py_float() {
                     Ok(val_f) => {
                         if !(val_f >= min_val && val_f <= max_val) {

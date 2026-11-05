@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -1424,6 +1424,7 @@ describe("nightly regression package and source contracts", () => {
           E2E_EXIT_CODE: "7",
           NIGHTLY_ADMIN_EMAIL: "private@example.invalid",
           NIGHTLY_ADMIN_PASSWORD: "private-test-password",
+          GITHUB_STEP_SUMMARY: join(temporaryRoot, "github-step-summary.md"),
         },
       });
       expect(successful.status).toBe(0);
@@ -1468,6 +1469,7 @@ describe("nightly regression package and source contracts", () => {
             NIGHTLY_SUITE: "unit",
             UNIT_OUTCOME: "success",
             UNIT_EXIT_CODE: "9",
+            GITHUB_STEP_SUMMARY: join(inconsistentRoot, "github-step-summary.md"),
             E2E_OUTCOME: "skipped",
             E2E_EXIT_CODE: "",
           },
@@ -1525,19 +1527,32 @@ describe("nightly regression package and source contracts", () => {
         `${JSON.stringify(evidence)}\n`,
         { mode: 0o600 },
       );
-      const result = spawnSync("python3", ["-c", script], {
-        cwd: temporaryRoot,
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          GITHUB_WORKSPACE: repositoryRoot,
-          NIGHTLY_SUITE: "e2e",
-          UNIT_OUTCOME: "skipped",
-          UNIT_EXIT_CODE: "",
-          E2E_OUTCOME: "failure",
-          E2E_EXIT_CODE: "1",
-        },
-      });
+      const ambientSummary = join(temporaryRoot, "ambient-sentinel-summary.md");
+      const previousSummary = process.env.GITHUB_STEP_SUMMARY;
+      process.env.GITHUB_STEP_SUMMARY = ambientSummary;
+      let result!: SpawnSyncReturns<string>;
+      try {
+        result = spawnSync("python3", ["-c", script], {
+          cwd: temporaryRoot,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            GITHUB_WORKSPACE: repositoryRoot,
+            NIGHTLY_SUITE: "e2e",
+            UNIT_OUTCOME: "skipped",
+            UNIT_EXIT_CODE: "",
+            E2E_OUTCOME: "failure",
+            E2E_EXIT_CODE: "1",
+            GITHUB_STEP_SUMMARY: join(temporaryRoot, "github-step-summary.md"),
+          },
+        });
+      } finally {
+        if (previousSummary === undefined) {
+          delete process.env.GITHUB_STEP_SUMMARY;
+        } else {
+          process.env.GITHUB_STEP_SUMMARY = previousSummary;
+        }
+      }
       expect(result.status).toBe(0);
       const target = join(
         temporaryRoot,
@@ -1545,6 +1560,10 @@ describe("nightly regression package and source contracts", () => {
       );
       expect(lstatSync(target).mode & 0o777).toBe(0o600);
       expect(JSON.parse(readFileSync(target, "utf8"))).toEqual(evidence);
+      expect(readFileSync(join(temporaryRoot, "github-step-summary.md"), "utf8")).toBe(
+        "- E2E fixed failure classes: failed=1\n- E2E curated failure IDs: PW-NAV#2:failed\n",
+      );
+      expect(() => lstatSync(ambientSummary)).toThrow();
 
       const runnerRoot = mkdtempSync(join(tmpdir(), "tzudong-nightly-runner-evidence-"));
       try {
@@ -1651,6 +1670,7 @@ describe("nightly regression package and source contracts", () => {
             UNIT_EXIT_CODE: "",
             E2E_OUTCOME: "failure",
             E2E_EXIT_CODE: "1",
+            GITHUB_STEP_SUMMARY: join(rejectedRoot, "github-step-summary.md"),
           },
         });
         expect(rejected.status).not.toBe(0);

@@ -39,6 +39,9 @@ on:
       - 'backend/bin/tests/**'
       - 'backend/bin/apply_hosted_pending_candidates.py'
       - 'backend/bin/evaluate_new_youtube_videos.py'
+      - 'backend/pipeline/validators.py'
+      - 'backend/pipeline/test_validators_unittest.py'
+      - 'backend/restaurant-crawling/scripts/01-collect-urls.py'
       - 'backend/bin/terminal_completion_cache.py'
       - 'backend/supabase/scripts/hosted_data_plane.py'
       - 'backend/supabase/scripts/hosted_pending_*.py'
@@ -309,8 +312,8 @@ jobs:
 
   orchestration-readiness:
     runs-on: ubuntu-latest
-    # The recovered full contract suite extends beyond the original focused job.
-    timeout-minutes: 10
+    # Include retained-source verification and descriptor tooling after checkout.
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -320,6 +323,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           fetch-depth: 0
+          filter: blob:none
 
       - name: Verify retained provenance commits
         run: |
@@ -381,6 +385,8 @@ jobs:
         run: |
           command -v jq
           python -m unittest backend.bin.tests.test_restaurant_review_automation backend.utils.tests.test_stage_execution backend.utils.tests.test_pipeline_restart_integration
+          python -m unittest backend.bin.tests.test_restaurant_evidence_recovery backend.bin.tests.test_recovery_pipeline_budget backend.bin.tests.test_review_input_repair backend.bin.tests.test_review_native_visual_packet
+          python -m unittest backend.bin.tests.test_collect_urls_snapshot backend.pipeline.test_validators_unittest
           node --test backend/utils/tests/resource-budget.test.mjs
 
       - name: Install Helm for actual local descriptor rendering
@@ -416,7 +422,7 @@ jobs:
 
       - name: Verify recovered observability and readiness-agent boundaries
         run: >-
-          python -m unittest
+          python -m unittest -v
           backend.utils.tests.test_operational_source_recovery
           backend.utils.tests.test_platform_modernization_reconciliation
           backend.utils.tests.test_duplicate_checker_jsonl
@@ -619,6 +625,7 @@ jobs:
           TZUDONG_REQUIRE_RUST_CALL_SITES=1 "$RUNNER_TEMP/rust-parity/bin/python" -m unittest backend.pipeline_control.tests.test_rust_runtime_bindings
           "$RUNNER_TEMP/rust-parity/bin/python" -m unittest backend.pipeline_control.tests.test_rust_performance_admission backend.pipeline_control.tests.test_rust_promotion_evidence backend.pipeline_control.tests.test_rust_parity backend.pipeline_control.tests.test_impl_selector backend.pipeline_control.test_rust_parity_gate_pbt backend.pipeline_control.test_impl_selector_pbt
           "$RUNNER_TEMP/rust-parity/bin/python" -m unittest backend.rust.tests.parity_pbt backend.rust.tests.parity_error_pbt
+          "$RUNNER_TEMP/rust-parity/bin/python" -m unittest backend.rust.tests.test_visit_enum_compiled_parity
 
   secret-pattern-scan:
     runs-on: ubuntu-latest

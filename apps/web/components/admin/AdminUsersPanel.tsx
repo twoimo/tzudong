@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingPreview, LoadingSurface } from '@/components/ui/loading-surface';
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -229,10 +229,25 @@ function SummaryMetric({ label, value, tone = "default", isLoading = false }: { 
       )}
       data-admin-users-summary-metric={label}
     >
-      <p className="truncate text-xs leading-5 text-muted-foreground">{label}</p>
-      <p className="text-xs font-semibold tabular-nums text-foreground">
-        {isLoading ? <span className="inline-block h-5 w-10 rounded-full bg-muted/70 align-middle animate-pulse motion-reduce:animate-none sm:h-6 sm:w-12" aria-hidden="true" /> : value}
+
+      <p className="truncate text-xs leading-5 text-muted-foreground">
+
+        {label}
+
       </p>
+
+      <div className="text-xs font-semibold tabular-nums text-foreground">
+
+        {
+          isLoading ? <LoadingSurface label={label + " 집계 중"} className="inline-flex h-5 w-10 sm:h-6 sm:w-12">
+
+            <span>000</span>
+
+          </LoadingSurface> : value
+        }
+
+      </div>
+
     </div>
   );
 }
@@ -241,69 +256,87 @@ function UserTableSkeleton() {
   const { ref: mobileSkeletonRef, count: mobileSkeletonCount } = useFilledSkeletonCount(112, 4);
   const { ref: desktopSkeletonRef, count: desktopSkeletonCount } = useFilledSkeletonCount(56, 6, 36);
   return (
-    <div ref={desktopSkeletonRef} role="status" aria-busy="true" aria-label="사용자 목록 로딩 중" data-admin-users-loading-list className="h-full min-h-0 flex-1">
-      <span className="sr-only">사용자 목록을 불러오는 중입니다.</span>
-      <div ref={mobileSkeletonRef} className="admin-cms-record-list divide-y divide-border md:hidden" aria-hidden="true">
-        {Array.from({ length: mobileSkeletonCount }).map((_, index) => (
-          <div key={index} className="rounded-md border border-border/70 bg-background p-3">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1 space-y-1.5">
-                <Skeleton className={cn("h-4 rounded-full motion-reduce:animate-none", index % 2 === 0 ? "w-28" : "w-20")} />
-                <Skeleton className="h-3.5 w-44 max-w-full rounded-full motion-reduce:animate-none" />
-              </div>
-              <Skeleton className="h-8 w-14 shrink-0 rounded-full motion-reduce:animate-none" />
-            </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <Skeleton className="h-6 w-16 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-6 w-20 rounded-full motion-reduce:animate-none" />
-            </div>
-          </div>
-        ))}
+    <div
+      ref={desktopSkeletonRef}
+      role="status"
+      aria-busy="true"
+      aria-label="사용자 목록 로딩 중"
+      data-admin-users-loading-list
+      className="h-full min-h-0 flex-1"
+    >
+
+      <div
+        ref={mobileSkeletonRef}
+        className="admin-cms-record-list divide-y divide-border md:hidden"
+        aria-hidden="true"
+      >
+
+        <LoadingPreview
+          kind="list"
+          rows={mobileSkeletonCount}
+          showHeader={false}
+          label="사용자 목록 로딩 중"
+          style={{ minHeight: mobileSkeletonCount * 112 }}
+        />
+
       </div>
+
       <div className="hidden overflow-hidden rounded-lg border bg-card md:block">
-        <table className="admin-cms-table w-full table-fixed text-left text-sm">
-          <caption className="sr-only">관리자 사용자 목록 로딩</caption>
-          <thead className="sticky top-0 z-10 bg-card text-xs text-muted-foreground">
-            <tr>
-              <th scope="col" className="w-[40%] px-3 py-2 font-semibold">사용자</th>
-              <th scope="col" className="px-3 py-2 font-semibold">권한</th>
-              <th scope="col" className="hidden px-3 py-2 font-semibold md:table-cell">상태</th>
-              <th scope="col" className="px-3 py-2 font-semibold">작업</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/50 bg-background/70">
-            {Array.from({ length: desktopSkeletonCount }).map((_, index) => (
-              <tr key={index}>
-                <td className="min-w-0 px-3 py-2 align-middle">
-                  <button type="button" tabIndex={-1} className="block min-w-0 text-left" aria-hidden="true">
-                    <span className="block truncate font-semibold text-foreground">
-                      <Skeleton className={cn("h-5 rounded-full motion-reduce:animate-none", index % 2 === 0 ? "w-28" : "w-20")} aria-hidden="true" />
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      <Skeleton className="h-4 w-40 max-w-full rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                    </span>
-                  </button>
-                </td>
-                <td className="px-3 py-2 align-middle">
-                  <Badge variant="secondary" className="border-transparent bg-muted text-muted-foreground">
-                    <Skeleton className="h-4 w-14 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                  </Badge>
-                </td>
-                <td className="hidden px-3 py-2 align-middle md:table-cell">
-                  <Badge variant="secondary" className="border-transparent bg-emerald-50 text-emerald-800">
-                    <Skeleton className="h-4 w-8 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                  </Badge>
-                </td>
-                <td className="px-3 py-2 align-middle">
-                  <span className="inline-flex h-9 items-center justify-center rounded-md bg-muted/60 px-3 text-sm font-medium" aria-hidden="true">
-                    <Skeleton className="h-5 w-6 rounded-full motion-reduce:animate-none" />
-                  </span>
-                </td>
+
+        <LoadingSurface label="사용자 목록 로딩 중">
+
+          <table className="admin-cms-table w-full table-fixed text-left text-sm">
+
+            <caption className="sr-only">관리자 사용자 목록 로딩</caption>
+
+            <thead className="sticky top-0 z-10 bg-card text-xs text-muted-foreground">
+
+              <tr>
+
+                <th scope="col" className="w-[40%] px-3 py-2 font-semibold">사용자</th>
+
+                <th scope="col">권한</th>
+
+                <th scope="col">상태</th>
+
+                <th scope="col">작업</th>
+
               </tr>
-            ))}
-          </tbody>
-        </table>
+
+            </thead>
+
+            <tbody className="divide-y divide-border/50 bg-background/70">
+
+              {
+                Array.from({ length: desktopSkeletonCount }, (_, index) => (
+                  <tr key={index} className="h-14">
+
+                    <td className="px-3 py-2">
+
+                      <p className="font-semibold">사용자 이름</p>
+
+                      <p className="text-xs">프로필 정보</p>
+
+                    </td>
+
+                    <td>사용자 권한</td>
+
+                    <td>계정 상태</td>
+
+                    <td>상세 보기</td>
+
+                  </tr>
+                ))
+              }
+
+            </tbody>
+
+          </table>
+
+        </LoadingSurface>
+
       </div>
+
     </div>
   );
 }

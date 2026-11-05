@@ -18,7 +18,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingPreview } from '@/components/ui/loading-surface';
 import { cn } from "@/lib/utils";
 
 type RefreshCandidateStatus =
@@ -234,12 +234,26 @@ function evaluateRefreshReadback(pending: PendingRefreshReadback, candidates: Re
 
 function RefreshCandidateListSkeleton() {
   const { ref: skeletonRef, count: skeletonCount } = useFilledSkeletonCount(64, 5);
-  return <div ref={skeletonRef} className="h-full min-h-0 divide-y" role="status" aria-busy="true" aria-label="맛집 최신화 이력 로딩 중">
-    <span className="sr-only">맛집 최신화 후보 목록을 불러오는 중입니다.</span>
-    {Array.from({ length: skeletonCount }).map((_, index) => <div key={index} className="flex items-center gap-3 px-3 py-3" aria-hidden="true">
-      <div className="min-w-0 flex-1 space-y-2"><Skeleton className="h-4 w-36 motion-reduce:animate-none" /><Skeleton className="h-3 w-48 max-w-full motion-reduce:animate-none" /></div><Skeleton className="h-5 w-16 rounded-full motion-reduce:animate-none" />
-    </div>)}
-  </div>;
+  return (
+    <div
+      ref={skeletonRef}
+      className="h-full min-h-0 divide-y"
+      role="status"
+      aria-busy="true"
+      aria-label="맛집 최신화 이력 로딩 중"
+    >
+
+      <LoadingPreview
+        kind="list"
+        rows={skeletonCount}
+        showHeader={false}
+        compact
+        label="맛집 최신화 이력 로딩 중"
+        style={{ minHeight: skeletonCount * 64 }}
+      />
+
+    </div>
+  );
 }
 
 type RefreshCandidateListProps = {

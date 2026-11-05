@@ -44,7 +44,7 @@ export function hasUsableEvaluationBasis(value: unknown): boolean {
   if (typeof value !== 'string') return false;
 
   const trimmed = value.trim();
-  return trimmed.length > 0 && trimmed !== '-' && trimmed !== '근거 내용 없음';
+  return trimmed.length > 0 && trimmed !== '-' && trimmed !== '근거 내용 없음' && trimmed !== EVALUATION_BASIS_RERUN_NEEDED_TEXT;
 }
 
 export function isEvaluationCompletenessCheckable(record: Pick<EvaluationRecord, 'status' | 'is_missing' | 'is_not_selected'>): boolean {
