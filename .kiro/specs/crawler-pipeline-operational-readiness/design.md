@@ -110,9 +110,10 @@ Supabase, start containers, publish artifacts, or mutate hosted/local data.
 - `rust-source-provenance.v1.json` binds 36 recovered files to commit
   `880bf06d375dbc6ebe8dcf108419c3f455048a97`, a second identical Rust tree in commit
   `2d7a8f6ed5fe9e14d8f5046f45a4ea2d45fb725c`, each Git blob, each SHA-256, and each byte count.
-- `rust-candidate-provenance.v1.json` separately binds all 36 current candidate files after two
-  declared transformations: Rust 1.97.0 formatting on 11 Rust files and root MIT-license metadata
-  alignment on the workspace manifest. The original source manifest remains byte-exact evidence for
+- `rust-candidate-provenance.v1.json` separately binds all 36 current candidate files after five
+  declared transformations: Rust 1.97.0 formatting, root MIT-license metadata alignment, Python
+  whitespace parity, Python date/hash parity, and integer visit-authenticity codes0..4 with unchanged
+  approval requirements. The original source manifest remains byte-exact evidence for
   the authoritative commit instead of being silently rewritten to match the candidate.
 - `backend.utils.tests.test_rust_source_recovery` rehashes source bytes directly from the
   authoritative Git object and candidate bytes from the worktree, requires the declared transform

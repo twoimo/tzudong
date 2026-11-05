@@ -10,6 +10,7 @@ import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 interface EvaluationRowDetailsProps {
   record: EvaluationRecord;
   onEdit?: () => void;
+  onRecover?: () => void;
 }
 
 interface DuplicateErrorDetails {
@@ -34,7 +35,7 @@ function isDuplicateErrorDetails(value: EvaluationRecord['db_error_details']): v
   );
 }
 
-export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsProps) {
+export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record, onEdit, onRecover }: EvaluationRowDetailsProps) {
   const { youtube_meta, restaurant_info, missing_message } = record;
   const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record.youtube_link);
 
@@ -216,7 +217,7 @@ export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record,
       )}
 
       {/* Unified Detail View */}
-      <EvaluationDetailView record={record} className="flex-1" autoHeight={true} />
+      <EvaluationDetailView record={record} className="flex-1" autoHeight={true} onRecover={onRecover} />
     </div>
   );
 });

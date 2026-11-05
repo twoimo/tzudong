@@ -93,7 +93,20 @@ describe('home root runtime boundary', () => {
         expect(homeRuntimeShellSource).not.toContain('animate-bounce');
         expect(homeRuntimeShellSource).not.toContain('@keyframes');
         expect(homeRuntimeShellSource).not.toContain('지도를 준비하고 있어요');
-        expect(homeRuntimeShellSource).not.toContain('쯔동여지도 검색하기');
+        const sampleStart = homeRuntimeShellSource.indexOf('function HomeStaticSkeleton()');
+        const pendingShellStart = homeRuntimeShellSource.indexOf('function HomeRuntimePendingShell');
+        expect(sampleStart).toBeGreaterThanOrEqual(0);
+        expect(pendingShellStart).toBeGreaterThan(sampleStart);
+        const sampleSource = homeRuntimeShellSource.slice(sampleStart, pendingShellStart);
+        expect(sampleSource).toContain('aria-hidden="true"');
+        expect(sampleSource).toContain('pointer-events-none');
+        expect(sampleSource.split('<LoadingSurface ').length - 1).toBe(2);
+        expect(sampleSource).toContain('<span>쯔동여지도 검색하기</span>');
+        expect(sampleSource).toContain('<LoadingPreview kind="list"');
+        expect(sampleSource).not.toMatch(/\b(?:fetch|use[A-Z]\w*)\s*\(/);
+        for (const actionableOrMap of ['<input', '<button', '<form', '<a ', '<a\n', '<MapView', '<NaverMapView', '<OverseasMap']) {
+            expect(sampleSource).not.toContain(actionableOrMap);
+        }
         expect(homeRuntimeShellSource).not.toContain('bg-[radial-gradient');
         expect(homeRuntimeShellSource).not.toContain('bg-[linear-gradient');
         expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');

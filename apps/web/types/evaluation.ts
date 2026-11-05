@@ -1,4 +1,5 @@
 import type { SponsorshipInfo } from '@/lib/sponsorship-state';
+import type { ApprovalEligibility } from '@/lib/admin/evaluation-approval-eligibility';
 // 평가 레코드 타입 정의 (restaurants 테이블 기반)
 
 export interface NaverAddressInfo {
@@ -134,6 +135,8 @@ export type EvaluationRecordStatus =
 
 // restaurants 테이블 구조에 맞춘 EvaluationRecord
 export interface EvaluationRecord {
+  // Bounded preflight DTO computed from raw evidence; never approval authority.
+  approval_eligibility?: ApprovalEligibility;
   // Transient API projection; never a database column or approval authority.
   read_summary?: {
     address_consistency: 'true' | 'false' | 'failed' | 'review' | 'candidate' | 'not_applicable' | 'unknown';

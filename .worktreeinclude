@@ -1,0 +1,5 @@
+# Local, gitignored configuration copied into new Paseo worktrees.
+# Each operator supplies their own values in the source checkout.
+apps/web/.env.local
+backend/.env
+backend/.env.gemini-file-api.local

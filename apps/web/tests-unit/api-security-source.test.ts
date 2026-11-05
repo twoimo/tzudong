@@ -256,8 +256,14 @@ describe('public API security source contracts', () => {
       );
     }
 
-    for (const callerSource of [editRestaurantModal, submissionListView]) {
-      expect(callerSource).toContain("fetch('/api/naver-search', {");
+    const adminProviderClient = source('lib/admin/admin-geocode-client.ts');
+    expect(editRestaurantModal).toContain('fetchAdminPlaceItems(query)');
+    expect(editRestaurantModal).toContain('fetchAdminGeocode(address)');
+    expect(source('components/admin/AdminRestaurantModal.tsx')).toContain('fetchAdminGeocode(address)');
+    expect(adminProviderClient).toContain("postProvider('/api/naver-search', { query, display: 5 }");
+    expect(adminProviderClient).toContain("postProvider('/api/naver-geocode', { query }");
+    expect(submissionListView).toContain("fetch('/api/naver-search', {");
+    for (const callerSource of [adminProviderClient, submissionListView]) {
       expect(callerSource).toContain("method: 'POST'");
       expect(callerSource).toContain("'Content-Type': 'application/json'");
       expect(callerSource).not.toContain('/api/naver-search?');

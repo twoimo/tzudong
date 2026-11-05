@@ -68,6 +68,22 @@ describe('admin evaluation completeness', () => {
     expect(getEvaluationRerunSummary(record)).toContain('근거 없음: 방문여부, 추론합리');
   });
 
+  test('SQL missing-basis sentinel remains incomplete even when every metric passes', () => {
+    const record = baseRecord({ evaluation_results: {
+      visit_authenticity: { name: '합성', eval_value: 1, eval_basis: '  평가 근거 없음  ' },
+      rb_inference_score: { name: '합성', eval_value: 1, eval_basis: '확인된 근거' },
+      rb_grounding_TF: { name: '합성', eval_value: true, eval_basis: '확인된 근거' },
+      review_faithfulness_score: { name: '합성', eval_value: 1, eval_basis: '확인된 근거' },
+      category_validity_TF: { name: '합성', eval_value: true },
+      category_TF: { name: '합성', eval_value: true, category_revision: null },
+      location_match_TF: null,
+    } });
+    expect(needsEvaluationRerun(record)).toBe(true);
+    expect(getEvaluationCompletenessIssues(record)).toEqual([
+      { key: 'visit_authenticity', label: '방문여부', missingValue: false, missingBasis: true },
+    ]);
+  });
+
   test('does not mark deleted, missing, or not-selected rows for evaluator rerun', () => {
     expect(needsEvaluationRerun(baseRecord({ status: 'deleted' }))).toBe(false);
     expect(needsEvaluationRerun(baseRecord({ status: 'missing', is_missing: false }))).toBe(false);
