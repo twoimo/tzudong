@@ -250,6 +250,24 @@ class LocalFreshnessTests(unittest.TestCase):
         with patch.object(self.module, '_cache_probe', side_effect=mutate_after_probe):
             self.assert_miss()
 
+    def test_all_visit_enum_codes_remain_terminal_under_current_receipts(self):
+        self.terminal()
+        for code in range(5):
+            with self.subTest(code=code):
+                for stage, directory in [('rule', 'rule_results'), ('laaj', 'laaj_results')]:
+                    path = self.eval / 'evaluation' / directory / (VIDEO + '.jsonl')
+                    value = json.loads(path.read_text())
+                    value['evaluation_results']['visit_authenticity']['values'][0]['eval_value'] = code
+                    write(path, value)
+                    self.certify(stage, [path])
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.transform.run_transform('tzuyang', self.crawl, self.eval)
+                self.assertEqual(self.module._fresh_locally_evaluated_ids(
+                    self.eval, self.crawl, 'tzuyang', self.env), {VIDEO})
+                rows = [json.loads(line) for line in (self.eval / 'evaluation/transforms.jsonl').read_text().splitlines()]
+                self.assertTrue(rows)
+                self.assertTrue(all(row['status'] == 'pending' for row in rows))
+
     def test_terminal_shape_is_rechecked_inside_the_receipt_snapshot(self):
         self.terminal()
         snapshot = self.module._cache_snapshot
@@ -261,7 +279,7 @@ class LocalFreshnessTests(unittest.TestCase):
                 for stage, directory in [('rule', 'rule_results'), ('laaj', 'laaj_results')]:
                     path = self.eval / 'evaluation' / directory / (VIDEO + '.jsonl')
                     value = json.loads(path.read_text())
-                    value['evaluation_results']['visit_authenticity']['values'][0]['eval_value'] = 3
+                    value['evaluation_results']['visit_authenticity']['values'][0]['eval_value'] = 5
                     write(path, value)
                     self.certify(stage, [path])
                 with contextlib.redirect_stdout(io.StringIO()):

@@ -1,0 +1,132 @@
+{
+  "kind": "public-source-fixture-NOT-authority-or-provider-execution",
+  "publisherRelativePath": "HELD_VIDEO_PUBLIC_METADATA.json",
+  "publisherSha256": "ae9cd34a427bd4a067b7dfada54c4e338a2e9fb5a2de555b261b8d790852b649",
+  "cases": [
+    {
+      "restaurantId": "252df2a1-7623-4725-93ad-f777db40209c",
+      "videoId": "Ck5UrobZuKA",
+      "sceneId": "intro",
+      "receiptRelativePath": "public-visual-cues/Ck5UrobZuKA/receipt.json",
+      "receiptSha256": "91e7c18627c161ac43db397d8c03229acaae44b14e83bdc33fc4f4595843c892",
+      "frameRelativePath": "public-visual-cues/Ck5UrobZuKA/source-87.png",
+      "frameSha256": "c3f33a352424ef46f2ebab1c480e94a7e0df4c352a0e3d56b3c0a9aaba823c70",
+      "clipRelativePath": "public-visual-cues/Ck5UrobZuKA/cue.mp4",
+      "clipSha256": "1c714ac2e8296ba807b0bcb36177982cd1dd294fb01335ace2901658d6fe4121",
+      "observation": {
+        "signName": "황해 모밀냉면",
+        "branchQualifier": "본점",
+        "addressOverlay": "인천 남동구 구월말로 92",
+        "sourceApproxSeconds": 87
+      },
+      "observerObservedAt": "2026-11-03T22:21:39.527141+00:00",
+      "reportedOriginalAddress": "인천 남동구 구월말로 92",
+      "expected": "same_address_cue",
+      "reportedObserver": "parent"
+    },
+    {
+      "restaurantId": "218457d8-5f7c-4e4d-8dcf-fc986c0780b6",
+      "videoId": "gV9QMjeRV8s",
+      "sceneId": "intro",
+      "receiptRelativePath": "public-visual-cues/gV9QMjeRV8s/receipt.json",
+      "receiptSha256": "f384f712522c8ddab7f077dcc6fd79fc61078ae9fb15d30f8d42b8fc8c04f563",
+      "frameRelativePath": "public-visual-cues/gV9QMjeRV8s/source-106.png",
+      "frameSha256": "5a86c203c64320aafe8915d90add67df5ba9ab25e1c46a04c9453c9f820fe4d2",
+      "clipRelativePath": "public-visual-cues/gV9QMjeRV8s/cue.mp4",
+      "clipSha256": "0a033fdc48c93706dfba649fbc11b5a12b2f6b18e22a0a5de031f883926d5614",
+      "observation": {
+        "signName": "친정엄마",
+        "branchQualifier": null,
+        "addressOverlay": "충청북도 충주시 자유시장길 23-1",
+        "sourceApproxSeconds": 106
+      },
+      "observerObservedAt": "2026-11-03T22:26:10.803933+00:00",
+      "reportedOriginalAddress": "충청북도 충주시 자유시장길 23-1",
+      "expected": "same_address_cue",
+      "reportedObserver": "parent"
+    },
+    {
+      "restaurantId": "5d14e8a2-2f12-47f8-80d9-94b4692168bc",
+      "videoId": "DNGGl1-jFcU",
+      "sceneId": "cutlet-intro",
+      "receiptRelativePath": "public-visual-cues/DNGGl1-jFcU/receipt.json",
+      "receiptSha256": "e9500203d5c364f97364719765c5a80c10ca69d8987e8573da44319ff6ff0d4c",
+      "frameRelativePath": "public-visual-cues/DNGGl1-jFcU/cutlet-intro-1053.png",
+      "frameSha256": "f74e82e2e1efc287326b8845ae7d283c3d1da5ef66cfd51321f92f88fa24b062",
+      "clipRelativePath": "public-visual-cues/DNGGl1-jFcU/cutlet-intro.mp4",
+      "clipSha256": "bf1e2540329604744a7fafe576f4e206fece28990ef969e32b8827204bfde7eb",
+      "observation": {
+        "signName": "돈 & 까",
+        "branchQualifier": null,
+        "addressOverlay": "인천 제물포구 송학동3가 7-47",
+        "sourceApproxSeconds": 1053
+      },
+      "observerObservedAt": "2026-11-03T22:29:46.128105+00:00",
+      "reportedOriginalAddress": "인천 제물포구 송학동3가 7-47",
+      "expected": "same_address_cue",
+      "reportedObserver": "Jason"
+    },
+    {
+      "restaurantId": "769a87f9-efc3-4603-93be-7ae1bb4d8c10",
+      "videoId": "DNGGl1-jFcU",
+      "sceneId": "chicken-overlay-refinement",
+      "receiptRelativePath": "public-visual-cues/DNGGl1-jFcU/receipt.json",
+      "receiptSha256": "e9500203d5c364f97364719765c5a80c10ca69d8987e8573da44319ff6ff0d4c",
+      "frameRelativePath": "public-visual-cues/DNGGl1-jFcU/chicken-overlay-refinement-1294.png",
+      "frameSha256": "e43b61d6315a49ab97074618ede4334baa4c08210ac633a411490229fe2687e4",
+      "clipRelativePath": "public-visual-cues/DNGGl1-jFcU/chicken-overlay-refinement.mp4",
+      "clipSha256": "b182b176a36b836f9087224c67d2ee343b7504451cb0ac6d61694279074a5888",
+      "observation": {
+        "signName": "치킨꼬꼬",
+        "branchQualifier": null,
+        "addressOverlay": "인천 제물포구 신포동 7-40",
+        "sourceApproxSeconds": 1294
+      },
+      "observerObservedAt": "2026-11-03T22:29:46.128105+00:00",
+      "reportedOriginalAddress": "인천 제물포구 신포동 5-10",
+      "expected": "address_conflict",
+      "reportedObserver": "Jason",
+      "corroborationRelativePath": "public-branch-corroboration/REPORT.json",
+      "corroborationSha256": "4a70b73d0211c4713a4af279f4eacf32cd59244e6d0c4f4629fd994473c8511a",
+      "correctionIntent": {
+        "kind": "derive_fresh_location_preserve_origin",
+        "candidateSha256": "b84fc1b34aa8d0fe71113f5550a05396f83481872edd9fcf1ae34b758e720a83",
+        "observedAddress": "인천 제물포구 신포동 7-40",
+        "parcelAddress": "인천광역시 제물포구 신포동 7-40",
+        "roadAddress": "인천광역시 제물포구 우현로49번길 25"
+      },
+      "expectedWithCorroboration": "derived_location_source_preflight_only"
+    },
+    {
+      "restaurantId": "a08b0767-c015-4d37-9fdf-b446eff82abc",
+      "videoId": "jkDzCwDpfV8",
+      "sceneId": "cue-84-94",
+      "receiptRelativePath": "public-visual-cues/jkDzCwDpfV8/cue-84-94/receipt.json",
+      "receiptSha256": "fbee9a40a25d0dd29ffa31ce5639b503383e509eee60234e9e16a906df0993d8",
+      "frameRelativePath": "public-visual-cues/jkDzCwDpfV8/cue-84-94/source-89-native.png",
+      "frameSha256": "44ac84baf1d831efc1dd9f620e26b54f77f70cd4d86ed126bbd40031d497fe6a",
+      "clipRelativePath": "public-visual-cues/jkDzCwDpfV8/cue-84-94/cue.mp4",
+      "clipSha256": "7e07dbb00898e6dc948a02bb8ff9f77943e62f1ae4b074d8ff305c03c72f103d",
+      "observation": {
+        "signName": "명동식당",
+        "branchQualifier": null,
+        "addressOverlay": "인천광역시 중구 경동 179-2",
+        "sourceApproxSeconds": 89
+      },
+      "observerObservedAt": "2026-11-03T22:34:12.750573+00:00",
+      "reportedOriginalAddress": "인천광역시 중구 경동 13-2",
+      "expected": "address_conflict",
+      "reportedObserver": "parent",
+      "corroborationRelativePath": "public-branch-corroboration/ADAPTIVE_MYUNGDONG.json",
+      "corroborationSha256": "db787ea3111f711a872b7d3962fc0fc47d62607bf80fd51f6a47101535ba47b3",
+      "correctionIntent": {
+        "kind": "derive_fresh_location_preserve_origin",
+        "candidateSha256": "bb8fe7dd57f7017e7e4c760d65e414b5ee9ed7d244961304a43a1fb403f43f93",
+        "observedAddress": "인천광역시 중구 경동 179-2",
+        "parcelAddress": "인천광역시 제물포구 경동 179-2",
+        "roadAddress": "인천광역시 제물포구 답동로30번길 25"
+      },
+      "expectedWithCorroboration": "derived_location_source_preflight_only"
+    }
+  ]
+}

@@ -7,7 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingSurface } from "@/components/ui/loading-surface";
 import { useNotifications } from "@/contexts/NotificationContextBase";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/types/notification";
@@ -96,22 +96,17 @@ export default function DesktopLeftPanelNotifications({
 
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-3">
         {isLoading ? (
-          <div
-            role="status"
-            aria-label="알림 목록 로딩 중"
-            className="space-y-3"
-          >
-            {[0, 1, 2, 3].map((item) => (
-              <div
-                key={item}
-                className="rounded-xl border border-border bg-card p-3"
-              >
-                <Skeleton className="h-4 w-2/3 rounded" />
-                <Skeleton className="mt-2 h-3 w-full rounded" />
-                <Skeleton className="mt-2 h-3 w-1/2 rounded" />
-              </div>
-            ))}
-          </div>
+          <LoadingSurface label="알림 목록 로딩 중" className="space-y-3">
+            <div className="space-y-3">
+              {Array.from({ length: 4 }, (_, index) => (
+                <article key={index} className="rounded-xl border border-border bg-card p-3">
+                  <h3 className="text-sm font-medium leading-4">새로운 알림</h3>
+                  <p className="mt-2 text-xs leading-3 text-muted-foreground">맛집과 방문 이야기를 확인해 보세요</p>
+                  <p className="mt-2 text-xs leading-3 text-muted-foreground">새로운 소식을 만나보세요</p>
+                </article>
+              ))}
+            </div>
+          </LoadingSurface>
         ) : isError ? (
           <div
             role="status"

@@ -7,6 +7,7 @@ import { resolveRootLayoutResourceHintPolicy } from "@/lib/root-layout-resource-
 import { VIEWPORT_HEIGHT_BOOTSTRAP_SOURCE } from "@/lib/viewport-height-bootstrap";
 import { RootSpeedInsights } from "./root-speed-insights";
 import { LocalWorkspaceBanner } from "@/components/home/LocalWorkspaceBanner";
+import { LoadingProvider } from "@/components/ui/loading-surface";
 import "./globals.css";
 export const dynamic = "force-dynamic";
 
@@ -151,11 +152,13 @@ export default async function RootLayout({
                 ) : null}
             </head>
             <body suppressHydrationWarning>
+                <LoadingProvider nonce={nonce}>
                 <LocalWorkspaceBanner />
                 <div data-local-workspace-app="true">
                     {children}
                 </div>
                 <RootSpeedInsights />
+                </LoadingProvider>
             </body>
         </html>
     );

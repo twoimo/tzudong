@@ -6,10 +6,10 @@ const source = (relativePath: string) =>
   readFileSync(join(import.meta.dir, "..", relativePath), "utf8");
 
 describe("header action loading source contract", () => {
-  test("desktop header action icons use independent skeleton slots instead of one grouped auth placeholder", () => {
+  test("desktop header action icons use independent measured loading slots instead of one grouped auth placeholder", () => {
     const headerSource = source("components/layout/Header.tsx");
 
-    expect(headerSource).toContain("function HeaderActionSkeleton");
+    expect(headerSource).toContain("function HeaderActionLoading");
     expect(headerSource).toContain("shouldShowNotificationSkeleton");
     expect(headerSource).toContain("shouldShowBookmarkSkeleton");
     expect(headerSource).toContain("shouldShowFullscreenSkeleton");
@@ -22,10 +22,10 @@ describe("header action loading source contract", () => {
       "const HeaderBookmarkMenuButton = useDeferredComponent",
     );
     expect(headerSource).toContain(
-      'HeaderBookmarkMenuButton ? <HeaderBookmarkMenuButton /> : <HeaderActionSkeleton label="북마크 로딩 중" />',
+      'HeaderBookmarkMenuButton ? <HeaderBookmarkMenuButton /> : <HeaderActionLoading label="북마크 로딩 중" />',
     );
     expect(headerSource).toContain(
-      'fallback={<HeaderActionSkeleton label="북마크 로딩 중" />}',
+      'fallback={<HeaderActionLoading label="북마크 로딩 중" />}',
     );
     expect(headerSource).not.toContain(
       "w-[84px] rounded-md md:ml-2 md:h-10 md:w-[96px]",
@@ -219,15 +219,15 @@ describe("header action loading source contract", () => {
     expect(headerSource).toContain('HeaderAnnouncementPanel');
   });
 
-  test("bookmark dropdown keeps its own list skeleton while bookmark data loads", () => {
+  test("bookmark dropdown keeps its own measured list preview while bookmark data loads", () => {
     const bookmarkSource = source(
       "components/layout/HeaderBookmarkMenuButton.tsx",
     );
 
     expect(bookmarkSource).toContain("isLoading: isBookmarksLoading");
-    expect(bookmarkSource).toContain('aria-label="북마크 목록 로딩 중"');
+    expect(bookmarkSource).toContain('label="북마크 목록 로딩 중"');
     expect(bookmarkSource).toContain(
-      '<Skeleton className="h-4 w-3/4 rounded" />',
+      '<LoadingSurface label="북마크 목록 로딩 중"',
     );
   });
 });

@@ -104,7 +104,7 @@ const g003SourceCoverageMatrix = {
         path: 'components/home/HomeMapThemeFilters.tsx',
         contains: [
           'flex-wrap',
-          'min-h-[44px]',
+          'min-h-8',
           'aria-pressed={isSelected}',
         ],
       },

@@ -277,6 +277,22 @@ class ValidatorsRegressionTests(unittest.TestCase):
         self.assertIn("insufficient_evidence_families", rules)
         self.assertIn("inconsistent_second_pass_state", rules)
 
+    def test_visit_authenticity_is_strict_integer_enum_and_preserves_score_semantics(self):
+        for value in list(range(5)) + [None, True, False, '1', 1.0, 1.5, -1, 5, float('nan'), float('inf')]:
+            data = {'evaluation_results': {
+                'visit_authenticity': [{'name': 'fixture', 'eval_value': value, 'eval_basis': '충분한 근거 문장'}],
+                'rb_inference_score': [{'eval_value': 1.5, 'eval_basis': '충분한 근거 문장'}],
+                'review_faithfulness_score': [{'eval_value': 0.5, 'eval_basis': '충분한 근거 문장'}],
+                'rb_grounding_TF': [], 'category_TF': [],
+            }}
+            with self.subTest(value=value):
+                errors = validate_laaj_results('fixture', data)
+                if type(value) is int and 0 <= value <= 4:
+                    self.assertEqual(errors, [])
+                else:
+                    self.assertEqual(len(errors), 1)
+                    self.assertEqual(errors[0]['rule'], 'score_range' if type(value) in (int, float) and (value < 0 or value > 4) else 'score_type')
+
     def test_validate_laaj_results_detects_score_and_type_regressions(self) -> None:
         errors = validate_laaj_results(
             "vid-5",
@@ -284,7 +300,7 @@ class ValidatorsRegressionTests(unittest.TestCase):
                 "restaurants": [{"origin_name": "식당A"}],
                 "evaluation_results": {
                     "visit_authenticity": [
-                        {"name": "식당A", "eval_value": 3, "eval_basis": "충분한 근거 문장"}
+                        {"name": "식당A", "eval_value": 5, "eval_basis": "충분한 근거 문장"}
                     ],
                     "rb_inference_score": [
                         {"name": "식당A", "eval_value": "NaN-ish", "eval_basis": "충분한 근거 문장"}
@@ -314,7 +330,7 @@ class ValidatorsRegressionTests(unittest.TestCase):
                 "evaluation_results": {
                     "visit_authenticity": {
                         "values": [
-                            {"name": "식당A", "eval_value": 3, "eval_basis": "충분한 근거 문장"}
+                            {"name": "식당A", "eval_value": 5, "eval_basis": "충분한 근거 문장"}
                         ],
                         "missing": [],
                     },

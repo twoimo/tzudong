@@ -135,7 +135,7 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
                 del row['evaluation_results'][key]
                 variants.append(row)
             for key, values in {
-                'visit_authenticity': [None, True, '1', -1, 3, 10 ** 400, float('nan'), float('inf')],
+                'visit_authenticity': [None, True, '1', 1.0, 1.5, -1, 5, 10 ** 400, float('nan'), float('inf')],
                 'rb_inference_score': [None, 3],
                 'review_faithfulness_score': [None, 1.1],
                 'rb_grounding_TF': [None, 0, 'false'],
@@ -157,6 +157,38 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
                 with self.subTest(variant=index):
                     write_rows(evaluation / 'evaluation/transforms.jsonl', [row])
                     self.assertEqual(module._locally_evaluated_ids(evaluation), set())
+
+    def test_visit_enum_negative_outcomes_are_complete_without_approval(self):
+        for value in range(5):
+            row = terminal_rows('abcdefghijk', ['selected'])[0]
+            row['evaluation_results']['visit_authenticity']['eval_value'] = value
+            with self.subTest(value=value):
+                self.assertTrue(module._has_terminal_evaluation(row))
+                # Real transform preserves negative evidence and HOLD; completion
+                # never promotes these records to approved.
+                self.assertEqual(row['status'], 'pending')
+                self.assertFalse(row['evaluation_results']['location_match_TF']['eval_value'])
+
+    def test_short_classification_preserves_existing_metadata_contract(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            crawling = Path(tmp)
+            video = 'abcdefghijk'
+            path = crawling / 'meta' / f'{video}.jsonl'
+            self.assertFalse(module._is_short_video(crawling, video))
+            for metadata, expected in [
+                ({'youtube_link': f'https://youtu.be/{video}', 'duration': 180}, True),
+                ({'youtube_link': f'https://youtu.be/{video}', 'duration': 0}, True),
+                ({'youtube_link': f'https://youtu.be/{video}', 'duration': True}, False),
+                ({'youtube_link': f'https://youtu.be/{video}', 'duration': float('nan')}, False),
+                ({'youtube_link': f'https://youtu.be/{video}', 'duration': float('inf')}, False),
+                                ({'is_shorts': True}, True),
+                ({'youtube_link': f'https://youtu.be/{video}', 'is_shorts': True, 'duration': 0}, True),
+            ]:
+                write_rows(path, [metadata])
+                with self.subTest(metadata=metadata):
+                    self.assertEqual(module._is_short_video(crawling, video), expected)
+            path.write_text('{incomplete')
+            self.assertFalse(module._is_short_video(crawling, video))
 
     def test_latest_selection_identity_and_names_control_terminal_reuse(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -459,6 +491,34 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
             if "--video-id" in call and str(call[1]).endswith("09-target-selection.py")
         ]
         self.assertEqual(evaluated, ["bbbbbbbbbbb", "ccccccccccc"])
+    def test_bounded_metadata_refill_skips_three_shorts_then_evaluates_at_most_three(self):
+        for limit in (1, 3):
+            with self.subTest(limit=limit):
+                videos = [f'{index:011d}' for index in range(module.MAX_DISCOVERY_VIDEOS + 5)]
+                urls = [f'https://www.youtube.com/watch?v={video}' for video in videos]
+                target_ids, metadata_inputs, writes, paid_inputs = [], [], [], []
+                def run(argv, env, *, required=True):
+                    if str(module.SCRIPTS['collect_meta']) in argv:
+                        metadata_inputs.extend(writes[-1])
+                    if any(str(module.SCRIPTS[key]) in argv for key in ('transcript', 'chunk')):
+                        paid_inputs.append(list(writes[-1]))
+                    if str(module.SCRIPTS['target']) in argv:
+                        target_ids.append(argv[argv.index('--video-id') + 1])
+                    return 0
+                with patch.object(module, 'assert_hosted_target'), patch.object(
+                    module, 'fetch_hosted_restaurant_snapshot', return_value=([], [])
+                ), patch.object(module, '_load_urls', side_effect=[list(reversed(urls)), urls]), patch.object(
+                    module, '_write_urls', side_effect=lambda path, values: writes.append(list(values))
+                ), patch.object(module, '_fresh_locally_evaluated_ids', side_effect=[set(), set(videos[:3 + limit])]), patch.object(
+                    module, '_is_short_video', side_effect=lambda root, video: video in videos[:3]
+                ), patch.object(module, '_mark_crawl_not_selected') as mark, patch.object(module, '_run', side_effect=run):
+                    self.assertEqual(module.main(['--limit', str(limit)]), 0)
+                self.assertEqual(len(metadata_inputs), module.MAX_DISCOVERY_VIDEOS)
+                self.assertEqual(target_ids, videos[3:3 + limit])
+                self.assertEqual(mark.call_count, 3)
+                self.assertEqual(paid_inputs, [urls[3:3 + limit], urls[3:3 + limit]])
+                self.assertEqual(writes[-1], urls)  # no old failure prefix, no history deletion
+
     def test_laaj_script_keeps_absolute_evaluation_path(self) -> None:
         script = (
             ROOT

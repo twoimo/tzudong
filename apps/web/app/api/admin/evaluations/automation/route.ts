@@ -5,6 +5,7 @@ import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 import { isRecord } from '@/lib/admin/normalize-evaluation-record';
 import { isReviewJudgmentEngine } from '@/lib/admin/restaurant-review-automation';
+import { readReviewAutomationCoverage } from '@/lib/admin/review-automation-coverage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,8 +28,15 @@ export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
   try {
-    const { data, error } = await client()('restaurant_review_automation_status');
-    return error ? errorResponse(error) : respond(data);
+    const supabase = createSupabaseServiceRoleClient();
+    const { data, error } = await (supabase.rpc.bind(supabase) as unknown as Rpc)('restaurant_review_automation_status');
+    if (error) return errorResponse(error);
+    if (!isRecord(data)) return errorResponse(null);
+    const coverage = await readReviewAutomationCoverage({
+      count: status => supabase.from('restaurants').select('id', { count: 'exact', head: true }).eq('status', status),
+      latest: () => supabase.from('restaurants').select('created_at').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    });
+    return respond({ ...data, coverage });
   } catch { return errorResponse(null); }
 }
 

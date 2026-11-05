@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { createUserNotification } from "@/contexts/NotificationContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LoadingPreview } from '@/components/ui/loading-surface';
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -452,12 +453,9 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                     </div>
                 ) : isLoading ? (
                     <div className="space-y-2">
-                        {[1, 2, 3].map(i => (
-                            <Card key={i} className="p-3">
-                                <div className="h-4 bg-muted rounded animate-pulse w-32 mb-2" />
-                                <div className="h-3 bg-muted rounded animate-pulse w-48" />
-                            </Card>
-                        ))}
+
+                        <LoadingPreview kind="list" rows={3} showHeader={false} label="리뷰 목록 조회 중" />
+
                     </div>
                 ) : pendingReviews.length === 0 ? (
                     <Card className="p-6 text-center">
